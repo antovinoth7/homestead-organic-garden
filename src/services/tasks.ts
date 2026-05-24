@@ -1,0 +1,854 @@
+import { TaskTemplate, TaskLog, Plant, TaskType } from '../types/database.types';
+import { db, auth, refreshAuthToken } from '../lib/firebase';
+import {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  addDoc,
+  updateDoc,
+  writeBatch,
+  query,
+  where,
+  orderBy,
+  Timestamp,
+} from 'firebase/firestore';
+import { getData, setData, KEYS } from '../lib/storage';
+import {
+  withTimeoutAndRetry,
+  FIRESTORE_WRITE_TIMEOUT_MS,
+  FIRESTORE_READ_TIMEOUT_MS,
+} from '../utils/firestoreTimeout';
+import { logError } from '../utils/errorLogging';
+import { logger } from '../utils/logger';
+import { convertTimestamp } from '../utils/dateHelpers';
+import { getCached, setCached, invalidate, dedup, CACHE_KEYS } from '../lib/dataCache';
+import { TASK_DUE_TIME_HOUR, MS_PER_DAY } from '../utils/taskConstants';
+import { getCurrentSeason, getWateringFrequencyMultiplier } from '../utils/seasonHelpers';
+import { getCoconutAgeInfo, getEffectiveGrowthStage, isPlantArchived } from '../utils/plantHelpers';
+import { getPlantCareProfile } from '../utils/plantCareDefaults';
+
+const TASKS_COLLECTION = 'task_templates';
+const TASK_LOGS_COLLECTION = 'task_logs';
+const PLANTS_COLLECTION = 'plants';
+type PlantLastCareField =
+  | 'last_watered_date'
+  | 'last_fertilised_date'
+  | 'last_pruned_date'
+  | 'last_harvest_date';
+const TASK_TYPE_TO_PLANT_LAST_CARE_FIELD: Partial<Record<TaskType, PlantLastCareField>> = {
+  water: 'last_watered_date',
+  fertilise: 'last_fertilised_date',
+  prune: 'last_pruned_date',
+  harvest: 'last_harvest_date',
+};
+type MarkTaskDoneOptions = {
+  skipAlreadyDoneCheck?: boolean;
+};
+
+/**
+ * Get all task templates with offline-first approach
+ */
+export const getTaskTemplates = async (): Promise<TaskTemplate[]> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  // Return fresh in-memory data if available
+  const cached = getCached<TaskTemplate[]>(CACHE_KEYS.TASK_TEMPLATES);
+  if (cached) return cached;
+
+  // Refresh token to prevent expiration issues
+  await refreshAuthToken();
+  try {
+    const q = query(
+      collection(db, TASKS_COLLECTION),
+      where('user_id', '==', user.uid),
+      orderBy('created_at', 'desc')
+    );
+
+    const tasks = await dedup(CACHE_KEYS.TASK_TEMPLATES, async () => {
+      const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
+        timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+      });
+
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        created_at: convertTimestamp(doc.data().created_at),
+        next_due_at: convertTimestamp(doc.data().next_due_at),
+      })) as TaskTemplate[];
+    });
+
+    // Cache locally
+    await setData(KEYS.TASKS, tasks);
+
+    return tasks;
+  } catch (error) {
+    logger.warn('Failed to fetch task templates, using cached data', error as Error);
+    logError('network', 'Failed to fetch task templates', error as Error);
+    return getData<TaskTemplate>(KEYS.TASKS);
+  }
+};
+
+export const getTodayTasks = async (): Promise<TaskTemplate[]> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  // Return fresh in-memory data if available
+  const cached = getCached<TaskTemplate[]>(CACHE_KEYS.TODAY_TASKS);
+  if (cached) return cached;
+
+  // Refresh token to prevent expiration issues
+  await refreshAuthToken();
+
+  // Get today's date range (start and end of day)
+  const now = new Date();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  try {
+    // Simplified query without orderBy to avoid composite index requirement
+    const q = query(
+      collection(db, TASKS_COLLECTION),
+      where('user_id', '==', user.uid),
+      where('enabled', '==', true)
+    );
+
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
+      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+    });
+
+    let tasks = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      created_at: convertTimestamp(doc.data().created_at),
+      next_due_at: convertTimestamp(doc.data().next_due_at),
+    })) as TaskTemplate[];
+
+    // Filter tasks: include overdue tasks and tasks due today
+    tasks = tasks.filter((task) => {
+      if (!task.next_due_at) return false;
+      const dueDate = new Date(task.next_due_at);
+      // Show tasks that are overdue or due today
+      return dueDate <= todayEnd;
+    });
+
+    tasks.sort((a, b) => a.next_due_at.localeCompare(b.next_due_at));
+
+    setCached(CACHE_KEYS.TODAY_TASKS, tasks);
+    return tasks;
+  } catch (error) {
+    logger.warn('Failed to fetch today tasks, using cached data', error as Error);
+    logError('network', 'Failed to fetch today tasks', error as Error);
+    const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const filtered = cachedTasks.filter((task) => {
+      if (!task.enabled || !task.next_due_at) return false;
+      const dueDate = new Date(task.next_due_at);
+      return dueDate <= todayEnd;
+    });
+    filtered.sort((a, b) => a.next_due_at.localeCompare(b.next_due_at));
+    return filtered;
+  }
+};
+
+export const createTaskTemplate = async (
+  template: Omit<TaskTemplate, 'id' | 'user_id' | 'created_at'>
+): Promise<TaskTemplate> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const newTemplate = {
+    ...template,
+    user_id: user.uid,
+    created_at: Timestamp.now(),
+    next_due_at: template.next_due_at ? Timestamp.fromDate(new Date(template.next_due_at)) : null,
+  };
+
+  const docRef = await withTimeoutAndRetry(
+    () => addDoc(collection(db, TASKS_COLLECTION), newTemplate),
+    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+  );
+
+  const result = {
+    id: docRef.id,
+    ...template,
+    user_id: user.uid,
+    created_at: convertTimestamp(newTemplate.created_at),
+    next_due_at: newTemplate.next_due_at
+      ? convertTimestamp(newTemplate.next_due_at)
+      : template.next_due_at,
+  } as TaskTemplate;
+
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+
+  return result;
+};
+
+export const updateTaskTemplate = async (
+  id: string,
+  updates: Partial<TaskTemplate>
+): Promise<TaskTemplate> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const docRef = doc(db, TASKS_COLLECTION, id);
+
+  // Verify ownership before updating
+  const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
+    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+  });
+  if (!existingSnap.exists() || existingSnap.data().user_id !== user.uid) {
+    throw new Error('Not authorized to update this task');
+  }
+
+  const firestoreUpdates: Record<string, unknown> = { ...updates };
+  if (updates.next_due_at) {
+    const parsedDate = new Date(updates.next_due_at);
+    if (Number.isNaN(parsedDate.getTime())) {
+      throw new Error('Invalid next_due_at date value');
+    }
+    firestoreUpdates.next_due_at = Timestamp.fromDate(parsedDate);
+  }
+
+  await withTimeoutAndRetry(() => updateDoc(docRef, firestoreUpdates), {
+    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+  });
+
+  // Use direct document read instead of query for better performance
+  const docSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
+    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+  });
+
+  if (!docSnap.exists()) throw new Error('Task template not found');
+
+  const doc_data = docSnap.data();
+  const result = {
+    id,
+    ...doc_data,
+    created_at: convertTimestamp(doc_data.created_at),
+    next_due_at: convertTimestamp(doc_data.next_due_at),
+  } as TaskTemplate;
+
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+
+  return result;
+};
+
+export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> => {
+  const uniquePlantIds = Array.from(
+    new Set(plantIds.filter((plantId) => plantId && plantId.trim() !== ''))
+  );
+  if (uniquePlantIds.length === 0) return;
+
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const plantIdSet = new Set(uniquePlantIds);
+  const tasks = await getTaskTemplates();
+  const logs = await getTaskLogs();
+
+  const tasksToDelete = tasks.filter((task) => task.plant_id && plantIdSet.has(task.plant_id));
+  const logsToDelete = logs.filter((log) => log.plant_id && plantIdSet.has(log.plant_id));
+
+  // Batch delete all related templates and logs atomically
+  // Firestore batches support up to 500 operations
+  const BATCH_LIMIT = 500;
+  const allDeletes = [
+    ...tasksToDelete.map((task) => doc(db, TASKS_COLLECTION, task.id)),
+    ...logsToDelete.map((log) => doc(db, TASK_LOGS_COLLECTION, log.id)),
+  ];
+
+  for (let i = 0; i < allDeletes.length; i += BATCH_LIMIT) {
+    const chunk = allDeletes.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    for (const ref of chunk) {
+      batch.delete(ref);
+    }
+    await withTimeoutAndRetry(() => batch.commit(), {
+      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+    });
+  }
+
+  const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+  if (cachedTasks.length > 0) {
+    const filteredTasks = cachedTasks.filter(
+      (task) => !task.plant_id || !plantIdSet.has(task.plant_id)
+    );
+    await setData(KEYS.TASKS, filteredTasks);
+  }
+
+  const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
+  if (cachedLogs.length > 0) {
+    const filteredLogs = cachedLogs.filter((log) => !log.plant_id || !plantIdSet.has(log.plant_id));
+    await setData(KEYS.TASK_LOGS, filteredLogs);
+  }
+
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS, CACHE_KEYS.TODAY_TASK_LOGS);
+};
+
+export const markTaskDone = async (
+  template: TaskTemplate,
+  notes?: string,
+  productUsed?: string,
+  options?: MarkTaskDoneOptions
+): Promise<boolean> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  // Verify the task belongs to the current user
+  if (template.user_id !== user.uid) {
+    throw new Error('Not authorized to complete this task');
+  }
+
+  const doneAt = new Date();
+  const frequencyDays = Number.isFinite(template.frequency_days) ? template.frequency_days : 0;
+
+  // For water tasks, apply Kanyakumari season-aware multiplier so next due
+  // date reflects actual rainfall / heat conditions.
+  let effectiveDays = frequencyDays;
+  if (template.task_type === 'water' && template.plant_id && frequencyDays > 0) {
+    const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+    const waterPlant = cachedPlants.find((p) => p.id === template.plant_id);
+    if (waterPlant) {
+      effectiveDays = Math.max(
+        1,
+        Math.round(frequencyDays * getWateringFrequencyMultiplier(waterPlant.space_type))
+      );
+    }
+  }
+
+  // Calculate next due date at 6 PM (18:00) instead of using completion time
+  const nextDueAt = new Date(doneAt);
+  nextDueAt.setDate(nextDueAt.getDate() + effectiveDays);
+  nextDueAt.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0); // Always set to 6:00 PM
+
+  const startOfDay = new Date(doneAt);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(doneAt);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  if (!options?.skipAlreadyDoneCheck) {
+    const existingLogs = await getTaskLogs(template.id);
+    const alreadyDoneToday = existingLogs.some((log) => {
+      const logDate = new Date(log.done_at);
+      return logDate >= startOfDay && logDate <= endOfDay;
+    });
+
+    if (alreadyDoneToday) {
+      if (frequencyDays <= 0) {
+        await updateDoc(doc(db, TASKS_COLLECTION, template.id), {
+          enabled: false,
+        });
+      }
+      return false;
+    }
+  }
+
+  // Insert task log with optional notes
+  const logDocRef = doc(collection(db, TASK_LOGS_COLLECTION));
+  const doneAtIso = doneAt.toISOString();
+  const logData = {
+    user_id: user.uid,
+    template_id: template.id,
+    plant_id: template.plant_id,
+    task_type: template.task_type,
+    done_at: Timestamp.fromDate(doneAt),
+    notes: notes || null,
+    product_used: productUsed || null,
+    created_at: Timestamp.now(),
+  };
+
+  // Update next due date
+  const templateDocRef = doc(db, TASKS_COLLECTION, template.id);
+  const templateUpdates: { next_due_at?: Timestamp; enabled?: boolean } = {};
+  let nextDueAtIso: string | undefined;
+  if (frequencyDays <= 0) {
+    templateUpdates.enabled = false;
+    templateUpdates.next_due_at = Timestamp.fromDate(doneAt);
+    nextDueAtIso = doneAtIso;
+  } else if (!Number.isNaN(nextDueAt.getTime())) {
+    templateUpdates.next_due_at = Timestamp.fromDate(nextDueAt);
+    nextDueAtIso = nextDueAt.toISOString();
+  }
+
+  // Determine plant last-care update
+  const plantLastCareField = TASK_TYPE_TO_PLANT_LAST_CARE_FIELD[template.task_type];
+
+  // Atomic batch: create log + update template + update plant in one commit
+  const batch = writeBatch(db);
+  batch.set(logDocRef, logData);
+  if (Object.keys(templateUpdates).length > 0) {
+    batch.update(templateDocRef, templateUpdates);
+  }
+  if (template.plant_id && plantLastCareField) {
+    batch.update(doc(db, PLANTS_COLLECTION, template.plant_id), {
+      [plantLastCareField]: doneAtIso,
+    });
+  }
+  await withTimeoutAndRetry(() => batch.commit(), {
+    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+  });
+
+  // ── Update local caches after successful batch commit ──
+
+  const newTaskLog: TaskLog = {
+    id: logDocRef.id,
+    user_id: user.uid,
+    template_id: template.id,
+    plant_id: template.plant_id,
+    task_type: template.task_type,
+    done_at: doneAtIso,
+    notes: notes || null,
+    product_used: productUsed || null,
+    created_at: doneAtIso,
+  };
+  const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
+  cachedLogs.unshift(newTaskLog);
+  await setData(KEYS.TASK_LOGS, cachedLogs);
+
+  if (Object.keys(templateUpdates).length > 0) {
+    const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+    const taskIndex = cachedTasks.findIndex((task) => task.id === template.id);
+    if (taskIndex !== -1) {
+      cachedTasks[taskIndex] = {
+        ...cachedTasks[taskIndex]!,
+        ...(typeof templateUpdates.enabled === 'boolean'
+          ? { enabled: templateUpdates.enabled }
+          : {}),
+        ...(nextDueAtIso ? { next_due_at: nextDueAtIso } : {}),
+      };
+      await setData(KEYS.TASKS, cachedTasks);
+    }
+  }
+
+  if (template.plant_id && plantLastCareField) {
+    const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+    const plantIndex = cachedPlants.findIndex((plant) => plant.id === template.plant_id);
+    if (plantIndex !== -1) {
+      cachedPlants[plantIndex] = {
+        ...cachedPlants[plantIndex]!,
+        [plantLastCareField]: doneAtIso,
+      };
+      await setData(KEYS.PLANTS, cachedPlants);
+    }
+  }
+
+  // Invalidate caches after mutation
+  invalidate(
+    CACHE_KEYS.TODAY_TASKS,
+    CACHE_KEYS.TASK_TEMPLATES,
+    CACHE_KEYS.TODAY_TASK_LOGS,
+    CACHE_KEYS.ALL_PLANTS
+  );
+
+  // For one_shot annual plants: completing a harvest task auto-archives the plant.
+  if (template.task_type === 'harvest' && template.plant_id) {
+    const plants = await getData<Plant>(KEYS.PLANTS);
+    const harvestedPlant = plants.find((p) => p.id === template.plant_id);
+    if (harvestedPlant?.harvest_mode === 'one_shot' && !isPlantArchived(harvestedPlant)) {
+      try {
+        const { archivePlant } = await import('./plants');
+        await archivePlant(template.plant_id);
+      } catch (err) {
+        logger.warn('markTaskDone: failed to auto-archive one_shot plant', err as Error);
+      }
+    }
+  }
+
+  return true;
+};
+
+export const getTaskLogs = async (templateId?: string): Promise<TaskLog[]> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  try {
+    await refreshAuthToken();
+
+    let q;
+
+    if (templateId) {
+      // Query with template filter - no orderBy to avoid composite index
+      q = query(
+        collection(db, TASK_LOGS_COLLECTION),
+        where('user_id', '==', user.uid),
+        where('template_id', '==', templateId)
+      );
+    } else {
+      // Query all user's logs - no orderBy to avoid composite index
+      q = query(collection(db, TASK_LOGS_COLLECTION), where('user_id', '==', user.uid));
+    }
+
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
+      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+    });
+    const logs = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      done_at: convertTimestamp(doc.data().done_at),
+      created_at: convertTimestamp(doc.data().created_at),
+    })) as TaskLog[];
+
+    // Sort in-memory by done_at descending
+    logs.sort((a, b) => new Date(b.done_at).getTime() - new Date(a.done_at).getTime());
+
+    // Cache locally
+    await setData(KEYS.TASK_LOGS, logs);
+
+    return logs;
+  } catch (error) {
+    logger.warn('Failed to fetch task logs, using cached data', error as Error);
+    const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
+    const filtered = templateId
+      ? cachedLogs.filter((log) => log.template_id === templateId)
+      : cachedLogs;
+    filtered.sort((a, b) => new Date(b.done_at).getTime() - new Date(a.done_at).getTime());
+    return filtered;
+  }
+};
+
+/**
+ * Get only today's task logs — much cheaper than getTaskLogs() which
+ * fetches the entire history.  Uses a Firestore date-range filter so
+ * only relevant docs cross the wire.
+ */
+export const getTodayTaskLogs = async (): Promise<TaskLog[]> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  // Return fresh in-memory data if available
+  const cached = getCached<TaskLog[]>(CACHE_KEYS.TODAY_TASK_LOGS);
+  if (cached) return cached;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(today);
+  todayEnd.setHours(23, 59, 59, 999);
+
+  try {
+    const q = query(
+      collection(db, TASK_LOGS_COLLECTION),
+      where('user_id', '==', user.uid),
+      where('done_at', '>=', Timestamp.fromDate(today)),
+      where('done_at', '<=', Timestamp.fromDate(todayEnd))
+    );
+
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
+      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+    });
+
+    const logs = snapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+      done_at: convertTimestamp(d.data().done_at),
+      created_at: convertTimestamp(d.data().created_at),
+    })) as TaskLog[];
+
+    logs.sort((a, b) => new Date(b.done_at).getTime() - new Date(a.done_at).getTime());
+
+    setCached(CACHE_KEYS.TODAY_TASK_LOGS, logs);
+    return logs;
+  } catch (error) {
+    logger.warn('Failed to fetch today logs, using cached data', error as Error);
+    const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
+    return cachedLogs.filter((log) => {
+      const logDate = new Date(log.done_at);
+      return logDate >= today && logDate <= todayEnd;
+    });
+  }
+};
+
+const parseDateValue = (value?: string | null): Date | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+};
+
+const computeNextDueAt = (plant: Plant, taskType: TaskType, frequency: number): string => {
+  const reference =
+    taskType === 'water'
+      ? plant.last_watered_date
+      : taskType === 'fertilise'
+      ? plant.last_fertilised_date
+      : taskType === 'prune'
+      ? plant.last_pruned_date
+      : null;
+
+  const base = parseDateValue(reference) || new Date();
+
+  const nextDueAt = new Date(base);
+  nextDueAt.setDate(nextDueAt.getDate() + frequency);
+  nextDueAt.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0);
+
+  return nextDueAt.toISOString();
+};
+
+/**
+ * Generate recurring tasks from plant care schedules
+ * This will create task templates for plants that have care schedules configured
+ */
+const _generateRecurringTasksFromPlants = async (plants: Plant[]): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  // Get existing task templates to avoid duplicates
+  const existingTasks = await getTaskTemplates();
+
+  for (const plant of plants) {
+    if (!plant.care_schedule || !plant.care_schedule.auto_generate_tasks) continue;
+
+    const schedule = plant.care_schedule;
+
+    // Generate water task
+    if (schedule.water_frequency_days && schedule.water_frequency_days > 0) {
+      const existingWaterTask = existingTasks.find(
+        (t) => t.plant_id === plant.id && t.task_type === 'water'
+      );
+
+      if (!existingWaterTask) {
+        await createTaskTemplate({
+          plant_id: plant.id,
+          task_type: 'water',
+          frequency_days: schedule.water_frequency_days,
+          next_due_at: computeNextDueAt(plant, 'water', schedule.water_frequency_days),
+          enabled: true,
+          preferred_time: null,
+        });
+      }
+    }
+
+    // Generate fertilise task
+    if (schedule.fertilise_frequency_days && schedule.fertilise_frequency_days > 0) {
+      const existingFertiliseTask = existingTasks.find(
+        (t) => t.plant_id === plant.id && t.task_type === 'fertilise'
+      );
+
+      if (!existingFertiliseTask) {
+        await createTaskTemplate({
+          plant_id: plant.id,
+          task_type: 'fertilise',
+          frequency_days: schedule.fertilise_frequency_days,
+          next_due_at: computeNextDueAt(plant, 'fertilise', schedule.fertilise_frequency_days),
+          enabled: true,
+          preferred_time: null,
+        });
+      }
+    }
+
+    // Generate prune task
+    if (schedule.prune_frequency_days && schedule.prune_frequency_days > 0) {
+      const existingPruneTask = existingTasks.find(
+        (t) => t.plant_id === plant.id && t.task_type === 'prune'
+      );
+
+      if (!existingPruneTask) {
+        await createTaskTemplate({
+          plant_id: plant.id,
+          task_type: 'prune',
+          frequency_days: schedule.prune_frequency_days,
+          next_due_at: computeNextDueAt(plant, 'prune', schedule.prune_frequency_days),
+          enabled: true,
+          preferred_time: null,
+        });
+      }
+    }
+  }
+};
+
+export const syncCareTasksForPlant = async (plant: Plant): Promise<void> => {
+  if (!plant?.id) return;
+
+  // Archived plants have their tasks disabled in archivePlant() — skip sync.
+  if (isPlantArchived(plant)) return;
+
+  const desiredFrequencies = [
+    {
+      taskType: 'water' as TaskType,
+      frequency: plant.watering_frequency_days,
+      enabled: plant.watering_enabled !== false,
+    },
+    {
+      taskType: 'fertilise' as TaskType,
+      frequency: plant.fertilising_frequency_days,
+      enabled: plant.fertilising_enabled !== false,
+    },
+    {
+      taskType: 'prune' as TaskType,
+      frequency: plant.pruning_frequency_days,
+      enabled: plant.pruning_enabled !== false,
+    },
+  ].filter(
+    (item) =>
+      item.enabled &&
+      typeof item.frequency === 'number' &&
+      Number.isFinite(item.frequency) &&
+      item.frequency > 0
+  ) as { taskType: TaskType; frequency: number }[];
+
+  // For coconut trees, auto-derive a Harvest task from the tree's age.
+  // harvestFrequencyDays === 0 means the tree is not yet bearing.
+  if (plant.plant_type === 'coconut_tree' && plant.planting_date) {
+    const ageInfo = getCoconutAgeInfo(plant.planting_date);
+    if (ageInfo && ageInfo.harvestFrequencyDays > 0) {
+      desiredFrequencies.push({
+        taskType: 'harvest',
+        frequency: ageInfo.harvestFrequencyDays,
+      });
+    }
+  }
+
+  // For perennial plants (Type 2), maintain a recurring "harvest_leaves" task
+  // so the user is prompted to log leaf/produce weight on a fixed cycle.
+  // Default 14-day cycle; permanent plants use their own harvest cadence (coconut above).
+  if (plant.lifecycle_type === 'perennial') {
+    desiredFrequencies.push({
+      taskType: 'harvest_leaves' as TaskType,
+      frequency: 14,
+    });
+  }
+
+  if (desiredFrequencies.length === 0) return;
+
+  const existingTasks = await getTaskTemplates();
+  const plantTasks = existingTasks.filter((task) => task.plant_id === plant.id);
+  const plantCreatedAt = parseDateValue(plant.created_at);
+
+  for (const { taskType, frequency } of desiredFrequencies) {
+    // Apply Kanyakumari season-aware multiplier for water tasks.
+    // frequencyDays stored remains the user-configured base so the user's
+    // intent is preserved across seasons; only next_due_at is adjusted.
+    const effectiveFrequency =
+      taskType === 'water'
+        ? Math.max(1, Math.round(frequency * getWateringFrequencyMultiplier(plant.space_type)))
+        : frequency;
+    const nextDueAt = computeNextDueAt(plant, taskType, effectiveFrequency);
+    const existing = plantTasks.find((task) => task.task_type === taskType);
+    if (existing) {
+      const updates: Partial<TaskTemplate> = {};
+      if (existing.frequency_days !== frequency) {
+        updates.frequency_days = frequency;
+        updates.next_due_at = nextDueAt;
+      }
+      if (!existing.enabled) {
+        updates.enabled = true;
+      }
+      const existingDueDate = parseDateValue(existing.next_due_at);
+      if (!existingDueDate) {
+        updates.next_due_at = nextDueAt;
+      } else if (plantCreatedAt && existingDueDate < plantCreatedAt) {
+        updates.next_due_at = nextDueAt;
+      }
+      if (Object.keys(updates).length > 0) {
+        await updateTaskTemplate(existing.id, updates);
+      }
+      continue;
+    }
+
+    await createTaskTemplate({
+      plant_id: plant.id,
+      task_type: taskType,
+      frequency_days: frequency,
+      next_due_at: nextDueAt,
+      enabled: true,
+      preferred_time: null,
+    });
+  }
+};
+
+/**
+ * PHASE 2: Calculate task priority based on plant health, growth stage, and overdue status
+ */
+export const calculateTaskPriority = (
+  task: TaskTemplate,
+  plant: Plant | null
+): 'critical' | 'high' | 'medium' | 'low' => {
+  if (!plant) {
+    return 'medium';
+  }
+
+  // Critical if plant is sick or stressed
+  if (plant.health_status === 'sick' || plant.health_status === 'stressed') {
+    return 'critical';
+  }
+
+  // Compute effective growth stage (B.4 auto-progression)
+  const profile = getPlantCareProfile(plant.plant_variety ?? '', plant.plant_type);
+  const effectiveStage = getEffectiveGrowthStage(plant, profile).stage;
+
+  // High priority for flowering/fruiting stages
+  if (effectiveStage === 'flowering' || effectiveStage === 'fruiting') {
+    return 'high';
+  }
+
+  // Check if task is overdue
+  const dueDate = new Date(task.next_due_at);
+  const now = new Date();
+  const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / MS_PER_DAY);
+
+  if (daysOverdue > 2) {
+    return 'critical';
+  } else if (daysOverdue > 0) {
+    return 'high';
+  }
+
+  // Low priority for dormant plants
+  if (effectiveStage === 'dormant') {
+    return 'low';
+  }
+
+  return 'medium';
+};
+
+/**
+ * Get seasonal care reminder for plant
+ * (Simplified version - seasonal care profiles removed)
+ */
+export const getSeasonalCareReminder = (plant: Plant): string | null => {
+  const season = getCurrentSeason();
+
+  // Provide season-specific advice for Kanyakumari conditions
+  if ((season === 'sw_monsoon' || season === 'ne_monsoon') && plant.space_type === 'pot') {
+    return season === 'ne_monsoon'
+      ? 'NE Monsoon: heaviest rains — check drainage daily, move pots under cover if needed'
+      : 'SW Monsoon: ensure proper drainage to prevent waterlogging';
+  }
+
+  if (season === 'ne_monsoon' && (plant.space_type === 'bed' || plant.space_type === 'ground')) {
+    return 'NE Monsoon season — reduce watering; natural rainfall is usually sufficient';
+  }
+
+  if (season === 'summer') {
+    return 'Peak summer heat — water early morning or after sunset to reduce evaporation';
+  }
+
+  if (season === 'cool_dry') {
+    return 'Cool dry period — good time to apply organic mulch and prepare beds for the next season';
+  }
+
+  return null;
+};
+
+/**
+ * Disable (but do not delete) all task templates for a given plant.
+ * Called when a plant is archived after final harvest — tasks go quiet
+ * while the record is preserved for rotation history.
+ */
+export const disableTasksForPlant = async (plantId: string): Promise<void> => {
+  const templates = await getTaskTemplates();
+  const plantTemplates = templates.filter((t) => t.plant_id === plantId && t.enabled);
+  if (plantTemplates.length === 0) return;
+
+  await Promise.all(plantTemplates.map((t) => updateTaskTemplate(t.id, { enabled: false })));
+
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+};
+
+// ─── Pre-Monsoon Batch Tasks ─────────────────────────────────────────────────
+
+// Re-export pure pre-monsoon functions from utility (avoids Firebase dep in tests)
+export { getDaysToSWMonsoon, getPreMonsoonTasks } from '@/utils/preMonsoonTasks';
+export type { PreMonsoonTaskItem } from '@/utils/preMonsoonTasks';
+
+// Re-export bed task sync for consumers that import from tasks.ts
+export { syncBedTasksFromPlants } from './BedTaskResolver';

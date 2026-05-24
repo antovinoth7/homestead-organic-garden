@@ -1,0 +1,566 @@
+import { BedType, BedLayer, CropFamily, SunlightLevel } from '@/types/database.types';
+
+export type BenefitTag =
+  | 'nematode'
+  | 'pest-repel'
+  | 'self-seeds'
+  | 'chop-drop'
+  | 'n-fixer'
+  | 'soil-builder';
+
+export interface PlantRow {
+  name: string;
+  layer: BedLayer;
+  spacing_cm: number;
+  crop_family: CropFamily;
+  companion_plants: string[];
+  needs_good_drainage?: boolean;
+  days_to_harvest?: number;
+  benefit_tag?: BenefitTag;
+  care_tasks?: string[];
+  is_companion?: boolean;
+  succession_week?: number;
+}
+
+export interface ThreeSistersSequence {
+  week: number;
+  plant: string;
+  action: string;
+}
+
+export interface GuildTemplate {
+  type: BedType;
+  label: string;
+  description: string;
+  low_light_flag: boolean;
+  sunlight_requirement: SunlightLevel;
+  plant_rows: PlantRow[];
+  three_sisters_sequence?: ThreeSistersSequence[];
+}
+
+export const GUILD_TEMPLATES: Record<BedType, GuildTemplate> = {
+  leafy: {
+    type: 'leafy',
+    label: 'Leafy Greens Bed',
+    description:
+      'Cool-season greens, spinach, lettuce, amaranth — high-yield short-cycle crops. Tamil Nadu heritage varieties included.',
+    low_light_flag: false,
+    sunlight_requirement: 'partial_sun',
+    plant_rows: [
+      {
+        name: 'Amaranth',
+        layer: 'ground_cover',
+        spacing_cm: 20,
+        crop_family: 'other',
+        companion_plants: ['Radish', 'Carrot'],
+        days_to_harvest: 25,
+        benefit_tag: 'chop-drop',
+        care_tasks: ['Weed Day 10', 'Jeevamrutha Day 14'],
+        succession_week: 1,
+      },
+      {
+        name: 'Spinach',
+        layer: 'ground_cover',
+        spacing_cm: 15,
+        crop_family: 'other',
+        companion_plants: ['Garlic', 'Strawberry'],
+        days_to_harvest: 28,
+        care_tasks: ['Thin Day 15'],
+        succession_week: 2,
+      },
+      {
+        name: 'Lettuce',
+        layer: 'ground_cover',
+        spacing_cm: 25,
+        crop_family: 'other',
+        companion_plants: ['Radish', 'Carrot'],
+        days_to_harvest: 45,
+        care_tasks: ['Water daily in heat'],
+        succession_week: 1,
+      },
+      {
+        name: 'Fenugreek',
+        layer: 'ground_cover',
+        spacing_cm: 10,
+        crop_family: 'legume',
+        companion_plants: ['Spinach'],
+        days_to_harvest: 30,
+        benefit_tag: 'n-fixer',
+        succession_week: 1,
+      },
+      {
+        name: 'Pasalai Keerai',
+        layer: 'ground_cover',
+        spacing_cm: 15,
+        crop_family: 'other',
+        companion_plants: ['Radish', 'Turmeric'],
+        days_to_harvest: 25,
+        care_tasks: ['Harvest young leaves'],
+        succession_week: 1,
+      },
+      {
+        name: 'Drumstick',
+        layer: 'understory',
+        spacing_cm: 100,
+        crop_family: 'other',
+        companion_plants: ['Carrot', 'Radish'],
+        days_to_harvest: 90,
+        care_tasks: ['Prune to 1m height'],
+        succession_week: 1,
+      },
+    ],
+  },
+  fruiting: {
+    type: 'fruiting',
+    label: 'Fruiting Vegetables Bed',
+    description:
+      'Tomato, brinjal, capsicum, okra — heavy feeders needing full sun. Ridge gourd and squash on vertical trellis.',
+    low_light_flag: false,
+    sunlight_requirement: 'full_sun',
+    plant_rows: [
+      {
+        name: 'Tomato',
+        layer: 'understory',
+        spacing_cm: 60,
+        crop_family: 'solanaceae',
+        companion_plants: ['Basil', 'Marigold'],
+        days_to_harvest: 75,
+        care_tasks: ['Stake at 30cm', 'Pinch suckers weekly'],
+        succession_week: 1,
+      },
+      {
+        name: 'Brinjal',
+        layer: 'understory',
+        spacing_cm: 60,
+        crop_family: 'solanaceae',
+        companion_plants: ['Marigold'],
+        days_to_harvest: 65,
+        care_tasks: ['Deep water 2× weekly'],
+        succession_week: 1,
+      },
+      {
+        name: 'Okra',
+        layer: 'understory',
+        spacing_cm: 45,
+        crop_family: 'other',
+        companion_plants: ['Basil', 'Pepper'],
+        days_to_harvest: 50,
+        care_tasks: ['Harvest every 3 days'],
+        succession_week: 1,
+      },
+      {
+        name: 'Ridge Gourd',
+        layer: 'climber',
+        spacing_cm: 100,
+        crop_family: 'cucurbit',
+        companion_plants: ['Tomato', 'Basil'],
+        days_to_harvest: 60,
+        care_tasks: ['Train on trellis weekly'],
+        succession_week: 2,
+      },
+      {
+        name: 'Marigold',
+        layer: 'ground_cover',
+        spacing_cm: 30,
+        crop_family: 'other',
+        companion_plants: ['Tomato', 'Brinjal'],
+        benefit_tag: 'nematode',
+        is_companion: true,
+        care_tasks: ['Deadhead fortnightly'],
+        succession_week: 1,
+      },
+    ],
+  },
+  spice: {
+    type: 'spice',
+    label: 'Spice & Herb Bed',
+    description:
+      'Chilli, ginger, turmeric, curry leaf — aromatic crops with insect-repelling properties.',
+    low_light_flag: false,
+    sunlight_requirement: 'full_sun',
+    plant_rows: [
+      {
+        name: 'Chilli',
+        layer: 'understory',
+        spacing_cm: 45,
+        crop_family: 'solanaceae',
+        companion_plants: ['Basil', 'Carrot'],
+        days_to_harvest: 70,
+        care_tasks: ['Mulch base', 'Stake when tall'],
+        succession_week: 1,
+      },
+      {
+        name: 'Ginger',
+        layer: 'root',
+        spacing_cm: 20,
+        crop_family: 'other',
+        companion_plants: ['Turmeric'],
+        needs_good_drainage: true,
+        days_to_harvest: 180,
+        care_tasks: ['Weed monthly', 'No waterlogging'],
+        succession_week: 1,
+      },
+      {
+        name: 'Turmeric',
+        layer: 'root',
+        spacing_cm: 25,
+        crop_family: 'other',
+        companion_plants: ['Ginger'],
+        needs_good_drainage: true,
+        days_to_harvest: 210,
+        care_tasks: ['Mulch heavily', 'Divide clumps year 2'],
+        succession_week: 1,
+      },
+      {
+        name: 'Curry Leaf',
+        layer: 'understory',
+        spacing_cm: 100,
+        crop_family: 'other',
+        companion_plants: ['Chilli'],
+        days_to_harvest: 180,
+        benefit_tag: 'pest-repel',
+        care_tasks: ['Prune to shape'],
+        succession_week: 1,
+      },
+    ],
+  },
+  root_legume: {
+    type: 'root_legume',
+    label: 'Root & Legume Bed',
+    description:
+      'Beans, cowpea, carrot, radish — soil-building nitrogen fixers and root crops. Tamil Nadu pulses (urad, pigeon pea) included.',
+    low_light_flag: false,
+    sunlight_requirement: 'full_sun',
+    plant_rows: [
+      {
+        name: 'Cowpea',
+        layer: 'understory',
+        spacing_cm: 30,
+        crop_family: 'legume',
+        companion_plants: ['Carrot', 'Radish'],
+        days_to_harvest: 55,
+        benefit_tag: 'n-fixer',
+        succession_week: 1,
+      },
+      {
+        name: 'French Beans',
+        layer: 'understory',
+        spacing_cm: 25,
+        crop_family: 'legume',
+        companion_plants: ['Carrot', 'Beetroot'],
+        days_to_harvest: 50,
+        benefit_tag: 'n-fixer',
+        care_tasks: ['Stake when 20cm tall'],
+        succession_week: 1,
+      },
+      {
+        name: 'Black Gram (Urad)',
+        layer: 'understory',
+        spacing_cm: 20,
+        crop_family: 'legume',
+        companion_plants: ['Carrot', 'Radish'],
+        days_to_harvest: 65,
+        benefit_tag: 'n-fixer',
+        succession_week: 2,
+      },
+      {
+        name: 'Groundnut',
+        layer: 'understory',
+        spacing_cm: 25,
+        crop_family: 'legume',
+        companion_plants: ['Carrot', 'Radish'],
+        needs_good_drainage: true,
+        days_to_harvest: 110,
+        benefit_tag: 'n-fixer',
+        care_tasks: ['Earth up mounds at 30 days'],
+        succession_week: 1,
+      },
+      {
+        name: 'Pigeon Pea (Arhar)',
+        layer: 'understory',
+        spacing_cm: 45,
+        crop_family: 'legume',
+        companion_plants: ['Carrot', 'Radish'],
+        days_to_harvest: 150,
+        benefit_tag: 'n-fixer',
+        care_tasks: ['Prune after first harvest'],
+        succession_week: 1,
+      },
+      {
+        name: 'Carrot',
+        layer: 'root',
+        spacing_cm: 8,
+        crop_family: 'apiaceae',
+        companion_plants: ['Beans', 'Tomato'],
+        needs_good_drainage: true,
+        days_to_harvest: 70,
+        care_tasks: ['Thin to 8cm at 2 weeks'],
+        succession_week: 1,
+      },
+      {
+        name: 'Radish',
+        layer: 'root',
+        spacing_cm: 10,
+        crop_family: 'brassica',
+        companion_plants: ['Carrot', 'Spinach'],
+        days_to_harvest: 30,
+        care_tasks: ['Pull before bolting'],
+        succession_week: 2,
+      },
+    ],
+  },
+  climber_trellis: {
+    type: 'climber_trellis',
+    label: 'Climber & Trellis Bed',
+    description: 'Bitter gourd, snake gourd, yardlong beans — vertical growing maximises space.',
+    low_light_flag: false,
+    sunlight_requirement: 'full_sun',
+    plant_rows: [
+      {
+        name: 'Bitter Gourd',
+        layer: 'climber',
+        spacing_cm: 90,
+        crop_family: 'cucurbit',
+        companion_plants: ['Basil'],
+        days_to_harvest: 55,
+        care_tasks: ['Train on trellis', 'Pollinate manually'],
+        succession_week: 1,
+      },
+      {
+        name: 'Snake Gourd',
+        layer: 'climber',
+        spacing_cm: 100,
+        crop_family: 'cucurbit',
+        companion_plants: ['Marigold'],
+        days_to_harvest: 60,
+        care_tasks: ['Hang weights to straighten gourds'],
+        succession_week: 1,
+      },
+      {
+        name: 'Yardlong Beans',
+        layer: 'climber',
+        spacing_cm: 30,
+        crop_family: 'legume',
+        companion_plants: ['Carrot'],
+        days_to_harvest: 60,
+        benefit_tag: 'n-fixer',
+        care_tasks: ['Harvest every 4 days'],
+        succession_week: 1,
+      },
+      {
+        name: 'Marigold',
+        layer: 'ground_cover',
+        spacing_cm: 30,
+        crop_family: 'other',
+        companion_plants: ['Bitter Gourd'],
+        benefit_tag: 'nematode',
+        is_companion: true,
+        care_tasks: ['Deadhead fortnightly'],
+        succession_week: 1,
+      },
+    ],
+  },
+  coconut_intercrop: {
+    type: 'coconut_intercrop',
+    label: 'Coconut Intercrop Bed',
+    description:
+      'Shade-tolerant crops planted between coconut palms — banana, cocoa, pepper, spice crops, and root vegetables.',
+    low_light_flag: true,
+    sunlight_requirement: 'partial_sun',
+    plant_rows: [
+      {
+        name: 'Banana',
+        layer: 'understory',
+        spacing_cm: 250,
+        crop_family: 'other',
+        companion_plants: ['Cocoa', 'Pepper'],
+        days_to_harvest: 270,
+        care_tasks: ['Remove dead leaves monthly', 'Remove suckers'],
+        succession_week: 1,
+      },
+      {
+        name: 'Cocoa',
+        layer: 'understory',
+        spacing_cm: 300,
+        crop_family: 'other',
+        companion_plants: ['Banana'],
+        days_to_harvest: 365,
+        care_tasks: ['Shade cloth first 6 months'],
+        succession_week: 2,
+      },
+      {
+        name: 'Black Pepper',
+        layer: 'climber',
+        spacing_cm: 200,
+        crop_family: 'other',
+        companion_plants: ['Cocoa'],
+        days_to_harvest: 180,
+        benefit_tag: 'pest-repel',
+        care_tasks: ['Train on support post'],
+        succession_week: 2,
+      },
+      {
+        name: 'Elephant Yam',
+        layer: 'root',
+        spacing_cm: 90,
+        crop_family: 'other',
+        companion_plants: ['Banana'],
+        needs_good_drainage: true,
+        days_to_harvest: 210,
+        care_tasks: ['Hill up soil at 2 months'],
+        succession_week: 1,
+      },
+      {
+        name: 'Turmeric',
+        layer: 'root',
+        spacing_cm: 25,
+        crop_family: 'other',
+        companion_plants: ['Ginger', 'Banana'],
+        needs_good_drainage: true,
+        days_to_harvest: 210,
+        care_tasks: ['Mulch heavily'],
+        succession_week: 1,
+      },
+      {
+        name: 'Ginger',
+        layer: 'root',
+        spacing_cm: 20,
+        crop_family: 'other',
+        companion_plants: ['Turmeric', 'Banana'],
+        needs_good_drainage: true,
+        days_to_harvest: 180,
+        care_tasks: ['No waterlogging'],
+        succession_week: 2,
+      },
+      {
+        name: 'Taro',
+        layer: 'root',
+        spacing_cm: 40,
+        crop_family: 'other',
+        companion_plants: ['Banana', 'Elephant Yam'],
+        days_to_harvest: 180,
+        care_tasks: ['Keep moist but not waterlogged'],
+        succession_week: 1,
+      },
+      {
+        name: 'Lotus Stem',
+        layer: 'root',
+        spacing_cm: 60,
+        crop_family: 'other',
+        companion_plants: ['Taro'],
+        days_to_harvest: 120,
+        care_tasks: ['Needs standing water'],
+        succession_week: 2,
+      },
+    ],
+  },
+  three_sisters: {
+    type: 'three_sisters',
+    label: 'Three Sisters Bed',
+    description:
+      'Traditional polyculture — corn provides trellis, beans fix nitrogen, squash shades soil.',
+    low_light_flag: false,
+    sunlight_requirement: 'full_sun',
+    plant_rows: [
+      {
+        name: 'Maize',
+        layer: 'canopy',
+        spacing_cm: 45,
+        crop_family: 'other',
+        companion_plants: ['Beans', 'Pumpkin'],
+        days_to_harvest: 80,
+        care_tasks: ['Hill up soil at 3 weeks'],
+        succession_week: 1,
+      },
+      {
+        name: 'Beans',
+        layer: 'climber',
+        spacing_cm: 30,
+        crop_family: 'legume',
+        companion_plants: ['Maize', 'Pumpkin'],
+        days_to_harvest: 60,
+        benefit_tag: 'n-fixer',
+        care_tasks: ['Train up corn stalks'],
+        succession_week: 2,
+      },
+      {
+        name: 'Pumpkin',
+        layer: 'ground_cover',
+        spacing_cm: 90,
+        crop_family: 'cucurbit',
+        companion_plants: ['Maize', 'Beans'],
+        days_to_harvest: 90,
+        benefit_tag: 'soil-builder',
+        care_tasks: ['Pinch runners at 1m'],
+        succession_week: 3,
+      },
+    ],
+    three_sisters_sequence: [
+      { week: 0, plant: 'Maize', action: 'Sow corn seeds 45 cm apart in rows' },
+      { week: 2, plant: 'Beans', action: 'Sow bean seeds at base of each corn stalk' },
+      {
+        week: 4,
+        plant: 'Pumpkin',
+        action: 'Transplant or sow pumpkin between rows to cover ground',
+      },
+    ],
+  },
+  medicinal_guild: {
+    type: 'medicinal_guild',
+    label: 'Medicinal Guild Bed',
+    description:
+      'Moringa, tulsi, aloe vera, neem — multi-purpose medicinal and pest-repelling plants.',
+    low_light_flag: true,
+    sunlight_requirement: 'partial_sun',
+    plant_rows: [
+      {
+        name: 'Moringa',
+        layer: 'canopy',
+        spacing_cm: 300,
+        crop_family: 'other',
+        companion_plants: ['Tulsi', 'Aloe Vera'],
+        days_to_harvest: 90,
+        benefit_tag: 'chop-drop',
+        care_tasks: ['Prune to 2m height', 'Harvest young pods'],
+        succession_week: 1,
+      },
+      {
+        name: 'Tulsi',
+        layer: 'understory',
+        spacing_cm: 45,
+        crop_family: 'lamiaceae',
+        companion_plants: ['Moringa', 'Tomato'],
+        benefit_tag: 'pest-repel',
+        is_companion: true,
+        care_tasks: ['Pinch tulsi buds monthly'],
+        succession_week: 1,
+      },
+      {
+        name: 'Aloe Vera',
+        layer: 'ground_cover',
+        spacing_cm: 60,
+        crop_family: 'other',
+        companion_plants: ['Moringa'],
+        days_to_harvest: 365,
+        benefit_tag: 'soil-builder',
+        care_tasks: ['Divide pups yearly'],
+        succession_week: 1,
+      },
+      {
+        name: 'Lemongrass',
+        layer: 'ground_cover',
+        spacing_cm: 50,
+        crop_family: 'other',
+        companion_plants: ['Tulsi'],
+        benefit_tag: 'pest-repel',
+        is_companion: true,
+        care_tasks: ['Divide clumps yearly', 'Cut back seasonally'],
+        succession_week: 1,
+      },
+    ],
+  },
+};
+
+export function getGuildTemplate(type: BedType): GuildTemplate {
+  return GUILD_TEMPLATES[type];
+}

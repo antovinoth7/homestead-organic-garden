@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "organic-gardening-app",
+    "slug": "organic-gardening-app",
+    "version": "1.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.antovinoth7.organicgardeningapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.antovinoth7.organicgardeningapp",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": ["READ_MEDIA_IMAGES", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to save and manage garden images.",
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos of your garden.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
+        "@sentry/react-native",
+        {
+          "url": "https://sentry.io/",
+          "project": "organic-gardening-app",
+          "organization": "antovinoth7"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b6c9a180-9c28-445a-9d74-7d2de79f2740"
+      }
+    }
+  }
+}
