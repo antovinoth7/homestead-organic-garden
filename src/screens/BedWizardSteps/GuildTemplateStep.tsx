@@ -40,6 +40,51 @@ const ACCUMULATOR_DEFAULT_SPACING = 60;
 const DEFAULT_BED_WIDTH_M = 1.2;
 const DEFAULT_BED_LENGTH_M = 3.0;
 
+const PLANT_TAMIL_NAME: Record<string, string> = {
+  Amaranth: 'அரைக்கீரை',
+  Spinach: 'பசலைக்கீரை',
+  Lettuce: 'லெட்டூஸ்',
+  Fenugreek: 'வெந்தயக்கீரை',
+  'Pasalai Keerai': 'பசலைக்கீரை',
+  Drumstick: 'முருங்கை',
+  Tomato: 'தக்காளி',
+  Brinjal: 'கத்தரிக்காய்',
+  Okra: 'வெண்டைக்காய்',
+  Marigold: 'துலுக்காமல்லி',
+  Chilli: 'மிளகாய்',
+  Ginger: 'இஞ்சி',
+  Turmeric: 'மஞ்சள்',
+  'Curry Leaf': 'கருவேப்பிலை',
+  Cowpea: 'காராமணி',
+  'French Beans': 'பீன்ஸ்',
+  Carrot: 'கேரட்',
+  Radish: 'முள்ளங்கி',
+  'Bitter Gourd': 'பாகற்காய்',
+  'Snake Gourd': 'புடலங்காய்',
+  'Yardlong Beans': 'தட்டைப்பயறு',
+  Banana: 'வாழை',
+  Cocoa: 'கொக்கோ',
+  'Black Pepper': 'மிளகு',
+  'Elephant Yam': 'சேனைக்கிழங்கு',
+  'Taro / Colocasia': 'சேப்பங்கிழங்கு',
+  Maize: 'மக்காச்சோளம்',
+  Beans: 'பீன்ஸ்',
+  Pumpkin: 'பரங்கிக்காய்',
+  Moringa: 'முருங்கை',
+  Tulsi: 'துளசி',
+  'Aloe Vera': 'கற்றாழை',
+  Lemongrass: 'எலுமிச்சைப்புல்',
+  Basil: 'திருநீற்றுப்பச்சை',
+  Garlic: 'பூண்டு',
+  Strawberry: 'ஸ்ட்ராபெர்ரி',
+  Beetroot: 'பீட்ரூட்',
+  Pepper: 'மிளகு',
+  Agathi: 'அகத்தி',
+  Comfrey: 'கம்ப்ரி',
+};
+
+const MARKET_CROPS = new Set(['Tomato', 'Brinjal', 'Okra', 'Chilli', 'Bitter Gourd', 'Snake Gourd', 'Cowpea', 'French Beans', 'Yardlong Beans', 'Drumstick']);
+
 const PLANT_EMOJI: Record<string, string> = {
   Amaranth: '🌿',
   Spinach: '🥬',
@@ -457,6 +502,10 @@ export function GuildTemplateStep({
         const autoCompanions =
           isMain && row.companion_plants.length > 0 ? row.companion_plants : undefined;
 
+        const tamilName = PLANT_TAMIL_NAME[row.name];
+        const isMarketCrop = MARKET_CROPS.has(row.name);
+        const harvestDays = row.days_to_harvest;
+
         return (
           <View
             key={row.name}
@@ -471,9 +520,19 @@ export function GuildTemplateStep({
             </View>
 
             <View style={styles.gtPlantMeta}>
-              <Text style={[styles.gtPlantName, isBlocked && styles.gtPlantNameBlocked]}>
-                {row.name}
-              </Text>
+              <View style={styles.gtPlantNameRow}>
+                <Text style={[styles.gtPlantName, isBlocked && styles.gtPlantNameBlocked]}>
+                  {row.name}
+                </Text>
+                {isMarketCrop && (
+                  <View style={styles.gtMarketBadge}>
+                    <Text style={styles.gtMarketBadgeText}>Market</Text>
+                  </View>
+                )}
+              </View>
+              {tamilName ? (
+                <Text style={styles.gtTamilName}>{tamilName}</Text>
+              ) : null}
               <View style={styles.gtBadgeRow}>
                 <View style={[styles.gtLayerBadge, isSelected && styles.gtLayerBadgeSelected]}>
                   <Text
@@ -485,6 +544,11 @@ export function GuildTemplateStep({
                 {row.crop_family === 'legume' && (
                   <View style={styles.gtNFixerBadge}>
                     <Text style={styles.gtNFixerBadgeText}>N-Fixer</Text>
+                  </View>
+                )}
+                {harvestDays !== undefined && (
+                  <View style={styles.gtHarvestBadge}>
+                    <Text style={styles.gtHarvestBadgeText}>{harvestDays}d harvest</Text>
                   </View>
                 )}
               </View>

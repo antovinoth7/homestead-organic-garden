@@ -1,10 +1,20 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/theme';
 import { Step2Data, Step3Data } from '@/hooks/useBedCreationWizard';
 import { BedType } from '@/types/database.types';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import { getSoilPrepSteps } from '@/config/beds/soilPrepEngine';
+
+const M_TO_FT = 3.28084;
+
+function toFt(m: number): number {
+  return parseFloat((m * M_TO_FT).toFixed(1));
+}
+
+function toM(ft: number): number {
+  return parseFloat((ft / M_TO_FT).toFixed(2));
+}
 
 interface Props {
   data: Step3Data;
@@ -125,6 +135,17 @@ function CircleStepper({
 export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const [useFeet, setUseFeet] = useState(false);
+
+  const displayWidth = useFeet ? toFt(data.width_m) : data.width_m;
+  const displayLength = useFeet ? toFt(data.length_m) : data.length_m;
+  const displayUnit = useFeet ? 'ft' : 'm';
+  const widthStep = useFeet ? 0.5 : 0.1;
+  const lengthStep = useFeet ? 0.5 : 0.5;
+  const widthMin = useFeet ? toFt(0.6) : 0.6;
+  const widthMax = useFeet ? toFt(3) : 3;
+  const lengthMin = useFeet ? toFt(1) : 1;
+  const lengthMax = useFeet ? toFt(10) : 10;
 
   const conditionTags = useMemo(() => {
     const tags: string[] = [];
@@ -141,6 +162,15 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
   const updateDimension = (field: 'width_m' | 'length_m', value: number): void => {
     const updated = { ...data, [field]: value };
     onChange({ ...updated, area_sqm: parseFloat((updated.width_m * updated.length_m).toFixed(2)) });
+  };
+
+  const handleWidthChange = (displayVal: number): void => {
+    const m = useFeet ? toM(displayVal) : displayVal;
+    updateDimension('width_m', m);
+  };
+  const handleLengthChange = (displayVal: number): void => {
+    const m = useFeet ? toM(displayVal) : displayVal;
+    updateDimension('length_m', m);
   };
 
   const applyPreset = (preset: SizePreset): void => {
@@ -197,10 +227,14 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
 
           <Text style={styles.szOptimalLabel}>OPTIMAL SIZE</Text>
           <View style={styles.szSizeRow}>
-            <Text style={styles.szSizeValue}>{rec.width_m}</Text>
+            <Text style={styles.szSizeValue}>
+              {useFeet ? toFt(rec.width_m) : rec.width_m}
+            </Text>
             <Text style={styles.szSizeSep}> × </Text>
-            <Text style={styles.szSizeValue}>{rec.length_m}</Text>
-            <Text style={styles.szSizeUnit}> metres</Text>
+            <Text style={styles.szSizeValue}>
+              {useFeet ? toFt(rec.length_m) : rec.length_m}
+            </Text>
+            <Text style={styles.szSizeUnit}> {displayUnit}</Text>
           </View>
 
           <Text style={styles.szRationale}>{rec.rationale}</Text>
@@ -239,7 +273,9 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
               activeOpacity={0.7}
             >
               <Text style={[styles.szPresetChipSize, selected && styles.szPresetChipSizeSelected]}>
-                {preset.width_m} × {preset.length_m}m
+                {useFeet
+                  ? `${toFt(preset.width_m)} × ${toFt(preset.length_m)} ft`
+                  : `${preset.width_m} × ${preset.length_m}m`}
               </Text>
               <Text style={[styles.szPresetChipName, selected && styles.szPresetChipNameSelected]}>
                 {preset.label}
@@ -254,24 +290,49 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
       </View>
 
       {/* Custom size controls */}
-      <Text style={styles.szSectionLabel}>CUSTOM SIZE</Text>
+      <View style={styles.szCustomHeader}>
+        <Text style={styles.szSectionLabel}>CUSTOM SIZE</Text>
+        <View style={styles.szUnitToggle}>
+          <TouchableOpacity
+            style={[styles.szUnitBtn, !useFeet && styles.szUnitBtnActive]}
+            onPress={() => setUseFeet(false)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.szUnitBtnText, !useFeet && styles.szUnitBtnTextActive]}>m</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.szUnitBtn, useFeet && styles.szUnitBtnActive]}
+            onPress={() => setUseFeet(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.szUnitBtnText, useFeet && styles.szUnitBtnTextActive]}>ft</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.szArmReachHint}>
+        <Text style={styles.szArmReachText}>
+          💡 Keep width ≤ {useFeet ? '4 ft' : '1.2 m'} — reach the centre without stepping in
+        </Text>
+      </View>
+
       <CircleStepper
-        label="Width (m)"
-        value={data.width_m}
-        unit="m"
-        min={0.6}
-        max={3}
-        step={0.1}
-        onChange={(v) => updateDimension('width_m', v)}
+        label={`Width (${displayUnit})`}
+        value={displayWidth}
+        unit={displayUnit}
+        min={widthMin}
+        max={widthMax}
+        step={widthStep}
+        onChange={handleWidthChange}
       />
       <CircleStepper
-        label="Length (m)"
-        value={data.length_m}
-        unit="m"
-        min={1}
-        max={10}
-        step={0.5}
-        onChange={(v) => updateDimension('length_m', v)}
+        label={`Length (${displayUnit})`}
+        value={displayLength}
+        unit={displayUnit}
+        min={lengthMin}
+        max={lengthMax}
+        step={lengthStep}
+        onChange={handleLengthChange}
       />
 
       {/* Before planting prep card */}
