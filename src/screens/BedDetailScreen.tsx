@@ -6,6 +6,7 @@ import { useTheme } from '@/theme';
 import { useBedDetail } from '@/hooks/useBedDetail';
 import { RotationStatusCard } from '@/components/RotationStatusCard';
 import { BedDiagram } from '@/components/BedDiagram';
+import { BedSuccessionTimeline } from '@/components/BedSuccessionTimeline';
 import {
   markBedAsResting,
   endBedRest,
@@ -195,6 +196,12 @@ export default function BedDetailScreen(): React.JSX.Element {
           onPositionChange={handlePositionChange}
           onResetLayout={handleResetLayout}
         />
+      </View>
+
+      {/* Succession & Season Timeline */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Season Timeline</Text>
+        <BedSuccessionTimeline bed={bed} plants={plants} />
       </View>
 
       {/* Soil Input Log */}
