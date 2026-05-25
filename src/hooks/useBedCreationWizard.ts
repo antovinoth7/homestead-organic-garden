@@ -177,6 +177,7 @@ export interface UseBedCreationWizardResult {
   stepData: Partial<WizardStepData>;
   canProceed: boolean;
   solanaceaeBlocked: boolean;
+  isDirty: boolean;
   submitting: boolean;
   error: string | null;
   locationConfig: LocationConfig;
@@ -229,6 +230,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
 
   const solanaceaeBlocked = stepData[2]?.prev_crop_family === 'solanaceae';
   const canProceed = canProceedStep(currentStep, stepData);
+  const isDirty = currentStep > 1 || !!stepData[1]?.name?.trim();
 
   const patchStep = useCallback(
     <S extends keyof WizardStepData>(step: S, patch: Partial<WizardStepData[S]>) => {
@@ -432,6 +434,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     stepData,
     canProceed,
     solanaceaeBlocked,
+    isDirty,
     submitting,
     error,
     locationConfig,

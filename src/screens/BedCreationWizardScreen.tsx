@@ -1,11 +1,20 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+  BackHandler,
+} from 'react-native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { useBedCreationWizard } from '@/hooks/useBedCreationWizard';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
+import DiscardChangesModal from '@/components/modals/DiscardChangesModal';
 import type {
   BedCreationWizardNavigationProp,
   BedCreationWizardRouteProp,
@@ -20,7 +29,15 @@ import { BedLayoutStep } from './BedWizardSteps/BedLayoutStep';
 import { BedConfirmStep } from './BedWizardSteps/BedConfirmStep';
 import { BedSuccessStep } from './BedWizardSteps/BedSuccessStep';
 
-const STEP_LABELS = ['Type', 'Land', 'Size', 'Guild', 'Layout', 'Confirm', 'Done'];
+const STEP_LABELS = ['Type', 'Conditions', 'Size', 'Guild', 'Layout', 'Review', 'Done'];
+const STEP_SUBTITLES = [
+  'What kind of bed?',
+  'Sun, soil, prior crop',
+  'Dimensions',
+  'Companion planting',
+  'Arrange the plants',
+  'Confirm and save',
+];
 // Maps display indices (0–5) to actual wizard step numbers
 const VISIBLE_STEPS = [1, 2, 3, 4, 5, 6] as const;
 
@@ -34,10 +51,31 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
 
   const wizard = useBedCreationWizard(prefillType);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [discardVisible, setDiscardVisible] = useState(false);
 
   useEffect(() => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
   }, [wizard.currentStep]);
+
+  const requestExit = useCallback((): boolean => {
+    if (wizard.currentStep === 7) {
+      navigation.goBack();
+      return true;
+    }
+    if (wizard.isDirty) {
+      setDiscardVisible(true);
+      return true;
+    }
+    navigation.goBack();
+    return true;
+  }, [wizard.currentStep, wizard.isDirty, navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', requestExit);
+      return () => sub.remove();
+    }, [requestExit])
+  );
 
   // Consume resolvedEntry handed back by PlantFormScreen after in-form create
   useEffect(() => {
@@ -163,8 +201,8 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
       {/* Header */}
       {!isSuccess && (
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-            <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
+          <TouchableOpacity onPress={requestExit} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={theme.textInverse} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Create Bed</Text>
           <View style={styles.headerSpacer} />
@@ -221,6 +259,14 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
               );
             })}
           </View>
+          {wizard.currentStep <= 6 && (
+            <View style={styles.stepCounterRow}>
+              <Text style={styles.stepCounterText}>Step {wizard.currentStep} of 6</Text>
+              <Text style={styles.stepSubtitleText} numberOfLines={1}>
+                — {STEP_SUBTITLES[wizard.currentStep - 1]}
+              </Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -233,21 +279,30 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
         {renderStep()}
       </ScrollView>
 
+      {/* Solanaceae block banner — sits above the footer, not inline with buttons */}
+      {!isSuccess && wizard.solanaceaeBlocked && wizard.currentStep === 2 && (
+        <View style={styles.blockedBanner}>
+          <Ionicons name="warning" size={18} color={theme.error} />
+          <Text style={styles.blockedBannerText}>
+            Solanaceae was planted here — choose a different previous crop to continue.
+          </Text>
+        </View>
+      )}
+
       {/* Navigation buttons */}
       {!isSuccess && (
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           {wizard.currentStep > 1 ? (
-            <TouchableOpacity style={styles.backButton} onPress={wizard.goBack}>
-              <Ionicons name="arrow-back" size={20} color="#fff" />
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={wizard.goBack}
+              accessibilityLabel="Back to previous step"
+            >
+              <Ionicons name="arrow-back" size={18} color="#fff" />
+              <Text style={styles.backText}>Back</Text>
             </TouchableOpacity>
           ) : (
             <View />
-          )}
-
-          {wizard.solanaceaeBlocked && wizard.currentStep === 2 && (
-            <Text style={styles.blockedText}>
-              ⛔ Solanaceae was planted here — choose a different previous crop to continue
-            </Text>
           )}
 
           {isLastInputStep ? (
@@ -258,11 +313,18 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
               ]}
               onPress={handleSubmit}
               disabled={!wizard.canProceed || wizard.submitting}
+              accessibilityLabel="Save bed"
             >
               {wizard.submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.nextText}>Saving…</Text>
+                </>
               ) : (
-                <Ionicons name="checkmark" size={22} color="#fff" />
+                <>
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                  <Text style={styles.nextText}>Save Bed</Text>
+                </>
               )}
             </TouchableOpacity>
           ) : (
@@ -270,12 +332,24 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
               style={[styles.nextButton, !wizard.canProceed && styles.nextButtonDisabled]}
               onPress={wizard.goNext}
               disabled={!wizard.canProceed}
+              accessibilityLabel="Next step"
             >
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
+              <Text style={styles.nextText}>Next</Text>
+              <Ionicons name="arrow-forward" size={18} color="#fff" />
             </TouchableOpacity>
           )}
         </View>
       )}
+
+      <DiscardChangesModal
+        visible={discardVisible}
+        styles={styles}
+        onKeepEditing={() => setDiscardVisible(false)}
+        onDiscard={() => {
+          setDiscardVisible(false);
+          navigation.goBack();
+        }}
+      />
     </View>
   );
 }

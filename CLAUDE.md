@@ -48,7 +48,7 @@ utils/ — Pure utilities
 - **State**: `useState` local, Context cross-screen, no Redux. After mutations call `invalidate()`.
 - **Performance**: `FlatList` for 20+ items. No anon functions in JSX. `expo-image` with `cachePolicy="memory-disk"`.
 - **Navigation**: defined in `AppNavigator.tsx`. Types in `navigation.types.ts`. Typed hooks only. Primitive route params.
-- **Commits**: `type(scope): description` — Conventional Commits. `commitlint` enforced.
+- **Commits**: `type(scope): description` — Conventional Commits (convention, no longer enforced by hook).
 
 ## Quick Start
 
