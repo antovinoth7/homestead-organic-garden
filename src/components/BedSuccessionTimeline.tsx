@@ -2,7 +2,8 @@ import React, { useMemo, useRef, useEffect } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useTheme } from '@/theme';
 import type { Bed, Plant, CropFamily } from '@/types/database.types';
-import { getGreenManureForMonth } from '@/config/beds';
+import { getGreenManureForMonth, getGuildTemplate } from '@/config/beds';
+import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { createStyles } from '@/styles/bedSuccessionTimelineStyles';
 
 const DAY_PX = 2;
@@ -44,45 +45,40 @@ const MONTH_STARTS: { label: string; doy: number }[] = [
   { label: 'Dec', doy: 335 },
 ];
 
-// Approximate harvest days for common bed plants
-const HARVEST_DAYS: Record<string, number> = {
-  Amaranth: 25,
-  Spinach: 30,
-  Lettuce: 35,
-  Fenugreek: 25,
-  Drumstick: 90,
-  Tomato: 75,
-  Brinjal: 80,
-  Okra: 60,
-  Marigold: 60,
-  Chilli: 90,
-  Ginger: 210,
-  Turmeric: 270,
-  'Curry Leaf': 90,
-  Cowpea: 60,
-  'French Beans': 60,
-  Carrot: 80,
-  Radish: 35,
-  'Bitter Gourd': 60,
-  'Snake Gourd': 65,
-  'Yardlong Beans': 70,
-  Banana: 270,
-  Cocoa: 180,
-  'Black Pepper': 180,
-  'Elephant Yam': 180,
-  'Taro / Colocasia': 180,
-  Maize: 90,
-  Beans: 60,
-  Pumpkin: 90,
-  Moringa: 90,
-  Tulsi: 60,
-  'Aloe Vera': 90,
-  Lemongrass: 90,
-  Basil: 45,
-  Garlic: 120,
-  Agathi: 60,
-  Comfrey: 60,
-};
+// Build a guild-template harvest-days index keyed by plant name.
+// Populated lazily the first time it's needed (avoids importing all 8 templates at module load).
+const GUILD_HARVEST_DAYS_CACHE = new Map<string, number>();
+let guildCacheBuilt = false;
+
+function buildGuildCacheIfNeeded(): void {
+  if (guildCacheBuilt) return;
+  guildCacheBuilt = true;
+  const BED_TYPES = [
+    'leafy', 'fruiting', 'spice', 'root_legume',
+    'climber_trellis', 'coconut_intercrop', 'three_sisters', 'medicinal_guild',
+  ] as const;
+  for (const t of BED_TYPES) {
+    for (const row of getGuildTemplate(t).plant_rows) {
+      if (row.days_to_harvest !== undefined && !GUILD_HARVEST_DAYS_CACHE.has(row.name)) {
+        GUILD_HARVEST_DAYS_CACHE.set(row.name, row.days_to_harvest);
+      }
+    }
+  }
+}
+
+function getDaysToHarvest(plant: Plant): number {
+  // 1. Plant care profile (170+ varieties, returns midpoint of min/max range)
+  const profile = getPlantCareProfile(plant.name, plant.plant_type ?? undefined);
+  const range = profile?.daysToHarvest;
+  if (range) return Math.round((range.min + range.max) / 2);
+
+  // 2. Guild template plant_rows (single integer, covers all 8 guilds)
+  buildGuildCacheIfNeeded();
+  const fromGuild = GUILD_HARVEST_DAYS_CACHE.get(plant.name);
+  if (fromGuild !== undefined) return fromGuild;
+
+  return 60; // generic fallback
+}
 
 const NEXT_CROP_AFTER: Partial<Record<CropFamily, string>> = {
   solanaceae: 'Legume — N-fixer restores soil after tomato/brinjal',
@@ -134,9 +130,12 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
 
   // Build one bar per unique plant species (earliest planting date wins)
   const plantBars = useMemo((): PlantBar[] => {
+    // Collect earliest planting date and a representative Plant per species
     const earliestDate = new Map<string, Date>();
+    const representativePlant = new Map<string, Plant>();
     for (const p of plants) {
       const d = parseDate(p.sow_date) ?? parseDate(p.planting_date);
+      if (!representativePlant.has(p.name)) representativePlant.set(p.name, p);
       if (!d) continue;
       const existing = earliestDate.get(p.name);
       if (!existing || d < existing) earliestDate.set(p.name, d);
@@ -147,7 +146,8 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
       .map((name) => {
         const plantDate = earliestDate.get(name) ?? fallback;
         const startDay = Math.min(dayOfYear(plantDate), 364);
-        const dth = HARVEST_DAYS[name] ?? 60;
+        const rep = representativePlant.get(name);
+        const dth = rep ? getDaysToHarvest(rep) : 60;
         const endDay = Math.min(startDay + dth, 365);
         return { name, startDay, endDay };
       })
