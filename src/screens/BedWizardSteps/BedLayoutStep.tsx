@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { BedLayerStack } from '@/components/BedLayerStack';
@@ -12,6 +12,32 @@ import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import type { BedLayer, BedType, EntryResolution, PlantEntry } from '@/types/database.types';
 import type { Step2Data, Step3Data, Step4Data } from '@/hooks/useBedCreationWizard';
+
+const FARMER_LAYER_LABEL: Record<BedLayer, string> = {
+  canopy: 'Shade Tree',
+  climber: 'Trellis',
+  understory: 'Main Crop',
+  root: 'Underground',
+  ground_cover: 'Border',
+};
+
+const LAYER_ACCENT_COLOR: Record<BedLayer, string> = {
+  canopy: '#2e7d32',
+  climber: '#7b1fa2',
+  understory: '#558b2f',
+  root: '#e65100',
+  ground_cover: '#c8842a',
+};
+
+const PLANT_EMOJI_LAYOUT: Record<string, string> = {
+  Amaranth: '🌿', Spinach: '🥬', Lettuce: '🥗', Fenugreek: '🌱', Tomato: '🍅',
+  Brinjal: '🍆', Okra: '🫛', Marigold: '🌼', Chilli: '🌶️', Ginger: '🫚',
+  Turmeric: '🟡', 'Curry Leaf': '🍃', Cowpea: '🫘', 'French Beans': '🫘',
+  Carrot: '🥕', Radish: '🌰', 'Bitter Gourd': '🥒', 'Snake Gourd': '🥒',
+  'Yardlong Beans': '🫘', Banana: '🍌', Maize: '🌽', Beans: '🫘', Pumpkin: '🎃',
+  Moringa: '🌳', Tulsi: '🌿', 'Aloe Vera': '🌵', Lemongrass: '🌾', Basil: '🌿',
+  Garlic: '🧄', 'Black Pepper': '⚫', 'Elephant Yam': '🥔',
+};
 
 const generateId = (): string =>
   `pe${Date.now().toString(36)}${Math.random().toString(36).slice(2, 9)}`;
@@ -149,8 +175,83 @@ export function BedLayoutStep({
     [step4.plant_entries, resolveEntryId]
   );
 
+  // Bed rows preview — visual dot data for each row.
+  const bedRowsPreview = useMemo(() => {
+    if (rowLayout.rows.length === 0) return [];
+    return rowLayout.rows.map((row) => {
+      const capped = row.plants.slice(0, 8);
+      const overflow = Math.max(0, row.plants.length - 8);
+      return {
+        rowIndex: row.rowIndex,
+        layer: row.layer,
+        dots: capped.map((p) => ({
+          name: p.name,
+          emoji: PLANT_EMOJI_LAYOUT[p.name] ?? '🌱',
+          isCompanion: p.isCompanion === true,
+        })),
+        overflow,
+      };
+    });
+  }, [rowLayout.rows]);
+
+  // Planting schedule grouped by succession_week from guild template.
+  const plantingSchedule = useMemo(() => {
+    if (!bedType || step4.plant_entries.length === 0) return [];
+    const template = getGuildTemplate(bedType);
+    const weekMap = new Map<number, string[]>();
+    const seen = new Set<string>();
+    for (const entry of step4.plant_entries) {
+      if (seen.has(entry.name)) continue;
+      seen.add(entry.name);
+      const row = template.plant_rows.find((r) => r.name === entry.name);
+      const week = row?.succession_week ?? 1;
+      const existing = weekMap.get(week) ?? [];
+      weekMap.set(week, [...existing, entry.name]);
+    }
+    return Array.from(weekMap.entries()).sort(([a], [b]) => a - b);
+  }, [bedType, step4.plant_entries]);
+
   return (
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
+      {/* ── Bed rows preview ─────────────────────────────────────────────── */}
+      {bedRowsPreview.length > 0 && (
+        <View style={styles.blRowPreviewCard}>
+          <View style={styles.blRowPreviewHeader}>
+            <Text style={styles.blRowPreviewTitle}>
+              📐 {step3.width_m.toFixed(1)}m × {step3.length_m.toFixed(1)}m bed plan
+            </Text>
+            <Text style={styles.blRowPreviewCompass}>↑ N</Text>
+          </View>
+          {bedRowsPreview.map((row) => (
+            <View key={row.rowIndex} style={styles.blRowPreviewRow}>
+              <View
+                style={[
+                  styles.blRowAccent,
+                  { backgroundColor: LAYER_ACCENT_COLOR[row.layer as BedLayer] },
+                ]}
+              />
+              <View style={styles.blRowDots}>
+                {row.dots.map((dot, i) => (
+                  <View
+                    key={i}
+                    style={[styles.blRowDot, dot.isCompanion && styles.blRowDotCompanion]}
+                  >
+                    <Text style={styles.blRowDotEmoji}>{dot.emoji}</Text>
+                  </View>
+                ))}
+                {row.overflow > 0 && (
+                  <Text style={styles.blRowOverflow}>+{row.overflow}</Text>
+                )}
+              </View>
+              <Text style={styles.blRowPreviewRowLayer}>
+                {FARMER_LAYER_LABEL[row.layer as BedLayer]}
+              </Text>
+            </View>
+          ))}
+          <Text style={styles.blRowPreviewSouth}>↓ S · 60cm walking path</Text>
+        </View>
+      )}
+
       <BedLayerStack
         result={rowLayout}
         entries={step4.plant_entries}
@@ -164,6 +265,23 @@ export function BedLayoutStep({
         <Ionicons name="add" size={18} color={theme.textInverse} />
         <Text style={styles.blAddFabText}>Add Plant</Text>
       </TouchableOpacity>
+
+      {/* ── Planting schedule ────────────────────────────────────────────── */}
+      {plantingSchedule.length > 0 && (
+        <View style={styles.blScheduleCard}>
+          <Text style={styles.blScheduleTitle}>PLANTING SCHEDULE</Text>
+          {plantingSchedule.map(([week, names]: [number, string[]]) => (
+            <View key={week} style={styles.blScheduleWeekRow}>
+              <Text style={styles.blScheduleWeekLabel}>
+                {week === 1 ? 'Week 1\n(Plant now)' : `Week ${week}`}
+              </Text>
+              <Text style={styles.blSchedulePlantNames}>
+                {names.map((n) => `${PLANT_EMOJI_LAYOUT[n] ?? '🌱'} ${n}`).join('  ·  ')}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <BedPlantPickerSheet
         visible={pickerVisible}

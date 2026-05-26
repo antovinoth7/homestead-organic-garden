@@ -5,6 +5,8 @@ import { Step2Data, Step3Data } from '@/hooks/useBedCreationWizard';
 import { BedType } from '@/types/database.types';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import { getSoilPrepSteps } from '@/config/beds/soilPrepEngine';
+import { BED_TYPE_LABEL } from '@/utils/bedNameGenerator';
+import { SOIL_LABELS } from '@/utils/plantLabels';
 
 const M_TO_FT = 3.28084;
 
@@ -23,50 +25,11 @@ interface Props {
   step2?: Step2Data;
 }
 
-const BED_TYPE_SHORT: Record<string, string> = {
-  leafy: 'Leafy',
-  fruiting: 'Fruiting',
-  spice: 'Spice',
-  root_legume: 'Root/Legume',
-  climber_trellis: 'Climber',
-  coconut_intercrop: 'Coconut',
-  three_sisters: 'Three Sisters',
-  medicinal_guild: 'Medicinal',
-};
-const SOIL_SHORT: Record<string, string> = {
-  garden_soil: 'Garden soil',
-  laterite: 'Laterite',
-  red_loam: 'Red loam',
-  black_cotton: 'Black cotton',
-  coastal_sandy: 'Sandy',
-  clay_loam: 'Clay',
-  sandy_loam: 'Sandy loam',
-};
 const SLOPE_SHORT: Record<string, string> = {
   flat: 'Flat',
   gentle: 'Gentle',
   moderate: 'Moderate',
   steep: 'Steep',
-};
-
-interface SizePreset {
-  label: string;
-  width_m: number;
-  length_m: number;
-  landHint: string;
-}
-
-const COMPACT_PRESET: SizePreset = {
-  label: 'Compact',
-  width_m: 1.0,
-  length_m: 3.0,
-  landHint: '5c land',
-};
-const EXTENDED_PRESET: SizePreset = {
-  label: 'Extended',
-  width_m: 1.2,
-  length_m: 5.0,
-  landHint: '25c+',
 };
 
 function CircleStepper({
@@ -149,8 +112,8 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
 
   const conditionTags = useMemo(() => {
     const tags: string[] = [];
-    if (bedType) tags.push(BED_TYPE_SHORT[bedType] ?? bedType);
-    if (step2?.soil_type) tags.push(SOIL_SHORT[step2.soil_type] ?? step2.soil_type);
+    if (bedType) tags.push(BED_TYPE_LABEL[bedType] ?? bedType);
+    if (step2?.soil_type) tags.push(SOIL_LABELS[step2.soil_type]);
     if (step2?.slope) tags.push(SLOPE_SHORT[step2.slope] ?? step2.slope);
     return tags;
   }, [bedType, step2]);
@@ -173,16 +136,7 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
     updateDimension('length_m', m);
   };
 
-  const applyPreset = (preset: SizePreset): void => {
-    onChange({
-      width_m: preset.width_m,
-      length_m: preset.length_m,
-      area_sqm: parseFloat((preset.width_m * preset.length_m).toFixed(2)),
-    });
-  };
-
-  const isPresetSelected = (preset: SizePreset): boolean =>
-    data.width_m === preset.width_m && data.length_m === preset.length_m;
+  const [prepExpanded, setPrepExpanded] = useState(false);
 
   const prepSteps = useMemo(() => {
     if (!step2) return [];
@@ -192,24 +146,11 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
       prev_crop_season: step2.prev_crop_season,
       pest_history: step2.pest_history,
       currentMonth: new Date().getMonth() + 1,
+      bed_type: bedType,
     });
-  }, [step2]);
+  }, [step2, bedType]);
 
   const rec = data.sizeRecommendation;
-
-  const sizePresets = useMemo(
-    (): SizePreset[] => [
-      COMPACT_PRESET,
-      {
-        label: 'Recommended',
-        width_m: rec?.width_m ?? 1.2,
-        length_m: rec?.length_m ?? 3.5,
-        landHint: '10–25c',
-      },
-      EXTENDED_PRESET,
-    ],
-    [rec]
-  );
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
@@ -260,35 +201,6 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
         </View>
       )}
 
-      {/* Size presets */}
-      <Text style={styles.szSectionLabelSpaced}>SIZE OPTIONS</Text>
-      <View style={styles.szPresetRow}>
-        {sizePresets.map((preset) => {
-          const selected = isPresetSelected(preset);
-          return (
-            <TouchableOpacity
-              key={preset.label}
-              style={[styles.szPresetChip, selected && styles.szPresetChipSelected]}
-              onPress={() => applyPreset(preset)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.szPresetChipSize, selected && styles.szPresetChipSizeSelected]}>
-                {useFeet
-                  ? `${toFt(preset.width_m)} × ${toFt(preset.length_m)} ft`
-                  : `${preset.width_m} × ${preset.length_m}m`}
-              </Text>
-              <Text style={[styles.szPresetChipName, selected && styles.szPresetChipNameSelected]}>
-                {preset.label}
-                {selected ? ' ✓' : ''}
-              </Text>
-              <Text style={[styles.szPresetChipHint, selected && styles.szPresetChipHintSelected]}>
-                {preset.landHint}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
       {/* Custom size controls */}
       <View style={styles.szCustomHeader}>
         <Text style={styles.szSectionLabel}>CUSTOM SIZE</Text>
@@ -335,21 +247,31 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
         onChange={handleLengthChange}
       />
 
-      {/* Before planting prep card */}
+      {/* Before planting prep card — collapsed by default */}
       {prepSteps.length > 0 && (
         <View style={styles.szPrepCard}>
-          <Text style={styles.szPrepCardTitle}>Before planting — prep for your conditions</Text>
-          {prepSteps.map((s, i) => (
-            <View key={i} style={styles.szPrepStepRow}>
-              <View style={styles.szPrepStepNumber}>
-                <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+          <TouchableOpacity
+            style={styles.szPrepToggleRow}
+            activeOpacity={0.7}
+            onPress={() => setPrepExpanded((v) => !v)}
+          >
+            <Text style={styles.szPrepCardTitle}>
+              🌱 Prep checklist · {prepSteps.length} steps
+            </Text>
+            <Text style={styles.szPrepChevron}>{prepExpanded ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {prepExpanded &&
+            prepSteps.map((s, i) => (
+              <View key={i} style={[styles.szPrepStepRow, i === 0 && styles.szPrepFirstStep]}>
+                <View style={styles.szPrepStepNumber}>
+                  <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+                </View>
+                <View style={styles.szPrepStepContent}>
+                  <Text style={styles.szPrepStepText}>{s.text}</Text>
+                  <Text style={styles.szPrepStepDetail}>{s.detail}</Text>
+                </View>
               </View>
-              <View style={styles.szPrepStepContent}>
-                <Text style={styles.szPrepStepText}>{s.text}</Text>
-                <Text style={styles.szPrepStepDetail}>{s.detail}</Text>
-              </View>
-            </View>
-          ))}
+            ))}
         </View>
       )}
     </ScrollView>

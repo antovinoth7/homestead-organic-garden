@@ -25,10 +25,10 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
     <ScrollView contentContainerStyle={styles.stepContainer}>
       <Text style={styles.stepTitle}>Review & Save</Text>
 
-      {s1?.name ? (
+      {s2?.name ? (
         <View style={styles.fieldGroup}>
           <Text style={styles.fieldLabel}>Bed name</Text>
-          <Text style={styles.summaryRow}>{s1.name}</Text>
+          <Text style={styles.summaryRow}>{s2.name}</Text>
         </View>
       ) : null}
 

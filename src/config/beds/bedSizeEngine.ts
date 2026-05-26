@@ -5,6 +5,7 @@ export interface BedSizeConditions {
   soil_type: SoilType;
   sunlight: SunlightLevel;
   waterlogging_risk?: boolean;
+  construction_type?: 'raised' | 'in_ground';
 }
 
 export interface BedSizeResult {
@@ -27,11 +28,10 @@ function shouldRaiseBed(conditions: BedSizeConditions): boolean {
 }
 
 export function getBedSizeRecommendation(conditions: BedSizeConditions): BedSizeResult {
-  const raised = shouldRaiseBed(conditions);
+  const raised = shouldRaiseBed(conditions) || conditions.construction_type === 'raised';
 
-  // Raised beds: narrower (max arm reach from both sides = 1.2 m)
-  // Ground beds: wider on flat terrain
-  let width_m = raised ? 1.2 : 1.5;
+  // Max 1.2 m width — reachable from both sides without stepping in
+  let width_m = 1.2;
   let length_m = 3.0;
 
   if (conditions.slope === 'steep') {
@@ -51,10 +51,14 @@ export function getBedSizeRecommendation(conditions: BedSizeConditions): BedSize
     parts.push('black cotton soil benefits from raised drainage');
   if (conditions.waterlogging_risk) parts.push('waterlogging risk — raise bed 30 cm');
 
+  const flatFallback =
+    conditions.construction_type === 'raised'
+      ? `Standard ${width_m} m × ${length_m} m raised bed.`
+      : `Standard ${width_m} m × ${length_m} m ground bed for flat terrain.`;
   const rationale =
     parts.length > 0
       ? parts.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join('. ') + '.'
-      : `Standard ${width_m} m × ${length_m} m ground bed for flat terrain.`;
+      : flatFallback;
 
   return { width_m, length_m, area_sqm, is_raised_bed: raised, rationale };
 }

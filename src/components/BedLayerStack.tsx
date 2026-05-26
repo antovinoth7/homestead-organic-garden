@@ -14,36 +14,36 @@ const LAYER_META: Record<
 > = {
   canopy: {
     icon: '🌳',
-    title: 'Canopy',
-    subtitle: 'Tallest trees — shade & vertical structure',
+    title: 'Tall / Shade Trees',
+    subtitle: 'Largest plants — provide shade and vertical support',
     border: '#2e7d32',
     bg: '#f1f8f1',
   },
   climber: {
     icon: '🌿',
-    title: 'Climber',
-    subtitle: 'Vines on trellis or canopy support',
+    title: 'Trellis Crops',
+    subtitle: 'Vines growing up a trellis or support frame',
     border: '#7b1fa2',
     bg: '#f5f0fa',
   },
   understory: {
     icon: '🌱',
-    title: 'Understory',
-    subtitle: 'Main crops at mid height',
+    title: 'Main Crops',
+    subtitle: 'Primary income crops at mid height',
     border: '#558b2f',
     bg: '#f4f8ee',
   },
   root: {
     icon: '🥕',
-    title: 'Root',
-    subtitle: 'Below-ground crops',
+    title: 'Underground Crops',
+    subtitle: 'Root and tuber crops grown below ground',
     border: '#e65100',
     bg: '#fff8f0',
   },
   ground_cover: {
     icon: '🌸',
-    title: 'Ground Cover',
-    subtitle: 'Living mulch and pollinator companions',
+    title: 'Border & Mulch Plants',
+    subtitle: 'Companion plants at bed edges — suppress weeds and pests',
     border: '#c8842a',
     bg: '#fdf5e8',
   },
@@ -100,10 +100,10 @@ interface Props {
 
 function resolutionLabel(res: EntryResolution | undefined): { text: string; resolved: boolean } {
   const kind = res?.kind ?? 'placeholder';
-  if (kind === 'placeholder') return { text: 'TEMPLATE · TAP TO RESOLVE', resolved: false };
-  if (kind === 'link') return { text: 'LINKED', resolved: true };
+  if (kind === 'placeholder') return { text: 'Tap to link / add to My Plants', resolved: false };
+  if (kind === 'link') return { text: '✓ Linked to plant', resolved: true };
   const variety = res?.kind === 'create' ? res.variety : undefined;
-  return { text: variety ? `NEW · ${variety.toUpperCase()}` : 'NEW PLANT', resolved: true };
+  return { text: variety ? `✓ New: ${variety}` : '✓ New plant', resolved: true };
 }
 
 export function BedLayerStack({
@@ -191,14 +191,21 @@ export function BedLayerStack({
       <View style={styles.capacityStrip}>
         <Text style={styles.capacityChip}>{result.rowsNeeded} rows used</Text>
         {result.totalRowsFit > 0 && (
-          <Text style={styles.capacityChip}>+{result.totalRowsFit} rows could fit</Text>
+          <Text style={styles.capacityChip}>+{result.totalRowsFit} more rows fit</Text>
         )}
         {overflowing && (
           <Text style={[styles.capacityChip, styles.capacityOverflow]}>
-            Overflow {Math.round(result.overflowCm)}cm
+            ⚠ Too short by {Math.round(result.overflowCm)}cm
           </Text>
         )}
       </View>
+      {overflowing && (
+        <View style={styles.overflowActionRow}>
+          <Text style={styles.overflowActionText}>
+            Remove one crop row, or go back to Step 3 to increase bed length.
+          </Text>
+        </View>
+      )}
 
       {LAYER_ORDER.map((layer) => {
         const meta = LAYER_META[layer];

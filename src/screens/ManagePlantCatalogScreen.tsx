@@ -2,7 +2,7 @@ import React, { useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
@@ -12,7 +12,6 @@ import { PlantCatalogList } from '@/components/PlantCatalogList';
 import { usePlantCatalogManager } from '@/hooks/usePlantCatalogManager';
 
 export default function ManagePlantCatalogScreen(): React.JSX.Element {
-  const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const moreNav = useNavigation<NativeStackNavigationProp<MoreStackParamList>>();
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -43,7 +42,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => moreNav.goBack()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
         </TouchableOpacity>
         <Text style={styles.title}>Manage Plant Catalog</Text>
@@ -72,7 +71,6 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
             <View style={styles.section}>
               <PlantCatalogList
                 plantNames={categoryData.plantNames}
-                activeCategory={activeCategory}
                 counts={categoryData.counts}
                 onPlantPress={onPlantPress}
               />
