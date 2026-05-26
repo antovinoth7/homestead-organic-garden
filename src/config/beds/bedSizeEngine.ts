@@ -29,9 +29,8 @@ function shouldRaiseBed(conditions: BedSizeConditions): boolean {
 export function getBedSizeRecommendation(conditions: BedSizeConditions): BedSizeResult {
   const raised = shouldRaiseBed(conditions);
 
-  // Raised beds: narrower (max arm reach from both sides = 1.2 m)
-  // Ground beds: wider on flat terrain
-  let width_m = raised ? 1.2 : 1.5;
+  // Max 1.2 m width — reachable from both sides without stepping in
+  let width_m = 1.2;
   let length_m = 3.0;
 
   if (conditions.slope === 'steep') {
