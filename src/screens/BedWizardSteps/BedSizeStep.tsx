@@ -49,26 +49,6 @@ const SLOPE_SHORT: Record<string, string> = {
   steep: 'Steep',
 };
 
-interface SizePreset {
-  label: string;
-  width_m: number;
-  length_m: number;
-  landHint: string;
-}
-
-const COMPACT_PRESET: SizePreset = {
-  label: 'Compact',
-  width_m: 1.0,
-  length_m: 3.0,
-  landHint: '5c land',
-};
-const EXTENDED_PRESET: SizePreset = {
-  label: 'Extended',
-  width_m: 1.2,
-  length_m: 5.0,
-  landHint: '25c+',
-};
-
 function CircleStepper({
   label,
   value,
@@ -173,17 +153,6 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
     updateDimension('length_m', m);
   };
 
-  const applyPreset = (preset: SizePreset): void => {
-    onChange({
-      width_m: preset.width_m,
-      length_m: preset.length_m,
-      area_sqm: parseFloat((preset.width_m * preset.length_m).toFixed(2)),
-    });
-  };
-
-  const isPresetSelected = (preset: SizePreset): boolean =>
-    data.width_m === preset.width_m && data.length_m === preset.length_m;
-
   const prepSteps = useMemo(() => {
     if (!step2) return [];
     return getSoilPrepSteps({
@@ -196,20 +165,6 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
   }, [step2]);
 
   const rec = data.sizeRecommendation;
-
-  const sizePresets = useMemo(
-    (): SizePreset[] => [
-      COMPACT_PRESET,
-      {
-        label: 'Recommended',
-        width_m: rec?.width_m ?? 1.2,
-        length_m: rec?.length_m ?? 3.5,
-        landHint: '10–25c',
-      },
-      EXTENDED_PRESET,
-    ],
-    [rec]
-  );
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
@@ -259,35 +214,6 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
           </View>
         </View>
       )}
-
-      {/* Size presets */}
-      <Text style={styles.szSectionLabelSpaced}>SIZE OPTIONS</Text>
-      <View style={styles.szPresetRow}>
-        {sizePresets.map((preset) => {
-          const selected = isPresetSelected(preset);
-          return (
-            <TouchableOpacity
-              key={preset.label}
-              style={[styles.szPresetChip, selected && styles.szPresetChipSelected]}
-              onPress={() => applyPreset(preset)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.szPresetChipSize, selected && styles.szPresetChipSizeSelected]}>
-                {useFeet
-                  ? `${toFt(preset.width_m)} × ${toFt(preset.length_m)} ft`
-                  : `${preset.width_m} × ${preset.length_m}m`}
-              </Text>
-              <Text style={[styles.szPresetChipName, selected && styles.szPresetChipNameSelected]}>
-                {preset.label}
-                {selected ? ' ✓' : ''}
-              </Text>
-              <Text style={[styles.szPresetChipHint, selected && styles.szPresetChipHintSelected]}>
-                {preset.landHint}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
 
       {/* Custom size controls */}
       <View style={styles.szCustomHeader}>

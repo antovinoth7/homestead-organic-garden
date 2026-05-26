@@ -109,11 +109,6 @@ export function LandConditionsStep({
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Land Conditions</Text>
-      <Text style={styles.stepSubtitle}>
-        Tell us about this spot so we can size and plan the bed correctly.
-      </Text>
-
       {/* Bed name */}
       <View style={styles.fieldGroup}>
         <Text style={styles.fieldLabel}>Bed name *</Text>
