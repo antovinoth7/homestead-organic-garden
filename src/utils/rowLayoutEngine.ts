@@ -43,6 +43,7 @@ export interface RowPlantInput {
   name: string;
   layer: BedLayer;
   spacingCm: number;
+  rowGapCm?: number; // N-S between-row clearance from template; falls back to spacingCm × multiplier
   cropFamily?: CropFamily | null;
   daysToHarvest?: number;
   benefitTag?: string;
@@ -72,12 +73,35 @@ export interface BedRow {
   interplantedCount: number; // companions woven between mains in this row
   rowSpacingCm: number; // N-S clearance this row needs from neighbors
   isStaggered: boolean;
+  northEdgeCm: number; // distance from bed's north edge to this row's centreline
+  eastPositionsCm: number[]; // E-W distances from bed's west edge to each plant centre
+}
+
+/** Layers expected per bed type (used to hide empty layer sections in Step 5). */
+export const EXPECTED_LAYERS_BY_BED: Record<BedType, BedLayer[]> = {
+  leafy: ['understory', 'ground_cover'],
+  fruiting: ['climber', 'understory', 'ground_cover'],
+  spice: ['understory', 'root'],
+  root_legume: ['understory', 'root'],
+  climber_trellis: ['climber', 'ground_cover'],
+  coconut_intercrop: ['climber', 'understory', 'root'],
+  three_sisters: ['canopy', 'climber', 'ground_cover'],
+  medicinal_guild: ['canopy', 'understory', 'ground_cover'],
+};
+
+/**
+ * Returns the layers to show in Step 5 for a given bed type.
+ * Always includes layers that have plants; adds architecturally expected empty layers too.
+ */
+export function getVisibleLayers(bedType: BedType, plantedLayers: Set<BedLayer>): BedLayer[] {
+  const expected = new Set([...(EXPECTED_LAYERS_BY_BED[bedType] ?? []), ...plantedLayers]);
+  return LAYER_ORDER.filter((l) => expected.has(l));
 }
 
 /**
  * Returns how many more of `candidate` can be added on top of `currentPlants` while
- * the bed still satisfies `fitsInBed`. Linear probe — caps at `cap` to prevent
- * runaway loops on huge beds where the species never overflows.
+ * the bed still satisfies `fitsInBed`. Uses a formula-based cap derived from bed geometry
+ * so small-spacing crops (Carrot, Radish) are never capped at an arbitrary number.
  */
 export function maxFitForSpecies(
   candidate: RowPlantInput,
@@ -85,9 +109,21 @@ export function maxFitForSpecies(
   widthM: number,
   lengthM: number,
   bedType: BedType = 'leafy',
-  constructionType?: 'raised' | 'in_ground',
-  cap = 50
+  constructionType?: 'raised' | 'in_ground'
 ): number {
+  const bedWidthCm = Math.round(widthM * 100);
+  const bedLengthCm = Math.round(lengthM * 100);
+  const category: BedCategory =
+    bedType === 'coconut_intercrop' ? 'food_forest' : constructionType ?? 'raised';
+  const rowMultiplier = ROW_MULTIPLIER_BY_CATEGORY[category];
+  const minRowGap = MIN_ROW_GAP_BY_CATEGORY[category];
+
+  const ppr = computePlantsPerRow(bedWidthCm, candidate.spacingCm);
+  const gapCm = candidate.rowGapCm ?? candidate.spacingCm * rowMultiplier;
+  const effectiveGap = Math.max(gapCm, minRowGap);
+  const maxRowsCap = Math.max(1, Math.floor(bedLengthCm / effectiveGap));
+  const cap = Math.max(ppr * maxRowsCap, 1);
+
   for (let n = 1; n <= cap; n++) {
     const additions: RowPlantInput[] = Array.from({ length: n }, (_, i) => ({
       ...candidate,
@@ -123,6 +159,43 @@ export function getRecommendedFirstAdd(
     constructionType
   );
   return Math.max(0, Math.min(perRow, maxFit));
+}
+
+/**
+ * Returns { plantsPerRow, rowCount, total } for a species in a given bed.
+ * Used by Step 4 to show "N rows × M = total" in the capacity display.
+ */
+export function computePlantMatrix(
+  candidate: RowPlantInput,
+  currentPlants: RowPlantInput[],
+  widthM: number,
+  lengthM: number,
+  bedType: BedType = 'leafy',
+  constructionType?: 'raised' | 'in_ground'
+): { plantsPerRow: number; rowCount: number; total: number } {
+  const bedWidthCm = Math.round(widthM * 100);
+  const bedLengthCm = Math.round(lengthM * 100);
+  const category: BedCategory =
+    bedType === 'coconut_intercrop' ? 'food_forest' : constructionType ?? 'raised';
+  const rowMultiplier = ROW_MULTIPLIER_BY_CATEGORY[category];
+  const minRowGap = MIN_ROW_GAP_BY_CATEGORY[category];
+
+  const plantsPerRow = computePlantsPerRow(bedWidthCm, candidate.spacingCm);
+  const gapCm = candidate.rowGapCm ?? candidate.spacingCm * rowMultiplier;
+  const effectiveGap = Math.max(gapCm, minRowGap);
+  const edgeBuf = computeEdgeBuffer(effectiveGap);
+
+  // Rows available for this species only (ignores other species already in bed for display)
+  const rowCount = Math.max(
+    1,
+    Math.floor((bedLengthCm - 2 * edgeBuf) / effectiveGap) + 1
+  );
+
+  // Cap by actual remaining capacity
+  const maxFit = maxFitForSpecies(candidate, currentPlants, widthM, lengthM, bedType, constructionType);
+  const total = Math.min(plantsPerRow * rowCount, maxFit);
+
+  return { plantsPerRow, rowCount: Math.ceil(total / plantsPerRow), total };
 }
 
 /**
@@ -210,6 +283,7 @@ export function computePlantsPerRow(bedWidthCm: number, spacingCm: number): numb
 /**
  * Auto-assigns plants to N→S rows by BedLayer using bed-type-aware row spacing,
  * center-to-center column math, and companion interplanting.
+ * Each BedRow includes exact northEdgeCm and eastPositionsCm for peg-out marking.
  */
 export function computeRowLayout(
   plants: RowPlantInput[],
@@ -274,11 +348,21 @@ export function computeRowLayout(
       const interleaved = [...mainChunk, ...interleavedCompanions];
 
       const maxChunkSpacing = Math.max(...interleaved.map((p) => p.spacingCm));
-      const rowSpacingCm = Math.max(Math.round(maxChunkSpacing * rowMultiplier), minRowGap);
+      // Prefer explicit row_gap_cm from template; fall back to spacing × category multiplier
+      const maxChunkRowGap = Math.max(...interleaved.map((p) => p.rowGapCm ?? p.spacingCm * rowMultiplier));
+      const rowSpacingCm = Math.max(Math.round(maxChunkRowGap), minRowGap);
 
       const baseLabel = LAYER_BASE_LABELS[layer];
       const suffix = totalChunks > 1 ? ` ${ROW_SUFFIX[chunkIndex] ?? String(chunkIndex + 1)}` : '';
       const layerLabel = `${baseLabel}${suffix}`;
+
+      // Compute E-W plant positions from the west edge
+      const anchorSp = maxChunkSpacing;
+      const eBufEW = computeEdgeBuffer(anchorSp);
+      const eastPositionsCm = Array.from(
+        { length: plantsPerRow },
+        (_, k) => eBufEW + k * anchorSp
+      );
 
       rows.push({
         rowIndex,
@@ -302,6 +386,8 @@ export function computeRowLayout(
         interplantedCount: interplanted,
         rowSpacingCm,
         isStaggered: chunkIndex > 0,
+        northEdgeCm: 0, // filled in second pass below
+        eastPositionsCm,
       });
 
       rowIndex++;
@@ -315,10 +401,17 @@ export function computeRowLayout(
       const chunk = companionPool.splice(0, compPerRow);
 
       const maxChunkSpacing = Math.max(...chunk.map((p) => p.spacingCm));
-      const rowSpacingCm = Math.max(Math.round(maxChunkSpacing * rowMultiplier), minRowGap);
+      const maxChunkRowGap = Math.max(...chunk.map((p) => p.rowGapCm ?? p.spacingCm * rowMultiplier));
+      const rowSpacingCm = Math.max(Math.round(maxChunkRowGap), minRowGap);
 
       const baseLabel = LAYER_BASE_LABELS[layer];
       const suffix = ` ${ROW_SUFFIX[chunkIndex] ?? String(chunkIndex + 1)}`;
+
+      const eBufEW = computeEdgeBuffer(maxChunkSpacing);
+      const eastPositionsCm = Array.from(
+        { length: compPerRow },
+        (_, k) => eBufEW + k * compAnchor
+      );
 
       rows.push({
         rowIndex,
@@ -342,6 +435,8 @@ export function computeRowLayout(
         interplantedCount: 0,
         rowSpacingCm,
         isStaggered: true,
+        northEdgeCm: 0, // filled in second pass below
+        eastPositionsCm,
       });
 
       rowIndex++;
@@ -366,6 +461,15 @@ export function computeRowLayout(
   const spareLengthCm = Math.max(0, bedLengthCm - usedLengthCm);
   const effectiveRowGap = maxRowSpacing > 0 ? maxRowSpacing : minRowGap;
   const totalRowsFit = spareLengthCm > 0 ? Math.floor(spareLengthCm / effectiveRowGap) : 0;
+
+  // Second pass: assign northEdgeCm to each row (distance from N edge to row centreline)
+  let northOffset = edgeBufferCm;
+  for (let i = 0; i < rows.length; i++) {
+    rows[i]!.northEdgeCm = northOffset;
+    if (i < rows.length - 1) {
+      northOffset += Math.max(rows[i]!.rowSpacingCm, rows[i + 1]!.rowSpacingCm);
+    }
+  }
 
   // Companion validation — all pairs across the whole bed
   const allNames = plants.map((p) => p.name);

@@ -1171,6 +1171,34 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700' as const,
       letterSpacing: 0.5,
     },
+    blRowPositionInfo: {
+      flex: 1,
+      justifyContent: 'center' as const,
+    },
+    blRowPositionText: {
+      fontSize: 10,
+      color: theme.textTertiary,
+      marginTop: 2,
+    },
+    blTrellisCard: {
+      backgroundColor: theme.warningLight,
+      borderRadius: 10,
+      padding: 12,
+      marginTop: 10,
+      borderWidth: 1,
+      borderColor: theme.warning,
+    },
+    blTrellisText: {
+      fontSize: 13,
+      color: theme.text,
+      lineHeight: 19,
+    },
+    // Step 4 — collapsible section headers
+    gtCollapsibleHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+    },
     // Layout step — planting schedule
     blScheduleCard: {
       backgroundColor: theme.backgroundSecondary,

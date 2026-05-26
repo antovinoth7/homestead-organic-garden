@@ -92,6 +92,7 @@ const PLANT_EMOJI: Record<string, string> = {
 interface Props {
   result: RowLayoutResult;
   entries: PlantEntry[];
+  visibleLayers?: BedLayer[]; // when provided, only these layers render (empty or not)
   onAddToLayer: (layer: BedLayer) => void;
   onRemovePlant: (entryId: string) => void;
   onResolveEntry: (entryId: string) => void;
@@ -109,6 +110,7 @@ function resolutionLabel(res: EntryResolution | undefined): { text: string; reso
 export function BedLayerStack({
   result,
   entries,
+  visibleLayers,
   onAddToLayer,
   onRemovePlant,
   onResolveEntry,
@@ -207,7 +209,7 @@ export function BedLayerStack({
         </View>
       )}
 
-      {LAYER_ORDER.map((layer) => {
+      {(visibleLayers ?? LAYER_ORDER).map((layer) => {
         const meta = LAYER_META[layer];
         const layerEntries = entriesByLayer.get(layer) ?? [];
         if (layerEntries.length === 0) {
