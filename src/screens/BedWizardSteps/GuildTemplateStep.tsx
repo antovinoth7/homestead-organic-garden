@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
@@ -200,6 +200,15 @@ export function GuildTemplateStep({
 
   const template = bedType ? getGuildTemplate(bedType) : null;
 
+  const [autoAddedMsg, setAutoAddedMsg] = useState<string | null>(null);
+
+  // Auto-dismiss the companion notification after 4 seconds
+  useEffect(() => {
+    if (autoAddedMsg === null) return;
+    const timer = setTimeout(() => setAutoAddedMsg(null), 4000);
+    return () => clearTimeout(timer);
+  }, [autoAddedMsg]);
+
   const plantRowNames = useMemo(
     () => new Set(template?.plant_rows.map((r) => r.name) ?? []),
     [template]
@@ -335,6 +344,7 @@ export function GuildTemplateStep({
 
   const incrementPlant = useCallback(
     (candidate: RowPlantInput, companionsToAutoAdd?: string[]): void => {
+      setAutoAddedMsg(null);
       // Antagonist check vs any *different* species already in the bed
       for (const entry of data.plant_entries) {
         if (entry.name === candidate.name) continue;
@@ -360,7 +370,8 @@ export function GuildTemplateStep({
         makeEntry(candidate.name, candidate.layer, candidate.spacingCm),
       ];
 
-      // On first add of a main crop, silently add recommended companion plants that fit
+      // On first add of a main crop, auto-add recommended companions that fit
+      const addedCompanions: string[] = [];
       if (instanceCount === 0 && companionsToAutoAdd && companionsToAutoAdd.length > 0) {
         for (const compName of companionsToAutoAdd) {
           if (newEntries.some((e) => e.name === compName)) continue;
@@ -382,10 +393,17 @@ export function GuildTemplateStep({
           );
           if (!fitResult.fitsInBed) continue;
           newEntries.push(makeEntry(compName, COMPANION_DEFAULT_LAYER, COMPANION_DEFAULT_SPACING));
+          addedCompanions.push(compName);
         }
       }
 
       onChange({ plant_entries: newEntries });
+      if (addedCompanions.length > 0) {
+        const label = addedCompanions.length === 1 ? 'companion' : 'companions';
+        setAutoAddedMsg(
+          `Also added to your bed: ${addedCompanions.join(', ')} (${label})`
+        );
+      }
     },
     [
       data.plant_entries,
@@ -397,11 +415,13 @@ export function GuildTemplateStep({
       maxFitMap,
       candidateForCompanion,
       onChange,
+      setAutoAddedMsg,
     ]
   );
 
   const decrementPlant = useCallback(
     (plantName: string): void => {
+      setAutoAddedMsg(null);
       const lastIdx = (() => {
         for (let i = data.plant_entries.length - 1; i >= 0; i--) {
           if (data.plant_entries[i]!.name === plantName) return i;
@@ -431,6 +451,7 @@ export function GuildTemplateStep({
   // One-tap: add all template plants at their recommended counts.
   const handleUseFullPlan = useCallback(() => {
     if (!template) return;
+    setAutoAddedMsg(null);
     let accEntries: PlantEntry[] = [];
     for (const row of template.plant_rows) {
       let blocked = false;
@@ -485,14 +506,26 @@ export function GuildTemplateStep({
       <View style={styles.gtTemplateBanner}>
         <Ionicons name="information-circle-outline" size={18} color={theme.infoDark} />
         <Text style={styles.gtTemplateBannerText}>
-          Tap + to add each crop. All selected crops are planted when you save this bed. Set
-          variety in the Arrange step.
+          Tap + to add each crop. All selected crops are planted when you save this bed. Link
+          each to a seed variety in the Arrange step.
         </Text>
       </View>
 
+      {autoAddedMsg !== null && (
+        <View style={styles.gtAutoAddedBanner}>
+          <Text style={styles.gtAutoAddedBannerText}>✓ {autoAddedMsg}</Text>
+          <TouchableOpacity
+            onPress={() => setAutoAddedMsg(null)}
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          >
+            <Text style={styles.gtAutoAddedBannerDismiss}>×</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <TouchableOpacity style={styles.gtUseFullPlanBtn} onPress={handleUseFullPlan} activeOpacity={0.8}>
         <Text style={styles.gtUseFullPlanBtnText}>
-          📋 Add all recommended crops at once
+          📋 Plant all suggested crops for this bed
         </Text>
         <View style={styles.gtUseFullPlanQuickBadge}>
           <Text style={styles.gtUseFullPlanQuickBadgeText}>Quick Start</Text>

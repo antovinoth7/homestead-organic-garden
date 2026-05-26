@@ -21,6 +21,14 @@ const FARMER_LAYER_LABEL: Record<BedLayer, string> = {
   ground_cover: 'Border',
 };
 
+const LAYER_ACCENT_COLOR: Record<BedLayer, string> = {
+  canopy: '#2e7d32',
+  climber: '#7b1fa2',
+  understory: '#558b2f',
+  root: '#e65100',
+  ground_cover: '#c8842a',
+};
+
 const PLANT_EMOJI_LAYOUT: Record<string, string> = {
   Amaranth: '🌿', Spinach: '🥬', Lettuce: '🥗', Fenugreek: '🌱', Tomato: '🍅',
   Brinjal: '🍆', Okra: '🫛', Marigold: '🌼', Chilli: '🌶️', Ginger: '🫚',
@@ -167,16 +175,22 @@ export function BedLayoutStep({
     [step4.plant_entries, resolveEntryId]
   );
 
-  // Bed rows preview data from the row layout engine.
+  // Bed rows preview — visual dot data for each row.
   const bedRowsPreview = useMemo(() => {
     if (rowLayout.rows.length === 0) return [];
     return rowLayout.rows.map((row) => {
-      const mainPlant = row.plants[0];
-      const emoji = mainPlant ? (PLANT_EMOJI_LAYOUT[mainPlant.name] ?? '🌱') : '🌱';
-      const plantText = mainPlant
-        ? `${emoji} ${mainPlant.name} ×${row.plantsPerRow}`
-        : '—';
-      return { rowIndex: row.rowIndex, plantText, layer: row.layer };
+      const capped = row.plants.slice(0, 8);
+      const overflow = Math.max(0, row.plants.length - 8);
+      return {
+        rowIndex: row.rowIndex,
+        layer: row.layer,
+        dots: capped.map((p) => ({
+          name: p.name,
+          emoji: PLANT_EMOJI_LAYOUT[p.name] ?? '🌱',
+          isCompanion: p.isCompanion === true,
+        })),
+        overflow,
+      };
     });
   }, [rowLayout.rows]);
 
@@ -204,18 +218,37 @@ export function BedLayoutStep({
         <View style={styles.blRowPreviewCard}>
           <View style={styles.blRowPreviewHeader}>
             <Text style={styles.blRowPreviewTitle}>
-              📐 Bed Rows: {step3.width_m.toFixed(1)}m × {step3.length_m.toFixed(1)}m
+              📐 {step3.width_m.toFixed(1)}m × {step3.length_m.toFixed(1)}m bed plan
             </Text>
-            <Text style={styles.blRowPreviewCompass}>↑ NORTH</Text>
+            <Text style={styles.blRowPreviewCompass}>↑ N</Text>
           </View>
           {bedRowsPreview.map((row) => (
             <View key={row.rowIndex} style={styles.blRowPreviewRow}>
-              <Text style={styles.blRowPreviewRowNum}>Row {row.rowIndex + 1}</Text>
-              <Text style={styles.blRowPreviewRowPlants} numberOfLines={1}>{row.plantText}</Text>
-              <Text style={styles.blRowPreviewRowLayer}>{FARMER_LAYER_LABEL[row.layer as BedLayer]}</Text>
+              <View
+                style={[
+                  styles.blRowAccent,
+                  { backgroundColor: LAYER_ACCENT_COLOR[row.layer as BedLayer] },
+                ]}
+              />
+              <View style={styles.blRowDots}>
+                {row.dots.map((dot, i) => (
+                  <View
+                    key={i}
+                    style={[styles.blRowDot, dot.isCompanion && styles.blRowDotCompanion]}
+                  >
+                    <Text style={styles.blRowDotEmoji}>{dot.emoji}</Text>
+                  </View>
+                ))}
+                {row.overflow > 0 && (
+                  <Text style={styles.blRowOverflow}>+{row.overflow}</Text>
+                )}
+              </View>
+              <Text style={styles.blRowPreviewRowLayer}>
+                {FARMER_LAYER_LABEL[row.layer as BedLayer]}
+              </Text>
             </View>
           ))}
-          <Text style={styles.blRowPreviewSouth}>↓ SOUTH — walking path 60cm</Text>
+          <Text style={styles.blRowPreviewSouth}>↓ S · 60cm walking path</Text>
         </View>
       )}
 

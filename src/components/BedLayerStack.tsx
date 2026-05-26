@@ -100,7 +100,7 @@ interface Props {
 
 function resolutionLabel(res: EntryResolution | undefined): { text: string; resolved: boolean } {
   const kind = res?.kind ?? 'placeholder';
-  if (kind === 'placeholder') return { text: 'Tap to set variety', resolved: false };
+  if (kind === 'placeholder') return { text: 'Tap to link / add to My Plants', resolved: false };
   if (kind === 'link') return { text: '✓ Linked to plant', resolved: true };
   const variety = res?.kind === 'create' ? res.variety : undefined;
   return { text: variety ? `✓ New: ${variety}` : '✓ New plant', resolved: true };
