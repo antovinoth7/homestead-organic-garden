@@ -21,7 +21,7 @@ export function buildGeneratedBedNameBase(
   if (!parent || !typeLabel) return '';
   const child = childLocation?.trim();
   const locPart = child ? `${parent} ${child}` : parent;
-  return `${locPart} ${typeLabel} Bed`;
+  return `${typeLabel} Bed ${locPart} `;
 }
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
