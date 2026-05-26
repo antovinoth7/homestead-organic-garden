@@ -253,6 +253,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
         soil_type: merged.soil_type,
         sunlight: merged.sunlight,
         waterlogging_risk: merged.waterlogging_risk,
+        construction_type: merged.construction_type,
       });
       const updated3: Step3Data = {
         ...(prev[3] ?? DEFAULT_STEP3),
@@ -276,6 +277,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
         soil_type: merged2.soil_type,
         sunlight: recommended,
         waterlogging_risk: merged2.waterlogging_risk,
+        construction_type: merged2.construction_type,
       });
       const updated3: Step3Data = {
         ...(prev[3] ?? DEFAULT_STEP3),

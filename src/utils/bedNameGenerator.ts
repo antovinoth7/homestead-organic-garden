@@ -1,6 +1,6 @@
 import type { BedType } from '@/types/database.types';
 
-const BED_TYPE_LABEL: Partial<Record<BedType, string>> = {
+export const BED_TYPE_LABEL: Partial<Record<BedType, string>> = {
   leafy: 'Leafy',
   fruiting: 'Veggie',
   spice: 'Spice',
