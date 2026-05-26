@@ -1,4 +1,4 @@
-import type { SoilType, CropFamily, PestHistoryItem } from '@/types/database.types';
+import type { SoilType, CropFamily, PestHistoryItem, BedType } from '@/types/database.types';
 import { getGreenManureForMonth } from './greenManureEngine';
 
 export interface PrepStep {
@@ -13,11 +13,11 @@ export interface SoilPrepParams {
   prev_crop_season: string | null;
   pest_history: PestHistoryItem[];
   currentMonth: number;
+  bed_type?: BedType | null;
 }
 
-// Soil-type specific amendment steps (numbers 1–3)
 const SOIL_BASE_STEPS: Partial<Record<SoilType, { text: string; detail: string }[]>> = {
-  laterite: [
+  red_laterite: [
     { text: 'Dig 45cm once', detail: 'Break laterite hardpan. Never dig again after this.' },
     {
       text: 'Coir pith compost 4kg/sqm',
@@ -25,12 +25,18 @@ const SOIL_BASE_STEPS: Partial<Record<SoilType, { text: string; detail: string }
     },
     { text: 'Lasagne layers', detail: 'Dry leaves 5cm → compost 10cm → topsoil mix.' },
   ],
-  red_loam: [
-    { text: 'Loosen top 30cm', detail: 'Red loam is workable — no hardpan digging needed.' },
-    { text: 'Compost 2kg/sqm', detail: 'Adds organic matter and improves drainage balance.' },
+  alluvial: [
     {
-      text: 'Mulch 5cm before planting',
-      detail: 'Prevents moisture loss in warm Tamil Nadu summers.',
+      text: 'Fork top 20cm',
+      detail: 'Alluvial soil is already loose — light pass is enough, no deep breaking needed.',
+    },
+    {
+      text: 'Compost 1kg/sqm',
+      detail: 'Alluvial is naturally fertile; light organic top-up maintains soil biology.',
+    },
+    {
+      text: 'Level and water 2 days before planting',
+      detail: 'Settles the bed and activates soil microbes.',
     },
   ],
   garden_soil: [
@@ -63,22 +69,22 @@ const SOIL_BASE_STEPS: Partial<Record<SoilType, { text: string; detail: string }
     },
     { text: 'Lasagne layers', detail: 'Dry leaves 5cm → compost 10cm → topsoil mix.' },
   ],
-  clay_loam: [
-    { text: 'Break surface crust first', detail: 'Dry clay crust prevents water penetration.' },
-    { text: 'Compost + coarse sand 3kg/sqm', detail: 'Improves drainage and root penetration.' },
-    { text: 'Avoid walking on bed after rain', detail: 'Clay compacts easily when wet.' },
-  ],
-  sandy_loam: [
-    { text: 'Fork top 25cm', detail: 'Sandy loam is easy to work — light loosening is enough.' },
-    { text: 'Compost 2kg/sqm', detail: 'Maintains organic matter for healthy soil biology.' },
+  coco_peat: [
     {
-      text: 'Level and water 2 days before planting',
-      detail: 'Settles the bed and activates soil microbes.',
+      text: 'No digging needed',
+      detail: 'Coco peat is already loose — just top-dress and prepare the surface.',
+    },
+    {
+      text: 'Top-dress 2cm compost + 50g neem cake/sqm',
+      detail: 'Adds nutrients and suppresses soil pests in the growing medium.',
+    },
+    {
+      text: 'Wet thoroughly 2 days before planting',
+      detail: 'Coco peat must be fully saturated before transplanting or sowing.',
     },
   ],
 };
 
-// Rest period text by previous crop family
 const REST_BY_PREV_CROP: Record<string, { days: string; reason: string }> = {
   solanaceae: { days: '14 days', reason: 'clear solanaceae soil pathogens' },
   cucurbit: { days: '10 days', reason: 'remove vine debris and reset fungal load' },
@@ -88,7 +94,6 @@ const REST_BY_PREV_CROP: Record<string, { days: string; reason: string }> = {
   other: { days: '5 days', reason: 'standard rest between crop families' },
 };
 
-// Pest-history additions to the prep list
 const PEST_ADDITIONS: Record<string, { text: string; detail: string }> = {
   'Root Knot Nematode': {
     text: 'Neem cake 500g/sqm',
@@ -108,6 +113,8 @@ const PEST_ADDITIONS: Record<string, { text: string; detail: string }> = {
   },
 };
 
+const DRAINAGE_BED_TYPES: BedType[] = ['spice', 'root_legume'];
+
 function isVirginOrFallow(prevCropSeason: string | null): boolean {
   if (!prevCropSeason) return true;
   const low = prevCropSeason.toLowerCase();
@@ -121,7 +128,8 @@ function isVirginOrFallow(prevCropSeason: string | null): boolean {
 }
 
 export function getSoilPrepSteps(params: SoilPrepParams): PrepStep[] {
-  const { soil_type, prev_crop_family, prev_crop_season, pest_history, currentMonth } = params;
+  const { soil_type, prev_crop_family, prev_crop_season, pest_history, currentMonth, bed_type } =
+    params;
 
   const steps: PrepStep[] = [];
   let stepNum = 1;
@@ -132,11 +140,21 @@ export function getSoilPrepSteps(params: SoilPrepParams): PrepStep[] {
     steps.push({ number: String(stepNum++), text: s.text, detail: s.detail });
   }
 
-  // Step "3c" (contextual): green manure if virgin/fallow land or no previous crop
+  // Bed-type drainage reminder for crops sensitive to waterlogging
+  if (bed_type && DRAINAGE_BED_TYPES.includes(bed_type)) {
+    steps.push({
+      number: String(stepNum++),
+      text: 'Ensure drainage channel',
+      detail:
+        'Ginger, turmeric, carrot and groundnut rot in waterlogged soil — slope bed or add gravel sub-layer.',
+    });
+  }
+
+  // Contextual: green manure if virgin/fallow land or no previous crop
   if (isVirginOrFallow(prev_crop_season) || prev_crop_family === null) {
     const gm = getGreenManureForMonth(currentMonth);
     steps.push({
-      number: `${stepNum - 1}c`,
+      number: String(stepNum++),
       text: `${gm.name} green manure first`,
       detail: prev_crop_season
         ? `Land was previously ${prev_crop_season.toLowerCase()}. One 6-week ${gm.name.toLowerCase()} cycle builds soil biology before first vegetable crop.`
@@ -144,7 +162,7 @@ export function getSoilPrepSteps(params: SoilPrepParams): PrepStep[] {
     });
   }
 
-  // Step 4: rest period
+  // Rest period
   const restInfo = prev_crop_family
     ? REST_BY_PREV_CROP[prev_crop_family] ?? REST_BY_PREV_CROP.other
     : null;
@@ -160,7 +178,6 @@ export function getSoilPrepSteps(params: SoilPrepParams): PrepStep[] {
       detail: `Let soil biology activate before planting — ${restInfo.reason}.`,
     });
   } else {
-    // Virgin land with green manure — rest is baked into the green manure cycle
     steps.push({
       number: String(stepNum++),
       text: 'Rest 6 weeks (green manure) then 10 days',
@@ -175,7 +192,7 @@ export function getSoilPrepSteps(params: SoilPrepParams): PrepStep[] {
     detail: 'Paddy straw or coconut frond pieces — keeps moisture and suppresses weeds.',
   });
 
-  // Append pest-history extras (no step numbers — flagged entries)
+  // Pest-history warnings (flagged entries, no sequence number)
   for (const record of pest_history) {
     const extra = PEST_ADDITIONS[record.pest_name];
     if (extra) {

@@ -136,6 +136,8 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
     updateDimension('length_m', m);
   };
 
+  const [prepExpanded, setPrepExpanded] = useState(false);
+
   const prepSteps = useMemo(() => {
     if (!step2) return [];
     return getSoilPrepSteps({
@@ -144,8 +146,9 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
       prev_crop_season: step2.prev_crop_season,
       pest_history: step2.pest_history,
       currentMonth: new Date().getMonth() + 1,
+      bed_type: bedType,
     });
-  }, [step2]);
+  }, [step2, bedType]);
 
   const rec = data.sizeRecommendation;
 
@@ -244,21 +247,31 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
         onChange={handleLengthChange}
       />
 
-      {/* Before planting prep card */}
+      {/* Before planting prep card — collapsed by default */}
       {prepSteps.length > 0 && (
         <View style={styles.szPrepCard}>
-          <Text style={styles.szPrepCardTitle}>Before planting — prep for your conditions</Text>
-          {prepSteps.map((s, i) => (
-            <View key={i} style={styles.szPrepStepRow}>
-              <View style={styles.szPrepStepNumber}>
-                <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+          <TouchableOpacity
+            style={styles.szPrepToggleRow}
+            activeOpacity={0.7}
+            onPress={() => setPrepExpanded((v) => !v)}
+          >
+            <Text style={styles.szPrepCardTitle}>
+              🌱 Prep checklist · {prepSteps.length} steps
+            </Text>
+            <Text style={styles.szPrepChevron}>{prepExpanded ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {prepExpanded &&
+            prepSteps.map((s, i) => (
+              <View key={i} style={[styles.szPrepStepRow, i === 0 && styles.szPrepFirstStep]}>
+                <View style={styles.szPrepStepNumber}>
+                  <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+                </View>
+                <View style={styles.szPrepStepContent}>
+                  <Text style={styles.szPrepStepText}>{s.text}</Text>
+                  <Text style={styles.szPrepStepDetail}>{s.detail}</Text>
+                </View>
               </View>
-              <View style={styles.szPrepStepContent}>
-                <Text style={styles.szPrepStepText}>{s.text}</Text>
-                <Text style={styles.szPrepStepDetail}>{s.detail}</Text>
-              </View>
-            </View>
-          ))}
+            ))}
         </View>
       )}
     </ScrollView>

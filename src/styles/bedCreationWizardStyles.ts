@@ -974,7 +974,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 13,
       fontWeight: '700' as const,
       color: theme.warning,
-      marginBottom: 12,
+      flex: 1,
     },
     szPrepStepRow: {
       flexDirection: 'row' as const,
@@ -994,6 +994,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 10,
       fontWeight: '800' as const,
       color: theme.textInverse,
+    },
+    szPrepToggleRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+    },
+    szPrepFirstStep: { marginTop: 12 },
+    szPrepChevron: {
+      fontSize: 11,
+      fontWeight: '700' as const,
+      color: theme.warning,
     },
     szPrepStepContent: { flex: 1 },
     szPrepStepText: {
