@@ -126,11 +126,27 @@ const PLANT_EMOJI: Record<string, string> = {
 };
 
 const LAYER_LABEL: Record<string, string> = {
-  canopy: 'Canopy',
+  canopy: 'Tall / Shade Tree',
   understory: 'Main Crop',
-  ground_cover: 'Ground Cover',
-  climber: 'Climber',
-  root: 'Root Crop',
+  ground_cover: 'Border / Mulch',
+  climber: 'Trellis Crop',
+  root: 'Underground Crop',
+};
+
+const BENEFIT_TAG_LABEL: Record<string, string> = {
+  'n-fixer': 'Feeds Soil N',
+  'pest-repel': 'Repels Pests',
+  nematode: 'Nematode Control',
+  'chop-drop': 'Chop & Drop',
+  'soil-builder': 'Soil Builder',
+};
+
+const BENEFIT_EXPLANATION: Record<string, string> = {
+  'n-fixer': 'Fixes nitrogen — feeds neighboring crops',
+  'pest-repel': 'Repels insects that attack crop neighbors',
+  nematode: 'Reduces root nematodes in soil',
+  'chop-drop': 'Chop stems as mulch to feed the soil',
+  'soil-builder': 'Builds organic matter when cut back',
 };
 
 interface PlantQtyStepperProps {
@@ -426,17 +442,57 @@ export function GuildTemplateStep({
     [data.plant_entries, onChange]
   );
 
-  // Capacity text shown on each card, e.g. "~3 fit" or "~2 more fit" or "Bed full".
+  // Capacity text shown on each card, e.g. "fits ~3" or "~2 more fit" or "Bed full".
   const capacityText = useCallback(
     (name: string, count: number): string => {
       const remaining = maxFitMap.get(name) ?? 0;
-      if (remaining === 0 && count === 0) return 'Won’t fit';
-      if (remaining === 0) return 'Bed full for this';
-      if (count === 0) return `~${remaining} fit`;
+      if (remaining === 0 && count === 0) return "Too big for bed";
+      if (remaining === 0) return "Bed full";
+      if (count === 0) return `fits ~${remaining}`;
       return `~${remaining} more fit`;
     },
     [maxFitMap]
   );
+
+  // One-tap: add all template plants at their recommended counts.
+  const handleUseFullPlan = useCallback(() => {
+    if (!template) return;
+    let accEntries: PlantEntry[] = [];
+    for (const row of template.plant_rows) {
+      let blocked = false;
+      for (const existing of accEntries) {
+        if (existing.name === row.name) continue;
+        const check = validateCompanionPair(row.name, existing.name);
+        if (!check.valid) { blocked = true; break; }
+      }
+      if (blocked) continue;
+      const candidate = candidateForRow(row);
+      const trialInputs = mapPlantEntriesToRowInputs(accEntries, template);
+      const count = getRecommendedFirstAdd(candidate, trialInputs, widthM, lengthM, bedTypeForEngine, construction);
+      if (count === 0) continue;
+      for (let i = 0; i < count; i++) {
+        accEntries = [...accEntries, { id: generateId(), name: row.name, layer: row.layer, spacingCm: row.spacing_cm }];
+      }
+    }
+    onChange({ plant_entries: accEntries });
+  }, [template, widthM, lengthM, bedTypeForEngine, construction, candidateForRow, onChange]);
+
+  // Harvest mini-timeline — selected plants sorted by days to harvest.
+  const harvestPreview = useMemo(() => {
+    if (!template) return [];
+    const seen = new Set<string>();
+    const items: { name: string; days: number; emoji: string }[] = [];
+    for (const entry of data.plant_entries) {
+      if (seen.has(entry.name)) continue;
+      seen.add(entry.name);
+      const row = template.plant_rows.find((r) => r.name === entry.name);
+      const days = row?.days_to_harvest;
+      if (days !== undefined) {
+        items.push({ name: entry.name, days, emoji: PLANT_EMOJI[entry.name] ?? '🌱' });
+      }
+    }
+    return items.sort((a, b) => a.days - b.days);
+  }, [data.plant_entries, template]);
 
   if (!template) {
     return (
@@ -455,10 +511,19 @@ export function GuildTemplateStep({
       <View style={styles.gtTemplateBanner}>
         <Ionicons name="information-circle-outline" size={18} color={theme.infoDark} />
         <Text style={styles.gtTemplateBannerText}>
-          Selections become real plants in your garden when you save the bed. Customise variety or
-          link existing plants in the Layout step.
+          Tap + to add each crop. All selected crops are planted when you save this bed. Set
+          variety in the Arrange step.
         </Text>
       </View>
+
+      <TouchableOpacity style={styles.gtUseFullPlanBtn} onPress={handleUseFullPlan} activeOpacity={0.8}>
+        <Text style={styles.gtUseFullPlanBtnText}>
+          📋 Add all recommended crops at once
+        </Text>
+        <View style={styles.gtUseFullPlanQuickBadge}>
+          <Text style={styles.gtUseFullPlanQuickBadgeText}>Quick Start</Text>
+        </View>
+      </TouchableOpacity>
 
       {template.low_light_flag && (
         <View style={styles.infoBadge}>
@@ -487,7 +552,7 @@ export function GuildTemplateStep({
       )}
 
       {/* ── Template plants ─────────────────────────────────────────────── */}
-      <Text style={styles.gtSectionHeader}>SUGGESTED PLANTS</Text>
+      <Text style={styles.gtSectionHeader}>MAIN CROPS</Text>
 
       {template.plant_rows.map((row) => {
         const instanceCount = data.plant_entries.filter((e) => e.name === row.name).length;
@@ -543,7 +608,14 @@ export function GuildTemplateStep({
                 </View>
                 {row.crop_family === 'legume' && (
                   <View style={styles.gtNFixerBadge}>
-                    <Text style={styles.gtNFixerBadgeText}>N-Fixer</Text>
+                    <Text style={styles.gtNFixerBadgeText}>Feeds Soil N</Text>
+                  </View>
+                )}
+                {row.benefit_tag && row.benefit_tag !== 'n-fixer' && (
+                  <View style={styles.gtBenefitTagBadge}>
+                    <Text style={styles.gtBenefitTagBadgeText}>
+                      {BENEFIT_TAG_LABEL[row.benefit_tag] ?? row.benefit_tag}
+                    </Text>
                   </View>
                 )}
                 {harvestDays !== undefined && (
@@ -552,6 +624,16 @@ export function GuildTemplateStep({
                   </View>
                 )}
               </View>
+              {row.benefit_tag && BENEFIT_EXPLANATION[row.benefit_tag] && (
+                <Text style={styles.gtBenefitLine}>
+                  {BENEFIT_EXPLANATION[row.benefit_tag]}
+                </Text>
+              )}
+              {!row.benefit_tag && row.companion_plants.length > 0 && !isBlocked && (
+                <Text style={styles.gtBenefitLine}>
+                  Good with: {row.companion_plants.slice(0, 2).join(', ')}
+                </Text>
+              )}
               {isBlocked && <Text style={styles.gtAntagonistText}>⛔ {blockedReason}</Text>}
               {step2?.waterlogging_risk && row.needs_good_drainage && (
                 <View style={styles.gtDrainageBadge}>
@@ -578,7 +660,7 @@ export function GuildTemplateStep({
       {companionSuggestions.length > 0 && (
         <>
           <Text style={[styles.gtSectionHeader, styles.gtSectionHeaderMt]}>
-            RECOMMENDED COMPANIONS
+            HELPFUL NEIGHBOR PLANTS
           </Text>
           {companionSuggestions.map((comp) => {
             const compCount = data.plant_entries.filter((e) => e.name === comp).length;
@@ -605,8 +687,8 @@ export function GuildTemplateStep({
       )}
 
       {/* ── Dynamic accumulators ─────────────────────────────────────────── */}
-      <Text style={[styles.gtSectionHeader, styles.gtSectionHeaderMt]}>DYNAMIC ACCUMULATORS</Text>
-      <Text style={styles.gtAccSubtitle}>Add one to enrich soil through chop-and-drop.</Text>
+      <Text style={[styles.gtSectionHeader, styles.gtSectionHeaderMt]}>{'SOIL BUILDERS (CHOP & DROP)'}</Text>
+      <Text style={styles.gtAccSubtitle}>Add one to enrich your soil. Cut stems back to mulch the bed.</Text>
 
       {DYNAMIC_ACCUMULATORS.map((acc) => {
         const accCount = data.plant_entries.filter((e) => e.name === acc.name).length;
@@ -649,6 +731,31 @@ export function GuildTemplateStep({
           </View>
         );
       })}
+      {/* ── Harvest mini-timeline ────────────────────────────────────────── */}
+      {harvestPreview.length > 1 && (
+        <>
+          <Text style={[styles.gtSectionHeader, styles.gtSectionHeaderMt]}>
+            FIRST HARVEST FROM THIS BED
+          </Text>
+          <View style={styles.gtHarvestTimeline}>
+            {harvestPreview.map((item) => {
+              const maxDays = harvestPreview[harvestPreview.length - 1]!.days;
+              const barWidth = Math.max(20, Math.round((item.days / maxDays) * 140));
+              return (
+                <View key={item.name} style={styles.gtHarvestRow}>
+                  <View style={styles.gtHarvestLabelCol}>
+                    <Text style={styles.gtHarvestName}>{item.emoji} {item.name}</Text>
+                  </View>
+                  <View style={styles.gtHarvestBarTrack}>
+                    <View style={[styles.gtHarvestBar, { width: barWidth }]} />
+                  </View>
+                  <Text style={styles.gtHarvestDays}>{item.days}d</Text>
+                </View>
+              );
+            })}
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 }

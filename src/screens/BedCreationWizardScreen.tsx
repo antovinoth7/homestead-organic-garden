@@ -29,13 +29,13 @@ import { BedLayoutStep } from './BedWizardSteps/BedLayoutStep';
 import { BedConfirmStep } from './BedWizardSteps/BedConfirmStep';
 import { BedSuccessStep } from './BedWizardSteps/BedSuccessStep';
 
-const STEP_LABELS = ['Type', 'Conditions', 'Size', 'Guild', 'Layout', 'Review', 'Done'];
+const STEP_LABELS = ['Crop Type', 'Your Land', 'Bed Size', 'Crops', 'Arrange', 'Review', 'Done'];
 const STEP_SUBTITLES = [
-  'What kind of bed?',
-  'Sun, soil, prior crop',
-  'Dimensions',
-  'Companion planting',
-  'Arrange the plants',
+  'What will you grow?',
+  'Sun, soil & prior crop',
+  'How big is the bed?',
+  'Choose your crops',
+  'Arrange your bed',
   'Confirm and save',
 ];
 // Maps display indices (0–5) to actual wizard step numbers

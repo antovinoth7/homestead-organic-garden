@@ -176,6 +176,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.success,
     },
 
+    // ── Overflow action hint ─────────────────────────────────────────────────
+    overflowActionRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: 4,
+      paddingBottom: 6,
+    },
+    overflowActionText: {
+      fontSize: 12,
+      color: theme.error,
+      fontWeight: '600' as const,
+      flex: 1,
+      lineHeight: 17,
+    },
+
     // ── Ghost section (empty layer) ──────────────────────────────────────────
     ghostCard: {
       borderRadius: 14,

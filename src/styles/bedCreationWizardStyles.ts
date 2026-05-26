@@ -989,6 +989,193 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 16,
     },
 
+    // Guild step — use full crop plan button
+    gtUseFullPlanBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      backgroundColor: theme.primaryLight,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginBottom: 16,
+      borderWidth: 1.5,
+      borderColor: theme.primary,
+    },
+    gtUseFullPlanBtnText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600' as const,
+      color: theme.primary,
+    },
+    gtUseFullPlanQuickBadge: {
+      backgroundColor: theme.primary,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      marginLeft: 8,
+    },
+    gtUseFullPlanQuickBadgeText: {
+      fontSize: 10,
+      fontWeight: '700' as const,
+      color: theme.textInverse,
+    },
+    // Guild step — benefit explanation line
+    gtBenefitLine: {
+      fontSize: 11,
+      color: theme.primary,
+      marginTop: 3,
+      lineHeight: 15,
+    },
+    // Guild step — benefit tag badge (non-legume)
+    gtBenefitTagBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+      backgroundColor: theme.infoLight,
+      borderWidth: 1,
+      borderColor: theme.info,
+    },
+    gtBenefitTagBadgeText: {
+      fontSize: 10,
+      fontWeight: '600' as const,
+      color: theme.infoDark,
+    },
+    // Guild step — harvest mini timeline
+    gtHarvestTimeline: {
+      backgroundColor: theme.backgroundSecondary,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    gtHarvestRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      marginBottom: 8,
+    },
+    gtHarvestLabelCol: {
+      width: 120,
+    },
+    gtHarvestName: {
+      fontSize: 12,
+      fontWeight: '600' as const,
+      color: theme.text,
+    },
+    gtHarvestBarTrack: {
+      flex: 1,
+      height: 8,
+      backgroundColor: theme.borderLight,
+      borderRadius: 4,
+      overflow: 'hidden' as const,
+    },
+    gtHarvestBar: {
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.success,
+    },
+    gtHarvestDays: {
+      fontSize: 11,
+      color: theme.textSecondary,
+      fontWeight: '600' as const,
+      marginLeft: 8,
+      width: 34,
+    },
+    // Layout step — bed rows preview
+    blRowPreviewCard: {
+      backgroundColor: theme.backgroundSecondary,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    blRowPreviewHeader: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      marginBottom: 10,
+    },
+    blRowPreviewTitle: {
+      fontSize: 13,
+      fontWeight: '700' as const,
+      color: theme.text,
+    },
+    blRowPreviewCompass: {
+      fontSize: 10,
+      fontWeight: '700' as const,
+      color: theme.textSecondary,
+      letterSpacing: 0.5,
+    },
+    blRowPreviewRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingVertical: 6,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.borderLight,
+      gap: 8,
+    },
+    blRowPreviewRowNum: {
+      fontSize: 10,
+      fontWeight: '700' as const,
+      color: theme.textTertiary,
+      width: 40,
+    },
+    blRowPreviewRowPlants: {
+      flex: 1,
+      fontSize: 12,
+      color: theme.text,
+      fontWeight: '500' as const,
+    },
+    blRowPreviewRowLayer: {
+      fontSize: 10,
+      color: theme.textTertiary,
+      textAlign: 'right' as const,
+    },
+    blRowPreviewSouth: {
+      fontSize: 10,
+      color: theme.textTertiary,
+      textAlign: 'center' as const,
+      marginTop: 8,
+      fontWeight: '700' as const,
+      letterSpacing: 0.5,
+    },
+    // Layout step — planting schedule
+    blScheduleCard: {
+      backgroundColor: theme.backgroundSecondary,
+      borderRadius: 12,
+      padding: 14,
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    blScheduleTitle: {
+      fontSize: 10,
+      fontWeight: '700' as const,
+      letterSpacing: 1.2,
+      color: theme.textTertiary,
+      marginBottom: 10,
+    },
+    blScheduleWeekRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'flex-start' as const,
+      marginBottom: 8,
+      gap: 10,
+    },
+    blScheduleWeekLabel: {
+      fontSize: 12,
+      fontWeight: '700' as const,
+      color: theme.primary,
+      width: 56,
+    },
+    blSchedulePlantNames: {
+      flex: 1,
+      fontSize: 12,
+      color: theme.text,
+      lineHeight: 18,
+    },
+
     // ── BedLayoutStep interactive grid ────────────────────────────────────────
     blRemoveBtn: {
       position: 'absolute' as const,
