@@ -342,6 +342,10 @@ export function GuildTemplateStep({
         if (!result.valid) return;
       }
 
+      // Capacity check — applies to every tap equally (no special first-add bulk fill)
+      const remaining = maxFitMap.get(candidate.name) ?? 0;
+      if (remaining <= 0) return;
+
       const instanceCount = data.plant_entries.filter((e) => e.name === candidate.name).length;
       const makeEntry = (name: string, layer: BedLayer, spacingCm: number): PlantEntry => ({
         id: generateId(),
@@ -350,71 +354,41 @@ export function GuildTemplateStep({
         spacingCm,
       });
 
-      if (instanceCount === 0) {
-        // First add — auto-fill recommended count + auto-add companions.
-        const firstCount = getRecommendedFirstAdd(
-          candidate,
-          currentInputs,
-          widthM,
-          lengthM,
-          bedTypeForEngine,
-          construction
-        );
-        if (firstCount === 0) return;
+      // Always add exactly 1 plant per tap for predictable stepper behaviour
+      const newEntries: PlantEntry[] = [
+        ...data.plant_entries,
+        makeEntry(candidate.name, candidate.layer, candidate.spacingCm),
+      ];
 
-        const newEntries: PlantEntry[] = [...data.plant_entries];
-        for (let i = 0; i < firstCount; i++) {
-          newEntries.push(makeEntry(candidate.name, candidate.layer, candidate.spacingCm));
-        }
-
-        if (companionsToAutoAdd && companionsToAutoAdd.length > 0) {
-          for (const compName of companionsToAutoAdd) {
-            if (newEntries.some((e) => e.name === compName)) continue;
-            // Skip if antagonist with anything already placed
-            let antag = false;
-            for (const existing of newEntries) {
-              if (existing.name === compName) continue;
-              const r = validateCompanionPair(compName, existing.name);
-              if (!r.valid) {
-                antag = true;
-                break;
-              }
-            }
-            if (antag) continue;
-            // Skip if it wouldn't fit
-            const compCandidate = candidateForCompanion(compName);
-            const trialInputs = mapPlantEntriesToRowInputs(newEntries, template);
-            const result = computeRowLayout(
-              [...trialInputs, { ...compCandidate, id: `${compName}_probe` }],
-              widthM,
-              lengthM,
-              bedTypeForEngine,
-              construction
-            );
-            if (!result.fitsInBed) continue;
-            newEntries.push(
-              makeEntry(compName, COMPANION_DEFAULT_LAYER, COMPANION_DEFAULT_SPACING)
-            );
+      // On first add of a main crop, silently add recommended companion plants that fit
+      if (instanceCount === 0 && companionsToAutoAdd && companionsToAutoAdd.length > 0) {
+        for (const compName of companionsToAutoAdd) {
+          if (newEntries.some((e) => e.name === compName)) continue;
+          let antag = false;
+          for (const existing of newEntries) {
+            if (existing.name === compName) continue;
+            const r = validateCompanionPair(compName, existing.name);
+            if (!r.valid) { antag = true; break; }
           }
+          if (antag) continue;
+          const compCandidate = candidateForCompanion(compName);
+          const trialInputs = mapPlantEntriesToRowInputs(newEntries, template);
+          const fitResult = computeRowLayout(
+            [...trialInputs, { ...compCandidate, id: `${compName}_probe` }],
+            widthM,
+            lengthM,
+            bedTypeForEngine,
+            construction
+          );
+          if (!fitResult.fitsInBed) continue;
+          newEntries.push(makeEntry(compName, COMPANION_DEFAULT_LAYER, COMPANION_DEFAULT_SPACING));
         }
-
-        onChange({ plant_entries: newEntries });
-        return;
       }
 
-      // Subsequent +1 — bounded by remaining capacity.
-      const remaining = maxFitMap.get(candidate.name) ?? 0;
-      if (remaining <= 0) return;
-      onChange({
-        plant_entries: [
-          ...data.plant_entries,
-          makeEntry(candidate.name, candidate.layer, candidate.spacingCm),
-        ],
-      });
+      onChange({ plant_entries: newEntries });
     },
     [
       data.plant_entries,
-      currentInputs,
       template,
       widthM,
       lengthM,
@@ -560,7 +534,7 @@ export function GuildTemplateStep({
         const blockedReason = !isSelected ? getBlockedReason(row.name) : null;
         const isBlocked = !!blockedReason;
         const remaining = maxFitMap.get(row.name) ?? 0;
-        const capReached = remaining === 0 && instanceCount > 0;
+        const capReached = remaining === 0;
         const emoji = PLANT_EMOJI[row.name] ?? '🌱';
         const layerLabel = LAYER_LABEL[row.layer] ?? row.layer.replace(/_/g, ' ');
         const isMain = row.is_companion !== true;
@@ -666,7 +640,7 @@ export function GuildTemplateStep({
             const compCount = data.plant_entries.filter((e) => e.name === comp).length;
             const compBlocked = compCount === 0 && !!getBlockedReason(comp);
             const compRemaining = maxFitMap.get(comp) ?? 0;
-            const compCapReached = compRemaining === 0 && compCount > 0;
+            const compCapReached = compRemaining === 0;
             return (
               <View key={comp} style={styles.gtCompanionRow}>
                 <Text style={styles.gtCompanionEmoji}>{PLANT_EMOJI[comp] ?? '🌿'}</Text>
@@ -695,7 +669,7 @@ export function GuildTemplateStep({
         const isAdded = accCount > 0;
         const accBlocked = !isAdded && !!getBlockedReason(acc.name);
         const accRemaining = maxFitMap.get(acc.name) ?? 0;
-        const accCapReached = accRemaining === 0 && accCount > 0;
+        const accCapReached = accRemaining === 0;
         return (
           <View key={acc.name} style={[styles.gtAccCard, isAdded && styles.gtAccCardSelected]}>
             <View style={styles.gtAccHeader}>
