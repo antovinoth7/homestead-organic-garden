@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/theme';
 import { Step2Data } from '@/hooks/useBedCreationWizard';
@@ -7,6 +7,7 @@ import { createStyles } from '@/styles/bedCreationWizardStyles';
 import FieldLabelWithHelp from '@/components/FieldLabelWithHelp';
 import ThemedDropdown from '@/components/ThemedDropdown';
 import { GUILD_TEMPLATES } from '@/config/beds/guildTemplates';
+import { buildGeneratedBedNameBase } from '@/utils/bedNameGenerator';
 
 const PEST_OPTIONS: { value: string; label: string; hint: string }[] = [
   { value: 'Root Knot Nematode', label: 'Root Knot', hint: 'Yellowing · stunted roots' },
@@ -109,6 +110,21 @@ export function LandConditionsStep({
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
+  const [showCustomName, setShowCustomName] = useState(false);
+
+  const generatedBedName = useMemo(
+    () => buildGeneratedBedNameBase(data.child_location ?? data.parent_location, bedType),
+    [data.child_location, data.parent_location, bedType]
+  );
+
+  // Sync generated name into data.name whenever location/bedType changes, unless user is editing
+  useEffect(() => {
+    if (!showCustomName && generatedBedName) {
+      onChange({ name: generatedBedName });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generatedBedName, showCustomName]);
+
   const sunlightRequired = bedType ? GUILD_TEMPLATES[bedType].sunlight_requirement : null;
   const sunlightMismatch =
     sunlightRequired !== null && SUNLIGHT_RANK[data.sunlight] < SUNLIGHT_RANK[sunlightRequired];
@@ -116,19 +132,6 @@ export function LandConditionsStep({
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer}>
-      {/* Bed name */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Bed name *</Text>
-        <TextInput
-          style={styles.textInput}
-          value={data.name ?? ''}
-          onChangeText={(v) => onChange({ name: v })}
-          placeholder="e.g. Front Leafy Bed"
-          placeholderTextColor={theme.textSecondary}
-          maxLength={60}
-        />
-      </View>
-
       {/* Location */}
       <View style={styles.fieldGroup}>
         <FieldLabelWithHelp
@@ -183,6 +186,48 @@ export function LandConditionsStep({
           </View>
         </View>
       )}
+
+      {/* Bed name — auto-generated from location + bed type, or custom */}
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>Bed name *</Text>
+        {!showCustomName && generatedBedName ? (
+          <View style={[styles.infoBadge, styles.namePreviewRow]}>
+            <Text style={styles.namePreviewText}>{generatedBedName}</Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                setShowCustomName(true);
+                onChange({ name: data.name || generatedBedName });
+              }}
+            >
+              <Text style={styles.infoBadgeText}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <TextInput
+              style={styles.textInput}
+              value={data.name ?? ''}
+              onChangeText={(v) => onChange({ name: v })}
+              placeholder={generatedBedName || 'e.g. Front Leafy Bed'}
+              placeholderTextColor={theme.textSecondary}
+              maxLength={60}
+              autoFocus={showCustomName}
+            />
+            {generatedBedName ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  setShowCustomName(false);
+                  onChange({ name: generatedBedName });
+                }}
+              >
+                <Text style={styles.nameAutoRevertText}>Use auto name ✓</Text>
+              </TouchableOpacity>
+            ) : null}
+          </>
+        )}
+      </View>
 
       {/* Sunlight — custom layout for recommendation badge */}
       <View style={styles.fieldGroup}>

@@ -415,6 +415,23 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 12,
     },
     infoBadgeText: { color: theme.infoDark, fontSize: 12 },
+    namePreviewRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+    },
+    namePreviewText: {
+      color: theme.primary,
+      fontSize: 14,
+      fontWeight: '600' as const,
+      flex: 1,
+    },
+    nameAutoRevertText: {
+      color: theme.primary,
+      fontSize: 12,
+      fontWeight: '600' as const,
+      marginTop: 6,
+    },
     sequenceCard: {
       backgroundColor: theme.backgroundSecondary,
       borderRadius: 8,
