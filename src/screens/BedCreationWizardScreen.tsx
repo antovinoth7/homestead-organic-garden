@@ -30,14 +30,6 @@ import { BedConfirmStep } from './BedWizardSteps/BedConfirmStep';
 import { BedSuccessStep } from './BedWizardSteps/BedSuccessStep';
 
 const STEP_LABELS = ['Crop Type', 'Your Land', 'Bed Size', 'Crops', 'Arrange', 'Review', 'Done'];
-const STEP_SUBTITLES = [
-  'What will you grow?',
-  'Sun, soil & prior crop',
-  'How big is the bed?',
-  'Choose your crops',
-  'Arrange your bed',
-  'Confirm and save',
-];
 // Maps display indices (0–5) to actual wizard step numbers
 const VISIBLE_STEPS = [1, 2, 3, 4, 5, 6] as const;
 
@@ -259,14 +251,6 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
               );
             })}
           </View>
-          {wizard.currentStep <= 6 && (
-            <View style={styles.stepCounterRow}>
-              <Text style={styles.stepCounterText}>Step {wizard.currentStep} of 6</Text>
-              <Text style={styles.stepSubtitleText} numberOfLines={1}>
-                — {STEP_SUBTITLES[wizard.currentStep - 1]}
-              </Text>
-            </View>
-          )}
         </View>
       )}
 

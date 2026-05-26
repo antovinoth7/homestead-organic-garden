@@ -103,12 +103,6 @@ const SEASON_LABEL: Record<string, string> = {
   cool_dry: 'Cool & Dry',
 };
 
-const QUICK_START_GOALS: { label: string; icon: string; type: BedType }[] = [
-  { label: 'Kitchen Garden', icon: '🏡', type: 'leafy' },
-  { label: 'Under Coconuts', icon: '🥥', type: 'coconut_intercrop' },
-  { label: 'Sell Vegetables', icon: '🛒', type: 'fruiting' },
-  { label: 'Build Soil', icon: '🌱', type: 'three_sisters' },
-];
 
 export function BedTypeStep({ data, onChange }: Props): React.JSX.Element {
   const theme = useTheme();
@@ -121,28 +115,7 @@ export function BedTypeStep({ data, onChange }: Props): React.JSX.Element {
       <Text style={styles.stepTitle}>What kind of bed?</Text>
       <Text style={styles.stepSubtitle}>Choose the primary crop guild for this bed.</Text>
 
-      {/* Quick-start goals */}
-      <Text style={styles.btGoalLabel}>QUICK START — WHAT IS YOUR GOAL?</Text>
-      <View style={styles.btGoalRow}>
-        {QUICK_START_GOALS.map((goal) => {
-          const selected = data.bed_type === goal.type;
-          return (
-            <TouchableOpacity
-              key={goal.label}
-              style={[styles.btGoalChip, selected && styles.btGoalChipSelected]}
-              onPress={() => onChange({ bed_type: goal.type })}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.btGoalIcon}>{goal.icon}</Text>
-              <Text style={[styles.btGoalText, selected && styles.btGoalTextSelected]}>
-                {goal.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      <View style={styles.btSeasonBanner}>
+<View style={styles.btSeasonBanner}>
         <Text style={styles.btSeasonBannerText}>
           🌦 Now: {seasonLabel} — ideal beds highlighted below
         </Text>
