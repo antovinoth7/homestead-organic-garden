@@ -321,6 +321,7 @@ export function useLocationManager(): UseLocationManagerReturn {
       editModal.type === 'parent'
         ? parentCounts[editModal.original] || 0
         : childCounts[editModal.original] || 0;
+    const nameChanged = name !== editModal.original;
 
     if (!name) {
       Alert.alert('Name Required', 'Please enter a new name.');
@@ -334,7 +335,7 @@ export function useLocationManager(): UseLocationManagerReturn {
       Alert.alert('Already Exists', 'That name is already in use.');
       return;
     }
-    if (name === editModal.original && editModal.type === 'child') {
+    if (!nameChanged && editModal.type === 'child') {
       setEditModal(null);
       return;
     }
@@ -343,7 +344,7 @@ export function useLocationManager(): UseLocationManagerReturn {
       setSaving(true);
       try {
         if (editModal.type === 'parent') {
-          if (count > 0) {
+          if (count > 0 && nameChanged) {
             await updatePlantsForParent(editModal.original, name);
           }
           const updatedParents = parentLocations.map((item) =>
@@ -363,7 +364,7 @@ export function useLocationManager(): UseLocationManagerReturn {
           }
           await saveConfig(updatedParents, childLocations, updatedShortNames, updatedProfiles);
         } else {
-          if (count > 0) {
+          if (count > 0 && nameChanged) {
             await updatePlantsForChild(editModal.original, name);
           }
           const updatedChildren = childLocations.map((item) =>
@@ -379,7 +380,7 @@ export function useLocationManager(): UseLocationManagerReturn {
       }
     };
 
-    if (count > 0) {
+    if (count > 0 && nameChanged) {
       Alert.alert('Update Plants', `Renaming will update ${count} plant(s). Continue?`, [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Rename', onPress: performRename },
