@@ -113,8 +113,8 @@ export function LandConditionsStep({
   const [showCustomName, setShowCustomName] = useState(false);
 
   const generatedBedName = useMemo(
-    () => buildGeneratedBedNameBase(data.child_location ?? data.parent_location, bedType),
-    [data.child_location, data.parent_location, bedType]
+    () => buildGeneratedBedNameBase(data.parent_location, bedType, data.child_location),
+    [data.parent_location, data.child_location, bedType]
   );
 
   // Sync generated name into data.name whenever location/bedType changes, unless user is editing

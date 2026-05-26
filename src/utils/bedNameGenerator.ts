@@ -12,13 +12,16 @@ const BED_TYPE_LABEL: Partial<Record<BedType, string>> = {
 };
 
 export function buildGeneratedBedNameBase(
-  location: string | null | undefined,
-  bedType: BedType | null | undefined
+  parentLocation: string | null | undefined,
+  bedType: BedType | null | undefined,
+  childLocation?: string | null
 ): string {
-  const loc = location?.trim();
+  const parent = parentLocation?.trim();
   const typeLabel = bedType ? BED_TYPE_LABEL[bedType] : undefined;
-  if (!loc || !typeLabel) return '';
-  return `${loc} ${typeLabel} Bed`;
+  if (!parent || !typeLabel) return '';
+  const child = childLocation?.trim();
+  const locPart = child ? `${parent} ${child}` : parent;
+  return `${locPart} ${typeLabel} Bed`;
 }
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
