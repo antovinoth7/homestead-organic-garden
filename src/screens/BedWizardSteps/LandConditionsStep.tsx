@@ -2,11 +2,18 @@ import React, { useMemo } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/theme';
 import { Step2Data } from '@/hooks/useBedCreationWizard';
-import { SunlightLevel, BedSlope, CropFamily, SoilType, BedType } from '@/types/database.types';
+import { SunlightLevel, BedSlope, CropFamily, SoilType, BedType, PestHistoryItem } from '@/types/database.types';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import FieldLabelWithHelp from '@/components/FieldLabelWithHelp';
 import ThemedDropdown from '@/components/ThemedDropdown';
 import { GUILD_TEMPLATES } from '@/config/beds/guildTemplates';
+
+const PEST_OPTIONS: { value: string; label: string; hint: string }[] = [
+  { value: 'Root Knot Nematode', label: 'Root Knot', hint: 'Yellowing · stunted roots' },
+  { value: 'Fusarium Wilt', label: 'Fusarium Wilt', hint: 'Wilting · stem rot' },
+  { value: 'Bacterial Wilt', label: 'Bacterial Wilt', hint: 'Sudden collapse' },
+  { value: 'White Grubs', label: 'White Grubs', hint: 'Root-eating larvae' },
+];
 
 const SUNLIGHT_RANK: Record<SunlightLevel, number> = { full_sun: 2, partial_sun: 1, shade: 0 };
 
@@ -311,6 +318,49 @@ export function LandConditionsStep({
           </Text>
         </View>
       )}
+
+      {/* Pest history */}
+      <View style={styles.fieldGroup}>
+        <FieldLabelWithHelp
+          label="Pest issues last season?"
+          helpText="Select any problems from the previous crop. This personalises the soil-prep checklist in the next step."
+          labelStyle={styles.fieldLabel}
+          style={styles.fieldLabelRow}
+        />
+        <View style={styles.chipRow}>
+          {PEST_OPTIONS.map((opt) => {
+            const selected = data.pest_history.some((p) => p.pest_name === opt.value);
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                activeOpacity={0.7}
+                style={[styles.chip, selected && styles.chipSelected]}
+                onPress={() => {
+                  const next: PestHistoryItem[] = selected
+                    ? data.pest_history.filter((p) => p.pest_name !== opt.value)
+                    : [
+                        ...data.pest_history,
+                        {
+                          pest_name: opt.value,
+                          severity: 'medium' as const,
+                          season: 'last',
+                          year: new Date().getFullYear(),
+                        },
+                      ];
+                  onChange({ pest_history: next });
+                }}
+              >
+                <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                  {opt.label}
+                </Text>
+                <Text style={[styles.chipHint, selected && styles.chipHintSelected]}>
+                  {opt.hint}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
 
       <TouchableOpacity
         activeOpacity={0.8}

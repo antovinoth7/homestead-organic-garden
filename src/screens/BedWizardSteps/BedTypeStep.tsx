@@ -118,7 +118,6 @@ export function BedTypeStep({ data, onChange }: Props): React.JSX.Element {
         </Text>
       </View>
 
-      <Text style={styles.btAllTypesLabel}>ALL BED TYPES</Text>
       <View style={styles.typeGrid}>
         {BED_TYPE_OPTIONS.map((opt) => {
           const fit = opt.seasonFit[currentSeason] ?? 'ok';
