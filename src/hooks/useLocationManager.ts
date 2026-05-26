@@ -351,11 +351,15 @@ export function useLocationManager(): UseLocationManagerReturn {
             item === editModal.original ? name : item
           );
           const updatedShortNames = { ...shortNames };
-          delete updatedShortNames[editModal.original];
           const sn = editModal.shortName?.trim().toUpperCase().slice(0, 5);
-          updatedShortNames[name] = sn && sn.length >= 2 ? sn : generateShortName(name);
+          const newShortName =
+            sn && sn.length >= 2
+              ? sn
+              : shortNames[editModal.original] ?? generateShortName(name);
+          if (nameChanged) delete updatedShortNames[editModal.original];
+          updatedShortNames[name] = newShortName;
           const updatedProfiles = { ...locationProfiles };
-          if (updatedProfiles[editModal.original]) {
+          if (nameChanged && updatedProfiles[editModal.original]) {
             updatedProfiles[name] = updatedProfiles[editModal.original]!;
             delete updatedProfiles[editModal.original];
           }
