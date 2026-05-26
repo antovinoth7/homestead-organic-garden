@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/theme';
 import { Step2Data } from '@/hooks/useBedCreationWizard';
 import { SunlightLevel, BedSlope, CropFamily, SoilType, BedType } from '@/types/database.types';
@@ -113,6 +113,19 @@ export function LandConditionsStep({
       <Text style={styles.stepSubtitle}>
         Tell us about this spot so we can size and plan the bed correctly.
       </Text>
+
+      {/* Bed name */}
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>Bed name *</Text>
+        <TextInput
+          style={styles.textInput}
+          value={data.name ?? ''}
+          onChangeText={(v) => onChange({ name: v })}
+          placeholder="e.g. Front Leafy Bed"
+          placeholderTextColor={theme.textSecondary}
+          maxLength={60}
+        />
+      </View>
 
       {/* Location */}
       <View style={styles.fieldGroup}>

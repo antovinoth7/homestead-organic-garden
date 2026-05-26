@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useTheme } from '@/theme';
 import { BedType } from '@/types/database.types';
 import { Step1Data } from '@/hooks/useBedCreationWizard';
@@ -112,25 +112,10 @@ export function BedTypeStep({ data, onChange }: Props): React.JSX.Element {
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer}>
-      <Text style={styles.stepTitle}>What kind of bed?</Text>
-      <Text style={styles.stepSubtitle}>Choose the primary crop guild for this bed.</Text>
-
-<View style={styles.btSeasonBanner}>
+      <View style={styles.btSeasonBanner}>
         <Text style={styles.btSeasonBannerText}>
           🌦 Now: {seasonLabel} — ideal beds highlighted below
         </Text>
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Bed name *</Text>
-        <TextInput
-          style={styles.textInput}
-          value={data.name ?? ''}
-          onChangeText={(v) => onChange({ name: v })}
-          placeholder="e.g. Front Leafy Bed"
-          placeholderTextColor={theme.textSecondary}
-          maxLength={60}
-        />
       </View>
 
       <Text style={styles.btAllTypesLabel}>ALL BED TYPES</Text>

@@ -27,10 +27,10 @@ import { cropFamilyFromName } from '@/utils/cropFamilyFromName';
 
 export interface Step1Data {
   bed_type: BedType | null;
-  name: string;
 }
 
 export interface Step2Data {
+  name: string;
   sunlight: SunlightLevel;
   soil_type: SoilType;
   slope: BedSlope;
@@ -59,7 +59,7 @@ export interface Step4Data {
 export type { PlantEntry };
 
 // Step 5 is the layout designer — positions are managed locally in BedLayoutStep
-// Step 6 is Review (notes only — name was captured in Step 1)
+// Step 6 is Review (notes only — name was captured in Step 2)
 export interface Step6Data {
   notes: string;
 }
@@ -77,6 +77,7 @@ export interface WizardStepData {
 // ─── Default values ───────────────────────────────────────────────────────────
 
 const DEFAULT_STEP2: Step2Data = {
+  name: '',
   sunlight: 'full_sun',
   soil_type: 'garden_soil',
   slope: 'flat',
@@ -103,10 +104,11 @@ const DEFAULT_STEP3: Step3Data = {
 function canProceedStep(step: WizardStep, data: Partial<WizardStepData>): boolean {
   switch (step) {
     case 1:
-      return !!data[1]?.bed_type && !!data[1]?.name?.trim();
+      return !!data[1]?.bed_type;
     case 2: {
       const s2 = data[2];
       if (!s2) return false;
+      if (!s2.name?.trim()) return false;
       if (s2.prev_crop_family === 'solanaceae') return false;
       return true;
     }
@@ -119,7 +121,7 @@ function canProceedStep(step: WizardStep, data: Partial<WizardStepData>): boolea
     case 5:
       return true; // layout designer — always proceed
     case 6:
-      return true; // notes optional; name was validated in Step 1
+      return true; // notes optional; name was validated in Step 2
     case 7:
       return false; // success step — no forward navigation
     default:
@@ -199,7 +201,7 @@ export interface UseBedCreationWizardResult {
 export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizardResult {
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [stepData, setStepData] = useState<Partial<WizardStepData>>({
-    1: { bed_type: prefillType ?? null, name: '' },
+    1: { bed_type: prefillType ?? null },
     2: prefillType
       ? { ...DEFAULT_STEP2, sunlight: GUILD_TEMPLATES[prefillType].sunlight_requirement }
       : DEFAULT_STEP2,
@@ -230,7 +232,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
 
   const solanaceaeBlocked = stepData[2]?.prev_crop_family === 'solanaceae';
   const canProceed = canProceedStep(currentStep, stepData);
-  const isDirty = currentStep > 1 || !!stepData[1]?.name?.trim();
+  const isDirty = currentStep > 1 || !!stepData[1]?.bed_type;
 
   const patchStep = useCallback(
     <S extends keyof WizardStepData>(step: S, patch: Partial<WizardStepData[S]>) => {
@@ -265,7 +267,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
 
   const setStep1 = useCallback((data: Partial<Step1Data>) => {
     setStepData((prev) => {
-      const merged1: Step1Data = { ...(prev[1] ?? { bed_type: null, name: '' }), ...data };
+      const merged1: Step1Data = { ...(prev[1] ?? { bed_type: null }), ...data };
       if (!merged1.bed_type) return { ...prev, 1: merged1 };
       const recommended = GUILD_TEMPLATES[merged1.bed_type].sunlight_requirement;
       const merged2: Step2Data = { ...(prev[2] ?? DEFAULT_STEP2), sunlight: recommended };
@@ -314,10 +316,10 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     const s3 = stepData[3] ?? DEFAULT_STEP3;
     const s6 = stepData[6];
 
-    if (!s1?.bed_type || !s1.name?.trim()) return null;
+    if (!s1?.bed_type || !s2.name?.trim()) return null;
 
     return {
-      name: s1.name.trim(),
+      name: s2.name.trim(),
       type: s1.bed_type,
       dimensions: {
         width_m: s3.width_m,
@@ -370,10 +372,10 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     const s2 = stepData[2] ?? DEFAULT_STEP2;
     const s4 = stepData[4];
 
-    if (!s1?.bed_type || !s1.name?.trim()) {
+    if (!s1?.bed_type || !s2.name?.trim()) {
       logger.warn(
         'useBedCreationWizard: submit guard failed',
-        new Error(`bed_type=${s1?.bed_type ?? 'null'}, name=${s1?.name ?? 'undefined'}`)
+        new Error(`bed_type=${s1?.bed_type ?? 'null'}, name=${s2.name ?? 'undefined'}`)
       );
       setError('Bed type and name are required');
       return null;
@@ -419,7 +421,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
   const reset = useCallback(() => {
     setCurrentStep(1);
     setStepData({
-      1: { bed_type: prefillType ?? null, name: '' },
+      1: { bed_type: prefillType ?? null },
       2: prefillType
         ? { ...DEFAULT_STEP2, sunlight: GUILD_TEMPLATES[prefillType].sunlight_requirement }
         : DEFAULT_STEP2,

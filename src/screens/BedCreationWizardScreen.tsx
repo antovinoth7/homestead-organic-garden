@@ -91,13 +91,13 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
     const entry = wizard.stepData[4]?.plant_entries.find((e) => e.id === entryId);
     if (!entry) return;
     const s1 = wizard.stepData[1];
-    if (!s1?.bed_type || !s1.name?.trim()) {
-      Alert.alert('Bed name required', 'Please go back to Step 1 and name your bed first.');
+    const s2 = wizard.stepData[2];
+    if (!s1?.bed_type || !s2?.name?.trim()) {
+      Alert.alert('Bed name required', 'Please complete Step 2 and name your bed first.');
       return;
     }
     try {
       const bedId = await wizard.ensureBedSaved();
-      const s2 = wizard.stepData[2];
       navigation.navigate('Plants', {
         screen: 'PlantForm',
         params: {
@@ -105,7 +105,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
             name: entry.name,
             variety,
             bedId,
-            bedName: s1.name.trim(),
+            bedName: s2.name.trim(),
             bedLayer: entry.layer,
             spacingCm: entry.spacingCm,
             sunlight: s2?.sunlight,
