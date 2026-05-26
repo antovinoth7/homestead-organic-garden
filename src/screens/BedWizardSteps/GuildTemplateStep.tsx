@@ -456,9 +456,6 @@ export function GuildTemplateStep({
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
-      <Text style={styles.stepTitle}>{template.label}</Text>
-      <Text style={styles.stepSubtitle}>{template.description}</Text>
-
       <View style={styles.gtTemplateBanner}>
         <Ionicons name="information-circle-outline" size={18} color={theme.infoDark} />
         <Text style={styles.gtTemplateBannerText}>
