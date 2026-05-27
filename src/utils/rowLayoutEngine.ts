@@ -36,6 +36,11 @@ const EDGE_BUFFER_MAX_CM = 20;
 const WALKING_PATH_CM = 60;
 const ROW_SUFFIX = ['A', 'B', 'C', 'D', 'E'];
 
+// Upper bound for `maxFitForSpecies` probing to keep the per-row UI snappy on
+// arbitrarily large beds. Real beds never need more than a few dozen of one
+// species; 200 is comfortably above any farmer-facing use case.
+const MAX_FIT_HARD_CAP = 200;
+
 export interface RowPlantInput {
   id?: string;
   name: string;
@@ -120,7 +125,7 @@ export function maxFitForSpecies(
   const gapCm = candidate.rowGapCm ?? candidate.spacingCm * rowMultiplier;
   const effectiveGap = Math.max(gapCm, minRowGap);
   const maxRowsCap = Math.max(1, Math.floor(bedLengthCm / effectiveGap));
-  const cap = Math.max(ppr * maxRowsCap, 1);
+  const cap = Math.min(MAX_FIT_HARD_CAP, Math.max(ppr * maxRowsCap, 1));
 
   for (let n = 1; n <= cap; n++) {
     const additions: RowPlantInput[] = Array.from({ length: n }, (_, i) => ({
