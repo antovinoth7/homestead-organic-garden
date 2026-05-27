@@ -10,6 +10,7 @@ import {
   computeRowLayout,
   maxFitForSpecies,
   getRecommendedFirstAdd,
+  computePlantsPerRow,
 } from '@/utils/rowLayoutEngine';
 import type { RowPlantInput } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
@@ -40,7 +41,6 @@ const ACCUMULATOR_DEFAULT_SPACING = 60;
 const DEFAULT_BED_WIDTH_M = 1.2;
 const DEFAULT_BED_LENGTH_M = 3.0;
 
-
 const PLANT_EMOJI: Record<string, string> = {
   Amaranth: '🌿',
   Spinach: '🥬',
@@ -48,7 +48,7 @@ const PLANT_EMOJI: Record<string, string> = {
   Fenugreek: '🌱',
   Tomato: '🍅',
   Brinjal: '🍆',
-  Okra: '🫛',
+  'Ladies Finger': '🫛',
   Marigold: '🌼',
   Chilli: '🌶️',
   Ginger: '🫚',
@@ -157,6 +157,8 @@ export function GuildTemplateStep({
   const template = bedType ? getGuildTemplate(bedType) : null;
 
   const [autoAddedMsg, setAutoAddedMsg] = useState<string | null>(null);
+  const [companionsExpanded, setCompanionsExpanded] = useState(false);
+  const [soilBuildersExpanded, setSoilBuildersExpanded] = useState(false);
 
   // Auto-dismiss the companion notification after 4 seconds
   useEffect(() => {
@@ -299,7 +301,7 @@ export function GuildTemplateStep({
   // ── Increment / decrement handlers ──────────────────────────────────────────
 
   const incrementPlant = useCallback(
-    (candidate: RowPlantInput, companionsToAutoAdd?: string[]): void => {
+    (candidate: RowPlantInput, isMainCrop: boolean, companionsToAutoAdd?: string[]): void => {
       setAutoAddedMsg(null);
       // Antagonist check vs any *different* species already in the bed
       for (const entry of data.plant_entries) {
@@ -308,9 +310,12 @@ export function GuildTemplateStep({
         if (!result.valid) return;
       }
 
-      // Capacity check — applies to every tap equally (no special first-add bulk fill)
+      const bedWidthCm = Math.round(widthM * 100);
+      const plantsToAdd = isMainCrop ? computePlantsPerRow(bedWidthCm, candidate.spacingCm) : 1;
+
+      // Capacity check — need room for a full row
       const remaining = maxFitMap.get(candidate.name) ?? 0;
-      if (remaining <= 0) return;
+      if (remaining < plantsToAdd) return;
 
       const instanceCount = data.plant_entries.filter((e) => e.name === candidate.name).length;
       const makeEntry = (name: string, layer: BedLayer, spacingCm: number): PlantEntry => ({
@@ -320,10 +325,12 @@ export function GuildTemplateStep({
         spacingCm,
       });
 
-      // Always add exactly 1 plant per tap for predictable stepper behaviour
+      // Add one full row (plantsToAdd plants) per tap for main crops; 1 for companions
       const newEntries: PlantEntry[] = [
         ...data.plant_entries,
-        makeEntry(candidate.name, candidate.layer, candidate.spacingCm),
+        ...Array.from({ length: plantsToAdd }, () =>
+          makeEntry(candidate.name, candidate.layer, candidate.spacingCm)
+        ),
       ];
 
       // On first add of a main crop, auto-add recommended companions that fit
@@ -335,7 +342,10 @@ export function GuildTemplateStep({
           for (const existing of newEntries) {
             if (existing.name === compName) continue;
             const r = validateCompanionPair(compName, existing.name);
-            if (!r.valid) { antag = true; break; }
+            if (!r.valid) {
+              antag = true;
+              break;
+            }
           }
           if (antag) continue;
           const compCandidate = candidateForCompanion(compName);
@@ -356,9 +366,7 @@ export function GuildTemplateStep({
       onChange({ plant_entries: newEntries });
       if (addedCompanions.length > 0) {
         const label = addedCompanions.length === 1 ? 'companion' : 'companions';
-        setAutoAddedMsg(
-          `Also added to your bed: ${addedCompanions.join(', ')} (${label})`
-        );
+        setAutoAddedMsg(`Also added to your bed: ${addedCompanions.join(', ')} (${label})`);
       }
     },
     [
@@ -376,32 +384,53 @@ export function GuildTemplateStep({
   );
 
   const decrementPlant = useCallback(
-    (plantName: string): void => {
+    (plantName: string, spacingCm: number, isMainCrop: boolean): void => {
       setAutoAddedMsg(null);
-      const lastIdx = (() => {
-        for (let i = data.plant_entries.length - 1; i >= 0; i--) {
-          if (data.plant_entries[i]!.name === plantName) return i;
-        }
-        return -1;
-      })();
-      if (lastIdx === -1) return;
+      const bedWidthCm = Math.round(widthM * 100);
+      const plantsToRemove = isMainCrop ? computePlantsPerRow(bedWidthCm, spacingCm) : 1;
+      let toRemove = plantsToRemove;
       const next = [...data.plant_entries];
-      next.splice(lastIdx, 1);
+      for (let i = next.length - 1; i >= 0 && toRemove > 0; i--) {
+        if (next[i]!.name === plantName) {
+          next.splice(i, 1);
+          toRemove--;
+        }
+      }
       onChange({ plant_entries: next });
     },
-    [data.plant_entries, onChange]
+    [data.plant_entries, widthM, onChange]
   );
 
-  // Capacity text shown on each card, e.g. "fits ~3" or "~2 more fit" or "Bed full".
+  // Capacity text: shows "N rows × M = total" for main crops; "fits ~N" for companions.
   const capacityText = useCallback(
-    (name: string, count: number): string => {
-      const remaining = maxFitMap.get(name) ?? 0;
-      if (remaining === 0 && count === 0) return "Too big for bed";
-      if (remaining === 0) return "Bed full";
+    (candidate: RowPlantInput, count: number, isMainCrop: boolean): string => {
+      const remaining = maxFitMap.get(candidate.name) ?? 0;
+
+      if (isMainCrop) {
+        const bedWidthCm = Math.round(widthM * 100);
+        const ppr = computePlantsPerRow(bedWidthCm, candidate.spacingCm);
+        const rowsCanAdd = Math.floor(remaining / ppr);
+
+        if (remaining === 0 && count === 0) return 'Too big for bed';
+        if (count === 0) {
+          if (rowsCanAdd === 0) return 'Too big for bed';
+          return rowsCanAdd === 1
+            ? `${ppr} plants (1 row)`
+            : `${rowsCanAdd} rows × ${ppr} = ${rowsCanAdd * ppr}`;
+        }
+        const suffix =
+          rowsCanAdd === 0 ? 'Bed full'
+          : rowsCanAdd === 1 ? '1 more row fits'
+          : `${rowsCanAdd} more rows fit`;
+        return `${count} plants · ${suffix}`;
+      }
+
+      if (remaining === 0 && count === 0) return 'Too big for bed';
+      if (remaining === 0) return 'Bed full';
       if (count === 0) return `fits ~${remaining}`;
       return `~${remaining} more fit`;
     },
-    [maxFitMap]
+    [maxFitMap, widthM]
   );
 
   // One-tap: add all template plants at their recommended counts.
@@ -414,15 +443,28 @@ export function GuildTemplateStep({
       for (const existing of accEntries) {
         if (existing.name === row.name) continue;
         const check = validateCompanionPair(row.name, existing.name);
-        if (!check.valid) { blocked = true; break; }
+        if (!check.valid) {
+          blocked = true;
+          break;
+        }
       }
       if (blocked) continue;
       const candidate = candidateForRow(row);
       const trialInputs = mapPlantEntriesToRowInputs(accEntries, template);
-      const count = getRecommendedFirstAdd(candidate, trialInputs, widthM, lengthM, bedTypeForEngine, construction);
+      const count = getRecommendedFirstAdd(
+        candidate,
+        trialInputs,
+        widthM,
+        lengthM,
+        bedTypeForEngine,
+        construction
+      );
       if (count === 0) continue;
       for (let i = 0; i < count; i++) {
-        accEntries = [...accEntries, { id: generateId(), name: row.name, layer: row.layer, spacingCm: row.spacing_cm }];
+        accEntries = [
+          ...accEntries,
+          { id: generateId(), name: row.name, layer: row.layer, spacingCm: row.spacing_cm },
+        ];
       }
     }
     onChange({ plant_entries: accEntries });
@@ -456,13 +498,6 @@ export function GuildTemplateStep({
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
-      <View style={styles.gtTemplateBanner}>
-        <Ionicons name="information-circle-outline" size={18} color={theme.infoDark} />
-        <Text style={styles.gtTemplateBannerText}>
-          Tap + to select crops. Link each to a seed variety in the Arrange step.
-        </Text>
-      </View>
-
       {autoAddedMsg !== null && (
         <View style={styles.gtAutoAddedBanner}>
           <Text style={styles.gtAutoAddedBannerText}>✓ {autoAddedMsg}</Text>
@@ -475,10 +510,12 @@ export function GuildTemplateStep({
         </View>
       )}
 
-      <TouchableOpacity style={styles.gtUseFullPlanBtn} onPress={handleUseFullPlan} activeOpacity={0.8}>
-        <Text style={styles.gtUseFullPlanBtnText}>
-          📋 Plant all suggested crops for this bed
-        </Text>
+      <TouchableOpacity
+        style={styles.gtUseFullPlanBtn}
+        onPress={handleUseFullPlan}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.gtUseFullPlanBtnText}>📋 Plant all suggested crops for this bed</Text>
         <View style={styles.gtUseFullPlanQuickBadge}>
           <Text style={styles.gtUseFullPlanQuickBadgeText}>Quick Start</Text>
         </View>
@@ -514,19 +551,19 @@ export function GuildTemplateStep({
       <Text style={styles.gtSectionHeader}>MAIN CROPS</Text>
 
       {template.plant_rows.map((row) => {
+        const candidate = candidateForRow(row);
         const instanceCount = data.plant_entries.filter((e) => e.name === row.name).length;
         const isSelected = instanceCount > 0;
         const blockedReason = !isSelected ? getBlockedReason(row.name) : null;
         const isBlocked = !!blockedReason;
         const remaining = maxFitMap.get(row.name) ?? 0;
-        const capReached = remaining === 0;
         const emoji = PLANT_EMOJI[row.name] ?? '🌱';
         const layerLabel = LAYER_LABEL[row.layer] ?? row.layer.replace(/_/g, ' ');
         const isMain = row.is_companion !== true;
+        const speciesPPR = isMain ? computePlantsPerRow(Math.round(widthM * 100), row.spacing_cm) : 1;
+        const capReached = remaining < speciesPPR;
         const autoCompanions =
           isMain && row.companion_plants.length > 0 ? row.companion_plants : undefined;
-
-        const harvestDays = row.days_to_harvest;
 
         return (
           <View
@@ -567,17 +604,12 @@ export function GuildTemplateStep({
                     </Text>
                   </View>
                 )}
-                {harvestDays !== undefined && (
+                {row.days_to_harvest !== undefined && (
                   <View style={styles.gtHarvestBadge}>
-                    <Text style={styles.gtHarvestBadgeText}>{harvestDays}d harvest</Text>
+                    <Text style={styles.gtHarvestBadgeText}>{row.days_to_harvest}d harvest</Text>
                   </View>
                 )}
               </View>
-              {row.benefit_tag && BENEFIT_EXPLANATION[row.benefit_tag] && (
-                <Text style={styles.gtBenefitLine}>
-                  {BENEFIT_EXPLANATION[row.benefit_tag]}
-                </Text>
-              )}
               {isBlocked && <Text style={styles.gtAntagonistText}>⛔ {blockedReason}</Text>}
               {step2?.waterlogging_risk && row.needs_good_drainage && (
                 <View style={styles.gtDrainageBadge}>
@@ -588,92 +620,138 @@ export function GuildTemplateStep({
 
             <View style={styles.gtPlantRight}>
               <Text style={styles.gtSpacingTag}>{row.spacing_cm} cm</Text>
-              <Text style={styles.gtPlantCountTag}>{capacityText(row.name, instanceCount)}</Text>
-              <PlantQtyStepper
-                count={instanceCount}
-                onIncrement={() => incrementPlant(candidateForRow(row), autoCompanions)}
-                onDecrement={() => decrementPlant(row.name)}
-                disabled={isBlocked || capReached}
-              />
+              <Text style={styles.gtPlantCountTag}>
+                {capacityText(candidate, instanceCount, isMain)}
+              </Text>
+              {(() => {
+                const bedWidthCm = Math.round(widthM * 100);
+                const speciesPPR = isMain ? computePlantsPerRow(bedWidthCm, row.spacing_cm) : 1;
+                const rowsAdded = isMain ? Math.round(instanceCount / speciesPPR) : instanceCount;
+                return (
+                  <PlantQtyStepper
+                    count={rowsAdded}
+                    onIncrement={() => incrementPlant(candidate, isMain, autoCompanions)}
+                    onDecrement={() => decrementPlant(row.name, row.spacing_cm, isMain)}
+                    disabled={isBlocked || capReached}
+                  />
+                );
+              })()}
             </View>
           </View>
         );
       })}
 
-      {/* ── Companion suggestions ────────────────────────────────────────── */}
+      {/* ── Companion suggestions (collapsible) ─────────────────────────── */}
       {companionSuggestions.length > 0 && (
         <>
-          <Text style={[styles.gtSectionHeader, styles.gtSectionHeaderMt]}>
-            HELPFUL NEIGHBOR PLANTS
-          </Text>
-          {companionSuggestions.map((comp) => {
-            const compCount = data.plant_entries.filter((e) => e.name === comp).length;
-            const compBlocked = compCount === 0 && !!getBlockedReason(comp);
-            const compRemaining = maxFitMap.get(comp) ?? 0;
-            const compCapReached = compRemaining === 0;
-            return (
-              <View key={comp} style={styles.gtCompanionRow}>
-                <Text style={styles.gtCompanionEmoji}>{PLANT_EMOJI[comp] ?? '🌿'}</Text>
-                <View style={styles.gtCompanionNameBlock}>
-                  <Text style={styles.gtCompanionName}>{comp}</Text>
-                  <Text style={styles.gtCompanionFitText}>{capacityText(comp, compCount)}</Text>
+          <TouchableOpacity
+            style={[styles.gtSectionHeaderMt, styles.gtCollapsibleHeader]}
+            onPress={() => setCompanionsExpanded((v: boolean) => !v)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.gtSectionHeader}>
+              HELPFUL NEIGHBORS ({companionSuggestions.length})
+            </Text>
+            <Ionicons
+              name={companionsExpanded ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={theme.textSecondary}
+            />
+          </TouchableOpacity>
+          {companionsExpanded &&
+            companionSuggestions.map((comp: string) => {
+              const compCandidate = candidateForCompanion(comp);
+              const compCount = data.plant_entries.filter((e) => e.name === comp).length;
+              const compBlocked = compCount === 0 && !!getBlockedReason(comp);
+              const compRemaining = maxFitMap.get(comp) ?? 0;
+              const compCapReached = compRemaining === 0;
+              return (
+                <View key={comp} style={styles.gtCompanionRow}>
+                  <Text style={styles.gtCompanionEmoji}>{PLANT_EMOJI[comp] ?? '🌿'}</Text>
+                  <View style={styles.gtCompanionNameBlock}>
+                    <Text style={styles.gtCompanionName}>{comp}</Text>
+                    <Text style={styles.gtCompanionFitText}>
+                      {capacityText(compCandidate, compCount, false)}
+                    </Text>
+                  </View>
+                  <PlantQtyStepper
+                    count={compCount}
+                    onIncrement={() => incrementPlant(compCandidate, false)}
+                    onDecrement={() => decrementPlant(comp, COMPANION_DEFAULT_SPACING, false)}
+                    disabled={compBlocked || compCapReached}
+                  />
                 </View>
-                <PlantQtyStepper
-                  count={compCount}
-                  onIncrement={() => incrementPlant(candidateForCompanion(comp))}
-                  onDecrement={() => decrementPlant(comp)}
-                  disabled={compBlocked || compCapReached}
-                />
+              );
+            })}
+        </>
+      )}
+
+      {/* ── Dynamic accumulators (collapsible) ──────────────────────────── */}
+      <TouchableOpacity
+        style={[styles.gtSectionHeaderMt, styles.gtCollapsibleHeader]}
+        onPress={() => setSoilBuildersExpanded((v: boolean) => !v)}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.gtSectionHeader}>SOIL BUILDERS (CHOP & DROP)</Text>
+        <Ionicons
+          name={soilBuildersExpanded ? 'chevron-up' : 'chevron-down'}
+          size={16}
+          color={theme.textSecondary}
+        />
+      </TouchableOpacity>
+
+      {soilBuildersExpanded && (
+        <>
+          <Text style={styles.gtAccSubtitle}>
+            Add one to enrich your soil. Cut stems back to mulch the bed.
+          </Text>
+          {DYNAMIC_ACCUMULATORS.map((acc) => {
+            const accCandidate = candidateForAccumulator(acc.name);
+            const accCount = data.plant_entries.filter((e) => e.name === acc.name).length;
+            const isAdded = accCount > 0;
+            const accBlocked = !isAdded && !!getBlockedReason(acc.name);
+            const accRemaining = maxFitMap.get(acc.name) ?? 0;
+            const accCapReached = accRemaining === 0;
+            return (
+              <View key={acc.name} style={[styles.gtAccCard, isAdded && styles.gtAccCardSelected]}>
+                <View style={styles.gtAccHeader}>
+                  <View style={styles.gtAccNameBlock}>
+                    <Text style={[styles.gtAccName, isAdded && styles.gtAccNameSelected]}>
+                      {acc.name}
+                    </Text>
+                    <Text style={styles.gtAccFitText}>
+                      {capacityText(accCandidate, accCount, false)}
+                    </Text>
+                  </View>
+                  <PlantQtyStepper
+                    count={accCount}
+                    onIncrement={() => incrementPlant(accCandidate, false)}
+                    onDecrement={() => decrementPlant(acc.name, ACCUMULATOR_DEFAULT_SPACING, false)}
+                    disabled={accBlocked || accCapReached}
+                  />
+                </View>
+                <Text style={[styles.gtIntervalText, isAdded && styles.gtIntervalTextSelected]}>
+                  ✂️ Chop every {acc.chop_drop_interval_days} days
+                </Text>
+                <View style={styles.gtNutrientRow}>
+                  {acc.nutrients_mined.map((n) => (
+                    <View
+                      key={n}
+                      style={[styles.gtNutrientChip, isAdded && styles.gtNutrientChipSelected]}
+                    >
+                      <Text
+                        style={[styles.gtNutrientText, isAdded && styles.gtNutrientTextSelected]}
+                      >
+                        {n}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
               </View>
             );
           })}
         </>
       )}
-
-      {/* ── Dynamic accumulators ─────────────────────────────────────────── */}
-      <Text style={[styles.gtSectionHeader, styles.gtSectionHeaderMt]}>{'SOIL BUILDERS (CHOP & DROP)'}</Text>
-      <Text style={styles.gtAccSubtitle}>Add one to enrich your soil. Cut stems back to mulch the bed.</Text>
-
-      {DYNAMIC_ACCUMULATORS.map((acc) => {
-        const accCount = data.plant_entries.filter((e) => e.name === acc.name).length;
-        const isAdded = accCount > 0;
-        const accBlocked = !isAdded && !!getBlockedReason(acc.name);
-        const accRemaining = maxFitMap.get(acc.name) ?? 0;
-        const accCapReached = accRemaining === 0;
-        return (
-          <View key={acc.name} style={[styles.gtAccCard, isAdded && styles.gtAccCardSelected]}>
-            <View style={styles.gtAccHeader}>
-              <View style={styles.gtAccNameBlock}>
-                <Text style={[styles.gtAccName, isAdded && styles.gtAccNameSelected]}>
-                  {acc.name}
-                </Text>
-                <Text style={styles.gtAccFitText}>{capacityText(acc.name, accCount)}</Text>
-              </View>
-              <PlantQtyStepper
-                count={accCount}
-                onIncrement={() => incrementPlant(candidateForAccumulator(acc.name))}
-                onDecrement={() => decrementPlant(acc.name)}
-                disabled={accBlocked || accCapReached}
-              />
-            </View>
-            <Text style={[styles.gtIntervalText, isAdded && styles.gtIntervalTextSelected]}>
-              ✂️ Chop every {acc.chop_drop_interval_days} days
-            </Text>
-            <View style={styles.gtNutrientRow}>
-              {acc.nutrients_mined.map((n) => (
-                <View
-                  key={n}
-                  style={[styles.gtNutrientChip, isAdded && styles.gtNutrientChipSelected]}
-                >
-                  <Text style={[styles.gtNutrientText, isAdded && styles.gtNutrientTextSelected]}>
-                    {n}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        );
-      })}
       {/* ── Harvest mini-timeline ────────────────────────────────────────── */}
       {harvestPreview.length > 1 && (
         <>
@@ -681,13 +759,15 @@ export function GuildTemplateStep({
             FIRST HARVEST FROM THIS BED
           </Text>
           <View style={styles.gtHarvestTimeline}>
-            {harvestPreview.map((item) => {
+            {harvestPreview.map((item: { name: string; days: number; emoji: string }) => {
               const maxDays = harvestPreview[harvestPreview.length - 1]!.days;
               const barWidth = Math.max(20, Math.round((item.days / maxDays) * 140));
               return (
                 <View key={item.name} style={styles.gtHarvestRow}>
                   <View style={styles.gtHarvestLabelCol}>
-                    <Text style={styles.gtHarvestName}>{item.emoji} {item.name}</Text>
+                    <Text style={styles.gtHarvestName}>
+                      {item.emoji} {item.name}
+                    </Text>
                   </View>
                   <View style={styles.gtHarvestBarTrack}>
                     <View style={[styles.gtHarvestBar, { width: barWidth }]} />

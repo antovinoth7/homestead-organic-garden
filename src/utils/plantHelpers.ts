@@ -24,7 +24,6 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Eggplant: ['Beans', 'Peas', 'Spinach', 'Thyme'],
   Brinjal: ['Beans', 'Peas', 'Spinach', 'Thyme'],
   'Long Brinjal': ['Beans', 'Peas', 'Spinach', 'Thyme'],
-  'Ladies Finger': ['Basil', 'Pepper', 'Eggplant', 'Cucumber'],
   Tapioca: ['Cowpea', 'Beans', 'Marigold'],
   Drumstick: ['Brinjal', 'Chilli', 'Coriander'],
   Amaranthus: ['Onion', 'Radish', 'Beans'],
@@ -79,7 +78,7 @@ const COMPANION_PLANTS: Record<string, string[]> = {
 
   // Bed-type plants — new additions
   Fenugreek: ['Spinach', 'Radish', 'Onion', 'Coriander'],
-  Okra: ['Basil', 'Pepper', 'Eggplant', 'Cucumber'],
+  'Ladies Finger': ['Basil', 'Pepper', 'Eggplant', 'Cucumber'],
   Moringa: ['Tulsi', 'Aloe Vera', 'Lemongrass'],
   'Pasalai Keerai': ['Radish', 'Turmeric', 'Basil'],
   'French Beans': ['Carrot', 'Beetroot', 'Cucumber', 'Radish'],
@@ -1132,8 +1131,8 @@ export function getCoconutAgeInfo(plantingDate: string | null | undefined): Coco
     ageMonths < 12
       ? `${ageMonths} month${ageMonths !== 1 ? 's' : ''}`
       : ageYears >= 2
-      ? `${Math.floor(ageYears)} year${Math.floor(ageYears) !== 1 ? 's' : ''}`
-      : `${Math.floor(ageYears)} year ${ageMonths % 12} month${ageMonths % 12 !== 1 ? 's' : ''}`;
+        ? `${Math.floor(ageYears)} year${Math.floor(ageYears) !== 1 ? 's' : ''}`
+        : `${Math.floor(ageYears)} year ${ageMonths % 12} month${ageMonths % 12 !== 1 ? 's' : ''}`;
 
   if (ageMonths < 6) {
     return {
@@ -1408,7 +1407,6 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Eggplant: '🍆',
   Brinjal: '🍆',
   'Long Brinjal': '🍆',
-  'Ladies Finger': '🌿',
   Pumpkin: '🎃',
   Spinach: '🥬',
   Radish: '🥕',
@@ -1462,7 +1460,7 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Purslane: '🌿',
   'Pasalai Keerai': '🥬',
   Fenugreek: '🌿',
-  Okra: '🌿',
+  'Ladies Finger': '🌿',
   Moringa: '🌿',
   Squash: '🥒',
   'Yardlong Beans': '🫘',

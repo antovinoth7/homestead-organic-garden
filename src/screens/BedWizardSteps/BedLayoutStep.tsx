@@ -5,7 +5,7 @@ import { useTheme } from '@/theme';
 import { BedLayerStack } from '@/components/BedLayerStack';
 import { BedPlantPickerSheet } from '@/components/BedPlantPickerSheet';
 import { PlantEntryResolverSheet } from '@/components/PlantEntryResolverSheet';
-import { computeRowLayout } from '@/utils/rowLayoutEngine';
+import { computeRowLayout, getVisibleLayers } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { getGuildTemplate } from '@/config/beds/guildTemplates';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
@@ -30,13 +30,37 @@ const LAYER_ACCENT_COLOR: Record<BedLayer, string> = {
 };
 
 const PLANT_EMOJI_LAYOUT: Record<string, string> = {
-  Amaranth: '🌿', Spinach: '🥬', Lettuce: '🥗', Fenugreek: '🌱', Tomato: '🍅',
-  Brinjal: '🍆', Okra: '🫛', Marigold: '🌼', Chilli: '🌶️', Ginger: '🫚',
-  Turmeric: '🟡', 'Curry Leaf': '🍃', Cowpea: '🫘', 'French Beans': '🫘',
-  Carrot: '🥕', Radish: '🌰', 'Bitter Gourd': '🥒', 'Snake Gourd': '🥒',
-  'Yardlong Beans': '🫘', Banana: '🍌', Maize: '🌽', Beans: '🫘', Pumpkin: '🎃',
-  Moringa: '🌳', Tulsi: '🌿', 'Aloe Vera': '🌵', Lemongrass: '🌾', Basil: '🌿',
-  Garlic: '🧄', 'Black Pepper': '⚫', 'Elephant Yam': '🥔',
+  Amaranth: '🌿',
+  Spinach: '🥬',
+  Lettuce: '🥗',
+  Fenugreek: '🌱',
+  Tomato: '🍅',
+  Brinjal: '🍆',
+  'Ladies Finger': '🫛',
+  Marigold: '🌼',
+  Chilli: '🌶️',
+  Ginger: '🫚',
+  Turmeric: '🟡',
+  'Curry Leaf': '🍃',
+  Cowpea: '🫘',
+  'French Beans': '🫘',
+  Carrot: '🥕',
+  Radish: '🌰',
+  'Bitter Gourd': '🥒',
+  'Snake Gourd': '🥒',
+  'Yardlong Beans': '🫘',
+  Banana: '🍌',
+  Maize: '🌽',
+  Beans: '🫘',
+  Pumpkin: '🎃',
+  Moringa: '🌳',
+  Tulsi: '🌿',
+  'Aloe Vera': '🌵',
+  Lemongrass: '🌾',
+  Basil: '🌿',
+  Garlic: '🧄',
+  'Black Pepper': '⚫',
+  'Elephant Yam': '🥔',
 };
 
 const generateId = (): string =>
@@ -175,45 +199,57 @@ export function BedLayoutStep({
     [step4.plant_entries, resolveEntryId]
   );
 
-  // Bed rows preview — visual dot data for each row.
+  // Position-aware row preview using northEdgeCm and eastPositionsCm from the engine.
   const bedRowsPreview = useMemo(() => {
     if (rowLayout.rows.length === 0) return [];
-    return rowLayout.rows.map((row) => {
-      const capped = row.plants.slice(0, 8);
-      const overflow = Math.max(0, row.plants.length - 8);
+    return rowLayout.rows.map((row: import('@/utils/rowLayoutEngine').BedRow) => {
+      // Unique plant names in display order (deduplicate within the row)
+      const seen = new Set<string>();
+      const uniquePlants: { name: string; emoji: string; isCompanion: boolean }[] = [];
+      for (const p of row.plants) {
+        if (!seen.has(p.name)) {
+          seen.add(p.name);
+          uniquePlants.push({
+            name: p.name,
+            emoji: PLANT_EMOJI_LAYOUT[p.name] ?? '🌱',
+            isCompanion: p.isCompanion === true,
+          });
+        }
+      }
+      const plantCount = row.plants.length;
+      // Show up to 4 position values, then "…"
+      const positions = row.eastPositionsCm.slice(0, 4).map((cm: number) => `${cm}`);
+      const posStr =
+        row.eastPositionsCm.length > 4 ? positions.join(', ') + '…' : positions.join(', ') + ' cm';
       return {
         rowIndex: row.rowIndex,
         layer: row.layer,
-        dots: capped.map((p) => ({
-          name: p.name,
-          emoji: PLANT_EMOJI_LAYOUT[p.name] ?? '🌱',
-          isCompanion: p.isCompanion === true,
-        })),
-        overflow,
+        northEdgeCm: row.northEdgeCm,
+        plants: uniquePlants,
+        plantCount,
+        plantsPerRow: row.plantsPerRow,
+        posStr,
       };
     });
   }, [rowLayout.rows]);
 
-  // Planting schedule grouped by succession_week from guild template.
-  const plantingSchedule = useMemo(() => {
-    if (!bedType || step4.plant_entries.length === 0) return [];
-    const template = getGuildTemplate(bedType);
-    const weekMap = new Map<number, string[]>();
-    const seen = new Set<string>();
-    for (const entry of step4.plant_entries) {
-      if (seen.has(entry.name)) continue;
-      seen.add(entry.name);
-      const row = template.plant_rows.find((r) => r.name === entry.name);
-      const week = row?.succession_week ?? 1;
-      const existing = weekMap.get(week) ?? [];
-      weekMap.set(week, [...existing, entry.name]);
-    }
-    return Array.from(weekMap.entries()).sort(([a], [b]) => a - b);
+  // Whether any row uses the climber layer (needs trellis installation guidance).
+  const hasTrellisRow = useMemo(
+    () =>
+      rowLayout.rows.some((r: import('@/utils/rowLayoutEngine').BedRow) => r.layer === 'climber'),
+    [rowLayout.rows]
+  );
+
+  // Layers to show in BedLayerStack — filtered to bed type + planted layers.
+  const visibleLayers = useMemo(() => {
+    if (!bedType) return undefined;
+    const plantedLayers = new Set(step4.plant_entries.map((e) => e.layer as BedLayer));
+    return getVisibleLayers(bedType, plantedLayers);
   }, [bedType, step4.plant_entries]);
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
-      {/* ── Bed rows preview ─────────────────────────────────────────────── */}
+      {/* ── Position-aware bed rows preview ──────────────────────────────── */}
       {bedRowsPreview.length > 0 && (
         <View style={styles.blRowPreviewCard}>
           <View style={styles.blRowPreviewHeader}>
@@ -222,39 +258,66 @@ export function BedLayoutStep({
             </Text>
             <Text style={styles.blRowPreviewCompass}>↑ N</Text>
           </View>
-          {bedRowsPreview.map((row) => (
-            <View key={row.rowIndex} style={styles.blRowPreviewRow}>
-              <View
-                style={[
-                  styles.blRowAccent,
-                  { backgroundColor: LAYER_ACCENT_COLOR[row.layer as BedLayer] },
-                ]}
-              />
-              <View style={styles.blRowDots}>
-                {row.dots.map((dot, i) => (
-                  <View
-                    key={i}
-                    style={[styles.blRowDot, dot.isCompanion && styles.blRowDotCompanion]}
-                  >
-                    <Text style={styles.blRowDotEmoji}>{dot.emoji}</Text>
-                  </View>
-                ))}
-                {row.overflow > 0 && (
-                  <Text style={styles.blRowOverflow}>+{row.overflow}</Text>
-                )}
+          {bedRowsPreview.map(
+            (row: {
+              rowIndex: number;
+              layer: string;
+              northEdgeCm: number;
+              plants: { name: string; emoji: string; isCompanion: boolean }[];
+              plantCount: number;
+              plantsPerRow: number;
+              posStr: string;
+            }) => (
+              <View key={row.rowIndex} style={styles.blRowPreviewRow}>
+                <View
+                  style={[
+                    styles.blRowAccent,
+                    { backgroundColor: LAYER_ACCENT_COLOR[row.layer as BedLayer] },
+                  ]}
+                />
+                <View style={styles.blRowDots}>
+                  {row.plants.map(
+                    (p: { name: string; emoji: string; isCompanion: boolean }, i: number) => (
+                      <View
+                        key={i}
+                        style={[styles.blRowDot, p.isCompanion && styles.blRowDotCompanion]}
+                      >
+                        <Text style={styles.blRowDotEmoji}>{p.emoji}</Text>
+                      </View>
+                    )
+                  )}
+                </View>
+                <View style={styles.blRowPositionInfo}>
+                  <Text style={styles.blRowPreviewRowLayer}>
+                    {FARMER_LAYER_LABEL[row.layer as BedLayer]}
+                  </Text>
+                  <Text style={styles.blRowPositionText}>
+                    {row.northEdgeCm}cm from N · {row.plantCount}× at {row.posStr}
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.blRowPreviewRowLayer}>
-                {FARMER_LAYER_LABEL[row.layer as BedLayer]}
-              </Text>
-            </View>
-          ))}
-          <Text style={styles.blRowPreviewSouth}>↓ S · 60cm walking path</Text>
+            )
+          )}
+          <Text style={styles.blRowPreviewSouth}>
+            ↓ S · 60cm walking path · Tall crops North — won't shade shorter rows
+          </Text>
+        </View>
+      )}
+
+      {/* ── Trellis guidance ─────────────────────────────────────────────── */}
+      {hasTrellisRow && (
+        <View style={styles.blTrellisCard}>
+          <Text style={styles.blTrellisText}>
+            🔧 Trellis required — Install bamboo poles or wire frame on the North end, min 1.5 m
+            height. Anchor firmly before sowing.
+          </Text>
         </View>
       )}
 
       <BedLayerStack
         result={rowLayout}
         entries={step4.plant_entries}
+        visibleLayers={visibleLayers}
         onAddToLayer={handleAddToLayer}
         onRemovePlant={handleRemovePlant}
         onResolveEntry={handleOpenResolver}
@@ -265,23 +328,6 @@ export function BedLayoutStep({
         <Ionicons name="add" size={18} color={theme.textInverse} />
         <Text style={styles.blAddFabText}>Add Plant</Text>
       </TouchableOpacity>
-
-      {/* ── Planting schedule ────────────────────────────────────────────── */}
-      {plantingSchedule.length > 0 && (
-        <View style={styles.blScheduleCard}>
-          <Text style={styles.blScheduleTitle}>PLANTING SCHEDULE</Text>
-          {plantingSchedule.map(([week, names]: [number, string[]]) => (
-            <View key={week} style={styles.blScheduleWeekRow}>
-              <Text style={styles.blScheduleWeekLabel}>
-                {week === 1 ? 'Week 1\n(Plant now)' : `Week ${week}`}
-              </Text>
-              <Text style={styles.blSchedulePlantNames}>
-                {names.map((n) => `${PLANT_EMOJI_LAYOUT[n] ?? '🌱'} ${n}`).join('  ·  ')}
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
 
       <BedPlantPickerSheet
         visible={pickerVisible}

@@ -36,7 +36,7 @@ const BED_TYPE_OPTIONS: {
     label: 'Veggie Bed',
     tamilLabel: 'காய்கறி பாத்தி',
     emoji: '🍅',
-    desc: 'Tomato, brinjal, okra',
+    desc: 'Tomato, brinjal, ladies finger',
     info: 'Full sun · 60–90 days',
     seasonFit: { summer: 'ideal', sw_monsoon: 'avoid', ne_monsoon: 'avoid', cool_dry: 'ok' },
   },
@@ -102,7 +102,6 @@ const SEASON_LABEL: Record<string, string> = {
   ne_monsoon: 'NE Monsoon',
   cool_dry: 'Cool & Dry',
 };
-
 
 export function BedTypeStep({ data, onChange }: Props): React.JSX.Element {
   const theme = useTheme();

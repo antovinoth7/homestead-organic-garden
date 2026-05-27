@@ -52,7 +52,7 @@ describe('computeRowLayout', () => {
     const plants = [
       plant('Tomato', 'understory', 60),
       plant('Brinjal', 'understory', 60),
-      plant('Okra', 'understory', 60),
+      plant('Ladies Finger', 'understory', 60),
     ];
     const result = computeRowLayout(plants, W, L);
     expect(result.rows).toHaveLength(2);
@@ -64,9 +64,9 @@ describe('computeRowLayout', () => {
 
   it('rowSpacingCm = max chunk spacing × multiplier, floored at category min', () => {
     // Raised (leafy default) multiplier=1.0, floor=25
-    // [Okra 45, Tomato 60] → maxChunk=60 → rowSpacingCm = max(60×1.0, 25) = 60
+    // [Ladies Finger 45, Tomato 60] → maxChunk=60 → rowSpacingCm = max(60×1.0, 25) = 60
     const r1 = computeRowLayout(
-      [plant('Tomato', 'understory', 60), plant('Okra', 'understory', 45)],
+      [plant('Tomato', 'understory', 60), plant('Ladies Finger', 'understory', 45)],
       W,
       L
     );
@@ -84,7 +84,7 @@ describe('computeRowLayout', () => {
     const plants = [
       plant('Tomato', 'understory', 60),
       plant('Brinjal', 'understory', 60),
-      plant('Okra', 'understory', 60),
+      plant('Ladies Finger', 'understory', 60),
     ];
     const result = computeRowLayout(plants, W, L);
     expect(result.usedLengthCm).toBe(90);
@@ -96,7 +96,7 @@ describe('computeRowLayout', () => {
     const plants = [
       plant('Tomato', 'understory', 60),
       plant('Brinjal', 'understory', 60),
-      plant('Okra', 'understory', 60),
+      plant('Ladies Finger', 'understory', 60),
     ];
     const result = computeRowLayout(plants, W, 0.5);
     expect(result.fitsInBed).toBe(false);
@@ -180,7 +180,7 @@ describe('computeRowLayout', () => {
     const plants = [
       plant('Tomato', 'understory', 60),
       plant('Brinjal', 'understory', 60),
-      plant('Okra', 'understory', 45),
+      plant('Ladies Finger', 'understory', 45),
       plant('Ridge Gourd', 'climber', 100),
       plant('Marigold', 'ground_cover', 30, { isCompanion: true }),
     ];
@@ -458,7 +458,7 @@ describe('maxFitForSpecies', () => {
 
   it('honours cap to prevent runaway probing on enormous beds', () => {
     // 50 m × 50 m at tiny spacing — even after `cap` adds, still fits.
-    const n = maxFitForSpecies(tomato, [], 50, 50, 'leafy', 'raised', 10);
+    const n = maxFitForSpecies(tomato, [], 50, 50, 'leafy', 'raised');
     expect(n).toBe(10);
   });
 });

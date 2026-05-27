@@ -34,6 +34,7 @@ export function mapPlantEntriesToRowInputs(
         name: entry.name,
         layer: entry.layer,
         spacingCm: entry.spacingCm,
+        rowGapCm: row.row_gap_cm,
         cropFamily: row.crop_family,
         daysToHarvest: row.days_to_harvest,
         benefitTag: row.benefit_tag,
