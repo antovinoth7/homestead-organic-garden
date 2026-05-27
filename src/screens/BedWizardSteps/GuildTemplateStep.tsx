@@ -499,13 +499,28 @@ export function GuildTemplateStep({
       for (let i = 0; i < count; i++) {
         accEntries = [
           ...accEntries,
-          { id: generateId(), name: comp, layer: COMPANION_DEFAULT_LAYER, spacingCm: COMPANION_DEFAULT_SPACING },
+          {
+            id: generateId(),
+            name: comp,
+            layer: COMPANION_DEFAULT_LAYER,
+            spacingCm: COMPANION_DEFAULT_SPACING,
+          },
         ];
       }
     }
     onChange({ plant_entries: accEntries });
     setQuickStartApplied(true);
-  }, [template, widthM, lengthM, bedTypeForEngine, construction, candidateForRow, candidateForCompanion, companionSuggestions, onChange]);
+  }, [
+    template,
+    widthM,
+    lengthM,
+    bedTypeForEngine,
+    construction,
+    candidateForRow,
+    candidateForCompanion,
+    companionSuggestions,
+    onChange,
+  ]);
 
   // Harvest mini-timeline — selected plants sorted by days to harvest.
   const harvestPreview = useMemo(() => {
@@ -549,20 +564,22 @@ export function GuildTemplateStep({
         </View>
       )}
 
-      <View style={styles.gtBedBanner}>
-        <Text style={styles.gtBedBannerLabel}>{template.label}</Text>
-        <Text style={styles.gtBedBannerDims}>{widthM} × {lengthM} m · {bedArea} m²</Text>
-      </View>
-
       <TouchableOpacity
         style={[styles.gtUseFullPlanBtn, quickStartApplied && styles.gtUseFullPlanBtnApplied]}
         onPress={handleUseFullPlan}
         activeOpacity={0.8}
       >
         <Text style={styles.gtUseFullPlanBtnText}>
-          {quickStartApplied ? '✓ Applied — tap to reapply' : '📋 Plant all suggested crops for this bed'}
+          {quickStartApplied
+            ? `✓ Applied — Tap to Reapply for this ${template.label}`
+            : `📋 Plant all suggested crops for this ${template.label}`}
         </Text>
-        <View style={[styles.gtUseFullPlanQuickBadge, quickStartApplied && styles.gtUseFullPlanQuickBadgeApplied]}>
+        <View
+          style={[
+            styles.gtUseFullPlanQuickBadge,
+            quickStartApplied && styles.gtUseFullPlanQuickBadgeApplied,
+          ]}
+        >
           <Text style={styles.gtUseFullPlanQuickBadgeText}>Quick Start</Text>
         </View>
       </TouchableOpacity>
