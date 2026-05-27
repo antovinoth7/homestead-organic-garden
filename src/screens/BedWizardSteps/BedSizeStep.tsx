@@ -7,6 +7,7 @@ import { createStyles } from '@/styles/bedCreationWizardStyles';
 import { getSoilPrepSteps } from '@/config/beds/soilPrepEngine';
 import { BED_TYPE_LABEL } from '@/utils/bedNameGenerator';
 import { SOIL_LABELS } from '@/utils/plantLabels';
+import { estimatePlantCapacity } from '@/utils/plantCapacity';
 
 const M_TO_FT = 3.28084;
 
@@ -118,8 +119,11 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
     return tags;
   }, [bedType, step2]);
 
-  const plantsMin = Math.round(data.area_sqm * 2);
-  const plantsMax = Math.round(data.area_sqm * 2.5);
+  const { min: plantsMin, max: plantsMax } = estimatePlantCapacity(
+    bedType ?? null,
+    data.width_m,
+    data.length_m,
+  );
   const harvestKg = (Math.round(data.area_sqm * 0.6 * 10) / 10).toFixed(1);
 
   const updateDimension = (field: 'width_m' | 'length_m', value: number): void => {
@@ -190,7 +194,7 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
               <Text style={styles.szMetricValue}>
                 {plantsMin}–{plantsMax}
               </Text>
-              <Text style={styles.szMetricLabel}>plants fit</Text>
+              <Text style={styles.szMetricLabel}>plants possible</Text>
             </View>
             <View style={styles.szMetricDivider} />
             <View style={styles.szMetricChip}>
