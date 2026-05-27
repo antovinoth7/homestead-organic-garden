@@ -1619,7 +1619,7 @@ export const KANYAKUMARI_DISEASES: DiseaseEntry[] = [
     identification:
       'Bright yellow network pattern on leaf veins. Leaves become entirely yellow in severe cases. Fruit malformation.',
     damageDescription:
-      'Dramatic yield reduction. Fruits become small, tough, and unmarketable. Major disease of okra/ladies finger.',
+      'Dramatic yield reduction. Fruits become small, tough, and unmarketable. Major disease of ladies finger.',
     organicPrevention: ['Control whitefly vectors', 'Use resistant varieties (e.g. Arka Anamika)'],
     organicTreatments: [
       {

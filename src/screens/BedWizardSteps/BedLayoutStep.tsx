@@ -30,13 +30,37 @@ const LAYER_ACCENT_COLOR: Record<BedLayer, string> = {
 };
 
 const PLANT_EMOJI_LAYOUT: Record<string, string> = {
-  Amaranth: '🌿', Spinach: '🥬', Lettuce: '🥗', Fenugreek: '🌱', Tomato: '🍅',
-  Brinjal: '🍆', Okra: '🫛', Marigold: '🌼', Chilli: '🌶️', Ginger: '🫚',
-  Turmeric: '🟡', 'Curry Leaf': '🍃', Cowpea: '🫘', 'French Beans': '🫘',
-  Carrot: '🥕', Radish: '🌰', 'Bitter Gourd': '🥒', 'Snake Gourd': '🥒',
-  'Yardlong Beans': '🫘', Banana: '🍌', Maize: '🌽', Beans: '🫘', Pumpkin: '🎃',
-  Moringa: '🌳', Tulsi: '🌿', 'Aloe Vera': '🌵', Lemongrass: '🌾', Basil: '🌿',
-  Garlic: '🧄', 'Black Pepper': '⚫', 'Elephant Yam': '🥔',
+  Amaranth: '🌿',
+  Spinach: '🥬',
+  Lettuce: '🥗',
+  Fenugreek: '🌱',
+  Tomato: '🍅',
+  Brinjal: '🍆',
+  'Ladies Finger': '🫛',
+  Marigold: '🌼',
+  Chilli: '🌶️',
+  Ginger: '🫚',
+  Turmeric: '🟡',
+  'Curry Leaf': '🍃',
+  Cowpea: '🫘',
+  'French Beans': '🫘',
+  Carrot: '🥕',
+  Radish: '🌰',
+  'Bitter Gourd': '🥒',
+  'Snake Gourd': '🥒',
+  'Yardlong Beans': '🫘',
+  Banana: '🍌',
+  Maize: '🌽',
+  Beans: '🫘',
+  Pumpkin: '🎃',
+  Moringa: '🌳',
+  Tulsi: '🌿',
+  'Aloe Vera': '🌵',
+  Lemongrass: '🌾',
+  Basil: '🌿',
+  Garlic: '🧄',
+  'Black Pepper': '⚫',
+  'Elephant Yam': '🥔',
 };
 
 const generateId = (): string =>
@@ -196,9 +220,7 @@ export function BedLayoutStep({
       // Show up to 4 position values, then "…"
       const positions = row.eastPositionsCm.slice(0, 4).map((cm: number) => `${cm}`);
       const posStr =
-        row.eastPositionsCm.length > 4
-          ? positions.join(', ') + '…'
-          : positions.join(', ') + ' cm';
+        row.eastPositionsCm.length > 4 ? positions.join(', ') + '…' : positions.join(', ') + ' cm';
       return {
         rowIndex: row.rowIndex,
         layer: row.layer,
@@ -213,7 +235,8 @@ export function BedLayoutStep({
 
   // Whether any row uses the climber layer (needs trellis installation guidance).
   const hasTrellisRow = useMemo(
-    () => rowLayout.rows.some((r: import('@/utils/rowLayoutEngine').BedRow) => r.layer === 'climber'),
+    () =>
+      rowLayout.rows.some((r: import('@/utils/rowLayoutEngine').BedRow) => r.layer === 'climber'),
     [rowLayout.rows]
   );
 
@@ -235,34 +258,46 @@ export function BedLayoutStep({
             </Text>
             <Text style={styles.blRowPreviewCompass}>↑ N</Text>
           </View>
-          {bedRowsPreview.map((row: { rowIndex: number; layer: string; northEdgeCm: number; plants: { name: string; emoji: string; isCompanion: boolean }[]; plantCount: number; plantsPerRow: number; posStr: string }) => (
-            <View key={row.rowIndex} style={styles.blRowPreviewRow}>
-              <View
-                style={[
-                  styles.blRowAccent,
-                  { backgroundColor: LAYER_ACCENT_COLOR[row.layer as BedLayer] },
-                ]}
-              />
-              <View style={styles.blRowDots}>
-                {row.plants.map((p: { name: string; emoji: string; isCompanion: boolean }, i: number) => (
-                  <View
-                    key={i}
-                    style={[styles.blRowDot, p.isCompanion && styles.blRowDotCompanion]}
-                  >
-                    <Text style={styles.blRowDotEmoji}>{p.emoji}</Text>
-                  </View>
-                ))}
+          {bedRowsPreview.map(
+            (row: {
+              rowIndex: number;
+              layer: string;
+              northEdgeCm: number;
+              plants: { name: string; emoji: string; isCompanion: boolean }[];
+              plantCount: number;
+              plantsPerRow: number;
+              posStr: string;
+            }) => (
+              <View key={row.rowIndex} style={styles.blRowPreviewRow}>
+                <View
+                  style={[
+                    styles.blRowAccent,
+                    { backgroundColor: LAYER_ACCENT_COLOR[row.layer as BedLayer] },
+                  ]}
+                />
+                <View style={styles.blRowDots}>
+                  {row.plants.map(
+                    (p: { name: string; emoji: string; isCompanion: boolean }, i: number) => (
+                      <View
+                        key={i}
+                        style={[styles.blRowDot, p.isCompanion && styles.blRowDotCompanion]}
+                      >
+                        <Text style={styles.blRowDotEmoji}>{p.emoji}</Text>
+                      </View>
+                    )
+                  )}
+                </View>
+                <View style={styles.blRowPositionInfo}>
+                  <Text style={styles.blRowPreviewRowLayer}>
+                    {FARMER_LAYER_LABEL[row.layer as BedLayer]}
+                  </Text>
+                  <Text style={styles.blRowPositionText}>
+                    {row.northEdgeCm}cm from N · {row.plantCount}× at {row.posStr}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.blRowPositionInfo}>
-                <Text style={styles.blRowPreviewRowLayer}>
-                  {FARMER_LAYER_LABEL[row.layer as BedLayer]}
-                </Text>
-                <Text style={styles.blRowPositionText}>
-                  {row.northEdgeCm}cm from N · {row.plantCount}×  at {row.posStr}
-                </Text>
-              </View>
-            </View>
-          ))}
+            )
+          )}
           <Text style={styles.blRowPreviewSouth}>
             ↓ S · 60cm walking path · Tall crops North — won't shade shorter rows
           </Text>
@@ -273,8 +308,8 @@ export function BedLayoutStep({
       {hasTrellisRow && (
         <View style={styles.blTrellisCard}>
           <Text style={styles.blTrellisText}>
-            🔧 Trellis required — Install bamboo poles or wire frame on the North end,
-            min 1.5 m height. Anchor firmly before sowing.
+            🔧 Trellis required — Install bamboo poles or wire frame on the North end, min 1.5 m
+            height. Anchor firmly before sowing.
           </Text>
         </View>
       )}

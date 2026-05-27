@@ -17,7 +17,7 @@ export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
   fruiting: [
     'Tomato',
     'Brinjal',
-    'Okra',
+    'Ladies Finger',
     'Pepper',
     'Chilli',
     'Bitter Gourd',

@@ -47,7 +47,7 @@ const PLANT_EMOJI: Record<string, string> = {
   Fenugreek: '🌱',
   Tomato: '🍅',
   Brinjal: '🍆',
-  Okra: '🫛',
+  'Ladies Finger': '🫛',
   Marigold: '🌼',
   Chilli: '🌶️',
   Ginger: '🫚',
@@ -184,7 +184,9 @@ function GuildTab({
             <Text style={styles.guildLayerBadgeText}>{LAYER_LABEL[row.layer]}</Text>
           </View>
           <Text style={styles.spacingTag}>↔ {row.spacing_cm}cm</Text>
-          <Text style={styles.spacingTag}>↕ {row.row_gap_cm ?? Math.max(row.spacing_cm, MIN_ROW_GAP_CM)}cm row gap</Text>
+          <Text style={styles.spacingTag}>
+            ↕ {row.row_gap_cm ?? Math.max(row.spacing_cm, MIN_ROW_GAP_CM)}cm row gap
+          </Text>
           {isCompanion && (
             <View style={[styles.guildLayerBadge, { backgroundColor: theme.primaryLight }]}>
               <Text style={[styles.guildLayerBadgeText, { color: theme.primary }]}>
@@ -351,7 +353,9 @@ function MyPlantsTab({
               ) : null}
               <View style={styles.spacingTagRow}>
                 <Text style={styles.spacingTag}>↔ {colSpacing}cm</Text>
-                <Text style={styles.spacingTag}>↕ {Math.max(colSpacing, MIN_ROW_GAP_CM)}cm row gap</Text>
+                <Text style={styles.spacingTag}>
+                  ↕ {Math.max(colSpacing, MIN_ROW_GAP_CM)}cm row gap
+                </Text>
               </View>
               {isSelected && (
                 <View style={styles.layerPicker}>

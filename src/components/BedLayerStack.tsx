@@ -56,7 +56,7 @@ const PLANT_EMOJI: Record<string, string> = {
   Fenugreek: '🌱',
   Tomato: '🍅',
   Brinjal: '🍆',
-  Okra: '🫛',
+  'Ladies Finger': '🫛',
   Marigold: '🌼',
   Chilli: '🌶️',
   Ginger: '🫚',

@@ -121,7 +121,7 @@ export const GUILD_TEMPLATES: Record<BedType, GuildTemplate> = {
     type: 'fruiting',
     label: 'Fruiting Vegetables Bed',
     description:
-      'Tomato, brinjal, capsicum, okra — heavy feeders needing full sun. Ridge gourd and squash on vertical trellis.',
+      'Tomato, brinjal, capsicum, ladies finger — heavy feeders needing full sun. Ridge gourd and squash on vertical trellis.',
     low_light_flag: false,
     sunlight_requirement: 'full_sun',
     plant_rows: [
@@ -148,7 +148,7 @@ export const GUILD_TEMPLATES: Record<BedType, GuildTemplate> = {
         succession_week: 1,
       },
       {
-        name: 'Okra',
+        name: 'Ladies Finger',
         layer: 'understory',
         spacing_cm: 45,
         row_gap_cm: 60,

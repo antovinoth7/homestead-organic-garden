@@ -18,7 +18,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
       plants: [
         'Brinjal',
         'Long Brinjal',
-        'Ladies Finger',
         'Tomato',
         'Chilli',
         'Tapioca',
@@ -55,7 +54,7 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Purslane',
         'Pasalai Keerai',
         'Fenugreek',
-        'Okra',
+        'Ladies Finger',
         'Moringa',
         // Bed-type plants — fruiting & climbing
         'Squash',
@@ -78,7 +77,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
       varieties: {
         Brinjal: ['Long Purple', 'Round Green', 'Striped'],
         'Long Brinjal': ['Long Green', 'Violet Long', 'Local'],
-        'Ladies Finger': ['CO 4', 'CO 5', 'Arka Anamika'],
         Tomato: ['Country Tomato', 'Hybrid Tomato', 'Cherry Tomato'],
         Chilli: ["Bird's Eye", 'Gundu', 'Long Chilli'],
         Tapioca: ['Mulluvadi', 'CO 2', 'H-165'],
@@ -115,7 +113,7 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Pigeon Pea': ['CO 6', 'Vamban 1', 'Local'],
         Maize: ['Hybrid Sweet', 'Country Corn', 'CO 1'],
         Fenugreek: ['Kasuri', 'Pusa Early', 'Local'],
-        Okra: ['CO 4', 'CO 5', 'Arka Anamika'],
+        'Ladies Finger': ['CO 4', 'CO 5', 'Arka Anamika'],
         Moringa: ['PKM 1', 'PKM 2', 'Local'],
         'Pasalai Keerai': ['Green Stem', 'Red Stem', 'Local'],
         Strawberry: ['Sweet Charlie', 'Festival', 'Local Hill'],
@@ -123,7 +121,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
       tamilNames: {
         Brinjal: 'கத்தரிக்காய்',
         'Long Brinjal': 'நீள கத்தரிக்காய்',
-        'Ladies Finger': 'வெண்டைக்காய்',
         Tomato: 'தக்காளி',
         Chilli: 'மிளகாய்',
         Tapioca: 'மரவள்ளிக்கிழங்கு',
@@ -158,7 +155,7 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Purslane: 'பொட்டுக்கீரை',
         'Pasalai Keerai': 'பசளைக்கீரை',
         Fenugreek: 'வெந்தயம்',
-        Okra: 'வெண்டைக்காய்',
+        'Ladies Finger': 'வெண்டைக்காய்',
         Moringa: 'முருங்கை',
         Squash: 'ஸ்குவாஷ்',
         'Yardlong Beans': 'தட்டப்பயறு',
@@ -178,7 +175,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'Versatile tropical nightshade yielding glossy purple fruit for curries and grills',
         'Long Brinjal':
           'Elongated purple eggplant variety favoured in South Indian sambar and stir-fries',
-        'Ladies Finger': 'Heat-loving mucilaginous pod vegetable essential in South Indian cooking',
         Tomato: 'Prolific warm-season fruit used fresh, in sambar, rasam, and chutneys',
         Chilli: 'Pungent hot pepper central to South Indian spice blends and daily cooking',
         Tapioca: 'Starchy root crop grown widely in Kanyakumari for kappa and traditional dishes',
@@ -216,7 +212,7 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Pasalai Keerai':
           'Malabar spinach — vigorous climbing leafy green thriving in Tamil Nadu heat',
         Fenugreek: 'Aromatic annual legume grown for its iron-rich leaves and distinctive seeds',
-        Okra: 'Heat-loving mucilaginous pod vegetable essential in South Indian cooking',
+        'Ladies Finger': 'Heat-loving mucilaginous pod vegetable essential in South Indian cooking',
         Moringa: 'Multipurpose tropical tree with nutrient-dense leaves, pods, and flowers',
         Squash: 'Fast-growing cucurbit producing tender fruits; ideal ground cover in polycultures',
         'Yardlong Beans':
