@@ -98,8 +98,8 @@ const BENEFIT_TAG_LABEL: Record<string, string> = {
 };
 
 const BENEFIT_EXPLANATION: Record<string, string> = {
-  'n-fixer': 'Fixes nitrogen — feeds neighboring crops',
-  'pest-repel': 'Repels insects that attack crop neighbors',
+  'n-fixer': 'Fixes nitrogen — feeds companion crops',
+  'pest-repel': 'Repels insects that attack crop companions',
   nematode: 'Reduces root nematodes in soil',
   'chop-drop': 'Chop stems as mulch to feed the soil',
   'soil-builder': 'Builds organic matter when cut back',
@@ -419,9 +419,11 @@ export function GuildTemplateStep({
             : `${rowsCanAdd} rows × ${ppr} = ${rowsCanAdd * ppr}`;
         }
         const suffix =
-          rowsCanAdd === 0 ? 'Bed full'
-          : rowsCanAdd === 1 ? '1 more row fits'
-          : `${rowsCanAdd} more rows fit`;
+          rowsCanAdd === 0
+            ? 'Bed full'
+            : rowsCanAdd === 1
+              ? '1 more row fits'
+              : `${rowsCanAdd} more rows fit`;
         return `${count} plants · ${suffix}`;
       }
 
@@ -560,7 +562,9 @@ export function GuildTemplateStep({
         const emoji = PLANT_EMOJI[row.name] ?? '🌱';
         const layerLabel = LAYER_LABEL[row.layer] ?? row.layer.replace(/_/g, ' ');
         const isMain = row.is_companion !== true;
-        const speciesPPR = isMain ? computePlantsPerRow(Math.round(widthM * 100), row.spacing_cm) : 1;
+        const speciesPPR = isMain
+          ? computePlantsPerRow(Math.round(widthM * 100), row.spacing_cm)
+          : 1;
         const capReached = remaining < speciesPPR;
         const autoCompanions =
           isMain && row.companion_plants.length > 0 ? row.companion_plants : undefined;
@@ -650,7 +654,7 @@ export function GuildTemplateStep({
             activeOpacity={0.7}
           >
             <Text style={styles.gtSectionHeader}>
-              HELPFUL NEIGHBORS ({companionSuggestions.length})
+              HELPFUL COMPANIONS ({companionSuggestions.length})
             </Text>
             <Ionicons
               name={companionsExpanded ? 'chevron-up' : 'chevron-down'}

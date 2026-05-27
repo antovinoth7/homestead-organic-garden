@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { BedLayerStack } from '@/components/BedLayerStack';
 import { BedPlantPickerSheet } from '@/components/BedPlantPickerSheet';
+import { BedTopDownMap } from '@/components/BedTopDownMap';
 import { PlantEntryResolverSheet } from '@/components/PlantEntryResolverSheet';
 import { computeRowLayout, getVisibleLayers } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
@@ -12,14 +13,6 @@ import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import type { BedLayer, BedType, EntryResolution, PlantEntry } from '@/types/database.types';
 import type { Step2Data, Step3Data, Step4Data } from '@/hooks/useBedCreationWizard';
-
-const FARMER_LAYER_LABEL: Record<BedLayer, string> = {
-  canopy: 'Shade Tree',
-  climber: 'Trellis',
-  understory: 'Main Crop',
-  root: 'Underground',
-  ground_cover: 'Border',
-};
 
 const LAYER_ACCENT_COLOR: Record<BedLayer, string> = {
   canopy: '#2e7d32',
@@ -199,40 +192,6 @@ export function BedLayoutStep({
     [step4.plant_entries, resolveEntryId]
   );
 
-  // Position-aware row preview using northEdgeCm and eastPositionsCm from the engine.
-  const bedRowsPreview = useMemo(() => {
-    if (rowLayout.rows.length === 0) return [];
-    return rowLayout.rows.map((row: import('@/utils/rowLayoutEngine').BedRow) => {
-      // Unique plant names in display order (deduplicate within the row)
-      const seen = new Set<string>();
-      const uniquePlants: { name: string; emoji: string; isCompanion: boolean }[] = [];
-      for (const p of row.plants) {
-        if (!seen.has(p.name)) {
-          seen.add(p.name);
-          uniquePlants.push({
-            name: p.name,
-            emoji: PLANT_EMOJI_LAYOUT[p.name] ?? '🌱',
-            isCompanion: p.isCompanion === true,
-          });
-        }
-      }
-      const plantCount = row.plants.length;
-      // Show up to 4 position values, then "…"
-      const positions = row.eastPositionsCm.slice(0, 4).map((cm: number) => `${cm}`);
-      const posStr =
-        row.eastPositionsCm.length > 4 ? positions.join(', ') + '…' : positions.join(', ') + ' cm';
-      return {
-        rowIndex: row.rowIndex,
-        layer: row.layer,
-        northEdgeCm: row.northEdgeCm,
-        plants: uniquePlants,
-        plantCount,
-        plantsPerRow: row.plantsPerRow,
-        posStr,
-      };
-    });
-  }, [rowLayout.rows]);
-
   // Whether any row uses the climber layer (needs trellis installation guidance).
   const hasTrellisRow = useMemo(
     () =>
@@ -249,60 +208,14 @@ export function BedLayoutStep({
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
-      {/* ── Position-aware bed rows preview ──────────────────────────────── */}
-      {bedRowsPreview.length > 0 && (
-        <View style={styles.blRowPreviewCard}>
-          <View style={styles.blRowPreviewHeader}>
-            <Text style={styles.blRowPreviewTitle}>
-              📐 {step3.width_m.toFixed(1)}m × {step3.length_m.toFixed(1)}m bed plan
-            </Text>
-            <Text style={styles.blRowPreviewCompass}>↑ N</Text>
-          </View>
-          {bedRowsPreview.map(
-            (row: {
-              rowIndex: number;
-              layer: string;
-              northEdgeCm: number;
-              plants: { name: string; emoji: string; isCompanion: boolean }[];
-              plantCount: number;
-              plantsPerRow: number;
-              posStr: string;
-            }) => (
-              <View key={row.rowIndex} style={styles.blRowPreviewRow}>
-                <View
-                  style={[
-                    styles.blRowAccent,
-                    { backgroundColor: LAYER_ACCENT_COLOR[row.layer as BedLayer] },
-                  ]}
-                />
-                <View style={styles.blRowDots}>
-                  {row.plants.map(
-                    (p: { name: string; emoji: string; isCompanion: boolean }, i: number) => (
-                      <View
-                        key={i}
-                        style={[styles.blRowDot, p.isCompanion && styles.blRowDotCompanion]}
-                      >
-                        <Text style={styles.blRowDotEmoji}>{p.emoji}</Text>
-                      </View>
-                    )
-                  )}
-                </View>
-                <View style={styles.blRowPositionInfo}>
-                  <Text style={styles.blRowPreviewRowLayer}>
-                    {FARMER_LAYER_LABEL[row.layer as BedLayer]}
-                  </Text>
-                  <Text style={styles.blRowPositionText}>
-                    {row.northEdgeCm}cm from N · {row.plantCount}× at {row.posStr}
-                  </Text>
-                </View>
-              </View>
-            )
-          )}
-          <Text style={styles.blRowPreviewSouth}>
-            ↓ S · 60cm walking path · Tall crops North — won't shade shorter rows
-          </Text>
-        </View>
-      )}
+      {/* ── Top-down bed map ──────────────────────────────────────────────── */}
+      <BedTopDownMap
+        widthM={step3.width_m}
+        lengthM={step3.length_m}
+        rows={rowLayout.rows}
+        plantEmoji={(name) => PLANT_EMOJI_LAYOUT[name] ?? '🌱'}
+        layerColor={(layer) => LAYER_ACCENT_COLOR[layer]}
+      />
 
       {/* ── Trellis guidance ─────────────────────────────────────────────── */}
       {hasTrellisRow && (
