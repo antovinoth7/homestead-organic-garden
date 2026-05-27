@@ -460,12 +460,7 @@ export function GuildTemplateStep({
         construction
       );
       if (count === 0) continue;
-      const isMainForQS = row.is_companion !== true;
-      const bedWidthCmQS = Math.round(widthM * 100);
-      const pprQS = isMainForQS ? computePlantsPerRow(bedWidthCmQS, row.spacing_cm) : 1;
-      const alignedCount = isMainForQS ? (count >= pprQS ? pprQS : 0) : count;
-      if (alignedCount === 0) continue;
-      for (let i = 0; i < alignedCount; i++) {
+      for (let i = 0; i < count; i++) {
         accEntries = [
           ...accEntries,
           { id: generateId(), name: row.name, layer: row.layer, spacingCm: row.spacing_cm },
