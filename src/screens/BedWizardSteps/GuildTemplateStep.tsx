@@ -412,13 +412,17 @@ export function GuildTemplateStep({
         const rowsCanAdd = Math.floor(remaining / ppr);
 
         if (remaining === 0 && count === 0) return 'Too big for bed';
-        if (rowsCanAdd === 0) return 'Bed full';
         if (count === 0) {
+          if (rowsCanAdd === 0) return 'Too big for bed';
           return rowsCanAdd === 1
             ? `${ppr} plants (1 row)`
             : `${rowsCanAdd} rows × ${ppr} = ${rowsCanAdd * ppr}`;
         }
-        return rowsCanAdd === 1 ? '1 more row fits' : `${rowsCanAdd} more rows fit`;
+        const suffix =
+          rowsCanAdd === 0 ? 'Bed full'
+          : rowsCanAdd === 1 ? '1 more row fits'
+          : `${rowsCanAdd} more rows fit`;
+        return `${count} plants · ${suffix}`;
       }
 
       if (remaining === 0 && count === 0) return 'Too big for bed';
@@ -553,10 +557,11 @@ export function GuildTemplateStep({
         const blockedReason = !isSelected ? getBlockedReason(row.name) : null;
         const isBlocked = !!blockedReason;
         const remaining = maxFitMap.get(row.name) ?? 0;
-        const capReached = remaining === 0;
         const emoji = PLANT_EMOJI[row.name] ?? '🌱';
         const layerLabel = LAYER_LABEL[row.layer] ?? row.layer.replace(/_/g, ' ');
         const isMain = row.is_companion !== true;
+        const speciesPPR = isMain ? computePlantsPerRow(Math.round(widthM * 100), row.spacing_cm) : 1;
+        const capReached = remaining < speciesPPR;
         const autoCompanions =
           isMain && row.companion_plants.length > 0 ? row.companion_plants : undefined;
 
