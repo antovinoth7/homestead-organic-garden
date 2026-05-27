@@ -779,6 +779,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textAlign: 'right' as const,
     },
     gtSpacingTag: { fontSize: 11, fontWeight: '600' as const, color: theme.textSecondary },
+    gtSpacingCompact: {
+      fontSize: 11,
+      color: theme.accent,
+      fontWeight: '500' as const,
+      letterSpacing: 0.1,
+    },
     gtSelectCircle: {
       width: 28,
       height: 28,
@@ -1100,6 +1106,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       fontWeight: '600' as const,
       color: theme.primary,
+    },
+    gtBedBanner: {
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      backgroundColor: theme.primaryLight,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.successBorder,
+      marginBottom: 10,
+    },
+    gtBedBannerLabel: {
+      fontSize: 15,
+      fontWeight: '700' as const,
+      color: theme.primary,
+      lineHeight: 20,
+    },
+    gtBedBannerDims: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      marginTop: 2,
+      letterSpacing: 0.2,
     },
     // Guild step — harvest mini timeline
     gtHarvestTimeline: {

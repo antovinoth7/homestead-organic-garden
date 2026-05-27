@@ -533,6 +533,8 @@ export function GuildTemplateStep({
     );
   }
 
+  const bedArea = (widthM * lengthM).toFixed(1);
+
   return (
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
       {autoAddedMsg !== null && (
@@ -547,8 +549,9 @@ export function GuildTemplateStep({
         </View>
       )}
 
-      <View style={styles.gtBedTypeChip}>
-        <Text style={styles.gtBedTypeChipText}>{template.label}</Text>
+      <View style={styles.gtBedBanner}>
+        <Text style={styles.gtBedBannerLabel}>{template.label}</Text>
+        <Text style={styles.gtBedBannerDims}>{widthM} × {lengthM} m · {bedArea} m²</Text>
       </View>
 
       <TouchableOpacity
@@ -668,10 +671,7 @@ export function GuildTemplateStep({
             </View>
 
             <View style={styles.gtPlantRight}>
-              <View style={styles.gtSpacingBlock}>
-                <Text style={styles.gtSpacingLabel}>PLANT GAP</Text>
-                <Text style={styles.gtSpacingTag}>{row.spacing_cm} cm</Text>
-              </View>
+              <Text style={styles.gtSpacingCompact}>↔{row.spacing_cm}cm</Text>
               <Text style={styles.gtPlantCountTag}>
                 {capacityText(candidate, instanceCount, isMain)}
               </Text>
