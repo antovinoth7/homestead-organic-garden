@@ -10,6 +10,7 @@ import { SOIL_LABELS } from '@/utils/plantLabels';
 import { estimatePlantCapacity } from '@/utils/plantCapacity';
 
 const M_TO_FT = 3.28084;
+const M_TO_CM = 100;
 
 function toFt(m: number): number {
   return parseFloat((m * M_TO_FT).toFixed(1));
@@ -18,6 +19,26 @@ function toFt(m: number): number {
 function toM(ft: number): number {
   return parseFloat((ft / M_TO_FT).toFixed(2));
 }
+
+function toCm(m: number): number {
+  return parseFloat((m * M_TO_CM).toFixed(0));
+}
+
+function fromCm(cm: number): number {
+  return parseFloat((cm / M_TO_CM).toFixed(2));
+}
+
+const HARVEST_COEFF: Record<BedType, number> = {
+  leafy: 0.8,
+  fruiting: 0.6,
+  root_legume: 0.5,
+  climber_trellis: 0.5,
+  three_sisters: 0.6,
+  coconut_intercrop: 0.4,
+  spice: 0.3,
+  medicinal_guild: 0.2,
+};
+const DEFAULT_HARVEST_COEFF = 0.5;
 
 interface Props {
   data: Step3Data;
@@ -99,17 +120,19 @@ function CircleStepper({
 export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const [useFeet, setUseFeet] = useState(false);
+  const [unit, setUnit] = useState<'m' | 'cm' | 'ft'>('m');
 
-  const displayWidth = useFeet ? toFt(data.width_m) : data.width_m;
-  const displayLength = useFeet ? toFt(data.length_m) : data.length_m;
-  const displayUnit = useFeet ? 'ft' : 'm';
-  const widthStep = useFeet ? 0.5 : 0.1;
-  const lengthStep = useFeet ? 0.5 : 0.5;
-  const widthMin = useFeet ? toFt(0.6) : 0.6;
-  const widthMax = useFeet ? toFt(3) : 3;
-  const lengthMin = useFeet ? toFt(1) : 1;
-  const lengthMax = useFeet ? toFt(10) : 10;
+  const displayWidth =
+    unit === 'ft' ? toFt(data.width_m) : unit === 'cm' ? toCm(data.width_m) : data.width_m;
+  const displayLength =
+    unit === 'ft' ? toFt(data.length_m) : unit === 'cm' ? toCm(data.length_m) : data.length_m;
+  const displayUnit = unit;
+  const widthStep = unit === 'ft' ? 0.5 : unit === 'cm' ? 10 : 0.1;
+  const lengthStep = unit === 'cm' ? 50 : 0.5;
+  const widthMin = unit === 'ft' ? toFt(0.6) : unit === 'cm' ? 60 : 0.6;
+  const widthMax = unit === 'ft' ? toFt(3) : unit === 'cm' ? 300 : 3;
+  const lengthMin = unit === 'ft' ? toFt(1) : unit === 'cm' ? 100 : 1;
+  const lengthMax = unit === 'ft' ? toFt(10) : unit === 'cm' ? 1000 : 10;
 
   const conditionTags = useMemo(() => {
     const tags: string[] = [];
@@ -124,7 +147,8 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
     data.width_m,
     data.length_m,
   );
-  const harvestKg = (Math.round(data.area_sqm * 0.6 * 10) / 10).toFixed(1);
+  const coeff = bedType ? (HARVEST_COEFF[bedType] ?? DEFAULT_HARVEST_COEFF) : DEFAULT_HARVEST_COEFF;
+  const harvestKg = (Math.round(data.area_sqm * coeff * 10) / 10).toFixed(1);
 
   const updateDimension = (field: 'width_m' | 'length_m', value: number): void => {
     const updated = { ...data, [field]: value };
@@ -132,11 +156,11 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
   };
 
   const handleWidthChange = (displayVal: number): void => {
-    const m = useFeet ? toM(displayVal) : displayVal;
+    const m = unit === 'ft' ? toM(displayVal) : unit === 'cm' ? fromCm(displayVal) : displayVal;
     updateDimension('width_m', m);
   };
   const handleLengthChange = (displayVal: number): void => {
-    const m = useFeet ? toM(displayVal) : displayVal;
+    const m = unit === 'ft' ? toM(displayVal) : unit === 'cm' ? fromCm(displayVal) : displayVal;
     updateDimension('length_m', m);
   };
 
@@ -173,11 +197,11 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
           <Text style={styles.szOptimalLabel}>OPTIMAL SIZE</Text>
           <View style={styles.szSizeRow}>
             <Text style={styles.szSizeValue}>
-              {useFeet ? toFt(rec.width_m) : rec.width_m}
+              {unit === 'ft' ? toFt(rec.width_m) : unit === 'cm' ? toCm(rec.width_m) : rec.width_m}
             </Text>
             <Text style={styles.szSizeSep}> × </Text>
             <Text style={styles.szSizeValue}>
-              {useFeet ? toFt(rec.length_m) : rec.length_m}
+              {unit === 'ft' ? toFt(rec.length_m) : unit === 'cm' ? toCm(rec.length_m) : rec.length_m}
             </Text>
             <Text style={styles.szSizeUnit}> {displayUnit}</Text>
           </View>
@@ -210,25 +234,32 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
         <Text style={styles.szSectionLabel}>CUSTOM SIZE</Text>
         <View style={styles.szUnitToggle}>
           <TouchableOpacity
-            style={[styles.szUnitBtn, !useFeet && styles.szUnitBtnActive]}
-            onPress={() => setUseFeet(false)}
+            style={[styles.szUnitBtn, unit === 'm' && styles.szUnitBtnActive]}
+            onPress={() => setUnit('m')}
             activeOpacity={0.7}
           >
-            <Text style={[styles.szUnitBtnText, !useFeet && styles.szUnitBtnTextActive]}>m</Text>
+            <Text style={[styles.szUnitBtnText, unit === 'm' && styles.szUnitBtnTextActive]}>m</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.szUnitBtn, useFeet && styles.szUnitBtnActive]}
-            onPress={() => setUseFeet(true)}
+            style={[styles.szUnitBtn, unit === 'cm' && styles.szUnitBtnActive]}
+            onPress={() => setUnit('cm')}
             activeOpacity={0.7}
           >
-            <Text style={[styles.szUnitBtnText, useFeet && styles.szUnitBtnTextActive]}>ft</Text>
+            <Text style={[styles.szUnitBtnText, unit === 'cm' && styles.szUnitBtnTextActive]}>cm</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.szUnitBtn, unit === 'ft' && styles.szUnitBtnActive]}
+            onPress={() => setUnit('ft')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.szUnitBtnText, unit === 'ft' && styles.szUnitBtnTextActive]}>ft</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.szArmReachHint}>
         <Text style={styles.szArmReachText}>
-          💡 Keep width ≤ {useFeet ? '4 ft' : '1.2 m'} — reach the centre without stepping in
+          💡 Keep width ≤ {unit === 'ft' ? '4 ft' : unit === 'cm' ? '120 cm' : '1.2 m'} — reach the centre without stepping in
         </Text>
       </View>
 
