@@ -323,75 +323,133 @@ export function computeRowLayout(
     const mains = layerPlants.filter((p) => p.isCompanion !== true);
     const companions = layerPlants.filter((p) => p.isCompanion === true);
 
-    // Anchor from mains when present, otherwise companions act as mains.
-    const anchorSource = mains.length > 0 ? mains : layerPlants;
-    const anchorSpacing = Math.max(...anchorSource.map((p) => p.spacingCm));
-    const plantsPerRow = computePlantsPerRow(bedWidthCm, anchorSpacing);
-
-    const sortedMains = [...mains].sort((a, b) => a.spacingCm - b.spacingCm);
     const sortedCompanions = [...companions].sort((a, b) => a.spacingCm - b.spacingCm);
-
-    const sourceForChunks = sortedMains.length > 0 ? sortedMains : sortedCompanions;
-    const companionPool = sortedMains.length > 0 ? [...sortedCompanions] : [];
-
-    // Max companions woven into a single row = gaps between mains = plantsPerRow - 1
-    const interplantCapacityPerRow = Math.max(0, plantsPerRow - 1);
-
-    const totalChunks = Math.ceil(sourceForChunks.length / plantsPerRow);
+    const companionPool = mains.length > 0 ? [...sortedCompanions] : [];
 
     let chunkIndex = 0;
-    for (let i = 0; i < sourceForChunks.length; i += plantsPerRow) {
-      const mainChunk = sourceForChunks.slice(i, i + plantsPerRow);
 
-      const interplanted = Math.min(interplantCapacityPerRow, companionPool.length);
-      const interleavedCompanions = companionPool.splice(0, interplanted);
-      const interleaved = [...mainChunk, ...interleavedCompanions];
+    if (mains.length > 0) {
+      // Group mains by species so each species gets its own rows.
+      const mainsBySpecies = new Map<string, RowPlantInput[]>();
+      for (const p of mains) {
+        const arr = mainsBySpecies.get(p.name) ?? [];
+        arr.push(p);
+        mainsBySpecies.set(p.name, arr);
+      }
 
-      const maxChunkSpacing = Math.max(...interleaved.map((p) => p.spacingCm));
-      // Prefer explicit row_gap_cm from template; fall back to spacing × category multiplier
-      const maxChunkRowGap = Math.max(...interleaved.map((p) => p.rowGapCm ?? p.spacingCm * rowMultiplier));
-      const rowSpacingCm = Math.max(Math.round(maxChunkRowGap), minRowGap);
-
-      const baseLabel = LAYER_BASE_LABELS[layer];
-      const suffix = totalChunks > 1 ? ` ${ROW_SUFFIX[chunkIndex] ?? String(chunkIndex + 1)}` : '';
-      const layerLabel = `${baseLabel}${suffix}`;
-
-      // Compute E-W plant positions from the west edge
-      const anchorSp = maxChunkSpacing;
-      const eBufEW = computeEdgeBuffer(anchorSp);
-      const eastPositionsCm = Array.from(
-        { length: plantsPerRow },
-        (_, k) => eBufEW + k * anchorSp
+      // Total row-chunks across all species (drives suffix labels like A/B/C).
+      const totalChunksThisLayer = [...mainsBySpecies.values()].reduce(
+        (sum, sp) => sum + Math.ceil(sp.length / computePlantsPerRow(bedWidthCm, sp[0]!.spacingCm)),
+        0
       );
 
-      rows.push({
-        rowIndex,
-        label: `Row ${rowIndex} — ${layerLabel}`,
-        layer,
-        plants: interleaved.map((p) => {
-          if (p.successionWeek !== undefined) successionWeekSet.add(p.successionWeek);
-          return {
-            id: p.id,
-            name: p.name,
-            spacingCm: p.spacingCm,
-            isNFixer: p.cropFamily === 'legume',
-            daysToHarvest: p.daysToHarvest,
-            benefitTag: p.benefitTag,
-            careTasks: p.careTasks,
-            isCompanion: p.isCompanion,
-            successionWeek: p.successionWeek,
-          };
-        }),
-        plantsPerRow,
-        interplantedCount: interplanted,
-        rowSpacingCm,
-        isStaggered: chunkIndex > 0,
-        northEdgeCm: 0, // filled in second pass below
-        eastPositionsCm,
-      });
+      for (const [, speciesPlants] of mainsBySpecies) {
+        const speciesSpacing = speciesPlants[0]!.spacingCm;
+        const speciesPPR = computePlantsPerRow(bedWidthCm, speciesSpacing);
+        const interplantCapacityPerRow = Math.max(0, speciesPPR - 1);
 
-      rowIndex++;
-      chunkIndex++;
+        for (let i = 0; i < speciesPlants.length; i += speciesPPR) {
+          const mainChunk = speciesPlants.slice(i, i + speciesPPR);
+
+          const interplanted = Math.min(interplantCapacityPerRow, companionPool.length);
+          const interleavedCompanions = companionPool.splice(0, interplanted);
+          const interleaved = [...mainChunk, ...interleavedCompanions];
+
+          // Prefer explicit row_gap_cm from template; fall back to spacing × category multiplier
+          const maxChunkRowGap = Math.max(...interleaved.map((p) => p.rowGapCm ?? p.spacingCm * rowMultiplier));
+          const rowSpacingCm = Math.max(Math.round(maxChunkRowGap), minRowGap);
+
+          const baseLabel = LAYER_BASE_LABELS[layer];
+          const suffix = totalChunksThisLayer > 1 ? ` ${ROW_SUFFIX[chunkIndex] ?? String(chunkIndex + 1)}` : '';
+
+          const eBufEW = computeEdgeBuffer(speciesSpacing);
+          const eastPositionsCm = Array.from(
+            { length: speciesPPR },
+            (_, k) => eBufEW + k * speciesSpacing
+          );
+
+          rows.push({
+            rowIndex,
+            label: `Row ${rowIndex} — ${baseLabel}${suffix}`,
+            layer,
+            plants: interleaved.map((p) => {
+              if (p.successionWeek !== undefined) successionWeekSet.add(p.successionWeek);
+              return {
+                id: p.id,
+                name: p.name,
+                spacingCm: p.spacingCm,
+                isNFixer: p.cropFamily === 'legume',
+                daysToHarvest: p.daysToHarvest,
+                benefitTag: p.benefitTag,
+                careTasks: p.careTasks,
+                isCompanion: p.isCompanion,
+                successionWeek: p.successionWeek,
+              };
+            }),
+            plantsPerRow: speciesPPR,
+            interplantedCount: interplanted,
+            rowSpacingCm,
+            isStaggered: chunkIndex > 0,
+            northEdgeCm: 0, // filled in second pass below
+            eastPositionsCm,
+          });
+
+          rowIndex++;
+          chunkIndex++;
+        }
+      }
+    } else {
+      // Companion-only layer: companions act as mains (flat chunking by spacing).
+      const anchorSpacing = Math.max(...layerPlants.map((p) => p.spacingCm));
+      const plantsPerRow = computePlantsPerRow(bedWidthCm, anchorSpacing);
+      const sortedSource = [...sortedCompanions];
+      const totalChunks = Math.ceil(sortedSource.length / plantsPerRow);
+
+      for (let i = 0; i < sortedSource.length; i += plantsPerRow) {
+        const chunk = sortedSource.slice(i, i + plantsPerRow);
+
+        const maxChunkSpacing = Math.max(...chunk.map((p) => p.spacingCm));
+        const maxChunkRowGap = Math.max(...chunk.map((p) => p.rowGapCm ?? p.spacingCm * rowMultiplier));
+        const rowSpacingCm = Math.max(Math.round(maxChunkRowGap), minRowGap);
+
+        const baseLabel = LAYER_BASE_LABELS[layer];
+        const suffix = totalChunks > 1 ? ` ${ROW_SUFFIX[chunkIndex] ?? String(chunkIndex + 1)}` : '';
+
+        const eBufEW = computeEdgeBuffer(maxChunkSpacing);
+        const eastPositionsCm = Array.from(
+          { length: plantsPerRow },
+          (_, k) => eBufEW + k * maxChunkSpacing
+        );
+
+        rows.push({
+          rowIndex,
+          label: `Row ${rowIndex} — ${baseLabel}${suffix}`,
+          layer,
+          plants: chunk.map((p) => {
+            if (p.successionWeek !== undefined) successionWeekSet.add(p.successionWeek);
+            return {
+              id: p.id,
+              name: p.name,
+              spacingCm: p.spacingCm,
+              isNFixer: p.cropFamily === 'legume',
+              daysToHarvest: p.daysToHarvest,
+              benefitTag: p.benefitTag,
+              careTasks: p.careTasks,
+              isCompanion: p.isCompanion,
+              successionWeek: p.successionWeek,
+            };
+          }),
+          plantsPerRow,
+          interplantedCount: 0,
+          rowSpacingCm,
+          isStaggered: chunkIndex > 0,
+          northEdgeCm: 0, // filled in second pass below
+          eastPositionsCm,
+        });
+
+        rowIndex++;
+        chunkIndex++;
+      }
     }
 
     // Surplus companions spill into staggered companion-only rows

@@ -10,7 +10,7 @@ import {
   computeRowLayout,
   maxFitForSpecies,
   getRecommendedFirstAdd,
-  computePlantMatrix,
+  computePlantsPerRow,
 } from '@/utils/rowLayoutEngine';
 import type { RowPlantInput } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
@@ -302,7 +302,7 @@ export function GuildTemplateStep({
   // ── Increment / decrement handlers ──────────────────────────────────────────
 
   const incrementPlant = useCallback(
-    (candidate: RowPlantInput, companionsToAutoAdd?: string[]): void => {
+    (candidate: RowPlantInput, isMainCrop: boolean, companionsToAutoAdd?: string[]): void => {
       setAutoAddedMsg(null);
       // Antagonist check vs any *different* species already in the bed
       for (const entry of data.plant_entries) {
@@ -311,9 +311,14 @@ export function GuildTemplateStep({
         if (!result.valid) return;
       }
 
-      // Capacity check — applies to every tap equally (no special first-add bulk fill)
+      const bedWidthCm = Math.round(widthM * 100);
+      const plantsToAdd = isMainCrop
+        ? computePlantsPerRow(bedWidthCm, candidate.spacingCm)
+        : 1;
+
+      // Capacity check — need room for a full row
       const remaining = maxFitMap.get(candidate.name) ?? 0;
-      if (remaining <= 0) return;
+      if (remaining < plantsToAdd) return;
 
       const instanceCount = data.plant_entries.filter((e) => e.name === candidate.name).length;
       const makeEntry = (name: string, layer: BedLayer, spacingCm: number): PlantEntry => ({
@@ -323,10 +328,12 @@ export function GuildTemplateStep({
         spacingCm,
       });
 
-      // Always add exactly 1 plant per tap for predictable stepper behaviour
+      // Add one full row (plantsToAdd plants) per tap for main crops; 1 for companions
       const newEntries: PlantEntry[] = [
         ...data.plant_entries,
-        makeEntry(candidate.name, candidate.layer, candidate.spacingCm),
+        ...Array.from({ length: plantsToAdd }, () =>
+          makeEntry(candidate.name, candidate.layer, candidate.spacingCm)
+        ),
       ];
 
       // On first add of a main crop, auto-add recommended companions that fit
@@ -379,44 +386,51 @@ export function GuildTemplateStep({
   );
 
   const decrementPlant = useCallback(
-    (plantName: string): void => {
+    (plantName: string, spacingCm: number, isMainCrop: boolean): void => {
       setAutoAddedMsg(null);
-      const lastIdx = (() => {
-        for (let i = data.plant_entries.length - 1; i >= 0; i--) {
-          if (data.plant_entries[i]!.name === plantName) return i;
-        }
-        return -1;
-      })();
-      if (lastIdx === -1) return;
+      const bedWidthCm = Math.round(widthM * 100);
+      const plantsToRemove = isMainCrop
+        ? computePlantsPerRow(bedWidthCm, spacingCm)
+        : 1;
+      let toRemove = plantsToRemove;
       const next = [...data.plant_entries];
-      next.splice(lastIdx, 1);
+      for (let i = next.length - 1; i >= 0 && toRemove > 0; i--) {
+        if (next[i]!.name === plantName) {
+          next.splice(i, 1);
+          toRemove--;
+        }
+      }
       onChange({ plant_entries: next });
     },
-    [data.plant_entries, onChange]
+    [data.plant_entries, widthM, onChange]
   );
 
-  // Capacity text: shows "N rows × M = total" for template main crops; "fits ~N" for others.
+  // Capacity text: shows "N rows × M = total" for main crops; "fits ~N" for companions.
   const capacityText = useCallback(
     (candidate: RowPlantInput, count: number, isMainCrop: boolean): string => {
       const remaining = maxFitMap.get(candidate.name) ?? 0;
+
+      if (isMainCrop) {
+        const bedWidthCm = Math.round(widthM * 100);
+        const ppr = computePlantsPerRow(bedWidthCm, candidate.spacingCm);
+        const rowsCanAdd = Math.floor(remaining / ppr);
+
+        if (remaining === 0 && count === 0) return 'Too big for bed';
+        if (rowsCanAdd === 0) return 'Bed full';
+        if (count === 0) {
+          return rowsCanAdd === 1
+            ? `${ppr} plants (1 row)`
+            : `${rowsCanAdd} rows × ${ppr} = ${rowsCanAdd * ppr}`;
+        }
+        return rowsCanAdd === 1 ? '1 more row fits' : `${rowsCanAdd} more rows fit`;
+      }
+
       if (remaining === 0 && count === 0) return 'Too big for bed';
       if (remaining === 0) return 'Bed full';
-      if (isMainCrop && count === 0) {
-        const { plantsPerRow, rowCount, total } = computePlantMatrix(
-          candidate,
-          currentInputs,
-          widthM,
-          lengthM,
-          bedTypeForEngine,
-          construction
-        );
-        if (rowCount === 1) return `${total} plants (1 row)`;
-        return `${rowCount} rows × ${plantsPerRow} = ${total}`;
-      }
       if (count === 0) return `fits ~${remaining}`;
       return `~${remaining} more fit`;
     },
-    [maxFitMap, currentInputs, widthM, lengthM, bedTypeForEngine, construction]
+    [maxFitMap, widthM]
   );
 
   // One-tap: add all template plants at their recommended counts.
@@ -593,12 +607,19 @@ export function GuildTemplateStep({
               <Text style={styles.gtPlantCountTag}>
                 {capacityText(candidate, instanceCount, isMain)}
               </Text>
-              <PlantQtyStepper
-                count={instanceCount}
-                onIncrement={() => incrementPlant(candidate, autoCompanions)}
-                onDecrement={() => decrementPlant(row.name)}
-                disabled={isBlocked || capReached}
-              />
+              {(() => {
+                const bedWidthCm = Math.round(widthM * 100);
+                const speciesPPR = isMain ? computePlantsPerRow(bedWidthCm, row.spacing_cm) : 1;
+                const rowsAdded = isMain ? Math.round(instanceCount / speciesPPR) : instanceCount;
+                return (
+                  <PlantQtyStepper
+                    count={rowsAdded}
+                    onIncrement={() => incrementPlant(candidate, isMain, autoCompanions)}
+                    onDecrement={() => decrementPlant(row.name, row.spacing_cm, isMain)}
+                    disabled={isBlocked || capReached}
+                  />
+                );
+              })()}
             </View>
           </View>
         );
@@ -638,8 +659,8 @@ export function GuildTemplateStep({
                 </View>
                 <PlantQtyStepper
                   count={compCount}
-                  onIncrement={() => incrementPlant(compCandidate)}
-                  onDecrement={() => decrementPlant(comp)}
+                  onIncrement={() => incrementPlant(compCandidate, false)}
+                  onDecrement={() => decrementPlant(comp, COMPANION_DEFAULT_SPACING, false)}
                   disabled={compBlocked || compCapReached}
                 />
               </View>
@@ -685,8 +706,8 @@ export function GuildTemplateStep({
                   </View>
                   <PlantQtyStepper
                     count={accCount}
-                    onIncrement={() => incrementPlant(accCandidate)}
-                    onDecrement={() => decrementPlant(acc.name)}
+                    onIncrement={() => incrementPlant(accCandidate, false)}
+                    onDecrement={() => decrementPlant(acc.name, ACCUMULATOR_DEFAULT_SPACING, false)}
                     disabled={accBlocked || accCapReached}
                   />
                 </View>
