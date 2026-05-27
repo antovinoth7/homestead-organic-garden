@@ -157,7 +157,8 @@ export function GuildTemplateStep({
   const template = bedType ? getGuildTemplate(bedType) : null;
 
   const [autoAddedMsg, setAutoAddedMsg] = useState<string | null>(null);
-  const [companionsExpanded, setCompanionsExpanded] = useState(false);
+  const [quickStartApplied, setQuickStartApplied] = useState(false);
+  const [companionsExpanded, setCompanionsExpanded] = useState(true);
   const [soilBuildersExpanded, setSoilBuildersExpanded] = useState(false);
 
   // Auto-dismiss the companion notification after 4 seconds
@@ -303,6 +304,7 @@ export function GuildTemplateStep({
   const incrementPlant = useCallback(
     (candidate: RowPlantInput, isMainCrop: boolean, companionsToAutoAdd?: string[]): void => {
       setAutoAddedMsg(null);
+      setQuickStartApplied(false);
       // Antagonist check vs any *different* species already in the bed
       for (const entry of data.plant_entries) {
         if (entry.name === candidate.name) continue;
@@ -386,6 +388,7 @@ export function GuildTemplateStep({
   const decrementPlant = useCallback(
     (plantName: string, spacingCm: number, isMainCrop: boolean): void => {
       setAutoAddedMsg(null);
+      setQuickStartApplied(false);
       const bedWidthCm = Math.round(widthM * 100);
       const plantsToRemove = isMainCrop ? computePlantsPerRow(bedWidthCm, spacingCm) : 1;
       let toRemove = plantsToRemove;
@@ -435,7 +438,7 @@ export function GuildTemplateStep({
     [maxFitMap, widthM]
   );
 
-  // One-tap: add all template plants at their recommended counts.
+  // One-tap: add all template plants at their recommended counts, then fit companions.
   const handleUseFullPlan = useCallback(() => {
     if (!template) return;
     setAutoAddedMsg(null);
@@ -469,8 +472,40 @@ export function GuildTemplateStep({
         ];
       }
     }
+    // Also add fitting companion suggestions
+    for (const comp of companionSuggestions) {
+      if (accEntries.some((e) => e.name === comp)) continue;
+      let antag = false;
+      for (const existing of accEntries) {
+        if (existing.name === comp) continue;
+        const r = validateCompanionPair(comp, existing.name);
+        if (!r.valid) {
+          antag = true;
+          break;
+        }
+      }
+      if (antag) continue;
+      const compCandidate = candidateForCompanion(comp);
+      const trialInputs = mapPlantEntriesToRowInputs(accEntries, template);
+      const count = getRecommendedFirstAdd(
+        compCandidate,
+        trialInputs,
+        widthM,
+        lengthM,
+        bedTypeForEngine,
+        construction
+      );
+      if (count === 0) continue;
+      for (let i = 0; i < count; i++) {
+        accEntries = [
+          ...accEntries,
+          { id: generateId(), name: comp, layer: COMPANION_DEFAULT_LAYER, spacingCm: COMPANION_DEFAULT_SPACING },
+        ];
+      }
+    }
     onChange({ plant_entries: accEntries });
-  }, [template, widthM, lengthM, bedTypeForEngine, construction, candidateForRow, onChange]);
+    setQuickStartApplied(true);
+  }, [template, widthM, lengthM, bedTypeForEngine, construction, candidateForRow, candidateForCompanion, companionSuggestions, onChange]);
 
   // Harvest mini-timeline — selected plants sorted by days to harvest.
   const harvestPreview = useMemo(() => {
@@ -512,13 +547,19 @@ export function GuildTemplateStep({
         </View>
       )}
 
+      <View style={styles.gtBedTypeChip}>
+        <Text style={styles.gtBedTypeChipText}>{template.label}</Text>
+      </View>
+
       <TouchableOpacity
-        style={styles.gtUseFullPlanBtn}
+        style={[styles.gtUseFullPlanBtn, quickStartApplied && styles.gtUseFullPlanBtnApplied]}
         onPress={handleUseFullPlan}
         activeOpacity={0.8}
       >
-        <Text style={styles.gtUseFullPlanBtnText}>📋 Plant all suggested crops for this bed</Text>
-        <View style={styles.gtUseFullPlanQuickBadge}>
+        <Text style={styles.gtUseFullPlanBtnText}>
+          {quickStartApplied ? '✓ Applied — tap to reapply' : '📋 Plant all suggested crops for this bed'}
+        </Text>
+        <View style={[styles.gtUseFullPlanQuickBadge, quickStartApplied && styles.gtUseFullPlanQuickBadgeApplied]}>
           <Text style={styles.gtUseFullPlanQuickBadgeText}>Quick Start</Text>
         </View>
       </TouchableOpacity>
@@ -584,7 +625,11 @@ export function GuildTemplateStep({
 
             <View style={styles.gtPlantMeta}>
               <View style={styles.gtPlantNameRow}>
-                <Text style={[styles.gtPlantName, isBlocked && styles.gtPlantNameBlocked]}>
+                <Text
+                  style={[styles.gtPlantName, isBlocked && styles.gtPlantNameBlocked]}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
                   {row.name}
                 </Text>
               </View>
@@ -623,7 +668,10 @@ export function GuildTemplateStep({
             </View>
 
             <View style={styles.gtPlantRight}>
-              <Text style={styles.gtSpacingTag}>{row.spacing_cm} cm</Text>
+              <View style={styles.gtSpacingBlock}>
+                <Text style={styles.gtSpacingLabel}>PLANT GAP</Text>
+                <Text style={styles.gtSpacingTag}>{row.spacing_cm} cm</Text>
+              </View>
               <Text style={styles.gtPlantCountTag}>
                 {capacityText(candidate, instanceCount, isMain)}
               </Text>

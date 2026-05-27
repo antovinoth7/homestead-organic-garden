@@ -717,7 +717,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       flexWrap: 'wrap' as const,
     },
-    gtPlantName: { fontSize: 14, fontWeight: '700' as const, color: theme.text },
+    gtPlantName: { fontSize: 14, fontWeight: '700' as const, color: theme.text, flexShrink: 1 as const },
     gtPlantNameBlocked: { color: theme.textTertiary },
     gtTamilName: {
       fontSize: 11,
@@ -769,7 +769,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     gtNFixerBadgeText: { fontSize: 10, fontWeight: '600' as const, color: theme.success },
     gtAntagonistText: { fontSize: 11, color: theme.error, marginTop: 5 },
-    gtPlantRight: { alignItems: 'flex-end' as const, gap: 6, marginLeft: 10 },
+    gtPlantRight: { alignItems: 'flex-end' as const, gap: 6, marginLeft: 10, flexShrink: 0 as const },
+    gtSpacingBlock: { alignItems: 'flex-end' as const },
+    gtSpacingLabel: {
+      fontSize: 8,
+      fontWeight: '700' as const,
+      letterSpacing: 0.8,
+      color: theme.textTertiary,
+      textAlign: 'right' as const,
+    },
     gtSpacingTag: { fontSize: 11, fontWeight: '600' as const, color: theme.textSecondary },
     gtSelectCircle: {
       width: 28,
@@ -1050,6 +1058,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700' as const,
       color: theme.textInverse,
     },
+    gtUseFullPlanBtnApplied: {
+      backgroundColor: theme.successLight,
+      borderColor: theme.success,
+    },
+    gtUseFullPlanQuickBadgeApplied: {
+      backgroundColor: theme.success,
+    },
     // Guild step — benefit explanation line
     gtBenefitLine: {
       fontSize: 11,
@@ -1070,6 +1085,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 10,
       fontWeight: '600' as const,
       color: theme.infoDark,
+    },
+    gtBedTypeChip: {
+      alignSelf: 'flex-start' as const,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+      backgroundColor: theme.primaryLight,
+      borderWidth: 1,
+      borderColor: theme.primary,
+      marginBottom: 12,
+    },
+    gtBedTypeChipText: {
+      fontSize: 12,
+      fontWeight: '600' as const,
+      color: theme.primary,
     },
     // Guild step — harvest mini timeline
     gtHarvestTimeline: {
