@@ -14,6 +14,7 @@ import {
 } from '@/utils/rowLayoutEngine';
 import type { RowPlantInput } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 
 const generateId = (): string =>
@@ -40,46 +41,6 @@ const ACCUMULATOR_DEFAULT_LAYER: BedLayer = 'understory';
 const ACCUMULATOR_DEFAULT_SPACING = 60;
 const DEFAULT_BED_WIDTH_M = 1.2;
 const DEFAULT_BED_LENGTH_M = 3.0;
-
-const PLANT_EMOJI: Record<string, string> = {
-  Amaranth: '🌿',
-  Spinach: '🥬',
-  Lettuce: '🥗',
-  Fenugreek: '🌱',
-  Tomato: '🍅',
-  Brinjal: '🍆',
-  'Ladies Finger': '🫛',
-  Marigold: '🌼',
-  Chilli: '🌶️',
-  Ginger: '🫚',
-  Turmeric: '🟡',
-  'Curry Leaf': '🍃',
-  Cowpea: '🫘',
-  'French Beans': '🫘',
-  Carrot: '🥕',
-  Radish: '🌰',
-  'Bitter Gourd': '🥒',
-  'Snake Gourd': '🥒',
-  'Yardlong Beans': '🫘',
-  Banana: '🍌',
-  Cocoa: '🍫',
-  'Black Pepper': '⚫',
-  'Elephant Yam': '🥔',
-  Maize: '🌽',
-  Beans: '🫘',
-  Pumpkin: '🎃',
-  Moringa: '🌳',
-  Tulsi: '🌿',
-  'Aloe Vera': '🌵',
-  Lemongrass: '🌾',
-  Basil: '🌿',
-  Garlic: '🧄',
-  Strawberry: '🍓',
-  Beetroot: '🟣',
-  Pepper: '🌶️',
-  Agathi: '🌱',
-  Comfrey: '🌿',
-};
 
 const LAYER_LABEL: Record<string, string> = {
   canopy: 'Tall / Shade Tree',
@@ -533,7 +494,7 @@ export function GuildTemplateStep({
       const row = template.plant_rows.find((r) => r.name === entry.name);
       const days = row?.days_to_harvest;
       if (days !== undefined) {
-        items.push({ name: entry.name, days, emoji: PLANT_EMOJI[entry.name] ?? '🌱' });
+        items.push({ name: entry.name, days, emoji: getPlantEmoji(entry.name) });
       }
     }
     return items.sort((a, b) => a.days - b.days);
@@ -620,7 +581,7 @@ export function GuildTemplateStep({
         const blockedReason = !isSelected ? getBlockedReason(row.name) : null;
         const isBlocked = !!blockedReason;
         const remaining = maxFitMap.get(row.name) ?? 0;
-        const emoji = PLANT_EMOJI[row.name] ?? '🌱';
+        const emoji = getPlantEmoji(row.name);
         const layerLabel = LAYER_LABEL[row.layer] ?? row.layer.replace(/_/g, ' ');
         const isMain = row.is_companion !== true;
         const speciesPPR = isMain
@@ -736,7 +697,7 @@ export function GuildTemplateStep({
               const compCapReached = compRemaining === 0;
               return (
                 <View key={comp} style={styles.gtCompanionRow}>
-                  <Text style={styles.gtCompanionEmoji}>{PLANT_EMOJI[comp] ?? '🌿'}</Text>
+                  <Text style={styles.gtCompanionEmoji}>{getPlantEmoji(comp)}</Text>
                   <View style={styles.gtCompanionNameBlock}>
                     <Text style={styles.gtCompanionName}>{comp}</Text>
                     <Text style={styles.gtCompanionFitText}>

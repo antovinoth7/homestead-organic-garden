@@ -40,6 +40,7 @@ import { logger } from '../utils/logger';
 import { convertTimestamp } from '../utils/dateHelpers';
 import { resolvePhotoFilename } from '../utils/photoFilename';
 import { getCached, invalidate, dedup, CACHE_KEYS } from '../lib/dataCache';
+import { LAYER_ORDER as BED_LAYER_ORDER } from '../config/beds/layerMeta';
 
 const PLANTS_COLLECTION = 'plants';
 const DEFAULT_PAGE_SIZE = 50;
@@ -622,7 +623,6 @@ export const unpinGrowthStage = async (plantId: string): Promise<void> => {
   invalidate(CACHE_KEYS.ALL_PLANTS);
 };
 
-const BED_LAYER_ORDER: BedLayer[] = ['canopy', 'climber', 'understory', 'root', 'ground_cover'];
 const bedLayerRank = (l: BedLayer | null | undefined): number => {
   if (!l) return BED_LAYER_ORDER.length;
   const i = BED_LAYER_ORDER.indexOf(l);

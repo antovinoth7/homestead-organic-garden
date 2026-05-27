@@ -10,51 +10,11 @@ import { computeRowLayout, getVisibleLayers } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { getGuildTemplate } from '@/config/beds/guildTemplates';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
+import { getLayerColor } from '@/config/beds/layerMeta';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import type { BedLayer, BedType, EntryResolution, PlantEntry } from '@/types/database.types';
 import type { Step2Data, Step3Data, Step4Data } from '@/hooks/useBedCreationWizard';
-
-const LAYER_ACCENT_COLOR: Record<BedLayer, string> = {
-  canopy: '#2e7d32',
-  climber: '#7b1fa2',
-  understory: '#558b2f',
-  root: '#e65100',
-  ground_cover: '#c8842a',
-};
-
-const PLANT_EMOJI_LAYOUT: Record<string, string> = {
-  Amaranth: '🌿',
-  Spinach: '🥬',
-  Lettuce: '🥗',
-  Fenugreek: '🌱',
-  Tomato: '🍅',
-  Brinjal: '🍆',
-  'Ladies Finger': '🫛',
-  Marigold: '🌼',
-  Chilli: '🌶️',
-  Ginger: '🫚',
-  Turmeric: '🟡',
-  'Curry Leaf': '🍃',
-  Cowpea: '🫘',
-  'French Beans': '🫘',
-  Carrot: '🥕',
-  Radish: '🌰',
-  'Bitter Gourd': '🥒',
-  'Snake Gourd': '🥒',
-  'Yardlong Beans': '🫘',
-  Banana: '🍌',
-  Maize: '🌽',
-  Beans: '🫘',
-  Pumpkin: '🎃',
-  Moringa: '🌳',
-  Tulsi: '🌿',
-  'Aloe Vera': '🌵',
-  Lemongrass: '🌾',
-  Basil: '🌿',
-  Garlic: '🧄',
-  'Black Pepper': '⚫',
-  'Elephant Yam': '🥔',
-};
 
 const generateId = (): string =>
   `pe${Date.now().toString(36)}${Math.random().toString(36).slice(2, 9)}`;
@@ -213,8 +173,10 @@ export function BedLayoutStep({
         widthM={step3.width_m}
         lengthM={step3.length_m}
         rows={rowLayout.rows}
-        plantEmoji={(name) => PLANT_EMOJI_LAYOUT[name] ?? '🌱'}
-        layerColor={(layer) => LAYER_ACCENT_COLOR[layer]}
+        plantEmoji={getPlantEmoji}
+        layerColor={getLayerColor}
+        walkingPathCm={rowLayout.walkingPathCm}
+        overflowCm={rowLayout.overflowCm}
       />
 
       {/* ── Trellis guidance ─────────────────────────────────────────────── */}

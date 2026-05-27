@@ -4,6 +4,41 @@ const SOLANACEAE_REST_SEASONS = 2;
 const MIN_LEGUME_COVERAGE_PCT = 20;
 const _MAX_SAME_FAMILY_CONSECUTIVE = 3;
 
+// Families that must rest before replanting same-family in the same row.
+const ROW_REST_FAMILIES: CropFamily[] = ['solanaceae', 'cucurbit'];
+
+export interface RowRotationCheck {
+  ok: boolean;
+  reason?: string;
+}
+
+/**
+ * Returns whether the candidate crop family is safe to plant in the given row
+ * given the bed's `row_history`. Same-family back-to-back in heavy-feeder
+ * families (solanaceae, cucurbit) triggers a row-level rest warning even when
+ * the bed-wide `prev_crop_family` would allow it elsewhere.
+ */
+export function validateRowRotation(
+  bed: Bed,
+  rowIndex: number,
+  candidateFamily: CropFamily | null
+): RowRotationCheck {
+  if (!candidateFamily) return { ok: true };
+  const history = bed.row_history ?? [];
+  const lastInRow = history
+    .filter((h) => h.row_index === rowIndex)
+    .sort((a, b) => (a.planted_at < b.planted_at ? 1 : -1))[0];
+  if (!lastInRow) return { ok: true };
+  if (!ROW_REST_FAMILIES.includes(candidateFamily)) return { ok: true };
+  if (lastInRow.crop_families.includes(candidateFamily)) {
+    return {
+      ok: false,
+      reason: `Row ${rowIndex} grew ${candidateFamily} last season — rest ${SOLANACEAE_REST_SEASONS} seasons before replanting same family.`,
+    };
+  }
+  return { ok: true };
+}
+
 export interface RotationCheckInput {
   bed: Bed;
   plants: Plant[];

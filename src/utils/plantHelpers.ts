@@ -1485,6 +1485,13 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Cardamom: '🌿',
   Ajwain: '🌿',
   Fennel: '🌿',
+  Amaranth: '🌿',
+  Ginger: '🫚',
+  Turmeric: '🟡',
+  'Curry Leaf': '🍃',
+  'Elephant Yam': '🥔',
+  Tulsi: '🌿',
+  Comfrey: '🌿',
 };
 
 export function getPlantEmoji(name: string): string {

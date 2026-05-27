@@ -2,8 +2,14 @@ import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
+import { computeInterleavedEastPositions } from '@/utils/rowLayoutEngine';
 import type { BedRow } from '@/utils/rowLayoutEngine';
 import type { BedLayer } from '@/types/database.types';
+
+interface RowWarning {
+  rowIndex: number;
+  message: string;
+}
 
 interface BedTopDownMapProps {
   widthM: number;
@@ -11,59 +17,14 @@ interface BedTopDownMapProps {
   rows: BedRow[];
   plantEmoji: (name: string) => string;
   layerColor: (layer: BedLayer) => string;
+  walkingPathCm?: number;
+  overflowCm?: number;
+  rowWarnings?: RowWarning[];
 }
 
-// Mirrors the engine's interleavePlants distribution: mains occupy their
-// eastPositionsCm slots; interplanted companions are placed in interior gaps
-// (or extended past a lone main / used as anchors when no mains exist).
-function computePlantEastPositions(row: BedRow): number[] {
-  const mains = row.plants.filter((p) => p.isCompanion !== true);
-  const companions = row.plants.filter((p) => p.isCompanion === true);
-  const positions: number[] = [];
-
-  mains.forEach((_, i) => {
-    positions.push(row.eastPositionsCm[i] ?? 0);
-  });
-
-  if (companions.length === 0) return positions;
-
-  if (mains.length === 0) {
-    companions.forEach((_, i) => {
-      positions.push(row.eastPositionsCm[i] ?? 0);
-    });
-    return positions;
-  }
-
-  if (mains.length === 1) {
-    const main = row.eastPositionsCm[0] ?? 0;
-    const spacing = mains[0]?.spacingCm ?? 30;
-    for (let j = 0; j < companions.length; j++) {
-      positions.push(main + ((j + 1) * spacing) / (companions.length + 1));
-    }
-    return positions;
-  }
-
-  const gapCount = mains.length - 1;
-  const perGapBase = Math.floor(companions.length / gapCount);
-  const remainder = companions.length - perGapBase * gapCount;
-
-  let cIdx = 0;
-  for (let i = 0; i < gapCount; i++) {
-    const take = perGapBase + (i < remainder ? 1 : 0);
-    const left = row.eastPositionsCm[i] ?? 0;
-    const right = row.eastPositionsCm[i + 1] ?? 0;
-    for (let k = 0; k < take && cIdx < companions.length; k++) {
-      const t = (k + 1) / (take + 1);
-      positions.push(left + t * (right - left));
-      cIdx++;
-    }
-  }
-  while (cIdx < companions.length) {
-    positions.push(row.eastPositionsCm[mains.length - 1] ?? 0);
-    cIdx++;
-  }
-
-  return positions;
+// Truncate species name to fit under the pin without wrapping.
+function shortLabel(name: string): string {
+  return name.length > 7 ? `${name.slice(0, 6)}…` : name;
 }
 
 export function BedTopDownMap({
@@ -72,6 +33,9 @@ export function BedTopDownMap({
   rows,
   plantEmoji,
   layerColor,
+  walkingPathCm = 60,
+  overflowCm = 0,
+  rowWarnings = [],
 }: BedTopDownMapProps): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -91,6 +55,24 @@ export function BedTopDownMap({
   // 30 cm grid: evenly spaced lines, count derived from bed dimensions.
   const gridColCount = Math.max(0, Math.round(widthCm / 30) - 1);
   const gridRowCount = Math.max(0, Math.round(lengthCm / 30) - 1);
+
+  // Walking path strips clamp to half the bed so they never collapse the canvas.
+  const pathPct = Math.min(50, (walkingPathCm / lengthCm) * 100);
+
+  const warningByRow = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const w of rowWarnings) map.set(w.rowIndex, w.message);
+    return map;
+  }, [rowWarnings]);
+
+  const mainCount = useMemo(
+    () => rows.reduce((sum, r) => sum + r.plants.filter((p) => p.isCompanion !== true).length, 0),
+    [rows]
+  );
+  const companionCount = useMemo(
+    () => rows.reduce((sum, r) => sum + r.plants.filter((p) => p.isCompanion === true).length, 0),
+    [rows]
+  );
 
   if (rows.length === 0) return null;
 
@@ -120,6 +102,21 @@ export function BedTopDownMap({
           </View>
 
           <View style={[styles.tdmCanvas, { aspectRatio: widthM / lengthM }]}>
+            {pathPct > 0 && (
+              <>
+                <View
+                  style={[styles.tdmPathStrip, styles.tdmPathStripTop, { height: `${pathPct}%` }]}
+                />
+                <View
+                  style={[
+                    styles.tdmPathStrip,
+                    styles.tdmPathStripBottom,
+                    { height: `${pathPct}%` },
+                  ]}
+                />
+              </>
+            )}
+
             {Array.from({ length: gridRowCount }).map((_, i) => (
               <View
                 key={`gh-${i}`}
@@ -140,28 +137,24 @@ export function BedTopDownMap({
             ))}
 
             {rows.map((row) => {
-              const bandTop = Math.max(
-                0,
-                ((row.northEdgeCm - row.rowSpacingCm / 2) / lengthCm) * 100
-              );
-              const bandHeight = (row.rowSpacingCm / lengthCm) * 100;
+              const centerPct = (row.northEdgeCm / lengthCm) * 100;
+              const warning = warningByRow.get(row.rowIndex);
               return (
-                <View
-                  key={`band-${row.rowIndex}`}
-                  style={[
-                    styles.tdmRowBand,
-                    { top: `${bandTop}%`, height: `${bandHeight}%` },
-                  ]}
-                >
-                  <View style={styles.tdmRowTag}>
+                <React.Fragment key={`row-${row.rowIndex}`}>
+                  <View
+                    style={[styles.tdmRowCenterline, { top: `${centerPct}%` }]}
+                    accessibilityLabel={`Row ${row.rowIndex} centerline at ${(row.northEdgeCm / 100).toFixed(2)} meters`}
+                  />
+                  <View style={[styles.tdmRowTag, { top: `${centerPct}%` }]}>
                     <Text style={styles.tdmRowTagText}>R{row.rowIndex}</Text>
+                    {warning ? <Text style={styles.tdmRowTagWarn}> ⚠</Text> : null}
                   </View>
-                </View>
+                </React.Fragment>
               );
             })}
 
             {rows.map((row) => {
-              const positions = computePlantEastPositions(row);
+              const positions = computeInterleavedEastPositions(row);
               return row.plants.map((plant, i) => {
                 const eastCm = positions[i];
                 if (eastCm === undefined) return null;
@@ -171,27 +164,54 @@ export function BedTopDownMap({
                 const isGround = row.layer === 'ground_cover';
                 return (
                   <View
-                    key={`pin-${row.rowIndex}-${i}`}
-                    style={[
-                      styles.tdmPin,
-                      { left: `${leftPct}%`, top: `${topPct}%` },
-                      isGround && styles.tdmPinGround,
-                      isCompanion
-                        ? styles.tdmPinCompanion
-                        : { borderColor: layerColor(row.layer) },
-                    ]}
+                    key={`pinwrap-${row.rowIndex}-${i}`}
+                    style={[styles.tdmPinWrap, { left: `${leftPct}%`, top: `${topPct}%` }]}
+                    accessibilityLabel={`${plant.name} · ${plant.spacingCm} cm spacing${isCompanion ? ' · companion' : ''}`}
                   >
-                    <Text style={styles.tdmPinEmoji}>{plantEmoji(plant.name)}</Text>
+                    <View
+                      style={[
+                        styles.tdmPin,
+                        isGround && styles.tdmPinGround,
+                        isCompanion
+                          ? styles.tdmPinCompanion
+                          : { borderColor: layerColor(row.layer) },
+                      ]}
+                    >
+                      <Text style={styles.tdmPinEmoji}>{plantEmoji(plant.name)}</Text>
+                    </View>
+                    <Text style={styles.tdmPinLabel} numberOfLines={1}>
+                      {shortLabel(plant.name)}
+                    </Text>
                   </View>
                 );
               });
             })}
+
+            {overflowCm > 0 && (
+              <View style={styles.tdmOverflowBadge}>
+                <Text style={styles.tdmOverflowText}>
+                  ⚠ Overflow {Math.round(overflowCm)} cm
+                </Text>
+              </View>
+            )}
 
             <View style={styles.tdmScaleBar}>
               <Text style={styles.tdmScaleBarText}>
                 {widthM.toFixed(1)} × {lengthM.toFixed(1)} m
               </Text>
             </View>
+          </View>
+
+          <View style={styles.tdmLegend}>
+            <View style={styles.tdmLegendItem}>
+              <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchMain]} />
+              <Text style={styles.tdmLegendText}>Main × {mainCount}</Text>
+            </View>
+            <View style={styles.tdmLegendItem}>
+              <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchCompanion]} />
+              <Text style={styles.tdmLegendText}>Companion × {companionCount}</Text>
+            </View>
+            <Text style={styles.tdmLegendHint}>Tallest crops at North</Text>
           </View>
 
           <View style={styles.tdmCompass}>
