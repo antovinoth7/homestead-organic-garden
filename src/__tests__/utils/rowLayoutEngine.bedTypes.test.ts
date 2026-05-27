@@ -1,9 +1,9 @@
 import {
   computeRowLayout,
   computeInterleavedEastPositions,
+  EXPECTED_LAYERS_BY_BED,
 } from '@/utils/rowLayoutEngine';
 import type { RowPlantInput } from '@/utils/rowLayoutEngine';
-import { EXPECTED_LAYERS_BY_BED } from '@/utils/rowLayoutEngine';
 import { LAYER_ORDER } from '@/config/beds/layerMeta';
 import type { BedLayer, BedType } from '@/types/database.types';
 
@@ -168,7 +168,7 @@ describe('computeRowLayout — bed-type placement audit', () => {
   });
 
   describe('expected layers per bed type', () => {
-    const cases: Array<[BedType, BedLayer]> = [
+    const cases: [BedType, BedLayer][] = [
       ['three_sisters', 'canopy'],
       ['three_sisters', 'climber'],
       ['three_sisters', 'ground_cover'],

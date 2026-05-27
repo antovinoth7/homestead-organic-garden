@@ -328,7 +328,16 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
         area_sqm: rec.area_sqm,
         sizeRecommendation: rec,
       };
-      return { ...prev, 1: merged1, 2: merged2, 3: updated3 };
+      // Plant entries and review notes are guild-specific — drop them when the
+      // bed type changes so Step 4/5 don't carry over crops from a different
+      // guild (which would otherwise show "Bed full" against the new bed).
+      const bedTypeChanged = prev[1]?.bed_type !== merged1.bed_type;
+      const next: Partial<WizardStepData> = { ...prev, 1: merged1, 2: merged2, 3: updated3 };
+      if (bedTypeChanged) {
+        next[4] = { plant_entries: [] };
+        delete next[6];
+      }
+      return next;
     });
   }, []);
   const setStep3 = useCallback((data: Partial<Step3Data>) => patchStep(3, data), [patchStep]);
