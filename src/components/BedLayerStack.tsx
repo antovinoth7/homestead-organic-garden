@@ -3,91 +3,10 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedLayerStackStyles';
 import { DraggablePlantRow } from '@/components/DraggablePlantRow';
+import { LAYER_ORDER, LAYER_META } from '@/config/beds/layerMeta';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import type { BedLayer, EntryResolution, PlantEntry } from '@/types/database.types';
-
-const LAYER_ORDER: BedLayer[] = ['canopy', 'climber', 'understory', 'root', 'ground_cover'];
-
-const LAYER_META: Record<
-  BedLayer,
-  { icon: string; title: string; subtitle: string; border: string; bg: string }
-> = {
-  canopy: {
-    icon: '🌳',
-    title: 'Tall / Shade Trees',
-    subtitle: 'Largest plants — provide shade and vertical support',
-    border: '#2e7d32',
-    bg: '#f1f8f1',
-  },
-  climber: {
-    icon: '🌿',
-    title: 'Trellis Crops',
-    subtitle: 'Vines growing up a trellis or support frame',
-    border: '#7b1fa2',
-    bg: '#f5f0fa',
-  },
-  understory: {
-    icon: '🌱',
-    title: 'Main Crops',
-    subtitle: 'Primary income crops at mid height',
-    border: '#558b2f',
-    bg: '#f4f8ee',
-  },
-  root: {
-    icon: '🥕',
-    title: 'Underground Crops',
-    subtitle: 'Root and tuber crops grown below ground',
-    border: '#e65100',
-    bg: '#fff8f0',
-  },
-  ground_cover: {
-    icon: '🌸',
-    title: 'Border & Mulch Plants',
-    subtitle: 'Companion plants at bed edges — suppress weeds and pests',
-    border: '#c8842a',
-    bg: '#fdf5e8',
-  },
-};
-
-const PLANT_EMOJI: Record<string, string> = {
-  Amaranth: '🌿',
-  Spinach: '🥬',
-  Lettuce: '🥗',
-  Fenugreek: '🌱',
-  Tomato: '🍅',
-  Brinjal: '🍆',
-  'Ladies Finger': '🫛',
-  Marigold: '🌼',
-  Chilli: '🌶️',
-  Ginger: '🫚',
-  Turmeric: '🟡',
-  'Curry Leaf': '🍃',
-  Cowpea: '🫘',
-  'French Beans': '🫘',
-  Carrot: '🥕',
-  Radish: '🌰',
-  'Bitter Gourd': '🥒',
-  'Snake Gourd': '🥒',
-  'Yardlong Beans': '🫘',
-  Banana: '🍌',
-  Cocoa: '🍫',
-  'Black Pepper': '⚫',
-  'Elephant Yam': '🥔',
-  Maize: '🌽',
-  Beans: '🫘',
-  Pumpkin: '🎃',
-  Moringa: '🌳',
-  Tulsi: '🌿',
-  'Aloe Vera': '🌵',
-  Lemongrass: '🌾',
-  Basil: '🌿',
-  Garlic: '🧄',
-  Strawberry: '🍓',
-  Beetroot: '🟣',
-  Pepper: '🌶️',
-  Agathi: '🌱',
-  Comfrey: '🌿',
-};
 
 interface Props {
   result: RowLayoutResult;
@@ -152,12 +71,12 @@ export function BedLayerStack({
       <View
         style={[
           styles.tile,
-          { borderColor: meta.border },
+          { borderColor: meta.color },
           isCompanion ? styles.tileCompanion : null,
           isDragging ? styles.tileDragging : null,
         ]}
       >
-        <Text style={styles.tileEmoji}>{PLANT_EMOJI[entry.name] ?? meta.icon}</Text>
+        <Text style={styles.tileEmoji}>{getPlantEmoji(entry.name)}</Text>
         <Text style={styles.tileName} numberOfLines={2}>
           {entry.name}
         </Text>
@@ -233,9 +152,9 @@ export function BedLayerStack({
         return (
           <View
             key={layer}
-            style={[styles.layerCard, { borderColor: meta.border, backgroundColor: meta.bg }]}
+            style={[styles.layerCard, { borderColor: meta.color, backgroundColor: meta.bg }]}
           >
-            <View style={[styles.layerAccent, { backgroundColor: meta.border }]} />
+            <View style={[styles.layerAccent, { backgroundColor: meta.color }]} />
             <View style={styles.layerHeader}>
               <Text style={styles.layerIcon}>{meta.icon}</Text>
               <View style={styles.layerTitleCol}>

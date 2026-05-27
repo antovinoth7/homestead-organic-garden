@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { getAllPlants } from '@/services/plants';
 import { getGuildTemplate } from '@/config/beds';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedPlantPickerStyles';
 import type { BedLayer, BedType, Plant, PlantEntry } from '@/types/database.types';
 import type { PlantRow } from '@/config/beds/guildTemplates';
@@ -39,46 +40,6 @@ const LAYER_OPTIONS: { value: BedLayer; label: string }[] = [
   { value: 'root', label: 'Root' },
   { value: 'climber', label: 'Climber' },
 ];
-
-const PLANT_EMOJI: Record<string, string> = {
-  Amaranth: '🌿',
-  Spinach: '🥬',
-  Lettuce: '🥗',
-  Fenugreek: '🌱',
-  Tomato: '🍅',
-  Brinjal: '🍆',
-  'Ladies Finger': '🫛',
-  Marigold: '🌼',
-  Chilli: '🌶️',
-  Ginger: '🫚',
-  Turmeric: '🟡',
-  'Curry Leaf': '🍃',
-  Cowpea: '🫘',
-  'French Beans': '🫘',
-  Carrot: '🥕',
-  Radish: '🌰',
-  'Bitter Gourd': '🥒',
-  'Snake Gourd': '🥒',
-  'Yardlong Beans': '🫘',
-  Banana: '🍌',
-  Cocoa: '🍫',
-  'Black Pepper': '⚫',
-  'Elephant Yam': '🥔',
-  Maize: '🌽',
-  Beans: '🫘',
-  Pumpkin: '🎃',
-  Moringa: '🌳',
-  Tulsi: '🌿',
-  'Aloe Vera': '🌵',
-  Lemongrass: '🌾',
-  Basil: '🌿',
-  Garlic: '🧄',
-  Strawberry: '🍓',
-  Beetroot: '🟣',
-  Pepper: '🌶️',
-  Agathi: '🌱',
-  Comfrey: '🌿',
-};
 
 const LAYER_LABEL: Record<BedLayer, string> = {
   canopy: 'Canopy',
@@ -167,7 +128,7 @@ function GuildTab({
 
   const renderRow = (row: PlantRow, isCompanion: boolean, count: number): React.JSX.Element => (
     <View key={row.name} style={styles.guildPlantRow}>
-      <Text style={styles.guildEmoji}>{PLANT_EMOJI[row.name] ?? '🌱'}</Text>
+      <Text style={styles.guildEmoji}>{getPlantEmoji(row.name)}</Text>
       <View style={styles.guildMeta}>
         <View style={styles.nameRow}>
           <Text style={styles.guildName}>{row.name}</Text>

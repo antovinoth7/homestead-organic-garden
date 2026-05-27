@@ -175,6 +175,26 @@ export interface PestHistoryItem {
   year: number;
 }
 
+/**
+ * Per-row snapshot of an active bed planting. Persisted on `Bed.row_layout` so
+ * future seasons can warn against same-family back-to-back at the row level
+ * (more granular than the bed-wide `prev_crop_family`).
+ */
+export interface BedRowSnapshot {
+  row_index: number;
+  layer: BedLayer;
+  north_edge_cm: number;
+  plants_per_row: number;
+  crop_families: CropFamily[];
+  species: string[];
+  planted_at: string;
+}
+
+/** Append-only history entry: a `BedRowSnapshot` that has been cleared/uprooted. */
+export interface BedRowHistoryEntry extends BedRowSnapshot {
+  cleared_at?: string;
+}
+
 export interface Bed {
   id: string;
   user_id: string;
@@ -202,6 +222,8 @@ export interface Bed {
   last_jeevamrutha_date?: string | null;
   last_weeding_date?: string | null;
   notes?: string | null;
+  row_layout?: BedRowSnapshot[];
+  row_history?: BedRowHistoryEntry[];
   is_deleted: boolean;
   created_at: string;
   updated_at: string;

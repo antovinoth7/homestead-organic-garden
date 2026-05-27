@@ -8,6 +8,7 @@ import {
   PestHistoryItem,
   PlantEntry,
   Bed,
+  BedRowSnapshot,
   LocationConfig,
   Plant,
 } from '@/types/database.types';
@@ -16,7 +17,9 @@ import { addBed, updateBed } from '@/services/beds';
 import { createPlant, updatePlant } from '@/services/plants';
 import { getBedSizeRecommendation } from '@/config/beds';
 import type { BedSizeResult } from '@/config/beds';
-import { GUILD_TEMPLATES } from '@/config/beds/guildTemplates';
+import { GUILD_TEMPLATES, getGuildTemplate } from '@/config/beds/guildTemplates';
+import { computeRowLayout } from '@/utils/rowLayoutEngine';
+import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
 import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 import { getLocationConfig } from '@/services/locations';
@@ -98,6 +101,45 @@ const DEFAULT_STEP3: Step3Data = {
   coconut_distance_m: null,
   sizeRecommendation: null,
 };
+
+// ─── Row-layout snapshot ──────────────────────────────────────────────────────
+
+/**
+ * Compute the per-row snapshot persisted on `Bed.row_layout`. Mirrors the same
+ * engine call as Step 5's visual layout so what the farmer sees == what's
+ * saved. Returns undefined when there are no plants yet (no snapshot to save).
+ */
+function computeRowLayoutSnapshot(
+  bedType: BedType,
+  s3: Step3Data,
+  plantEntries: PlantEntry[],
+  constructionType: 'raised' | 'in_ground'
+): BedRowSnapshot[] | undefined {
+  if (plantEntries.length === 0) return undefined;
+  const template = getGuildTemplate(bedType);
+  const inputs = mapPlantEntriesToRowInputs(plantEntries, template);
+  if (inputs.length === 0) return undefined;
+  const result = computeRowLayout(inputs, s3.width_m, s3.length_m, bedType, constructionType);
+  const plantedAt = new Date().toISOString();
+  return result.rows.map((row) => {
+    const species: string[] = [];
+    const familySet = new Set<CropFamily>();
+    for (const plant of row.plants) {
+      if (!species.includes(plant.name)) species.push(plant.name);
+      const fam = cropFamilyFromName(plant.name);
+      if (fam) familySet.add(fam);
+    }
+    return {
+      row_index: row.rowIndex,
+      layer: row.layer,
+      north_edge_cm: row.northEdgeCm,
+      plants_per_row: row.plantsPerRow,
+      crop_families: [...familySet],
+      species,
+      planted_at: plantedAt,
+    };
+  });
+}
 
 // ─── Per-step validation ──────────────────────────────────────────────────────
 
@@ -286,7 +328,16 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
         area_sqm: rec.area_sqm,
         sizeRecommendation: rec,
       };
-      return { ...prev, 1: merged1, 2: merged2, 3: updated3 };
+      // Plant entries and review notes are guild-specific — drop them when the
+      // bed type changes so Step 4/5 don't carry over crops from a different
+      // guild (which would otherwise show "Bed full" against the new bed).
+      const bedTypeChanged = prev[1]?.bed_type !== merged1.bed_type;
+      const next: Partial<WizardStepData> = { ...prev, 1: merged1, 2: merged2, 3: updated3 };
+      if (bedTypeChanged) {
+        next[4] = { plant_entries: [] };
+        delete next[6];
+      }
+      return next;
     });
   }, []);
   const setStep3 = useCallback((data: Partial<Step3Data>) => patchStep(3, data), [patchStep]);
@@ -316,9 +367,17 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     const s1 = stepData[1];
     const s2 = stepData[2] ?? DEFAULT_STEP2;
     const s3 = stepData[3] ?? DEFAULT_STEP3;
+    const s4 = stepData[4];
     const s6 = stepData[6];
 
     if (!s1?.bed_type || !s2.name?.trim()) return null;
+
+    const rowLayout = computeRowLayoutSnapshot(
+      s1.bed_type,
+      s3,
+      s4?.plant_entries ?? [],
+      s2.construction_type
+    );
 
     return {
       name: s2.name.trim(),
@@ -341,6 +400,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
       is_permanent: false,
       coconut_distance_m: s3.coconut_distance_m,
       notes: s6?.notes || null,
+      row_layout: rowLayout,
       is_deleted: false,
     };
   }, [stepData]);

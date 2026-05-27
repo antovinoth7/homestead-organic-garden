@@ -47,12 +47,12 @@ describe('computeRowLayout', () => {
     expect(result.rows[0]!.isStaggered).toBe(false);
   });
 
-  it('creates staggered rows when mains overflow plantsPerRow', () => {
-    // 3 mains × 60cm in 120cm bed → plantsPerRow=2 → row A (2) + row B staggered (1)
+  it('creates staggered rows when same-species mains overflow plantsPerRow', () => {
+    // 3 Tomatoes × 60cm in 120cm bed → plantsPerRow=2 → row A (2) + row B staggered (1)
     const plants = [
       plant('Tomato', 'understory', 60),
-      plant('Brinjal', 'understory', 60),
-      plant('Ladies Finger', 'understory', 60),
+      plant('Tomato', 'understory', 60),
+      plant('Tomato', 'understory', 60),
     ];
     const result = computeRowLayout(plants, W, L);
     expect(result.rows).toHaveLength(2);
@@ -78,13 +78,13 @@ describe('computeRowLayout', () => {
   });
 
   it('usedLengthCm sums inter-row gaps + edge buffer at both ends', () => {
-    // 3 tomatoes → 2 rows (rowSpacing=60 each)
+    // 3 same-species mains → 2 rows (rowSpacing=60 each)
     // inter-row gaps: max(60,60) = 60. edgeBuffer (raised, anchor 60) = 15 each side.
     // usedLengthCm = 60 + 2×15 = 90
     const plants = [
       plant('Tomato', 'understory', 60),
-      plant('Brinjal', 'understory', 60),
-      plant('Ladies Finger', 'understory', 60),
+      plant('Tomato', 'understory', 60),
+      plant('Tomato', 'understory', 60),
     ];
     const result = computeRowLayout(plants, W, L);
     expect(result.usedLengthCm).toBe(90);
@@ -92,11 +92,11 @@ describe('computeRowLayout', () => {
   });
 
   it('fitsInBed false and overflowCm > 0 when used length exceeds bed length', () => {
-    // 3 tomatoes need 90cm; 0.5m bed = 50cm → overflow 40cm
+    // 3 same-species mains need 90cm; 0.5m bed = 50cm → overflow 40cm
     const plants = [
       plant('Tomato', 'understory', 60),
-      plant('Brinjal', 'understory', 60),
-      plant('Ladies Finger', 'understory', 60),
+      plant('Tomato', 'understory', 60),
+      plant('Tomato', 'understory', 60),
     ];
     const result = computeRowLayout(plants, W, 0.5);
     expect(result.fitsInBed).toBe(false);
@@ -104,7 +104,7 @@ describe('computeRowLayout', () => {
   });
 
   it('fitsInBed true when all rows fit within bed length', () => {
-    const plants = [plant('Tomato', 'understory', 60), plant('Brinjal', 'understory', 60)];
+    const plants = [plant('Tomato', 'understory', 60), plant('Tomato', 'understory', 60)];
     // 1 row only (both fit) → usedLength = 0 + 2×15 = 30 ≤ 300
     const result = computeRowLayout(plants, W, L);
     expect(result.fitsInBed).toBe(true);
@@ -227,10 +227,10 @@ describe('computeRowLayout', () => {
     expect(computePlantsPerRow(200, 300)).toBe(1);
   });
 
-  it('companions interleave between mains: 2 tomatoes + 1 basil → row [T, T, basil]', () => {
+  it('companions interleave between same-species mains: 2 tomatoes + 1 basil → row [T, T, basil]', () => {
     const plants = [
       plant('Tomato', 'understory', 60),
-      plant('Brinjal', 'understory', 60),
+      plant('Tomato', 'understory', 60),
       plant('Basil', 'understory', 20, { isCompanion: true }),
     ];
     const result = computeRowLayout(plants, W, L);
@@ -296,10 +296,10 @@ describe('computeRowLayout', () => {
   });
 
   it('surplus companions overflow into a staggered companion-only row', () => {
-    // 2 tomatoes + 5 basil → row A [T,T,B] (interplanted 1) + row B [B,B,B,B] staggered
+    // 2 same-species tomatoes + 5 basils → row A [T,T,B] (interplanted 1) + row B [B,B,B,B] staggered
     const plants = [
       plant('Tomato', 'understory', 60),
-      plant('Brinjal', 'understory', 60),
+      plant('Tomato', 'understory', 60),
       plant('Basil 1', 'understory', 20, { isCompanion: true }),
       plant('Basil 2', 'understory', 20, { isCompanion: true }),
       plant('Basil 3', 'understory', 20, { isCompanion: true }),
@@ -456,10 +456,10 @@ describe('maxFitForSpecies', () => {
     expect(coconut).toBeLessThanOrEqual(leafy);
   });
 
-  it('honours cap to prevent runaway probing on enormous beds', () => {
-    // 50 m × 50 m at tiny spacing — even after `cap` adds, still fits.
+  it('honours hard cap to prevent runaway probing on enormous beds', () => {
+    // 50 m × 50 m would otherwise probe ~6889 iterations; the hard cap keeps it bounded.
     const n = maxFitForSpecies(tomato, [], 50, 50, 'leafy', 'raised');
-    expect(n).toBe(10);
+    expect(n).toBe(200);
   });
 });
 

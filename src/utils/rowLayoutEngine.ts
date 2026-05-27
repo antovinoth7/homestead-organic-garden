@@ -1,8 +1,6 @@
 import type { BedLayer, BedType, CropFamily } from '@/types/database.types';
 import { validateCompanionPair } from '@/config/beds/companionRules';
-
-// North → South layer order for row assignment
-const LAYER_ORDER: BedLayer[] = ['canopy', 'climber', 'understory', 'root', 'ground_cover'];
+import { LAYER_ORDER } from '@/config/beds/layerMeta';
 
 const LAYER_BASE_LABELS: Record<BedLayer, string> = {
   canopy: 'Canopy',
@@ -37,6 +35,11 @@ const EDGE_BUFFER_MAX_CM = 20;
 
 const WALKING_PATH_CM = 60;
 const ROW_SUFFIX = ['A', 'B', 'C', 'D', 'E'];
+
+// Upper bound for `maxFitForSpecies` probing to keep the per-row UI snappy on
+// arbitrarily large beds. Real beds never need more than a few dozen of one
+// species; 200 is comfortably above any farmer-facing use case.
+const MAX_FIT_HARD_CAP = 200;
 
 export interface RowPlantInput {
   id?: string;
@@ -122,7 +125,7 @@ export function maxFitForSpecies(
   const gapCm = candidate.rowGapCm ?? candidate.spacingCm * rowMultiplier;
   const effectiveGap = Math.max(gapCm, minRowGap);
   const maxRowsCap = Math.max(1, Math.floor(bedLengthCm / effectiveGap));
-  const cap = Math.max(ppr * maxRowsCap, 1);
+  const cap = Math.min(MAX_FIT_HARD_CAP, Math.max(ppr * maxRowsCap, 1));
 
   for (let n = 1; n <= cap; n++) {
     const additions: RowPlantInput[] = Array.from({ length: n }, (_, i) => ({
@@ -238,6 +241,66 @@ export function interleavePlants<T extends { isCompanion?: boolean }>(plants: T[
     result.push(companions[cIdx++]!);
   }
   return result;
+}
+
+/**
+ * East-west positions for a row's plants, in the same display order as
+ * `interleavePlants` would produce. Mains sit at `eastPositionsCm[i]`; interior
+ * companions are spread across the gaps between adjacent mains; trailing
+ * companions extend past the last main; with no mains, companions fall back to
+ * the row's pre-computed slot grid.
+ *
+ * Used by `BedTopDownMap` so the visual layout stays in lockstep with the
+ * engine's interleave rule (single source of truth).
+ */
+export function computeInterleavedEastPositions(row: BedRow): number[] {
+  const mains = row.plants.filter((p) => p.isCompanion !== true);
+  const companions = row.plants.filter((p) => p.isCompanion === true);
+  const positions: number[] = [];
+
+  mains.forEach((_, i) => {
+    positions.push(row.eastPositionsCm[i] ?? 0);
+  });
+
+  if (companions.length === 0) return positions;
+
+  if (mains.length === 0) {
+    companions.forEach((_, i) => {
+      positions.push(row.eastPositionsCm[i] ?? 0);
+    });
+    return positions;
+  }
+
+  if (mains.length === 1) {
+    const main = row.eastPositionsCm[0] ?? 0;
+    const spacing = mains[0]?.spacingCm ?? 30;
+    for (let j = 0; j < companions.length; j++) {
+      positions.push(main + ((j + 1) * spacing) / (companions.length + 1));
+    }
+    return positions;
+  }
+
+  const gapCount = mains.length - 1;
+  const perGapBase = Math.floor(companions.length / gapCount);
+  const remainder = companions.length - perGapBase * gapCount;
+
+  let cIdx = 0;
+  for (let i = 0; i < gapCount; i++) {
+    const take = perGapBase + (i < remainder ? 1 : 0);
+    const left = row.eastPositionsCm[i] ?? 0;
+    const right = row.eastPositionsCm[i + 1] ?? 0;
+    for (let k = 0; k < take && cIdx < companions.length; k++) {
+      const t = (k + 1) / (take + 1);
+      positions.push(left + t * (right - left));
+      cIdx++;
+    }
+  }
+  while (cIdx < companions.length) {
+    positions.push(row.eastPositionsCm[mains.length - 1] ?? 0);
+    cIdx++;
+  }
+
+  return positions;
 }
 
 export interface CompanionWarning {
