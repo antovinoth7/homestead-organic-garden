@@ -166,7 +166,7 @@ export function BedLayoutStep({
     return getVisibleLayers(bedType, plantedLayers);
   }, [bedType, step4.plant_entries]);
 
-  const [activeTab, setActiveTab] = useState<'layout' | 'plants'>('layout');
+  const [activeTab, setActiveTab] = useState<'layout' | 'crops'>('layout');
 
   return (
     <ScrollView
@@ -183,27 +183,21 @@ export function BedLayoutStep({
           accessibilityState={{ selected: activeTab === 'layout' }}
         >
           <Text
-            style={[
-              styles.blLayoutTabText,
-              activeTab === 'layout' && styles.blLayoutTabTextActive,
-            ]}
+            style={[styles.blLayoutTabText, activeTab === 'layout' && styles.blLayoutTabTextActive]}
           >
             Layout
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.blLayoutTab, activeTab === 'plants' && styles.blLayoutTabActive]}
-          onPress={() => setActiveTab('plants')}
+          style={[styles.blLayoutTab, activeTab === 'crops' && styles.blLayoutTabActive]}
+          onPress={() => setActiveTab('crops')}
           accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'plants' }}
+          accessibilityState={{ selected: activeTab === 'crops' }}
         >
           <Text
-            style={[
-              styles.blLayoutTabText,
-              activeTab === 'plants' && styles.blLayoutTabTextActive,
-            ]}
+            style={[styles.blLayoutTabText, activeTab === 'crops' && styles.blLayoutTabTextActive]}
           >
-            Plants
+            Crops
           </Text>
         </TouchableOpacity>
       </View>
@@ -224,8 +218,8 @@ export function BedLayoutStep({
           {hasTrellisRow && (
             <View style={styles.blTrellisCard}>
               <Text style={styles.blTrellisText}>
-                🔧 Trellis required — Install bamboo poles or wire frame on the North end, min 1.5
-                m height. Anchor firmly before sowing.
+                🔧 Trellis required — Install bamboo poles or wire frame on the North end, min 1.5 m
+                height. Anchor firmly before sowing.
               </Text>
             </View>
           )}
