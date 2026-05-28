@@ -1,5 +1,12 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Animated,
+  LayoutChangeEvent,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
@@ -32,7 +39,9 @@ function shortLabel(name: string): string {
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
-const LABEL_VISIBLE_SCALE = 1.4;
+const LABEL_VISIBLE_SCALE = 1.2;
+// tdmCard.padding (10) ×2 + tdmRuler.width (26) + tdmMapWrap.gap (6)
+const HORIZONTAL_OVERHEAD = 10 * 2 + 26 + 6;
 
 function clamp(value: number, min: number, max: number): number {
   if (value < min) return min;
@@ -53,6 +62,14 @@ export function BedTopDownMap({
 }: BedTopDownMapProps): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const { width: windowWidth } = useWindowDimensions();
+
+  const mapWidth = Math.max(220, windowWidth - HORIZONTAL_OVERHEAD);
+  const pinScale = clamp(mapWidth / 360, 0.9, 1.5);
+  const pinSize = Math.round(22 * pinScale);
+  const pinEmojiSize = Math.round(11 * pinScale);
+  const pinLabelSize = Math.round(9 * pinScale);
+  const pinWrapWidth = pinSize + 10;
 
   const widthCm = Math.max(1, Math.round(widthM * 100));
   const lengthCm = Math.max(1, Math.round(lengthM * 100));
@@ -78,6 +95,7 @@ export function BedTopDownMap({
   // Clamp extreme bed shapes so the canvas stays readable on phones.
   const rawAspect = widthM / lengthM;
   const clampedAspect = clamp(rawAspect, 0.4, 3);
+  const responsiveMinHeight = clamp(mapWidth / clampedAspect, 180, 360);
 
   const warningByRow = useMemo(() => {
     const map = new Map<number, string>();
@@ -106,12 +124,26 @@ export function BedTopDownMap({
   const [currentScale, setCurrentScale] = useState(1);
   const [hintDismissed, setHintDismissed] = useState(false);
 
-  const onFrameLayout = useCallback((e: LayoutChangeEvent) => {
-    frameSize.current = {
-      width: e.nativeEvent.layout.width,
-      height: e.nativeEvent.layout.height,
-    };
-  }, []);
+  const onFrameLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const { width, height } = e.nativeEvent.layout;
+      frameSize.current = { width, height };
+      // Re-clamp saved pan when the viewport shrinks (rotation, split-screen).
+      if (savedScale.current > 1.01) {
+        const maxTx = (width * (savedScale.current - 1)) / 2;
+        const maxTy = (height * (savedScale.current - 1)) / 2;
+        const tx = clamp(savedTx.current, -maxTx, maxTx);
+        const ty = clamp(savedTy.current, -maxTy, maxTy);
+        if (tx !== savedTx.current || ty !== savedTy.current) {
+          savedTx.current = tx;
+          savedTy.current = ty;
+          translateX.setValue(tx);
+          translateY.setValue(ty);
+        }
+      }
+    },
+    [translateX, translateY]
+  );
 
   const applyLabelOpacity = useCallback(
     (s: number) => {
@@ -228,7 +260,10 @@ export function BedTopDownMap({
 
           <GestureDetector gesture={composedGesture}>
             <View
-              style={[styles.tdmCanvasFrame, { aspectRatio: clampedAspect }]}
+              style={[
+                styles.tdmCanvasFrame,
+                { aspectRatio: clampedAspect, minHeight: responsiveMinHeight },
+              ]}
               onLayout={onFrameLayout}
             >
               <Animated.View
@@ -343,22 +378,37 @@ export function BedTopDownMap({
                     return (
                       <View
                         key={`pinwrap-${row.rowIndex}-${i}`}
-                        style={[styles.tdmPinWrap, { left: `${leftPct}%`, top: `${topPct}%` }]}
+                        style={[
+                          styles.tdmPinWrap,
+                          {
+                            left: `${leftPct}%`,
+                            top: `${topPct}%`,
+                            width: pinWrapWidth,
+                            marginLeft: -pinWrapWidth / 2,
+                            marginTop: -pinSize / 2,
+                          },
+                        ]}
                         accessibilityLabel={`${plant.name} · ${plant.spacingCm} cm spacing${isCompanion ? ' · companion' : ''}`}
                       >
                         <View
                           style={[
                             styles.tdmPin,
+                            { width: pinSize, height: pinSize, borderRadius: pinSize / 2 },
                             isGround && styles.tdmPinGround,
                             isCompanion
                               ? styles.tdmPinCompanion
                               : { borderColor: layerColor(row.layer) },
                           ]}
                         >
-                          <Text style={styles.tdmPinEmoji}>{plantEmoji(plant.name)}</Text>
+                          <Text style={[styles.tdmPinEmoji, { fontSize: pinEmojiSize }]}>
+                            {plantEmoji(plant.name)}
+                          </Text>
                         </View>
                         <Animated.Text
-                          style={[styles.tdmPinLabel, { opacity: labelOpacity }]}
+                          style={[
+                            styles.tdmPinLabel,
+                            { fontSize: pinLabelSize, opacity: labelOpacity },
+                          ]}
                           numberOfLines={1}
                         >
                           {shortLabel(plant.name)}

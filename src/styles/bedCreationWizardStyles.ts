@@ -1175,7 +1175,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmCard: {
       backgroundColor: theme.backgroundSecondary,
       borderRadius: 12,
-      padding: 14,
+      padding: 10,
       marginBottom: 12,
       borderWidth: 1,
       borderColor: theme.border,
@@ -1200,7 +1200,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmMapWrap: {
       flexDirection: 'row' as const,
       alignItems: 'stretch' as const,
-      gap: 8,
+      gap: 6,
     },
     tdmRuler: {
       width: 26,
@@ -1209,7 +1209,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmRulerTick: {
       position: 'absolute' as const,
       right: 0,
-      fontSize: 9,
+      fontSize: 10,
       color: theme.textTertiary,
       transform: [{ translateY: -6 }],
       textAlign: 'right' as const,
@@ -1248,7 +1248,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.borderDark,
       backgroundColor: theme.accentLight,
-      minHeight: 220,
     },
     tdmCanvas: {
       position: 'absolute' as const,
@@ -1296,13 +1295,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       transform: [{ translateY: -8 }],
     },
     tdmRowTagText: {
-      fontSize: 8,
+      fontSize: 9,
       color: theme.primary,
       fontWeight: '700' as const,
       letterSpacing: 0.3,
     },
     tdmRowTagWarn: {
-      fontSize: 8,
+      fontSize: 9,
       color: theme.warning,
       fontWeight: '700' as const,
     },
@@ -1330,7 +1329,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmEdgeStripRight: { right: 0 },
     tdmStripLabel: {
       position: 'absolute' as const,
-      fontSize: 8,
+      fontSize: 9,
       color: theme.textTertiary,
       fontWeight: '600' as const,
       letterSpacing: 0.2,
@@ -1358,7 +1357,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       transform: [{ rotate: '90deg' }],
     },
     tdmRowTagGap: {
-      fontSize: 8,
+      fontSize: 9,
       color: theme.accent,
       fontWeight: '600' as const,
       marginLeft: 4,
@@ -1479,7 +1478,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.purpleLight,
     },
     tdmLegendText: {
-      fontSize: 9,
+      fontSize: 10,
       color: theme.textSecondary,
     },
     tdmLegendHint: {
@@ -1498,7 +1497,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 4,
     },
     tdmScaleBarText: {
-      fontSize: 8,
+      fontSize: 10,
       color: theme.textTertiary,
       letterSpacing: 0.2,
     },
