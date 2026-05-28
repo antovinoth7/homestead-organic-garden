@@ -166,7 +166,7 @@ export function BedLayoutStep({
     return getVisibleLayers(bedType, plantedLayers);
   }, [bedType, step4.plant_entries]);
 
-  const [activeTab, setActiveTab] = useState<'name' | 'plot'>('name');
+  const [activeTab, setActiveTab] = useState<'layout' | 'plants'>('layout');
 
   return (
     <ScrollView
@@ -174,41 +174,41 @@ export function BedLayoutStep({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      {/* ── Name / Plot tab toggle ────────────────────────────────────────── */}
+      {/* ── Layout / Plants tab toggle ────────────────────────────────────── */}
       <View style={styles.blLayoutTabs}>
         <TouchableOpacity
-          style={[styles.blLayoutTab, activeTab === 'name' && styles.blLayoutTabActive]}
-          onPress={() => setActiveTab('name')}
+          style={[styles.blLayoutTab, activeTab === 'layout' && styles.blLayoutTabActive]}
+          onPress={() => setActiveTab('layout')}
           accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'name' }}
+          accessibilityState={{ selected: activeTab === 'layout' }}
         >
           <Text
             style={[
               styles.blLayoutTabText,
-              activeTab === 'name' && styles.blLayoutTabTextActive,
+              activeTab === 'layout' && styles.blLayoutTabTextActive,
             ]}
           >
-            Name
+            Layout
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.blLayoutTab, activeTab === 'plot' && styles.blLayoutTabActive]}
-          onPress={() => setActiveTab('plot')}
+          style={[styles.blLayoutTab, activeTab === 'plants' && styles.blLayoutTabActive]}
+          onPress={() => setActiveTab('plants')}
           accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'plot' }}
+          accessibilityState={{ selected: activeTab === 'plants' }}
         >
           <Text
             style={[
               styles.blLayoutTabText,
-              activeTab === 'plot' && styles.blLayoutTabTextActive,
+              activeTab === 'plants' && styles.blLayoutTabTextActive,
             ]}
           >
-            Plot
+            Plants
           </Text>
         </TouchableOpacity>
       </View>
 
-      {activeTab === 'plot' ? (
+      {activeTab === 'layout' ? (
         <>
           <BedTopDownMap
             widthM={step3.width_m}
