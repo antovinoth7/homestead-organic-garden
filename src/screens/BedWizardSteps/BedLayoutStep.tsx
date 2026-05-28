@@ -167,7 +167,11 @@ export function BedLayoutStep({
   }, [bedType, step4.plant_entries]);
 
   return (
-    <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={styles.stepContainer}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* ── Top-down bed map ──────────────────────────────────────────────── */}
       <BedTopDownMap
         widthM={step3.width_m}

@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   LayoutChangeEvent,
+  Modal,
   Text,
   TouchableOpacity,
   View,
@@ -40,8 +41,13 @@ function shortLabel(name: string): string {
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const LABEL_VISIBLE_SCALE = 1.2;
-// tdmCard.padding (10) ×2 + tdmRuler.width (26) + tdmMapWrap.gap (6)
+// Inline: tdmCard.padding (10) ×2 + tdmRuler.width (26) + tdmMapWrap.gap (6)
 const HORIZONTAL_OVERHEAD = 10 * 2 + 26 + 6;
+// Modal: tdmModalCanvasWrap.padding (12) + tdmRuler.width (26) + tdmMapWrap.gap (6)
+const MODAL_HORIZONTAL_OVERHEAD = 12 * 2 + 26 + 6;
+// Modal vertical chrome around the canvas: header (~52), compass top+bottom (~58),
+// legend (~36), wrap padding (~24).
+const MODAL_VERTICAL_CHROME = 170;
 
 function clamp(value: number, min: number, max: number): number {
   if (value < min) return min;
@@ -49,7 +55,13 @@ function clamp(value: number, min: number, max: number): number {
   return value;
 }
 
-export function BedTopDownMap({
+interface CanvasProps extends BedTopDownMapProps {
+  mapWidth: number;
+  frameHeightCap: number;
+  onExpand?: () => void;
+}
+
+function BedTopDownCanvas({
   widthM,
   lengthM,
   rows,
@@ -59,12 +71,13 @@ export function BedTopDownMap({
   edgeBufferCm = 0,
   overflowCm = 0,
   rowWarnings = [],
-}: BedTopDownMapProps): React.JSX.Element | null {
+  mapWidth,
+  frameHeightCap,
+  onExpand,
+}: CanvasProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const { width: windowWidth } = useWindowDimensions();
 
-  const mapWidth = Math.max(220, windowWidth - HORIZONTAL_OVERHEAD);
   const pinScale = clamp(mapWidth / 360, 0.9, 1.5);
   const pinSize = Math.round(22 * pinScale);
   const pinEmojiSize = Math.round(11 * pinScale);
@@ -74,7 +87,6 @@ export function BedTopDownMap({
   const widthCm = Math.max(1, Math.round(widthM * 100));
   const lengthCm = Math.max(1, Math.round(lengthM * 100));
 
-  // Y-axis ruler ticks every 0.5 m, anchored 0 → top, lengthM → bottom.
   const rulerTicks = useMemo<number[]>(() => {
     const ticks: number[] = [];
     for (let m = 0; m <= lengthM + 1e-6; m += 0.5) {
@@ -83,19 +95,15 @@ export function BedTopDownMap({
     return ticks;
   }, [lengthM]);
 
-  // 30 cm grid: evenly spaced lines, count derived from bed dimensions.
   const gridColCount = Math.max(0, Math.round(widthCm / 30) - 1);
   const gridRowCount = Math.max(0, Math.round(lengthCm / 30) - 1);
 
-  // Walking path strips clamp to half the bed so they never collapse the canvas.
   const pathPct = Math.min(50, (walkingPathCm / lengthCm) * 100);
-  // Edge buffer strips on E/W, clamped to a quarter of bed width.
   const edgePctW = edgeBufferCm > 0 ? Math.min(25, (edgeBufferCm / widthCm) * 100) : 0;
 
-  // Clamp extreme bed shapes so the canvas stays readable on phones.
   const rawAspect = widthM / lengthM;
   const clampedAspect = clamp(rawAspect, 0.4, 3);
-  const responsiveMinHeight = clamp(mapWidth / clampedAspect, 180, 360);
+  const responsiveMinHeight = clamp(mapWidth / clampedAspect, 180, frameHeightCap);
 
   const warningByRow = useMemo(() => {
     const map = new Map<number, string>();
@@ -128,7 +136,6 @@ export function BedTopDownMap({
     (e: LayoutChangeEvent) => {
       const { width, height } = e.nativeEvent.layout;
       frameSize.current = { width, height };
-      // Re-clamp saved pan when the viewport shrinks (rotation, split-screen).
       if (savedScale.current > 1.01) {
         const maxTx = (width * (savedScale.current - 1)) / 2;
         const maxTy = (height * (savedScale.current - 1)) / 2;
@@ -177,8 +184,6 @@ export function BedTopDownMap({
   }, [scale, translateX, translateY, labelOpacity]);
 
   const composedGesture = useMemo(() => {
-    // Snapshot base values at gesture start so e.scale / e.translationX are
-    // applied as deltas, not multiplied against already-updated saved state.
     const pinchBase = { scale: 1 };
     const pinch = Gesture.Pinch()
       .onStart(() => {
@@ -196,21 +201,19 @@ export function BedTopDownMap({
 
     const panBase = { tx: 0, ty: 0 };
     const pan = Gesture.Pan()
-      .activeOffsetX([-10, 10])
-      .activeOffsetY([-10, 10])
+      .activeOffsetX([-5, 5])
+      .activeOffsetY([-5, 5])
       .onStart(() => {
         panBase.tx = savedTx.current;
         panBase.ty = savedTy.current;
       })
       .onUpdate((e) => {
-        if (savedScale.current <= 1.01) return;
         const maxTx = (frameSize.current.width * (savedScale.current - 1)) / 2;
         const maxTy = (frameSize.current.height * (savedScale.current - 1)) / 2;
         translateX.setValue(clamp(panBase.tx + e.translationX, -maxTx, maxTx));
         translateY.setValue(clamp(panBase.ty + e.translationY, -maxTy, maxTy));
       })
       .onEnd((e) => {
-        if (savedScale.current <= 1.01) return;
         const maxTx = (frameSize.current.width * (savedScale.current - 1)) / 2;
         const maxTy = (frameSize.current.height * (savedScale.current - 1)) / 2;
         commitState(
@@ -223,8 +226,6 @@ export function BedTopDownMap({
     return Gesture.Simultaneous(pinch, pan);
   }, [scale, translateX, translateY, applyLabelOpacity, commitState]);
 
-  if (rows.length === 0) return null;
-
   const pathLabel = `${walkingPathCm} cm path`;
   const edgeLabel = `${edgeBufferCm} cm edge`;
   const compassDim = `${widthM.toFixed(1)} m wide`;
@@ -234,243 +235,307 @@ export function BedTopDownMap({
   const showHint = !hintDismissed;
 
   return (
-    <View style={styles.tdmCard}>
-      <View style={styles.tdmHeader}>
-        <Text style={styles.tdmEyebrow}>TOP-DOWN VIEW</Text>
-        <Text style={styles.tdmMeta}>scale · 30 cm grid</Text>
+    <View style={styles.tdmMapWrap}>
+      <View style={styles.tdmRuler}>
+        {rulerTicks.map((m) => (
+          <Text
+            key={m}
+            style={[styles.tdmRulerTick, { top: `${(m / lengthM) * 100}%` }]}
+          >
+            {m.toFixed(1)} m
+          </Text>
+        ))}
       </View>
 
-      <View style={styles.tdmMapWrap}>
-        <View style={styles.tdmRuler}>
-          {rulerTicks.map((m) => (
-            <Text
-              key={m}
-              style={[styles.tdmRulerTick, { top: `${(m / lengthM) * 100}%` }]}
-            >
-              {m.toFixed(1)} m
-            </Text>
-          ))}
+      <View style={styles.tdmFrame}>
+        <View style={styles.tdmCompass}>
+          <Text style={styles.tdmCompassN}>↑ N · canopy</Text>
+          <Text style={styles.tdmCompassDim}>{compassDim}</Text>
         </View>
 
-        <View style={styles.tdmFrame}>
-          <View style={styles.tdmCompass}>
-            <Text style={styles.tdmCompassN}>↑ N · canopy</Text>
-            <Text style={styles.tdmCompassDim}>{compassDim}</Text>
-          </View>
-
-          <GestureDetector gesture={composedGesture}>
-            <View
+        <GestureDetector gesture={composedGesture}>
+          <View
+            style={[
+              styles.tdmCanvasFrame,
+              { aspectRatio: clampedAspect, minHeight: responsiveMinHeight },
+            ]}
+            onLayout={onFrameLayout}
+          >
+            <Animated.View
               style={[
-                styles.tdmCanvasFrame,
-                { aspectRatio: clampedAspect, minHeight: responsiveMinHeight },
+                styles.tdmCanvas,
+                { transform: [{ translateX }, { translateY }, { scale }] },
               ]}
-              onLayout={onFrameLayout}
             >
-              <Animated.View
-                style={[
-                  styles.tdmCanvas,
-                  { transform: [{ translateX }, { translateY }, { scale }] },
-                ]}
-              >
-                {pathPct > 0 && (
-                  <>
-                    <View
-                      style={[
-                        styles.tdmPathStrip,
-                        styles.tdmPathStripTop,
-                        { height: `${pathPct}%` },
-                      ]}
-                    >
-                      <Text style={[styles.tdmStripLabel, styles.tdmStripLabelN]}>
-                        {pathLabel}
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.tdmPathStrip,
-                        styles.tdmPathStripBottom,
-                        { height: `${pathPct}%` },
-                      ]}
-                    >
-                      <Text style={[styles.tdmStripLabel, styles.tdmStripLabelS]}>
-                        {pathLabel}
-                      </Text>
-                    </View>
-                  </>
-                )}
-
-                {edgePctW > 0 && (
-                  <>
-                    <View
-                      style={[
-                        styles.tdmEdgeStrip,
-                        styles.tdmEdgeStripLeft,
-                        { width: `${edgePctW}%` },
-                      ]}
-                    >
-                      <Text style={[styles.tdmStripLabel, styles.tdmStripLabelW]}>
-                        {edgeLabel}
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.tdmEdgeStrip,
-                        styles.tdmEdgeStripRight,
-                        { width: `${edgePctW}%` },
-                      ]}
-                    >
-                      <Text style={[styles.tdmStripLabel, styles.tdmStripLabelE]}>
-                        {edgeLabel}
-                      </Text>
-                    </View>
-                  </>
-                )}
-
-                {Array.from({ length: gridRowCount }).map((_, i) => (
+              {pathPct > 0 && (
+                <>
                   <View
-                    key={`gh-${i}`}
                     style={[
-                      styles.tdmGridLineH,
-                      { top: `${((i + 1) / (gridRowCount + 1)) * 100}%` },
+                      styles.tdmPathStrip,
+                      styles.tdmPathStripTop,
+                      { height: `${pathPct}%` },
                     ]}
-                  />
-                ))}
-                {Array.from({ length: gridColCount }).map((_, i) => (
-                  <View
-                    key={`gv-${i}`}
-                    style={[
-                      styles.tdmGridLineV,
-                      { left: `${((i + 1) / (gridColCount + 1)) * 100}%` },
-                    ]}
-                  />
-                ))}
-
-                {rows.map((row) => {
-                  const centerPct = (row.northEdgeCm / lengthCm) * 100;
-                  const warning = warningByRow.get(row.rowIndex);
-                  const anchorGap = row.plants[0]?.spacingCm;
-                  return (
-                    <React.Fragment key={`row-${row.rowIndex}`}>
-                      <View
-                        style={[styles.tdmRowCenterline, { top: `${centerPct}%` }]}
-                        accessibilityLabel={`Row ${row.rowIndex} centerline at ${(row.northEdgeCm / 100).toFixed(2)} meters`}
-                      />
-                      <View style={[styles.tdmRowTag, { top: `${centerPct}%` }]}>
-                        <Text style={styles.tdmRowTagText}>R{row.rowIndex}</Text>
-                        {anchorGap !== undefined && (
-                          <Text style={styles.tdmRowTagGap}>↔{anchorGap}cm</Text>
-                        )}
-                        {warning ? <Text style={styles.tdmRowTagWarn}> ⚠</Text> : null}
-                      </View>
-                    </React.Fragment>
-                  );
-                })}
-
-                {rows.map((row) => {
-                  const positions = computeInterleavedEastPositions(row);
-                  return row.plants.map((plant, i) => {
-                    const eastCm = positions[i];
-                    if (eastCm === undefined) return null;
-                    const leftPct = (eastCm / widthCm) * 100;
-                    const topPct = (row.northEdgeCm / lengthCm) * 100;
-                    const isCompanion = plant.isCompanion === true;
-                    const isGround = row.layer === 'ground_cover';
-                    return (
-                      <View
-                        key={`pinwrap-${row.rowIndex}-${i}`}
-                        style={[
-                          styles.tdmPinWrap,
-                          {
-                            left: `${leftPct}%`,
-                            top: `${topPct}%`,
-                            width: pinWrapWidth,
-                            marginLeft: -pinWrapWidth / 2,
-                            marginTop: -pinSize / 2,
-                          },
-                        ]}
-                        accessibilityLabel={`${plant.name} · ${plant.spacingCm} cm spacing${isCompanion ? ' · companion' : ''}`}
-                      >
-                        <View
-                          style={[
-                            styles.tdmPin,
-                            { width: pinSize, height: pinSize, borderRadius: pinSize / 2 },
-                            isGround && styles.tdmPinGround,
-                            isCompanion
-                              ? styles.tdmPinCompanion
-                              : { borderColor: layerColor(row.layer) },
-                          ]}
-                        >
-                          <Text style={[styles.tdmPinEmoji, { fontSize: pinEmojiSize }]}>
-                            {plantEmoji(plant.name)}
-                          </Text>
-                        </View>
-                        <Animated.Text
-                          style={[
-                            styles.tdmPinLabel,
-                            { fontSize: pinLabelSize, opacity: labelOpacity },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {shortLabel(plant.name)}
-                        </Animated.Text>
-                      </View>
-                    );
-                  });
-                })}
-
-                {overflowCm > 0 && (
-                  <View style={styles.tdmOverflowBadge}>
-                    <Text style={styles.tdmOverflowText}>
-                      ⚠ Overflow {Math.round(overflowCm)} cm
+                  >
+                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelN]}>
+                      {pathLabel}
                     </Text>
                   </View>
-                )}
+                  <View
+                    style={[
+                      styles.tdmPathStrip,
+                      styles.tdmPathStripBottom,
+                      { height: `${pathPct}%` },
+                    ]}
+                  >
+                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelS]}>
+                      {pathLabel}
+                    </Text>
+                  </View>
+                </>
+              )}
 
-                <View style={styles.tdmScaleBar}>
-                  <Text style={styles.tdmScaleBarText}>
-                    {widthM.toFixed(1)} × {lengthM.toFixed(1)} m
+              {edgePctW > 0 && (
+                <>
+                  <View
+                    style={[
+                      styles.tdmEdgeStrip,
+                      styles.tdmEdgeStripLeft,
+                      { width: `${edgePctW}%` },
+                    ]}
+                  >
+                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelW]}>
+                      {edgeLabel}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.tdmEdgeStrip,
+                      styles.tdmEdgeStripRight,
+                      { width: `${edgePctW}%` },
+                    ]}
+                  >
+                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelE]}>
+                      {edgeLabel}
+                    </Text>
+                  </View>
+                </>
+              )}
+
+              {Array.from({ length: gridRowCount }).map((_, i) => (
+                <View
+                  key={`gh-${i}`}
+                  style={[
+                    styles.tdmGridLineH,
+                    { top: `${((i + 1) / (gridRowCount + 1)) * 100}%` },
+                  ]}
+                />
+              ))}
+              {Array.from({ length: gridColCount }).map((_, i) => (
+                <View
+                  key={`gv-${i}`}
+                  style={[
+                    styles.tdmGridLineV,
+                    { left: `${((i + 1) / (gridColCount + 1)) * 100}%` },
+                  ]}
+                />
+              ))}
+
+              {rows.map((row) => {
+                const centerPct = (row.northEdgeCm / lengthCm) * 100;
+                const warning = warningByRow.get(row.rowIndex);
+                const anchorGap = row.plants[0]?.spacingCm;
+                return (
+                  <React.Fragment key={`row-${row.rowIndex}`}>
+                    <View
+                      style={[styles.tdmRowCenterline, { top: `${centerPct}%` }]}
+                      accessibilityLabel={`Row ${row.rowIndex} centerline at ${(row.northEdgeCm / 100).toFixed(2)} meters`}
+                    />
+                    <View style={[styles.tdmRowTag, { top: `${centerPct}%` }]}>
+                      <Text style={styles.tdmRowTagText}>R{row.rowIndex}</Text>
+                      {anchorGap !== undefined && (
+                        <Text style={styles.tdmRowTagGap}>↔{anchorGap}cm</Text>
+                      )}
+                      {warning ? <Text style={styles.tdmRowTagWarn}> ⚠</Text> : null}
+                    </View>
+                  </React.Fragment>
+                );
+              })}
+
+              {rows.map((row) => {
+                const positions = computeInterleavedEastPositions(row);
+                return row.plants.map((plant, i) => {
+                  const eastCm = positions[i];
+                  if (eastCm === undefined) return null;
+                  const leftPct = (eastCm / widthCm) * 100;
+                  const topPct = (row.northEdgeCm / lengthCm) * 100;
+                  const isCompanion = plant.isCompanion === true;
+                  const isGround = row.layer === 'ground_cover';
+                  return (
+                    <View
+                      key={`pinwrap-${row.rowIndex}-${i}`}
+                      style={[
+                        styles.tdmPinWrap,
+                        {
+                          left: `${leftPct}%`,
+                          top: `${topPct}%`,
+                          width: pinWrapWidth,
+                          marginLeft: -pinWrapWidth / 2,
+                          marginTop: -pinSize / 2,
+                        },
+                      ]}
+                      accessibilityLabel={`${plant.name} · ${plant.spacingCm} cm spacing${isCompanion ? ' · companion' : ''}`}
+                    >
+                      <View
+                        style={[
+                          styles.tdmPin,
+                          { width: pinSize, height: pinSize, borderRadius: pinSize / 2 },
+                          isGround && styles.tdmPinGround,
+                          isCompanion
+                            ? styles.tdmPinCompanion
+                            : { borderColor: layerColor(row.layer) },
+                        ]}
+                      >
+                        <Text style={[styles.tdmPinEmoji, { fontSize: pinEmojiSize }]}>
+                          {plantEmoji(plant.name)}
+                        </Text>
+                      </View>
+                      <Animated.Text
+                        style={[
+                          styles.tdmPinLabel,
+                          { fontSize: pinLabelSize, opacity: labelOpacity },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {shortLabel(plant.name)}
+                      </Animated.Text>
+                    </View>
+                  );
+                });
+              })}
+
+              {overflowCm > 0 && (
+                <View style={styles.tdmOverflowBadge}>
+                  <Text style={styles.tdmOverflowText}>
+                    ⚠ Overflow {Math.round(overflowCm)} cm
                   </Text>
                 </View>
-              </Animated.View>
-
-              {showHint && (
-                <View style={styles.tdmZoomHint} pointerEvents="none">
-                  <Ionicons name="scan-outline" size={12} color={theme.textSecondary} />
-                  <Text style={styles.tdmZoomHintText}>Pinch to zoom</Text>
-                </View>
               )}
 
-              {showResetButton && (
-                <TouchableOpacity
-                  style={styles.tdmZoomReset}
-                  onPress={resetView}
-                  accessibilityLabel="Reset zoom"
-                  hitSlop={6}
-                >
-                  <Ionicons name="contract-outline" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-              )}
-            </View>
-          </GestureDetector>
+              <View style={styles.tdmScaleBar}>
+                <Text style={styles.tdmScaleBarText}>
+                  {widthM.toFixed(1)} × {lengthM.toFixed(1)} m
+                </Text>
+              </View>
+            </Animated.View>
 
-          <View style={styles.tdmLegend}>
-            <View style={styles.tdmLegendItem}>
-              <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchMain]} />
-              <Text style={styles.tdmLegendText}>Main × {mainCount}</Text>
-            </View>
-            <View style={styles.tdmLegendItem}>
-              <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchCompanion]} />
-              <Text style={styles.tdmLegendText}>Companion × {companionCount}</Text>
-            </View>
-            <Text style={styles.tdmLegendHint}>Tallest crops at North</Text>
-          </View>
+            {showHint && (
+              <View style={styles.tdmZoomHint} pointerEvents="none">
+                <Ionicons name="scan-outline" size={12} color={theme.textSecondary} />
+                <Text style={styles.tdmZoomHintText}>Pinch to zoom</Text>
+              </View>
+            )}
 
-          <View style={styles.tdmCompass}>
-            <Text style={styles.tdmCompassS}>↓ S · open sun</Text>
-            <Text style={styles.tdmCompassDim}>{legendFooter}</Text>
+            {showResetButton && (
+              <TouchableOpacity
+                style={styles.tdmZoomReset}
+                onPress={resetView}
+                accessibilityLabel="Reset zoom"
+                hitSlop={6}
+              >
+                <Ionicons name="contract-outline" size={16} color={theme.textSecondary} />
+              </TouchableOpacity>
+            )}
+
+            {onExpand && (
+              <TouchableOpacity
+                style={styles.tdmExpandButton}
+                onPress={onExpand}
+                accessibilityLabel="Open fullscreen map"
+                hitSlop={6}
+              >
+                <Ionicons name="expand-outline" size={16} color={theme.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
+        </GestureDetector>
+
+        <View style={styles.tdmLegend}>
+          <View style={styles.tdmLegendItem}>
+            <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchMain]} />
+            <Text style={styles.tdmLegendText}>Main × {mainCount}</Text>
+          </View>
+          <View style={styles.tdmLegendItem}>
+            <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchCompanion]} />
+            <Text style={styles.tdmLegendText}>Companion × {companionCount}</Text>
+          </View>
+          <Text style={styles.tdmLegendHint}>Tallest crops at North</Text>
+        </View>
+
+        <View style={styles.tdmCompass}>
+          <Text style={styles.tdmCompassS}>↓ S · open sun</Text>
+          <Text style={styles.tdmCompassDim}>{legendFooter}</Text>
         </View>
       </View>
     </View>
+  );
+}
+
+export function BedTopDownMap(props: BedTopDownMapProps): React.JSX.Element | null {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  if (props.rows.length === 0) return null;
+
+  const inlineMapWidth = Math.max(220, windowWidth - HORIZONTAL_OVERHEAD);
+  const modalMapWidth = Math.max(280, windowWidth - MODAL_HORIZONTAL_OVERHEAD);
+  const modalHeightCap = Math.max(280, windowHeight - MODAL_VERTICAL_CHROME);
+
+  const dimensionLabel = `${props.widthM.toFixed(1)} × ${props.lengthM.toFixed(1)} m`;
+
+  return (
+    <>
+      <View style={styles.tdmCard}>
+        <View style={styles.tdmHeader}>
+          <Text style={styles.tdmEyebrow}>TOP-DOWN VIEW</Text>
+          <Text style={styles.tdmMeta}>scale · 30 cm grid</Text>
+        </View>
+        <BedTopDownCanvas
+          {...props}
+          mapWidth={inlineMapWidth}
+          frameHeightCap={360}
+          onExpand={() => setIsFullScreen(true)}
+        />
+      </View>
+
+      <Modal
+        visible={isFullScreen}
+        animationType="fade"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setIsFullScreen(false)}
+      >
+        <View style={styles.tdmModalRoot}>
+          <View style={styles.tdmModalHeader}>
+            <Text style={styles.tdmModalTitle}>{dimensionLabel}</Text>
+            <TouchableOpacity
+              style={styles.tdmModalClose}
+              onPress={() => setIsFullScreen(false)}
+              accessibilityLabel="Close fullscreen map"
+              hitSlop={8}
+            >
+              <Ionicons name="close" size={24} color={theme.text} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.tdmModalCanvasWrap}>
+            <BedTopDownCanvas
+              {...props}
+              mapWidth={modalMapWidth}
+              frameHeightCap={modalHeightCap}
+            />
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
