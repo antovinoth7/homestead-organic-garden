@@ -21,6 +21,7 @@ import {
   orderBy,
   limit,
   startAfter,
+  writeBatch,
   QueryDocumentSnapshot,
   Timestamp,
 } from 'firebase/firestore';
@@ -336,6 +337,73 @@ export const createPlant = async (
   await setData(KEYS.PLANTS, [...cachedPlants, result]);
 
   return result;
+};
+
+/**
+ * Atomically create multiple plants in a single Firestore writeBatch.
+ *
+ * Used by the bed wizard to persist all plants for a bed in one shot —
+ * cuts a typical leafy bed from ~30 writes to 3-6 row-record writes,
+ * which matters on free-tier quota and on flaky mobile networks.
+ *
+ * Resolves photo URIs and derives lifecycle per plant just like
+ * createPlant; commits as one atomic batch; invalidates cache and
+ * updates AsyncStorage once at the end.
+ */
+export const createPlantBatch = async (
+  plants: Omit<Plant, 'id' | 'user_id' | 'created_at'>[]
+): Promise<Plant[]> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  if (plants.length === 0) return [];
+
+  const batch = writeBatch(db);
+  const createdAt = Timestamp.now();
+
+  const prepared = plants.map((plant) => {
+    const { photo_url: _photoUrl, ...rest } = plant;
+    const photoFilename = resolvePhotoFilename(plant.photo_filename, plant.photo_url);
+
+    let lifecycle_type: PlantLifecycle | null = rest.lifecycle_type ?? null;
+    if (!lifecycle_type) {
+      const profile = getPlantCareProfile(rest.plant_variety ?? '', rest.plant_type);
+      lifecycle_type = deriveInstanceLifecycle(profile?.lifecycle, rest.plant_type);
+    }
+
+    const docRef = doc(collection(db, PLANTS_COLLECTION));
+    const newPlant = {
+      ...rest,
+      lifecycle_type,
+      photo_filename: photoFilename ?? null,
+      user_id: user.uid,
+      created_at: createdAt,
+    };
+    batch.set(docRef, newPlant);
+    return { docRef, newPlant, photoFilename };
+  });
+
+  await withTimeoutAndRetry(() => batch.commit(), {
+    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+  });
+
+  const results = await Promise.all(
+    prepared.map(async ({ docRef, newPlant, photoFilename }) => {
+      const resolvedPhotoUrl = await resolveLocalImageUri(photoFilename ?? null);
+      return {
+        id: docRef.id,
+        ...newPlant,
+        photo_url: resolvedPhotoUrl ?? null,
+        created_at: convertTimestamp(newPlant.created_at),
+      } as Plant;
+    })
+  );
+
+  invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(KEYS.PLANTS, [...cachedPlants, ...results]);
+
+  return results;
 };
 
 export const updatePlant = async (id: string, updates: Partial<Plant>): Promise<Plant> => {
