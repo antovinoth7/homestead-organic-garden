@@ -68,15 +68,6 @@ const BED_TYPE_OPTIONS: {
     seasonFit: { summer: 'ideal', sw_monsoon: 'ok', ne_monsoon: 'ok', cool_dry: 'avoid' },
   },
   {
-    type: 'coconut_intercrop',
-    label: 'Coconut Intercrop',
-    tamilLabel: 'தென்னை இடைப்பயிர்',
-    emoji: '🥥',
-    desc: 'Shade crops under coconut palms',
-    info: 'Dappled · 2m+ from trunk',
-    seasonFit: { summer: 'ok', sw_monsoon: 'ideal', ne_monsoon: 'ideal', cool_dry: 'ok' },
-  },
-  {
     type: 'three_sisters',
     label: 'Three Sisters',
     tamilLabel: 'மூன்று சகோதரிகள்',

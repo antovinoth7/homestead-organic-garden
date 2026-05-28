@@ -13,7 +13,7 @@ const FARM_CONFIG_FIELD = 'farmConfig';
 
 /** 1 cent = 40.47 sqm */
 const SQM_PER_CENT = 40.47;
-/** Usable factor: ~70% after paths, structures, trees */
+/** Usable factor: ~70% after paths, structures */
 const USABLE_FACTOR = 0.7;
 /** Average bed area in sqm (1.2m × 4m) */
 const AVG_BED_AREA_SQM = 4.8;
@@ -34,14 +34,13 @@ const CATEGORY_BED_MAP: Record<string, BedType[]> = {
   root_legume: ['root_legume'],
   spice: ['spice', 'medicinal_guild'],
   climber: ['climber_trellis'],
-  coconut: ['coconut_intercrop'],
 };
 
 // ─── Pure computation functions ──────────────────────────────────────────────
 
 /**
  * Calculate usable square meters from land area in cents.
- * Applies 70% usable factor (paths, structures, coconut canopy).
+ * Applies 70% usable factor (paths, structures).
  */
 export function calcUsableSqm(cents: number): number {
   return Math.round(cents * SQM_PER_CENT * USABLE_FACTOR * 10) / 10;
@@ -113,12 +112,6 @@ export function getPhase3YearPlan(config: FarmConfig, totalCents?: number): Year
   if (config.goals.includes('self_sufficiency')) {
     y3Beds.push({ type: 'three_sisters', count: Math.max(1, Math.round(remaining * 0.3)) });
   }
-  if ((config.coconut_tree_count ?? 0) > 0) {
-    y3Beds.push({
-      type: 'coconut_intercrop',
-      count: Math.min(config.coconut_tree_count!, Math.round(remaining * 0.3)),
-    });
-  }
   if (y3Beds.length === 0) {
     y3Beds.push({ type: 'fruiting', count: Math.max(1, remaining) });
   }
@@ -144,7 +137,7 @@ export function getPhase3YearPlan(config: FarmConfig, totalCents?: number): Year
     {
       year: 3,
       beds_to_add: y3Beds,
-      focus: 'Specialize — based on your goals and coconut canopy utilization',
+      focus: 'Specialize — based on your goals',
     },
   ];
 }

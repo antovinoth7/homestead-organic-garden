@@ -12,9 +12,6 @@ const LAYER_BASE_LABELS: Record<BedLayer, string> = {
 
 type BedCategory = 'raised' | 'in_ground' | 'food_forest';
 
-// Coconut intercrop is always food-forest (tree spacing dominates).
-// All other bed types use the user-selected construction_type from the wizard.
-
 const MIN_ROW_GAP_BY_CATEGORY: Record<BedCategory, number> = {
   raised: 25,
   in_ground: 40,
@@ -94,7 +91,6 @@ export const EXPECTED_LAYERS_BY_BED: Record<BedType, BedLayer[]> = {
   spice: ['understory', 'root'],
   root_legume: ['understory', 'root'],
   climber_trellis: ['climber', 'ground_cover'],
-  coconut_intercrop: ['climber', 'understory', 'root'],
   three_sisters: ['canopy', 'climber', 'ground_cover'],
   medicinal_guild: ['canopy', 'understory', 'ground_cover'],
 };
@@ -123,8 +119,7 @@ export function maxFitForSpecies(
 ): number {
   const bedWidthCm = Math.round(widthM * 100);
   const bedLengthCm = Math.round(lengthM * 100);
-  const category: BedCategory =
-    bedType === 'coconut_intercrop' ? 'food_forest' : (constructionType ?? 'raised');
+  const category: BedCategory = constructionType ?? 'raised';
   const rowMultiplier = ROW_MULTIPLIER_BY_CATEGORY[category];
   const minRowGap = MIN_ROW_GAP_BY_CATEGORY[category];
 
@@ -185,8 +180,7 @@ export function computePlantMatrix(
 ): { plantsPerRow: number; rowCount: number; total: number } {
   const bedWidthCm = Math.round(widthM * 100);
   const bedLengthCm = Math.round(lengthM * 100);
-  const category: BedCategory =
-    bedType === 'coconut_intercrop' ? 'food_forest' : (constructionType ?? 'raised');
+  const category: BedCategory = constructionType ?? 'raised';
   const rowMultiplier = ROW_MULTIPLIER_BY_CATEGORY[category];
   const minRowGap = MIN_ROW_GAP_BY_CATEGORY[category];
 
@@ -363,13 +357,12 @@ export function computeRowLayout(
   plants: RowPlantInput[],
   widthM: number,
   lengthM: number,
-  bedType: BedType = 'leafy',
+  _bedType: BedType = 'leafy',
   constructionType?: 'raised' | 'in_ground'
 ): RowLayoutResult {
   const bedWidthCm = Math.round(widthM * 100);
   const bedLengthCm = Math.round(lengthM * 100);
-  const category: BedCategory =
-    bedType === 'coconut_intercrop' ? 'food_forest' : (constructionType ?? 'raised');
+  const category: BedCategory = constructionType ?? 'raised';
   const rowMultiplier = ROW_MULTIPLIER_BY_CATEGORY[category];
   const minRowGap = MIN_ROW_GAP_BY_CATEGORY[category];
 

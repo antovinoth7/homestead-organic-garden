@@ -51,7 +51,6 @@ export interface Step3Data {
   width_m: number;
   length_m: number;
   area_sqm: number;
-  coconut_distance_m: number | null;
   sizeRecommendation: BedSizeResult | null;
 }
 
@@ -98,7 +97,6 @@ const DEFAULT_STEP3: Step3Data = {
   width_m: 1.2,
   length_m: 3.0,
   area_sqm: 3.6,
-  coconut_distance_m: null,
   sizeRecommendation: null,
 };
 
@@ -398,7 +396,6 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
       pest_history: s2.pest_history,
       is_raised_bed: s2.construction_type === 'raised',
       is_permanent: false,
-      coconut_distance_m: s3.coconut_distance_m,
       notes: s6?.notes || null,
       row_layout: rowLayout,
       is_deleted: false,

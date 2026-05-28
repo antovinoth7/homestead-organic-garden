@@ -297,31 +297,17 @@ export function LandConditionsStep({
         styles={styles}
       />
 
-      {bedType === 'coconut_intercrop' ? (
-        <View style={styles.fieldGroup}>
-          <FieldLabelWithHelp
-            label="Bed construction"
-            helpText="Coconut intercropping spaces plants around mature trees, so it always uses food-forest row gaps regardless of construction style."
-            labelStyle={styles.fieldLabel}
-            style={styles.fieldLabelRow}
-          />
-          <View style={styles.infoBadge}>
-            <Text style={styles.infoBadgeText}>Coconut intercrop uses food-forest spacing</Text>
-          </View>
-        </View>
-      ) : (
-        <ChipGroup
-          label="Bed construction"
-          helpText="Raised beds drain better and allow narrower rows. In-ground beds suit flat terrain and need wider gaps (~40cm) between rows for walking access."
-          options={[
-            { value: 'raised' as const, label: 'Raised', hint: 'Above ground · narrow rows' },
-            { value: 'in_ground' as const, label: 'In-ground', hint: 'Direct soil · wider paths' },
-          ]}
-          value={data.construction_type}
-          onSelect={(v) => onChange({ construction_type: v })}
-          styles={styles}
-        />
-      )}
+      <ChipGroup
+        label="Bed construction"
+        helpText="Raised beds drain better and allow narrower rows. In-ground beds suit flat terrain and need wider gaps (~40cm) between rows for walking access."
+        options={[
+          { value: 'raised' as const, label: 'Raised', hint: 'Above ground · narrow rows' },
+          { value: 'in_ground' as const, label: 'In-ground', hint: 'Direct soil · wider paths' },
+        ]}
+        value={data.construction_type}
+        onSelect={(v) => onChange({ construction_type: v })}
+        styles={styles}
+      />
 
       <ChipGroup
         label="Previous crop family"

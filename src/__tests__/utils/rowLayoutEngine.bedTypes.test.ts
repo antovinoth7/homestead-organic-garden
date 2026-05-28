@@ -120,19 +120,7 @@ describe('computeRowLayout — bed-type placement audit', () => {
   });
 
   describe('bed-type category selection', () => {
-    it('coconut_intercrop forces food_forest spacing (min 60 cm row gap)', () => {
-      const plants = [
-        p('Black Pepper', 'climber', 30),
-        p('Black Pepper', 'climber', 30),
-      ];
-      // Even with construction_type='raised', coconut must use food_forest rules.
-      const result = computeRowLayout(plants, 3.0, 6.0, 'coconut_intercrop', 'raised');
-      for (const row of result.rows) {
-        expect(row.rowSpacingCm).toBeGreaterThanOrEqual(60);
-      }
-    });
-
-    it('non-coconut bed types honor construction_type=in_ground (min 40 cm row gap)', () => {
+    it('bed types honor construction_type=in_ground (min 40 cm row gap)', () => {
       const plants = [p('Spinach', 'understory', 25), p('Spinach', 'understory', 25)];
       const result = computeRowLayout(plants, W, L, 'leafy', 'in_ground');
       for (const row of result.rows) {
@@ -181,8 +169,6 @@ describe('computeRowLayout — bed-type placement audit', () => {
       ['spice', 'root'],
       ['root_legume', 'understory'],
       ['root_legume', 'root'],
-      ['coconut_intercrop', 'climber'],
-      ['coconut_intercrop', 'understory'],
       ['medicinal_guild', 'canopy'],
       ['medicinal_guild', 'ground_cover'],
     ];
