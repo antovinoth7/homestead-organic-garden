@@ -538,6 +538,10 @@ export interface Plant {
   harvest_mode?: HarvestMode | null;
   cleared_date?: string | null;
   archived_at?: string | null;
+  // Hybrid record discriminator. Missing on legacy docs → read as 'specimen'.
+  record_kind?: 'specimen' | 'row';
+  // Number of plants in a row-record. Present iff record_kind === 'row'.
+  plant_count?: number;
   created_at: string;
 }
 
