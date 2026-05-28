@@ -176,6 +176,7 @@ export function BedLayoutStep({
         plantEmoji={getPlantEmoji}
         layerColor={getLayerColor}
         walkingPathCm={rowLayout.walkingPathCm}
+        edgeBufferCm={rowLayout.edgeBufferCm}
         overflowCm={rowLayout.overflowCm}
       />
 

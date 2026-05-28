@@ -33,7 +33,14 @@ const EDGE_BUFFER_FRACTION = 0.25;
 const EDGE_BUFFER_MIN_CM = 5;
 const EDGE_BUFFER_MAX_CM = 20;
 
-const WALKING_PATH_CM = 60;
+// Walking path per bed category (permaculture standards):
+// raised beds = compact mulched access; in-ground = wheelbarrow access;
+// food forest = canopy clearance + mulched wheelbarrow path.
+const WALKING_PATH_BY_CATEGORY: Record<BedCategory, number> = {
+  raised: 45,
+  in_ground: 60,
+  food_forest: 90,
+};
 const ROW_SUFFIX = ['A', 'B', 'C', 'D', 'E'];
 
 // Upper bound for `maxFitForSpecies` probing to keep the per-row UI snappy on
@@ -614,7 +621,7 @@ export function computeRowLayout(
     bedWidthCm,
     bedLengthCm,
     edgeBufferCm,
-    walkingPathCm: WALKING_PATH_CM,
+    walkingPathCm: WALKING_PATH_BY_CATEGORY[category],
     companionWarnings: warnings,
     successionWeeks,
   };
