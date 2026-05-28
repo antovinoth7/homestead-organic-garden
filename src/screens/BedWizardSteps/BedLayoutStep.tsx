@@ -166,48 +166,88 @@ export function BedLayoutStep({
     return getVisibleLayers(bedType, plantedLayers);
   }, [bedType, step4.plant_entries]);
 
+  const [activeTab, setActiveTab] = useState<'name' | 'plot'>('name');
+
   return (
     <ScrollView
       contentContainerStyle={styles.stepContainer}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      {/* ── Top-down bed map ──────────────────────────────────────────────── */}
-      <BedTopDownMap
-        widthM={step3.width_m}
-        lengthM={step3.length_m}
-        rows={rowLayout.rows}
-        plantEmoji={getPlantEmoji}
-        layerColor={getLayerColor}
-        walkingPathCm={rowLayout.walkingPathCm}
-        edgeBufferCm={rowLayout.edgeBufferCm}
-        overflowCm={rowLayout.overflowCm}
-      />
-
-      {/* ── Trellis guidance ─────────────────────────────────────────────── */}
-      {hasTrellisRow && (
-        <View style={styles.blTrellisCard}>
-          <Text style={styles.blTrellisText}>
-            🔧 Trellis required — Install bamboo poles or wire frame on the North end, min 1.5 m
-            height. Anchor firmly before sowing.
+      {/* ── Name / Plot tab toggle ────────────────────────────────────────── */}
+      <View style={styles.blLayoutTabs}>
+        <TouchableOpacity
+          style={[styles.blLayoutTab, activeTab === 'name' && styles.blLayoutTabActive]}
+          onPress={() => setActiveTab('name')}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'name' }}
+        >
+          <Text
+            style={[
+              styles.blLayoutTabText,
+              activeTab === 'name' && styles.blLayoutTabTextActive,
+            ]}
+          >
+            Name
           </Text>
-        </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.blLayoutTab, activeTab === 'plot' && styles.blLayoutTabActive]}
+          onPress={() => setActiveTab('plot')}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'plot' }}
+        >
+          <Text
+            style={[
+              styles.blLayoutTabText,
+              activeTab === 'plot' && styles.blLayoutTabTextActive,
+            ]}
+          >
+            Plot
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeTab === 'plot' ? (
+        <>
+          <BedTopDownMap
+            widthM={step3.width_m}
+            lengthM={step3.length_m}
+            rows={rowLayout.rows}
+            plantEmoji={getPlantEmoji}
+            layerColor={getLayerColor}
+            walkingPathCm={rowLayout.walkingPathCm}
+            edgeBufferCm={rowLayout.edgeBufferCm}
+            overflowCm={rowLayout.overflowCm}
+          />
+
+          {hasTrellisRow && (
+            <View style={styles.blTrellisCard}>
+              <Text style={styles.blTrellisText}>
+                🔧 Trellis required — Install bamboo poles or wire frame on the North end, min 1.5
+                m height. Anchor firmly before sowing.
+              </Text>
+            </View>
+          )}
+        </>
+      ) : (
+        <>
+          <BedLayerStack
+            result={rowLayout}
+            entries={step4.plant_entries}
+            visibleLayers={visibleLayers}
+            onAddToLayer={handleAddToLayer}
+            onRemovePlant={handleRemovePlant}
+            onResolveEntry={handleOpenResolver}
+            onReorder={handleReorder}
+          />
+
+          <TouchableOpacity style={styles.blAddFab} onPress={handleOpenFab} activeOpacity={0.8}>
+            <Ionicons name="add" size={18} color={theme.textInverse} />
+            <Text style={styles.blAddFabText}>Add Plant</Text>
+          </TouchableOpacity>
+        </>
       )}
-
-      <BedLayerStack
-        result={rowLayout}
-        entries={step4.plant_entries}
-        visibleLayers={visibleLayers}
-        onAddToLayer={handleAddToLayer}
-        onRemovePlant={handleRemovePlant}
-        onResolveEntry={handleOpenResolver}
-        onReorder={handleReorder}
-      />
-
-      <TouchableOpacity style={styles.blAddFab} onPress={handleOpenFab} activeOpacity={0.8}>
-        <Ionicons name="add" size={18} color={theme.textInverse} />
-        <Text style={styles.blAddFabText}>Add Plant</Text>
-      </TouchableOpacity>
 
       <BedPlantPickerSheet
         visible={pickerVisible}

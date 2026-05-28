@@ -1654,4 +1654,34 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700' as const,
       marginLeft: 8,
     },
+
+    // Step 5 — Name / Plot tabs at the top of the layout designer
+    blLayoutTabs: {
+      flexDirection: 'row' as const,
+      backgroundColor: theme.backgroundSecondary,
+      borderRadius: 22,
+      padding: 4,
+      marginBottom: 12,
+      alignSelf: 'stretch' as const,
+    },
+    blLayoutTab: {
+      flex: 1,
+      paddingVertical: 9,
+      paddingHorizontal: 18,
+      borderRadius: 18,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
+    blLayoutTabActive: {
+      backgroundColor: theme.primary,
+    },
+    blLayoutTabText: {
+      fontSize: 14,
+      fontWeight: '600' as const,
+      color: theme.textSecondary,
+    },
+    blLayoutTabTextActive: {
+      color: theme.textInverse,
+      fontWeight: '700' as const,
+    },
   });
