@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import {
   BedType,
   BedSlope,
+  BedLayer,
   SunlightLevel,
   SoilType,
   CropFamily,
@@ -14,12 +15,13 @@ import {
 } from '@/types/database.types';
 
 import { addBed, updateBed } from '@/services/beds';
-import { createPlant, updatePlant } from '@/services/plants';
+import { createPlantBatch, updatePlant } from '@/services/plants';
 import { getBedSizeRecommendation } from '@/config/beds';
 import type { BedSizeResult } from '@/config/beds';
 import { GUILD_TEMPLATES, getGuildTemplate } from '@/config/beds/guildTemplates';
 import { computeRowLayout } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
+import { classifyAsRowRecord } from '@/utils/plantClassification';
 import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 import { getLocationConfig } from '@/services/locations';
@@ -51,7 +53,6 @@ export interface Step3Data {
   width_m: number;
   length_m: number;
   area_sqm: number;
-  coconut_distance_m: number | null;
   sizeRecommendation: BedSizeResult | null;
 }
 
@@ -98,7 +99,6 @@ const DEFAULT_STEP3: Step3Data = {
   width_m: 1.2,
   length_m: 3.0,
   area_sqm: 3.6,
-  coconut_distance_m: null,
   sizeRecommendation: null,
 };
 
@@ -171,47 +171,189 @@ function canProceedStep(step: WizardStep, data: Partial<WizardStepData>): boolea
   }
 }
 
-// ─── Plant materialization (turn wizard PlantEntry into real Plant record) ───
+// ─── Plant materialization (turn wizard PlantEntry into real Plant records) ───
 
-async function materializeEntry(
-  entry: PlantEntry,
-  bedId: string,
-  bedLocation: string,
-  bedSunlight: SunlightLevel
-): Promise<Plant> {
-  const resolution = entry.resolution ?? { kind: 'placeholder' };
+type NewPlantPayload = Omit<Plant, 'id' | 'user_id' | 'created_at'>;
 
-  const sortOrder = entry.sortOrder ?? 0;
-
-  if (resolution.kind === 'link') {
-    return updatePlant(resolution.plantId, {
-      bed_id: bedId,
-      bed_layer: entry.layer,
-      spacing_cm: entry.spacingCm,
-      sort_order: sortOrder,
-    });
-  }
-
-  const variety = resolution.kind === 'create' ? resolution.variety ?? null : null;
-  const cropFamily = cropFamilyFromName(entry.name);
-
-  return createPlant({
-    name: entry.name,
-    plant_type: plantTypeFromName(entry.name),
-    plant_variety: variety,
+function buildPlantPayload(opts: {
+  name: string;
+  layer: BedLayer;
+  spacingCm: number;
+  variety: string | null;
+  bedId: string;
+  bedLocation: string;
+  bedSunlight: SunlightLevel;
+  recordKind: 'specimen' | 'row';
+  plantCount?: number;
+  sortOrder: number;
+}): NewPlantPayload {
+  return {
+    name: opts.name,
+    plant_type: plantTypeFromName(opts.name),
+    plant_variety: opts.variety,
     photo_filename: null,
     photo_url: null,
     space_type: 'bed',
-    location: bedLocation,
-    bed_id: bedId,
-    bed_layer: entry.layer,
-    spacing_cm: entry.spacingCm,
-    sort_order: sortOrder,
-    crop_family: cropFamily,
-    sunlight: bedSunlight,
-    light_requirement: bedSunlight,
+    location: opts.bedLocation,
+    bed_id: opts.bedId,
+    bed_layer: opts.layer,
+    spacing_cm: opts.spacingCm,
+    sort_order: opts.sortOrder,
+    crop_family: cropFamilyFromName(opts.name),
+    sunlight: opts.bedSunlight,
+    light_requirement: opts.bedSunlight,
     is_deleted: false,
-  });
+    record_kind: opts.recordKind,
+    ...(opts.plantCount !== undefined ? { plant_count: opts.plantCount } : {}),
+  };
+}
+
+function varietyFromEntry(entry: PlantEntry | undefined): string | null {
+  if (!entry) return null;
+  const r = entry.resolution;
+  return r?.kind === 'create' ? r.variety ?? null : null;
+}
+
+/**
+ * Split wizard PlantEntry[] into:
+ *  - linkEntries: 'link' resolutions that re-parent existing plants to this bed
+ *  - newPlants: payloads to be persisted via createPlantBatch, grouped per the
+ *    engine's row layout. Each engine row's mains are classified together —
+ *    dense crops collapse into one row-record (record_kind: 'row',
+ *    plant_count: N), fruiting / climber / three-sisters / companion plants
+ *    stay one doc each (record_kind: 'specimen').
+ */
+function buildPlantBatchFromEntries(
+  entries: PlantEntry[],
+  bedId: string,
+  bedType: BedType,
+  bedLocation: string,
+  bedSunlight: SunlightLevel,
+  s3: Step3Data,
+  constructionType: 'raised' | 'in_ground'
+): {
+  newPlants: NewPlantPayload[];
+  linkEntries: PlantEntry[];
+} {
+  const linkEntries: PlantEntry[] = [];
+  const createEntries: PlantEntry[] = [];
+  for (const entry of entries) {
+    if (entry.resolution?.kind === 'link') {
+      linkEntries.push(entry);
+    } else {
+      createEntries.push(entry);
+    }
+  }
+
+  if (createEntries.length === 0) {
+    return { newPlants: [], linkEntries };
+  }
+
+  const entryById = new Map<string, PlantEntry>();
+  for (const e of createEntries) entryById.set(e.id, e);
+
+  const template = getGuildTemplate(bedType);
+  const inputs = mapPlantEntriesToRowInputs(createEntries, template);
+  const result = computeRowLayout(
+    inputs,
+    s3.width_m,
+    s3.length_m,
+    bedType,
+    constructionType
+  );
+
+  const newPlants: NewPlantPayload[] = [];
+  let sortCounter = 0;
+  const consumedIds = new Set<string>();
+
+  for (const row of result.rows) {
+    const mains = row.plants.filter((p) => p.isCompanion !== true);
+    const companions = row.plants.filter((p) => p.isCompanion === true);
+
+    if (mains.length > 0) {
+      const first = mains[0]!;
+      const isRow = classifyAsRowRecord(first.spacingCm, bedType, false);
+
+      if (isRow) {
+        const firstEntry = entryById.get(first.id ?? '');
+        newPlants.push(
+          buildPlantPayload({
+            name: first.name,
+            layer: row.layer,
+            spacingCm: first.spacingCm,
+            variety: varietyFromEntry(firstEntry),
+            bedId,
+            bedLocation,
+            bedSunlight,
+            recordKind: 'row',
+            plantCount: mains.length,
+            sortOrder: sortCounter++,
+          })
+        );
+        mains.forEach((p) => {
+          if (p.id) consumedIds.add(p.id);
+        });
+      } else {
+        for (const main of mains) {
+          const mEntry = entryById.get(main.id ?? '');
+          newPlants.push(
+            buildPlantPayload({
+              name: main.name,
+              layer: row.layer,
+              spacingCm: main.spacingCm,
+              variety: varietyFromEntry(mEntry),
+              bedId,
+              bedLocation,
+              bedSunlight,
+              recordKind: 'specimen',
+              sortOrder: sortCounter++,
+            })
+          );
+          if (main.id) consumedIds.add(main.id);
+        }
+      }
+    }
+
+    for (const comp of companions) {
+      const cEntry = entryById.get(comp.id ?? '');
+      newPlants.push(
+        buildPlantPayload({
+          name: comp.name,
+          layer: cEntry?.layer ?? row.layer,
+          spacingCm: comp.spacingCm,
+          variety: varietyFromEntry(cEntry),
+          bedId,
+          bedLocation,
+          bedSunlight,
+          recordKind: 'specimen',
+          sortOrder: sortCounter++,
+        })
+      );
+      if (comp.id) consumedIds.add(comp.id);
+    }
+  }
+
+  // Stragglers: entries the engine couldn't fit get persisted as specimens so
+  // they still appear in the user's list and can be moved later.
+  for (const entry of createEntries) {
+    if (!consumedIds.has(entry.id)) {
+      newPlants.push(
+        buildPlantPayload({
+          name: entry.name,
+          layer: entry.layer,
+          spacingCm: entry.spacingCm,
+          variety: varietyFromEntry(entry),
+          bedId,
+          bedLocation,
+          bedSunlight,
+          recordKind: 'specimen',
+          sortOrder: sortCounter++,
+        })
+      );
+    }
+  }
+
+  return { newPlants, linkEntries };
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -398,7 +540,6 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
       pest_history: s2.pest_history,
       is_raised_bed: s2.construction_type === 'raised',
       is_permanent: false,
-      coconut_distance_m: s3.coconut_distance_m,
       notes: s6?.notes || null,
       row_layout: rowLayout,
       is_deleted: false,
@@ -451,18 +592,54 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
       const entries = s4?.plant_entries ?? [];
       if (entries.length > 0) {
         const bedLocation = s2.parent_location ?? s2.child_location ?? '';
-        const results = await Promise.allSettled(
-          entries.map((entry) => materializeEntry(entry, bedId, bedLocation, s2.sunlight))
+        const s3 = stepData[3] ?? DEFAULT_STEP3;
+        const { newPlants, linkEntries } = buildPlantBatchFromEntries(
+          entries,
+          bedId,
+          s1.bed_type,
+          bedLocation,
+          s2.sunlight,
+          s3,
+          s2.construction_type
         );
-        const failed = results.filter((r) => r.status === 'rejected').length;
-        if (failed > 0) {
+
+        const linkResults = await Promise.allSettled(
+          linkEntries.map((entry) => {
+            const r = entry.resolution;
+            if (r?.kind !== 'link') return Promise.reject(new Error('not a link entry'));
+            return updatePlant(r.plantId, {
+              bed_id: bedId,
+              bed_layer: entry.layer,
+              spacing_cm: entry.spacingCm,
+              sort_order: entry.sortOrder ?? 0,
+            });
+          })
+        );
+
+        let createFailed = 0;
+        if (newPlants.length > 0) {
+          try {
+            await createPlantBatch(newPlants);
+          } catch (err) {
+            logError(
+              'network',
+              'useBedCreationWizard: createPlantBatch failed',
+              err as Error
+            );
+            createFailed = newPlants.length;
+          }
+        }
+
+        const linkFailed = linkResults.filter((r) => r.status === 'rejected').length;
+        const totalFailed = createFailed + linkFailed;
+        if (totalFailed > 0) {
           logError(
             'network',
-            'useBedCreationWizard: some plant entries failed to persist',
-            new Error(`${failed} of ${entries.length} plant writes failed`)
+            'useBedCreationWizard: some plant writes failed',
+            new Error(`${totalFailed} of ${entries.length} plant writes failed`)
           );
           setError(
-            `Bed saved, but ${failed} of ${entries.length} plant${
+            `Bed saved, but ${totalFailed} of ${entries.length} plant${
               entries.length > 1 ? 's' : ''
             } couldn't be added. You can add them from the Plants tab.`
           );

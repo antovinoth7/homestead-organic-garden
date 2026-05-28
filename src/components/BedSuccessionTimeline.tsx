@@ -55,7 +55,7 @@ function buildGuildCacheIfNeeded(): void {
   guildCacheBuilt = true;
   const BED_TYPES = [
     'leafy', 'fruiting', 'spice', 'root_legume',
-    'climber_trellis', 'coconut_intercrop', 'three_sisters', 'medicinal_guild',
+    'climber_trellis', 'three_sisters', 'medicinal_guild',
   ] as const;
   for (const t of BED_TYPES) {
     for (const row of getGuildTemplate(t).plant_rows) {

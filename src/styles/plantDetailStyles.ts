@@ -67,6 +67,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontStyle: 'italic',
       marginBottom: 16,
     },
+    rowRecordBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: theme.primaryLight,
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: theme.primary,
+    },
+    rowRecordBadgeText: {
+      fontSize: 13,
+      color: theme.primary,
+      fontWeight: '600',
+    },
     infoSection: {
       marginBottom: 24,
     },

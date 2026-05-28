@@ -68,7 +68,6 @@ function normalizeBed(id: string, data: Record<string, unknown>): Bed {
     child_location: (data.child_location as string) ?? null,
     is_raised_bed: (data.is_raised_bed as boolean) ?? false,
     is_permanent: (data.is_permanent as boolean) ?? false,
-    coconut_distance_m: (data.coconut_distance_m as number) ?? null,
     is_resting: (data.is_resting as boolean) ?? false,
     resting_until: (data.resting_until as string) ?? null,
     last_water_date: (data.last_water_date as string) ?? null,

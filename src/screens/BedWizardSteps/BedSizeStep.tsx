@@ -34,7 +34,6 @@ const HARVEST_COEFF: Record<BedType, number> = {
   root_legume: 0.5,
   climber_trellis: 0.5,
   three_sisters: 0.6,
-  coconut_intercrop: 0.4,
   spice: 0.3,
   medicinal_guild: 0.2,
 };

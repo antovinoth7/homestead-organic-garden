@@ -61,18 +61,6 @@ export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
     'Passion Fruit',
     'Pepper',
   ],
-  coconut_intercrop: [
-    'Banana',
-    'Cocoa',
-    'Black Pepper',
-    'Elephant Yam',
-    'Taro',
-    'Pineapple',
-    'Ginger',
-    'Turmeric',
-    'Nutmeg',
-    'Coleus',
-  ],
   three_sisters: ['Maize', 'Beans', 'Pumpkin', 'Squash', 'Cowpea', 'Yardlong Beans'],
   medicinal_guild: [
     'Moringa',

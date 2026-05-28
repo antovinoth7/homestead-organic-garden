@@ -7,8 +7,6 @@ export type FarmGoal = 'self_sufficiency' | 'surplus_sale' | 'seed_saving' | 'me
 export interface FarmConfig {
   /** @deprecated moved to LocationProfile.land_cents per-plot */
   land_cents?: number;
-  /** @deprecated tracked individually as plant_type: "coconut_tree" */
-  coconut_tree_count?: number;
   families_count: number;
   goals: FarmGoal[];
   updated_at?: string;
@@ -22,7 +20,6 @@ export type BedType =
   | 'spice'
   | 'root_legume'
   | 'climber_trellis'
-  | 'coconut_intercrop'
   | 'three_sisters'
   | 'medicinal_guild';
 
@@ -215,7 +212,6 @@ export interface Bed {
   child_location?: string | null;
   is_raised_bed: boolean;
   is_permanent: boolean;
-  coconut_distance_m?: number | null;
   is_resting?: boolean;
   resting_until?: string | null;
   last_water_date?: string | null;
@@ -542,6 +538,10 @@ export interface Plant {
   harvest_mode?: HarvestMode | null;
   cleared_date?: string | null;
   archived_at?: string | null;
+  // Hybrid record discriminator. Missing on legacy docs → read as 'specimen'.
+  record_kind?: 'specimen' | 'row';
+  // Number of plants in a row-record. Present iff record_kind === 'row'.
+  plant_count?: number;
   created_at: string;
 }
 

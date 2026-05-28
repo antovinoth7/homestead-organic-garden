@@ -15,7 +15,6 @@ const BED_TYPE_EMOJI: Record<string, string> = {
   spice: '🌿',
   root_legume: '🥕',
   climber_trellis: '🌱',
-  coconut_intercrop: '🥥',
   three_sisters: '🌽',
   medicinal_guild: '🌾',
 };

@@ -6,7 +6,6 @@ export const BED_TYPE_LABEL: Partial<Record<BedType, string>> = {
   spice: 'Spice',
   root_legume: 'Root',
   climber_trellis: 'Climber',
-  coconut_intercrop: 'Coconut',
   three_sisters: 'Three Sisters',
   medicinal_guild: 'Medicinal',
 };

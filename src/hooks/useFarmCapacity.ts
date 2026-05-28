@@ -75,7 +75,6 @@ export function useFarmCapacity(): UseFarmCapacityResult {
             root_legume: calcCategoryPct(beds, 'root_legume'),
             spice: calcCategoryPct(beds, 'spice'),
             climber: calcCategoryPct(beds, 'climber'),
-            coconut: calcCategoryPct(beds, 'coconut'),
           },
           yearPlan: getPhase3YearPlan(config),
         };
