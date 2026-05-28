@@ -61,6 +61,33 @@ interface CanvasProps extends BedTopDownMapProps {
   onExpand?: () => void;
 }
 
+interface CanvasGestureWrapProps {
+  isInlinePreview: boolean;
+  composedGesture: ReturnType<typeof Gesture.Simultaneous>;
+  onExpand?: () => void;
+  children: React.ReactNode;
+}
+
+function CanvasGestureWrap({
+  isInlinePreview,
+  composedGesture,
+  onExpand,
+  children,
+}: CanvasGestureWrapProps): React.JSX.Element {
+  if (isInlinePreview) {
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={onExpand}
+        accessibilityLabel="Open fullscreen map"
+      >
+        {children}
+      </TouchableOpacity>
+    );
+  }
+  return <GestureDetector gesture={composedGesture}>{children as React.ReactElement}</GestureDetector>;
+}
+
 function BedTopDownCanvas({
   widthM,
   lengthM,
@@ -95,8 +122,8 @@ function BedTopDownCanvas({
     return ticks;
   }, [lengthM]);
 
-  const gridColCount = Math.max(0, Math.round(widthCm / 30) - 1);
-  const gridRowCount = Math.max(0, Math.round(lengthCm / 30) - 1);
+  const gridColCount = Math.max(0, Math.floor((widthCm - 1) / 30));
+  const gridRowCount = Math.max(0, Math.floor((lengthCm - 1) / 30));
 
   const pathPct = Math.min(50, (walkingPathCm / lengthCm) * 100);
   const edgePctW = edgeBufferCm > 0 ? Math.min(25, (edgeBufferCm / widthCm) * 100) : 0;
@@ -201,8 +228,10 @@ function BedTopDownCanvas({
 
     const panBase = { tx: 0, ty: 0 };
     const pan = Gesture.Pan()
-      .activeOffsetX([-5, 5])
-      .activeOffsetY([-5, 5])
+      .minPointers(1)
+      .maxPointers(1)
+      .activeOffsetX([-8, 8])
+      .activeOffsetY([-8, 8])
       .onStart(() => {
         panBase.tx = savedTx.current;
         panBase.ty = savedTy.current;
@@ -231,8 +260,9 @@ function BedTopDownCanvas({
   const compassDim = `${widthM.toFixed(1)} m wide`;
   const legendFooter =
     edgeBufferCm > 0 ? `${walkingPathCm} cm path · ${edgeBufferCm} cm edge` : `${walkingPathCm} cm path each side`;
-  const showResetButton = currentScale > 1.01;
-  const showHint = !hintDismissed;
+  const isInlinePreview = onExpand !== undefined;
+  const showResetButton = !isInlinePreview && currentScale > 1.01;
+  const showHint = !isInlinePreview && !hintDismissed;
 
   return (
     <View style={styles.tdmMapWrap}>
@@ -253,7 +283,11 @@ function BedTopDownCanvas({
           <Text style={styles.tdmCompassDim}>{compassDim}</Text>
         </View>
 
-        <GestureDetector gesture={composedGesture}>
+        <CanvasGestureWrap
+          isInlinePreview={isInlinePreview}
+          composedGesture={composedGesture}
+          onExpand={onExpand}
+        >
           <View
             style={[
               styles.tdmCanvasFrame,
@@ -326,7 +360,7 @@ function BedTopDownCanvas({
                   key={`gh-${i}`}
                   style={[
                     styles.tdmGridLineH,
-                    { top: `${((i + 1) / (gridRowCount + 1)) * 100}%` },
+                    { top: `${(((i + 1) * 30) / lengthCm) * 100}%` },
                   ]}
                 />
               ))}
@@ -335,7 +369,7 @@ function BedTopDownCanvas({
                   key={`gv-${i}`}
                   style={[
                     styles.tdmGridLineV,
-                    { left: `${((i + 1) / (gridColCount + 1)) * 100}%` },
+                    { left: `${(((i + 1) * 30) / widthCm) * 100}%` },
                   ]}
                 />
               ))}
@@ -446,18 +480,13 @@ function BedTopDownCanvas({
               </TouchableOpacity>
             )}
 
-            {onExpand && (
-              <TouchableOpacity
-                style={styles.tdmExpandButton}
-                onPress={onExpand}
-                accessibilityLabel="Open fullscreen map"
-                hitSlop={6}
-              >
+            {isInlinePreview && (
+              <View style={styles.tdmExpandButton} pointerEvents="none">
                 <Ionicons name="expand-outline" size={16} color={theme.textSecondary} />
-              </TouchableOpacity>
+              </View>
             )}
           </View>
-        </GestureDetector>
+        </CanvasGestureWrap>
 
         <View style={styles.tdmLegend}>
           <View style={styles.tdmLegendItem}>
