@@ -1320,13 +1320,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tdmEdgeStrip: {
       position: 'absolute' as const,
-      top: 0,
-      bottom: 0,
+      left: 0,
+      right: 0,
       backgroundColor: theme.borderDark,
       opacity: 0.12,
     },
-    tdmEdgeStripLeft: { left: 0 },
-    tdmEdgeStripRight: { right: 0 },
+    tdmEdgeStripTop: { top: 0 },
+    tdmEdgeStripBottom: { bottom: 0 },
     tdmStripLabel: {
       position: 'absolute' as const,
       fontSize: 9,
@@ -1346,21 +1346,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       right: 0,
       textAlign: 'center' as const,
     },
-    tdmStripLabelW: {
-      top: '50%' as const,
-      left: -10,
-      transform: [{ rotate: '-90deg' }],
+    tdmGapCaret: {
+      position: 'absolute' as const,
+      paddingHorizontal: 2,
+      borderRadius: 3,
+      backgroundColor: theme.backgroundSecondary,
+      transform: [{ translateX: -10 }, { translateY: 8 }],
     },
-    tdmStripLabelE: {
-      top: '50%' as const,
-      right: -10,
-      transform: [{ rotate: '90deg' }],
-    },
-    tdmRowTagGap: {
-      fontSize: 7,
+    tdmGapCaretText: {
       color: theme.accent,
       fontWeight: '600' as const,
-      marginLeft: 3,
       letterSpacing: 0.1,
     },
     tdmZoomHint: {
@@ -1472,7 +1467,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 13,
     },
     tdmPinLabel: {
-      fontSize: 7,
+      fontSize: 6,
       color: theme.textSecondary,
       marginTop: 1,
       textAlign: 'center' as const,

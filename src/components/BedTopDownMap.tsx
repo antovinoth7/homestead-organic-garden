@@ -108,7 +108,8 @@ function BedTopDownCanvas({
   const pinScale = clamp(mapWidth / 360, 0.9, 1.5);
   const pinSize = Math.round(22 * pinScale);
   const pinEmojiSize = Math.round(11 * pinScale);
-  const pinLabelSize = Math.round(9 * pinScale);
+  const pinLabelSize = Math.max(6, Math.round(7 * pinScale));
+  const gapCaretSize = Math.max(6, Math.round(7 * pinScale));
   const pinWrapWidth = pinSize + 10;
 
   const widthCm = Math.max(1, Math.round(widthM * 100));
@@ -126,7 +127,7 @@ function BedTopDownCanvas({
   const gridRowCount = Math.max(0, Math.floor((lengthCm - 1) / 30));
 
   const pathPct = Math.min(50, (walkingPathCm / lengthCm) * 100);
-  const edgePctW = edgeBufferCm > 0 ? Math.min(25, (edgeBufferCm / widthCm) * 100) : 0;
+  const edgePctH = edgeBufferCm > 0 ? (edgeBufferCm / lengthCm) * 100 : 0;
 
   const rawAspect = widthM / lengthM;
   const clampedAspect = clamp(rawAspect, 0.4, 3);
@@ -328,27 +329,27 @@ function BedTopDownCanvas({
                 </>
               )}
 
-              {edgePctW > 0 && (
+              {edgePctH > 0 && (
                 <>
                   <View
                     style={[
                       styles.tdmEdgeStrip,
-                      styles.tdmEdgeStripLeft,
-                      { width: `${edgePctW}%` },
+                      styles.tdmEdgeStripTop,
+                      { height: `${edgePctH}%` },
                     ]}
                   >
-                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelW]}>
+                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelN]}>
                       {edgeLabel}
                     </Text>
                   </View>
                   <View
                     style={[
                       styles.tdmEdgeStrip,
-                      styles.tdmEdgeStripRight,
-                      { width: `${edgePctW}%` },
+                      styles.tdmEdgeStripBottom,
+                      { height: `${edgePctH}%` },
                     ]}
                   >
-                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelE]}>
+                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelS]}>
                       {edgeLabel}
                     </Text>
                   </View>
@@ -377,7 +378,6 @@ function BedTopDownCanvas({
               {rows.map((row) => {
                 const centerPct = (row.northEdgeCm / lengthCm) * 100;
                 const warning = warningByRow.get(row.rowIndex);
-                const anchorGap = row.plants[0]?.spacingCm;
                 return (
                   <React.Fragment key={`row-${row.rowIndex}`}>
                     <View
@@ -386,13 +386,43 @@ function BedTopDownCanvas({
                     />
                     <View style={[styles.tdmRowTag, { top: `${centerPct}%` }]}>
                       <Text style={styles.tdmRowTagText}>R{row.rowIndex}</Text>
-                      {anchorGap !== undefined && (
-                        <Text style={styles.tdmRowTagGap}>↔{anchorGap}cm</Text>
-                      )}
                       {warning ? <Text style={styles.tdmRowTagWarn}> ⚠</Text> : null}
                     </View>
                   </React.Fragment>
                 );
+              })}
+
+              {rows.map((row) => {
+                const positions = computeInterleavedEastPositions(row);
+                const topPct = (row.northEdgeCm / lengthCm) * 100;
+                const carets: React.ReactNode[] = [];
+                for (let i = 0; i < positions.length - 1; i++) {
+                  const left = positions[i];
+                  const right = positions[i + 1];
+                  if (left === undefined || right === undefined) continue;
+                  const gapCm = Math.round(right - left);
+                  if (gapCm <= 0) continue;
+                  const midPct = (((left + right) / 2) / widthCm) * 100;
+                  carets.push(
+                    <Animated.View
+                      key={`gap-${row.rowIndex}-${i}`}
+                      style={[
+                        styles.tdmGapCaret,
+                        {
+                          left: `${midPct}%`,
+                          top: `${topPct}%`,
+                          opacity: labelOpacity,
+                        },
+                      ]}
+                      pointerEvents="none"
+                    >
+                      <Text style={[styles.tdmGapCaretText, { fontSize: gapCaretSize }]}>
+                        ↔{gapCm}
+                      </Text>
+                    </Animated.View>
+                  );
+                }
+                return <React.Fragment key={`gaps-${row.rowIndex}`}>{carets}</React.Fragment>;
               })}
 
               {rows.map((row) => {
