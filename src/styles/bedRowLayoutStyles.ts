@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
 
-export const ROW_TILE_WIDTH = 80;
+export const ROW_TILE_WIDTH = 90;
 export const ROW_TILE_GAP = 8;
 export const ROW_TILE_STEP = ROW_TILE_WIDTH + ROW_TILE_GAP;
 
@@ -113,22 +113,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     // ── Row card ──────────────────────────────────────────────────────────────
     rowCard: {
-      borderRadius: 10,
-      marginBottom: 6,
+      borderRadius: 14,
+      marginBottom: 8,
       borderWidth: 1.5,
       overflow: 'hidden',
     },
     rowAccentStripe: {
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      bottom: 0,
-      width: 4,
+      height: 4,
+      width: '100%' as const,
     },
     rowHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingLeft: 14,
+      paddingLeft: 12,
       paddingRight: 12,
       paddingTop: 10,
       paddingBottom: 8,
@@ -216,40 +213,41 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // ── Plant tiles ───────────────────────────────────────────────────────────
     plantTilesContainer: {
       flexDirection: 'row',
-      paddingLeft: 14,
+      paddingLeft: 10,
       paddingTop: 10,
       paddingBottom: 10,
-      paddingRight: 8,
+      paddingRight: 10,
       gap: 8,
     },
     plantTileMain: {
-      width: 80,
+      width: 90,
       minHeight: 90,
-      borderRadius: 8,
+      borderRadius: 10,
       borderWidth: 1.5,
-      padding: 6,
+      backgroundColor: theme.background,
+      padding: 8,
       alignItems: 'center',
-      gap: 3,
+      gap: 4,
     },
     plantTileCompanion: {
-      width: 80,
+      width: 90,
       minHeight: 90,
-      borderRadius: 8,
+      borderRadius: 10,
       borderWidth: 1.5,
       borderStyle: 'dashed',
       borderColor: COMPANION_BORDER,
       backgroundColor: COMPANION_BG,
-      padding: 6,
+      padding: 8,
       alignItems: 'center',
-      gap: 3,
+      gap: 4,
     },
     plantTileEmpty: {
-      width: 80,
+      width: 90,
       minHeight: 90,
-      borderRadius: 8,
+      borderRadius: 10,
       borderWidth: 1.5,
       borderStyle: 'dashed',
-      padding: 6,
+      padding: 8,
       alignItems: 'center',
       justifyContent: 'center',
       gap: 2,
@@ -259,11 +257,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 22,
     },
     plantTileName: {
-      fontSize: 10,
-      fontWeight: '600',
+      fontSize: 12,
+      fontWeight: '700',
       color: theme.text,
       textAlign: 'center',
-      lineHeight: 13,
+      lineHeight: 15,
     },
     plantTileEmptyIcon: {
       fontSize: 20,
@@ -337,10 +335,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // ── Care task chips ────────────────────────────────────────────────────────
     careTaskChips: {
       flexDirection: 'row',
-      paddingLeft: 14,
+      paddingLeft: 10,
       paddingBottom: 10,
       paddingTop: 4,
-      paddingRight: 8,
+      paddingRight: 10,
       gap: 6,
     },
     careTaskChip: {
@@ -521,7 +519,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row' as const,
       flexWrap: 'wrap' as const,
       alignItems: 'center' as const,
-      paddingLeft: 14,
+      paddingLeft: 12,
       paddingRight: 12,
       paddingBottom: 10,
       paddingTop: 4,
@@ -645,6 +643,25 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     insightsSummaryWarn: {
       color: theme.error,
       fontWeight: '600' as const,
+    },
+
+    // ── Tile remove button (matches BedLayerStack tileRemove) ────────────────
+    tileRemove: {
+      position: 'absolute' as const,
+      top: -6,
+      right: -6,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: theme.error,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
+    tileRemoveText: {
+      fontSize: 11,
+      fontWeight: '800' as const,
+      color: theme.textInverse,
+      lineHeight: 13,
     },
 
     // ── Resolution chip ────────────────────────────────────────────────────────

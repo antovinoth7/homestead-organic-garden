@@ -24,7 +24,6 @@ import { useTheme } from '@/theme';
 import { createStyles, ROW_TILE_STEP } from '@/styles/bedRowLayoutStyles';
 import { computeTargetIndex } from '@/utils/dragRowMath';
 import type { BedLayer, EntryResolution } from '@/types/database.types';
-import { createStyles as createWizardStyles } from '@/styles/bedCreationWizardStyles';
 import type { RowLayoutResult, BedRow, RowPlant } from '@/utils/rowLayoutEngine';
 import { interleavePlants } from '@/utils/rowLayoutEngine';
 
@@ -146,7 +145,6 @@ function PlantTile({
 }: PlantTileProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const wizardStyles = useMemo(() => createWizardStyles(theme), [theme]);
   const isCompanion = plant.isCompanion === true;
   const resLabel = onResolveEntry !== undefined ? resolutionLabel(resolution) : null;
 
@@ -200,8 +198,8 @@ function PlantTile({
         </TouchableOpacity>
       )}
       {onRemove !== undefined && (
-        <TouchableOpacity style={wizardStyles.blRemoveBtn} onPress={onRemove} hitSlop={6}>
-          <Text style={wizardStyles.blRemoveBtnText}>×</Text>
+        <TouchableOpacity style={styles.tileRemove} onPress={onRemove} hitSlop={6}>
+          <Text style={styles.tileRemoveText}>×</Text>
         </TouchableOpacity>
       )}
     </View>
