@@ -1198,9 +1198,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       letterSpacing: 0.2,
     },
     tdmMapWrap: {
+      flexDirection: 'column' as const,
+      alignItems: 'stretch' as const,
+      gap: 6,
+    },
+    // Ruler + canvas live in this row so the ruler stretches to the canvas
+    // height only (not the compass/legend), keeping meter ticks aligned to the
+    // grid at base zoom.
+    tdmPlotRow: {
       flexDirection: 'row' as const,
       alignItems: 'stretch' as const,
       gap: 6,
+    },
+    tdmPlotCol: {
+      flex: 1,
     },
     tdmRuler: {
       width: 26,
@@ -1214,15 +1225,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       transform: [{ translateY: -6 }],
       textAlign: 'right' as const,
     },
-    tdmFrame: {
-      flex: 1,
-      flexDirection: 'column' as const,
-      gap: 6,
-    },
     tdmCompass: {
       flexDirection: 'row' as const,
       justifyContent: 'space-between' as const,
       alignItems: 'center' as const,
+      // Indent past the ruler (width 26 + row gap 6) so the N/S markers sit over
+      // the canvas, matching where they sat when nested inside the frame.
+      paddingLeft: 32,
     },
     tdmCompassN: {
       fontSize: 10,
@@ -1285,7 +1294,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tdmRowTag: {
       position: 'absolute' as const,
-      left: 4,
+      left: 2,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       backgroundColor: theme.backgroundSecondary,
@@ -1294,9 +1303,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 6,
       paddingVertical: 1,
       borderRadius: 999,
-      // Lift the pill above the row centerline so it clears the plant pins
-      // (which are centered on the line and extend ~±16px), preventing overlap.
-      transform: [{ translateY: -24 }],
+      // Centre the pill on the row centerline (≈17px tall → lift half its height).
+      // Rendered after the pins so the opaque pill reads cleanly on top of the
+      // westmost pin at the bed edge.
+      transform: [{ translateY: -9 }],
     },
     tdmRowTagText: {
       fontSize: 11,
@@ -1350,17 +1360,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       right: 0,
       textAlign: 'center' as const,
     },
+    // Zero-width anchor placed at the gap midpoint; alignItems centers the chip
+    // exactly on that point regardless of digit count. Sits just below the line.
     tdmGapCaret: {
       position: 'absolute' as const,
-      paddingHorizontal: 2,
-      borderRadius: 3,
-      backgroundColor: theme.backgroundSecondary,
-      transform: [{ translateX: -10 }, { translateY: 8 }],
+      width: 0,
+      alignItems: 'center' as const,
+      transform: [{ translateY: 7 }],
     },
     tdmGapCaretText: {
       color: theme.accent,
       fontWeight: '600' as const,
       letterSpacing: 0.1,
+      paddingHorizontal: 2,
+      borderRadius: 3,
+      overflow: 'hidden' as const,
+      backgroundColor: theme.backgroundSecondary,
     },
     tdmZoomHint: {
       position: 'absolute' as const,
@@ -1510,6 +1525,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 1,
       textAlign: 'center' as const,
       letterSpacing: 0.1,
+      // Allow short names to center under the pin without being clipped to the
+      // narrow pin-wrap width.
+      maxWidth: 56,
     },
     tdmOverflowBadge: {
       position: 'absolute' as const,
@@ -1533,6 +1551,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexWrap: 'wrap' as const,
       gap: 8,
       marginTop: 6,
+      // Align under the canvas (past the ruler gutter), matching the compass.
+      paddingLeft: 32,
     },
     tdmLegendItem: {
       flexDirection: 'row' as const,
