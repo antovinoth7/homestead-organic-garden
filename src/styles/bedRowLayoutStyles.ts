@@ -508,42 +508,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingBottom: 4,
     },
 
-    // ── RowCard accordion ──────────────────────────────────────────────────────
-    rowHeaderCollapsed: {
-      borderBottomWidth: 0,
-    },
-    rowChevron: {
-      marginLeft: 'auto' as const,
-    },
-    collapsedSummary: {
-      flexDirection: 'row' as const,
-      flexWrap: 'wrap' as const,
-      alignItems: 'center' as const,
-      paddingLeft: 12,
-      paddingRight: 12,
-      paddingBottom: 10,
-      paddingTop: 4,
-      gap: 6,
-    },
-    collapsedChip: {
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-      borderRadius: 12,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-    },
-    collapsedChipText: {
-      fontSize: 10,
-      fontWeight: '600' as const,
-      color: theme.textSecondary,
-    },
-    collapsedMore: {
-      fontSize: 10,
-      color: theme.textTertiary,
-      fontWeight: '600' as const,
-    },
-
     // ── AvailableLayersSection ─────────────────────────────────────────────────
     availableLayersCard: {
       borderRadius: 10,

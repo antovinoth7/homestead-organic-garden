@@ -263,8 +263,6 @@ function RowCard({
 }: RowCardProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const [isExpanded, setIsExpanded] = useState(true);
-
   // ── Drag-to-reorder state ────────────────────────────────────────────────
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const displayPlants = useMemo(() => interleavePlants(row.plants), [row.plants]);
@@ -329,11 +327,6 @@ function RowCard({
     [draggingId, localPlants, onReorder, row.layer, translateX]
   );
 
-  const toggle = (): void => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setIsExpanded((prev) => !prev);
-  };
-
   const borderColor = LAYER_BORDER[row.layer];
   const bgColor = LAYER_BG[row.layer];
   const icon = LAYER_ICON[row.layer];
@@ -354,16 +347,8 @@ function RowCard({
     <View style={[styles.rowCard, { borderColor, backgroundColor: bgColor }]}>
       <View style={[styles.rowAccentStripe, { backgroundColor: borderColor }]} />
 
-      {/* Header — tappable to expand/collapse */}
-      <TouchableOpacity
-        style={[
-          styles.rowHeader,
-          { borderBottomColor: borderColor },
-          !isExpanded && styles.rowHeaderCollapsed,
-        ]}
-        onPress={toggle}
-        activeOpacity={0.7}
-      >
+      {/* Header */}
+      <View style={[styles.rowHeader, { borderBottomColor: borderColor }]}>
         <View style={[styles.rowNumCircle, { backgroundColor: borderColor }]}>
           <Text style={styles.rowNumText}>{row.rowIndex}</Text>
         </View>
@@ -401,32 +386,11 @@ function RowCard({
             <Text style={styles.rowCardAddBtnText}>+</Text>
           </TouchableOpacity>
         )}
-        <Ionicons
-          name={isExpanded ? 'chevron-up' : 'chevron-down'}
-          size={16}
-          color={theme.textSecondary}
-          style={styles.rowChevron}
-        />
-      </TouchableOpacity>
+      </View>
 
-      {/* Collapsed summary — plant name chips */}
-      {!isExpanded && row.plants.length > 0 && (
-        <View style={styles.collapsedSummary}>
-          {row.plants.slice(0, 3).map((p, idx) => (
-            <View key={p.id ?? `${p.name}_${idx}`} style={styles.collapsedChip}>
-              <Text style={styles.collapsedChipText}>{p.name}</Text>
-            </View>
-          ))}
-          {row.plants.length > 3 && (
-            <Text style={styles.collapsedMore}>+{row.plants.length - 3} more</Text>
-          )}
-        </View>
-      )}
-
-      {/* Expanded: plant tiles + care chips */}
-      {isExpanded && (
-        <>
-          {onReorder !== undefined ? (
+      {/* Plant tiles + care chips */}
+      <>
+        {onReorder !== undefined ? (
             <PanGestureHandler
               ref={panRef}
               enabled={draggingId !== null}
@@ -550,7 +514,6 @@ function RowCard({
             </ScrollView>
           )}
         </>
-      )}
     </View>
   );
 }
