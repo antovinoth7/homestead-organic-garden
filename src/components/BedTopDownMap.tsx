@@ -17,6 +17,7 @@ import {
   PanGestureHandlerEventPayload,
 } from 'react-native-gesture-handler';
 import type { HandlerStateChangeEvent } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
@@ -640,13 +641,21 @@ export function BedTopDownMap(props: BedTopDownMapProps): React.JSX.Element | nu
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [isFullScreen, setIsFullScreen] = useState(false);
 
   if (props.rows.length === 0) return null;
 
   const inlineMapWidth = Math.max(220, windowWidth - HORIZONTAL_OVERHEAD);
   const modalMapWidth = Math.max(280, windowWidth - MODAL_HORIZONTAL_OVERHEAD);
-  const modalHeightCap = Math.max(280, windowHeight - MODAL_VERTICAL_CHROME);
+  // Subtract the system insets (status bar / bottom gesture area) so the canvas
+  // frame fits inside the *visible* fullscreen area — otherwise the bottom of
+  // the bed (and the legend/S-compass) is pushed under the bottom bar with no
+  // way to scroll or pan to it.
+  const modalHeightCap = Math.max(
+    280,
+    windowHeight - MODAL_VERTICAL_CHROME - insets.top - insets.bottom
+  );
 
   const dimensionLabel = `${props.widthM.toFixed(1)} × ${props.lengthM.toFixed(1)} m`;
 
@@ -672,7 +681,9 @@ export function BedTopDownMap(props: BedTopDownMapProps): React.JSX.Element | nu
         onRequestClose={() => setIsFullScreen(false)}
       >
         <GestureHandlerRootView style={styles.tdmModalGestureRoot}>
-          <View style={styles.tdmModalRoot}>
+          <View
+            style={[styles.tdmModalRoot, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+          >
             <View style={styles.tdmModalHeader}>
               <Text style={styles.tdmModalTitle}>{dimensionLabel}</Text>
               <TouchableOpacity
