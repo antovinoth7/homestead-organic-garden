@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   ScrollView,
@@ -8,9 +9,20 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
+import {
+  LongPressGestureHandler,
+  PanGestureHandler,
+  State,
+} from 'react-native-gesture-handler';
+import type {
+  PanGestureHandlerEventPayload,
+  GestureEvent,
+  HandlerStateChangeEvent,
+} from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
-import { createStyles } from '@/styles/bedRowLayoutStyles';
+import { createStyles, ROW_TILE_STEP } from '@/styles/bedRowLayoutStyles';
+import { computeTargetIndex } from '@/utils/dragRowMath';
 import type { BedLayer, EntryResolution } from '@/types/database.types';
 import { createStyles as createWizardStyles } from '@/styles/bedCreationWizardStyles';
 import type { RowLayoutResult, BedRow, RowPlant } from '@/utils/rowLayoutEngine';
@@ -42,6 +54,7 @@ interface Props {
   solanaceaeBlocked: boolean;
   onAddToRow?: (layer: BedLayer) => void;
   onRemovePlant?: (id: string) => void;
+  onReorder?: (layer: BedLayer, orderedIds: string[]) => void;
   ghostRows?: GhostRow[];
   onResolveEntry?: (entryId: string) => void;
   entryResolutions?: Map<string, EntryResolution>;
@@ -236,6 +249,7 @@ interface RowCardProps {
   row: BedRow;
   onAddToRow?: (layer: BedLayer) => void;
   onRemovePlant?: (id: string) => void;
+  onReorder?: (layer: BedLayer, orderedIds: string[]) => void;
   onResolveEntry?: (entryId: string) => void;
   entryResolutions?: Map<string, EntryResolution>;
 }
@@ -244,12 +258,77 @@ function RowCard({
   row,
   onAddToRow,
   onRemovePlant,
+  onReorder,
   onResolveEntry,
   entryResolutions,
 }: RowCardProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [isExpanded, setIsExpanded] = useState(true);
+
+  // ── Drag-to-reorder state ────────────────────────────────────────────────
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const displayPlants = useMemo(() => interleavePlants(row.plants), [row.plants]);
+  const [localPlants, setLocalPlants] = useState<RowPlant[]>(displayPlants);
+  const startIdxRef = useRef(0);
+  const currentIdxRef = useRef(0);
+  const translateX = useRef(new Animated.Value(0)).current;
+  const panRef = useRef(null);
+
+  useEffect(() => {
+    if (draggingId === null) setLocalPlants(displayPlants);
+  }, [displayPlants, draggingId]);
+
+  const beginDrag = useCallback(
+    (id: string): void => {
+      const idx = localPlants.findIndex((p) => p.id === id);
+      if (idx === -1) return;
+      startIdxRef.current = idx;
+      currentIdxRef.current = idx;
+      translateX.setValue(0);
+      setDraggingId(id);
+    },
+    [localPlants, translateX]
+  );
+
+  const handlePan = useCallback(
+    (event: GestureEvent<PanGestureHandlerEventPayload>): void => {
+      if (draggingId === null) return;
+      const tx = event.nativeEvent.translationX;
+      const target = computeTargetIndex(startIdxRef.current, tx, localPlants.length, ROW_TILE_STEP);
+      if (target !== currentIdxRef.current) {
+        const next = [...localPlants];
+        const [item] = next.splice(currentIdxRef.current, 1);
+        if (item) {
+          next.splice(target, 0, item);
+          currentIdxRef.current = target;
+          setLocalPlants(next);
+        }
+      }
+      translateX.setValue(tx - (currentIdxRef.current - startIdxRef.current) * ROW_TILE_STEP);
+    },
+    [draggingId, localPlants, translateX]
+  );
+
+  const handlePanState = useCallback(
+    (event: HandlerStateChangeEvent<PanGestureHandlerEventPayload>): void => {
+      const s = event.nativeEvent.state;
+      if (s !== State.END && s !== State.CANCELLED && s !== State.FAILED) return;
+      if (draggingId === null) return;
+      const orderedIds = localPlants
+        .map((p) => p.id)
+        .filter((id): id is string => id !== undefined);
+      Animated.timing(translateX, {
+        toValue: 0,
+        duration: 120,
+        useNativeDriver: true,
+      }).start(() => {
+        setDraggingId(null);
+        onReorder?.(row.layer, orderedIds);
+      });
+    },
+    [draggingId, localPlants, onReorder, row.layer, translateX]
+  );
 
   const toggle = (): void => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -271,7 +350,6 @@ function RowCard({
   const tileSpacingCm =
     row.plants.length > 0 ? Math.min(...row.plants.map((p) => p.spacingCm)) : 30;
   const emptySlotCount = Math.max(0, row.plantsPerRow - row.plants.length);
-  const displayPlants = useMemo(() => interleavePlants(row.plants), [row.plants]);
 
   return (
     <View style={[styles.rowCard, { borderColor, backgroundColor: bgColor }]}>
@@ -349,39 +427,117 @@ function RowCard({
       {/* Expanded: plant tiles + care chips */}
       {isExpanded && (
         <>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.plantTilesContainer}>
-              {displayPlants.map((plant, idx) => (
-                <React.Fragment key={plant.id ?? `${plant.name}_${idx}`}>
-                  {idx > 0 && <View style={styles.tileGapDot} />}
-                  <PlantTile
-                    plant={plant}
-                    layerIcon={icon}
-                    layerBorderColor={borderColor}
-                    resolution={entryResolutions?.get(plant.id ?? '')}
-                    onResolveEntry={
-                      onResolveEntry && plant.id !== undefined
-                        ? () => onResolveEntry(plant.id!)
-                        : undefined
-                    }
-                    onRemove={
-                      onRemovePlant && plant.id !== undefined
-                        ? () => onRemovePlant(plant.id!)
-                        : undefined
-                    }
+          {onReorder !== undefined ? (
+            <PanGestureHandler
+              ref={panRef}
+              enabled={draggingId !== null}
+              onGestureEvent={handlePan}
+              onHandlerStateChange={handlePanState}
+            >
+              <Animated.View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  scrollEnabled={draggingId === null}
+                >
+                  <View style={styles.plantTilesContainer}>
+                    {localPlants.map((plant, idx) => {
+                      const isDragging = draggingId === plant.id;
+                      const canDrag = !plant.isCompanion && plant.id !== undefined;
+                      const tileEl = (
+                        <Animated.View
+                          style={
+                            isDragging
+                              ? [
+                                  styles.tileWrapperDragging,
+                                  { transform: [{ translateX }, { scale: 1.05 }] },
+                                ]
+                              : undefined
+                          }
+                        >
+                          <PlantTile
+                            plant={plant}
+                            layerIcon={icon}
+                            layerBorderColor={borderColor}
+                            resolution={entryResolutions?.get(plant.id ?? '')}
+                            onResolveEntry={
+                              onResolveEntry && plant.id !== undefined
+                                ? () => onResolveEntry(plant.id!)
+                                : undefined
+                            }
+                            onRemove={
+                              onRemovePlant && plant.id !== undefined
+                                ? () => onRemovePlant(plant.id!)
+                                : undefined
+                            }
+                          />
+                        </Animated.View>
+                      );
+                      return (
+                        <React.Fragment key={plant.id ?? `${plant.name}_${idx}`}>
+                          {canDrag ? (
+                            <LongPressGestureHandler
+                              minDurationMs={350}
+                              simultaneousHandlers={panRef}
+                              onActivated={() =>
+                                plant.id !== undefined && beginDrag(plant.id)
+                              }
+                            >
+                              {tileEl}
+                            </LongPressGestureHandler>
+                          ) : (
+                            tileEl
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                    {Array.from({ length: emptySlotCount }, (_, i) => (
+                      <EmptySlot
+                        key={`empty-${i}`}
+                        spacingCm={tileSpacingCm}
+                        borderColor={borderColor}
+                        onPress={onAddToRow ? () => onAddToRow(row.layer) : undefined}
+                      />
+                    ))}
+                  </View>
+                </ScrollView>
+              </Animated.View>
+            </PanGestureHandler>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.plantTilesContainer}>
+                {displayPlants.map((plant, idx) => (
+                  <React.Fragment key={plant.id ?? `${plant.name}_${idx}`}>
+                    {idx > 0 && <View style={styles.tileGapDot} />}
+                    <PlantTile
+                      plant={plant}
+                      layerIcon={icon}
+                      layerBorderColor={borderColor}
+                      resolution={entryResolutions?.get(plant.id ?? '')}
+                      onResolveEntry={
+                        onResolveEntry && plant.id !== undefined
+                          ? () => onResolveEntry(plant.id!)
+                          : undefined
+                      }
+                      onRemove={
+                        onRemovePlant && plant.id !== undefined
+                          ? () => onRemovePlant(plant.id!)
+                          : undefined
+                      }
+                    />
+                  </React.Fragment>
+                ))}
+                {Array.from({ length: emptySlotCount }, (_, i) => (
+                  <EmptySlot
+                    key={`empty-${i}`}
+                    spacingCm={tileSpacingCm}
+                    borderColor={borderColor}
+                    onPress={onAddToRow ? () => onAddToRow(row.layer) : undefined}
                   />
-                </React.Fragment>
-              ))}
-              {Array.from({ length: emptySlotCount }, (_, i) => (
-                <EmptySlot
-                  key={`empty-${i}`}
-                  spacingCm={tileSpacingCm}
-                  borderColor={borderColor}
-                  onPress={onAddToRow ? () => onAddToRow(row.layer) : undefined}
-                />
-              ))}
-            </View>
-          </ScrollView>
+                ))}
+              </View>
+            </ScrollView>
+          )}
 
           {careTasks.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -738,6 +894,7 @@ export function BedRowLayout({
   solanaceaeBlocked,
   onAddToRow,
   onRemovePlant,
+  onReorder,
   ghostRows,
   onResolveEntry,
   entryResolutions,
@@ -813,6 +970,7 @@ export function BedRowLayout({
           row={row}
           onAddToRow={onAddToRow}
           onRemovePlant={onRemovePlant}
+          onReorder={onReorder}
           onResolveEntry={onResolveEntry}
           entryResolutions={entryResolutions}
         />

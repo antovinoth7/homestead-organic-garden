@@ -324,6 +324,7 @@ export function BedLayoutStep({
               solanaceaeBlocked={solanaceaeBlocked ?? false}
               onAddToRow={handleAddToLayer}
               onRemovePlant={handleRemovePlant}
+              onReorder={handleReorder}
               ghostRows={ghostRowsForWizard}
               onResolveEntry={handleOpenResolver}
               entryResolutions={entryResolutionMap}

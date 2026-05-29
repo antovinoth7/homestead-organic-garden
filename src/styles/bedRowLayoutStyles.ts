@@ -1,6 +1,10 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
 
+export const ROW_TILE_WIDTH = 80;
+export const ROW_TILE_GAP = 8;
+export const ROW_TILE_STEP = ROW_TILE_WIDTH + ROW_TILE_GAP;
+
 // Companion tile fixed design — matches LAYER_BORDER['climber'] purple
 const COMPANION_BORDER = '#7b1fa2';
 const COMPANION_BG = '#f5f0fa';
@@ -667,6 +671,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     resolutionChipResolvedText: {
       color: theme.success,
+    },
+    // ── Drag wrapper ──────────────────────────────────────────────────────────
+    tileWrapperDragging: {
+      zIndex: 10,
+      elevation: 8,
+      opacity: 0.92,
+      shadowColor: theme.text,
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
     },
     // ── Per-row add button ────────────────────────────────────────────────────
     rowCardAddBtn: {
