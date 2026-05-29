@@ -167,7 +167,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.successDark,
     },
     fillsGapsBadge: {
-      backgroundColor: HARVEST_BG,
+      backgroundColor: '#fff3e0',
       borderRadius: 4,
       paddingHorizontal: 5,
       paddingVertical: 2,
@@ -175,7 +175,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     fillsGapsBadgeText: {
       fontSize: 9,
       fontWeight: '700',
-      color: HARVEST_TEXT,
+      color: '#e65100',
     },
     staggeredBadge: {
       backgroundColor: theme.accentLight,
