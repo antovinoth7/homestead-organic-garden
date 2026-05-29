@@ -12,9 +12,6 @@ const COMPANION_BG = '#f5f0fa';
 const GROUND_BORDER = '#c8842a';
 // Main crop legend swatch — matches LAYER_BORDER['understory'] green
 const MAIN_BORDER = '#558b2f';
-// Harvest badge — amber/orange
-const HARVEST_BG = '#fff3e0';
-const HARVEST_TEXT = '#e65100';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -220,8 +217,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 8,
     },
     plantTileMain: {
-      width: 90,
-      minHeight: 90,
+      minWidth: 90,
+      maxWidth: 130,
       borderRadius: 10,
       borderWidth: 1.5,
       backgroundColor: theme.background,
@@ -230,8 +227,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 4,
     },
     plantTileCompanion: {
-      width: 90,
-      minHeight: 90,
+      minWidth: 90,
+      maxWidth: 130,
       borderRadius: 10,
       borderWidth: 1.5,
       borderStyle: 'dashed',
@@ -263,6 +260,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textAlign: 'center',
       lineHeight: 15,
     },
+    plantTileSpacing: {
+      fontSize: 10,
+      color: theme.textTertiary,
+    },
     plantTileEmptyIcon: {
       fontSize: 20,
       color: theme.textTertiary,
@@ -276,56 +277,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       opacity: 0.5,
     },
 
-    // Harvest & benefit badges inside tile
-    harvestBadge: {
-      backgroundColor: HARVEST_BG,
-      borderRadius: 4,
-      paddingHorizontal: 4,
-      paddingVertical: 2,
-      marginTop: 2,
-    },
-    harvestBadgeText: {
-      fontSize: 8,
-      fontWeight: '700',
-      color: HARVEST_TEXT,
-    },
-    benefitBadge: {
-      borderRadius: 4,
-      paddingHorizontal: 4,
-      paddingVertical: 2,
-      marginTop: 2,
-    },
-    benefitBadgeText: {
-      fontSize: 8,
-      fontWeight: '700',
-      color: theme.textInverse,
-    },
-    companionFixedBadge: {
-      borderRadius: 4,
-      paddingHorizontal: 4,
-      paddingVertical: 2,
-      marginTop: 2,
-      borderWidth: 1,
-      borderColor: COMPANION_BORDER,
-      backgroundColor: COMPANION_BG,
-    },
-    companionFixedBadgeText: {
-      fontSize: 8,
-      fontWeight: '700',
-      color: COMPANION_BORDER,
-    },
-    spacingBadge: {
-      borderRadius: 4,
-      paddingHorizontal: 4,
-      paddingVertical: 2,
-      marginTop: 2,
-      backgroundColor: theme.backgroundSecondary,
-    },
-    spacingBadgeText: {
-      fontSize: 8,
-      fontWeight: '600',
-      color: theme.textTertiary,
-    },
     emptySlotSpacingText: {
       fontSize: 9,
       color: theme.textTertiary,
@@ -636,8 +587,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderStyle: 'dashed' as const,
       borderColor: theme.textTertiary,
-      marginTop: 3,
-      alignSelf: 'flex-start' as const,
+      marginTop: 2,
     },
     resolutionChipText: {
       fontSize: 9,

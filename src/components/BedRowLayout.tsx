@@ -84,15 +84,6 @@ const LAYER_ICON: Record<BedLayer, string> = {
   ground_cover: '🌸',
 };
 
-const BENEFIT_COLOR: Record<string, string> = {
-  nematode: '#2e7d32',
-  'pest-repel': '#00695c',
-  'self-seeds': '#0277bd',
-  'chop-drop': '#bf360c',
-  'n-fixer': '#1b5e20',
-  'soil-builder': '#4e342e',
-};
-
 const BENEFIT_LABEL: Record<string, string> = {
   nematode: 'nematode',
   'pest-repel': 'pest-repel',
@@ -129,7 +120,6 @@ function resolutionLabel(res: EntryResolution | undefined): { text: string; reso
 
 interface PlantTileProps {
   plant: RowPlant;
-  layerIcon: string;
   layerBorderColor: string;
   onRemove?: () => void;
   resolution?: EntryResolution;
@@ -138,7 +128,6 @@ interface PlantTileProps {
 
 function PlantTile({
   plant,
-  layerIcon,
   layerBorderColor,
   onRemove,
   resolution,
@@ -160,32 +149,13 @@ function PlantTile({
       <Text style={styles.plantTileName} numberOfLines={2}>
         {plant.name}
       </Text>
-      {plant.daysToHarvest !== undefined && (
-        <View style={styles.harvestBadge}>
-          <Text style={styles.harvestBadgeText}>Day {plant.daysToHarvest}</Text>
-        </View>
-      )}
-      {plant.benefitTag !== undefined && (
-        <View
-          style={[
-            styles.benefitBadge,
-            { backgroundColor: BENEFIT_COLOR[plant.benefitTag] ?? '#666' },
-          ]}
-        >
-          <Text style={styles.benefitBadgeText}>
-            {BENEFIT_LABEL[plant.benefitTag] ?? plant.benefitTag}
-          </Text>
-        </View>
-      )}
-      {isCompanion ? (
-        <View style={styles.companionFixedBadge}>
-          <Text style={styles.companionFixedBadgeText}>★ {plant.spacingCm}cm</Text>
-        </View>
-      ) : (
-        <View style={styles.spacingBadge}>
-          <Text style={styles.spacingBadgeText}>{plant.spacingCm}cm gap</Text>
-        </View>
-      )}
+      <Text style={styles.plantTileSpacing}>
+        {isCompanion
+          ? `★ ${plant.spacingCm}cm`
+          : plant.daysToHarvest !== undefined
+            ? `${plant.spacingCm}cm · Day ${plant.daysToHarvest}`
+            : `${plant.spacingCm}cm`}
+      </Text>
       {resLabel !== null && (
         <TouchableOpacity
           onPress={onResolveEntry}
@@ -420,7 +390,6 @@ function RowCard({
                         >
                           <PlantTile
                             plant={plant}
-                            layerIcon={icon}
                             layerBorderColor={borderColor}
                             resolution={entryResolutions?.get(plant.id ?? '')}
                             onResolveEntry={
@@ -474,7 +443,6 @@ function RowCard({
                     {idx > 0 && <View style={styles.tileGapDot} />}
                     <PlantTile
                       plant={plant}
-                      layerIcon={icon}
                       layerBorderColor={borderColor}
                       resolution={entryResolutions?.get(plant.id ?? '')}
                       onResolveEntry={
