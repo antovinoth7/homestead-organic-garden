@@ -211,6 +211,31 @@ function BedTopDownCanvas({
     setCurrentScale(1);
   }, [scale, translateX, translateY, labelOpacity]);
 
+  const zoomTo = useCallback(
+    (target: number) => {
+      const next = clamp(target, MIN_SCALE, MAX_SCALE);
+      const maxTx = (frameSize.current.width * (next - 1)) / 2;
+      const maxTy = (frameSize.current.height * (next - 1)) / 2;
+      const tx = clamp(savedTx.current, -maxTx, maxTx);
+      const ty = clamp(savedTy.current, -maxTy, maxTy);
+      Animated.parallel([
+        Animated.spring(scale, { toValue: next, useNativeDriver: true, friction: 7 }),
+        Animated.spring(translateX, { toValue: tx, useNativeDriver: true, friction: 7 }),
+        Animated.spring(translateY, { toValue: ty, useNativeDriver: true, friction: 7 }),
+        Animated.timing(labelOpacity, {
+          toValue: next >= LABEL_VISIBLE_SCALE ? 1 : 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      commitState(next, tx, ty);
+    },
+    [scale, translateX, translateY, labelOpacity, commitState]
+  );
+
+  const handleZoomIn = useCallback(() => zoomTo(savedScale.current + 0.5), [zoomTo]);
+  const handleZoomOut = useCallback(() => zoomTo(savedScale.current - 0.5), [zoomTo]);
+
   const composedGesture = useMemo(() => {
     const pinchBase = { scale: 1 };
     const pinch = Gesture.Pinch()
@@ -262,8 +287,10 @@ function BedTopDownCanvas({
   const legendFooter =
     edgeBufferCm > 0 ? `${walkingPathCm} cm path · ${edgeBufferCm} cm edge` : `${walkingPathCm} cm path each side`;
   const isInlinePreview = onExpand !== undefined;
-  const showResetButton = !isInlinePreview && currentScale > 1.01;
+  const showZoomControls = !isInlinePreview;
   const showHint = !isInlinePreview && !hintDismissed;
+  const atMinZoom = currentScale <= MIN_SCALE + 0.001;
+  const atMaxZoom = currentScale >= MAX_SCALE - 0.001;
 
   return (
     <View style={styles.tdmMapWrap}>
@@ -495,24 +522,46 @@ function BedTopDownCanvas({
             {showHint && (
               <View style={styles.tdmZoomHint} pointerEvents="none">
                 <Ionicons name="scan-outline" size={12} color={theme.textSecondary} />
-                <Text style={styles.tdmZoomHintText}>Pinch to zoom</Text>
+                <Text style={styles.tdmZoomHintText}>Pinch or +/− to zoom</Text>
               </View>
             )}
 
-            {showResetButton && (
-              <TouchableOpacity
-                style={styles.tdmZoomReset}
-                onPress={resetView}
-                accessibilityLabel="Reset zoom"
-                hitSlop={6}
-              >
-                <Ionicons name="contract-outline" size={16} color={theme.textSecondary} />
-              </TouchableOpacity>
+            {showZoomControls && (
+              <View style={styles.tdmZoomControls}>
+                <TouchableOpacity
+                  style={[styles.tdmZoomBtn, atMaxZoom && styles.tdmZoomBtnDisabled]}
+                  onPress={handleZoomIn}
+                  disabled={atMaxZoom}
+                  accessibilityLabel="Zoom in"
+                  hitSlop={6}
+                >
+                  <Ionicons name="add" size={20} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tdmZoomBtn, atMinZoom && styles.tdmZoomBtnDisabled]}
+                  onPress={handleZoomOut}
+                  disabled={atMinZoom}
+                  accessibilityLabel="Zoom out"
+                  hitSlop={6}
+                >
+                  <Ionicons name="remove" size={20} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tdmZoomBtn, atMinZoom && styles.tdmZoomBtnDisabled]}
+                  onPress={resetView}
+                  disabled={atMinZoom}
+                  accessibilityLabel="Reset zoom"
+                  hitSlop={6}
+                >
+                  <Ionicons name="contract-outline" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
             )}
 
             {isInlinePreview && (
               <View style={styles.tdmExpandButton} pointerEvents="none">
                 <Ionicons name="expand-outline" size={16} color={theme.textSecondary} />
+                <Text style={styles.tdmExpandButtonText}>Tap to zoom</Text>
               </View>
             )}
           </View>
