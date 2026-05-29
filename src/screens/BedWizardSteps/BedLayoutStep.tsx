@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/theme';
 import { BedPlantPickerSheet } from '@/components/BedPlantPickerSheet';
@@ -83,6 +83,18 @@ export function BedLayoutStep({
       step2?.construction_type
     );
   }, [bedType, step4.plant_entries, step3.width_m, step3.length_m, step2?.construction_type]);
+
+  const prevFitsRef = useRef(rowLayout.fitsInBed);
+  useEffect(() => {
+    if (prevFitsRef.current && !rowLayout.fitsInBed) {
+      Alert.alert(
+        'Bed is Now Over Capacity',
+        `Adding that plant pushed the layout ${Math.round(rowLayout.overflowCm)} cm over. Remove a plant or go back to Step 3 to increase the bed length.`,
+        [{ text: 'OK' }]
+      );
+    }
+    prevFitsRef.current = rowLayout.fitsInBed;
+  }, [rowLayout.fitsInBed, rowLayout.overflowCm]);
 
   const handleAddToLayer = useCallback((layer: BedLayer): void => {
     if (!rowLayout.fitsInBed) {
