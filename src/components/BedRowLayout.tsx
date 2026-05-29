@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles, ROW_TILE_STEP } from '@/styles/bedRowLayoutStyles';
 import { computeTargetIndex } from '@/utils/dragRowMath';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import type { BedLayer, EntryResolution } from '@/types/database.types';
 import type { RowLayoutResult, BedRow, RowPlant } from '@/utils/rowLayoutEngine';
 import { interleavePlants } from '@/utils/rowLayoutEngine';
@@ -155,7 +156,7 @@ function PlantTile({
         isCompanion ? null : { borderColor: layerBorderColor },
       ]}
     >
-      <Text style={styles.plantTileEmoji}>{layerIcon}</Text>
+      <Text style={styles.plantTileEmoji}>{getPlantEmoji(plant.name)}</Text>
       <Text style={styles.plantTileName} numberOfLines={2}>
         {plant.name}
       </Text>
