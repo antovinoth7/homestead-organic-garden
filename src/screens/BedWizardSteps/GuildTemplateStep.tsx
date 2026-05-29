@@ -58,7 +58,7 @@ const BENEFIT_TAG_LABEL: Record<string, string> = {
   'soil-builder': 'Soil Builder',
 };
 
-const BENEFIT_EXPLANATION: Record<string, string> = {
+const _BENEFIT_EXPLANATION: Record<string, string> = {
   'n-fixer': 'Fixes nitrogen — feeds companion crops',
   'pest-repel': 'Repels insects that attack crop companions',
   nematode: 'Reduces root nematodes in soil',
@@ -508,8 +508,6 @@ export function GuildTemplateStep({
       </View>
     );
   }
-
-  const bedArea = (widthM * lengthM).toFixed(1);
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>

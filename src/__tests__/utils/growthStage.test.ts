@@ -12,7 +12,33 @@ import type {
   PlantCareProfile,
 } from '../../types/database.types';
 
+// Build a "n days ago" planting date (YYYY-MM-DD) in LOCAL time. The util parses
+// this at local noon (`new Date(date + 'T12:00:00')`) and compares to the local
+// `new Date()`, so anchoring on the local calendar day makes elapsed days exactly
+// `n` regardless of the current time-of-day, timezone, or DST.
+const daysAgoIso = (n: number): string => {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() - n);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 describe('computeExpectedGrowthStage', () => {
+  // Pin the clock to a fixed instant AFTER local noon. The util anchors the
+  // planting date at local noon (`new Date(date + 'T12:00:00')`) and compares
+  // to `new Date()`, so a pinned `now` at 18:00 makes `elapsedDays` floor to
+  // exactly `n` for every `daysAgoIso(n)` (n days + 6h → floor n). Without this
+  // the result depends on the real time-of-day the suite happens to run at.
+  beforeAll(() => {
+    jest.useFakeTimers({ now: new Date(2026, 4, 15, 18, 0, 0) });
+  });
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   const tomatoDurations: GrowthStageDurations = {
     seedling: 21,
     vegetative: 25,
@@ -22,50 +48,28 @@ describe('computeExpectedGrowthStage', () => {
   };
 
   it('returns seedling on day 1', () => {
-    const today = new Date();
-    const plantingDate = new Date(today);
-    plantingDate.setDate(plantingDate.getDate() - 1);
-    const result = computeExpectedGrowthStage(
-      plantingDate.toISOString().slice(0, 10),
-      tomatoDurations
-    );
+    const result = computeExpectedGrowthStage(daysAgoIso(1), tomatoDurations);
     expect(result).not.toBeNull();
     expect(result!.stage).toBe('seedling');
     expect(result!.daysSinceStageStart).toBe(1);
   });
 
   it('returns vegetative after seedling days', () => {
-    const today = new Date();
-    const plantingDate = new Date(today);
-    plantingDate.setDate(plantingDate.getDate() - 25); // 25 days ago (past 21-day seedling)
-    const result = computeExpectedGrowthStage(
-      plantingDate.toISOString().slice(0, 10),
-      tomatoDurations
-    );
+    const result = computeExpectedGrowthStage(daysAgoIso(25), tomatoDurations); // past 21-day seedling
     expect(result).not.toBeNull();
     expect(result!.stage).toBe('vegetative');
   });
 
   it('returns flowering at correct time', () => {
-    const today = new Date();
-    const plantingDate = new Date(today);
-    plantingDate.setDate(plantingDate.getDate() - 50); // seedling(21) + vegetative(25) + 4 = flowering
-    const result = computeExpectedGrowthStage(
-      plantingDate.toISOString().slice(0, 10),
-      tomatoDurations
-    );
+    // seedling(21) + vegetative(25) + 4 = flowering
+    const result = computeExpectedGrowthStage(daysAgoIso(50), tomatoDurations);
     expect(result).not.toBeNull();
     expect(result!.stage).toBe('flowering');
   });
 
   it('returns last stage when past all durations', () => {
-    const today = new Date();
-    const plantingDate = new Date(today);
-    plantingDate.setDate(plantingDate.getDate() - 200); // way past total of 121 days
-    const result = computeExpectedGrowthStage(
-      plantingDate.toISOString().slice(0, 10),
-      tomatoDurations
-    );
+    // way past total of 121 days
+    const result = computeExpectedGrowthStage(daysAgoIso(200), tomatoDurations);
     expect(result).not.toBeNull();
     expect(result!.stage).toBe('mature');
   });
@@ -76,13 +80,8 @@ describe('computeExpectedGrowthStage', () => {
   });
 
   it('computes percentComplete correctly', () => {
-    const today = new Date();
-    const plantingDate = new Date(today);
-    plantingDate.setDate(plantingDate.getDate() - 10); // 10 days into 21-day seedling
-    const result = computeExpectedGrowthStage(
-      plantingDate.toISOString().slice(0, 10),
-      tomatoDurations
-    );
+    // 10 days into 21-day seedling
+    const result = computeExpectedGrowthStage(daysAgoIso(10), tomatoDurations);
     expect(result).not.toBeNull();
     expect(result!.stage).toBe('seedling');
     expect(result!.percentComplete).toBeCloseTo((10 / 21) * 100, 0);
@@ -91,6 +90,14 @@ describe('computeExpectedGrowthStage', () => {
 });
 
 describe('computeAnnualCycleStage', () => {
+  // Same rationale as above: pin the clock so age/elapsed math is deterministic.
+  beforeAll(() => {
+    jest.useFakeTimers({ now: new Date(2026, 4, 15, 18, 0, 0) });
+  });
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   const mangoCycle: AnnualCycleDurations = {
     flowering: 45,
     fruiting: 90,
@@ -99,11 +106,8 @@ describe('computeAnnualCycleStage', () => {
   };
 
   it('returns null if tree is too young', () => {
-    const today = new Date();
-    const plantingDate = new Date(today);
-    plantingDate.setDate(plantingDate.getDate() - 365); // 1 year old
     const result = computeAnnualCycleStage(
-      plantingDate.toISOString().slice(0, 10),
+      daysAgoIso(365), // 1 year old
       5, // 5 years to first harvest
       mangoCycle,
       11 // flowering starts November

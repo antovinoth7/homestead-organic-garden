@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import { View, Text, ScrollView } from 'react-native';
+import type { StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { useTheme } from '@/theme';
 import type { Bed, Plant, CropFamily } from '@/types/database.types';
 import { getGreenManureForMonth, getGuildTemplate } from '@/config/beds';
@@ -8,7 +9,6 @@ import { createStyles } from '@/styles/bedSuccessionTimelineStyles';
 
 const DAY_PX = 2;
 const TOTAL_WIDTH = 365 * DAY_PX;
-const LEFT_COL_W = 80;
 const BAND_HEIGHT = 22;
 const MONTH_HEIGHT = 18;
 const BAR_HEIGHT = 10;
@@ -178,14 +178,14 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
   const totalRows = plantBars.length + 1; // +1 for green manure
   const canvasHeight = BAND_HEIGHT + MONTH_HEIGHT + totalRows * ROW_HEIGHT + 4;
 
-  const bandBg = (id: SeasonId) => {
+  const bandBg = (id: SeasonId): StyleProp<ViewStyle> => {
     if (id === 'summer') return styles.bandSummer;
     if (id === 'sw_monsoon') return styles.bandSwMonsoon;
     if (id === 'ne_monsoon') return styles.bandNeMonsoon;
     return styles.bandCoolDry;
   };
 
-  const bandTxt = (id: SeasonId) => {
+  const bandTxt = (id: SeasonId): StyleProp<TextStyle> => {
     if (id === 'summer') return styles.bandLabelSummer;
     if (id === 'sw_monsoon') return styles.bandLabelSwMonsoon;
     if (id === 'ne_monsoon') return styles.bandLabelNeMonsoon;
@@ -218,7 +218,7 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
 
         {/* Horizontally scrollable year canvas */}
         <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ width: TOTAL_WIDTH, height: canvasHeight, position: 'relative' }}>
+          <View style={[styles.canvas, { width: TOTAL_WIDTH, height: canvasHeight }]}>
 
             {/* Season bands */}
             {SEASON_BANDS.map((band) => (
@@ -230,7 +230,6 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
                   {
                     left: (band.startDay - 1) * DAY_PX,
                     width: (band.endDay - band.startDay + 1) * DAY_PX,
-                    top: 0,
                     height: BAND_HEIGHT,
                   },
                 ]}
@@ -298,7 +297,7 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
             <View
               style={[
                 styles.todayLine,
-                { left: (todayDoy - 1) * DAY_PX, top: 0, height: canvasHeight },
+                { left: (todayDoy - 1) * DAY_PX, height: canvasHeight },
               ]}
             />
 

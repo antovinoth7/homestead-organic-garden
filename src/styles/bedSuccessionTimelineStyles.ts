@@ -37,9 +37,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.accent,
       fontStyle: 'italic' as const,
     },
+    // Scrollable year canvas (absolute-positioned children anchor to this)
+    canvas: {
+      position: 'relative' as const,
+    },
     // Season band strips
     band: {
       position: 'absolute' as const,
+      top: 0,
       justifyContent: 'center' as const,
       paddingHorizontal: 4,
       overflow: 'hidden' as const,
@@ -96,6 +101,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // Today vertical line
     todayLine: {
       position: 'absolute' as const,
+      top: 0,
       width: 2,
       backgroundColor: theme.primary,
     },
