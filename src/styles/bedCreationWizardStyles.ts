@@ -1726,6 +1726,41 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700' as const,
     },
 
+    // ── Crops tab — By Category | By Row sub-toggle ──────────────────────────
+    blCropViewToggle: {
+      flexDirection: 'row' as const,
+      backgroundColor: theme.backgroundTertiary,
+      borderRadius: 16,
+      padding: 3,
+      marginBottom: 10,
+      alignSelf: 'stretch' as const,
+    },
+    blCropViewTab: {
+      flex: 1,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 13,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
+    blCropViewTabActive: {
+      backgroundColor: theme.backgroundSecondary,
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+    blCropViewTabText: {
+      fontSize: 12,
+      fontWeight: '600' as const,
+      color: theme.textTertiary,
+    },
+    blCropViewTabTextActive: {
+      color: theme.text,
+      fontWeight: '700' as const,
+    },
+
     // ── Crops tab — companion antagonist warning banner ───────────────────────
     blCompanionWarningBanner: {
       backgroundColor: theme.warningLight,

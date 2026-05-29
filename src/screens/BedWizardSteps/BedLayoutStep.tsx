@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/theme';
+import { BedLayerStack } from '@/components/BedLayerStack';
 import { BedPlantPickerSheet } from '@/components/BedPlantPickerSheet';
 import { BedRowLayout } from '@/components/BedRowLayout';
 import type { GhostRow } from '@/components/BedRowLayout';
@@ -183,6 +184,7 @@ export function BedLayoutStep({
   }, [bedType, step4.plant_entries]);
 
   const [activeTab, setActiveTab] = useState<'layout' | 'crops'>('layout');
+  const [cropView, setCropView] = useState<'category' | 'row'>('category');
 
   const ghostRowsForWizard = useMemo<GhostRow[]>(() => {
     if (!bedType || !visibleLayers) return [];
@@ -265,13 +267,58 @@ export function BedLayoutStep({
             </View>
           )}
 
-          <BedRowLayout
-            result={rowLayout}
-            solanaceaeBlocked={solanaceaeBlocked ?? false}
-            onAddToRow={handleAddToLayer}
-            onRemovePlant={handleRemovePlant}
-            ghostRows={ghostRowsForWizard}
-          />
+          <View style={styles.blCropViewToggle}>
+            <TouchableOpacity
+              style={[styles.blCropViewTab, cropView === 'category' && styles.blCropViewTabActive]}
+              onPress={() => setCropView('category')}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: cropView === 'category' }}
+            >
+              <Text
+                style={[
+                  styles.blCropViewTabText,
+                  cropView === 'category' && styles.blCropViewTabTextActive,
+                ]}
+              >
+                By Category
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.blCropViewTab, cropView === 'row' && styles.blCropViewTabActive]}
+              onPress={() => setCropView('row')}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: cropView === 'row' }}
+            >
+              <Text
+                style={[
+                  styles.blCropViewTabText,
+                  cropView === 'row' && styles.blCropViewTabTextActive,
+                ]}
+              >
+                By Row
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {cropView === 'category' ? (
+            <BedLayerStack
+              result={rowLayout}
+              entries={step4.plant_entries}
+              visibleLayers={visibleLayers}
+              onAddToLayer={handleAddToLayer}
+              onRemovePlant={handleRemovePlant}
+              onResolveEntry={handleOpenResolver}
+              onReorder={handleReorder}
+            />
+          ) : (
+            <BedRowLayout
+              result={rowLayout}
+              solanaceaeBlocked={solanaceaeBlocked ?? false}
+              onAddToRow={handleAddToLayer}
+              onRemovePlant={handleRemovePlant}
+              ghostRows={ghostRowsForWizard}
+            />
+          )}
         </>
       )}
 
