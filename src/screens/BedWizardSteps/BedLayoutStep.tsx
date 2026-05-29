@@ -186,6 +186,14 @@ export function BedLayoutStep({
   const [activeTab, setActiveTab] = useState<'layout' | 'crops'>('layout');
   const [cropView, setCropView] = useState<'category' | 'row'>('category');
 
+  const entryResolutionMap = useMemo(() => {
+    const map = new Map<string, EntryResolution>();
+    for (const e of step4.plant_entries) {
+      if (e.resolution !== undefined) map.set(e.id, e.resolution);
+    }
+    return map;
+  }, [step4.plant_entries]);
+
   const ghostRowsForWizard = useMemo<GhostRow[]>(() => {
     if (!bedType || !visibleLayers) return [];
     const occupiedLayers = new Set(rowLayout.rows.map((r) => r.layer));
@@ -317,6 +325,8 @@ export function BedLayoutStep({
               onAddToRow={handleAddToLayer}
               onRemovePlant={handleRemovePlant}
               ghostRows={ghostRowsForWizard}
+              onResolveEntry={handleOpenResolver}
+              entryResolutions={entryResolutionMap}
             />
           )}
         </>

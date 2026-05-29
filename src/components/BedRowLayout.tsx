@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedRowLayoutStyles';
-import type { BedLayer } from '@/types/database.types';
+import type { BedLayer, EntryResolution } from '@/types/database.types';
 import { createStyles as createWizardStyles } from '@/styles/bedCreationWizardStyles';
 import type { RowLayoutResult, BedRow, RowPlant } from '@/utils/rowLayoutEngine';
 import { interleavePlants } from '@/utils/rowLayoutEngine';
@@ -43,6 +43,8 @@ interface Props {
   onAddToRow?: (layer: BedLayer) => void;
   onRemovePlant?: (id: string) => void;
   ghostRows?: GhostRow[];
+  onResolveEntry?: (entryId: string) => void;
+  entryResolutions?: Map<string, EntryResolution>;
 }
 
 const LAYER_BORDER: Record<BedLayer, string> = {
@@ -104,11 +106,21 @@ function getRowDisplayName(layer: BedLayer, isStaggered: boolean): string {
 
 // ─── PlantTile ────────────────────────────────────────────────────────────────
 
+function resolutionLabel(res: EntryResolution | undefined): { text: string; resolved: boolean } {
+  const kind = res?.kind ?? 'placeholder';
+  if (kind === 'placeholder') return { text: 'Tap to link / add to My Plants', resolved: false };
+  if (kind === 'link') return { text: '✓ Linked to plant', resolved: true };
+  const variety = res?.kind === 'create' ? res.variety : undefined;
+  return { text: variety ? `✓ New: ${variety}` : '✓ New plant', resolved: true };
+}
+
 interface PlantTileProps {
   plant: RowPlant;
   layerIcon: string;
   layerBorderColor: string;
   onRemove?: () => void;
+  resolution?: EntryResolution;
+  onResolveEntry?: () => void;
 }
 
 function PlantTile({
@@ -116,11 +128,14 @@ function PlantTile({
   layerIcon,
   layerBorderColor,
   onRemove,
+  resolution,
+  onResolveEntry,
 }: PlantTileProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const wizardStyles = useMemo(() => createWizardStyles(theme), [theme]);
   const isCompanion = plant.isCompanion === true;
+  const resLabel = onResolveEntry !== undefined ? resolutionLabel(resolution) : null;
 
   return (
     <View
@@ -158,6 +173,18 @@ function PlantTile({
         <View style={styles.spacingBadge}>
           <Text style={styles.spacingBadgeText}>{plant.spacingCm}cm gap</Text>
         </View>
+      )}
+      {resLabel !== null && (
+        <TouchableOpacity
+          onPress={onResolveEntry}
+          style={[styles.resolutionChip, resLabel.resolved && styles.resolutionChipResolved]}
+        >
+          <Text
+            style={[styles.resolutionChipText, resLabel.resolved && styles.resolutionChipResolvedText]}
+          >
+            {resLabel.text}
+          </Text>
+        </TouchableOpacity>
       )}
       {onRemove !== undefined && (
         <TouchableOpacity style={wizardStyles.blRemoveBtn} onPress={onRemove} hitSlop={6}>
@@ -209,9 +236,17 @@ interface RowCardProps {
   row: BedRow;
   onAddToRow?: (layer: BedLayer) => void;
   onRemovePlant?: (id: string) => void;
+  onResolveEntry?: (entryId: string) => void;
+  entryResolutions?: Map<string, EntryResolution>;
 }
 
-function RowCard({ row, onAddToRow, onRemovePlant }: RowCardProps): React.JSX.Element {
+function RowCard({
+  row,
+  onAddToRow,
+  onRemovePlant,
+  onResolveEntry,
+  entryResolutions,
+}: RowCardProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -280,6 +315,15 @@ function RowCard({ row, onAddToRow, onRemovePlant }: RowCardProps): React.JSX.El
           )}
           <Text style={styles.plantCountText}>{plantCount}</Text>
         </View>
+        {onAddToRow !== undefined && (
+          <TouchableOpacity
+            style={styles.rowCardAddBtn}
+            onPress={() => onAddToRow(row.layer)}
+            hitSlop={4}
+          >
+            <Text style={styles.rowCardAddBtnText}>+</Text>
+          </TouchableOpacity>
+        )}
         <Ionicons
           name={isExpanded ? 'chevron-up' : 'chevron-down'}
           size={16}
@@ -314,6 +358,12 @@ function RowCard({ row, onAddToRow, onRemovePlant }: RowCardProps): React.JSX.El
                     plant={plant}
                     layerIcon={icon}
                     layerBorderColor={borderColor}
+                    resolution={entryResolutions?.get(plant.id ?? '')}
+                    onResolveEntry={
+                      onResolveEntry && plant.id !== undefined
+                        ? () => onResolveEntry(plant.id!)
+                        : undefined
+                    }
                     onRemove={
                       onRemovePlant && plant.id !== undefined
                         ? () => onRemovePlant(plant.id!)
@@ -689,6 +739,8 @@ export function BedRowLayout({
   onAddToRow,
   onRemovePlant,
   ghostRows,
+  onResolveEntry,
+  entryResolutions,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -761,6 +813,8 @@ export function BedRowLayout({
           row={row}
           onAddToRow={onAddToRow}
           onRemovePlant={onRemovePlant}
+          onResolveEntry={onResolveEntry}
+          entryResolutions={entryResolutions}
         />
       ))}
 

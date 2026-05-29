@@ -642,4 +642,42 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.error,
       fontWeight: '600' as const,
     },
+
+    // ── Resolution chip ────────────────────────────────────────────────────────
+    resolutionChip: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderStyle: 'dashed' as const,
+      borderColor: theme.textTertiary,
+      marginTop: 3,
+      alignSelf: 'flex-start' as const,
+    },
+    resolutionChipText: {
+      fontSize: 9,
+      color: theme.textSecondary,
+      fontWeight: '700' as const,
+      letterSpacing: 0.3,
+    },
+    resolutionChipResolved: {
+      borderStyle: 'solid' as const,
+      borderColor: theme.success,
+      backgroundColor: theme.successLight,
+    },
+    resolutionChipResolvedText: {
+      color: theme.success,
+    },
+    // ── Per-row add button ────────────────────────────────────────────────────
+    rowCardAddBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 14,
+      backgroundColor: theme.primary,
+    },
+    rowCardAddBtnText: {
+      fontSize: 12,
+      fontWeight: '700' as const,
+      color: theme.textInverse,
+    },
   });
