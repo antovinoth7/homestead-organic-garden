@@ -1436,6 +1436,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       fontWeight: '500' as const,
     },
+    tdmModalGestureRoot: {
+      flex: 1,
+    },
     tdmModalRoot: {
       flex: 1,
       backgroundColor: theme.background,

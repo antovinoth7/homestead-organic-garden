@@ -8,7 +8,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
@@ -623,26 +623,28 @@ export function BedTopDownMap(props: BedTopDownMapProps): React.JSX.Element | nu
         presentationStyle="fullScreen"
         onRequestClose={() => setIsFullScreen(false)}
       >
-        <View style={styles.tdmModalRoot}>
-          <View style={styles.tdmModalHeader}>
-            <Text style={styles.tdmModalTitle}>{dimensionLabel}</Text>
-            <TouchableOpacity
-              style={styles.tdmModalClose}
-              onPress={() => setIsFullScreen(false)}
-              accessibilityLabel="Close fullscreen map"
-              hitSlop={8}
-            >
-              <Ionicons name="close" size={24} color={theme.text} />
-            </TouchableOpacity>
+        <GestureHandlerRootView style={styles.tdmModalGestureRoot}>
+          <View style={styles.tdmModalRoot}>
+            <View style={styles.tdmModalHeader}>
+              <Text style={styles.tdmModalTitle}>{dimensionLabel}</Text>
+              <TouchableOpacity
+                style={styles.tdmModalClose}
+                onPress={() => setIsFullScreen(false)}
+                accessibilityLabel="Close fullscreen map"
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={24} color={theme.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.tdmModalCanvasWrap}>
+              <BedTopDownCanvas
+                {...props}
+                mapWidth={modalMapWidth}
+                frameHeightCap={modalHeightCap}
+              />
+            </View>
           </View>
-          <View style={styles.tdmModalCanvasWrap}>
-            <BedTopDownCanvas
-              {...props}
-              mapWidth={modalMapWidth}
-              frameHeightCap={modalHeightCap}
-            />
-          </View>
-        </View>
+        </GestureHandlerRootView>
       </Modal>
     </>
   );
