@@ -1292,9 +1292,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.primary,
       paddingHorizontal: 6,
-      paddingVertical: 2,
+      paddingVertical: 1,
       borderRadius: 999,
-      transform: [{ translateY: -9 }],
+      // Lift the pill above the row centerline so it clears the plant pins
+      // (which are centered on the line and extend ~±16px), preventing overlap.
+      transform: [{ translateY: -24 }],
     },
     tdmRowTagText: {
       fontSize: 11,

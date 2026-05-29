@@ -8,7 +8,15 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  GestureHandlerRootView,
+  PinchGestureHandler,
+  PanGestureHandler,
+  State,
+  PinchGestureHandlerEventPayload,
+  PanGestureHandlerEventPayload,
+} from 'react-native-gesture-handler';
+import type { HandlerStateChangeEvent } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
@@ -63,17 +71,31 @@ interface CanvasProps extends BedTopDownMapProps {
 
 interface CanvasGestureWrapProps {
   isInlinePreview: boolean;
-  composedGesture: ReturnType<typeof Gesture.Simultaneous>;
   onExpand?: () => void;
+  onPinchEvent: ReturnType<typeof Animated.event>;
+  onPinchStateChange: (e: HandlerStateChangeEvent<PinchGestureHandlerEventPayload>) => void;
+  onPanEvent: ReturnType<typeof Animated.event>;
+  onPanStateChange: (e: HandlerStateChangeEvent<PanGestureHandlerEventPayload>) => void;
+  panEnabled: boolean;
   children: React.ReactNode;
 }
 
+// Inline preview is a tap-to-expand button; fullscreen uses the v1 pinch/pan
+// handlers (which work without reanimated). The handler refs are local because
+// they are only needed to cross-reference the two gestures as simultaneous.
 function CanvasGestureWrap({
   isInlinePreview,
-  composedGesture,
   onExpand,
+  onPinchEvent,
+  onPinchStateChange,
+  onPanEvent,
+  onPanStateChange,
+  panEnabled,
   children,
 }: CanvasGestureWrapProps): React.JSX.Element {
+  const pinchRef = useRef(null);
+  const panRef = useRef(null);
+
   if (isInlinePreview) {
     return (
       <TouchableOpacity
@@ -85,7 +107,28 @@ function CanvasGestureWrap({
       </TouchableOpacity>
     );
   }
-  return <GestureDetector gesture={composedGesture}>{children as React.ReactElement}</GestureDetector>;
+  return (
+    <PanGestureHandler
+      ref={panRef}
+      onGestureEvent={onPanEvent}
+      onHandlerStateChange={onPanStateChange}
+      simultaneousHandlers={[pinchRef]}
+      minPointers={1}
+      maxPointers={1}
+      enabled={panEnabled}
+    >
+      <Animated.View collapsable={false}>
+        <PinchGestureHandler
+          ref={pinchRef}
+          onGestureEvent={onPinchEvent}
+          onHandlerStateChange={onPinchStateChange}
+          simultaneousHandlers={[panRef]}
+        >
+          <Animated.View collapsable={false}>{children}</Animated.View>
+        </PinchGestureHandler>
+      </Animated.View>
+    </PanGestureHandler>
+  );
 }
 
 function BedTopDownCanvas({
@@ -148,34 +191,37 @@ function BedTopDownCanvas({
     [rows]
   );
 
-  // ── Pinch + pan state ────────────────────────────────────────────────────
-  const scale = useRef(new Animated.Value(1)).current;
+  // ── Pinch + pan state (v1 gesture-handler API — works without reanimated) ──
+  const baseScale = useRef(new Animated.Value(1)).current;
+  const pinchScale = useRef(new Animated.Value(1)).current;
+  const composedScale = useRef(Animated.multiply(baseScale, pinchScale)).current;
+  const lastScale = useRef(1);
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
+  const lastOffset = useRef({ x: 0, y: 0 });
   const labelOpacity = useRef(new Animated.Value(0)).current;
-  const savedScale = useRef(1);
-  const savedTx = useRef(0);
-  const savedTy = useRef(0);
   const frameSize = useRef({ width: 0, height: 0 });
   const [currentScale, setCurrentScale] = useState(1);
   const [hintDismissed, setHintDismissed] = useState(false);
 
-  const onFrameLayout = useCallback(
-    (e: LayoutChangeEvent) => {
-      const { width, height } = e.nativeEvent.layout;
-      frameSize.current = { width, height };
-      if (savedScale.current > 1.01) {
-        const maxTx = (width * (savedScale.current - 1)) / 2;
-        const maxTy = (height * (savedScale.current - 1)) / 2;
-        const tx = clamp(savedTx.current, -maxTx, maxTx);
-        const ty = clamp(savedTy.current, -maxTy, maxTy);
-        if (tx !== savedTx.current || ty !== savedTy.current) {
-          savedTx.current = tx;
-          savedTy.current = ty;
-          translateX.setValue(tx);
-          translateY.setValue(ty);
-        }
-      }
+  const clampOffset = useCallback(
+    (x: number, y: number, s: number): { x: number; y: number } => {
+      const maxTx = (frameSize.current.width * (s - 1)) / 2;
+      const maxTy = (frameSize.current.height * (s - 1)) / 2;
+      return { x: clamp(x, -maxTx, maxTx), y: clamp(y, -maxTy, maxTy) };
+    },
+    []
+  );
+
+  // Re-establish the offset model (offset = position, value = 0) so subsequent
+  // pans accumulate correctly from the committed position.
+  const settleOffset = useCallback(
+    (x: number, y: number) => {
+      lastOffset.current = { x, y };
+      translateX.setOffset(x);
+      translateX.setValue(0);
+      translateY.setOffset(y);
+      translateY.setValue(0);
     },
     [translateX, translateY]
   );
@@ -187,99 +233,92 @@ function BedTopDownCanvas({
     [labelOpacity]
   );
 
-  const commitState = useCallback(
-    (s: number, tx: number, ty: number) => {
-      savedScale.current = s;
-      savedTx.current = tx;
-      savedTy.current = ty;
-      setCurrentScale(s);
-      if (s > 1.05 && !hintDismissed) setHintDismissed(true);
+  const onFrameLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const { width, height } = e.nativeEvent.layout;
+      frameSize.current = { width, height };
+      if (lastScale.current > 1.01) {
+        const { x, y } = clampOffset(lastOffset.current.x, lastOffset.current.y, lastScale.current);
+        if (x !== lastOffset.current.x || y !== lastOffset.current.y) {
+          settleOffset(x, y);
+        }
+      }
     },
-    [hintDismissed]
+    [clampOffset, settleOffset]
   );
 
-  const resetView = useCallback(() => {
-    Animated.parallel([
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 7 }),
-      Animated.spring(translateX, { toValue: 0, useNativeDriver: true, friction: 7 }),
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 7 }),
-      Animated.timing(labelOpacity, { toValue: 0, duration: 150, useNativeDriver: true }),
-    ]).start();
-    savedScale.current = 1;
-    savedTx.current = 0;
-    savedTy.current = 0;
-    setCurrentScale(1);
-  }, [scale, translateX, translateY, labelOpacity]);
+  const onPinchEvent = useRef(
+    Animated.event([{ nativeEvent: { scale: pinchScale } }], { useNativeDriver: true })
+  ).current;
 
-  const zoomTo = useCallback(
+  const onPinchStateChange = useCallback(
+    ({ nativeEvent }: HandlerStateChangeEvent<PinchGestureHandlerEventPayload>) => {
+      if (nativeEvent.oldState === State.ACTIVE) {
+        const next = clamp(lastScale.current * nativeEvent.scale, MIN_SCALE, MAX_SCALE);
+        lastScale.current = next;
+        baseScale.setValue(next);
+        pinchScale.setValue(1);
+        const { x, y } = clampOffset(lastOffset.current.x, lastOffset.current.y, next);
+        settleOffset(x, y);
+        applyLabelOpacity(next);
+        setCurrentScale(next);
+        if (next > 1.05 && !hintDismissed) setHintDismissed(true);
+      }
+    },
+    [baseScale, pinchScale, clampOffset, settleOffset, applyLabelOpacity, hintDismissed]
+  );
+
+  const onPanEvent = useRef(
+    Animated.event([{ nativeEvent: { translationX: translateX, translationY: translateY } }], {
+      useNativeDriver: true,
+    })
+  ).current;
+
+  const onPanStateChange = useCallback(
+    ({ nativeEvent }: HandlerStateChangeEvent<PanGestureHandlerEventPayload>) => {
+      if (nativeEvent.oldState === State.ACTIVE) {
+        const { x, y } = clampOffset(
+          lastOffset.current.x + nativeEvent.translationX,
+          lastOffset.current.y + nativeEvent.translationY,
+          lastScale.current
+        );
+        settleOffset(x, y);
+      }
+    },
+    [clampOffset, settleOffset]
+  );
+
+  const animateTo = useCallback(
     (target: number) => {
       const next = clamp(target, MIN_SCALE, MAX_SCALE);
-      const maxTx = (frameSize.current.width * (next - 1)) / 2;
-      const maxTy = (frameSize.current.height * (next - 1)) / 2;
-      const tx = clamp(savedTx.current, -maxTx, maxTx);
-      const ty = clamp(savedTy.current, -maxTy, maxTy);
+      const { x, y } = clampOffset(lastOffset.current.x, lastOffset.current.y, next);
+      pinchScale.setValue(1);
+      // Collapse offset into value so the spring animates to the true target.
+      translateX.setOffset(0);
+      translateX.setValue(lastOffset.current.x);
+      translateY.setOffset(0);
+      translateY.setValue(lastOffset.current.y);
       Animated.parallel([
-        Animated.spring(scale, { toValue: next, useNativeDriver: true, friction: 7 }),
-        Animated.spring(translateX, { toValue: tx, useNativeDriver: true, friction: 7 }),
-        Animated.spring(translateY, { toValue: ty, useNativeDriver: true, friction: 7 }),
+        Animated.spring(baseScale, { toValue: next, useNativeDriver: true, friction: 7 }),
+        Animated.spring(translateX, { toValue: x, useNativeDriver: true, friction: 7 }),
+        Animated.spring(translateY, { toValue: y, useNativeDriver: true, friction: 7 }),
         Animated.timing(labelOpacity, {
           toValue: next >= LABEL_VISIBLE_SCALE ? 1 : 0,
           duration: 150,
           useNativeDriver: true,
         }),
-      ]).start();
-      commitState(next, tx, ty);
+      ]).start(() => settleOffset(x, y));
+      lastScale.current = next;
+      lastOffset.current = { x, y };
+      setCurrentScale(next);
+      if (next > 1.05 && !hintDismissed) setHintDismissed(true);
     },
-    [scale, translateX, translateY, labelOpacity, commitState]
+    [baseScale, pinchScale, translateX, translateY, labelOpacity, clampOffset, settleOffset, hintDismissed]
   );
 
-  const handleZoomIn = useCallback(() => zoomTo(savedScale.current + 0.5), [zoomTo]);
-  const handleZoomOut = useCallback(() => zoomTo(savedScale.current - 0.5), [zoomTo]);
-
-  const composedGesture = useMemo(() => {
-    const pinchBase = { scale: 1 };
-    const pinch = Gesture.Pinch()
-      .onStart(() => {
-        pinchBase.scale = savedScale.current;
-      })
-      .onUpdate((e) => {
-        const next = clamp(pinchBase.scale * e.scale, MIN_SCALE, MAX_SCALE);
-        scale.setValue(next);
-        applyLabelOpacity(next);
-      })
-      .onEnd((e) => {
-        const next = clamp(pinchBase.scale * e.scale, MIN_SCALE, MAX_SCALE);
-        commitState(next, savedTx.current, savedTy.current);
-      });
-
-    const panBase = { tx: 0, ty: 0 };
-    const pan = Gesture.Pan()
-      .minPointers(1)
-      .maxPointers(1)
-      .activeOffsetX([-8, 8])
-      .activeOffsetY([-8, 8])
-      .onStart(() => {
-        panBase.tx = savedTx.current;
-        panBase.ty = savedTy.current;
-      })
-      .onUpdate((e) => {
-        const maxTx = (frameSize.current.width * (savedScale.current - 1)) / 2;
-        const maxTy = (frameSize.current.height * (savedScale.current - 1)) / 2;
-        translateX.setValue(clamp(panBase.tx + e.translationX, -maxTx, maxTx));
-        translateY.setValue(clamp(panBase.ty + e.translationY, -maxTy, maxTy));
-      })
-      .onEnd((e) => {
-        const maxTx = (frameSize.current.width * (savedScale.current - 1)) / 2;
-        const maxTy = (frameSize.current.height * (savedScale.current - 1)) / 2;
-        commitState(
-          savedScale.current,
-          clamp(panBase.tx + e.translationX, -maxTx, maxTx),
-          clamp(panBase.ty + e.translationY, -maxTy, maxTy)
-        );
-      });
-
-    return Gesture.Simultaneous(pinch, pan);
-  }, [scale, translateX, translateY, applyLabelOpacity, commitState]);
+  const resetView = useCallback(() => animateTo(MIN_SCALE), [animateTo]);
+  const handleZoomIn = useCallback(() => animateTo(lastScale.current + 0.5), [animateTo]);
+  const handleZoomOut = useCallback(() => animateTo(lastScale.current - 0.5), [animateTo]);
 
   const pathLabel = `${walkingPathCm} cm path`;
   const edgeLabel = `${edgeBufferCm} cm edge`;
@@ -313,8 +352,12 @@ function BedTopDownCanvas({
 
         <CanvasGestureWrap
           isInlinePreview={isInlinePreview}
-          composedGesture={composedGesture}
           onExpand={onExpand}
+          onPinchEvent={onPinchEvent}
+          onPinchStateChange={onPinchStateChange}
+          onPanEvent={onPanEvent}
+          onPanStateChange={onPanStateChange}
+          panEnabled={currentScale > 1.01}
         >
           <View
             style={[
@@ -326,7 +369,7 @@ function BedTopDownCanvas({
             <Animated.View
               style={[
                 styles.tdmCanvas,
-                { transform: [{ translateX }, { translateY }, { scale }] },
+                { transform: [{ translateX }, { translateY }, { scale: composedScale }] },
               ]}
             >
               {pathPct > 0 && (
