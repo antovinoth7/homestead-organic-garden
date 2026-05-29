@@ -89,6 +89,8 @@ describe('computeRowLayout', () => {
     const result = computeRowLayout(plants, W, L);
     expect(result.usedLengthCm).toBe(90);
     expect(result.edgeBufferCm).toBe(15);
+    // E-W edge buffer mirrors the per-row eBufEW: computeEdgeBuffer(60) = clamp(15, 5, 20) = 15.
+    expect(result.edgeBufferEWCm).toBe(15);
   });
 
   it('fitsInBed false and overflowCm > 0 when used length exceeds bed length', () => {

@@ -320,6 +320,7 @@ export interface RowLayoutResult {
   bedWidthCm: number;
   bedLengthCm: number;
   edgeBufferCm: number; // N-S edge buffer applied at both bed ends
+  edgeBufferEWCm: number; // E-W (left/right) edge buffer — gap from each side wall to the first/last plant column
   walkingPathCm: number;
   companionWarnings: CompanionWarning[];
   successionWeeks: number[];
@@ -380,6 +381,10 @@ export function computeRowLayout(
 
   const rows: BedRow[] = [];
   let rowIndex = 1;
+  // Running max of the per-row E-W edge buffer (already baked into eastPositionsCm
+  // at each row-build site below). Surfaced on the result so the map can draw the
+  // left/right side gap; mirrors how the N-S edgeBufferCm is derived from the max.
+  let maxEwEdgeBuffer = 0;
   const successionWeekSet = new Set<number>();
 
   // Pool ALL companions across layers into a single sequence so they can interplant
@@ -440,6 +445,7 @@ export function computeRowLayout(
           totalChunksThisLayer > 1 ? ` ${ROW_SUFFIX[chunkIndex] ?? String(chunkIndex + 1)}` : '';
 
         const eBufEW = computeEdgeBuffer(speciesSpacing);
+        maxEwEdgeBuffer = Math.max(maxEwEdgeBuffer, eBufEW);
         const eastPositionsCm = Array.from(
           { length: speciesPPR },
           (_, k) => eBufEW + k * speciesSpacing
@@ -519,6 +525,7 @@ export function computeRowLayout(
             : '';
 
         const eBufEW = computeEdgeBuffer(maxChunkSpacing);
+        maxEwEdgeBuffer = Math.max(maxEwEdgeBuffer, eBufEW);
         const eastPositionsCm = Array.from(
           { length: plantsPerRow },
           (_, k) => eBufEW + k * maxChunkSpacing
@@ -614,6 +621,7 @@ export function computeRowLayout(
     bedWidthCm,
     bedLengthCm,
     edgeBufferCm,
+    edgeBufferEWCm: rows.length > 0 ? maxEwEdgeBuffer : 0,
     walkingPathCm: WALKING_PATH_BY_CATEGORY[category],
     companionWarnings: warnings,
     successionWeeks,

@@ -1197,27 +1197,50 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       letterSpacing: 0.2,
     },
-    tdmMapWrap: {
-      flexDirection: 'row' as const,
-      alignItems: 'stretch' as const,
-      gap: 6,
+    tdmRoot: {
+      flexDirection: 'column' as const,
+      gap: 8,
     },
-    tdmRuler: {
-      width: 26,
+    tdmMapZone: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: 4,
+    },
+    tdmCanvasColumn: {
+      flexDirection: 'column' as const,
+      gap: 5,
+    },
+    tdmGutter: {
+      width: 34,
       position: 'relative' as const,
     },
-    tdmRulerTick: {
+    tdmGutterTick: {
       position: 'absolute' as const,
       right: 0,
-      fontSize: 10,
-      color: theme.textTertiary,
-      transform: [{ translateY: -6 }],
-      textAlign: 'right' as const,
+      width: 6,
+      height: 1,
+      backgroundColor: theme.borderDark,
+      opacity: 0.5,
     },
-    tdmFrame: {
-      flex: 1,
-      flexDirection: 'column' as const,
-      gap: 6,
+    tdmGutterRow: {
+      position: 'absolute' as const,
+      right: 9,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 1,
+      transform: [{ translateY: -7 }],
+    },
+    tdmGutterRowText: {
+      fontSize: 10,
+      fontWeight: '700' as const,
+      color: theme.primary,
+      letterSpacing: 0.2,
+    },
+    tdmGutterRowWarn: {
+      fontSize: 9,
+      color: theme.warning,
+      fontWeight: '700' as const,
     },
     tdmCompass: {
       flexDirection: 'row' as const,
@@ -1283,68 +1306,32 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       opacity: 0.55,
       transform: [{ translateY: -0.5 }],
     },
-    tdmRowTag: {
-      position: 'absolute' as const,
-      left: 3,
-      flexDirection: 'row' as const,
+    tdmEdgeRail: {
+      width: 22,
       alignItems: 'center' as const,
-      backgroundColor: theme.backgroundSecondary,
-      paddingHorizontal: 4,
-      paddingVertical: 0,
-      borderRadius: 999,
-      transform: [{ translateY: -7 }],
+      justifyContent: 'center' as const,
     },
-    tdmRowTagText: {
-      fontSize: 8,
-      color: theme.primary,
-      fontWeight: '700' as const,
-      letterSpacing: 0.2,
-    },
-    tdmRowTagWarn: {
-      fontSize: 8,
-      color: theme.warning,
-      fontWeight: '700' as const,
-    },
-    tdmPathStrip: {
-      position: 'absolute' as const,
-      left: 0,
-      right: 0,
-      backgroundColor: theme.borderDark,
-      opacity: 0.12,
-    },
-    tdmPathStripTop: {
-      top: 0,
-    },
-    tdmPathStripBottom: {
-      bottom: 0,
-    },
-    tdmEdgeStrip: {
-      position: 'absolute' as const,
-      left: 0,
-      right: 0,
-      backgroundColor: theme.borderDark,
-      opacity: 0.12,
-    },
-    tdmEdgeStripTop: { top: 0 },
-    tdmEdgeStripBottom: { bottom: 0 },
-    tdmStripLabel: {
-      position: 'absolute' as const,
+    tdmEdgeRailLabel: {
+      width: 60,
       fontSize: 9,
       color: theme.textTertiary,
       fontWeight: '600' as const,
       letterSpacing: 0.2,
-    },
-    tdmStripLabelN: {
-      top: 1,
-      left: 0,
-      right: 0,
       textAlign: 'center' as const,
+      transform: [{ rotate: '-90deg' }],
     },
-    tdmStripLabelS: {
-      bottom: 1,
-      left: 0,
-      right: 0,
-      textAlign: 'center' as const,
+    tdmRuleNote: {
+      flexDirection: 'row' as const,
+      alignItems: 'flex-start' as const,
+      gap: 5,
+      paddingHorizontal: 2,
+    },
+    tdmRuleNoteText: {
+      flex: 1,
+      fontSize: 10,
+      lineHeight: 14,
+      color: theme.textSecondary,
+      letterSpacing: 0.1,
     },
     tdmGapCaret: {
       position: 'absolute' as const,
@@ -1361,7 +1348,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmZoomHint: {
       position: 'absolute' as const,
       top: 6,
-      right: 6,
+      left: 6,
       backgroundColor: theme.backgroundSecondary,
       paddingHorizontal: 8,
       paddingVertical: 4,
@@ -1390,7 +1377,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
     },
-    tdmExpandButton: {
+    tdmExpandTouch: {
       position: 'absolute' as const,
       top: 6,
       right: 6,
@@ -1525,20 +1512,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       marginLeft: 'auto' as const,
       fontStyle: 'italic' as const,
-    },
-    tdmScaleBar: {
-      position: 'absolute' as const,
-      bottom: 4,
-      right: 4,
-      backgroundColor: theme.backgroundSecondary,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    tdmScaleBarText: {
-      fontSize: 10,
-      color: theme.textTertiary,
-      letterSpacing: 0.2,
     },
     blTrellisCard: {
       backgroundColor: theme.warningLight,

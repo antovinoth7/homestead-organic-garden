@@ -66,6 +66,7 @@ export function BedLayoutStep({
       bedWidthCm: Math.round(step3.width_m * 100),
       bedLengthCm: Math.round(step3.length_m * 100),
       edgeBufferCm: 0,
+      edgeBufferEWCm: 0,
       walkingPathCm: 60,
       companionWarnings: [],
       successionWeeks: [],
@@ -212,6 +213,7 @@ export function BedLayoutStep({
             layerColor={getLayerColor}
             walkingPathCm={rowLayout.walkingPathCm}
             edgeBufferCm={rowLayout.edgeBufferCm}
+            edgeBufferEWCm={rowLayout.edgeBufferEWCm}
             overflowCm={rowLayout.overflowCm}
           />
 
