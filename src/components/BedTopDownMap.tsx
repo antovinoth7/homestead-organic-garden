@@ -8,7 +8,16 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import {
+  GestureHandlerRootView,
+  PinchGestureHandler,
+  PanGestureHandler,
+  State,
+  PinchGestureHandlerEventPayload,
+  PanGestureHandlerEventPayload,
+} from 'react-native-gesture-handler';
+import type { HandlerStateChangeEvent } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
@@ -63,17 +72,31 @@ interface CanvasProps extends BedTopDownMapProps {
 
 interface CanvasGestureWrapProps {
   isInlinePreview: boolean;
-  composedGesture: ReturnType<typeof Gesture.Simultaneous>;
   onExpand?: () => void;
+  onPinchEvent: ReturnType<typeof Animated.event>;
+  onPinchStateChange: (e: HandlerStateChangeEvent<PinchGestureHandlerEventPayload>) => void;
+  onPanEvent: ReturnType<typeof Animated.event>;
+  onPanStateChange: (e: HandlerStateChangeEvent<PanGestureHandlerEventPayload>) => void;
+  panEnabled: boolean;
   children: React.ReactNode;
 }
 
+// Inline preview is a tap-to-expand button; fullscreen uses the v1 pinch/pan
+// handlers (which work without reanimated). The handler refs are local because
+// they are only needed to cross-reference the two gestures as simultaneous.
 function CanvasGestureWrap({
   isInlinePreview,
-  composedGesture,
   onExpand,
+  onPinchEvent,
+  onPinchStateChange,
+  onPanEvent,
+  onPanStateChange,
+  panEnabled,
   children,
 }: CanvasGestureWrapProps): React.JSX.Element {
+  const pinchRef = useRef(null);
+  const panRef = useRef(null);
+
   if (isInlinePreview) {
     return (
       <TouchableOpacity
@@ -85,7 +108,28 @@ function CanvasGestureWrap({
       </TouchableOpacity>
     );
   }
-  return <GestureDetector gesture={composedGesture}>{children as React.ReactElement}</GestureDetector>;
+  return (
+    <PanGestureHandler
+      ref={panRef}
+      onGestureEvent={onPanEvent}
+      onHandlerStateChange={onPanStateChange}
+      simultaneousHandlers={[pinchRef]}
+      minPointers={1}
+      maxPointers={1}
+      enabled={panEnabled}
+    >
+      <Animated.View collapsable={false}>
+        <PinchGestureHandler
+          ref={pinchRef}
+          onGestureEvent={onPinchEvent}
+          onHandlerStateChange={onPinchStateChange}
+          simultaneousHandlers={[panRef]}
+        >
+          <Animated.View collapsable={false}>{children}</Animated.View>
+        </PinchGestureHandler>
+      </Animated.View>
+    </PanGestureHandler>
+  );
 }
 
 function BedTopDownCanvas({
@@ -148,34 +192,34 @@ function BedTopDownCanvas({
     [rows]
   );
 
-  // ── Pinch + pan state ────────────────────────────────────────────────────
-  const scale = useRef(new Animated.Value(1)).current;
+  // ── Pinch + pan state (v1 gesture-handler API — works without reanimated) ──
+  const baseScale = useRef(new Animated.Value(1)).current;
+  const pinchScale = useRef(new Animated.Value(1)).current;
+  const composedScale = useRef(Animated.multiply(baseScale, pinchScale)).current;
+  const lastScale = useRef(1);
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
+  const lastOffset = useRef({ x: 0, y: 0 });
   const labelOpacity = useRef(new Animated.Value(0)).current;
-  const savedScale = useRef(1);
-  const savedTx = useRef(0);
-  const savedTy = useRef(0);
   const frameSize = useRef({ width: 0, height: 0 });
   const [currentScale, setCurrentScale] = useState(1);
   const [hintDismissed, setHintDismissed] = useState(false);
 
-  const onFrameLayout = useCallback(
-    (e: LayoutChangeEvent) => {
-      const { width, height } = e.nativeEvent.layout;
-      frameSize.current = { width, height };
-      if (savedScale.current > 1.01) {
-        const maxTx = (width * (savedScale.current - 1)) / 2;
-        const maxTy = (height * (savedScale.current - 1)) / 2;
-        const tx = clamp(savedTx.current, -maxTx, maxTx);
-        const ty = clamp(savedTy.current, -maxTy, maxTy);
-        if (tx !== savedTx.current || ty !== savedTy.current) {
-          savedTx.current = tx;
-          savedTy.current = ty;
-          translateX.setValue(tx);
-          translateY.setValue(ty);
-        }
-      }
+  const clampOffset = useCallback((x: number, y: number, s: number): { x: number; y: number } => {
+    const maxTx = (frameSize.current.width * (s - 1)) / 2;
+    const maxTy = (frameSize.current.height * (s - 1)) / 2;
+    return { x: clamp(x, -maxTx, maxTx), y: clamp(y, -maxTy, maxTy) };
+  }, []);
+
+  // Re-establish the offset model (offset = position, value = 0) so subsequent
+  // pans accumulate correctly from the committed position.
+  const settleOffset = useCallback(
+    (x: number, y: number) => {
+      lastOffset.current = { x, y };
+      translateX.setOffset(x);
+      translateX.setValue(0);
+      translateY.setOffset(y);
+      translateY.setValue(0);
     },
     [translateX, translateY]
   );
@@ -187,353 +231,407 @@ function BedTopDownCanvas({
     [labelOpacity]
   );
 
-  const commitState = useCallback(
-    (s: number, tx: number, ty: number) => {
-      savedScale.current = s;
-      savedTx.current = tx;
-      savedTy.current = ty;
-      setCurrentScale(s);
-      if (s > 1.05 && !hintDismissed) setHintDismissed(true);
+  const onFrameLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const { width, height } = e.nativeEvent.layout;
+      frameSize.current = { width, height };
+      if (lastScale.current > 1.01) {
+        const { x, y } = clampOffset(lastOffset.current.x, lastOffset.current.y, lastScale.current);
+        if (x !== lastOffset.current.x || y !== lastOffset.current.y) {
+          settleOffset(x, y);
+        }
+      }
     },
-    [hintDismissed]
+    [clampOffset, settleOffset]
   );
 
-  const resetView = useCallback(() => {
-    Animated.parallel([
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 7 }),
-      Animated.spring(translateX, { toValue: 0, useNativeDriver: true, friction: 7 }),
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 7 }),
-      Animated.timing(labelOpacity, { toValue: 0, duration: 150, useNativeDriver: true }),
-    ]).start();
-    savedScale.current = 1;
-    savedTx.current = 0;
-    savedTy.current = 0;
-    setCurrentScale(1);
-  }, [scale, translateX, translateY, labelOpacity]);
+  const onPinchEvent = useRef(
+    Animated.event([{ nativeEvent: { scale: pinchScale } }], { useNativeDriver: true })
+  ).current;
 
-  const composedGesture = useMemo(() => {
-    const pinchBase = { scale: 1 };
-    const pinch = Gesture.Pinch()
-      .onStart(() => {
-        pinchBase.scale = savedScale.current;
-      })
-      .onUpdate((e) => {
-        const next = clamp(pinchBase.scale * e.scale, MIN_SCALE, MAX_SCALE);
-        scale.setValue(next);
+  const onPinchStateChange = useCallback(
+    ({ nativeEvent }: HandlerStateChangeEvent<PinchGestureHandlerEventPayload>) => {
+      if (nativeEvent.oldState === State.ACTIVE) {
+        const next = clamp(lastScale.current * nativeEvent.scale, MIN_SCALE, MAX_SCALE);
+        lastScale.current = next;
+        baseScale.setValue(next);
+        pinchScale.setValue(1);
+        const { x, y } = clampOffset(lastOffset.current.x, lastOffset.current.y, next);
+        settleOffset(x, y);
         applyLabelOpacity(next);
-      })
-      .onEnd((e) => {
-        const next = clamp(pinchBase.scale * e.scale, MIN_SCALE, MAX_SCALE);
-        commitState(next, savedTx.current, savedTy.current);
-      });
+        setCurrentScale(next);
+        if (next > 1.05 && !hintDismissed) setHintDismissed(true);
+      }
+    },
+    [baseScale, pinchScale, clampOffset, settleOffset, applyLabelOpacity, hintDismissed]
+  );
 
-    const panBase = { tx: 0, ty: 0 };
-    const pan = Gesture.Pan()
-      .minPointers(1)
-      .maxPointers(1)
-      .activeOffsetX([-8, 8])
-      .activeOffsetY([-8, 8])
-      .onStart(() => {
-        panBase.tx = savedTx.current;
-        panBase.ty = savedTy.current;
-      })
-      .onUpdate((e) => {
-        const maxTx = (frameSize.current.width * (savedScale.current - 1)) / 2;
-        const maxTy = (frameSize.current.height * (savedScale.current - 1)) / 2;
-        translateX.setValue(clamp(panBase.tx + e.translationX, -maxTx, maxTx));
-        translateY.setValue(clamp(panBase.ty + e.translationY, -maxTy, maxTy));
-      })
-      .onEnd((e) => {
-        const maxTx = (frameSize.current.width * (savedScale.current - 1)) / 2;
-        const maxTy = (frameSize.current.height * (savedScale.current - 1)) / 2;
-        commitState(
-          savedScale.current,
-          clamp(panBase.tx + e.translationX, -maxTx, maxTx),
-          clamp(panBase.ty + e.translationY, -maxTy, maxTy)
+  const onPanEvent = useRef(
+    Animated.event([{ nativeEvent: { translationX: translateX, translationY: translateY } }], {
+      useNativeDriver: true,
+    })
+  ).current;
+
+  const onPanStateChange = useCallback(
+    ({ nativeEvent }: HandlerStateChangeEvent<PanGestureHandlerEventPayload>) => {
+      if (nativeEvent.oldState === State.ACTIVE) {
+        const { x, y } = clampOffset(
+          lastOffset.current.x + nativeEvent.translationX,
+          lastOffset.current.y + nativeEvent.translationY,
+          lastScale.current
         );
-      });
+        settleOffset(x, y);
+      }
+    },
+    [clampOffset, settleOffset]
+  );
 
-    return Gesture.Simultaneous(pinch, pan);
-  }, [scale, translateX, translateY, applyLabelOpacity, commitState]);
+  const animateTo = useCallback(
+    (target: number) => {
+      const next = clamp(target, MIN_SCALE, MAX_SCALE);
+      const { x, y } = clampOffset(lastOffset.current.x, lastOffset.current.y, next);
+      pinchScale.setValue(1);
+      // Collapse offset into value so the spring animates to the true target.
+      translateX.setOffset(0);
+      translateX.setValue(lastOffset.current.x);
+      translateY.setOffset(0);
+      translateY.setValue(lastOffset.current.y);
+      Animated.parallel([
+        Animated.spring(baseScale, { toValue: next, useNativeDriver: true, friction: 7 }),
+        Animated.spring(translateX, { toValue: x, useNativeDriver: true, friction: 7 }),
+        Animated.spring(translateY, { toValue: y, useNativeDriver: true, friction: 7 }),
+        Animated.timing(labelOpacity, {
+          toValue: next >= LABEL_VISIBLE_SCALE ? 1 : 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start(() => settleOffset(x, y));
+      lastScale.current = next;
+      lastOffset.current = { x, y };
+      setCurrentScale(next);
+      if (next > 1.05 && !hintDismissed) setHintDismissed(true);
+    },
+    [
+      baseScale,
+      pinchScale,
+      translateX,
+      translateY,
+      labelOpacity,
+      clampOffset,
+      settleOffset,
+      hintDismissed,
+    ]
+  );
+
+  const resetView = useCallback(() => animateTo(MIN_SCALE), [animateTo]);
+  const handleZoomIn = useCallback(() => animateTo(lastScale.current + 0.5), [animateTo]);
+  const handleZoomOut = useCallback(() => animateTo(lastScale.current - 0.5), [animateTo]);
 
   const pathLabel = `${walkingPathCm} cm path`;
   const edgeLabel = `${edgeBufferCm} cm edge`;
   const compassDim = `${widthM.toFixed(1)} m wide`;
   const legendFooter =
-    edgeBufferCm > 0 ? `${walkingPathCm} cm path · ${edgeBufferCm} cm edge` : `${walkingPathCm} cm path each side`;
+    edgeBufferCm > 0
+      ? `${walkingPathCm} cm path · ${edgeBufferCm} cm edge`
+      : `${walkingPathCm} cm path each side`;
   const isInlinePreview = onExpand !== undefined;
-  const showResetButton = !isInlinePreview && currentScale > 1.01;
+  const showZoomControls = !isInlinePreview;
   const showHint = !isInlinePreview && !hintDismissed;
+  const atMinZoom = currentScale <= MIN_SCALE + 0.001;
+  const atMaxZoom = currentScale >= MAX_SCALE - 0.001;
 
   return (
     <View style={styles.tdmMapWrap}>
-      <View style={styles.tdmRuler}>
-        {rulerTicks.map((m) => (
-          <Text
-            key={m}
-            style={[styles.tdmRulerTick, { top: `${(m / lengthM) * 100}%` }]}
-          >
-            {m.toFixed(1)} m
-          </Text>
-        ))}
+      <View style={styles.tdmCompass}>
+        <Text style={styles.tdmCompassN}>↑ N · canopy</Text>
+        <Text style={styles.tdmCompassDim}>{compassDim}</Text>
       </View>
 
-      <View style={styles.tdmFrame}>
-        <View style={styles.tdmCompass}>
-          <Text style={styles.tdmCompassN}>↑ N · canopy</Text>
-          <Text style={styles.tdmCompassDim}>{compassDim}</Text>
+      <View style={styles.tdmPlotRow}>
+        <View style={styles.tdmRuler}>
+          {rulerTicks.map((m) => (
+            <Text key={m} style={[styles.tdmRulerTick, { top: `${(m / lengthM) * 100}%` }]}>
+              {m.toFixed(1)} m
+            </Text>
+          ))}
         </View>
 
-        <CanvasGestureWrap
-          isInlinePreview={isInlinePreview}
-          composedGesture={composedGesture}
-          onExpand={onExpand}
-        >
-          <View
-            style={[
-              styles.tdmCanvasFrame,
-              { aspectRatio: clampedAspect, minHeight: responsiveMinHeight },
-            ]}
-            onLayout={onFrameLayout}
+        <View style={styles.tdmPlotCol}>
+          <CanvasGestureWrap
+            isInlinePreview={isInlinePreview}
+            onExpand={onExpand}
+            onPinchEvent={onPinchEvent}
+            onPinchStateChange={onPinchStateChange}
+            onPanEvent={onPanEvent}
+            onPanStateChange={onPanStateChange}
+            panEnabled={currentScale > 1.01}
           >
-            <Animated.View
+            <View
               style={[
-                styles.tdmCanvas,
-                { transform: [{ translateX }, { translateY }, { scale }] },
+                styles.tdmCanvasFrame,
+                { aspectRatio: clampedAspect, minHeight: responsiveMinHeight },
               ]}
+              onLayout={onFrameLayout}
             >
-              {pathPct > 0 && (
-                <>
-                  <View
-                    style={[
-                      styles.tdmPathStrip,
-                      styles.tdmPathStripTop,
-                      { height: `${pathPct}%` },
-                    ]}
-                  >
-                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelN]}>
-                      {pathLabel}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.tdmPathStrip,
-                      styles.tdmPathStripBottom,
-                      { height: `${pathPct}%` },
-                    ]}
-                  >
-                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelS]}>
-                      {pathLabel}
-                    </Text>
-                  </View>
-                </>
-              )}
-
-              {edgePctH > 0 && (
-                <>
-                  <View
-                    style={[
-                      styles.tdmEdgeStrip,
-                      styles.tdmEdgeStripTop,
-                      { height: `${edgePctH}%` },
-                    ]}
-                  >
-                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelN]}>
-                      {edgeLabel}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.tdmEdgeStrip,
-                      styles.tdmEdgeStripBottom,
-                      { height: `${edgePctH}%` },
-                    ]}
-                  >
-                    <Text style={[styles.tdmStripLabel, styles.tdmStripLabelS]}>
-                      {edgeLabel}
-                    </Text>
-                  </View>
-                </>
-              )}
-
-              {Array.from({ length: gridRowCount }).map((_, i) => (
-                <View
-                  key={`gh-${i}`}
-                  style={[
-                    styles.tdmGridLineH,
-                    { top: `${(((i + 1) * 30) / lengthCm) * 100}%` },
-                  ]}
-                />
-              ))}
-              {Array.from({ length: gridColCount }).map((_, i) => (
-                <View
-                  key={`gv-${i}`}
-                  style={[
-                    styles.tdmGridLineV,
-                    { left: `${(((i + 1) * 30) / widthCm) * 100}%` },
-                  ]}
-                />
-              ))}
-
-              {rows.map((row) => {
-                const centerPct = (row.northEdgeCm / lengthCm) * 100;
-                const warning = warningByRow.get(row.rowIndex);
-                return (
-                  <React.Fragment key={`row-${row.rowIndex}`}>
+              <Animated.View
+                style={[
+                  styles.tdmCanvas,
+                  { transform: [{ translateX }, { translateY }, { scale: composedScale }] },
+                ]}
+              >
+                {pathPct > 0 && (
+                  <>
                     <View
+                      style={[
+                        styles.tdmPathStrip,
+                        styles.tdmPathStripTop,
+                        { height: `${pathPct}%` },
+                      ]}
+                    >
+                      <Text style={[styles.tdmStripLabel, styles.tdmStripLabelN]}>{pathLabel}</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.tdmPathStrip,
+                        styles.tdmPathStripBottom,
+                        { height: `${pathPct}%` },
+                      ]}
+                    >
+                      <Text style={[styles.tdmStripLabel, styles.tdmStripLabelS]}>{pathLabel}</Text>
+                    </View>
+                  </>
+                )}
+
+                {edgePctH > 0 && (
+                  <>
+                    <View
+                      style={[
+                        styles.tdmEdgeStrip,
+                        styles.tdmEdgeStripTop,
+                        { height: `${edgePctH}%` },
+                      ]}
+                    >
+                      <Text style={[styles.tdmStripLabel, styles.tdmStripLabelN]}>{edgeLabel}</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.tdmEdgeStrip,
+                        styles.tdmEdgeStripBottom,
+                        { height: `${edgePctH}%` },
+                      ]}
+                    >
+                      <Text style={[styles.tdmStripLabel, styles.tdmStripLabelS]}>{edgeLabel}</Text>
+                    </View>
+                  </>
+                )}
+
+                {Array.from({ length: gridRowCount }).map((_, i) => (
+                  <View
+                    key={`gh-${i}`}
+                    style={[styles.tdmGridLineH, { top: `${(((i + 1) * 30) / lengthCm) * 100}%` }]}
+                  />
+                ))}
+                {Array.from({ length: gridColCount }).map((_, i) => (
+                  <View
+                    key={`gv-${i}`}
+                    style={[styles.tdmGridLineV, { left: `${(((i + 1) * 30) / widthCm) * 100}%` }]}
+                  />
+                ))}
+
+                {rows.map((row) => {
+                  const centerPct = (row.northEdgeCm / lengthCm) * 100;
+                  return (
+                    <View
+                      key={`rowline-${row.rowIndex}`}
                       style={[styles.tdmRowCenterline, { top: `${centerPct}%` }]}
-                      accessibilityLabel={`Row ${row.rowIndex} centerline at ${(row.northEdgeCm / 100).toFixed(2)} meters`}
+                      accessibilityLabel={`Row ${row.rowIndex} centerline at ${(
+                        row.northEdgeCm / 100
+                      ).toFixed(2)} meters`}
                     />
-                    <View style={[styles.tdmRowTag, { top: `${centerPct}%` }]}>
+                  );
+                })}
+
+                {rows.map((row) => {
+                  const positions = computeInterleavedEastPositions(row);
+                  const topPct = (row.northEdgeCm / lengthCm) * 100;
+                  const carets: React.ReactNode[] = [];
+                  for (let i = 0; i < positions.length - 1; i++) {
+                    const left = positions[i];
+                    const right = positions[i + 1];
+                    if (left === undefined || right === undefined) continue;
+                    const gapCm = Math.round(right - left);
+                    if (gapCm <= 0) continue;
+                    const midPct = ((left + right) / 2 / widthCm) * 100;
+                    carets.push(
+                      <Animated.View
+                        key={`gap-${row.rowIndex}-${i}`}
+                        style={[
+                          styles.tdmGapCaret,
+                          {
+                            left: `${midPct}%`,
+                            top: `${topPct}%`,
+                            opacity: labelOpacity,
+                          },
+                        ]}
+                        pointerEvents="none"
+                      >
+                        <Text style={[styles.tdmGapCaretText, { fontSize: gapCaretSize }]}>
+                          ↔{gapCm}
+                        </Text>
+                      </Animated.View>
+                    );
+                  }
+                  return <React.Fragment key={`gaps-${row.rowIndex}`}>{carets}</React.Fragment>;
+                })}
+
+                {rows.map((row) => {
+                  const positions = computeInterleavedEastPositions(row);
+                  return row.plants.map((plant, i) => {
+                    const eastCm = positions[i];
+                    if (eastCm === undefined) return null;
+                    const leftPct = (eastCm / widthCm) * 100;
+                    const topPct = (row.northEdgeCm / lengthCm) * 100;
+                    const isCompanion = plant.isCompanion === true;
+                    const isGround = row.layer === 'ground_cover';
+                    return (
+                      <View
+                        key={`pinwrap-${row.rowIndex}-${i}`}
+                        style={[
+                          styles.tdmPinWrap,
+                          {
+                            left: `${leftPct}%`,
+                            top: `${topPct}%`,
+                            width: pinWrapWidth,
+                            marginLeft: -pinWrapWidth / 2,
+                            marginTop: -pinSize / 2,
+                          },
+                        ]}
+                        accessibilityLabel={`${plant.name} · ${plant.spacingCm} cm spacing${
+                          isCompanion ? ' · companion' : ''
+                        }`}
+                      >
+                        <View
+                          style={[
+                            styles.tdmPin,
+                            { width: pinSize, height: pinSize, borderRadius: pinSize / 2 },
+                            isGround && styles.tdmPinGround,
+                            isCompanion
+                              ? styles.tdmPinCompanion
+                              : { borderColor: layerColor(row.layer) },
+                          ]}
+                        >
+                          <Text style={[styles.tdmPinEmoji, { fontSize: pinEmojiSize }]}>
+                            {plantEmoji(plant.name)}
+                          </Text>
+                        </View>
+                        <Animated.Text
+                          style={[
+                            styles.tdmPinLabel,
+                            { fontSize: pinLabelSize, opacity: labelOpacity },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {shortLabel(plant.name)}
+                        </Animated.Text>
+                      </View>
+                    );
+                  });
+                })}
+
+                {rows.map((row) => {
+                  const centerPct = (row.northEdgeCm / lengthCm) * 100;
+                  const warning = warningByRow.get(row.rowIndex);
+                  return (
+                    <View
+                      key={`rowtag-${row.rowIndex}`}
+                      style={[styles.tdmRowTag, { top: `${centerPct}%` }]}
+                    >
                       <Text style={styles.tdmRowTagText}>R{row.rowIndex}</Text>
                       {warning ? <Text style={styles.tdmRowTagWarn}> ⚠</Text> : null}
                     </View>
-                  </React.Fragment>
-                );
-              })}
-
-              {rows.map((row) => {
-                const positions = computeInterleavedEastPositions(row);
-                const topPct = (row.northEdgeCm / lengthCm) * 100;
-                const carets: React.ReactNode[] = [];
-                for (let i = 0; i < positions.length - 1; i++) {
-                  const left = positions[i];
-                  const right = positions[i + 1];
-                  if (left === undefined || right === undefined) continue;
-                  const gapCm = Math.round(right - left);
-                  if (gapCm <= 0) continue;
-                  const midPct = (((left + right) / 2) / widthCm) * 100;
-                  carets.push(
-                    <Animated.View
-                      key={`gap-${row.rowIndex}-${i}`}
-                      style={[
-                        styles.tdmGapCaret,
-                        {
-                          left: `${midPct}%`,
-                          top: `${topPct}%`,
-                          opacity: labelOpacity,
-                        },
-                      ]}
-                      pointerEvents="none"
-                    >
-                      <Text style={[styles.tdmGapCaretText, { fontSize: gapCaretSize }]}>
-                        ↔{gapCm}
-                      </Text>
-                    </Animated.View>
                   );
-                }
-                return <React.Fragment key={`gaps-${row.rowIndex}`}>{carets}</React.Fragment>;
-              })}
+                })}
 
-              {rows.map((row) => {
-                const positions = computeInterleavedEastPositions(row);
-                return row.plants.map((plant, i) => {
-                  const eastCm = positions[i];
-                  if (eastCm === undefined) return null;
-                  const leftPct = (eastCm / widthCm) * 100;
-                  const topPct = (row.northEdgeCm / lengthCm) * 100;
-                  const isCompanion = plant.isCompanion === true;
-                  const isGround = row.layer === 'ground_cover';
-                  return (
-                    <View
-                      key={`pinwrap-${row.rowIndex}-${i}`}
-                      style={[
-                        styles.tdmPinWrap,
-                        {
-                          left: `${leftPct}%`,
-                          top: `${topPct}%`,
-                          width: pinWrapWidth,
-                          marginLeft: -pinWrapWidth / 2,
-                          marginTop: -pinSize / 2,
-                        },
-                      ]}
-                      accessibilityLabel={`${plant.name} · ${plant.spacingCm} cm spacing${isCompanion ? ' · companion' : ''}`}
-                    >
-                      <View
-                        style={[
-                          styles.tdmPin,
-                          { width: pinSize, height: pinSize, borderRadius: pinSize / 2 },
-                          isGround && styles.tdmPinGround,
-                          isCompanion
-                            ? styles.tdmPinCompanion
-                            : { borderColor: layerColor(row.layer) },
-                        ]}
-                      >
-                        <Text style={[styles.tdmPinEmoji, { fontSize: pinEmojiSize }]}>
-                          {plantEmoji(plant.name)}
-                        </Text>
-                      </View>
-                      <Animated.Text
-                        style={[
-                          styles.tdmPinLabel,
-                          { fontSize: pinLabelSize, opacity: labelOpacity },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {shortLabel(plant.name)}
-                      </Animated.Text>
-                    </View>
-                  );
-                });
-              })}
+                {overflowCm > 0 && (
+                  <View style={styles.tdmOverflowBadge}>
+                    <Text style={styles.tdmOverflowText}>
+                      ⚠ Overflow {Math.round(overflowCm)} cm
+                    </Text>
+                  </View>
+                )}
 
-              {overflowCm > 0 && (
-                <View style={styles.tdmOverflowBadge}>
-                  <Text style={styles.tdmOverflowText}>
-                    ⚠ Overflow {Math.round(overflowCm)} cm
+                <View style={styles.tdmScaleBar}>
+                  <Text style={styles.tdmScaleBarText}>
+                    {widthM.toFixed(1)} × {lengthM.toFixed(1)} m
                   </Text>
+                </View>
+              </Animated.View>
+
+              {showHint && (
+                <View style={styles.tdmZoomHint} pointerEvents="none">
+                  <Ionicons name="scan-outline" size={12} color={theme.textSecondary} />
+                  <Text style={styles.tdmZoomHintText}>Pinch or +/− to zoom</Text>
                 </View>
               )}
 
-              <View style={styles.tdmScaleBar}>
-                <Text style={styles.tdmScaleBarText}>
-                  {widthM.toFixed(1)} × {lengthM.toFixed(1)} m
-                </Text>
-              </View>
-            </Animated.View>
+              {showZoomControls && (
+                <View style={styles.tdmZoomControls}>
+                  <TouchableOpacity
+                    style={[styles.tdmZoomBtn, atMaxZoom && styles.tdmZoomBtnDisabled]}
+                    onPress={handleZoomIn}
+                    disabled={atMaxZoom}
+                    accessibilityLabel="Zoom in"
+                    hitSlop={6}
+                  >
+                    <Ionicons name="add" size={20} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.tdmZoomBtn, atMinZoom && styles.tdmZoomBtnDisabled]}
+                    onPress={handleZoomOut}
+                    disabled={atMinZoom}
+                    accessibilityLabel="Zoom out"
+                    hitSlop={6}
+                  >
+                    <Ionicons name="remove" size={20} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.tdmZoomBtn, atMinZoom && styles.tdmZoomBtnDisabled]}
+                    onPress={resetView}
+                    disabled={atMinZoom}
+                    accessibilityLabel="Reset zoom"
+                    hitSlop={6}
+                  >
+                    <Ionicons name="contract-outline" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              )}
 
-            {showHint && (
-              <View style={styles.tdmZoomHint} pointerEvents="none">
-                <Ionicons name="scan-outline" size={12} color={theme.textSecondary} />
-                <Text style={styles.tdmZoomHintText}>Pinch to zoom</Text>
-              </View>
-            )}
-
-            {showResetButton && (
-              <TouchableOpacity
-                style={styles.tdmZoomReset}
-                onPress={resetView}
-                accessibilityLabel="Reset zoom"
-                hitSlop={6}
-              >
-                <Ionicons name="contract-outline" size={16} color={theme.textSecondary} />
-              </TouchableOpacity>
-            )}
-
-            {isInlinePreview && (
-              <View style={styles.tdmExpandButton} pointerEvents="none">
-                <Ionicons name="expand-outline" size={16} color={theme.textSecondary} />
-              </View>
-            )}
-          </View>
-        </CanvasGestureWrap>
-
-        <View style={styles.tdmLegend}>
-          <View style={styles.tdmLegendItem}>
-            <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchMain]} />
-            <Text style={styles.tdmLegendText}>Main × {mainCount}</Text>
-          </View>
-          <View style={styles.tdmLegendItem}>
-            <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchCompanion]} />
-            <Text style={styles.tdmLegendText}>Companion × {companionCount}</Text>
-          </View>
-          <Text style={styles.tdmLegendHint}>Tallest crops at North</Text>
+              {isInlinePreview && (
+                <View style={styles.tdmExpandButton} pointerEvents="none">
+                  <Ionicons name="expand-outline" size={16} color={theme.textSecondary} />
+                  <Text style={styles.tdmExpandButtonText}>Tap to zoom</Text>
+                </View>
+              )}
+            </View>
+          </CanvasGestureWrap>
         </View>
+      </View>
 
-        <View style={styles.tdmCompass}>
-          <Text style={styles.tdmCompassS}>↓ S · open sun</Text>
-          <Text style={styles.tdmCompassDim}>{legendFooter}</Text>
+      <View style={styles.tdmLegend}>
+        <View style={styles.tdmLegendItem}>
+          <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchMain]} />
+          <Text style={styles.tdmLegendText}>Main × {mainCount}</Text>
         </View>
+        <View style={styles.tdmLegendItem}>
+          <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchCompanion]} />
+          <Text style={styles.tdmLegendText}>Companion × {companionCount}</Text>
+        </View>
+        <Text style={styles.tdmLegendHint}>Tallest crops at North</Text>
+      </View>
+
+      <View style={styles.tdmCompass}>
+        <Text style={styles.tdmCompassS}>↓ S · open sun</Text>
+        <Text style={styles.tdmCompassDim}>{legendFooter}</Text>
       </View>
     </View>
   );
@@ -543,13 +641,21 @@ export function BedTopDownMap(props: BedTopDownMapProps): React.JSX.Element | nu
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [isFullScreen, setIsFullScreen] = useState(false);
 
   if (props.rows.length === 0) return null;
 
   const inlineMapWidth = Math.max(220, windowWidth - HORIZONTAL_OVERHEAD);
   const modalMapWidth = Math.max(280, windowWidth - MODAL_HORIZONTAL_OVERHEAD);
-  const modalHeightCap = Math.max(280, windowHeight - MODAL_VERTICAL_CHROME);
+  // Subtract the system insets (status bar / bottom gesture area) so the canvas
+  // frame fits inside the *visible* fullscreen area — otherwise the bottom of
+  // the bed (and the legend/S-compass) is pushed under the bottom bar with no
+  // way to scroll or pan to it.
+  const modalHeightCap = Math.max(
+    280,
+    windowHeight - MODAL_VERTICAL_CHROME - insets.top - insets.bottom
+  );
 
   const dimensionLabel = `${props.widthM.toFixed(1)} × ${props.lengthM.toFixed(1)} m`;
 
@@ -574,26 +680,30 @@ export function BedTopDownMap(props: BedTopDownMapProps): React.JSX.Element | nu
         presentationStyle="fullScreen"
         onRequestClose={() => setIsFullScreen(false)}
       >
-        <View style={styles.tdmModalRoot}>
-          <View style={styles.tdmModalHeader}>
-            <Text style={styles.tdmModalTitle}>{dimensionLabel}</Text>
-            <TouchableOpacity
-              style={styles.tdmModalClose}
-              onPress={() => setIsFullScreen(false)}
-              accessibilityLabel="Close fullscreen map"
-              hitSlop={8}
-            >
-              <Ionicons name="close" size={24} color={theme.text} />
-            </TouchableOpacity>
+        <GestureHandlerRootView style={styles.tdmModalGestureRoot}>
+          <View
+            style={[styles.tdmModalRoot, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+          >
+            <View style={styles.tdmModalHeader}>
+              <Text style={styles.tdmModalTitle}>{dimensionLabel}</Text>
+              <TouchableOpacity
+                style={styles.tdmModalClose}
+                onPress={() => setIsFullScreen(false)}
+                accessibilityLabel="Close fullscreen map"
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={24} color={theme.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.tdmModalCanvasWrap}>
+              <BedTopDownCanvas
+                {...props}
+                mapWidth={modalMapWidth}
+                frameHeightCap={modalHeightCap}
+              />
+            </View>
           </View>
-          <View style={styles.tdmModalCanvasWrap}>
-            <BedTopDownCanvas
-              {...props}
-              mapWidth={modalMapWidth}
-              frameHeightCap={modalHeightCap}
-            />
-          </View>
-        </View>
+        </GestureHandlerRootView>
       </Modal>
     </>
   );
