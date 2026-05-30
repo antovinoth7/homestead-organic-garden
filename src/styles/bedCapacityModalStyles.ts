@@ -1,0 +1,85 @@
+import { StyleSheet } from 'react-native';
+import type { Theme } from '@/theme/colors';
+
+export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: 32,
+    },
+    card: {
+      backgroundColor: theme.backgroundSecondary,
+      borderRadius: 20,
+      padding: 28,
+      alignItems: 'center' as const,
+      width: '100%',
+      maxWidth: 340,
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.15,
+      shadowRadius: 24,
+      elevation: 8,
+    },
+    iconWrap: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: theme.warningLight,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      marginBottom: 16,
+    },
+    title: {
+      fontSize: 19,
+      fontWeight: '700' as const,
+      color: theme.text,
+      textAlign: 'center' as const,
+      marginBottom: 8,
+    },
+    message: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      textAlign: 'center' as const,
+      lineHeight: 21,
+      marginBottom: 24,
+    },
+    overflowBadge: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
+      backgroundColor: theme.warningLight,
+      borderWidth: 1,
+      borderColor: theme.warningBorder,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      marginBottom: 24,
+    },
+    overflowBadgeText: {
+      fontSize: 13,
+      fontWeight: '700' as const,
+      color: theme.warningDark,
+    },
+    overflowLabel: {
+      fontSize: 12,
+      color: theme.warningDark,
+    },
+    button: {
+      width: '100%',
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 14,
+      backgroundColor: theme.warning,
+    },
+    buttonText: {
+      fontSize: 15,
+      fontWeight: '700' as const,
+      color: theme.textInverse,
+    },
+  });

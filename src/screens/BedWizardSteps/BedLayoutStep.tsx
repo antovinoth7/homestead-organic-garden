@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/theme';
+import { BedCapacityModal } from '@/components/modals/BedCapacityModal';
 import { BedPlantPickerSheet } from '@/components/BedPlantPickerSheet';
 import { BedRowLayout } from '@/components/BedRowLayout';
 import type { GhostRow } from '@/components/BedRowLayout';
@@ -55,6 +56,10 @@ export function BedLayoutStep({
   const [pickerVisible, setPickerVisible] = useState(false);
   const [targetLayer, setTargetLayer] = useState<BedLayer | null>(null);
   const [resolveEntryId, setResolveEntryId] = useState<string | null>(null);
+  const [capacityModal, setCapacityModal] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   const rowLayout = useMemo<RowLayoutResult>(() => {
     const baseResult: RowLayoutResult = {
@@ -87,27 +92,30 @@ export function BedLayoutStep({
   const prevFitsRef = useRef(rowLayout.fitsInBed);
   useEffect(() => {
     if (prevFitsRef.current && !rowLayout.fitsInBed) {
-      Alert.alert(
-        'Bed is Now Over Capacity',
-        `Adding that plant pushed the layout ${Math.round(rowLayout.overflowCm)} cm over. Remove a plant or go back to Step 3 to increase the bed length.`,
-        [{ text: 'OK' }]
-      );
+      setCapacityModal({
+        title: 'Bed is Now Over Capacity',
+        message:
+          'Adding that plant pushed the layout over the bed length. Remove a plant or go back to Step 3 to increase the bed size.',
+      });
     }
     prevFitsRef.current = rowLayout.fitsInBed;
-  }, [rowLayout.fitsInBed, rowLayout.overflowCm]);
+  }, [rowLayout.fitsInBed]);
 
-  const handleAddToLayer = useCallback((layer: BedLayer): void => {
-    if (!rowLayout.fitsInBed) {
-      Alert.alert(
-        'Bed is Full',
-        `This bed is over capacity by ${Math.round(rowLayout.overflowCm)} cm. Remove a plant or go back to Step 3 to increase the bed length.`,
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-    setTargetLayer(layer);
-    setPickerVisible(true);
-  }, [rowLayout.fitsInBed, rowLayout.overflowCm]);
+  const handleAddToLayer = useCallback(
+    (layer: BedLayer): void => {
+      if (!rowLayout.fitsInBed) {
+        setCapacityModal({
+          title: 'Bed is Full',
+          message:
+            'This bed is already over capacity. Remove a plant or go back to Step 3 to increase the bed size before adding more.',
+        });
+        return;
+      }
+      setTargetLayer(layer);
+      setPickerVisible(true);
+    },
+    [rowLayout.fitsInBed]
+  );
 
   const handleRemovePlant = useCallback(
     (id: string): void => {
@@ -285,6 +293,14 @@ export function BedLayoutStep({
           />
         </>
       )}
+
+      <BedCapacityModal
+        visible={capacityModal !== null}
+        title={capacityModal?.title ?? ''}
+        message={capacityModal?.message ?? ''}
+        overflowCm={rowLayout.overflowCm}
+        onClose={() => setCapacityModal(null)}
+      />
 
       <BedPlantPickerSheet
         visible={pickerVisible}

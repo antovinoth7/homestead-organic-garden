@@ -453,7 +453,10 @@ export const GUILD_TEMPLATES: Record<BedType, GuildTemplate> = {
         name: 'Moringa',
         layer: 'canopy',
         spacing_cm: 300,
-        row_gap_cm: 300,
+        // A single guild moringa is pruned to ~2m (see care task) and grown as the canopy
+        // ABOVE the understory — it needs trellis-scale N–S clearance, not the 3m orchard
+        // inter-tree spacing that would otherwise fill an entire 3m bed on its own.
+        row_gap_cm: 120,
         crop_family: 'other',
         companion_plants: ['Tulsi', 'Aloe Vera'],
         days_to_harvest: 90,
