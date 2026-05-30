@@ -1,12 +1,12 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/theme';
-import { BedLayerStack } from '@/components/BedLayerStack';
 import { BedPlantPickerSheet } from '@/components/BedPlantPickerSheet';
+import { BedRowLayout } from '@/components/BedRowLayout';
+import type { GhostRow } from '@/components/BedRowLayout';
 import { BedTopDownMap } from '@/components/BedTopDownMap';
 import { PlantEntryResolverSheet } from '@/components/PlantEntryResolverSheet';
-import { computeRowLayout, getVisibleLayers } from '@/utils/rowLayoutEngine';
+import { computeRowLayout, computePlantsPerRow, getVisibleLayers } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { getGuildTemplate } from '@/config/beds/guildTemplates';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
@@ -45,6 +45,7 @@ export function BedLayoutStep({
   step2,
   step3,
   step4,
+  solanaceaeBlocked,
   onChangePlants,
   onCreateInFormForEntry,
 }: Props): React.JSX.Element {
@@ -83,15 +84,30 @@ export function BedLayoutStep({
     );
   }, [bedType, step4.plant_entries, step3.width_m, step3.length_m, step2?.construction_type]);
 
+  const prevFitsRef = useRef(rowLayout.fitsInBed);
+  useEffect(() => {
+    if (prevFitsRef.current && !rowLayout.fitsInBed) {
+      Alert.alert(
+        'Bed is Now Over Capacity',
+        `Adding that plant pushed the layout ${Math.round(rowLayout.overflowCm)} cm over. Remove a plant or go back to Step 3 to increase the bed length.`,
+        [{ text: 'OK' }]
+      );
+    }
+    prevFitsRef.current = rowLayout.fitsInBed;
+  }, [rowLayout.fitsInBed, rowLayout.overflowCm]);
+
   const handleAddToLayer = useCallback((layer: BedLayer): void => {
+    if (!rowLayout.fitsInBed) {
+      Alert.alert(
+        'Bed is Full',
+        `This bed is over capacity by ${Math.round(rowLayout.overflowCm)} cm. Remove a plant or go back to Step 3 to increase the bed length.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
     setTargetLayer(layer);
     setPickerVisible(true);
-  }, []);
-
-  const handleOpenFab = useCallback((): void => {
-    setTargetLayer(null);
-    setPickerVisible(true);
-  }, []);
+  }, [rowLayout.fitsInBed, rowLayout.overflowCm]);
 
   const handleRemovePlant = useCallback(
     (id: string): void => {
@@ -168,6 +184,27 @@ export function BedLayoutStep({
 
   const [activeTab, setActiveTab] = useState<'layout' | 'crops'>('layout');
 
+  const entryResolutionMap = useMemo(() => {
+    const map = new Map<string, EntryResolution>();
+    for (const e of step4.plant_entries) {
+      if (e.resolution !== undefined) map.set(e.id, e.resolution);
+    }
+    return map;
+  }, [step4.plant_entries]);
+
+  const ghostRowsForWizard = useMemo<GhostRow[]>(() => {
+    if (!bedType || !visibleLayers) return [];
+    const occupiedLayers = new Set(rowLayout.rows.map((r) => r.layer));
+    const bedWidthCm = Math.round(step3.width_m * 100);
+    return visibleLayers
+      .filter((layer) => !occupiedLayers.has(layer))
+      .map((layer) => ({
+        layer,
+        plantsPerRow: computePlantsPerRow(bedWidthCm, 30),
+        spacingCm: 30,
+      }));
+  }, [bedType, visibleLayers, rowLayout.rows, step3.width_m]);
+
   return (
     <ScrollView
       contentContainerStyle={styles.stepContainer}
@@ -226,20 +263,26 @@ export function BedLayoutStep({
         </>
       ) : (
         <>
-          <BedLayerStack
-            result={rowLayout}
-            entries={step4.plant_entries}
-            visibleLayers={visibleLayers}
-            onAddToLayer={handleAddToLayer}
-            onRemovePlant={handleRemovePlant}
-            onResolveEntry={handleOpenResolver}
-            onReorder={handleReorder}
-          />
+          {rowLayout.companionWarnings.length > 0 && (
+            <View style={styles.blCompanionWarningBanner}>
+              {rowLayout.companionWarnings.map((w, i) => (
+                <Text key={i} style={styles.blCompanionWarningText}>
+                  {`⚠ ${w.plantA} + ${w.plantB} — ${w.reason}`}
+                </Text>
+              ))}
+            </View>
+          )}
 
-          <TouchableOpacity style={styles.blAddFab} onPress={handleOpenFab} activeOpacity={0.8}>
-            <Ionicons name="add" size={18} color={theme.textInverse} />
-            <Text style={styles.blAddFabText}>Add Plant</Text>
-          </TouchableOpacity>
+          <BedRowLayout
+            result={rowLayout}
+            solanaceaeBlocked={solanaceaeBlocked ?? false}
+            onAddToRow={handleAddToLayer}
+            onRemovePlant={handleRemovePlant}
+            onReorder={handleReorder}
+            ghostRows={ghostRowsForWizard}
+            onResolveEntry={handleOpenResolver}
+            entryResolutions={entryResolutionMap}
+          />
         </>
       )}
 

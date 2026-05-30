@@ -1664,23 +1664,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
     },
-    blAddFab: {
-      alignSelf: 'center' as const,
-      marginTop: 12,
-      marginBottom: 8,
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: 6,
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      borderRadius: 20,
-      backgroundColor: theme.primary,
-    },
-    blAddFabText: {
-      color: theme.textInverse,
-      fontWeight: '600' as const,
-      fontSize: 14,
-    },
     blRemoveBtnText: {
       fontSize: 10,
       fontWeight: '800' as const,
@@ -1741,5 +1724,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     blLayoutTabTextActive: {
       color: theme.textInverse,
       fontWeight: '700' as const,
+    },
+
+    // ── Crops tab — companion antagonist warning banner ───────────────────────
+    blCompanionWarningBanner: {
+      backgroundColor: theme.warningLight,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.warning,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      marginBottom: 8,
+      gap: 4,
+    },
+    blCompanionWarningText: {
+      fontSize: 12,
+      color: theme.warningDark,
+      lineHeight: 17,
     },
   });
