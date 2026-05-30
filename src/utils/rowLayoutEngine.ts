@@ -105,6 +105,21 @@ export function getVisibleLayers(bedType: BedType, plantedLayers: Set<BedLayer>)
 }
 
 /**
+ * Effective N–S row gap (cm) one instance of `candidate` needs: the template's explicit
+ * row_gap_cm, else spacing × category multiplier, floored at the category minimum. Mirrors
+ * the per-plant gap math inside `computeRowLayout` so callers (e.g. the Quick Start planner)
+ * can rank plants by footprint without duplicating the engine's constants.
+ */
+export function effectiveRowGapCm(
+  candidate: RowPlantInput,
+  constructionType?: 'raised' | 'in_ground'
+): number {
+  const category: BedCategory = constructionType ?? 'raised';
+  const gapCm = candidate.rowGapCm ?? candidate.spacingCm * ROW_MULTIPLIER_BY_CATEGORY[category];
+  return Math.max(gapCm, MIN_ROW_GAP_BY_CATEGORY[category]);
+}
+
+/**
  * Returns how many more of `candidate` can be added on top of `currentPlants` while
  * the bed still satisfies `fitsInBed`. Uses a formula-based cap derived from bed geometry
  * so small-spacing crops (Carrot, Radish) are never capped at an arbitrary number.
@@ -119,26 +134,33 @@ export function maxFitForSpecies(
 ): number {
   const bedWidthCm = Math.round(widthM * 100);
   const bedLengthCm = Math.round(lengthM * 100);
-  const category: BedCategory = constructionType ?? 'raised';
-  const rowMultiplier = ROW_MULTIPLIER_BY_CATEGORY[category];
-  const minRowGap = MIN_ROW_GAP_BY_CATEGORY[category];
 
   const ppr = computePlantsPerRow(bedWidthCm, candidate.spacingCm);
-  const gapCm = candidate.rowGapCm ?? candidate.spacingCm * rowMultiplier;
-  const effectiveGap = Math.max(gapCm, minRowGap);
+  const effectiveGap = effectiveRowGapCm(candidate, constructionType);
   const maxRowsCap = Math.max(1, Math.floor(bedLengthCm / effectiveGap));
   const cap = Math.min(MAX_FIT_HARD_CAP, Math.max(ppr * maxRowsCap, 1));
 
-  for (let n = 1; n <= cap; n++) {
+  const fitsWith = (n: number): boolean => {
     const additions: RowPlantInput[] = Array.from({ length: n }, (_, i) => ({
       ...candidate,
       id: `${candidate.id ?? candidate.name}_probe_${i}`,
     }));
-    const test = [...currentPlants, ...additions];
-    const result = computeRowLayout(test, widthM, lengthM, bedType, constructionType);
-    if (!result.fitsInBed) return n - 1;
+    return computeRowLayout([...currentPlants, ...additions], widthM, lengthM, bedType, constructionType)
+      .fitsInBed;
+  };
+
+  // `fitsInBed` is monotonic in n — adding more of one species only ever grows used length,
+  // never shrinks it — so binary-search the largest n in [1, cap] that still fits. This keeps
+  // the per-species probe O(log cap) instead of O(cap) computeRowLayout calls.
+  if (!fitsWith(1)) return 0;
+  let lo = 1;
+  let hi = cap;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (fitsWith(mid)) lo = mid;
+    else hi = mid - 1;
   }
-  return cap;
+  return lo;
 }
 
 /**

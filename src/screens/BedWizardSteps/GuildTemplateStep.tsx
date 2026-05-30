@@ -6,14 +6,14 @@ import { BedType, BedLayer, CropFamily, PlantEntry } from '@/types/database.type
 import { Step2Data, Step3Data, Step4Data } from '@/hooks/useBedCreationWizard';
 import { getGuildTemplate, validateCompanionPair, DYNAMIC_ACCUMULATORS } from '@/config/beds';
 import type { PlantRow } from '@/config/beds/guildTemplates';
-import {
-  computeRowLayout,
-  maxFitForSpecies,
-  getRecommendedFirstAdd,
-  computePlantsPerRow,
-} from '@/utils/rowLayoutEngine';
+import { computeRowLayout, maxFitForSpecies, computePlantsPerRow } from '@/utils/rowLayoutEngine';
 import type { RowPlantInput } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
+import {
+  buildQuickStartPlan,
+  COMPANION_DEFAULT_LAYER,
+  COMPANION_DEFAULT_SPACING,
+} from '@/utils/quickStartPlanner';
 import { getPlantEmoji } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 
@@ -35,8 +35,6 @@ const ROTATION_HINT: Partial<Record<CropFamily, string>> = {
   allium: '✓ After allium — beneficial for most companions',
 };
 
-const COMPANION_DEFAULT_LAYER: BedLayer = 'ground_cover';
-const COMPANION_DEFAULT_SPACING = 25;
 const ACCUMULATOR_DEFAULT_LAYER: BedLayer = 'understory';
 const ACCUMULATOR_DEFAULT_SPACING = 60;
 const DEFAULT_BED_WIDTH_M = 1.2;
@@ -329,7 +327,7 @@ export function GuildTemplateStep({
       onChange({ plant_entries: newEntries });
       if (addedCompanions.length > 0) {
         const label = addedCompanions.length === 1 ? 'companion' : 'companions';
-        setAutoAddedMsg(`Also added to your bed: ${addedCompanions.join(', ')} (${label})`);
+        setAutoAddedMsg(`✓ Also added to your bed: ${addedCompanions.join(', ')} (${label})`);
       }
     },
     [
@@ -399,89 +397,25 @@ export function GuildTemplateStep({
     [maxFitMap, widthM]
   );
 
-  // One-tap: add all template plants at their recommended counts, then fit companions.
+  // One-tap: seed a balanced, companion-inclusive guild sized to the bed. The diversity-first
+  // planner (see buildQuickStartPlan) guarantees companions are seeded before mains are topped
+  // up, so they aren't starved of bed capacity.
   const handleUseFullPlan = useCallback(() => {
     if (!template) return;
     setAutoAddedMsg(null);
-    let accEntries: PlantEntry[] = [];
-    for (const row of template.plant_rows) {
-      let blocked = false;
-      for (const existing of accEntries) {
-        if (existing.name === row.name) continue;
-        const check = validateCompanionPair(row.name, existing.name);
-        if (!check.valid) {
-          blocked = true;
-          break;
-        }
-      }
-      if (blocked) continue;
-      const candidate = candidateForRow(row);
-      const trialInputs = mapPlantEntriesToRowInputs(accEntries, template);
-      const count = getRecommendedFirstAdd(
-        candidate,
-        trialInputs,
-        widthM,
-        lengthM,
-        bedTypeForEngine,
-        construction
-      );
-      if (count === 0) continue;
-      for (let i = 0; i < count; i++) {
-        accEntries = [
-          ...accEntries,
-          { id: generateId(), name: row.name, layer: row.layer, spacingCm: row.spacing_cm },
-        ];
-      }
-    }
-    // Also add fitting companion suggestions
-    for (const comp of companionSuggestions) {
-      if (accEntries.some((e) => e.name === comp)) continue;
-      let antag = false;
-      for (const existing of accEntries) {
-        if (existing.name === comp) continue;
-        const r = validateCompanionPair(comp, existing.name);
-        if (!r.valid) {
-          antag = true;
-          break;
-        }
-      }
-      if (antag) continue;
-      const compCandidate = candidateForCompanion(comp);
-      const trialInputs = mapPlantEntriesToRowInputs(accEntries, template);
-      const count = getRecommendedFirstAdd(
-        compCandidate,
-        trialInputs,
-        widthM,
-        lengthM,
-        bedTypeForEngine,
-        construction
-      );
-      if (count === 0) continue;
-      for (let i = 0; i < count; i++) {
-        accEntries = [
-          ...accEntries,
-          {
-            id: generateId(),
-            name: comp,
-            layer: COMPANION_DEFAULT_LAYER,
-            spacingCm: COMPANION_DEFAULT_SPACING,
-          },
-        ];
-      }
-    }
-    onChange({ plant_entries: accEntries });
+    const { entries, dropped } = buildQuickStartPlan(
+      template,
+      widthM,
+      lengthM,
+      bedTypeForEngine,
+      construction
+    );
+    onChange({ plant_entries: entries });
     setQuickStartApplied(true);
-  }, [
-    template,
-    widthM,
-    lengthM,
-    bedTypeForEngine,
-    construction,
-    candidateForRow,
-    candidateForCompanion,
-    companionSuggestions,
-    onChange,
-  ]);
+    if (dropped.length > 0) {
+      setAutoAddedMsg(`⚠️ Bed full — couldn't fit ${dropped.join(', ')}. Try a larger bed size.`);
+    }
+  }, [template, widthM, lengthM, bedTypeForEngine, construction, onChange]);
 
   // Harvest mini-timeline — selected plants sorted by days to harvest.
   const harvestPreview = useMemo(() => {
@@ -515,7 +449,7 @@ export function GuildTemplateStep({
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
       {autoAddedMsg !== null && (
         <View style={styles.gtAutoAddedBanner}>
-          <Text style={styles.gtAutoAddedBannerText}>✓ {autoAddedMsg}</Text>
+          <Text style={styles.gtAutoAddedBannerText}>{autoAddedMsg}</Text>
           <TouchableOpacity
             onPress={() => setAutoAddedMsg(null)}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
