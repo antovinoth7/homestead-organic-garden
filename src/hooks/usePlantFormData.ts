@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { getAllPlants } from '@/services/plants';
 import { getLocationConfig } from '@/services/locations';
@@ -105,20 +105,22 @@ export function usePlantFormData({
     }
   }, []);
 
-  const loadAllReferenceData = useCallback((): void => {
-    loadLocations();
-    loadPlantProfiles();
-    loadExistingPlants();
-  }, [loadLocations, loadPlantProfiles, loadExistingPlants]);
-
-  useEffect(() => {
-    loadAllReferenceData();
-  }, [loadAllReferenceData]);
+  // Static reference data (locations + plant profiles) changes rarely; load it
+  // once. existingPlants must stay current for unique-naming, so refresh it on
+  // every focus. Loading everything on both mount and focus previously doubled
+  // the Firestore reads and rebuilt the plant catalog on each focus, stalling
+  // the slide-in transition when opening the form from the bed wizard.
+  const staticLoadedRef = useRef(false);
 
   useFocusEffect(
     React.useCallback(() => {
-      loadAllReferenceData();
-    }, [loadAllReferenceData])
+      if (!staticLoadedRef.current) {
+        staticLoadedRef.current = true;
+        loadLocations();
+        loadPlantProfiles();
+      }
+      loadExistingPlants();
+    }, [loadLocations, loadPlantProfiles, loadExistingPlants])
   );
 
   // Bridge shapes for callers that still read PlantCatalog / PlantCareProfiles

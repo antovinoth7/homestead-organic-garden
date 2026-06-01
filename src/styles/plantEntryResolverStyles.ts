@@ -13,7 +13,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       maxHeight: '85%' as const,
-      paddingBottom: 24,
     },
     handle: {
       width: 40,

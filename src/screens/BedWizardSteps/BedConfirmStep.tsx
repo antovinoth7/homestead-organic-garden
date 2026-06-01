@@ -2,9 +2,14 @@ import React, { useMemo } from 'react';
 import { View, Text, TextInput, ScrollView } from 'react-native';
 import { useTheme } from '@/theme';
 import { Step6Data, WizardStepData } from '@/hooks/useBedCreationWizard';
-import { getGuildTemplate } from '@/config/beds';
+import { getGuildTemplate, getSoilPrepSteps } from '@/config/beds';
+import { getLayerColor } from '@/config/beds/layerMeta';
+import { computeRowLayout } from '@/utils/rowLayoutEngine';
+import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
+import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
+import { getPlantEmoji, buildHarvestPreview } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
-import { BedZoneIllustration } from '@/components/BedZoneIllustration';
+import { BedTopDownMap } from '@/components/BedTopDownMap';
 
 interface Props {
   stepData: Partial<WizardStepData>;
@@ -19,16 +24,39 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
   const s1 = stepData[1];
   const s2 = stepData[2];
   const s3 = stepData[3];
+  const s4 = stepData[4];
   const template = s1?.bed_type ? getGuildTemplate(s1.bed_type) : null;
+  const entries = useMemo(() => s4?.plant_entries ?? [], [s4?.plant_entries]);
+
+  // Compute the planted row layout for the read-only top-down preview.
+  const rowLayout = useMemo<RowLayoutResult | null>(() => {
+    if (!s1?.bed_type || !s3 || entries.length === 0) return null;
+    const tpl = getGuildTemplate(s1.bed_type);
+    const inputs = mapPlantEntriesToRowInputs(entries, tpl);
+    if (inputs.length === 0) return null;
+    return computeRowLayout(inputs, s3.width_m, s3.length_m, s1.bed_type, s2?.construction_type);
+  }, [s1?.bed_type, s3, entries, s2?.construction_type]);
+
+  const harvestPreview = useMemo(() => buildHarvestPreview(entries, template), [entries, template]);
+
+  const soilPrepSteps = useMemo(() => {
+    if (!s2) return [];
+    return getSoilPrepSteps({
+      soil_type: s2.soil_type,
+      prev_crop_family: s2.prev_crop_family,
+      prev_crop_season: s2.prev_crop_season,
+      pest_history: s2.pest_history,
+      currentMonth: new Date().getMonth() + 1,
+      bed_type: s1?.bed_type ?? null,
+    }).slice(0, 3);
+  }, [s2, s1?.bed_type]);
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Review & Save</Text>
-
-      {s1?.name ? (
+      {s2?.name ? (
         <View style={styles.fieldGroup}>
           <Text style={styles.fieldLabel}>Bed name</Text>
-          <Text style={styles.summaryRow}>{s1.name}</Text>
+          <Text style={styles.summaryRow}>{s2.name}</Text>
         </View>
       ) : null}
 
@@ -46,7 +74,22 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
         />
       </View>
 
-      {s3 && <BedZoneIllustration widthM={s3.width_m} lengthM={s3.length_m} isRaised />}
+      {/* Row-by-row layout preview */}
+      {rowLayout && s3 && (
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Bed layout</Text>
+          <BedTopDownMap
+            widthM={s3.width_m}
+            lengthM={s3.length_m}
+            rows={rowLayout.rows}
+            plantEmoji={getPlantEmoji}
+            layerColor={getLayerColor}
+            walkingPathCm={rowLayout.walkingPathCm}
+            edgeBufferCm={rowLayout.edgeBufferCm}
+            overflowCm={rowLayout.overflowCm}
+          />
+        </View>
+      )}
 
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Summary</Text>
@@ -69,7 +112,6 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
           </>
         )}
         {(() => {
-          const entries = stepData[4]?.plant_entries ?? [];
           if (entries.length === 0) return null;
           const countByName = new Map<string, number>();
           for (const e of entries) countByName.set(e.name, (countByName.get(e.name) ?? 0) + 1);
@@ -79,6 +121,42 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
           return <Text style={styles.summaryRow}>Plants: {label}</Text>;
         })()}
       </View>
+
+      {/* First-harvest timeline */}
+      {harvestPreview.length > 1 && (
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>First harvest from this bed</Text>
+          {harvestPreview.map((item) => {
+            const maxDays = harvestPreview[harvestPreview.length - 1]!.days;
+            const barWidth = Math.max(20, Math.round((item.days / maxDays) * 140));
+            return (
+              <View key={item.name} style={styles.gtHarvestRow}>
+                <View style={styles.gtHarvestLabelCol}>
+                  <Text style={styles.gtHarvestName}>
+                    {item.emoji} {item.name}
+                  </Text>
+                </View>
+                <View style={styles.gtHarvestBarTrack}>
+                  <View style={[styles.gtHarvestBar, { width: barWidth }]} />
+                </View>
+                <Text style={styles.gtHarvestDays}>{item.days}d</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Soil-prep preview */}
+      {soilPrepSteps.length > 0 && (
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Soil prep before planting</Text>
+          {soilPrepSteps.map((step) => (
+            <Text key={step.number} style={styles.soilPrepRow}>
+              {step.number}. {step.text}
+            </Text>
+          ))}
+        </View>
+      )}
 
       <View style={styles.autoTasksCard}>
         <Text style={styles.autoTasksTitle}>Auto-tasks that will be created</Text>

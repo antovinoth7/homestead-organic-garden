@@ -1,10 +1,43 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/theme';
 import { Step2Data, Step3Data } from '@/hooks/useBedCreationWizard';
 import { BedType } from '@/types/database.types';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import { getSoilPrepSteps } from '@/config/beds/soilPrepEngine';
+import { BED_TYPE_LABEL } from '@/utils/bedNameGenerator';
+import { SOIL_LABELS } from '@/utils/plantLabels';
+import { estimatePlantCapacity } from '@/utils/plantCapacity';
+
+const M_TO_FT = 3.28084;
+const M_TO_CM = 100;
+
+function toFt(m: number): number {
+  return parseFloat((m * M_TO_FT).toFixed(1));
+}
+
+function toM(ft: number): number {
+  return parseFloat((ft / M_TO_FT).toFixed(2));
+}
+
+function toCm(m: number): number {
+  return parseFloat((m * M_TO_CM).toFixed(0));
+}
+
+function fromCm(cm: number): number {
+  return parseFloat((cm / M_TO_CM).toFixed(2));
+}
+
+const HARVEST_COEFF: Record<BedType, number> = {
+  leafy: 0.8,
+  fruiting: 0.6,
+  root_legume: 0.5,
+  climber_trellis: 0.5,
+  three_sisters: 0.6,
+  spice: 0.3,
+  medicinal_guild: 0.2,
+};
+const DEFAULT_HARVEST_COEFF = 0.5;
 
 interface Props {
   data: Step3Data;
@@ -13,50 +46,11 @@ interface Props {
   step2?: Step2Data;
 }
 
-const BED_TYPE_SHORT: Record<string, string> = {
-  leafy: 'Leafy',
-  fruiting: 'Fruiting',
-  spice: 'Spice',
-  root_legume: 'Root/Legume',
-  climber_trellis: 'Climber',
-  coconut_intercrop: 'Coconut',
-  three_sisters: 'Three Sisters',
-  medicinal_guild: 'Medicinal',
-};
-const SOIL_SHORT: Record<string, string> = {
-  garden_soil: 'Garden soil',
-  laterite: 'Laterite',
-  red_loam: 'Red loam',
-  black_cotton: 'Black cotton',
-  coastal_sandy: 'Sandy',
-  clay_loam: 'Clay',
-  sandy_loam: 'Sandy loam',
-};
 const SLOPE_SHORT: Record<string, string> = {
   flat: 'Flat',
   gentle: 'Gentle',
   moderate: 'Moderate',
   steep: 'Steep',
-};
-
-interface SizePreset {
-  label: string;
-  width_m: number;
-  length_m: number;
-  landHint: string;
-}
-
-const COMPACT_PRESET: SizePreset = {
-  label: 'Compact',
-  width_m: 1.0,
-  length_m: 3.0,
-  landHint: '5c land',
-};
-const EXTENDED_PRESET: SizePreset = {
-  label: 'Extended',
-  width_m: 1.2,
-  length_m: 5.0,
-  landHint: '25c+',
 };
 
 function CircleStepper({
@@ -125,34 +119,51 @@ function CircleStepper({
 export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const [unit, setUnit] = useState<'m' | 'cm' | 'ft'>('m');
+
+  const displayWidth =
+    unit === 'ft' ? toFt(data.width_m) : unit === 'cm' ? toCm(data.width_m) : data.width_m;
+  const displayLength =
+    unit === 'ft' ? toFt(data.length_m) : unit === 'cm' ? toCm(data.length_m) : data.length_m;
+  const displayUnit = unit;
+  const widthStep = unit === 'ft' ? 0.5 : unit === 'cm' ? 10 : 0.1;
+  const lengthStep = unit === 'cm' ? 50 : 0.5;
+  const widthMin = unit === 'ft' ? toFt(0.6) : unit === 'cm' ? 60 : 0.6;
+  const widthMax = unit === 'ft' ? toFt(3) : unit === 'cm' ? 300 : 3;
+  const lengthMin = unit === 'ft' ? toFt(1) : unit === 'cm' ? 100 : 1;
+  const lengthMax = unit === 'ft' ? toFt(10) : unit === 'cm' ? 1000 : 10;
 
   const conditionTags = useMemo(() => {
     const tags: string[] = [];
-    if (bedType) tags.push(BED_TYPE_SHORT[bedType] ?? bedType);
-    if (step2?.soil_type) tags.push(SOIL_SHORT[step2.soil_type] ?? step2.soil_type);
+    if (bedType) tags.push(BED_TYPE_LABEL[bedType] ?? bedType);
+    if (step2?.soil_type) tags.push(SOIL_LABELS[step2.soil_type]);
     if (step2?.slope) tags.push(SLOPE_SHORT[step2.slope] ?? step2.slope);
     return tags;
   }, [bedType, step2]);
 
-  const plantsMin = Math.round(data.area_sqm * 2);
-  const plantsMax = Math.round(data.area_sqm * 2.5);
-  const harvestKg = (Math.round(data.area_sqm * 0.6 * 10) / 10).toFixed(1);
+  const { min: plantsMin, max: plantsMax } = estimatePlantCapacity(
+    bedType ?? null,
+    data.width_m,
+    data.length_m,
+  );
+  const coeff = bedType ? (HARVEST_COEFF[bedType] ?? DEFAULT_HARVEST_COEFF) : DEFAULT_HARVEST_COEFF;
+  const harvestKg = (Math.round(data.area_sqm * coeff * 10) / 10).toFixed(1);
 
   const updateDimension = (field: 'width_m' | 'length_m', value: number): void => {
     const updated = { ...data, [field]: value };
     onChange({ ...updated, area_sqm: parseFloat((updated.width_m * updated.length_m).toFixed(2)) });
   };
 
-  const applyPreset = (preset: SizePreset): void => {
-    onChange({
-      width_m: preset.width_m,
-      length_m: preset.length_m,
-      area_sqm: parseFloat((preset.width_m * preset.length_m).toFixed(2)),
-    });
+  const handleWidthChange = (displayVal: number): void => {
+    const m = unit === 'ft' ? toM(displayVal) : unit === 'cm' ? fromCm(displayVal) : displayVal;
+    updateDimension('width_m', m);
+  };
+  const handleLengthChange = (displayVal: number): void => {
+    const m = unit === 'ft' ? toM(displayVal) : unit === 'cm' ? fromCm(displayVal) : displayVal;
+    updateDimension('length_m', m);
   };
 
-  const isPresetSelected = (preset: SizePreset): boolean =>
-    data.width_m === preset.width_m && data.length_m === preset.length_m;
+  const [prepExpanded, setPrepExpanded] = useState(false);
 
   const prepSteps = useMemo(() => {
     if (!step2) return [];
@@ -162,24 +173,11 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
       prev_crop_season: step2.prev_crop_season,
       pest_history: step2.pest_history,
       currentMonth: new Date().getMonth() + 1,
+      bed_type: bedType,
     });
-  }, [step2]);
+  }, [step2, bedType]);
 
   const rec = data.sizeRecommendation;
-
-  const sizePresets = useMemo(
-    (): SizePreset[] => [
-      COMPACT_PRESET,
-      {
-        label: 'Recommended',
-        width_m: rec?.width_m ?? 1.2,
-        length_m: rec?.length_m ?? 3.5,
-        landHint: '10–25c',
-      },
-      EXTENDED_PRESET,
-    ],
-    [rec]
-  );
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
@@ -197,10 +195,14 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
 
           <Text style={styles.szOptimalLabel}>OPTIMAL SIZE</Text>
           <View style={styles.szSizeRow}>
-            <Text style={styles.szSizeValue}>{rec.width_m}</Text>
+            <Text style={styles.szSizeValue}>
+              {unit === 'ft' ? toFt(rec.width_m) : unit === 'cm' ? toCm(rec.width_m) : rec.width_m}
+            </Text>
             <Text style={styles.szSizeSep}> × </Text>
-            <Text style={styles.szSizeValue}>{rec.length_m}</Text>
-            <Text style={styles.szSizeUnit}> metres</Text>
+            <Text style={styles.szSizeValue}>
+              {unit === 'ft' ? toFt(rec.length_m) : unit === 'cm' ? toCm(rec.length_m) : rec.length_m}
+            </Text>
+            <Text style={styles.szSizeUnit}> {displayUnit}</Text>
           </View>
 
           <Text style={styles.szRationale}>{rec.rationale}</Text>
@@ -215,7 +217,7 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
               <Text style={styles.szMetricValue}>
                 {plantsMin}–{plantsMax}
               </Text>
-              <Text style={styles.szMetricLabel}>plants fit</Text>
+              <Text style={styles.szMetricLabel}>plants possible</Text>
             </View>
             <View style={styles.szMetricDivider} />
             <View style={styles.szMetricChip}>
@@ -226,69 +228,84 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
         </View>
       )}
 
-      {/* Size presets */}
-      <Text style={styles.szSectionLabelSpaced}>SIZE OPTIONS</Text>
-      <View style={styles.szPresetRow}>
-        {sizePresets.map((preset) => {
-          const selected = isPresetSelected(preset);
-          return (
-            <TouchableOpacity
-              key={preset.label}
-              style={[styles.szPresetChip, selected && styles.szPresetChipSelected]}
-              onPress={() => applyPreset(preset)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.szPresetChipSize, selected && styles.szPresetChipSizeSelected]}>
-                {preset.width_m} × {preset.length_m}m
-              </Text>
-              <Text style={[styles.szPresetChipName, selected && styles.szPresetChipNameSelected]}>
-                {preset.label}
-                {selected ? ' ✓' : ''}
-              </Text>
-              <Text style={[styles.szPresetChipHint, selected && styles.szPresetChipHintSelected]}>
-                {preset.landHint}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      {/* Custom size controls */}
+      <View style={styles.szCustomHeader}>
+        <Text style={styles.szSectionLabel}>CUSTOM SIZE</Text>
+        <View style={styles.szUnitToggle}>
+          <TouchableOpacity
+            style={[styles.szUnitBtn, unit === 'm' && styles.szUnitBtnActive]}
+            onPress={() => setUnit('m')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.szUnitBtnText, unit === 'm' && styles.szUnitBtnTextActive]}>m</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.szUnitBtn, unit === 'cm' && styles.szUnitBtnActive]}
+            onPress={() => setUnit('cm')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.szUnitBtnText, unit === 'cm' && styles.szUnitBtnTextActive]}>cm</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.szUnitBtn, unit === 'ft' && styles.szUnitBtnActive]}
+            onPress={() => setUnit('ft')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.szUnitBtnText, unit === 'ft' && styles.szUnitBtnTextActive]}>ft</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Custom size controls */}
-      <Text style={styles.szSectionLabel}>CUSTOM SIZE</Text>
+      <View style={styles.szArmReachHint}>
+        <Text style={styles.szArmReachText}>
+          💡 Keep width ≤ {unit === 'ft' ? '4 ft' : unit === 'cm' ? '120 cm' : '1.2 m'} — reach the centre without stepping in
+        </Text>
+      </View>
+
       <CircleStepper
-        label="Width (m)"
-        value={data.width_m}
-        unit="m"
-        min={0.6}
-        max={3}
-        step={0.1}
-        onChange={(v) => updateDimension('width_m', v)}
+        label={`Width (${displayUnit})`}
+        value={displayWidth}
+        unit={displayUnit}
+        min={widthMin}
+        max={widthMax}
+        step={widthStep}
+        onChange={handleWidthChange}
       />
       <CircleStepper
-        label="Length (m)"
-        value={data.length_m}
-        unit="m"
-        min={1}
-        max={10}
-        step={0.5}
-        onChange={(v) => updateDimension('length_m', v)}
+        label={`Length (${displayUnit})`}
+        value={displayLength}
+        unit={displayUnit}
+        min={lengthMin}
+        max={lengthMax}
+        step={lengthStep}
+        onChange={handleLengthChange}
       />
 
-      {/* Before planting prep card */}
+      {/* Before planting prep card — collapsed by default */}
       {prepSteps.length > 0 && (
         <View style={styles.szPrepCard}>
-          <Text style={styles.szPrepCardTitle}>Before planting — prep for your conditions</Text>
-          {prepSteps.map((s, i) => (
-            <View key={i} style={styles.szPrepStepRow}>
-              <View style={styles.szPrepStepNumber}>
-                <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+          <TouchableOpacity
+            style={styles.szPrepToggleRow}
+            activeOpacity={0.7}
+            onPress={() => setPrepExpanded((v) => !v)}
+          >
+            <Text style={styles.szPrepCardTitle}>
+              🌱 Prep checklist · {prepSteps.length} steps
+            </Text>
+            <Text style={styles.szPrepChevron}>{prepExpanded ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {prepExpanded &&
+            prepSteps.map((s, i) => (
+              <View key={i} style={[styles.szPrepStepRow, i === 0 && styles.szPrepFirstStep]}>
+                <View style={styles.szPrepStepNumber}>
+                  <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+                </View>
+                <View style={styles.szPrepStepContent}>
+                  <Text style={styles.szPrepStepText}>{s.text}</Text>
+                  <Text style={styles.szPrepStepDetail}>{s.detail}</Text>
+                </View>
               </View>
-              <View style={styles.szPrepStepContent}>
-                <Text style={styles.szPrepStepText}>{s.text}</Text>
-                <Text style={styles.szPrepStepDetail}>{s.detail}</Text>
-              </View>
-            </View>
-          ))}
+            ))}
         </View>
       )}
     </ScrollView>

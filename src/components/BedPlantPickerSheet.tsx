@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { getAllPlants } from '@/services/plants';
 import { getGuildTemplate } from '@/config/beds';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedPlantPickerStyles';
 import type { BedLayer, BedType, Plant, PlantEntry } from '@/types/database.types';
 import type { PlantRow } from '@/config/beds/guildTemplates';
@@ -39,46 +40,6 @@ const LAYER_OPTIONS: { value: BedLayer; label: string }[] = [
   { value: 'root', label: 'Root' },
   { value: 'climber', label: 'Climber' },
 ];
-
-const PLANT_EMOJI: Record<string, string> = {
-  Amaranth: '🌿',
-  Spinach: '🥬',
-  Lettuce: '🥗',
-  Fenugreek: '🌱',
-  Tomato: '🍅',
-  Brinjal: '🍆',
-  Okra: '🫛',
-  Marigold: '🌼',
-  Chilli: '🌶️',
-  Ginger: '🫚',
-  Turmeric: '🟡',
-  'Curry Leaf': '🍃',
-  Cowpea: '🫘',
-  'French Beans': '🫘',
-  Carrot: '🥕',
-  Radish: '🌰',
-  'Bitter Gourd': '🥒',
-  'Snake Gourd': '🥒',
-  'Yardlong Beans': '🫘',
-  Banana: '🍌',
-  Cocoa: '🍫',
-  'Black Pepper': '⚫',
-  'Elephant Yam': '🥔',
-  Maize: '🌽',
-  Beans: '🫘',
-  Pumpkin: '🎃',
-  Moringa: '🌳',
-  Tulsi: '🌿',
-  'Aloe Vera': '🌵',
-  Lemongrass: '🌾',
-  Basil: '🌿',
-  Garlic: '🧄',
-  Strawberry: '🍓',
-  Beetroot: '🟣',
-  Pepper: '🌶️',
-  Agathi: '🌱',
-  Comfrey: '🌿',
-};
 
 const LAYER_LABEL: Record<BedLayer, string> = {
   canopy: 'Canopy',
@@ -167,7 +128,7 @@ function GuildTab({
 
   const renderRow = (row: PlantRow, isCompanion: boolean, count: number): React.JSX.Element => (
     <View key={row.name} style={styles.guildPlantRow}>
-      <Text style={styles.guildEmoji}>{PLANT_EMOJI[row.name] ?? '🌱'}</Text>
+      <Text style={styles.guildEmoji}>{getPlantEmoji(row.name)}</Text>
       <View style={styles.guildMeta}>
         <View style={styles.nameRow}>
           <Text style={styles.guildName}>{row.name}</Text>
@@ -184,7 +145,9 @@ function GuildTab({
             <Text style={styles.guildLayerBadgeText}>{LAYER_LABEL[row.layer]}</Text>
           </View>
           <Text style={styles.spacingTag}>↔ {row.spacing_cm}cm</Text>
-          <Text style={styles.spacingTag}>↕ {Math.max(row.spacing_cm, MIN_ROW_GAP_CM)}cm</Text>
+          <Text style={styles.spacingTag}>
+            ↕ {row.row_gap_cm ?? Math.max(row.spacing_cm, MIN_ROW_GAP_CM)}cm row gap
+          </Text>
           {isCompanion && (
             <View style={[styles.guildLayerBadge, { backgroundColor: theme.primaryLight }]}>
               <Text style={[styles.guildLayerBadgeText, { color: theme.primary }]}>
@@ -297,7 +260,7 @@ function MyPlantsTab({
       const plant = plants.find((p) => p.id === id);
       if (!plant) continue;
       const layer = layerMap[id] ?? preselectedLayer ?? 'understory';
-      onAdd(plant.name, layer, 30);
+      onAdd(plant.name, layer, plant.spacing_cm ?? 30);
     }
   }, [selectedIds, plants, layerMap, preselectedLayer, onAdd]);
 
@@ -351,7 +314,9 @@ function MyPlantsTab({
               ) : null}
               <View style={styles.spacingTagRow}>
                 <Text style={styles.spacingTag}>↔ {colSpacing}cm</Text>
-                <Text style={styles.spacingTag}>↕ {Math.max(colSpacing, MIN_ROW_GAP_CM)}cm</Text>
+                <Text style={styles.spacingTag}>
+                  ↕ {Math.max(colSpacing, MIN_ROW_GAP_CM)}cm row gap
+                </Text>
               </View>
               {isSelected && (
                 <View style={styles.layerPicker}>

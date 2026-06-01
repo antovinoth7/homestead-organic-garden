@@ -1,6 +1,10 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
 
+export const ROW_TILE_WIDTH = 90;
+export const ROW_TILE_GAP = 8;
+export const ROW_TILE_STEP = ROW_TILE_WIDTH + ROW_TILE_GAP;
+
 // Companion tile fixed design — matches LAYER_BORDER['climber'] purple
 const COMPANION_BORDER = '#7b1fa2';
 const COMPANION_BG = '#f5f0fa';
@@ -8,9 +12,6 @@ const COMPANION_BG = '#f5f0fa';
 const GROUND_BORDER = '#c8842a';
 // Main crop legend swatch — matches LAYER_BORDER['understory'] green
 const MAIN_BORDER = '#558b2f';
-// Harvest badge — amber/orange
-const HARVEST_BG = '#fff3e0';
-const HARVEST_TEXT = '#e65100';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -109,27 +110,26 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     // ── Row card ──────────────────────────────────────────────────────────────
     rowCard: {
-      borderRadius: 10,
-      marginBottom: 6,
+      borderRadius: 14,
+      marginBottom: 8,
       borderWidth: 1.5,
       overflow: 'hidden',
     },
     rowAccentStripe: {
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      bottom: 0,
-      width: 4,
+      height: 4,
+      width: '100%' as const,
     },
     rowHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingLeft: 14,
+      paddingLeft: 12,
       paddingRight: 12,
       paddingTop: 10,
       paddingBottom: 8,
-      gap: 6,
       borderBottomWidth: 1,
+    },
+    rowHeaderTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
     },
     rowNumCircle: {
       width: 22,
@@ -154,8 +154,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     badgeRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 4,
       alignItems: 'center',
+      marginTop: 6,
     },
     nFixerBadge: {
       backgroundColor: theme.successLight,
@@ -169,7 +171,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.successDark,
     },
     fillsGapsBadge: {
-      backgroundColor: HARVEST_BG,
+      backgroundColor: theme.warningLight,
       borderRadius: 4,
       paddingHorizontal: 5,
       paddingVertical: 2,
@@ -177,7 +179,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     fillsGapsBadgeText: {
       fontSize: 9,
       fontWeight: '700',
-      color: HARVEST_TEXT,
+      color: theme.warningDark,
     },
     staggeredBadge: {
       backgroundColor: theme.accentLight,
@@ -212,40 +214,41 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // ── Plant tiles ───────────────────────────────────────────────────────────
     plantTilesContainer: {
       flexDirection: 'row',
-      paddingLeft: 14,
+      paddingLeft: 10,
       paddingTop: 10,
       paddingBottom: 10,
-      paddingRight: 8,
+      paddingRight: 10,
       gap: 8,
     },
     plantTileMain: {
-      width: 80,
-      minHeight: 90,
-      borderRadius: 8,
+      minWidth: 90,
+      maxWidth: 130,
+      borderRadius: 10,
       borderWidth: 1.5,
-      padding: 6,
+      backgroundColor: theme.background,
+      padding: 8,
       alignItems: 'center',
-      gap: 3,
+      gap: 4,
     },
     plantTileCompanion: {
-      width: 80,
-      minHeight: 90,
-      borderRadius: 8,
+      minWidth: 90,
+      maxWidth: 130,
+      borderRadius: 10,
       borderWidth: 1.5,
       borderStyle: 'dashed',
       borderColor: COMPANION_BORDER,
       backgroundColor: COMPANION_BG,
-      padding: 6,
+      padding: 8,
       alignItems: 'center',
-      gap: 3,
+      gap: 4,
     },
     plantTileEmpty: {
-      width: 80,
+      width: 90,
       minHeight: 90,
-      borderRadius: 8,
+      borderRadius: 10,
       borderWidth: 1.5,
       borderStyle: 'dashed',
-      padding: 6,
+      padding: 8,
       alignItems: 'center',
       justifyContent: 'center',
       gap: 2,
@@ -255,11 +258,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 22,
     },
     plantTileName: {
-      fontSize: 10,
-      fontWeight: '600',
+      fontSize: 12,
+      fontWeight: '700',
       color: theme.text,
       textAlign: 'center',
-      lineHeight: 13,
+      lineHeight: 15,
+    },
+    plantTileSpacing: {
+      fontSize: 10,
+      color: theme.textTertiary,
     },
     plantTileEmptyIcon: {
       fontSize: 20,
@@ -274,56 +281,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       opacity: 0.5,
     },
 
-    // Harvest & benefit badges inside tile
-    harvestBadge: {
-      backgroundColor: HARVEST_BG,
-      borderRadius: 4,
-      paddingHorizontal: 4,
-      paddingVertical: 2,
-      marginTop: 2,
-    },
-    harvestBadgeText: {
-      fontSize: 8,
-      fontWeight: '700',
-      color: HARVEST_TEXT,
-    },
-    benefitBadge: {
-      borderRadius: 4,
-      paddingHorizontal: 4,
-      paddingVertical: 2,
-      marginTop: 2,
-    },
-    benefitBadgeText: {
-      fontSize: 8,
-      fontWeight: '700',
-      color: theme.textInverse,
-    },
-    companionFixedBadge: {
-      borderRadius: 4,
-      paddingHorizontal: 4,
-      paddingVertical: 2,
-      marginTop: 2,
-      borderWidth: 1,
-      borderColor: COMPANION_BORDER,
-      backgroundColor: COMPANION_BG,
-    },
-    companionFixedBadgeText: {
-      fontSize: 8,
-      fontWeight: '700',
-      color: COMPANION_BORDER,
-    },
-    spacingBadge: {
-      borderRadius: 4,
-      paddingHorizontal: 4,
-      paddingVertical: 2,
-      marginTop: 2,
-      backgroundColor: theme.backgroundSecondary,
-    },
-    spacingBadgeText: {
-      fontSize: 8,
-      fontWeight: '600',
-      color: theme.textTertiary,
-    },
     emptySlotSpacingText: {
       fontSize: 9,
       color: theme.textTertiary,
@@ -333,10 +290,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // ── Care task chips ────────────────────────────────────────────────────────
     careTaskChips: {
       flexDirection: 'row',
-      paddingLeft: 14,
+      paddingLeft: 10,
       paddingBottom: 10,
       paddingTop: 4,
-      paddingRight: 8,
+      paddingRight: 10,
       gap: 6,
     },
     careTaskChip: {
@@ -506,42 +463,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingBottom: 4,
     },
 
-    // ── RowCard accordion ──────────────────────────────────────────────────────
-    rowHeaderCollapsed: {
-      borderBottomWidth: 0,
-    },
-    rowChevron: {
-      marginLeft: 'auto' as const,
-    },
-    collapsedSummary: {
-      flexDirection: 'row' as const,
-      flexWrap: 'wrap' as const,
-      alignItems: 'center' as const,
-      paddingLeft: 14,
-      paddingRight: 12,
-      paddingBottom: 10,
-      paddingTop: 4,
-      gap: 6,
-    },
-    collapsedChip: {
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-      borderRadius: 12,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-    },
-    collapsedChipText: {
-      fontSize: 10,
-      fontWeight: '600' as const,
-      color: theme.textSecondary,
-    },
-    collapsedMore: {
-      fontSize: 10,
-      color: theme.textTertiary,
-      fontWeight: '600' as const,
-    },
-
     // ── AvailableLayersSection ─────────────────────────────────────────────────
     availableLayersCard: {
       borderRadius: 10,
@@ -641,5 +562,71 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     insightsSummaryWarn: {
       color: theme.error,
       fontWeight: '600' as const,
+    },
+
+    // ── Tile remove button (matches BedLayerStack tileRemove) ────────────────
+    tileRemove: {
+      position: 'absolute' as const,
+      top: -6,
+      right: -6,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: theme.error,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
+    tileRemoveText: {
+      fontSize: 11,
+      fontWeight: '800' as const,
+      color: theme.textInverse,
+      lineHeight: 13,
+    },
+
+    // ── Resolution chip ────────────────────────────────────────────────────────
+    resolutionChip: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderStyle: 'dashed' as const,
+      borderColor: theme.textTertiary,
+      marginTop: 2,
+    },
+    resolutionChipText: {
+      fontSize: 9,
+      color: theme.textSecondary,
+      fontWeight: '700' as const,
+      letterSpacing: 0.3,
+    },
+    resolutionChipResolved: {
+      borderStyle: 'solid' as const,
+      borderColor: theme.success,
+      backgroundColor: theme.successLight,
+    },
+    resolutionChipResolvedText: {
+      color: theme.success,
+    },
+    // ── Drag wrapper ──────────────────────────────────────────────────────────
+    tileWrapperDragging: {
+      zIndex: 10,
+      elevation: 8,
+      opacity: 0.92,
+      shadowColor: theme.text,
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    // ── Per-row add button ────────────────────────────────────────────────────
+    rowCardAddBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 14,
+      backgroundColor: theme.primary,
+    },
+    rowCardAddBtnText: {
+      fontSize: 12,
+      fontWeight: '700' as const,
+      color: theme.textInverse,
     },
   });

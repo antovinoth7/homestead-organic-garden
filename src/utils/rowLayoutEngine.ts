@@ -1,8 +1,6 @@
 import type { BedLayer, BedType, CropFamily } from '@/types/database.types';
 import { validateCompanionPair } from '@/config/beds/companionRules';
-
-// North → South layer order for row assignment
-const LAYER_ORDER: BedLayer[] = ['canopy', 'climber', 'understory', 'root', 'ground_cover'];
+import { LAYER_ORDER } from '@/config/beds/layerMeta';
 
 const LAYER_BASE_LABELS: Record<BedLayer, string> = {
   canopy: 'Canopy',
@@ -13,9 +11,6 @@ const LAYER_BASE_LABELS: Record<BedLayer, string> = {
 };
 
 type BedCategory = 'raised' | 'in_ground' | 'food_forest';
-
-// Coconut intercrop is always food-forest (tree spacing dominates).
-// All other bed types use the user-selected construction_type from the wizard.
 
 const MIN_ROW_GAP_BY_CATEGORY: Record<BedCategory, number> = {
   raised: 25,
@@ -35,14 +30,27 @@ const EDGE_BUFFER_FRACTION = 0.25;
 const EDGE_BUFFER_MIN_CM = 5;
 const EDGE_BUFFER_MAX_CM = 20;
 
-const WALKING_PATH_CM = 60;
+// Walking path per bed category (permaculture standards):
+// raised beds = compact mulched access; in-ground = wheelbarrow access;
+// food forest = canopy clearance + mulched wheelbarrow path.
+const WALKING_PATH_BY_CATEGORY: Record<BedCategory, number> = {
+  raised: 45,
+  in_ground: 60,
+  food_forest: 90,
+};
 const ROW_SUFFIX = ['A', 'B', 'C', 'D', 'E'];
+
+// Upper bound for `maxFitForSpecies` probing to keep the per-row UI snappy on
+// arbitrarily large beds. Real beds never need more than a few dozen of one
+// species; 200 is comfortably above any farmer-facing use case.
+const MAX_FIT_HARD_CAP = 200;
 
 export interface RowPlantInput {
   id?: string;
   name: string;
   layer: BedLayer;
   spacingCm: number;
+  rowGapCm?: number; // N-S between-row clearance from template; falls back to spacingCm × multiplier
   cropFamily?: CropFamily | null;
   daysToHarvest?: number;
   benefitTag?: string;
@@ -70,14 +78,51 @@ export interface BedRow {
   plants: RowPlant[];
   plantsPerRow: number; // main-crop column slots across bed width
   interplantedCount: number; // companions woven between mains in this row
-  rowSpacingCm: number; // N-S clearance this row needs from neighbors
+  rowSpacingCm: number; // N-S clearance this row needs from companions in adjacent rows
   isStaggered: boolean;
+  northEdgeCm: number; // distance from bed's north edge to this row's centreline
+  eastPositionsCm: number[]; // E-W distances from bed's west edge to each plant centre
+}
+
+/** Layers expected per bed type (used to hide empty layer sections in Step 5). */
+export const EXPECTED_LAYERS_BY_BED: Record<BedType, BedLayer[]> = {
+  leafy: ['understory', 'ground_cover'],
+  fruiting: ['climber', 'understory', 'ground_cover'],
+  spice: ['understory', 'root'],
+  root_legume: ['understory', 'root'],
+  climber_trellis: ['climber', 'ground_cover'],
+  three_sisters: ['canopy', 'climber', 'ground_cover'],
+  medicinal_guild: ['canopy', 'understory', 'ground_cover'],
+};
+
+/**
+ * Returns the layers to show in Step 5 for a given bed type.
+ * Always includes layers that have plants; adds architecturally expected empty layers too.
+ */
+export function getVisibleLayers(bedType: BedType, plantedLayers: Set<BedLayer>): BedLayer[] {
+  const expected = new Set([...(EXPECTED_LAYERS_BY_BED[bedType] ?? []), ...plantedLayers]);
+  return LAYER_ORDER.filter((l) => expected.has(l));
+}
+
+/**
+ * Effective N–S row gap (cm) one instance of `candidate` needs: the template's explicit
+ * row_gap_cm, else spacing × category multiplier, floored at the category minimum. Mirrors
+ * the per-plant gap math inside `computeRowLayout` so callers (e.g. the Quick Start planner)
+ * can rank plants by footprint without duplicating the engine's constants.
+ */
+export function effectiveRowGapCm(
+  candidate: RowPlantInput,
+  constructionType?: 'raised' | 'in_ground'
+): number {
+  const category: BedCategory = constructionType ?? 'raised';
+  const gapCm = candidate.rowGapCm ?? candidate.spacingCm * ROW_MULTIPLIER_BY_CATEGORY[category];
+  return Math.max(gapCm, MIN_ROW_GAP_BY_CATEGORY[category]);
 }
 
 /**
  * Returns how many more of `candidate` can be added on top of `currentPlants` while
- * the bed still satisfies `fitsInBed`. Linear probe — caps at `cap` to prevent
- * runaway loops on huge beds where the species never overflows.
+ * the bed still satisfies `fitsInBed`. Uses a formula-based cap derived from bed geometry
+ * so small-spacing crops (Carrot, Radish) are never capped at an arbitrary number.
  */
 export function maxFitForSpecies(
   candidate: RowPlantInput,
@@ -85,19 +130,37 @@ export function maxFitForSpecies(
   widthM: number,
   lengthM: number,
   bedType: BedType = 'leafy',
-  constructionType?: 'raised' | 'in_ground',
-  cap = 50
+  constructionType?: 'raised' | 'in_ground'
 ): number {
-  for (let n = 1; n <= cap; n++) {
+  const bedWidthCm = Math.round(widthM * 100);
+  const bedLengthCm = Math.round(lengthM * 100);
+
+  const ppr = computePlantsPerRow(bedWidthCm, candidate.spacingCm);
+  const effectiveGap = effectiveRowGapCm(candidate, constructionType);
+  const maxRowsCap = Math.max(1, Math.floor(bedLengthCm / effectiveGap));
+  const cap = Math.min(MAX_FIT_HARD_CAP, Math.max(ppr * maxRowsCap, 1));
+
+  const fitsWith = (n: number): boolean => {
     const additions: RowPlantInput[] = Array.from({ length: n }, (_, i) => ({
       ...candidate,
       id: `${candidate.id ?? candidate.name}_probe_${i}`,
     }));
-    const test = [...currentPlants, ...additions];
-    const result = computeRowLayout(test, widthM, lengthM, bedType, constructionType);
-    if (!result.fitsInBed) return n - 1;
+    return computeRowLayout([...currentPlants, ...additions], widthM, lengthM, bedType, constructionType)
+      .fitsInBed;
+  };
+
+  // `fitsInBed` is monotonic in n — adding more of one species only ever grows used length,
+  // never shrinks it — so binary-search the largest n in [1, cap] that still fits. This keeps
+  // the per-species probe O(log cap) instead of O(cap) computeRowLayout calls.
+  if (!fitsWith(1)) return 0;
+  let lo = 1;
+  let hi = cap;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (fitsWith(mid)) lo = mid;
+    else hi = mid - 1;
   }
-  return cap;
+  return lo;
 }
 
 /**
@@ -123,6 +186,46 @@ export function getRecommendedFirstAdd(
     constructionType
   );
   return Math.max(0, Math.min(perRow, maxFit));
+}
+
+/**
+ * Returns { plantsPerRow, rowCount, total } for a species in a given bed.
+ * Used by Step 4 to show "N rows × M = total" in the capacity display.
+ */
+export function computePlantMatrix(
+  candidate: RowPlantInput,
+  currentPlants: RowPlantInput[],
+  widthM: number,
+  lengthM: number,
+  bedType: BedType = 'leafy',
+  constructionType?: 'raised' | 'in_ground'
+): { plantsPerRow: number; rowCount: number; total: number } {
+  const bedWidthCm = Math.round(widthM * 100);
+  const bedLengthCm = Math.round(lengthM * 100);
+  const category: BedCategory = constructionType ?? 'raised';
+  const rowMultiplier = ROW_MULTIPLIER_BY_CATEGORY[category];
+  const minRowGap = MIN_ROW_GAP_BY_CATEGORY[category];
+
+  const plantsPerRow = computePlantsPerRow(bedWidthCm, candidate.spacingCm);
+  const gapCm = candidate.rowGapCm ?? candidate.spacingCm * rowMultiplier;
+  const effectiveGap = Math.max(gapCm, minRowGap);
+  const edgeBuf = computeEdgeBuffer(effectiveGap);
+
+  // Rows available for this species only (ignores other species already in bed for display)
+  const rowCount = Math.max(1, Math.floor((bedLengthCm - 2 * edgeBuf) / effectiveGap) + 1);
+
+  // Cap by actual remaining capacity
+  const maxFit = maxFitForSpecies(
+    candidate,
+    currentPlants,
+    widthM,
+    lengthM,
+    bedType,
+    constructionType
+  );
+  const total = Math.min(plantsPerRow * rowCount, maxFit);
+
+  return { plantsPerRow, rowCount: Math.ceil(total / plantsPerRow), total };
 }
 
 /**
@@ -161,6 +264,66 @@ export function interleavePlants<T extends { isCompanion?: boolean }>(plants: T[
     result.push(companions[cIdx++]!);
   }
   return result;
+}
+
+/**
+ * East-west positions for a row's plants, in the same display order as
+ * `interleavePlants` would produce. Mains sit at `eastPositionsCm[i]`; interior
+ * companions are spread across the gaps between adjacent mains; trailing
+ * companions extend past the last main; with no mains, companions fall back to
+ * the row's pre-computed slot grid.
+ *
+ * Used by `BedTopDownMap` so the visual layout stays in lockstep with the
+ * engine's interleave rule (single source of truth).
+ */
+export function computeInterleavedEastPositions(row: BedRow): number[] {
+  const mains = row.plants.filter((p) => p.isCompanion !== true);
+  const companions = row.plants.filter((p) => p.isCompanion === true);
+  const positions: number[] = [];
+
+  mains.forEach((_, i) => {
+    positions.push(row.eastPositionsCm[i] ?? 0);
+  });
+
+  if (companions.length === 0) return positions;
+
+  if (mains.length === 0) {
+    companions.forEach((_, i) => {
+      positions.push(row.eastPositionsCm[i] ?? 0);
+    });
+    return positions;
+  }
+
+  if (mains.length === 1) {
+    const main = row.eastPositionsCm[0] ?? 0;
+    const spacing = mains[0]?.spacingCm ?? 30;
+    for (let j = 0; j < companions.length; j++) {
+      positions.push(main + ((j + 1) * spacing) / (companions.length + 1));
+    }
+    return positions;
+  }
+
+  const gapCount = mains.length - 1;
+  const perGapBase = Math.floor(companions.length / gapCount);
+  const remainder = companions.length - perGapBase * gapCount;
+
+  let cIdx = 0;
+  for (let i = 0; i < gapCount; i++) {
+    const take = perGapBase + (i < remainder ? 1 : 0);
+    const left = row.eastPositionsCm[i] ?? 0;
+    const right = row.eastPositionsCm[i + 1] ?? 0;
+    for (let k = 0; k < take && cIdx < companions.length; k++) {
+      const t = (k + 1) / (take + 1);
+      positions.push(left + t * (right - left));
+      cIdx++;
+    }
+  }
+  while (cIdx < companions.length) {
+    positions.push(row.eastPositionsCm[mains.length - 1] ?? 0);
+    cIdx++;
+  }
+
+  return positions;
 }
 
 export interface CompanionWarning {
@@ -210,18 +373,18 @@ export function computePlantsPerRow(bedWidthCm: number, spacingCm: number): numb
 /**
  * Auto-assigns plants to N→S rows by BedLayer using bed-type-aware row spacing,
  * center-to-center column math, and companion interplanting.
+ * Each BedRow includes exact northEdgeCm and eastPositionsCm for peg-out marking.
  */
 export function computeRowLayout(
   plants: RowPlantInput[],
   widthM: number,
   lengthM: number,
-  bedType: BedType = 'leafy',
+  _bedType: BedType = 'leafy',
   constructionType?: 'raised' | 'in_ground'
 ): RowLayoutResult {
   const bedWidthCm = Math.round(widthM * 100);
   const bedLengthCm = Math.round(lengthM * 100);
-  const category: BedCategory =
-    bedType === 'coconut_intercrop' ? 'food_forest' : constructionType ?? 'raised';
+  const category: BedCategory = constructionType ?? 'raised';
   const rowMultiplier = ROW_MULTIPLIER_BY_CATEGORY[category];
   const minRowGap = MIN_ROW_GAP_BY_CATEGORY[category];
 
@@ -241,111 +404,177 @@ export function computeRowLayout(
   let rowIndex = 1;
   const successionWeekSet = new Set<number>();
 
+  // Pool ALL companions across layers into a single sequence so they can interplant
+  // cross-layer into ANY main's row (e.g. a ground_cover Basil sits between canopy
+  // Brinjals). Each layer iteration below then sees only mains.
+  const globalCompanionPool: RowPlantInput[] = [];
   for (const layer of LAYER_ORDER) {
     const layerPlants = byLayer[layer];
-    if (layerPlants.length === 0) continue;
+    for (const p of layerPlants) {
+      if (p.isCompanion === true) globalCompanionPool.push(p);
+    }
+    byLayer[layer] = layerPlants.filter((p) => p.isCompanion !== true);
+  }
+  globalCompanionPool.sort((a, b) => a.spacingCm - b.spacingCm);
 
-    // Companions interplant between mains; they don't claim column slots.
-    const mains = layerPlants.filter((p) => p.isCompanion !== true);
-    const companions = layerPlants.filter((p) => p.isCompanion === true);
+  let hadMains = false;
 
-    // Anchor from mains when present, otherwise companions act as mains.
-    const anchorSource = mains.length > 0 ? mains : layerPlants;
-    const anchorSpacing = Math.max(...anchorSource.map((p) => p.spacingCm));
-    const plantsPerRow = computePlantsPerRow(bedWidthCm, anchorSpacing);
+  for (const layer of LAYER_ORDER) {
+    const mains = byLayer[layer];
+    if (mains.length === 0) continue;
+    hadMains = true;
 
-    const sortedMains = [...mains].sort((a, b) => a.spacingCm - b.spacingCm);
-    const sortedCompanions = [...companions].sort((a, b) => a.spacingCm - b.spacingCm);
-
-    const sourceForChunks = sortedMains.length > 0 ? sortedMains : sortedCompanions;
-    const companionPool = sortedMains.length > 0 ? [...sortedCompanions] : [];
-
-    // Max companions woven into a single row = gaps between mains = plantsPerRow - 1
-    const interplantCapacityPerRow = Math.max(0, plantsPerRow - 1);
-
-    const totalChunks = Math.ceil(sourceForChunks.length / plantsPerRow);
-
-    let chunkIndex = 0;
-    for (let i = 0; i < sourceForChunks.length; i += plantsPerRow) {
-      const mainChunk = sourceForChunks.slice(i, i + plantsPerRow);
-
-      const interplanted = Math.min(interplantCapacityPerRow, companionPool.length);
-      const interleavedCompanions = companionPool.splice(0, interplanted);
-      const interleaved = [...mainChunk, ...interleavedCompanions];
-
-      const maxChunkSpacing = Math.max(...interleaved.map((p) => p.spacingCm));
-      const rowSpacingCm = Math.max(Math.round(maxChunkSpacing * rowMultiplier), minRowGap);
-
-      const baseLabel = LAYER_BASE_LABELS[layer];
-      const suffix = totalChunks > 1 ? ` ${ROW_SUFFIX[chunkIndex] ?? String(chunkIndex + 1)}` : '';
-      const layerLabel = `${baseLabel}${suffix}`;
-
-      rows.push({
-        rowIndex,
-        label: `Row ${rowIndex} — ${layerLabel}`,
-        layer,
-        plants: interleaved.map((p) => {
-          if (p.successionWeek !== undefined) successionWeekSet.add(p.successionWeek);
-          return {
-            id: p.id,
-            name: p.name,
-            spacingCm: p.spacingCm,
-            isNFixer: p.cropFamily === 'legume',
-            daysToHarvest: p.daysToHarvest,
-            benefitTag: p.benefitTag,
-            careTasks: p.careTasks,
-            isCompanion: p.isCompanion,
-            successionWeek: p.successionWeek,
-          };
-        }),
-        plantsPerRow,
-        interplantedCount: interplanted,
-        rowSpacingCm,
-        isStaggered: chunkIndex > 0,
-      });
-
-      rowIndex++;
-      chunkIndex++;
+    // Group mains by species so each species gets its own rows.
+    const mainsBySpecies = new Map<string, RowPlantInput[]>();
+    for (const p of mains) {
+      const arr = mainsBySpecies.get(p.name) ?? [];
+      arr.push(p);
+      mainsBySpecies.set(p.name, arr);
     }
 
-    // Surplus companions spill into staggered companion-only rows
-    while (companionPool.length > 0) {
-      const compAnchor = Math.max(...companionPool.map((p) => p.spacingCm));
-      const compPerRow = computePlantsPerRow(bedWidthCm, compAnchor);
-      const chunk = companionPool.splice(0, compPerRow);
+    // Total row-chunks across all species (drives suffix labels like A/B/C).
+    const totalChunksThisLayer = [...mainsBySpecies.values()].reduce(
+      (sum, sp) => sum + Math.ceil(sp.length / computePlantsPerRow(bedWidthCm, sp[0]!.spacingCm)),
+      0
+    );
 
-      const maxChunkSpacing = Math.max(...chunk.map((p) => p.spacingCm));
-      const rowSpacingCm = Math.max(Math.round(maxChunkSpacing * rowMultiplier), minRowGap);
+    let chunkIndex = 0;
+    for (const [, speciesPlants] of mainsBySpecies) {
+      const speciesSpacing = speciesPlants[0]!.spacingCm;
+      const speciesPPR = computePlantsPerRow(bedWidthCm, speciesSpacing);
+      const interplantCapacityPerRow = Math.max(0, speciesPPR - 1);
 
-      const baseLabel = LAYER_BASE_LABELS[layer];
-      const suffix = ` ${ROW_SUFFIX[chunkIndex] ?? String(chunkIndex + 1)}`;
+      for (let i = 0; i < speciesPlants.length; i += speciesPPR) {
+        const mainChunk = speciesPlants.slice(i, i + speciesPPR);
 
-      rows.push({
-        rowIndex,
-        label: `Row ${rowIndex} — ${baseLabel}${suffix}`,
-        layer,
-        plants: chunk.map((p) => {
-          if (p.successionWeek !== undefined) successionWeekSet.add(p.successionWeek);
-          return {
-            id: p.id,
-            name: p.name,
-            spacingCm: p.spacingCm,
-            isNFixer: p.cropFamily === 'legume',
-            daysToHarvest: p.daysToHarvest,
-            benefitTag: p.benefitTag,
-            careTasks: p.careTasks,
-            isCompanion: p.isCompanion,
-            successionWeek: p.successionWeek,
-          };
-        }),
-        plantsPerRow: compPerRow,
-        interplantedCount: 0,
-        rowSpacingCm,
-        isStaggered: true,
-      });
+        const interplanted = Math.min(interplantCapacityPerRow, globalCompanionPool.length);
+        const interleavedCompanions = globalCompanionPool.splice(0, interplanted);
+        const interleaved = [...mainChunk, ...interleavedCompanions];
 
-      rowIndex++;
-      chunkIndex++;
+        // Prefer explicit row_gap_cm from template; fall back to spacing × category multiplier
+        const maxChunkRowGap = Math.max(
+          ...interleaved.map((p) => p.rowGapCm ?? p.spacingCm * rowMultiplier)
+        );
+        const rowSpacingCm = Math.max(Math.round(maxChunkRowGap), minRowGap);
+
+        const baseLabel = LAYER_BASE_LABELS[layer];
+        const suffix =
+          totalChunksThisLayer > 1 ? ` ${ROW_SUFFIX[chunkIndex] ?? String(chunkIndex + 1)}` : '';
+
+        const eBufEW = computeEdgeBuffer(speciesSpacing);
+        const eastPositionsCm = Array.from(
+          { length: speciesPPR },
+          (_, k) => eBufEW + k * speciesSpacing
+        );
+
+        rows.push({
+          rowIndex,
+          label: `Row ${rowIndex} — ${baseLabel}${suffix}`,
+          layer,
+          plants: interleaved.map((p) => {
+            if (p.successionWeek !== undefined) successionWeekSet.add(p.successionWeek);
+            return {
+              id: p.id,
+              name: p.name,
+              spacingCm: p.spacingCm,
+              isNFixer: p.cropFamily === 'legume',
+              daysToHarvest: p.daysToHarvest,
+              benefitTag: p.benefitTag,
+              careTasks: p.careTasks,
+              isCompanion: p.isCompanion,
+              successionWeek: p.successionWeek,
+            };
+          }),
+          plantsPerRow: speciesPPR,
+          interplantedCount: interplanted,
+          rowSpacingCm,
+          isStaggered: chunkIndex > 0,
+          northEdgeCm: 0, // filled in second pass below
+          eastPositionsCm,
+        });
+
+        rowIndex++;
+        chunkIndex++;
+      }
+    }
+  }
+
+  // Drain leftover companions into companion-only rows. Two cases:
+  // - hadMains === false: companions-only bed → emit per-layer anchor rows (no suffix
+  //   when a layer has only one chunk; first chunk of first layer is not staggered).
+  // - hadMains === true: interior gaps were exhausted → all leftover rows are
+  //   staggered surplus at the bottom of the bed (suffix always present).
+  if (globalCompanionPool.length > 0) {
+    const compsByLayer: Record<BedLayer, RowPlantInput[]> = {
+      canopy: [],
+      climber: [],
+      understory: [],
+      root: [],
+      ground_cover: [],
+    };
+    for (const c of globalCompanionPool) compsByLayer[c.layer].push(c);
+    globalCompanionPool.length = 0;
+
+    for (const layer of LAYER_ORDER) {
+      const compsInLayer = compsByLayer[layer];
+      if (compsInLayer.length === 0) continue;
+      compsInLayer.sort((a, b) => a.spacingCm - b.spacingCm);
+
+      const anchorSpacing = Math.max(...compsInLayer.map((p) => p.spacingCm));
+      const plantsPerRow = computePlantsPerRow(bedWidthCm, anchorSpacing);
+      const totalChunks = Math.ceil(compsInLayer.length / plantsPerRow);
+
+      let chunkIndex = 0;
+      for (let i = 0; i < compsInLayer.length; i += plantsPerRow) {
+        const chunk = compsInLayer.slice(i, i + plantsPerRow);
+
+        const maxChunkSpacing = Math.max(...chunk.map((p) => p.spacingCm));
+        const maxChunkRowGap = Math.max(
+          ...chunk.map((p) => p.rowGapCm ?? p.spacingCm * rowMultiplier)
+        );
+        const rowSpacingCm = Math.max(Math.round(maxChunkRowGap), minRowGap);
+
+        const baseLabel = LAYER_BASE_LABELS[layer];
+        const suffix =
+          hadMains || totalChunks > 1
+            ? ` ${ROW_SUFFIX[chunkIndex] ?? String(chunkIndex + 1)}`
+            : '';
+
+        const eBufEW = computeEdgeBuffer(maxChunkSpacing);
+        const eastPositionsCm = Array.from(
+          { length: plantsPerRow },
+          (_, k) => eBufEW + k * maxChunkSpacing
+        );
+
+        rows.push({
+          rowIndex,
+          label: `Row ${rowIndex} — ${baseLabel}${suffix}`,
+          layer,
+          plants: chunk.map((p) => {
+            if (p.successionWeek !== undefined) successionWeekSet.add(p.successionWeek);
+            return {
+              id: p.id,
+              name: p.name,
+              spacingCm: p.spacingCm,
+              isNFixer: p.cropFamily === 'legume',
+              daysToHarvest: p.daysToHarvest,
+              benefitTag: p.benefitTag,
+              careTasks: p.careTasks,
+              isCompanion: p.isCompanion,
+              successionWeek: p.successionWeek,
+            };
+          }),
+          plantsPerRow,
+          interplantedCount: 0,
+          rowSpacingCm,
+          isStaggered: hadMains || chunkIndex > 0,
+          northEdgeCm: 0, // filled in second pass below
+          eastPositionsCm,
+        });
+
+        rowIndex++;
+        chunkIndex++;
+      }
     }
   }
 
@@ -366,6 +595,15 @@ export function computeRowLayout(
   const spareLengthCm = Math.max(0, bedLengthCm - usedLengthCm);
   const effectiveRowGap = maxRowSpacing > 0 ? maxRowSpacing : minRowGap;
   const totalRowsFit = spareLengthCm > 0 ? Math.floor(spareLengthCm / effectiveRowGap) : 0;
+
+  // Second pass: assign northEdgeCm to each row (distance from N edge to row centreline)
+  let northOffset = edgeBufferCm;
+  for (let i = 0; i < rows.length; i++) {
+    rows[i]!.northEdgeCm = northOffset;
+    if (i < rows.length - 1) {
+      northOffset += Math.max(rows[i]!.rowSpacingCm, rows[i + 1]!.rowSpacingCm);
+    }
+  }
 
   // Companion validation — all pairs across the whole bed
   const allNames = plants.map((p) => p.name);
@@ -398,7 +636,7 @@ export function computeRowLayout(
     bedWidthCm,
     bedLengthCm,
     edgeBufferCm,
-    walkingPathCm: WALKING_PATH_CM,
+    walkingPathCm: WALKING_PATH_BY_CATEGORY[category],
     companionWarnings: warnings,
     successionWeeks,
   };

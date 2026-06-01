@@ -24,7 +24,6 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Eggplant: ['Beans', 'Peas', 'Spinach', 'Thyme'],
   Brinjal: ['Beans', 'Peas', 'Spinach', 'Thyme'],
   'Long Brinjal': ['Beans', 'Peas', 'Spinach', 'Thyme'],
-  'Ladies Finger': ['Basil', 'Pepper', 'Eggplant', 'Cucumber'],
   Tapioca: ['Cowpea', 'Beans', 'Marigold'],
   Drumstick: ['Brinjal', 'Chilli', 'Coriander'],
   Amaranthus: ['Onion', 'Radish', 'Beans'],
@@ -79,7 +78,7 @@ const COMPANION_PLANTS: Record<string, string[]> = {
 
   // Bed-type plants — new additions
   Fenugreek: ['Spinach', 'Radish', 'Onion', 'Coriander'],
-  Okra: ['Basil', 'Pepper', 'Eggplant', 'Cucumber'],
+  'Ladies Finger': ['Basil', 'Pepper', 'Eggplant', 'Cucumber'],
   Moringa: ['Tulsi', 'Aloe Vera', 'Lemongrass'],
   'Pasalai Keerai': ['Radish', 'Turmeric', 'Basil'],
   'French Beans': ['Carrot', 'Beetroot', 'Cucumber', 'Radish'],
@@ -1132,8 +1131,8 @@ export function getCoconutAgeInfo(plantingDate: string | null | undefined): Coco
     ageMonths < 12
       ? `${ageMonths} month${ageMonths !== 1 ? 's' : ''}`
       : ageYears >= 2
-      ? `${Math.floor(ageYears)} year${Math.floor(ageYears) !== 1 ? 's' : ''}`
-      : `${Math.floor(ageYears)} year ${ageMonths % 12} month${ageMonths % 12 !== 1 ? 's' : ''}`;
+        ? `${Math.floor(ageYears)} year${Math.floor(ageYears) !== 1 ? 's' : ''}`
+        : `${Math.floor(ageYears)} year ${ageMonths % 12} month${ageMonths % 12 !== 1 ? 's' : ''}`;
 
   if (ageMonths < 6) {
     return {
@@ -1408,7 +1407,6 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Eggplant: '🍆',
   Brinjal: '🍆',
   'Long Brinjal': '🍆',
-  'Ladies Finger': '🌿',
   Pumpkin: '🎃',
   Spinach: '🥬',
   Radish: '🥕',
@@ -1462,7 +1460,7 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Purslane: '🌿',
   'Pasalai Keerai': '🥬',
   Fenugreek: '🌿',
-  Okra: '🌿',
+  'Ladies Finger': '🌿',
   Moringa: '🌿',
   Squash: '🥒',
   'Yardlong Beans': '🫘',
@@ -1487,6 +1485,13 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Cardamom: '🌿',
   Ajwain: '🌿',
   Fennel: '🌿',
+  Amaranth: '🌿',
+  Ginger: '🫚',
+  Turmeric: '🟡',
+  'Curry Leaf': '🍃',
+  'Elephant Yam': '🥔',
+  Tulsi: '🌿',
+  Comfrey: '🌿',
 };
 
 export function getPlantEmoji(name: string): string {
@@ -1497,6 +1502,36 @@ export function getPlantEmoji(name: string): string {
     if (PLANT_EMOJI_MAP[titled]) return PLANT_EMOJI_MAP[titled]!;
   }
   return '🌱';
+}
+
+export interface HarvestPreviewItem {
+  name: string;
+  days: number;
+  emoji: string;
+}
+
+/**
+ * Build the "first harvest from this bed" timeline: the distinct planted crops
+ * that have a known days-to-harvest, sorted soonest-first. Shared by the Crops
+ * step and the Review step.
+ */
+export function buildHarvestPreview(
+  entries: { name: string }[],
+  template: import('../config/beds/guildTemplates').GuildTemplate | null
+): HarvestPreviewItem[] {
+  if (!template) return [];
+  const seen = new Set<string>();
+  const items: HarvestPreviewItem[] = [];
+  for (const entry of entries) {
+    if (seen.has(entry.name)) continue;
+    seen.add(entry.name);
+    const row = template.plant_rows.find((r) => r.name === entry.name);
+    const days = row?.days_to_harvest;
+    if (days !== undefined) {
+      items.push({ name: entry.name, days, emoji: getPlantEmoji(entry.name) });
+    }
+  }
+  return items.sort((a, b) => a.days - b.days);
 }
 
 // ── Growth Stage Auto-Progression (Phase B.4) ─────────────────────────

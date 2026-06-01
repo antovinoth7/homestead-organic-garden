@@ -139,7 +139,7 @@ const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
     'Purslane',
     'Pasalai Keerai',
     'Fenugreek',
-    'Okra',
+    'Ladies Finger',
     'Moringa',
     'Squash',
     'Yardlong Beans',
@@ -3280,7 +3280,7 @@ const PLANT_CARE_OVERRIDES: Record<string, PlantCareProfile> = {
     feedingIntensity: 'light',
     growthStageDurations: { seedling: 7, vegetative: 13, mature: 8 },
   },
-  [buildProfileKey('vegetable', 'Okra')]: {
+  [buildProfileKey('vegetable', 'Ladies Finger')]: {
     waterRequirement: 'medium',
     wateringFrequencyDays: 2,
     fertilisingFrequencyDays: 14,
@@ -4054,7 +4054,7 @@ const findProfileByVariety = (plantVariety: string): PlantCareProfile | null => 
   const key = Object.keys(PLANT_CARE_PROFILES).find((profileKey) =>
     profileKey.endsWith(`:${plantVariety}`)
   );
-  return key ? PLANT_CARE_PROFILES[key] ?? null : null;
+  return key ? (PLANT_CARE_PROFILES[key] ?? null) : null;
 };
 
 const applyOverrides = (

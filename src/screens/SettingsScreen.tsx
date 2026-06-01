@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { exportImagesOnly, importImagesOnly, getImagesOnlyStorageSize } from '../services/backup';
-import { useTheme } from '../theme';
+import { exportImagesOnly, importImagesOnly, getImagesOnlyStorageSize } from '@/services/backup';
+import { useTheme } from '@/theme';
 import {
   useFocusEffect,
   useNavigation,
@@ -10,11 +10,11 @@ import {
   ParamListBase,
 } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { clearAllData } from '../lib/storage';
-import { auth } from '../lib/firebase';
-import { createStyles } from '../styles/settingsStyles';
-import { logger } from '../utils/logger';
-import { getErrorMessage } from '../utils/errorLogging';
+import { clearAllData } from '@/lib/storage';
+import { auth } from '@/lib/firebase';
+import { createStyles } from '@/styles/settingsStyles';
+import { logger } from '@/utils/logger';
+import { getErrorMessage } from '@/utils/errorLogging';
 export default function SettingsScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
@@ -165,7 +165,7 @@ export default function SettingsScreen(): React.JSX.Element {
             disabled={loading}
           >
             {loadingAction === 'export' ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={theme.textInverse} />
             ) : (
               <>
                 <Ionicons name="images-outline" size={20} color="#fff" />
@@ -202,7 +202,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
           <View style={styles.card}>
             <TouchableOpacity style={styles.infoItem} onPress={handleClearCache} disabled={loading}>
-              <Ionicons name="trash-outline" size={20} color="#FF9800" />
+              <Ionicons name="trash-outline" size={20} color={theme.warning} />
               <Text style={styles.infoText}>Clear App Cache</Text>
             </TouchableOpacity>
             <Text style={styles.helpText}>

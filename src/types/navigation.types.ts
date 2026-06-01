@@ -23,8 +23,11 @@ export type BedsStackParamList = {
         resolvedEntry?: { wizardEntryId: string; plantId: string };
       }
     | undefined;
+  BedEdit: { bedId: string };
   BedPlantPicker: { bedId: string };
   BedTasks: { bedId: string };
+  PlantForm: PlantsStackParamList['PlantForm'];
+  PlantDetail: { plantId: string };
 };
 
 export type RootTabParamList = {
@@ -199,6 +202,12 @@ export type BedDetailScreenNavigationProp = NativeStackNavigationProp<
   'BedDetail'
 >;
 export type BedDetailScreenRouteProp = RouteProp<BedsStackParamList, 'BedDetail'>;
+
+export type BedEditScreenNavigationProp = NativeStackNavigationProp<
+  BedsStackParamList,
+  'BedEdit'
+>;
+export type BedEditScreenRouteProp = RouteProp<BedsStackParamList, 'BedEdit'>;
 
 export type BedCreationWizardNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<BedsStackParamList, 'BedCreationWizard'>,

@@ -16,7 +16,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import { getAllPlants, deletePlant } from '../services/plants';
+import { getAllPlants, deletePlant, getCachedPlants } from '../services/plants';
 import { getLocationConfig } from '../services/locations';
 import {
   Plant,
@@ -38,6 +38,7 @@ import { getErrorMessage } from '../utils/errorLogging';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { PlantFilterSheet } from '../components/PlantFilterSheet';
 import { useBedData } from '../hooks/useBedData';
+import { isPlantArchived } from '../utils/plantHelpers';
 
 type FilterType = 'all' | PlantType;
 
@@ -172,6 +173,10 @@ export default function PlantsScreen(): React.JSX.Element {
     const unsubscribe = navigation.addListener('focus', () => {
       if (isMounted) {
         resetTabBar();
+        // Immediately apply any surgical cache update (e.g. bed deletion) so
+        // deleted plants don't linger during the async refresh.
+        const instant = getCachedPlants();
+        if (instant !== null) setPlants(instant);
         void loadPlants({ silent: true });
         void loadLocations();
       }
@@ -230,6 +235,15 @@ export default function PlantsScreen(): React.JSX.Element {
       const index = plants.findIndex((p) => p.id === id);
       if (index === -1) return;
       const plant = plants[index]!;
+
+      // Block deleting an active plant — it must be archived first.
+      if (!isPlantArchived(plant)) {
+        Alert.alert(
+          'Can’t delete active plant',
+          'This plant is still active. Archive it (after harvest or clearing the bed) before deleting.'
+        );
+        return;
+      }
 
       // Cancel any in-flight undo for the previous pending delete
       if (undoTimerRef.current) {

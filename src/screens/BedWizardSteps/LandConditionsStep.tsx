@@ -1,12 +1,20 @@
-import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState, useEffect } from 'react';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/theme';
 import { Step2Data } from '@/hooks/useBedCreationWizard';
-import { SunlightLevel, BedSlope, CropFamily, SoilType, BedType } from '@/types/database.types';
+import { SunlightLevel, BedSlope, CropFamily, SoilType, BedType, PestHistoryItem, Bed } from '@/types/database.types';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import FieldLabelWithHelp from '@/components/FieldLabelWithHelp';
 import ThemedDropdown from '@/components/ThemedDropdown';
 import { GUILD_TEMPLATES } from '@/config/beds/guildTemplates';
+import { buildGeneratedBedNameBase, buildGeneratedBedName } from '@/utils/bedNameGenerator';
+
+const PEST_OPTIONS: { value: string; label: string; hint: string }[] = [
+  { value: 'Root Knot Nematode', label: 'Root Knot', hint: 'Yellowing · stunted roots' },
+  { value: 'Fusarium Wilt', label: 'Fusarium Wilt', hint: 'Wilting · stem rot' },
+  { value: 'Bacterial Wilt', label: 'Bacterial Wilt', hint: 'Sudden collapse' },
+  { value: 'White Grubs', label: 'White Grubs', hint: 'Root-eating larvae' },
+];
 
 const SUNLIGHT_RANK: Record<SunlightLevel, number> = { full_sun: 2, partial_sun: 1, shade: 0 };
 
@@ -35,6 +43,8 @@ interface Props {
   data: Step2Data;
   onChange: (data: Partial<Step2Data>) => void;
   solanaceaeBlocked: boolean;
+  directionMissing: boolean;
+  existingBeds: Bed[];
   parentOptions: string[];
   childOptions: string[];
   locationsLoading: boolean;
@@ -94,6 +104,8 @@ export function LandConditionsStep({
   data,
   onChange,
   solanaceaeBlocked,
+  directionMissing,
+  existingBeds,
   parentOptions,
   childOptions,
   locationsLoading,
@@ -102,6 +114,21 @@ export function LandConditionsStep({
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
+  const [showCustomName, setShowCustomName] = useState(false);
+
+  const generatedBedName = useMemo(() => {
+    const base = buildGeneratedBedNameBase(data.parent_location, bedType, data.child_location);
+    return base ? buildGeneratedBedName(base, existingBeds) : '';
+  }, [data.parent_location, data.child_location, bedType, existingBeds]);
+
+  // Sync generated name into data.name whenever location/bedType changes, unless user is editing
+  useEffect(() => {
+    if (!showCustomName && generatedBedName) {
+      onChange({ name: generatedBedName });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generatedBedName, showCustomName]);
+
   const sunlightRequired = bedType ? GUILD_TEMPLATES[bedType].sunlight_requirement : null;
   const sunlightMismatch =
     sunlightRequired !== null && SUNLIGHT_RANK[data.sunlight] < SUNLIGHT_RANK[sunlightRequired];
@@ -109,11 +136,6 @@ export function LandConditionsStep({
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Land Conditions</Text>
-      <Text style={styles.stepSubtitle}>
-        Tell us about this spot so we can size and plan the bed correctly.
-      </Text>
-
       {/* Location */}
       <View style={styles.fieldGroup}>
         <FieldLabelWithHelp
@@ -166,8 +188,57 @@ export function LandConditionsStep({
               );
             })}
           </View>
+          {directionMissing && (
+            <View style={styles.sunlightWarning}>
+              <Text style={styles.sunlightWarningText}>
+                ⚠️ Choose a section/direction to continue.
+              </Text>
+            </View>
+          )}
         </View>
       )}
+
+      {/* Bed name — auto-generated from location + bed type, or custom */}
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>Bed name *</Text>
+        {!showCustomName && generatedBedName ? (
+          <View style={[styles.infoBadge, styles.namePreviewRow]}>
+            <Text style={styles.namePreviewText}>{generatedBedName}</Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                setShowCustomName(true);
+                onChange({ name: data.name || generatedBedName });
+              }}
+            >
+              <Text style={styles.infoBadgeText}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <TextInput
+              style={styles.textInput}
+              value={data.name ?? ''}
+              onChangeText={(v) => onChange({ name: v })}
+              placeholder={generatedBedName || 'e.g. Front Leafy Bed'}
+              placeholderTextColor={theme.textSecondary}
+              maxLength={60}
+              autoFocus={showCustomName}
+            />
+            {generatedBedName ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  setShowCustomName(false);
+                  onChange({ name: generatedBedName });
+                }}
+              >
+                <Text style={styles.nameAutoRevertText}>Use auto name ✓</Text>
+              </TouchableOpacity>
+            ) : null}
+          </>
+        )}
+      </View>
 
       {/* Sunlight — custom layout for recommendation badge */}
       <View style={styles.fieldGroup}>
@@ -237,31 +308,17 @@ export function LandConditionsStep({
         styles={styles}
       />
 
-      {bedType === 'coconut_intercrop' ? (
-        <View style={styles.fieldGroup}>
-          <FieldLabelWithHelp
-            label="Bed construction"
-            helpText="Coconut intercropping spaces plants around mature trees, so it always uses food-forest row gaps regardless of construction style."
-            labelStyle={styles.fieldLabel}
-            style={styles.fieldLabelRow}
-          />
-          <View style={styles.infoBadge}>
-            <Text style={styles.infoBadgeText}>Coconut intercrop uses food-forest spacing</Text>
-          </View>
-        </View>
-      ) : (
-        <ChipGroup
-          label="Bed construction"
-          helpText="Raised beds drain better and allow narrower rows. In-ground beds suit flat terrain and need wider gaps (~40cm) between rows for walking access."
-          options={[
-            { value: 'raised' as const, label: 'Raised', hint: 'Above ground · narrow rows' },
-            { value: 'in_ground' as const, label: 'In-ground', hint: 'Direct soil · wider paths' },
-          ]}
-          value={data.construction_type}
-          onSelect={(v) => onChange({ construction_type: v })}
-          styles={styles}
-        />
-      )}
+      <ChipGroup
+        label="Bed construction"
+        helpText="Raised beds drain better and allow narrower rows. In-ground beds suit flat terrain and need wider gaps (~40cm) between rows for walking access."
+        options={[
+          { value: 'raised' as const, label: 'Raised', hint: 'Above ground · narrow rows' },
+          { value: 'in_ground' as const, label: 'In-ground', hint: 'Direct soil · wider paths' },
+        ]}
+        value={data.construction_type}
+        onSelect={(v) => onChange({ construction_type: v })}
+        styles={styles}
+      />
 
       <ChipGroup
         label="Previous crop family"
@@ -303,6 +360,49 @@ export function LandConditionsStep({
           </Text>
         </View>
       )}
+
+      {/* Pest history */}
+      <View style={styles.fieldGroup}>
+        <FieldLabelWithHelp
+          label="Pest issues last season?"
+          helpText="Select any problems from the previous crop. This personalises the soil-prep checklist in the next step."
+          labelStyle={styles.fieldLabel}
+          style={styles.fieldLabelRow}
+        />
+        <View style={styles.chipRow}>
+          {PEST_OPTIONS.map((opt) => {
+            const selected = data.pest_history.some((p) => p.pest_name === opt.value);
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                activeOpacity={0.7}
+                style={[styles.chip, selected && styles.chipSelected]}
+                onPress={() => {
+                  const next: PestHistoryItem[] = selected
+                    ? data.pest_history.filter((p) => p.pest_name !== opt.value)
+                    : [
+                        ...data.pest_history,
+                        {
+                          pest_name: opt.value,
+                          severity: 'medium' as const,
+                          season: 'last',
+                          year: new Date().getFullYear(),
+                        },
+                      ];
+                  onChange({ pest_history: next });
+                }}
+              >
+                <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                  {opt.label}
+                </Text>
+                <Text style={[styles.chipHint, selected && styles.chipHintSelected]}>
+                  {opt.hint}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
 
       <TouchableOpacity
         activeOpacity={0.8}

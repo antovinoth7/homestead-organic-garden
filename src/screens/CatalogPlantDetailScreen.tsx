@@ -489,10 +489,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     if (renameCount > 0) {
       Alert.alert('Update Plants', `Renaming will update ${renameCount} plant(s). Continue?`, [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Rename', onPress: () => doSave(trimmedName) },
+        { text: 'Rename', onPress: () => void doSave(trimmedName) },
       ]);
     } else {
-      doSave(trimmedName);
+      void doSave(trimmedName);
     }
   };
 
@@ -1688,7 +1688,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonDanger]}
-                onPress={() => doDelete(reassignReplacement)}
+                onPress={() => void doDelete(reassignReplacement)}
               >
                 <Text style={styles.modalButtonTextPrimary}>Move & Delete</Text>
               </TouchableOpacity>
@@ -1732,6 +1732,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
             />
             <FlatList
               style={styles.pickerList}
+              keyboardShouldPersistTaps="handled"
               data={getAllPests().filter((p) => {
                 const taken = new Set(
                   [...pests, ...(careForm?.customPests ?? [])].map((n) => n.toLowerCase())
@@ -1797,6 +1798,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
             />
             <FlatList
               style={styles.pickerList}
+              keyboardShouldPersistTaps="handled"
               data={getAllDiseases().filter((d) => {
                 const taken = new Set(
                   [...diseases, ...(careForm?.customDiseases ?? [])].map((n) => n.toLowerCase())

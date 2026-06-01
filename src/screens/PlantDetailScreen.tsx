@@ -414,6 +414,13 @@ export default function PlantDetailScreen(): React.JSX.Element {
           {/* ── §1 Name & Key Info ──────────────────────────────────── */}
           <Text style={styles.name}>{plant.name}</Text>
           {plant.variety && <Text style={styles.variety}>{plant.variety}</Text>}
+          {plant.record_kind === 'row' && plant.plant_count !== undefined && (
+            <View style={styles.rowRecordBadge}>
+              <Text style={styles.rowRecordBadgeText}>
+                Row of {plant.plant_count} {plant.plant_count === 1 ? 'plant' : 'plants'}
+              </Text>
+            </View>
+          )}
 
           <View style={styles.infoSection}>
             {plant.plant_variety && (

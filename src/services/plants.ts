@@ -21,6 +21,7 @@ import {
   orderBy,
   limit,
   startAfter,
+  writeBatch,
   QueryDocumentSnapshot,
   Timestamp,
 } from 'firebase/firestore';
@@ -39,7 +40,8 @@ import { logError } from '../utils/errorLogging';
 import { logger } from '../utils/logger';
 import { convertTimestamp } from '../utils/dateHelpers';
 import { resolvePhotoFilename } from '../utils/photoFilename';
-import { getCached, invalidate, dedup, CACHE_KEYS } from '../lib/dataCache';
+import { getCached, setCached, invalidate, dedup, CACHE_KEYS } from '../lib/dataCache';
+import { LAYER_ORDER as BED_LAYER_ORDER } from '../config/beds/layerMeta';
 
 const PLANTS_COLLECTION = 'plants';
 const DEFAULT_PAGE_SIZE = 50;
@@ -54,7 +56,7 @@ const FETCH_ALL_PAGE_SIZE = 100;
 export const getPlants = async (
   pageSize: number = DEFAULT_PAGE_SIZE,
   lastDoc?: QueryDocumentSnapshot
-): Promise<{ plants: Plant[]; lastDoc?: QueryDocumentSnapshot }> => {
+): Promise<{ plants: Plant[]; lastDoc?: QueryDocumentSnapshot; fetchedCount?: number }> => {
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
 
@@ -82,7 +84,7 @@ export const getPlants = async (
 
     // Wrap Firestore call with timeout
     const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
     });
 
     // Batch image resolution for better performance
@@ -130,6 +132,10 @@ export const getPlants = async (
     return {
       plants: activePlants,
       lastDoc: snapshot.docs[snapshot.docs.length - 1],
+      // Raw doc count (before the is_deleted filter) so callers can paginate on
+      // pages, not on the filtered active count — a full page of raw docs may
+      // contain soft-deleted docs and yield fewer active plants.
+      fetchedCount: snapshot.docs.length,
     };
   } catch (error) {
     logger.warn('Failed to fetch plants, using cached data', error as Error);
@@ -160,6 +166,9 @@ export const getPlants = async (
   }
 };
 
+/** Synchronous cache read — returns the warm plant list or null if stale/absent. */
+export const getCachedPlants = (): Plant[] | null => getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
+
 export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Promise<Plant[]> => {
   // Return fresh in-memory data if available (< 30s old)
   const cached = getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
@@ -175,7 +184,14 @@ export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Prom
         const response = await getPlants(pageSize, lastDoc);
         allPlants.push(...(response.plants ?? []));
 
-        if (!response.lastDoc || response.plants.length < pageSize) {
+        // Decide on the RAW page size, not the filtered active count: a page full
+        // of docs can still yield <pageSize active plants once soft-deleted docs
+        // exist, which would otherwise stop paging early and undercount.
+        if (
+          response.fetchedCount === undefined ||
+          response.fetchedCount < pageSize ||
+          !response.lastDoc
+        ) {
           hasMore = false;
           continue;
         }
@@ -337,6 +353,73 @@ export const createPlant = async (
   return result;
 };
 
+/**
+ * Atomically create multiple plants in a single Firestore writeBatch.
+ *
+ * Used by the bed wizard to persist all plants for a bed in one shot —
+ * cuts a typical leafy bed from ~30 writes to 3-6 row-record writes,
+ * which matters on free-tier quota and on flaky mobile networks.
+ *
+ * Resolves photo URIs and derives lifecycle per plant just like
+ * createPlant; commits as one atomic batch; invalidates cache and
+ * updates AsyncStorage once at the end.
+ */
+export const createPlantBatch = async (
+  plants: Omit<Plant, 'id' | 'user_id' | 'created_at'>[]
+): Promise<Plant[]> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  if (plants.length === 0) return [];
+
+  const batch = writeBatch(db);
+  const createdAt = Timestamp.now();
+
+  const prepared = plants.map((plant) => {
+    const { photo_url: _photoUrl, ...rest } = plant;
+    const photoFilename = resolvePhotoFilename(plant.photo_filename, plant.photo_url);
+
+    let lifecycle_type: PlantLifecycle | null = rest.lifecycle_type ?? null;
+    if (!lifecycle_type) {
+      const profile = getPlantCareProfile(rest.plant_variety ?? '', rest.plant_type);
+      lifecycle_type = deriveInstanceLifecycle(profile?.lifecycle, rest.plant_type);
+    }
+
+    const docRef = doc(collection(db, PLANTS_COLLECTION));
+    const newPlant = {
+      ...rest,
+      lifecycle_type,
+      photo_filename: photoFilename ?? null,
+      user_id: user.uid,
+      created_at: createdAt,
+    };
+    batch.set(docRef, newPlant);
+    return { docRef, newPlant, photoFilename };
+  });
+
+  await withTimeoutAndRetry(() => batch.commit(), {
+    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+  });
+
+  const results = await Promise.all(
+    prepared.map(async ({ docRef, newPlant, photoFilename }) => {
+      const resolvedPhotoUrl = await resolveLocalImageUri(photoFilename ?? null);
+      return {
+        id: docRef.id,
+        ...newPlant,
+        photo_url: resolvedPhotoUrl ?? null,
+        created_at: convertTimestamp(newPlant.created_at),
+      } as Plant;
+    })
+  );
+
+  invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(KEYS.PLANTS, [...cachedPlants, ...results]);
+
+  return results;
+};
+
 export const updatePlant = async (id: string, updates: Partial<Plant>): Promise<Plant> => {
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
@@ -476,6 +559,61 @@ export const deletePlant = async (id: string): Promise<void> => {
     await deleteTasksForPlantIds([id]);
   } catch (error) {
     logger.warn('Failed to cascade-delete tasks for plant', error as Error);
+  }
+};
+
+/**
+ * Soft-delete every plant in a bed in one shot — used when a bed is deleted.
+ *
+ * Collapses what would be N×(ownership getDoc + updateDoc + AsyncStorage rewrite +
+ * task cascade) into a single writeBatch, one cache invalidate, one AsyncStorage
+ * rewrite, and one task cascade — keeping the JS thread free so the UI stays
+ * responsive. Callers pass plants already fetched for the user's bed, so per-plant
+ * ownership re-verification is skipped.
+ */
+export const deletePlantsForBed = async (plants: Plant[]): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  if (plants.length === 0) return;
+
+  await refreshAuthToken();
+
+  const ids = plants.map((p) => p.id);
+  const deletedAt = Timestamp.now();
+
+  const batch = writeBatch(db);
+  for (const id of ids) {
+    batch.update(doc(db, PLANTS_COLLECTION, id), {
+      is_deleted: true,
+      deleted_at: deletedAt,
+    });
+  }
+  await withTimeoutAndRetry(() => batch.commit(), {
+    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+  });
+
+  // Surgical in-memory cache update: filter deleted ids out of the warm cache
+  // rather than invalidating it entirely, so the Plants tab can still serve
+  // from cache without triggering a full Firestore re-fetch + image resolution.
+  const idSet = new Set(ids);
+  const warmPlants = getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
+  if (warmPlants !== null) {
+    setCached(CACHE_KEYS.ALL_PLANTS, warmPlants.filter((p) => !idSet.has(p.id)));
+  }
+
+  // Update local AsyncStorage cache once.
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(
+    KEYS.PLANTS,
+    cachedPlants.filter((p) => !idSet.has(p.id))
+  );
+
+  // Cascade: delete orphaned tasks and logs for all plants at once.
+  try {
+    const { deleteTasksForPlantIds } = await import('./tasks');
+    await deleteTasksForPlantIds(ids);
+  } catch (error) {
+    logger.warn('Failed to cascade-delete tasks for bed plants', error as Error);
   }
 };
 
@@ -622,7 +760,6 @@ export const unpinGrowthStage = async (plantId: string): Promise<void> => {
   invalidate(CACHE_KEYS.ALL_PLANTS);
 };
 
-const BED_LAYER_ORDER: BedLayer[] = ['canopy', 'climber', 'understory', 'root', 'ground_cover'];
 const bedLayerRank = (l: BedLayer | null | undefined): number => {
   if (!l) return BED_LAYER_ORDER.length;
   const i = BED_LAYER_ORDER.indexOf(l);

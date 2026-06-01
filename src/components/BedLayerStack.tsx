@@ -3,95 +3,15 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedLayerStackStyles';
 import { DraggablePlantRow } from '@/components/DraggablePlantRow';
+import { LAYER_ORDER, LAYER_META } from '@/config/beds/layerMeta';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import type { BedLayer, EntryResolution, PlantEntry } from '@/types/database.types';
-
-const LAYER_ORDER: BedLayer[] = ['canopy', 'climber', 'understory', 'root', 'ground_cover'];
-
-const LAYER_META: Record<
-  BedLayer,
-  { icon: string; title: string; subtitle: string; border: string; bg: string }
-> = {
-  canopy: {
-    icon: '🌳',
-    title: 'Canopy',
-    subtitle: 'Tallest trees — shade & vertical structure',
-    border: '#2e7d32',
-    bg: '#f1f8f1',
-  },
-  climber: {
-    icon: '🌿',
-    title: 'Climber',
-    subtitle: 'Vines on trellis or canopy support',
-    border: '#7b1fa2',
-    bg: '#f5f0fa',
-  },
-  understory: {
-    icon: '🌱',
-    title: 'Understory',
-    subtitle: 'Main crops at mid height',
-    border: '#558b2f',
-    bg: '#f4f8ee',
-  },
-  root: {
-    icon: '🥕',
-    title: 'Root',
-    subtitle: 'Below-ground crops',
-    border: '#e65100',
-    bg: '#fff8f0',
-  },
-  ground_cover: {
-    icon: '🌸',
-    title: 'Ground Cover',
-    subtitle: 'Living mulch and pollinator companions',
-    border: '#c8842a',
-    bg: '#fdf5e8',
-  },
-};
-
-const PLANT_EMOJI: Record<string, string> = {
-  Amaranth: '🌿',
-  Spinach: '🥬',
-  Lettuce: '🥗',
-  Fenugreek: '🌱',
-  Tomato: '🍅',
-  Brinjal: '🍆',
-  Okra: '🫛',
-  Marigold: '🌼',
-  Chilli: '🌶️',
-  Ginger: '🫚',
-  Turmeric: '🟡',
-  'Curry Leaf': '🍃',
-  Cowpea: '🫘',
-  'French Beans': '🫘',
-  Carrot: '🥕',
-  Radish: '🌰',
-  'Bitter Gourd': '🥒',
-  'Snake Gourd': '🥒',
-  'Yardlong Beans': '🫘',
-  Banana: '🍌',
-  Cocoa: '🍫',
-  'Black Pepper': '⚫',
-  'Elephant Yam': '🥔',
-  Maize: '🌽',
-  Beans: '🫘',
-  Pumpkin: '🎃',
-  Moringa: '🌳',
-  Tulsi: '🌿',
-  'Aloe Vera': '🌵',
-  Lemongrass: '🌾',
-  Basil: '🌿',
-  Garlic: '🧄',
-  Strawberry: '🍓',
-  Beetroot: '🟣',
-  Pepper: '🌶️',
-  Agathi: '🌱',
-  Comfrey: '🌿',
-};
 
 interface Props {
   result: RowLayoutResult;
   entries: PlantEntry[];
+  visibleLayers?: BedLayer[]; // when provided, only these layers render (empty or not)
   onAddToLayer: (layer: BedLayer) => void;
   onRemovePlant: (entryId: string) => void;
   onResolveEntry: (entryId: string) => void;
@@ -100,15 +20,16 @@ interface Props {
 
 function resolutionLabel(res: EntryResolution | undefined): { text: string; resolved: boolean } {
   const kind = res?.kind ?? 'placeholder';
-  if (kind === 'placeholder') return { text: 'TEMPLATE · TAP TO RESOLVE', resolved: false };
-  if (kind === 'link') return { text: 'LINKED', resolved: true };
+  if (kind === 'placeholder') return { text: 'Tap to link / add to My Plants', resolved: false };
+  if (kind === 'link') return { text: '✓ Linked to plant', resolved: true };
   const variety = res?.kind === 'create' ? res.variety : undefined;
-  return { text: variety ? `NEW · ${variety.toUpperCase()}` : 'NEW PLANT', resolved: true };
+  return { text: variety ? `✓ New: ${variety}` : '✓ New plant', resolved: true };
 }
 
 export function BedLayerStack({
   result,
   entries,
+  visibleLayers,
   onAddToLayer,
   onRemovePlant,
   onResolveEntry,
@@ -150,12 +71,12 @@ export function BedLayerStack({
       <View
         style={[
           styles.tile,
-          { borderColor: meta.border },
+          { borderColor: meta.color },
           isCompanion ? styles.tileCompanion : null,
           isDragging ? styles.tileDragging : null,
         ]}
       >
-        <Text style={styles.tileEmoji}>{PLANT_EMOJI[entry.name] ?? meta.icon}</Text>
+        <Text style={styles.tileEmoji}>{getPlantEmoji(entry.name)}</Text>
         <Text style={styles.tileName} numberOfLines={2}>
           {entry.name}
         </Text>
@@ -191,16 +112,23 @@ export function BedLayerStack({
       <View style={styles.capacityStrip}>
         <Text style={styles.capacityChip}>{result.rowsNeeded} rows used</Text>
         {result.totalRowsFit > 0 && (
-          <Text style={styles.capacityChip}>+{result.totalRowsFit} rows could fit</Text>
+          <Text style={styles.capacityChip}>+{result.totalRowsFit} more rows fit</Text>
         )}
         {overflowing && (
           <Text style={[styles.capacityChip, styles.capacityOverflow]}>
-            Overflow {Math.round(result.overflowCm)}cm
+            ⚠ Too short by {Math.round(result.overflowCm)}cm
           </Text>
         )}
       </View>
+      {overflowing && (
+        <View style={styles.overflowActionRow}>
+          <Text style={styles.overflowActionText}>
+            Remove one crop row, or go back to Step 3 to increase bed length.
+          </Text>
+        </View>
+      )}
 
-      {LAYER_ORDER.map((layer) => {
+      {(visibleLayers ?? LAYER_ORDER).map((layer) => {
         const meta = LAYER_META[layer];
         const layerEntries = entriesByLayer.get(layer) ?? [];
         if (layerEntries.length === 0) {
@@ -224,9 +152,9 @@ export function BedLayerStack({
         return (
           <View
             key={layer}
-            style={[styles.layerCard, { borderColor: meta.border, backgroundColor: meta.bg }]}
+            style={[styles.layerCard, { borderColor: meta.color, backgroundColor: meta.bg }]}
           >
-            <View style={[styles.layerAccent, { backgroundColor: meta.border }]} />
+            <View style={[styles.layerAccent, { backgroundColor: meta.color }]} />
             <View style={styles.layerHeader}>
               <Text style={styles.layerIcon}>{meta.icon}</Text>
               <View style={styles.layerTitleCol}>

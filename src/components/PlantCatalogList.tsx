@@ -3,19 +3,16 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
-import { PlantType } from '@/types/database.types';
 import { getPlantEmoji } from '@/utils/plantHelpers';
 
 interface Props {
   plantNames: string[];
-  activeCategory: PlantType;
   counts: Record<string, number>;
   onPlantPress: (plantName: string) => void;
 }
 
 export function PlantCatalogList({
   plantNames,
-  activeCategory: _activeCategory,
   counts,
   onPlantPress,
 }: Props): React.JSX.Element {

@@ -1028,7 +1028,7 @@ export const KANYAKUMARI_PESTS: PestEntry[] = [
     identification:
       'Similar to fruit and shoot borer. Larva bores into shoots first, then moves to fruits as they develop.',
     damageDescription:
-      'Wilting of growing tips, bore holes in fruits with frass. Major yield loss in brinjal and okra.',
+      'Wilting of growing tips, bore holes in fruits with frass. Major yield loss in brinjal and ladies finger.',
     organicPrevention: [
       'Clip and destroy affected shoots weekly',
       'Install pheromone traps at planting',
