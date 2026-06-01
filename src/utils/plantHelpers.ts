@@ -1504,6 +1504,36 @@ export function getPlantEmoji(name: string): string {
   return '🌱';
 }
 
+export interface HarvestPreviewItem {
+  name: string;
+  days: number;
+  emoji: string;
+}
+
+/**
+ * Build the "first harvest from this bed" timeline: the distinct planted crops
+ * that have a known days-to-harvest, sorted soonest-first. Shared by the Crops
+ * step and the Review step.
+ */
+export function buildHarvestPreview(
+  entries: { name: string }[],
+  template: import('../config/beds/guildTemplates').GuildTemplate | null
+): HarvestPreviewItem[] {
+  if (!template) return [];
+  const seen = new Set<string>();
+  const items: HarvestPreviewItem[] = [];
+  for (const entry of entries) {
+    if (seen.has(entry.name)) continue;
+    seen.add(entry.name);
+    const row = template.plant_rows.find((r) => r.name === entry.name);
+    const days = row?.days_to_harvest;
+    if (days !== undefined) {
+      items.push({ name: entry.name, days, emoji: getPlantEmoji(entry.name) });
+    }
+  }
+  return items.sort((a, b) => a.days - b.days);
+}
+
 // ── Growth Stage Auto-Progression (Phase B.4) ─────────────────────────
 
 /** Ordered stage progression for walking durations. */

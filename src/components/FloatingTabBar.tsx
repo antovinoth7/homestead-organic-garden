@@ -153,12 +153,23 @@ export function FloatingTabBar({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const translateY = useContext(AnimatedTranslateContext);
+  const { resetTabBar } = useContext(TabBarScrollContext);
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   // Hide tab bar when a nested stack is showing a non-root screen
   const focusedRoute = state.routes[state.index]!;
   const nestedState = focusedRoute.state;
-  if (nestedState && nestedState.index !== undefined && nestedState.index > 0) {
+  const nestedIndex = nestedState && nestedState.index !== undefined ? nestedState.index : 0;
+
+  // Restore visibility whenever the focused tab/screen changes, so the global
+  // scroll-hide state left over from a previous screen can't strand the bar
+  // off-screen on a root screen that never resets it itself.
+  const focusSignature = `${state.index}:${nestedIndex}`;
+  useEffect(() => {
+    resetTabBar();
+  }, [focusSignature, resetTabBar]);
+
+  if (nestedIndex > 0) {
     return null;
   }
 

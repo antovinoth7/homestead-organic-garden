@@ -120,14 +120,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       width: '100%' as const,
     },
     rowHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
       paddingLeft: 12,
       paddingRight: 12,
       paddingTop: 10,
       paddingBottom: 8,
-      gap: 6,
       borderBottomWidth: 1,
+    },
+    rowHeaderTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
     },
     rowNumCircle: {
       width: 22,
@@ -152,8 +154,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     badgeRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 4,
       alignItems: 'center',
+      marginTop: 6,
     },
     nFixerBadge: {
       backgroundColor: theme.successLight,
@@ -167,7 +171,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.successDark,
     },
     fillsGapsBadge: {
-      backgroundColor: '#fff3e0',
+      backgroundColor: theme.warningLight,
       borderRadius: 4,
       paddingHorizontal: 5,
       paddingVertical: 2,
@@ -175,7 +179,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     fillsGapsBadgeText: {
       fontSize: 9,
       fontWeight: '700',
-      color: '#e65100',
+      color: theme.warningDark,
     },
     staggeredBadge: {
       backgroundColor: theme.accentLight,

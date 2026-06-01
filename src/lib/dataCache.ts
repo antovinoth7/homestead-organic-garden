@@ -67,9 +67,15 @@ export function dedup<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
   const existing = pendingRequests.get(key) as Promise<T> | undefined;
   if (existing) return existing;
 
+  const startTime = Date.now();
   const promise = fetcher()
     .then((result) => {
-      setCached(key, result);
+      // Don't overwrite a more-recent surgical cache update (e.g. from deletePlantsForBed)
+      // that ran while this fetch was in-flight.
+      const current = store.get(key);
+      if (!current || current.fetchedAt <= startTime) {
+        setCached(key, result);
+      }
       return result;
     })
     .finally(() => {

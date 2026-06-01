@@ -14,7 +14,7 @@ import {
   COMPANION_DEFAULT_LAYER,
   COMPANION_DEFAULT_SPACING,
 } from '@/utils/quickStartPlanner';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantEmoji, buildHarvestPreview } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 
 const generateId = (): string =>
@@ -54,14 +54,6 @@ const BENEFIT_TAG_LABEL: Record<string, string> = {
   nematode: 'Nematode Control',
   'chop-drop': 'Chop & Drop',
   'soil-builder': 'Soil Builder',
-};
-
-const BENEFIT_EXPLANATION: Record<string, string> = {
-  'n-fixer': 'Fixes nitrogen — feeds companion crops',
-  'pest-repel': 'Repels insects that attack crop companions',
-  nematode: 'Reduces root nematodes in soil',
-  'chop-drop': 'Chop stems as mulch to feed the soil',
-  'soil-builder': 'Builds organic matter when cut back',
 };
 
 interface PlantQtyStepperProps {
@@ -418,21 +410,10 @@ export function GuildTemplateStep({
   }, [template, widthM, lengthM, bedTypeForEngine, construction, onChange]);
 
   // Harvest mini-timeline — selected plants sorted by days to harvest.
-  const harvestPreview = useMemo(() => {
-    if (!template) return [];
-    const seen = new Set<string>();
-    const items: { name: string; days: number; emoji: string }[] = [];
-    for (const entry of data.plant_entries) {
-      if (seen.has(entry.name)) continue;
-      seen.add(entry.name);
-      const row = template.plant_rows.find((r) => r.name === entry.name);
-      const days = row?.days_to_harvest;
-      if (days !== undefined) {
-        items.push({ name: entry.name, days, emoji: getPlantEmoji(entry.name) });
-      }
-    }
-    return items.sort((a, b) => a.days - b.days);
-  }, [data.plant_entries, template]);
+  const harvestPreview = useMemo(
+    () => buildHarvestPreview(data.plant_entries, template),
+    [data.plant_entries, template]
+  );
 
   if (!template) {
     return (
@@ -442,8 +423,6 @@ export function GuildTemplateStep({
       </View>
     );
   }
-
-  const bedArea = (widthM * lengthM).toFixed(1);
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
@@ -464,20 +443,30 @@ export function GuildTemplateStep({
         onPress={handleUseFullPlan}
         activeOpacity={0.8}
       >
-        <Text style={styles.gtUseFullPlanBtnText}>
-          {quickStartApplied
-            ? `✓ Applied — Tap to Reapply for this ${template.label}`
-            : `📋 Plant all suggested crops for this ${template.label}`}
-        </Text>
+        <View style={styles.gtQuickStartTextCol}>
+          <Text
+            style={[styles.gtQuickStartTitle, quickStartApplied && styles.gtQuickStartTitleApplied]}
+          >
+            {quickStartApplied ? '✓ Quick Start applied' : 'Quick Start'}
+          </Text>
+          <Text style={styles.gtQuickStartSubtitle} numberOfLines={1}>
+            {quickStartApplied
+              ? `Balanced ${template.label} guild · tap to reset`
+              : `Auto-fill a balanced ${template.label}`}
+          </Text>
+        </View>
         <View
-          style={[
-            styles.gtUseFullPlanQuickBadge,
-            quickStartApplied && styles.gtUseFullPlanQuickBadgeApplied,
-          ]}
+          style={[styles.gtQuickStartPill, quickStartApplied && styles.gtQuickStartPillApplied]}
         >
-          <Text style={styles.gtUseFullPlanQuickBadgeText}>Quick Start</Text>
+          <Text style={styles.gtQuickStartPillText}>{quickStartApplied ? 'Reapply' : 'Apply'}</Text>
         </View>
       </TouchableOpacity>
+
+      {data.plant_entries.length === 0 && (
+        <Text style={styles.gtEmptyHint}>
+          Add at least one crop, or tap Quick Start above to auto-fill.
+        </Text>
+      )}
 
       {template.low_light_flag && (
         <View style={styles.infoBadge}>

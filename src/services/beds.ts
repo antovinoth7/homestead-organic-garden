@@ -36,7 +36,7 @@ import {
   validateCompanionPair as validateCompanionPairConfig,
   checkRotationRules,
 } from '@/config/beds';
-import { getPlantsByBed, updatePlant } from '@/services/plants';
+import { getPlantsByBed, deletePlantsForBed } from '@/services/plants';
 import type { BedSizeConditions, BedSizeResult, CompanionValidation } from '@/config/beds';
 
 const BEDS_COLLECTION = 'beds';
@@ -176,8 +176,37 @@ export async function updateBed(
 
 export async function deleteBed(id: string): Promise<void> {
   await updateBed(id, { is_deleted: true });
+  // Remove the bed's plants from the system too (soft-delete + task cascade),
+  // batched in one shot so the cascade doesn't stall the UI thread.
   const plants = await getPlantsByBed(id);
-  await Promise.all(plants.map((p) => updatePlant(p.id, { bed_id: null })));
+  if (plants.length > 0) await deletePlantsForBed(plants);
+}
+
+export async function restoreBed(id: string): Promise<void> {
+  // Un-delete a soft-deleted bed so it (and any restored plants) reappear.
+  await updateBed(id, { is_deleted: false });
+}
+
+export async function getDeletedBeds(): Promise<Bed[]> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  await refreshAuthToken();
+
+  try {
+    const q = query(
+      collection(db, BEDS_COLLECTION),
+      where('user_id', '==', user.uid),
+      where('is_deleted', '==', true)
+    );
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    return snapshot.docs.map((d) => normalizeBed(d.id, d.data() as Record<string, unknown>));
+  } catch (error) {
+    logger.warn('getDeletedBeds: Firestore failed, using cache', error as Error);
+    const cached = await getData<Bed>(KEYS.BEDS);
+    return cached.filter((b) => b.is_deleted);
+  }
 }
 
 export async function markBedAsResting(id: string, durationDays: number = 45): Promise<void> {

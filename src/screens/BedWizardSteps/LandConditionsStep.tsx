@@ -2,12 +2,12 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/theme';
 import { Step2Data } from '@/hooks/useBedCreationWizard';
-import { SunlightLevel, BedSlope, CropFamily, SoilType, BedType, PestHistoryItem } from '@/types/database.types';
+import { SunlightLevel, BedSlope, CropFamily, SoilType, BedType, PestHistoryItem, Bed } from '@/types/database.types';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import FieldLabelWithHelp from '@/components/FieldLabelWithHelp';
 import ThemedDropdown from '@/components/ThemedDropdown';
 import { GUILD_TEMPLATES } from '@/config/beds/guildTemplates';
-import { buildGeneratedBedNameBase } from '@/utils/bedNameGenerator';
+import { buildGeneratedBedNameBase, buildGeneratedBedName } from '@/utils/bedNameGenerator';
 
 const PEST_OPTIONS: { value: string; label: string; hint: string }[] = [
   { value: 'Root Knot Nematode', label: 'Root Knot', hint: 'Yellowing · stunted roots' },
@@ -43,6 +43,8 @@ interface Props {
   data: Step2Data;
   onChange: (data: Partial<Step2Data>) => void;
   solanaceaeBlocked: boolean;
+  directionMissing: boolean;
+  existingBeds: Bed[];
   parentOptions: string[];
   childOptions: string[];
   locationsLoading: boolean;
@@ -102,6 +104,8 @@ export function LandConditionsStep({
   data,
   onChange,
   solanaceaeBlocked,
+  directionMissing,
+  existingBeds,
   parentOptions,
   childOptions,
   locationsLoading,
@@ -112,10 +116,10 @@ export function LandConditionsStep({
 
   const [showCustomName, setShowCustomName] = useState(false);
 
-  const generatedBedName = useMemo(
-    () => buildGeneratedBedNameBase(data.parent_location, bedType, data.child_location),
-    [data.parent_location, data.child_location, bedType]
-  );
+  const generatedBedName = useMemo(() => {
+    const base = buildGeneratedBedNameBase(data.parent_location, bedType, data.child_location);
+    return base ? buildGeneratedBedName(base, existingBeds) : '';
+  }, [data.parent_location, data.child_location, bedType, existingBeds]);
 
   // Sync generated name into data.name whenever location/bedType changes, unless user is editing
   useEffect(() => {
@@ -184,6 +188,13 @@ export function LandConditionsStep({
               );
             })}
           </View>
+          {directionMissing && (
+            <View style={styles.sunlightWarning}>
+              <Text style={styles.sunlightWarningText}>
+                ⚠️ Choose a section/direction to continue.
+              </Text>
+            </View>
+          )}
         </View>
       )}
 

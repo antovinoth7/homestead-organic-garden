@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   BedType,
   BedSlope,
@@ -14,7 +14,7 @@ import {
   Plant,
 } from '@/types/database.types';
 
-import { addBed, updateBed } from '@/services/beds';
+import { addBed, updateBed, deleteBed, getBeds } from '@/services/beds';
 import { createPlantBatch, updatePlant } from '@/services/plants';
 import { getBedSizeRecommendation } from '@/config/beds';
 import type { BedSizeResult } from '@/config/beds';
@@ -68,7 +68,7 @@ export interface Step6Data {
   notes: string;
 }
 
-export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface WizardStepData {
   1: Step1Data;
@@ -159,13 +159,11 @@ function canProceedStep(step: WizardStep, data: Partial<WizardStepData>): boolea
       return !!s3 && s3.width_m > 0 && s3.length_m > 0;
     }
     case 4:
-      return true; // optional guild selections
+      return (data[4]?.plant_entries.length ?? 0) > 0; // at least one crop required
     case 5:
       return true; // layout designer — always proceed
     case 6:
       return true; // notes optional; name was validated in Step 2
-    case 7:
-      return false; // success step — no forward navigation
     default:
       return false;
   }
@@ -363,6 +361,8 @@ export interface UseBedCreationWizardResult {
   stepData: Partial<WizardStepData>;
   canProceed: boolean;
   solanaceaeBlocked: boolean;
+  directionMissing: boolean;
+  existingBeds: Bed[];
   isDirty: boolean;
   submitting: boolean;
   error: string | null;
@@ -380,6 +380,7 @@ export interface UseBedCreationWizardResult {
   reset: () => void;
   ensureBedSaved: () => Promise<string>;
   applyResolvedEntry: (entryId: string, plantId: string) => void;
+  discardDraft: () => Promise<void>;
 }
 
 export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizardResult {
@@ -398,7 +399,15 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     childLocations: [],
   });
   const [locationLoading, setLocationLoading] = useState(true);
+  const [existingBeds, setExistingBeds] = useState<Bed[]>([]);
   const [persistedBedId, setPersistedBedId] = useState<string | null>(null);
+  // Plants created in-form during this wizard session (via applyResolvedEntry).
+  // Tracked so discardDraft can soft-delete them — but NOT plants the user merely
+  // linked from existing ones, which go through a different resolver path.
+  const createdPlantIdsRef = useRef<Set<string>>(new Set());
+  // Set true once submit() succeeds so discardDraft knows the bed is finalized
+  // and must not be cleaned up (the screen navigates away immediately after).
+  const finalizedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -414,8 +423,29 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     };
   }, []);
 
+  // Load existing beds once so the Step 2 auto name can append a unique " #N".
+  useEffect(() => {
+    let cancelled = false;
+    getBeds()
+      .then((beds) => {
+        if (!cancelled) setExistingBeds(beds);
+      })
+      .catch((err) => {
+        logger.warn('useBedCreationWizard: getBeds failed', err instanceof Error ? err : undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const solanaceaeBlocked = stepData[2]?.prev_crop_family === 'solanaceae';
-  const canProceed = canProceedStep(currentStep, stepData);
+  // Step 2 requires a section/direction when the selected location offers them.
+  const directionMissing =
+    currentStep === 2 &&
+    !!stepData[2]?.parent_location &&
+    locationConfig.childLocations.length > 0 &&
+    !stepData[2]?.child_location;
+  const canProceed = canProceedStep(currentStep, stepData) && !directionMissing;
   const isDirty = currentStep > 1 || !!stepData[1]?.bed_type;
 
   const patchStep = useCallback(
@@ -489,7 +519,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
   const goNext = useCallback(() => {
     if (!canProceed) return;
     setCurrentStep((s) => {
-      const next = Math.min(s + 1, 7) as WizardStep;
+      const next = Math.min(s + 1, 6) as WizardStep;
       if (next === 6) {
         setStepData((prev) => (prev[6] ? prev : { ...prev, 6: { notes: '' } }));
       }
@@ -561,6 +591,9 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
   }, [buildBedPayload, persistedBedId]);
 
   const applyResolvedEntry = useCallback((entryId: string, plantId: string): void => {
+    // This plant was created in-form during this session; remember it so an
+    // abandoned draft can clean it up (see discardDraft).
+    createdPlantIdsRef.current.add(plantId);
     setStepData((prev) => {
       const entries = prev[4]?.plant_entries ?? [];
       const updated = entries.map((e) =>
@@ -569,6 +602,38 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
       return { ...prev, 4: { plant_entries: updated } };
     });
   }, []);
+
+  const discardDraft = useCallback(async (): Promise<void> => {
+    // Only relevant for a bed saved early (ensureBedSaved) but never finalized.
+    // finalizedRef means submit() succeeded, so the bed is legitimate — leave it.
+    if (!persistedBedId || finalizedRef.current) return;
+
+    // If the user created real plants in-form, those plants already reference this
+    // bed. Deleting it would orphan them, so keep the bed + plants instead — the
+    // abandoned draft becomes a real saved bed. Refresh it with the latest layout.
+    if (createdPlantIdsRef.current.size > 0) {
+      createdPlantIdsRef.current = new Set();
+      try {
+        await ensureBedSaved();
+      } catch (err) {
+        logError(
+          'network',
+          'useBedCreationWizard: discardDraft keep-bed refresh failed',
+          err as Error
+        );
+      }
+      return;
+    }
+
+    // No in-form plants — the draft bed is empty, soft-delete it.
+    const bedId = persistedBedId;
+    setPersistedBedId(null);
+    try {
+      await deleteBed(bedId);
+    } catch (err) {
+      logError('network', 'useBedCreationWizard: discardDraft cleanup failed', err as Error);
+    }
+  }, [persistedBedId, ensureBedSaved]);
 
   const submit = useCallback(async (): Promise<string | null> => {
     const s1 = stepData[1];
@@ -646,7 +711,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
         }
       }
 
-      setCurrentStep(7);
+      finalizedRef.current = true;
       return bedId;
     } catch (err) {
       logError('network', 'useBedCreationWizard: submit failed', err as Error);
@@ -667,6 +732,8 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
       3: DEFAULT_STEP3,
     });
     setPersistedBedId(null);
+    createdPlantIdsRef.current = new Set();
+    finalizedRef.current = false;
     setError(null);
   }, [prefillType]);
 
@@ -675,6 +742,8 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     stepData,
     canProceed,
     solanaceaeBlocked,
+    directionMissing,
+    existingBeds,
     isDirty,
     submitting,
     error,
@@ -692,5 +761,6 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     reset,
     ensureBedSaved,
     applyResolvedEntry,
+    discardDraft,
   };
 }

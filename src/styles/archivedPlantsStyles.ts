@@ -70,6 +70,43 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginTop: 6,
     },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      backgroundColor: theme.background,
+      paddingTop: 8,
+      paddingBottom: 8,
+    },
+    sectionHeaderLeft: {
+      flex: 1,
+      minWidth: 0,
+    },
+    sectionTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    sectionCount: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
+    sectionRestoreButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+      backgroundColor: theme.primary,
+    },
+    sectionRestoreText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.textInverse,
+    },
     deletedAt: {
       fontSize: 12,
       color: theme.textTertiary,

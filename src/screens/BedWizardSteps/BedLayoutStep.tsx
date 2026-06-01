@@ -13,6 +13,8 @@ import { getGuildTemplate } from '@/config/beds/guildTemplates';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
 import { getLayerColor } from '@/config/beds/layerMeta';
 import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlant } from '@/services/plants';
+import { logger } from '@/utils/logger';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import type { BedLayer, BedType, EntryResolution, PlantEntry } from '@/types/database.types';
 import type { Step2Data, Step3Data, Step4Data } from '@/hooks/useBedCreationWizard';
@@ -39,6 +41,7 @@ interface Props {
   solanaceaeBlocked?: boolean;
   onChangePlants: (patch: Partial<Step4Data>) => void;
   onCreateInFormForEntry: (entryId: string, variety: string | null) => void | Promise<void>;
+  onOpenPlant: (plantId: string) => void;
 }
 
 export function BedLayoutStep({
@@ -49,6 +52,7 @@ export function BedLayoutStep({
   solanaceaeBlocked,
   onChangePlants,
   onCreateInFormForEntry,
+  onOpenPlant,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -190,7 +194,7 @@ export function BedLayoutStep({
     return getVisibleLayers(bedType, plantedLayers);
   }, [bedType, step4.plant_entries]);
 
-  const [activeTab, setActiveTab] = useState<'layout' | 'crops'>('layout');
+  const [activeTab, setActiveTab] = useState<'layout' | 'crops'>('crops');
 
   const entryResolutionMap = useMemo(() => {
     const map = new Map<string, EntryResolution>();
@@ -199,6 +203,53 @@ export function BedLayoutStep({
     }
     return map;
   }, [step4.plant_entries]);
+
+  // Real names for entries resolved to a saved plant (created in-form or linked),
+  // keyed by entry id, so the tile can show "✓ Turmeric · Local" instead of a
+  // generic "Linked to plant" label.
+  const [resolvedNames, setResolvedNames] = useState<Map<string, string>>(new Map());
+
+  const linkedPlantPairs = useMemo(
+    () =>
+      step4.plant_entries
+        .filter(
+          (e): e is PlantEntry & { resolution: { kind: 'link'; plantId: string } } =>
+            e.resolution?.kind === 'link'
+        )
+        .map((e) => ({ entryId: e.id, plantId: e.resolution.plantId })),
+    [step4.plant_entries]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (linkedPlantPairs.length === 0) {
+      setResolvedNames(new Map());
+      return;
+    }
+    Promise.all(
+      linkedPlantPairs.map(async ({ entryId, plantId }) => {
+        try {
+          const plant = await getPlant(plantId);
+          if (!plant) return null;
+          const label = plant.plant_variety ? `${plant.name} · ${plant.plant_variety}` : plant.name;
+          return [entryId, label] as const;
+        } catch (err) {
+          logger.warn(
+            'BedLayoutStep: failed to load linked plant name',
+            err instanceof Error ? err : undefined,
+            { metadata: { plantId } }
+          );
+          return null;
+        }
+      })
+    ).then((pairs) => {
+      if (cancelled) return;
+      setResolvedNames(new Map(pairs.filter((p): p is readonly [string, string] => p !== null)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [linkedPlantPairs]);
 
   const ghostRowsForWizard = useMemo<GhostRow[]>(() => {
     if (!bedType || !visibleLayers) return [];
@@ -290,6 +341,8 @@ export function BedLayoutStep({
             ghostRows={ghostRowsForWizard}
             onResolveEntry={handleOpenResolver}
             entryResolutions={entryResolutionMap}
+            resolvedNames={resolvedNames}
+            onOpenPlant={onOpenPlant}
           />
         </>
       )}

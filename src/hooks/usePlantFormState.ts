@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, StackActions } from '@react-navigation/native';
 import { PlantFormScreenNavigationProp, PlantFormScreenRouteProp } from '../types/navigation.types';
 import {
   getPlant,
@@ -82,6 +82,7 @@ export {
 
 export interface PlantFormStateReturn {
   plantId: string | undefined;
+  returnTo: { wizardEntryId: string } | undefined;
   theme: Theme;
   insets: EdgeInsets;
   isCompactScreen: boolean;
@@ -259,12 +260,16 @@ export function usePlantFormState(): PlantFormStateReturn {
 
   // ── Field state ────────────────────────────────────────────────────────────
   // Prefill seed for "Create new" flow from BedCreationWizard
-  const [name, setName] = useState(() => prefill?.name ?? '');
+  // prefill.name is the species (e.g. "Tomato") → seeds plantVariety (the "Plant"
+  // dropdown / plant_variety). prefill.variety (e.g. "Cherry Red") → seeds variety.
+  // Leave the nickname (name) empty so the app's generated unique name is used,
+  // matching the normal Add-Plant flow.
+  const [name, setName] = useState('');
   const [loadedGeneratedName, setLoadedGeneratedName] = useState('');
   const [plantType, setPlantType] = useState<PlantType>(() =>
     prefill ? plantTypeFromName(prefill.name) : 'vegetable'
   );
-  const [plantVariety, setPlantVariety] = useState(() => prefill?.variety ?? '');
+  const [plantVariety, setPlantVariety] = useState(() => prefill?.name ?? '');
   const [spaceType, setSpaceType] = useState<SpaceType>(() => (prefill ? 'bed' : 'ground'));
   const [location, setLocation] = useState('');
   const [parentLocation, setParentLocation] = useState(() => prefill?.parentLocation ?? '');
@@ -273,7 +278,7 @@ export function usePlantFormState(): PlantFormStateReturn {
   const [bedId, setBedId] = useState(() => prefill?.bedId ?? '');
   const [bedName, setBedName] = useState(() => prefill?.bedName ?? '');
   const [potSize, setPotSize] = useState('');
-  const [variety, setVariety] = useState('');
+  const [variety, setVariety] = useState(() => prefill?.variety ?? '');
   const [customVarietyMode, setCustomVarietyMode] = useState(false);
   const [plantingDate, setPlantingDate] = useState('');
   const [harvestSeason, setHarvestSeason] = useState('');
@@ -1196,12 +1201,15 @@ export function usePlantFormState(): PlantFormStateReturn {
         return;
       }
       if (returnTo) {
-        navigation.navigate('Beds', {
-          screen: 'BedCreationWizard',
-          params: {
+        // The bed wizard is still mounted below this form in the same stack.
+        // popTo returns to that existing instance (preserving its Step 5 state)
+        // and updates its params — unlike navigate, which was pushing a fresh
+        // wizard on top, losing the user's in-progress bed.
+        navigation.dispatch(
+          StackActions.popTo('BedCreationWizard', {
             resolvedEntry: { wizardEntryId: returnTo.wizardEntryId, plantId: savedPlant.id },
-          },
-        });
+          })
+        );
         return;
       }
       navigateToPlantsAfterSave();
@@ -1364,6 +1372,7 @@ export function usePlantFormState(): PlantFormStateReturn {
     sectionStatuses,
     phase2Unlocked,
     phase3Unlocked,
+    returnTo,
     handleSave,
     handleBackPress,
     handleDiscard,

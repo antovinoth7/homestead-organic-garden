@@ -58,6 +58,8 @@ interface Props {
   ghostRows?: GhostRow[];
   onResolveEntry?: (entryId: string) => void;
   entryResolutions?: Map<string, EntryResolution>;
+  resolvedNames?: Map<string, string>;
+  onOpenPlant?: (plantId: string) => void;
 }
 
 const LAYER_BORDER: Record<BedLayer, string> = {
@@ -110,10 +112,13 @@ function getRowDisplayName(layer: BedLayer, isStaggered: boolean): string {
 
 // ─── PlantTile ────────────────────────────────────────────────────────────────
 
-function resolutionLabel(res: EntryResolution | undefined): { text: string; resolved: boolean } {
+function resolutionLabel(
+  res: EntryResolution | undefined,
+  resolvedName?: string
+): { text: string; resolved: boolean } {
   const kind = res?.kind ?? 'placeholder';
   if (kind === 'placeholder') return { text: 'Tap to link / add to My Plants', resolved: false };
-  if (kind === 'link') return { text: '✓ Linked to plant', resolved: true };
+  if (kind === 'link') return { text: `✓ ${resolvedName ?? 'Linked to plant'}`, resolved: true };
   const variety = res?.kind === 'create' ? res.variety : undefined;
   return { text: variety ? `✓ New: ${variety}` : '✓ New plant', resolved: true };
 }
@@ -123,7 +128,9 @@ interface PlantTileProps {
   layerBorderColor: string;
   onRemove?: () => void;
   resolution?: EntryResolution;
+  resolvedName?: string;
   onResolveEntry?: () => void;
+  onOpenPlant?: (plantId: string) => void;
 }
 
 function PlantTile({
@@ -131,12 +138,21 @@ function PlantTile({
   layerBorderColor,
   onRemove,
   resolution,
+  resolvedName,
   onResolveEntry,
+  onOpenPlant,
 }: PlantTileProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const isCompanion = plant.isCompanion === true;
-  const resLabel = onResolveEntry !== undefined ? resolutionLabel(resolution) : null;
+  const resLabel = onResolveEntry !== undefined ? resolutionLabel(resolution, resolvedName) : null;
+  // A resolved "link" entry points at a saved plant — tapping opens its detail
+  // screen; an unresolved placeholder opens the resolver sheet instead.
+  const linkedPlantId = resolution?.kind === 'link' ? resolution.plantId : undefined;
+  const handleResLabelPress =
+    linkedPlantId !== undefined && onOpenPlant !== undefined
+      ? () => onOpenPlant(linkedPlantId)
+      : onResolveEntry;
 
   return (
     <View
@@ -158,7 +174,7 @@ function PlantTile({
       </Text>
       {resLabel !== null && (
         <TouchableOpacity
-          onPress={onResolveEntry}
+          onPress={handleResLabelPress}
           style={[styles.resolutionChip, resLabel.resolved && styles.resolutionChipResolved]}
         >
           <Text
@@ -221,6 +237,8 @@ interface RowCardProps {
   onReorder?: (layer: BedLayer, orderedIds: string[]) => void;
   onResolveEntry?: (entryId: string) => void;
   entryResolutions?: Map<string, EntryResolution>;
+  resolvedNames?: Map<string, string>;
+  onOpenPlant?: (plantId: string) => void;
 }
 
 function RowCard({
@@ -230,6 +248,8 @@ function RowCard({
   onReorder,
   onResolveEntry,
   entryResolutions,
+  resolvedNames,
+  onOpenPlant,
 }: RowCardProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -319,11 +339,24 @@ function RowCard({
 
       {/* Header */}
       <View style={[styles.rowHeader, { borderBottomColor: borderColor }]}>
-        <View style={[styles.rowNumCircle, { backgroundColor: borderColor }]}>
-          <Text style={styles.rowNumText}>{row.rowIndex}</Text>
+        <View style={styles.rowHeaderTop}>
+          <View style={[styles.rowNumCircle, { backgroundColor: borderColor }]}>
+            <Text style={styles.rowNumText}>{row.rowIndex}</Text>
+          </View>
+          <Text style={styles.rowIcon}>{icon}</Text>
+          <Text style={styles.rowNameText} numberOfLines={1}>
+            {displayName}
+          </Text>
+          {onAddToRow !== undefined && (
+            <TouchableOpacity
+              style={styles.rowCardAddBtn}
+              onPress={() => onAddToRow(row.layer)}
+              hitSlop={4}
+            >
+              <Text style={styles.rowCardAddBtnText}>+</Text>
+            </TouchableOpacity>
+          )}
         </View>
-        <Text style={styles.rowIcon}>{icon}</Text>
-        <Text style={styles.rowNameText}>{displayName}</Text>
         <View style={styles.badgeRow}>
           {hasNFixer && (
             <View style={styles.nFixerBadge}>
@@ -347,15 +380,6 @@ function RowCard({
           )}
           <Text style={styles.plantCountText}>{plantCount}</Text>
         </View>
-        {onAddToRow !== undefined && (
-          <TouchableOpacity
-            style={styles.rowCardAddBtn}
-            onPress={() => onAddToRow(row.layer)}
-            hitSlop={4}
-          >
-            <Text style={styles.rowCardAddBtnText}>+</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Plant tiles + care chips */}
@@ -392,6 +416,8 @@ function RowCard({
                             plant={plant}
                             layerBorderColor={borderColor}
                             resolution={entryResolutions?.get(plant.id ?? '')}
+                            resolvedName={resolvedNames?.get(plant.id ?? '')}
+                            onOpenPlant={onOpenPlant}
                             onResolveEntry={
                               onResolveEntry && plant.id !== undefined
                                 ? () => onResolveEntry(plant.id!)
@@ -445,6 +471,8 @@ function RowCard({
                       plant={plant}
                       layerBorderColor={borderColor}
                       resolution={entryResolutions?.get(plant.id ?? '')}
+                      resolvedName={resolvedNames?.get(plant.id ?? '')}
+                      onOpenPlant={onOpenPlant}
                       onResolveEntry={
                         onResolveEntry && plant.id !== undefined
                           ? () => onResolveEntry(plant.id!)
@@ -791,8 +819,12 @@ export function GhostRowCard({
     <View style={[styles.rowCard, { borderColor, backgroundColor: bgColor }]}>
       <View style={[styles.rowAccentStripe, { backgroundColor: borderColor }]} />
       <View style={[styles.rowHeader, { borderBottomColor: borderColor }]}>
-        <Text style={styles.rowIcon}>{icon}</Text>
-        <Text style={styles.rowNameText}>{displayName}</Text>
+        <View style={styles.rowHeaderTop}>
+          <Text style={styles.rowIcon}>{icon}</Text>
+          <Text style={styles.rowNameText} numberOfLines={1}>
+            {displayName}
+          </Text>
+        </View>
         <View style={styles.badgeRow}>
           <View style={styles.mainCropBadge}>
             <Text style={styles.mainCropBadgeText}>EMPTY</Text>
@@ -828,6 +860,8 @@ export function BedRowLayout({
   ghostRows,
   onResolveEntry,
   entryResolutions,
+  resolvedNames,
+  onOpenPlant,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -903,6 +937,8 @@ export function BedRowLayout({
           onReorder={onReorder}
           onResolveEntry={onResolveEntry}
           entryResolutions={entryResolutions}
+          resolvedNames={resolvedNames}
+          onOpenPlant={onOpenPlant}
         />
       ))}
 

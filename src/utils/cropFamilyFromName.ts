@@ -7,12 +7,16 @@ import type { CropFamily } from '@/types/database.types';
  * has the family needed for rotation tracking. Returns null when no template
  * mentions the plant.
  */
+function normalize(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
 export function cropFamilyFromName(name: string): CropFamily | null {
-  const target = name.trim().toLowerCase();
+  const target = normalize(name);
   if (!target) return null;
   for (const template of Object.values(GUILD_TEMPLATES)) {
     for (const row of template.plant_rows) {
-      if (row.name.toLowerCase() === target) {
+      if (normalize(row.name) === target) {
         return row.crop_family;
       }
     }

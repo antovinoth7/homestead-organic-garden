@@ -37,6 +37,7 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
     loading,
     hasUnsavedChanges,
     handleBackPress,
+    returnTo,
   } = formState;
 
   const [stepError, setStepError] = useState<string | null>(null);
@@ -91,8 +92,15 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
       return;
     }
     setStepError(null);
-    handleSave(showBanner);
-  }, [getWizardStepErrors, handleSave, showBanner]);
+    // When opened from the bed wizard (returnTo set), skip the "going to your
+    // plants" banner and let handleSave's built-in returnTo branch navigate back
+    // to BedCreationWizard. Otherwise show the banner → PlantsList as usual.
+    if (returnTo) {
+      handleSave();
+    } else {
+      handleSave(showBanner);
+    }
+  }, [getWizardStepErrors, handleSave, showBanner, returnTo]);
 
   return (
     <View style={wizardStyles.root}>
@@ -109,14 +117,6 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
           <Text style={formStyles.title}>Add Plant</Text>
           {hasUnsavedChanges && <View style={formStyles.unsavedDot} />}
         </View>
-        <TouchableOpacity
-          onPress={handleBackPress}
-          style={formStyles.headerIconButton}
-          activeOpacity={0.7}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="close" size={20} color={theme.textInverse} />
-        </TouchableOpacity>
       </View>
 
       <View style={wizardStyles.stepRow}>

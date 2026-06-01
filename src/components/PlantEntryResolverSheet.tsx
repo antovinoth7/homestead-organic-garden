@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { getAllPlants } from '@/services/plants';
@@ -36,12 +37,14 @@ export function PlantEntryResolverSheet({
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
 
   const [activeTab, setActiveTab] = useState<Tab>('create');
   const [selectedVariety, setSelectedVariety] = useState<string | null>(null);
   const [selectedPlantId, setSelectedPlantId] = useState<string | null>(null);
   const [linkablePlants, setLinkablePlants] = useState<Plant[]>([]);
   const [loadingLinkable, setLoadingLinkable] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const varieties = useMemo(() => (entry ? varietiesForName(entry.name) : []), [entry]);
 
@@ -80,7 +83,10 @@ export function PlantEntryResolverSheet({
 
   const handleConfirm = useCallback((): void => {
     if (activeTab === 'create') {
-      void onCreateInForm(selectedVariety);
+      // ensureBedSaved() runs before navigation, so show progress on the button
+      // rather than leaving the sheet looking frozen during the write.
+      setSubmitting(true);
+      Promise.resolve(onCreateInForm(selectedVariety)).finally(() => setSubmitting(false));
     } else if (selectedPlantId) {
       onResolve({ kind: 'link', plantId: selectedPlantId });
     }
@@ -213,16 +219,22 @@ export function PlantEntryResolverSheet({
             )}
           </ScrollView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <TouchableOpacity style={styles.secondaryBtn} onPress={onClose}>
               <Text style={styles.secondaryBtnText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.primaryBtn, !canConfirm && styles.primaryBtnDisabled]}
+              style={[styles.primaryBtn, (!canConfirm || submitting) && styles.primaryBtnDisabled]}
               onPress={handleConfirm}
-              disabled={!canConfirm}
+              disabled={!canConfirm || submitting}
             >
-              <Text style={styles.primaryBtnText}>Save</Text>
+              {submitting ? (
+                <ActivityIndicator color={theme.textInverse} size="small" />
+              ) : (
+                <Text style={styles.primaryBtnText}>
+                  {activeTab === 'create' ? 'Open Plant Form' : 'Save'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

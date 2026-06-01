@@ -498,23 +498,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     autoTasksTitle: { fontSize: 13, fontWeight: '600', color: theme.primary, marginBottom: 6 },
     autoTaskRow: { fontSize: 12, color: theme.primary, marginBottom: 3 },
-    // Step 7 — success
-    successContainer: { alignItems: 'center', justifyContent: 'center', flex: 1, padding: 40 },
-    successTitle: { fontSize: 24, fontWeight: '800', color: theme.text, marginTop: 20 },
-    successSubtitle: {
-      fontSize: 15,
-      color: theme.textSecondary,
-      textAlign: 'center',
-      marginTop: 12,
-      marginBottom: 32,
-    },
-    doneButton: {
-      backgroundColor: theme.primary,
-      paddingHorizontal: 40,
-      paddingVertical: 14,
-      borderRadius: 12,
-    },
-    doneButtonText: { color: theme.textInverse, fontWeight: '700', fontSize: 16 },
+    soilPrepRow: { fontSize: 13, color: theme.text, marginBottom: 4 },
     // Stepper (legacy — kept for other steps)
     stepperRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 6 },
     stepperLabel: { flex: 1, color: theme.text },
@@ -1042,36 +1026,53 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'space-between' as const,
       backgroundColor: theme.primaryLight,
       borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      marginBottom: 16,
-      borderWidth: 1.5,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      marginBottom: 12,
+      borderWidth: 1,
       borderColor: theme.primary,
-    },
-    gtUseFullPlanBtnText: {
-      flex: 1,
-      fontSize: 14,
-      fontWeight: '600' as const,
-      color: theme.primary,
-    },
-    gtUseFullPlanQuickBadge: {
-      backgroundColor: theme.primary,
-      borderRadius: 8,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      marginLeft: 8,
-    },
-    gtUseFullPlanQuickBadgeText: {
-      fontSize: 10,
-      fontWeight: '700' as const,
-      color: theme.textInverse,
     },
     gtUseFullPlanBtnApplied: {
       backgroundColor: theme.successLight,
       borderColor: theme.success,
     },
-    gtUseFullPlanQuickBadgeApplied: {
+    // Quick Start — compact two-line card
+    gtQuickStartTextCol: {
+      flex: 1,
+      marginRight: 10,
+    },
+    gtQuickStartTitle: {
+      fontSize: 13,
+      fontWeight: '700' as const,
+      color: theme.primary,
+    },
+    gtQuickStartTitleApplied: {
+      color: theme.success,
+    },
+    gtQuickStartSubtitle: {
+      fontSize: 11,
+      color: theme.textSecondary,
+      marginTop: 1,
+    },
+    gtQuickStartPill: {
+      backgroundColor: theme.primary,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    gtQuickStartPillApplied: {
       backgroundColor: theme.success,
+    },
+    gtQuickStartPillText: {
+      fontSize: 12,
+      fontWeight: '700' as const,
+      color: theme.textInverse,
+    },
+    gtEmptyHint: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginBottom: 12,
+      marginTop: -4,
     },
     // Guild step — benefit explanation line
     gtBenefitLine: {

@@ -12,6 +12,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
+import { logger } from '@/utils/logger';
 import { useBedCreationWizard } from '@/hooks/useBedCreationWizard';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import DiscardChangesModal from '@/components/modals/DiscardChangesModal';
@@ -27,9 +28,8 @@ import { BedSizeStep } from './BedWizardSteps/BedSizeStep';
 import { GuildTemplateStep } from './BedWizardSteps/GuildTemplateStep';
 import { BedLayoutStep } from './BedWizardSteps/BedLayoutStep';
 import { BedConfirmStep } from './BedWizardSteps/BedConfirmStep';
-import { BedSuccessStep } from './BedWizardSteps/BedSuccessStep';
 
-const STEP_LABELS = ['Crop Type', 'Your Land', 'Bed Size', 'Crops', 'Arrange', 'Review', 'Done'];
+const STEP_LABELS = ['Crop Type', 'Your Land', 'Bed Size', 'Crops', 'Arrange', 'Review'];
 // Maps display indices (0–5) to actual wizard step numbers
 const VISIBLE_STEPS = [1, 2, 3, 4, 5, 6] as const;
 
@@ -42,6 +42,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
   const prefillType = route.params?.prefillType;
 
   const wizard = useBedCreationWizard(prefillType);
+  const { discardDraft } = wizard;
   const scrollViewRef = useRef<ScrollView>(null);
   const [discardVisible, setDiscardVisible] = useState(false);
 
@@ -50,17 +51,15 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
   }, [wizard.currentStep]);
 
   const requestExit = useCallback((): boolean => {
-    if (wizard.currentStep === 7) {
-      navigation.goBack();
-      return true;
-    }
     if (wizard.isDirty) {
       setDiscardVisible(true);
       return true;
     }
+    // Best-effort cleanup of any bed saved early via "Create in Form".
+    void discardDraft();
     navigation.goBack();
     return true;
-  }, [wizard.currentStep, wizard.isDirty, navigation]);
+  }, [wizard.isDirty, discardDraft, navigation]);
 
   useFocusEffect(
     useCallback(() => {
@@ -84,12 +83,22 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
     const bedId = await wizard.submit();
     if (!bedId) {
       Alert.alert('Error', 'Failed to save bed. Check your connection and try again.');
+      return;
     }
+    navigation.popToTop();
+  };
+
+  const handleOpenPlant = (plantId: string): void => {
+    navigation.navigate('PlantDetail', { plantId });
   };
 
   const handleCreateInForm = async (entryId: string, variety: string | null): Promise<void> => {
     const entry = wizard.stepData[4]?.plant_entries.find((e) => e.id === entryId);
-    if (!entry) return;
+    if (!entry) {
+      logger.warn('handleCreateInForm: entry not found', undefined, { metadata: { entryId } });
+      Alert.alert('Error', 'Plant entry not found. Please try again.');
+      return;
+    }
     const s1 = wizard.stepData[1];
     const s2 = wizard.stepData[2];
     if (!s1?.bed_type || !s2?.name?.trim()) {
@@ -98,22 +107,19 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
     }
     try {
       const bedId = await wizard.ensureBedSaved();
-      navigation.navigate('Plants', {
-        screen: 'PlantForm',
-        params: {
-          prefill: {
-            name: entry.name,
-            variety,
-            bedId,
-            bedName: s2.name.trim(),
-            bedLayer: entry.layer,
-            spacingCm: entry.spacingCm,
-            sunlight: s2?.sunlight,
-            parentLocation: s2?.parent_location ?? undefined,
-            childLocation: s2?.child_location ?? undefined,
-          },
-          returnTo: { wizardEntryId: entryId },
+      navigation.navigate('PlantForm', {
+        prefill: {
+          name: entry.name,
+          variety,
+          bedId,
+          bedName: s2.name.trim(),
+          bedLayer: entry.layer,
+          spacingCm: entry.spacingCm,
+          sunlight: s2?.sunlight,
+          parentLocation: s2?.parent_location ?? undefined,
+          childLocation: s2?.child_location ?? undefined,
         },
+        returnTo: { wizardEntryId: entryId },
       });
     } catch (err) {
       Alert.alert(
@@ -133,6 +139,8 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
             data={wizard.stepData[2]!}
             onChange={wizard.setStep2}
             solanaceaeBlocked={wizard.solanaceaeBlocked}
+            directionMissing={wizard.directionMissing}
+            existingBeds={wizard.existingBeds}
             parentOptions={wizard.locationConfig.parentLocations}
             childOptions={wizard.locationConfig.childLocations}
             locationsLoading={wizard.locationLoading}
@@ -168,6 +176,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
             solanaceaeBlocked={wizard.solanaceaeBlocked}
             onChangePlants={wizard.setStep4}
             onCreateInFormForEntry={handleCreateInForm}
+            onOpenPlant={handleOpenPlant}
           />
         );
       case 6:
@@ -178,81 +187,72 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
             onChange={wizard.setStep6}
           />
         );
-      case 7:
-        return <BedSuccessStep onDone={() => navigation.navigate('BedList')} />;
       default:
-        return <BedSuccessStep onDone={() => navigation.navigate('BedList')} />;
+        return <BedTypeStep data={wizard.stepData[1]!} onChange={wizard.setStep1} />;
     }
   };
 
   const isLastInputStep = wizard.currentStep === 6;
-  const isSuccess = wizard.currentStep === 7;
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      {!isSuccess && (
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <TouchableOpacity onPress={requestExit} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={theme.textInverse} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create Bed</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      )}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity onPress={requestExit} style={styles.closeButton}>
+          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Create Bed</Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
       {/* Progress stepper */}
-      {!isSuccess && (
-        <View style={styles.progressContainer}>
-          <View style={styles.stepRow}>
-            {STEP_LABELS.slice(0, 6).map((label, i) => {
-              const step = VISIBLE_STEPS[i]!;
-              const currentIdx = VISIBLE_STEPS.indexOf(
-                wizard.currentStep as (typeof VISIBLE_STEPS)[number]
-              );
-              const isActive = step === wizard.currentStep;
-              const isComplete = currentIdx > i;
-              return (
-                <React.Fragment key={label}>
-                  <View style={styles.stepCol}>
-                    <View
-                      style={[
-                        styles.stepCircle,
-                        isActive && styles.stepCircleActive,
-                        isComplete && styles.stepCircleComplete,
-                      ]}
-                    >
-                      {isComplete ? (
-                        <Ionicons name="checkmark" size={14} color={theme.primary} />
-                      ) : (
-                        <Text
-                          style={[styles.stepCircleText, isActive && styles.stepCircleTextActive]}
-                        >
-                          {i + 1}
-                        </Text>
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.progressLabel,
-                        isActive && styles.progressLabelActive,
-                        isComplete && styles.progressLabelComplete,
-                      ]}
-                    >
-                      {label}
-                    </Text>
+      <View style={styles.progressContainer}>
+        <View style={styles.stepRow}>
+          {STEP_LABELS.slice(0, 6).map((label, i) => {
+            const step = VISIBLE_STEPS[i]!;
+            const currentIdx = VISIBLE_STEPS.indexOf(
+              wizard.currentStep as (typeof VISIBLE_STEPS)[number]
+            );
+            const isActive = step === wizard.currentStep;
+            const isComplete = currentIdx > i;
+            return (
+              <React.Fragment key={label}>
+                <View style={styles.stepCol}>
+                  <View
+                    style={[
+                      styles.stepCircle,
+                      isActive && styles.stepCircleActive,
+                      isComplete && styles.stepCircleComplete,
+                    ]}
+                  >
+                    {isComplete ? (
+                      <Ionicons name="checkmark" size={14} color={theme.primary} />
+                    ) : (
+                      <Text
+                        style={[styles.stepCircleText, isActive && styles.stepCircleTextActive]}
+                      >
+                        {i + 1}
+                      </Text>
+                    )}
                   </View>
-                  {i < 5 && (
-                    <View
-                      style={[styles.stepConnector, isComplete && styles.stepConnectorFilled]}
-                    />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </View>
+                  <Text
+                    style={[
+                      styles.progressLabel,
+                      isActive && styles.progressLabelActive,
+                      isComplete && styles.progressLabelComplete,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </View>
+                {i < 5 && (
+                  <View style={[styles.stepConnector, isComplete && styles.stepConnectorFilled]} />
+                )}
+              </React.Fragment>
+            );
+          })}
         </View>
-      )}
+      </View>
 
       {/* Step content */}
       <ScrollView
@@ -264,7 +264,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
       </ScrollView>
 
       {/* Solanaceae block banner — sits above the footer, not inline with buttons */}
-      {!isSuccess && wizard.solanaceaeBlocked && wizard.currentStep === 2 && (
+      {wizard.solanaceaeBlocked && wizard.currentStep === 2 && (
         <View style={styles.blockedBanner}>
           <Ionicons name="warning" size={18} color={theme.error} />
           <Text style={styles.blockedBannerText}>
@@ -274,56 +274,53 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
       )}
 
       {/* Navigation buttons */}
-      {!isSuccess && (
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          {wizard.currentStep > 1 ? (
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={wizard.goBack}
-              accessibilityLabel="Back to previous step"
-            >
-              <Ionicons name="arrow-back" size={18} color="#fff" />
-              <Text style={styles.backText}>Back</Text>
-            </TouchableOpacity>
-          ) : (
-            <View />
-          )}
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        {wizard.currentStep > 1 ? (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={wizard.goBack}
+            accessibilityLabel="Back to previous step"
+          >
+            <Ionicons name="arrow-back" size={18} color="#fff" />
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+        ) : (
+          <View />
+        )}
 
-          {isLastInputStep ? (
-            <TouchableOpacity
-              style={[
-                styles.nextButton,
-                (!wizard.canProceed || wizard.submitting) && styles.nextButtonDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={!wizard.canProceed || wizard.submitting}
-              accessibilityLabel="Save bed"
-            >
-              {wizard.submitting ? (
-                <>
-                  <ActivityIndicator size="small" color="#fff" />
-                  <Text style={styles.nextText}>Saving…</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="checkmark" size={20} color="#fff" />
-                  <Text style={styles.nextText}>Save Bed</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={[styles.nextButton, !wizard.canProceed && styles.nextButtonDisabled]}
-              onPress={wizard.goNext}
-              disabled={!wizard.canProceed}
-              accessibilityLabel="Next step"
-            >
-              <Text style={styles.nextText}>Next</Text>
-              <Ionicons name="arrow-forward" size={18} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+        {isLastInputStep ? (
+          <TouchableOpacity
+            style={[
+              styles.nextButton,
+              (!wizard.canProceed || wizard.submitting) && styles.nextButtonDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={!wizard.canProceed || wizard.submitting}
+            accessibilityLabel="Save bed"
+          >
+            {wizard.submitting ? (
+              <>
+                <ActivityIndicator size="small" color="#fff" />
+                <Text style={styles.nextText}>Saving…</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.nextText}>Save Bed</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.nextButton, !wizard.canProceed && styles.nextButtonDisabled]}
+            onPress={wizard.goNext}
+            disabled={!wizard.canProceed}
+            accessibilityLabel="Next step"
+          >
+            <Text style={styles.nextText}>Next</Text>
+            <Ionicons name="arrow-forward" size={18} color="#fff" />
+          </TouchableOpacity>
+        )}
+      </View>
 
       <DiscardChangesModal
         visible={discardVisible}
@@ -331,6 +328,8 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
         onKeepEditing={() => setDiscardVisible(false)}
         onDiscard={() => {
           setDiscardVisible(false);
+          // Best-effort cleanup of any bed saved early via "Create in Form".
+          void discardDraft();
           navigation.goBack();
         }}
       />

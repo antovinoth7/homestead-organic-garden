@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, type ViewStyle, type TextStyle } from 'react-native';
 import { useTheme } from '@/theme';
 import type { Bed, Plant, CropFamily } from '@/types/database.types';
 import { getGreenManureForMonth, getGuildTemplate } from '@/config/beds';
@@ -8,7 +8,6 @@ import { createStyles } from '@/styles/bedSuccessionTimelineStyles';
 
 const DAY_PX = 2;
 const TOTAL_WIDTH = 365 * DAY_PX;
-const LEFT_COL_W = 80;
 const BAND_HEIGHT = 22;
 const MONTH_HEIGHT = 18;
 const BAR_HEIGHT = 10;
@@ -178,18 +177,29 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
   const totalRows = plantBars.length + 1; // +1 for green manure
   const canvasHeight = BAND_HEIGHT + MONTH_HEIGHT + totalRows * ROW_HEIGHT + 4;
 
-  const bandBg = (id: SeasonId) => {
-    if (id === 'summer') return styles.bandSummer;
-    if (id === 'sw_monsoon') return styles.bandSwMonsoon;
-    if (id === 'ne_monsoon') return styles.bandNeMonsoon;
-    return styles.bandCoolDry;
+  const bandBg = (id: SeasonId): ViewStyle => {
+    const s =
+      id === 'summer'
+        ? styles.bandSummer
+        : id === 'sw_monsoon'
+          ? styles.bandSwMonsoon
+          : id === 'ne_monsoon'
+            ? styles.bandNeMonsoon
+            : styles.bandCoolDry;
+    // createStyles() returns the loose StyleSheet union; these keys are ViewStyles.
+    return s as ViewStyle;
   };
 
-  const bandTxt = (id: SeasonId) => {
-    if (id === 'summer') return styles.bandLabelSummer;
-    if (id === 'sw_monsoon') return styles.bandLabelSwMonsoon;
-    if (id === 'ne_monsoon') return styles.bandLabelNeMonsoon;
-    return styles.bandLabelCoolDry;
+  const bandTxt = (id: SeasonId): TextStyle => {
+    const s =
+      id === 'summer'
+        ? styles.bandLabelSummer
+        : id === 'sw_monsoon'
+          ? styles.bandLabelSwMonsoon
+          : id === 'ne_monsoon'
+            ? styles.bandLabelNeMonsoon
+            : styles.bandLabelCoolDry;
+    return s as TextStyle;
   };
 
   return (
@@ -218,7 +228,7 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
 
         {/* Horizontally scrollable year canvas */}
         <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ width: TOTAL_WIDTH, height: canvasHeight, position: 'relative' }}>
+          <View style={[styles.canvasRelative, { width: TOTAL_WIDTH, height: canvasHeight }]}>
 
             {/* Season bands */}
             {SEASON_BANDS.map((band) => (
@@ -230,7 +240,6 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
                   {
                     left: (band.startDay - 1) * DAY_PX,
                     width: (band.endDay - band.startDay + 1) * DAY_PX,
-                    top: 0,
                     height: BAND_HEIGHT,
                   },
                 ]}
@@ -298,7 +307,7 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
             <View
               style={[
                 styles.todayLine,
-                { left: (todayDoy - 1) * DAY_PX, top: 0, height: canvasHeight },
+                { left: (todayDoy - 1) * DAY_PX, height: canvasHeight },
               ]}
             />
 
