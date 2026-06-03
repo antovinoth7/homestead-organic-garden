@@ -18,6 +18,7 @@ import { useTheme } from '@/theme';
 import { useBedData, BedWithCoverage } from '@/hooks/useBedData';
 import { deleteBed } from '@/services/beds';
 import { BedCard } from '@/components/BedCard';
+import { BedRotationView } from '@/components/BedRotationView';
 import { BedFilterSheet, BedCounts } from '@/components/BedFilterSheet';
 import { BedDeleteModal } from '@/components/modals/BedDeleteModal';
 import { AnimatedFAB, useTabBarScroll, TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
@@ -75,6 +76,9 @@ export default function BedListScreen(): React.JSX.Element {
   const searchInputRef = useRef<TextInput>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Listing tab: bed list vs farm-wide rotation view.
+  const [activeTab, setActiveTab] = useState<'beds' | 'rotation'>('beds');
+
   // Sort & filter (mirrors the Plants listing).
   const [sortBy, setSortBy] = useState<BedSortOption>('newest');
   const [filters, setFilters] = useState<BedActiveFilters>(DEFAULT_BED_FILTERS);
@@ -88,10 +92,7 @@ export default function BedListScreen(): React.JSX.Element {
     }, 200);
   }, []);
 
-  const beds = useMemo(
-    () => bedsData.filter((b) => !deletedIds.has(b.id)),
-    [bedsData, deletedIds]
-  );
+  const beds = useMemo(() => bedsData.filter((b) => !deletedIds.has(b.id)), [bedsData, deletedIds]);
 
   const visibleBeds = useMemo(
     () => filterAndSortBeds(beds, filters, sortBy, searchQuery),
@@ -321,13 +322,18 @@ export default function BedListScreen(): React.JSX.Element {
       outputRange: ['0%', '100%'],
     });
     return (
-      <View style={[styles.undoToast, { bottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8 }]}>
+      <View
+        style={[styles.undoToast, { bottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8 }]}
+      >
         <View style={styles.undoToastRow}>
           <View style={styles.undoToastLeft}>
             <Ionicons name="trash-outline" size={16} color={theme.textSecondary} />
             <Text style={styles.undoToastText}>{pendingDelete.name} deleted</Text>
           </View>
-          <TouchableOpacity onPress={handleUndo} hitSlop={{ top: 8, bottom: 8, left: 12, right: 4 }}>
+          <TouchableOpacity
+            onPress={handleUndo}
+            hitSlop={{ top: 8, bottom: 8, left: 12, right: 4 }}
+          >
             <Text style={styles.undoToastAction}>Undo</Text>
           </TouchableOpacity>
         </View>
@@ -411,105 +417,151 @@ export default function BedListScreen(): React.JSX.Element {
                 {beds.length > 0 ? `${beds.length} Bed${beds.length > 1 ? 's' : ''}` : ''}
               </Text>
             </View>
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={styles.headerIconBtn}
-                onPress={() => {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                  setSearchActive(true);
-                }}
-              >
-                <Ionicons name="search" size={20} color={theme.textInverse} />
-                {searchInput.trim() !== '' && <View style={styles.searchActiveDot} />}
-              </TouchableOpacity>
-            </View>
+            {activeTab === 'beds' && (
+              <View style={styles.headerActions}>
+                <TouchableOpacity
+                  style={styles.headerIconBtn}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setSearchActive(true);
+                  }}
+                >
+                  <Ionicons name="search" size={20} color={theme.textInverse} />
+                  {searchInput.trim() !== '' && <View style={styles.searchActiveDot} />}
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
       </View>
 
       {beds.length > 0 && (
-        <View style={styles.resultsHeader}>
-          <View style={styles.resultsLeft}>
-            <Ionicons name="grid" size={14} color={theme.primary} />
-            <Text style={styles.resultsCount}>{visibleBeds.length}</Text>
-            {hasActiveFilters ? (
-              <>
-                <Text style={styles.resultsLabel}>of {beds.length} Beds</Text>
-                <View style={styles.resultsFilteredBadge}>
-                  <Text style={styles.resultsFilteredText}>filtered</Text>
-                </View>
-              </>
-            ) : (
-              <Text style={styles.resultsLabel}>{visibleBeds.length === 1 ? 'Bed' : 'Beds'}</Text>
-            )}
-          </View>
-          <View style={styles.resultsRight}>
-            <TouchableOpacity style={styles.sortPill} onPress={toggleFilters}>
-              <Ionicons name="swap-vertical" size={13} color={theme.textSecondary} />
-              <Text style={styles.sortPillText}>{SORT_LABELS[sortBy]}</Text>
-              <Ionicons name="chevron-down" size={12} color={theme.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.filterToggleButton, showFilters && styles.filterToggleButtonActive]}
-              onPress={toggleFilters}
-              accessibilityLabel="Sort and filter beds"
+        <View style={styles.segmentedControl}>
+          <TouchableOpacity
+            style={[styles.segment, activeTab === 'beds' && styles.segmentActive]}
+            onPress={() => setActiveTab('beds')}
+          >
+            <Ionicons
+              name="grid-outline"
+              size={15}
+              color={activeTab === 'beds' ? theme.primary : theme.textSecondary}
+            />
+            <Text style={[styles.segmentText, activeTab === 'beds' && styles.segmentTextActive]}>
+              Beds
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segment, activeTab === 'rotation' && styles.segmentActive]}
+            onPress={() => setActiveTab('rotation')}
+          >
+            <Ionicons
+              name="sync-outline"
+              size={15}
+              color={activeTab === 'rotation' ? theme.primary : theme.textSecondary}
+            />
+            <Text
+              style={[styles.segmentText, activeTab === 'rotation' && styles.segmentTextActive]}
             >
-              <Ionicons
-                name="funnel"
-                size={16}
-                color={showFilters ? theme.textInverse : theme.primary}
-              />
-              {activeFilterCount > 0 && !showFilters && (
-                <View style={styles.filterBadge}>
-                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
+              Rotation
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
 
-      {lowLegumeBeds.length > 0 && (
-        <View style={styles.legumeBanner}>
-          <Ionicons name="warning-outline" size={16} color={theme.warning ?? '#f59e0b'} />
-          <Text style={styles.legumeBannerText}>
-            {lowLegumeBeds.length} bed{lowLegumeBeds.length > 1 ? 's' : ''} under 20% legume
-            coverage
-          </Text>
-        </View>
-      )}
-
-      {beds.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="grid-outline" size={56} color={theme.textSecondary} />
-          <Text style={styles.emptyTitle}>No beds yet</Text>
-          <Text style={styles.emptySubtitle}>Tap + to create your first garden bed</Text>
-        </View>
-      ) : visibleBeds.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="search-outline" size={56} color={theme.textSecondary} />
-          <Text style={styles.emptyTitle}>No matching beds</Text>
-          <Text style={styles.emptySubtitle}>Try adjusting your filters or search</Text>
-          {hasActiveFilters && (
-            <TouchableOpacity style={styles.clearFiltersEmptyButton} onPress={clearAllFilters}>
-              <Ionicons name="close-circle-outline" size={16} color={theme.primary} />
-              <Text style={styles.clearFiltersEmptyText}>Clear Filters</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+      {activeTab === 'rotation' ? (
+        <BedRotationView beds={beds} onOpenBed={navigateToBed} />
       ) : (
-        <FlatList
-          data={visibleBeds}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.list}
-          onRefresh={refresh}
-          refreshing={loading}
-          initialNumToRender={8}
-          maxToRenderPerBatch={8}
-          windowSize={7}
-          removeClippedSubviews
-        />
+        <>
+          {beds.length > 0 && (
+            <View style={styles.resultsHeader}>
+              <View style={styles.resultsLeft}>
+                <Ionicons name="grid" size={14} color={theme.primary} />
+                <Text style={styles.resultsCount}>{visibleBeds.length}</Text>
+                {hasActiveFilters ? (
+                  <>
+                    <Text style={styles.resultsLabel}>of {beds.length} Beds</Text>
+                    <View style={styles.resultsFilteredBadge}>
+                      <Text style={styles.resultsFilteredText}>filtered</Text>
+                    </View>
+                  </>
+                ) : (
+                  <Text style={styles.resultsLabel}>
+                    {visibleBeds.length === 1 ? 'Bed' : 'Beds'}
+                  </Text>
+                )}
+              </View>
+              <View style={styles.resultsRight}>
+                <TouchableOpacity style={styles.sortPill} onPress={toggleFilters}>
+                  <Ionicons name="swap-vertical" size={13} color={theme.textSecondary} />
+                  <Text style={styles.sortPillText}>{SORT_LABELS[sortBy]}</Text>
+                  <Ionicons name="chevron-down" size={12} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.filterToggleButton,
+                    showFilters && styles.filterToggleButtonActive,
+                  ]}
+                  onPress={toggleFilters}
+                  accessibilityLabel="Sort and filter beds"
+                >
+                  <Ionicons
+                    name="funnel"
+                    size={16}
+                    color={showFilters ? theme.textInverse : theme.primary}
+                  />
+                  {activeFilterCount > 0 && !showFilters && (
+                    <View style={styles.filterBadge}>
+                      <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {lowLegumeBeds.length > 0 && (
+            <View style={styles.legumeBanner}>
+              <Ionicons name="warning-outline" size={16} color={theme.warning ?? '#f59e0b'} />
+              <Text style={styles.legumeBannerText}>
+                {lowLegumeBeds.length} bed{lowLegumeBeds.length > 1 ? 's' : ''} under 20% legume
+                coverage
+              </Text>
+            </View>
+          )}
+
+          {beds.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="grid-outline" size={56} color={theme.textSecondary} />
+              <Text style={styles.emptyTitle}>No beds yet</Text>
+              <Text style={styles.emptySubtitle}>Tap + to create your first garden bed</Text>
+            </View>
+          ) : visibleBeds.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={56} color={theme.textSecondary} />
+              <Text style={styles.emptyTitle}>No matching beds</Text>
+              <Text style={styles.emptySubtitle}>Try adjusting your filters or search</Text>
+              {hasActiveFilters && (
+                <TouchableOpacity style={styles.clearFiltersEmptyButton} onPress={clearAllFilters}>
+                  <Ionicons name="close-circle-outline" size={16} color={theme.primary} />
+                  <Text style={styles.clearFiltersEmptyText}>Clear Filters</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <FlatList
+              data={visibleBeds}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              contentContainerStyle={styles.list}
+              onRefresh={refresh}
+              refreshing={loading}
+              initialNumToRender={8}
+              maxToRenderPerBatch={8}
+              windowSize={7}
+              removeClippedSubviews
+            />
+          )}
+        </>
       )}
 
       {renderUndoToast()}

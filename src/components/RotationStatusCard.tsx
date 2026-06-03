@@ -9,9 +9,15 @@ import { createStyles } from '@/styles/bedDetailStyles';
 interface Props {
   status: RotationStatus;
   bedType: BedType;
+  /** Suppress the green-manure banner (e.g. when shown once in a farm summary above a list). */
+  hideGreenManure?: boolean;
 }
 
-export function RotationStatusCard({ status, bedType }: Props): React.JSX.Element {
+export function RotationStatusCard({
+  status,
+  bedType,
+  hideGreenManure = false,
+}: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -45,7 +51,7 @@ export function RotationStatusCard({ status, bedType }: Props): React.JSX.Elemen
         </View>
       )}
 
-      {status.green_manure_recommendation && (
+      {!hideGreenManure && status.green_manure_recommendation && (
         <View style={styles.greenManureBanner}>
           <Ionicons name="leaf-outline" size={14} color={theme.primary} />
           <Text style={styles.greenManureText}>
