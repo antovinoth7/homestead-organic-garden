@@ -70,15 +70,18 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
     }, [requestExit])
   );
 
-  // Consume resolvedEntry handed back by PlantFormScreen after in-form create
+  // Consume resolvedEntry handed back by PlantFormScreen after in-form create.
+  // In edit mode the wizard is still loading the bed + plants; wait for prefill
+  // to finish so the resolved link applies to fully-populated step-4 entries.
   useEffect(() => {
     const resolved = route.params?.resolvedEntry;
     if (!resolved) return;
+    if (wizard.initializing) return;
     wizard.applyResolvedEntry(resolved.wizardEntryId, resolved.plantId);
     navigation.setParams({ resolvedEntry: undefined });
     // wizard.applyResolvedEntry is stable; intentionally not depended on
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route.params?.resolvedEntry]);
+  }, [route.params?.resolvedEntry, wizard.initializing]);
 
   const handleSubmit = async (): Promise<void> => {
     if (wizard.submitting) return;

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useTheme } from '@/theme';
+import { BedType } from '@/types/database.types';
 import { BedWithCoverage } from '@/hooks/useBedData';
 import { createStyles } from '@/styles/bedListStyles';
 
@@ -14,7 +15,7 @@ interface Props {
   onSwipeableOpen?: (ref: Swipeable) => void;
 }
 
-const BED_TYPE_EMOJI: Record<string, string> = {
+export const BED_TYPE_EMOJI: Record<BedType, string> = {
   leafy: '🥬',
   fruiting: '🍅',
   spice: '🌿',
