@@ -29,6 +29,7 @@ import {
   DEFAULT_BED_FILTERS,
   LOW_LEGUME_THRESHOLD,
 } from '@/utils/filterAndSortBeds';
+import { bedExpectsLegumes } from '@/config/beds';
 import type { BedListScreenNavigationProp } from '@/types/navigation.types';
 
 const SORT_LABELS: Record<BedSortOption, string> = {
@@ -290,7 +291,13 @@ export default function BedListScreen(): React.JSX.Element {
   );
 
   const lowLegumeBeds = useMemo(
-    () => beds.filter((b) => b.legume_coverage_pct < LOW_LEGUME_THRESHOLD && b.plant_count > 0),
+    () =>
+      beds.filter(
+        (b) =>
+          bedExpectsLegumes(b.type) &&
+          b.legume_coverage_pct < LOW_LEGUME_THRESHOLD &&
+          b.plant_count > 0
+      ),
     [beds]
   );
 

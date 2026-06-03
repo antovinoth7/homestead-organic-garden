@@ -13,6 +13,7 @@ import { getTodayTasks, getTodayTaskLogs, getSeasonalCareReminder } from '../ser
 import { getAllPlants } from '../services/plants';
 import { TaskTemplate, Plant, TaskLog, TaskType } from '../types/database.types';
 import { useBedData } from '../hooks/useBedData';
+import { bedExpectsLegumes } from '../config/beds';
 import { Ionicons } from '@expo/vector-icons';
 import { TASK_EMOJIS, TASK_COLORS } from '../utils/taskConstants';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -741,7 +742,12 @@ export default function TodayScreen(): React.JSX.Element {
               (sum, b) => sum + Math.min(100, Math.round((b.plant_count / 5) * 100)),
               0
             ) / totalBeds;
-          const avgLegume = bedList.reduce((sum, b) => sum + b.legume_coverage_pct, 0) / totalBeds;
+          // Only beds designed around legumes count toward the farm legume average.
+          const legumeBeds = bedList.filter((b) => bedExpectsLegumes(b.type));
+          const avgLegume =
+            legumeBeds.length > 0
+              ? legumeBeds.reduce((sum, b) => sum + b.legume_coverage_pct, 0) / legumeBeds.length
+              : null;
           return (
             <TouchableOpacity
               style={styles.bedOverviewCard}
@@ -759,19 +765,23 @@ export default function TodayScreen(): React.JSX.Element {
                   <Text style={styles.bedOverviewStatValue}>{Math.round(avgOccupancy)}%</Text>
                   <Text style={styles.bedOverviewStatLabel}>Occupancy</Text>
                 </View>
-                <View style={styles.bedOverviewDivider} />
-                <View style={styles.bedOverviewStat}>
-                  <Text
-                    style={
-                      avgLegume >= 20
-                        ? styles.bedOverviewStatValueOk
-                        : styles.bedOverviewStatValueWarn
-                    }
-                  >
-                    {Math.round(avgLegume)}%
-                  </Text>
-                  <Text style={styles.bedOverviewStatLabel}>Legume</Text>
-                </View>
+                {avgLegume !== null && (
+                  <>
+                    <View style={styles.bedOverviewDivider} />
+                    <View style={styles.bedOverviewStat}>
+                      <Text
+                        style={
+                          avgLegume >= 20
+                            ? styles.bedOverviewStatValueOk
+                            : styles.bedOverviewStatValueWarn
+                        }
+                      >
+                        {Math.round(avgLegume)}%
+                      </Text>
+                      <Text style={styles.bedOverviewStatLabel}>Legume</Text>
+                    </View>
+                  </>
+                )}
               </View>
             </TouchableOpacity>
           );

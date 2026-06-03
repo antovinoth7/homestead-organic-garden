@@ -343,6 +343,7 @@ export function BedLayoutStep({
             entryResolutions={entryResolutionMap}
             resolvedNames={resolvedNames}
             onOpenPlant={onOpenPlant}
+            bedType={bedType ?? undefined}
           />
         </>
       )}

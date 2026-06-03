@@ -5,6 +5,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useTheme } from '@/theme';
 import { BedType } from '@/types/database.types';
 import { BedWithCoverage } from '@/hooks/useBedData';
+import { bedExpectsLegumes } from '@/config/beds';
 import { createStyles } from '@/styles/bedListStyles';
 
 interface Props {
@@ -37,7 +38,8 @@ export const BedCard = React.memo(function BedCard({
   const swipeableRef = useRef<Swipeable>(null);
 
   const emoji = BED_TYPE_EMOJI[bed.type] ?? '🌿';
-  const lowLegume = bed.legume_coverage_pct < 20;
+  const showLegume = bedExpectsLegumes(bed.type);
+  const lowLegume = showLegume && bed.legume_coverage_pct < 20;
   const stripeColor = lowLegume ? theme.warning ?? '#f59e0b' : theme.success ?? '#22c55e';
 
   const handlePress = useCallback(() => onPress(bed), [onPress, bed]);
@@ -114,21 +116,23 @@ export const BedCard = React.memo(function BedCard({
               <Ionicons name="resize-outline" size={12} color={theme.textSecondary} />
               <Text style={styles.metaChipText}>{bed.dimensions.area_sqm} m²</Text>
             </View>
-            <View style={styles.metaChip}>
-              <Ionicons
-                name="nutrition-outline"
-                size={12}
-                color={lowLegume ? theme.warning ?? '#f59e0b' : theme.success ?? '#22c55e'}
-              />
-              <Text
-                style={[
-                  styles.metaChipText,
-                  { color: lowLegume ? theme.warning ?? '#f59e0b' : theme.success ?? '#22c55e' },
-                ]}
-              >
-                {bed.legume_coverage_pct}% legume
-              </Text>
-            </View>
+            {showLegume && (
+              <View style={styles.metaChip}>
+                <Ionicons
+                  name="nutrition-outline"
+                  size={12}
+                  color={lowLegume ? theme.warning ?? '#f59e0b' : theme.success ?? '#22c55e'}
+                />
+                <Text
+                  style={[
+                    styles.metaChipText,
+                    { color: lowLegume ? theme.warning ?? '#f59e0b' : theme.success ?? '#22c55e' },
+                  ]}
+                >
+                  {bed.legume_coverage_pct}% legume
+                </Text>
+              </View>
+            )}
           </View>
         </View>
         <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />

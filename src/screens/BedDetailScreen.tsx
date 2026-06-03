@@ -334,7 +334,7 @@ export default function BedDetailScreen(): React.JSX.Element {
             {rotationStatus.coordinator_checklist.filter((r) => r.passed).length}/
             {rotationStatus.coordinator_checklist.length} rotation rules met
           </Text>
-          <RotationStatusCard status={rotationStatus} />
+          <RotationStatusCard status={rotationStatus} bedType={bed.type} />
         </View>
       )}
 

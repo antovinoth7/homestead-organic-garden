@@ -24,7 +24,8 @@ import { useTheme } from '@/theme';
 import { createStyles, ROW_TILE_STEP } from '@/styles/bedRowLayoutStyles';
 import { computeTargetIndex } from '@/utils/dragRowMath';
 import { getPlantEmoji } from '@/utils/plantHelpers';
-import type { BedLayer, EntryResolution } from '@/types/database.types';
+import type { BedLayer, BedType, EntryResolution } from '@/types/database.types';
+import { bedExpectsLegumes } from '@/config/beds';
 import type { RowLayoutResult, BedRow, RowPlant } from '@/utils/rowLayoutEngine';
 import { interleavePlants } from '@/utils/rowLayoutEngine';
 
@@ -60,6 +61,7 @@ interface Props {
   entryResolutions?: Map<string, EntryResolution>;
   resolvedNames?: Map<string, string>;
   onOpenPlant?: (plantId: string) => void;
+  bedType?: BedType;
 }
 
 const LAYER_BORDER: Record<BedLayer, string> = {
@@ -591,7 +593,11 @@ interface Rule {
   ok: boolean;
 }
 
-function buildRules(result: RowLayoutResult, solanaceaeBlocked: boolean): Rule[] {
+function buildRules(
+  result: RowLayoutResult,
+  solanaceaeBlocked: boolean,
+  bedType?: BedType
+): Rule[] {
   const rules: Rule[] = [];
   const allPlants = result.rows.flatMap((r) => r.plants);
 
@@ -618,14 +624,17 @@ function buildRules(result: RowLayoutResult, solanaceaeBlocked: boolean): Rule[]
       : { text: 'No Solanaceae conflict — rotation is safe', ok: true }
   );
 
-  const total = allPlants.length;
-  const nFix = allPlants.filter((p) => p.isNFixer).length;
-  const pct = total > 0 ? Math.round((nFix / total) * 100) : 0;
-  rules.push(
-    pct >= 30
-      ? { text: `Legume coverage ${pct}% — good nitrogen fixation`, ok: true }
-      : { text: `Legume coverage ${pct}% — consider adding a legume`, ok: pct > 0 }
-  );
+  // Legume coverage only matters for bed types designed around nitrogen-fixers.
+  if (bedType && bedExpectsLegumes(bedType)) {
+    const total = allPlants.length;
+    const nFix = allPlants.filter((p) => p.isNFixer).length;
+    const pct = total > 0 ? Math.round((nFix / total) * 100) : 0;
+    rules.push(
+      pct >= 30
+        ? { text: `Legume coverage ${pct}% — good nitrogen fixation`, ok: true }
+        : { text: `Legume coverage ${pct}% — consider adding a legume`, ok: pct > 0 }
+    );
+  }
 
   const spareCm = result.bedLengthCm - result.usedLengthCm;
   rules.push(
@@ -694,13 +703,18 @@ function PlantingSchedule({ result }: { result: RowLayoutResult }): React.JSX.El
 function RulesPanel({
   result,
   solanaceaeBlocked,
+  bedType,
 }: {
   result: RowLayoutResult;
   solanaceaeBlocked: boolean;
+  bedType?: BedType;
 }): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const rules = useMemo(() => buildRules(result, solanaceaeBlocked), [result, solanaceaeBlocked]);
+  const rules = useMemo(
+    () => buildRules(result, solanaceaeBlocked, bedType),
+    [result, solanaceaeBlocked, bedType]
+  );
 
   return (
     <View style={styles.rulesPanel}>
@@ -746,15 +760,20 @@ function Legend(): React.JSX.Element {
 interface BedInsightsAccordionProps {
   result: RowLayoutResult;
   solanaceaeBlocked: boolean;
+  bedType?: BedType;
 }
 
 function BedInsightsAccordion({
   result,
   solanaceaeBlocked,
+  bedType,
 }: BedInsightsAccordionProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const rules = useMemo(() => buildRules(result, solanaceaeBlocked), [result, solanaceaeBlocked]);
+  const rules = useMemo(
+    () => buildRules(result, solanaceaeBlocked, bedType),
+    [result, solanaceaeBlocked, bedType]
+  );
   const warnings = rules.filter((r) => !r.ok).length;
 
   const [isExpanded, setIsExpanded] = useState(warnings > 0);
@@ -791,7 +810,7 @@ function BedInsightsAccordion({
       {isExpanded && (
         <>
           <PlantingSchedule result={result} />
-          <RulesPanel result={result} solanaceaeBlocked={solanaceaeBlocked} />
+          <RulesPanel result={result} solanaceaeBlocked={solanaceaeBlocked} bedType={bedType} />
           <Legend />
         </>
       )}
@@ -862,6 +881,7 @@ export function BedRowLayout({
   entryResolutions,
   resolvedNames,
   onOpenPlant,
+  bedType,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -949,7 +969,11 @@ export function BedRowLayout({
 
       {/* Bed insights — planting schedule + rules + legend, collapsed accordion */}
       {result.rows.length > 0 && (
-        <BedInsightsAccordion result={result} solanaceaeBlocked={solanaceaeBlocked} />
+        <BedInsightsAccordion
+          result={result}
+          solanaceaeBlocked={solanaceaeBlocked}
+          bedType={bedType}
+        />
       )}
 
       {/* Compass Footer */}
