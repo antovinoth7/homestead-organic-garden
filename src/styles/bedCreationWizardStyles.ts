@@ -489,6 +489,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     summaryTitle: { fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 8 },
     summaryRow: { fontSize: 13, color: theme.textSecondary, marginBottom: 4 },
+    summaryItemRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+    summaryItemIcon: { width: 18, textAlign: 'center' },
+    summaryItemValue: { flex: 1, fontSize: 13, color: theme.text },
     autoTasksCard: {
       backgroundColor: theme.primaryLight,
       borderRadius: 8,
@@ -499,7 +502,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     autoTasksTitle: { fontSize: 13, fontWeight: '600', color: theme.primary, marginBottom: 6 },
     autoTaskRow: { fontSize: 12, color: theme.primary, marginBottom: 3 },
-    soilPrepRow: { fontSize: 13, color: theme.text, marginBottom: 4 },
     // Stepper (legacy — kept for other steps)
     stepperRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 6 },
     stepperLabel: { flex: 1, color: theme.text },
@@ -1133,14 +1135,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       letterSpacing: 0.2,
     },
     // Guild step — harvest mini timeline
-    gtHarvestTimeline: {
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 10,
-      padding: 12,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
     gtHarvestRow: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,

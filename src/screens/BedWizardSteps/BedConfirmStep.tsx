@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import { View, Text, TextInput, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { Step6Data, WizardStepData } from '@/hooks/useBedCreationWizard';
-import { getGuildTemplate, getSoilPrepSteps } from '@/config/beds';
+import { getGuildTemplate } from '@/config/beds';
 import { getLayerColor } from '@/config/beds/layerMeta';
 import { computeRowLayout } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
@@ -39,17 +40,40 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
 
   const harvestPreview = useMemo(() => buildHarvestPreview(entries, template), [entries, template]);
 
-  const soilPrepSteps = useMemo(() => {
-    if (!s2) return [];
-    return getSoilPrepSteps({
-      soil_type: s2.soil_type,
-      prev_crop_family: s2.prev_crop_family,
-      prev_crop_season: s2.prev_crop_season,
-      pest_history: s2.pest_history,
-      currentMonth: new Date().getMonth() + 1,
-      bed_type: s1?.bed_type ?? null,
-    }).slice(0, 3);
-  }, [s2, s1?.bed_type]);
+  const plantsLabel = useMemo(() => {
+    if (entries.length === 0) return null;
+    const countByName = new Map<string, number>();
+    for (const e of entries) countByName.set(e.name, (countByName.get(e.name) ?? 0) + 1);
+    return Array.from(countByName.entries())
+      .map(([name, n]) => (n > 1 ? `${name} ×${n}` : name))
+      .join(', ');
+  }, [entries]);
+
+  const summaryItems = useMemo<{ icon: keyof typeof Ionicons.glyphMap; value: string }[]>(() => {
+    const items: { icon: keyof typeof Ionicons.glyphMap; value: string }[] = [];
+    if (template) items.push({ icon: 'leaf-outline', value: template.label });
+    if (s3) {
+      const construction = s2?.construction_type === 'in_ground' ? 'In-ground' : 'Raised';
+      items.push({
+        icon: 'resize-outline',
+        value: `${s3.width_m} m × ${s3.length_m} m · ${s3.area_sqm} sqm · ${construction}`,
+      });
+    }
+    if (s2) {
+      const humanize = (v: string): string =>
+        v.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      items.push({ icon: 'sunny-outline', value: humanize(s2.sunlight) });
+      items.push({ icon: 'layers-outline', value: humanize(s2.soil_type) });
+      if (s2.parent_location) {
+        items.push({
+          icon: 'location-outline',
+          value: `${s2.parent_location}${s2.child_location ? ` › ${s2.child_location}` : ''}`,
+        });
+      }
+    }
+    if (plantsLabel) items.push({ icon: 'flower-outline', value: plantsLabel });
+    return items;
+  }, [template, s3, s2, plantsLabel]);
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer}>
@@ -93,33 +117,17 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
 
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Summary</Text>
-        {template && <Text style={styles.summaryRow}>Type: {template.label}</Text>}
-        {s3 && (
-          <Text style={styles.summaryRow}>
-            Size: {s3.width_m} m × {s3.length_m} m ({s3.area_sqm} sqm) — Raised
-          </Text>
-        )}
-        {s2 && (
-          <>
-            <Text style={styles.summaryRow}>Sunlight: {s2.sunlight.replace(/_/g, ' ')}</Text>
-            <Text style={styles.summaryRow}>Soil: {s2.soil_type.replace(/_/g, ' ')}</Text>
-            {s2.parent_location && (
-              <Text style={styles.summaryRow}>
-                Location: {s2.parent_location}
-                {s2.child_location ? ` › ${s2.child_location}` : ''}
-              </Text>
-            )}
-          </>
-        )}
-        {(() => {
-          if (entries.length === 0) return null;
-          const countByName = new Map<string, number>();
-          for (const e of entries) countByName.set(e.name, (countByName.get(e.name) ?? 0) + 1);
-          const label = Array.from(countByName.entries())
-            .map(([name, n]) => (n > 1 ? `${name} ×${n}` : name))
-            .join(', ');
-          return <Text style={styles.summaryRow}>Plants: {label}</Text>;
-        })()}
+        {summaryItems.map((item) => (
+          <View key={item.icon} style={styles.summaryItemRow}>
+            <Ionicons
+              name={item.icon}
+              size={16}
+              color={theme.textSecondary}
+              style={styles.summaryItemIcon}
+            />
+            <Text style={styles.summaryItemValue}>{item.value}</Text>
+          </View>
+        ))}
       </View>
 
       {/* First-harvest timeline */}
@@ -143,18 +151,6 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
               </View>
             );
           })}
-        </View>
-      )}
-
-      {/* Soil-prep preview */}
-      {soilPrepSteps.length > 0 && (
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Soil prep before planting</Text>
-          {soilPrepSteps.map((step) => (
-            <Text key={step.number} style={styles.soilPrepRow}>
-              {step.number}. {step.text}
-            </Text>
-          ))}
         </View>
       )}
 

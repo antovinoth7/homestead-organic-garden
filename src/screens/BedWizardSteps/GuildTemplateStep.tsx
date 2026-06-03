@@ -14,7 +14,7 @@ import {
   COMPANION_DEFAULT_LAYER,
   COMPANION_DEFAULT_SPACING,
 } from '@/utils/quickStartPlanner';
-import { getPlantEmoji, buildHarvestPreview } from '@/utils/plantHelpers';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 
 const generateId = (): string =>
@@ -409,12 +409,6 @@ export function GuildTemplateStep({
     }
   }, [template, widthM, lengthM, bedTypeForEngine, construction, onChange]);
 
-  // Harvest mini-timeline — selected plants sorted by days to harvest.
-  const harvestPreview = useMemo(
-    () => buildHarvestPreview(data.plant_entries, template),
-    [data.plant_entries, template]
-  );
-
   if (!template) {
     return (
       <View style={styles.stepContainer}>
@@ -703,33 +697,6 @@ export function GuildTemplateStep({
               </View>
             );
           })}
-        </>
-      )}
-      {/* ── Harvest mini-timeline ────────────────────────────────────────── */}
-      {harvestPreview.length > 1 && (
-        <>
-          <Text style={[styles.gtSectionHeader, styles.gtSectionHeaderMt]}>
-            FIRST HARVEST FROM THIS BED
-          </Text>
-          <View style={styles.gtHarvestTimeline}>
-            {harvestPreview.map((item: { name: string; days: number; emoji: string }) => {
-              const maxDays = harvestPreview[harvestPreview.length - 1]!.days;
-              const barWidth = Math.max(20, Math.round((item.days / maxDays) * 140));
-              return (
-                <View key={item.name} style={styles.gtHarvestRow}>
-                  <View style={styles.gtHarvestLabelCol}>
-                    <Text style={styles.gtHarvestName}>
-                      {item.emoji} {item.name}
-                    </Text>
-                  </View>
-                  <View style={styles.gtHarvestBarTrack}>
-                    <View style={[styles.gtHarvestBar, { width: barWidth }]} />
-                  </View>
-                  <Text style={styles.gtHarvestDays}>{item.days}d</Text>
-                </View>
-              );
-            })}
-          </View>
         </>
       )}
     </ScrollView>
