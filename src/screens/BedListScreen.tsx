@@ -440,12 +440,9 @@ export default function BedListScreen(): React.JSX.Element {
           <TouchableOpacity
             style={[styles.segment, activeTab === 'beds' && styles.segmentActive]}
             onPress={() => setActiveTab('beds')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'beds' }}
           >
-            <Ionicons
-              name="grid-outline"
-              size={15}
-              color={activeTab === 'beds' ? theme.primary : theme.textSecondary}
-            />
             <Text style={[styles.segmentText, activeTab === 'beds' && styles.segmentTextActive]}>
               Beds
             </Text>
@@ -453,12 +450,9 @@ export default function BedListScreen(): React.JSX.Element {
           <TouchableOpacity
             style={[styles.segment, activeTab === 'rotation' && styles.segmentActive]}
             onPress={() => setActiveTab('rotation')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'rotation' }}
           >
-            <Ionicons
-              name="sync-outline"
-              size={15}
-              color={activeTab === 'rotation' ? theme.primary : theme.textSecondary}
-            />
             <Text
               style={[styles.segmentText, activeTab === 'rotation' && styles.segmentTextActive]}
             >
