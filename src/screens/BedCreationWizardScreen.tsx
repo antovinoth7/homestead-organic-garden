@@ -40,8 +40,10 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
   const navigation = useNavigation<BedCreationWizardNavigationProp>();
   const route = useRoute<BedCreationWizardRouteProp>();
   const prefillType = route.params?.prefillType;
+  const editBedId = route.params?.editBedId;
+  const isEditMode = !!editBedId;
 
-  const wizard = useBedCreationWizard(prefillType);
+  const wizard = useBedCreationWizard({ prefillType, editBedId });
   const { discardDraft } = wizard;
   const scrollViewRef = useRef<ScrollView>(null);
   const [discardVisible, setDiscardVisible] = useState(false);
@@ -85,7 +87,11 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
       Alert.alert('Error', 'Failed to save bed. Check your connection and try again.');
       return;
     }
-    navigation.popToTop();
+    if (isEditMode) {
+      navigation.goBack();
+    } else {
+      navigation.popToTop();
+    }
   };
 
   const handleOpenPlant = (plantId: string): void => {
@@ -132,7 +138,13 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
   const renderStep = (): React.JSX.Element => {
     switch (wizard.currentStep) {
       case 1:
-        return <BedTypeStep data={wizard.stepData[1]!} onChange={wizard.setStep1} />;
+        return (
+          <BedTypeStep
+            data={wizard.stepData[1]!}
+            onChange={wizard.setStep1}
+            locked={isEditMode}
+          />
+        );
       case 2:
         return (
           <LandConditionsStep
@@ -194,6 +206,14 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
 
   const isLastInputStep = wizard.currentStep === 6;
 
+  if (wizard.initializing) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -201,7 +221,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
         <TouchableOpacity onPress={requestExit} style={styles.closeButton}>
           <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Bed</Text>
+        <Text style={styles.headerTitle}>{isEditMode ? 'Edit Bed' : 'Create Bed'}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -305,7 +325,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
               </>
             ) : (
               <>
-                <Text style={styles.nextText}>Save Bed</Text>
+                <Text style={styles.nextText}>{isEditMode ? 'Save Changes' : 'Save Bed'}</Text>
               </>
             )}
           </TouchableOpacity>

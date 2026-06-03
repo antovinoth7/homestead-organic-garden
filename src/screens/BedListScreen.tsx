@@ -196,7 +196,7 @@ export default function BedListScreen(): React.JSX.Element {
   );
 
   const handleEdit = useCallback(
-    (bed: BedWithCoverage) => navigation.navigate('BedEdit', { bedId: bed.id }),
+    (bed: BedWithCoverage) => navigation.navigate('BedCreationWizard', { editBedId: bed.id }),
     [navigation]
   );
 

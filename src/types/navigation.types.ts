@@ -21,9 +21,10 @@ export type BedsStackParamList = {
     | {
         prefillType?: BedType;
         resolvedEntry?: { wizardEntryId: string; plantId: string };
+        // When set, the wizard runs in edit mode, prefilled from this bed.
+        editBedId?: string;
       }
     | undefined;
-  BedEdit: { bedId: string };
   BedPlantPicker: { bedId: string };
   BedTasks: { bedId: string };
   PlantForm: PlantsStackParamList['PlantForm'];
@@ -202,12 +203,6 @@ export type BedDetailScreenNavigationProp = NativeStackNavigationProp<
   'BedDetail'
 >;
 export type BedDetailScreenRouteProp = RouteProp<BedsStackParamList, 'BedDetail'>;
-
-export type BedEditScreenNavigationProp = NativeStackNavigationProp<
-  BedsStackParamList,
-  'BedEdit'
->;
-export type BedEditScreenRouteProp = RouteProp<BedsStackParamList, 'BedEdit'>;
 
 export type BedCreationWizardNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<BedsStackParamList, 'BedCreationWizard'>,

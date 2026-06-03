@@ -4,6 +4,7 @@ import type { Theme } from '@/theme/colors';
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
+    loadingContainer: { alignItems: 'center', justifyContent: 'center' },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
