@@ -3,6 +3,31 @@ import type { Theme } from '@/theme/colors';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
+    // Standalone screen chrome
+    screenContainer: { flex: 1, backgroundColor: theme.background },
+    screenHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 12,
+      paddingBottom: 12,
+      backgroundColor: theme.backgroundSecondary,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    backBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: theme.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    screenTitle: { fontSize: 20, fontWeight: '700', color: theme.text },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+    emptyTitle: { fontSize: 18, fontWeight: '600', color: theme.text, marginTop: 16 },
+    emptySubtitle: { color: theme.textSecondary, marginTop: 8, textAlign: 'center' },
     scrollContent: { padding: 12, paddingBottom: 120, gap: 12 },
     loader: { marginTop: 24 },
     bottomSpacer: { height: 12 },

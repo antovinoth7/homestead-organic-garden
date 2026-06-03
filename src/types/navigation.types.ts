@@ -27,6 +27,7 @@ export type BedsStackParamList = {
     | undefined;
   BedPlantPicker: { bedId: string };
   BedTasks: { bedId: string };
+  BedRotation: undefined;
   PlantForm: PlantsStackParamList['PlantForm'];
   PlantDetail: { plantId: string };
 };
@@ -221,3 +222,8 @@ export type BedTasksScreenNavigationProp = NativeStackNavigationProp<
   'BedTasks'
 >;
 export type BedTasksScreenRouteProp = RouteProp<BedsStackParamList, 'BedTasks'>;
+
+export type BedRotationScreenNavigationProp = NativeStackNavigationProp<
+  BedsStackParamList,
+  'BedRotation'
+>;

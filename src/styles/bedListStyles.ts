@@ -79,27 +79,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 8,
     },
     retryText: { color: theme.textInverse, fontWeight: '600' },
-    // Beds / Rotation segmented control
-    segmentedControl: {
-      flexDirection: 'row',
-      marginHorizontal: 16,
-      marginTop: 10,
-      marginBottom: 8,
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 22,
-      padding: 4,
-    },
-    segment: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 9,
-      paddingHorizontal: 18,
-      borderRadius: 18,
-    },
-    segmentActive: { backgroundColor: theme.primary },
-    segmentText: { fontSize: 14, fontWeight: '600', color: theme.textSecondary },
-    segmentTextActive: { color: theme.textInverse, fontWeight: '700' },
     legumeBanner: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -163,6 +142,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     metaChipText: { fontSize: 11, color: theme.textSecondary, fontWeight: '500' },
     // Swipe actions
     swipeActions: { flexDirection: 'row' },
+    swipeLeftActions: { flexDirection: 'row' },
+    swipeRotationAction: {
+      width: 72,
+      backgroundColor: theme.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderTopLeftRadius: 12,
+      borderBottomLeftRadius: 12,
+    },
     swipeEditAction: {
       width: 72,
       backgroundColor: theme.primary,

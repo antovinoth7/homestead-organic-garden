@@ -13,6 +13,7 @@ interface Props {
   onPress: (bed: BedWithCoverage) => void;
   onDelete: (bed: BedWithCoverage) => void;
   onEdit: (bed: BedWithCoverage) => void;
+  onRotation: (bed: BedWithCoverage) => void;
   onSwipeableOpen?: (ref: Swipeable) => void;
 }
 
@@ -31,6 +32,7 @@ export const BedCard = React.memo(function BedCard({
   onPress,
   onDelete,
   onEdit,
+  onRotation,
   onSwipeableOpen,
 }: Props): React.JSX.Element {
   const theme = useTheme();
@@ -52,6 +54,11 @@ export const BedCard = React.memo(function BedCard({
     swipeableRef.current?.close();
     onEdit(bed);
   }, [onEdit, bed]);
+
+  const handleRotation = useCallback(() => {
+    swipeableRef.current?.close();
+    onRotation(bed);
+  }, [onRotation, bed]);
 
   const renderRightActions = useCallback(
     () => (
@@ -79,13 +86,33 @@ export const BedCard = React.memo(function BedCard({
     [styles, handleEdit, handleDelete]
   );
 
+  const renderLeftActions = useCallback(
+    () => (
+      <View style={styles.swipeLeftActions}>
+        <TouchableOpacity
+          style={styles.swipeRotationAction}
+          onPress={handleRotation}
+          accessibilityLabel="View crop rotation"
+          accessibilityRole="button"
+        >
+          <Ionicons name="sync-outline" size={20} color="#fff" />
+          <Text style={styles.swipeActionText}>Rotation</Text>
+        </TouchableOpacity>
+      </View>
+    ),
+    [styles, handleRotation]
+  );
+
   return (
     <Swipeable
       ref={swipeableRef}
       renderRightActions={renderRightActions}
+      renderLeftActions={renderLeftActions}
       overshootRight={false}
+      overshootLeft={false}
       friction={2}
       rightThreshold={40}
+      leftThreshold={40}
       onSwipeableOpen={() => {
         if (onSwipeableOpen && swipeableRef.current) {
           onSwipeableOpen(swipeableRef.current);
