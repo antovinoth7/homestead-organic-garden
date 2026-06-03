@@ -1,11 +1,11 @@
-import React, { useMemo, useCallback, useState, useRef } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { useBedDetail } from '@/hooks/useBedDetail';
 import { RotationStatusCard } from '@/components/RotationStatusCard';
-import { BedDiagram } from '@/components/BedDiagram';
+import { BedTopDownMap } from '@/components/BedTopDownMap';
 import { BedSuccessionTimeline } from '@/components/BedSuccessionTimeline';
 import {
   markBedAsResting,
@@ -14,11 +14,15 @@ import {
   getTransitionInputs,
   getHarvestGapWarnings,
 } from '@/services/beds';
-import { updatePlant } from '@/services/plants';
-import { getRecommendedPlantsForBed } from '@/config/beds';
+import { getRecommendedPlantsForBed, getGuildTemplate } from '@/config/beds';
+import { getLayerColor } from '@/config/beds/layerMeta';
+import { computeRowLayout } from '@/utils/rowLayoutEngine';
+import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
+import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
+import { plantToEntry } from '@/utils/bedEditReconcile';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedDetailStyles';
 import { logger } from '@/utils/logger';
-import type { BedPosition } from '@/types/database.types';
 import type {
   BedDetailScreenNavigationProp,
   BedDetailScreenRouteProp,
@@ -82,31 +86,23 @@ export default function BedDetailScreen(): React.JSX.Element {
     [bed, refresh]
   );
 
-  // Drag-and-drop position persistence (debounced)
-  const positionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handlePositionChange = useCallback((plantId: string, pos: BedPosition) => {
-    if (positionTimerRef.current) {
-      clearTimeout(positionTimerRef.current);
-    }
-    positionTimerRef.current = setTimeout(async () => {
-      try {
-        await updatePlant(plantId, { position_in_bed: pos });
-      } catch (err) {
-        logger.warn('Failed to save plant position', err as Error);
-      }
-    }, 300);
-  }, []);
-
-  const handleResetLayout = useCallback(async () => {
-    if (plants.length === 0) return;
-    try {
-      await Promise.all(plants.map((p) => updatePlant(p.id, { position_in_bed: null })));
-      refresh();
-    } catch (err) {
-      logger.warn('Reset layout failed', err as Error);
-    }
-  }, [plants, refresh]);
+  // Read-only top-down layout, recomputed from the bed's plants (same pipeline
+  // as the wizard's Step 6 review).
+  const rowLayout = useMemo<RowLayoutResult | null>(() => {
+    if (!bed || plants.length === 0) return null;
+    const entries = plants.map(plantToEntry);
+    const tpl = getGuildTemplate(bed.type);
+    const inputs = mapPlantEntriesToRowInputs(entries, tpl);
+    if (inputs.length === 0) return null;
+    const construction = bed.is_raised_bed ? 'raised' : 'in_ground';
+    return computeRowLayout(
+      inputs,
+      bed.dimensions.width_m,
+      bed.dimensions.length_m,
+      bed.type,
+      construction
+    );
+  }, [bed, plants]);
 
   const transitionInputs = useMemo(() => {
     if (!bed?.prev_crop_family) return [];
@@ -187,16 +183,22 @@ export default function BedDetailScreen(): React.JSX.Element {
         )}
       </View>
 
-      {/* Bed Layout Diagram */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Bed Layout</Text>
-        <BedDiagram
-          bed={bed}
-          plants={plants}
-          onPositionChange={handlePositionChange}
-          onResetLayout={handleResetLayout}
-        />
-      </View>
+      {/* Bed Layout — read-only top-down row map */}
+      {rowLayout && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Bed Layout</Text>
+          <BedTopDownMap
+            widthM={bed.dimensions.width_m}
+            lengthM={bed.dimensions.length_m}
+            rows={rowLayout.rows}
+            plantEmoji={getPlantEmoji}
+            layerColor={getLayerColor}
+            walkingPathCm={rowLayout.walkingPathCm}
+            edgeBufferCm={rowLayout.edgeBufferCm}
+            overflowCm={rowLayout.overflowCm}
+          />
+        </View>
+      )}
 
       {/* Succession & Season Timeline */}
       <View style={styles.section}>

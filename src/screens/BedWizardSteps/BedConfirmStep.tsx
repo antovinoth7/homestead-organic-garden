@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
-import { View, Text, TextInput, ScrollView } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, TextInput, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { Step6Data, WizardStepData } from '@/hooks/useBedCreationWizard';
-import { getGuildTemplate } from '@/config/beds';
+import { getGuildTemplate, getSoilPrepSteps } from '@/config/beds';
 import { getLayerColor } from '@/config/beds/layerMeta';
 import { computeRowLayout } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
@@ -21,6 +21,7 @@ interface Props {
 export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const [prepExpanded, setPrepExpanded] = useState(false);
 
   const s1 = stepData[1];
   const s2 = stepData[2];
@@ -74,6 +75,18 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
     if (plantsLabel) items.push({ icon: 'flower-outline', value: plantsLabel });
     return items;
   }, [template, s3, s2, plantsLabel]);
+
+  const prepSteps = useMemo(() => {
+    if (!s2) return [];
+    return getSoilPrepSteps({
+      soil_type: s2.soil_type,
+      prev_crop_family: s2.prev_crop_family,
+      prev_crop_season: s2.prev_crop_season,
+      pest_history: s2.pest_history,
+      currentMonth: new Date().getMonth() + 1,
+      bed_type: s1?.bed_type ?? null,
+    });
+  }, [s2, s1?.bed_type]);
 
   return (
     <ScrollView contentContainerStyle={styles.stepContainer}>
@@ -151,6 +164,34 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
               </View>
             );
           })}
+        </View>
+      )}
+
+      {/* Before-planting prep checklist — collapsed by default */}
+      {prepSteps.length > 0 && (
+        <View style={styles.szPrepCard}>
+          <TouchableOpacity
+            style={styles.szPrepToggleRow}
+            activeOpacity={0.7}
+            onPress={() => setPrepExpanded((v) => !v)}
+          >
+            <Text style={styles.szPrepCardTitle}>
+              🌱 Prep checklist · {prepSteps.length} steps
+            </Text>
+            <Text style={styles.szPrepChevron}>{prepExpanded ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {prepExpanded &&
+            prepSteps.map((s, i) => (
+              <View key={i} style={[styles.szPrepStepRow, i === 0 && styles.szPrepFirstStep]}>
+                <View style={styles.szPrepStepNumber}>
+                  <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+                </View>
+                <View style={styles.szPrepStepContent}>
+                  <Text style={styles.szPrepStepText}>{s.text}</Text>
+                  <Text style={styles.szPrepStepDetail}>{s.detail}</Text>
+                </View>
+              </View>
+            ))}
         </View>
       )}
 
