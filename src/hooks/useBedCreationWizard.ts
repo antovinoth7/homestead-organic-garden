@@ -14,8 +14,14 @@ import {
   Plant,
 } from '@/types/database.types';
 
-import { addBed, updateBed, deleteBed, getBeds } from '@/services/beds';
-import { createPlantBatch, updatePlant } from '@/services/plants';
+import { addBed, updateBed, deleteBed, getBeds, getBed } from '@/services/beds';
+import {
+  createPlantBatch,
+  updatePlant,
+  getPlantsByBed,
+  deletePlantsForBed,
+} from '@/services/plants';
+import { plantToEntry, computeRemovedPlants } from '@/utils/bedEditReconcile';
 import { getBedSizeRecommendation } from '@/config/beds';
 import type { BedSizeResult } from '@/config/beds';
 import { GUILD_TEMPLATES, getGuildTemplate } from '@/config/beds/guildTemplates';
@@ -356,7 +362,16 @@ function buildPlantBatchFromEntries(
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
+export interface UseBedCreationWizardOptions {
+  prefillType?: BedType;
+  /** When set, the wizard runs in edit mode, prefilled from this existing bed. */
+  editBedId?: string;
+}
+
 export interface UseBedCreationWizardResult {
+  mode: 'create' | 'edit';
+  /** True while an edit-mode bed + its plants are loading. */
+  initializing: boolean;
   currentStep: WizardStep;
   stepData: Partial<WizardStepData>;
   canProceed: boolean;
@@ -383,7 +398,12 @@ export interface UseBedCreationWizardResult {
   discardDraft: () => Promise<void>;
 }
 
-export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizardResult {
+export function useBedCreationWizard(
+  options: UseBedCreationWizardOptions = {}
+): UseBedCreationWizardResult {
+  const { prefillType, editBedId } = options;
+  const isEditMode = !!editBedId;
+  const mode: 'create' | 'edit' = isEditMode ? 'edit' : 'create';
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [stepData, setStepData] = useState<Partial<WizardStepData>>({
     1: { bed_type: prefillType ?? null },
@@ -392,6 +412,14 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
       : DEFAULT_STEP2,
     3: DEFAULT_STEP3,
   });
+  const [initializing, setInitializing] = useState(isEditMode);
+  // Edit mode: tracks whether the user has changed anything, so an untouched
+  // edit doesn't trigger the discard-changes prompt on exit.
+  const [userTouched, setUserTouched] = useState(false);
+  // Snapshot of the bed + its plants at edit load, used to preserve non-wizard
+  // fields and to reconcile (soft-delete) plants the user removes on save.
+  const originalBedRef = useRef<Bed | null>(null);
+  const originalPlantsRef = useRef<Plant[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locationConfig, setLocationConfig] = useState<LocationConfig>({
@@ -438,6 +466,62 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     };
   }, []);
 
+  // Edit mode: load the existing bed + its plants once, then prefill every step.
+  // Uses a single setStepData (not the cascading setStep1/setStep2) so the saved
+  // dimensions and plant entries aren't overwritten by fresh recommendations.
+  useEffect(() => {
+    if (!editBedId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [bed, plants] = await Promise.all([getBed(editBedId), getPlantsByBed(editBedId)]);
+        if (cancelled) return;
+        if (!bed) {
+          setError('Failed to load bed. Please try again.');
+          return;
+        }
+        originalBedRef.current = bed;
+        originalPlantsRef.current = plants;
+        setPersistedBedId(editBedId);
+        setStepData({
+          1: { bed_type: bed.type },
+          2: {
+            name: bed.name,
+            sunlight: bed.sunlight,
+            soil_type: bed.soil_type,
+            slope: bed.slope,
+            wind: bed.wind,
+            parent_location: bed.parent_location ?? null,
+            child_location: bed.child_location ?? null,
+            prev_crop_family: bed.prev_crop_family ?? null,
+            prev_crop_season: bed.prev_crop_season ?? null,
+            pest_history: bed.pest_history ?? [],
+            waterlogging_risk: false,
+            construction_type: bed.is_raised_bed ? 'raised' : 'in_ground',
+          },
+          3: {
+            width_m: bed.dimensions.width_m,
+            length_m: bed.dimensions.length_m,
+            area_sqm: bed.dimensions.area_sqm,
+            sizeRecommendation: null,
+          },
+          4: { plant_entries: plants.map(plantToEntry) },
+          6: { notes: bed.notes ?? '' },
+        });
+      } catch (err) {
+        if (!cancelled) {
+          logError('network', 'useBedCreationWizard: edit prefill failed', err as Error);
+          setError('Failed to load bed. Please try again.');
+        }
+      } finally {
+        if (!cancelled) setInitializing(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [editBedId]);
+
   const solanaceaeBlocked = stepData[2]?.prev_crop_family === 'solanaceae';
   // Step 2 requires a section/direction when the selected location offers them.
   const directionMissing =
@@ -446,7 +530,9 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     locationConfig.childLocations.length > 0 &&
     !stepData[2]?.child_location;
   const canProceed = canProceedStep(currentStep, stepData) && !directionMissing;
-  const isDirty = currentStep > 1 || !!stepData[1]?.bed_type;
+  const isDirty = isEditMode
+    ? userTouched
+    : currentStep > 1 || !!stepData[1]?.bed_type;
 
   const patchStep = useCallback(
     <S extends keyof WizardStepData>(step: S, patch: Partial<WizardStepData[S]>) => {
@@ -460,6 +546,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
 
   // When Step 2 changes, auto-compute Step 3 size recommendation
   const setStep2 = useCallback((data: Partial<Step2Data>) => {
+    setUserTouched(true);
     setStepData((prev) => {
       const merged: Step2Data = { ...(prev[2] ?? DEFAULT_STEP2), ...data };
       const rec = getBedSizeRecommendation({
@@ -481,6 +568,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
   }, []);
 
   const setStep1 = useCallback((data: Partial<Step1Data>) => {
+    setUserTouched(true);
     setStepData((prev) => {
       const merged1: Step1Data = { ...(prev[1] ?? { bed_type: null }), ...data };
       if (!merged1.bed_type) return { ...prev, 1: merged1 };
@@ -512,9 +600,27 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
       return next;
     });
   }, []);
-  const setStep3 = useCallback((data: Partial<Step3Data>) => patchStep(3, data), [patchStep]);
-  const setStep4 = useCallback((data: Partial<Step4Data>) => patchStep(4, data), [patchStep]);
-  const setStep6 = useCallback((data: Partial<Step6Data>) => patchStep(6, data), [patchStep]);
+  const setStep3 = useCallback(
+    (data: Partial<Step3Data>) => {
+      setUserTouched(true);
+      patchStep(3, data);
+    },
+    [patchStep]
+  );
+  const setStep4 = useCallback(
+    (data: Partial<Step4Data>) => {
+      setUserTouched(true);
+      patchStep(4, data);
+    },
+    [patchStep]
+  );
+  const setStep6 = useCallback(
+    (data: Partial<Step6Data>) => {
+      setUserTouched(true);
+      patchStep(6, data);
+    },
+    [patchStep]
+  );
 
   const goNext = useCallback(() => {
     if (!canProceed) return;
@@ -569,7 +675,10 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
       prev_crop_season: s2.prev_crop_season,
       pest_history: s2.pest_history,
       is_raised_bed: s2.construction_type === 'raised',
-      is_permanent: false,
+      // Preserve the existing flag when editing; default false on create.
+      // (updateBed is a partial write, so is_resting / resting_until / water
+      // fields omitted here are retained on the existing doc.)
+      is_permanent: originalBedRef.current?.is_permanent ?? false,
       notes: s6?.notes || null,
       row_layout: rowLayout,
       is_deleted: false,
@@ -591,6 +700,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
   }, [buildBedPayload, persistedBedId]);
 
   const applyResolvedEntry = useCallback((entryId: string, plantId: string): void => {
+    setUserTouched(true);
     // This plant was created in-form during this session; remember it so an
     // abandoned draft can clean it up (see discardDraft).
     createdPlantIdsRef.current.add(plantId);
@@ -604,6 +714,8 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
   }, []);
 
   const discardDraft = useCallback(async (): Promise<void> => {
+    // Edit mode: the bed already exists and must never be cleaned up on exit.
+    if (editBedId) return;
     // Only relevant for a bed saved early (ensureBedSaved) but never finalized.
     // finalizedRef means submit() succeeded, so the bed is legitimate — leave it.
     if (!persistedBedId || finalizedRef.current) return;
@@ -633,7 +745,7 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     } catch (err) {
       logError('network', 'useBedCreationWizard: discardDraft cleanup failed', err as Error);
     }
-  }, [persistedBedId, ensureBedSaved]);
+  }, [editBedId, persistedBedId, ensureBedSaved]);
 
   const submit = useCallback(async (): Promise<string | null> => {
     const s1 = stepData[1];
@@ -711,6 +823,27 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
         }
       }
 
+      // Edit mode reconciliation: soft-delete any plant that was on the bed at
+      // load but is no longer linked (the user removed it). Empty in create
+      // mode, so this is a safe no-op there.
+      const removed = computeRemovedPlants(originalPlantsRef.current, entries);
+      if (removed.length > 0) {
+        try {
+          await deletePlantsForBed(removed);
+        } catch (err) {
+          logError(
+            'network',
+            'useBedCreationWizard: reconcile delete failed',
+            err as Error
+          );
+          setError(
+            `Bed saved, but ${removed.length} removed plant${
+              removed.length > 1 ? 's' : ''
+            } couldn't be deleted. Try again from the Plants tab.`
+          );
+        }
+      }
+
       finalizedRef.current = true;
       return bedId;
     } catch (err) {
@@ -734,10 +867,13 @@ export function useBedCreationWizard(prefillType?: BedType): UseBedCreationWizar
     setPersistedBedId(null);
     createdPlantIdsRef.current = new Set();
     finalizedRef.current = false;
+    setUserTouched(false);
     setError(null);
   }, [prefillType]);
 
   return {
+    mode,
+    initializing,
     currentStep,
     stepData,
     canProceed,

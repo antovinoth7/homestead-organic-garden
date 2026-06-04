@@ -40,8 +40,10 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
   const navigation = useNavigation<BedCreationWizardNavigationProp>();
   const route = useRoute<BedCreationWizardRouteProp>();
   const prefillType = route.params?.prefillType;
+  const editBedId = route.params?.editBedId;
+  const isEditMode = !!editBedId;
 
-  const wizard = useBedCreationWizard(prefillType);
+  const wizard = useBedCreationWizard({ prefillType, editBedId });
   const { discardDraft } = wizard;
   const scrollViewRef = useRef<ScrollView>(null);
   const [discardVisible, setDiscardVisible] = useState(false);
@@ -68,15 +70,18 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
     }, [requestExit])
   );
 
-  // Consume resolvedEntry handed back by PlantFormScreen after in-form create
+  // Consume resolvedEntry handed back by PlantFormScreen after in-form create.
+  // In edit mode the wizard is still loading the bed + plants; wait for prefill
+  // to finish so the resolved link applies to fully-populated step-4 entries.
   useEffect(() => {
     const resolved = route.params?.resolvedEntry;
     if (!resolved) return;
+    if (wizard.initializing) return;
     wizard.applyResolvedEntry(resolved.wizardEntryId, resolved.plantId);
     navigation.setParams({ resolvedEntry: undefined });
     // wizard.applyResolvedEntry is stable; intentionally not depended on
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route.params?.resolvedEntry]);
+  }, [route.params?.resolvedEntry, wizard.initializing]);
 
   const handleSubmit = async (): Promise<void> => {
     if (wizard.submitting) return;
@@ -85,7 +90,11 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
       Alert.alert('Error', 'Failed to save bed. Check your connection and try again.');
       return;
     }
-    navigation.popToTop();
+    if (isEditMode) {
+      navigation.goBack();
+    } else {
+      navigation.popToTop();
+    }
   };
 
   const handleOpenPlant = (plantId: string): void => {
@@ -132,7 +141,13 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
   const renderStep = (): React.JSX.Element => {
     switch (wizard.currentStep) {
       case 1:
-        return <BedTypeStep data={wizard.stepData[1]!} onChange={wizard.setStep1} />;
+        return (
+          <BedTypeStep
+            data={wizard.stepData[1]!}
+            onChange={wizard.setStep1}
+            locked={isEditMode}
+          />
+        );
       case 2:
         return (
           <LandConditionsStep
@@ -194,6 +209,14 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
 
   const isLastInputStep = wizard.currentStep === 6;
 
+  if (wizard.initializing) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -201,7 +224,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
         <TouchableOpacity onPress={requestExit} style={styles.closeButton}>
           <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Bed</Text>
+        <Text style={styles.headerTitle}>{isEditMode ? 'Edit Bed' : 'Create Bed'}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -305,7 +328,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
               </>
             ) : (
               <>
-                <Text style={styles.nextText}>Save Bed</Text>
+                <Text style={styles.nextText}>{isEditMode ? 'Save Changes' : 'Save Bed'}</Text>
               </>
             )}
           </TouchableOpacity>

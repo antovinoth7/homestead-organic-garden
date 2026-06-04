@@ -18,10 +18,28 @@ import { useTheme } from '@/theme';
 import { useBedData, BedWithCoverage } from '@/hooks/useBedData';
 import { deleteBed } from '@/services/beds';
 import { BedCard } from '@/components/BedCard';
+import { BedFilterSheet, BedCounts } from '@/components/BedFilterSheet';
 import { BedDeleteModal } from '@/components/modals/BedDeleteModal';
 import { AnimatedFAB, useTabBarScroll, TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 import { createStyles } from '@/styles/bedListStyles';
+import {
+  filterAndSortBeds,
+  BedActiveFilters,
+  BedSortOption,
+  DEFAULT_BED_FILTERS,
+  LOW_LEGUME_THRESHOLD,
+} from '@/utils/filterAndSortBeds';
+import { bedExpectsLegumes } from '@/config/beds';
 import type { BedListScreenNavigationProp } from '@/types/navigation.types';
+
+const SORT_LABELS: Record<BedSortOption, string> = {
+  newest: 'Newest',
+  oldest: 'Oldest',
+  name: 'A–Z',
+  area: 'Area',
+  plants: 'Plants',
+  legume: 'Legume',
+};
 
 export default function BedListScreen(): React.JSX.Element {
   const theme = useTheme();
@@ -57,6 +75,11 @@ export default function BedListScreen(): React.JSX.Element {
   const searchInputRef = useRef<TextInput>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Sort & filter (mirrors the Plants listing).
+  const [sortBy, setSortBy] = useState<BedSortOption>('newest');
+  const [filters, setFilters] = useState<BedActiveFilters>(DEFAULT_BED_FILTERS);
+  const [showFilters, setShowFilters] = useState(false);
+
   const handleSearchChange = useCallback((text: string) => {
     setSearchInput(text);
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
@@ -65,20 +88,84 @@ export default function BedListScreen(): React.JSX.Element {
     }, 200);
   }, []);
 
-  const beds = useMemo(
-    () => bedsData.filter((b) => !deletedIds.has(b.id)),
-    [bedsData, deletedIds]
+  const beds = useMemo(() => bedsData.filter((b) => !deletedIds.has(b.id)), [bedsData, deletedIds]);
+
+  const visibleBeds = useMemo(
+    () => filterAndSortBeds(beds, filters, sortBy, searchQuery),
+    [beds, filters, sortBy, searchQuery]
   );
 
-  const visibleBeds = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return beds;
-    return beds.filter((b) =>
-      [b.name, b.type, b.notes, b.parent_location, b.child_location].some((field) =>
-        field?.toLowerCase().includes(q)
-      )
-    );
-  }, [beds, searchQuery]);
+  // Unique parent locations across beds (for the location filter chips).
+  const parentLocations = useMemo(() => {
+    const set = new Set<string>();
+    for (const b of beds) {
+      const loc = b.parent_location?.trim();
+      if (loc) set.add(loc);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [beds]);
+
+  // Child locations scoped to the currently selected parent.
+  const childLocations = useMemo(() => {
+    const set = new Set<string>();
+    for (const b of beds) {
+      if (filters.parentLocation && b.parent_location !== filters.parentLocation) continue;
+      const loc = b.child_location?.trim();
+      if (loc) set.add(loc);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [beds, filters.parentLocation]);
+
+  const bedCounts = useMemo<BedCounts>(() => {
+    const counts: BedCounts = {
+      type: {},
+      sunlight: {},
+      raised: 0,
+      inGround: 0,
+      resting: 0,
+      permanent: 0,
+    };
+    for (const b of beds) {
+      counts.type[b.type] = (counts.type[b.type] ?? 0) + 1;
+      counts.sunlight[b.sunlight] = (counts.sunlight[b.sunlight] ?? 0) + 1;
+      if (b.is_raised_bed) counts.raised += 1;
+      else counts.inGround += 1;
+      if (b.is_resting) counts.resting += 1;
+      if (b.is_permanent) counts.permanent += 1;
+    }
+    return counts;
+  }, [beds]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.type !== 'all') count += 1;
+    if (filters.sunlight !== 'all') count += 1;
+    if (filters.construction !== 'all') count += 1;
+    if (filters.status !== 'all') count += 1;
+    if (filters.parentLocation !== '') count += 1;
+    if (filters.childLocation !== '') count += 1;
+    return count;
+  }, [filters]);
+
+  const hasActiveFilters = activeFilterCount > 0 || searchQuery.trim() !== '';
+
+  const updateFilter = useCallback(
+    <K extends keyof BedActiveFilters>(category: K, value: BedActiveFilters[K]) => {
+      setFilters((prev) => ({ ...prev, [category]: value }));
+    },
+    []
+  );
+
+  const clearAllFilters = useCallback(() => {
+    setFilters(DEFAULT_BED_FILTERS);
+    setSearchInput('');
+    setSearchQuery('');
+  }, []);
+
+  const toggleFilters = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowFilters((v) => !v);
+  }, []);
 
   // Drop committed ids once the hook no longer returns them, so the set can't grow
   // unbounded. Beds still inside the undo window remain in bedsData, so they stay.
@@ -196,12 +283,23 @@ export default function BedListScreen(): React.JSX.Element {
   );
 
   const handleEdit = useCallback(
-    (bed: BedWithCoverage) => navigation.navigate('BedEdit', { bedId: bed.id }),
+    (bed: BedWithCoverage) => navigation.navigate('BedCreationWizard', { editBedId: bed.id }),
+    [navigation]
+  );
+
+  const handleRotation = useCallback(
+    (_bed: BedWithCoverage) => navigation.navigate('BedRotation'),
     [navigation]
   );
 
   const lowLegumeBeds = useMemo(
-    () => beds.filter((b) => b.legume_coverage_pct < 20 && b.plant_count > 0),
+    () =>
+      beds.filter(
+        (b) =>
+          bedExpectsLegumes(b.type) &&
+          b.legume_coverage_pct < LOW_LEGUME_THRESHOLD &&
+          b.plant_count > 0
+      ),
     [beds]
   );
 
@@ -212,10 +310,11 @@ export default function BedListScreen(): React.JSX.Element {
         onPress={navigateToBed}
         onDelete={requestDelete}
         onEdit={handleEdit}
+        onRotation={handleRotation}
         onSwipeableOpen={handleSwipeableOpen}
       />
     ),
-    [navigateToBed, requestDelete, handleEdit, handleSwipeableOpen]
+    [navigateToBed, requestDelete, handleEdit, handleRotation, handleSwipeableOpen]
   );
 
   const renderUndoToast = (): React.JSX.Element | null => {
@@ -225,13 +324,18 @@ export default function BedListScreen(): React.JSX.Element {
       outputRange: ['0%', '100%'],
     });
     return (
-      <View style={[styles.undoToast, { bottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8 }]}>
+      <View
+        style={[styles.undoToast, { bottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8 }]}
+      >
         <View style={styles.undoToastRow}>
           <View style={styles.undoToastLeft}>
             <Ionicons name="trash-outline" size={16} color={theme.textSecondary} />
             <Text style={styles.undoToastText}>{pendingDelete.name} deleted</Text>
           </View>
-          <TouchableOpacity onPress={handleUndo} hitSlop={{ top: 8, bottom: 8, left: 12, right: 4 }}>
+          <TouchableOpacity
+            onPress={handleUndo}
+            hitSlop={{ top: 8, bottom: 8, left: 12, right: 4 }}
+          >
             <Text style={styles.undoToastAction}>Undo</Text>
           </TouchableOpacity>
         </View>
@@ -331,6 +435,50 @@ export default function BedListScreen(): React.JSX.Element {
         )}
       </View>
 
+      {beds.length > 0 && (
+        <View style={styles.resultsHeader}>
+          <View style={styles.resultsLeft}>
+            <Ionicons name="grid" size={14} color={theme.primary} />
+            <Text style={styles.resultsCount}>{visibleBeds.length}</Text>
+            {hasActiveFilters ? (
+              <>
+                <Text style={styles.resultsLabel}>of {beds.length} Beds</Text>
+                <View style={styles.resultsFilteredBadge}>
+                  <Text style={styles.resultsFilteredText}>filtered</Text>
+                </View>
+              </>
+            ) : (
+              <Text style={styles.resultsLabel}>
+                {visibleBeds.length === 1 ? 'Bed' : 'Beds'}
+              </Text>
+            )}
+          </View>
+          <View style={styles.resultsRight}>
+            <TouchableOpacity style={styles.sortPill} onPress={toggleFilters}>
+              <Ionicons name="swap-vertical" size={13} color={theme.textSecondary} />
+              <Text style={styles.sortPillText}>{SORT_LABELS[sortBy]}</Text>
+              <Ionicons name="chevron-down" size={12} color={theme.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterToggleButton, showFilters && styles.filterToggleButtonActive]}
+              onPress={toggleFilters}
+              accessibilityLabel="Sort and filter beds"
+            >
+              <Ionicons
+                name="funnel"
+                size={16}
+                color={showFilters ? theme.textInverse : theme.primary}
+              />
+              {activeFilterCount > 0 && !showFilters && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {lowLegumeBeds.length > 0 && (
         <View style={styles.legumeBanner}>
           <Ionicons name="warning-outline" size={16} color={theme.warning ?? '#f59e0b'} />
@@ -351,7 +499,13 @@ export default function BedListScreen(): React.JSX.Element {
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={56} color={theme.textSecondary} />
           <Text style={styles.emptyTitle}>No matching beds</Text>
-          <Text style={styles.emptySubtitle}>Try a different name or location</Text>
+          <Text style={styles.emptySubtitle}>Try adjusting your filters or search</Text>
+          {hasActiveFilters && (
+            <TouchableOpacity style={styles.clearFiltersEmptyButton} onPress={clearAllFilters}>
+              <Ionicons name="close-circle-outline" size={16} color={theme.primary} />
+              <Text style={styles.clearFiltersEmptyText}>Clear Filters</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <FlatList
@@ -386,6 +540,21 @@ export default function BedListScreen(): React.JSX.Element {
           if (target) handleDelete(target);
         }}
       />
+
+      {showFilters && (
+        <BedFilterSheet
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          filters={filters}
+          updateFilter={updateFilter}
+          clearAllFilters={clearAllFilters}
+          hasActiveFilters={hasActiveFilters}
+          bedCounts={bedCounts}
+          parentLocations={parentLocations}
+          childLocations={childLocations}
+          onClose={toggleFilters}
+        />
+      )}
     </View>
   );
 }

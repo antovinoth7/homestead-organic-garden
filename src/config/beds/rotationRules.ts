@@ -1,4 +1,5 @@
 import { Bed, Plant, CropFamily, RotationRule } from '@/types/database.types';
+import { bedExpectsLegumes } from './legumeRelevance';
 
 const SOLANACEAE_REST_SEASONS = 2;
 const MIN_LEGUME_COVERAGE_PCT = 20;
@@ -83,7 +84,7 @@ function hasSufficientRest(bed: Bed): boolean {
 export function checkRotationRules(input: RotationCheckInput): RotationRule[] {
   const { bed, plants } = input;
 
-  return [
+  const rules: RotationRule[] = [
     {
       id: 'solanaceae_rest',
       rule: 'No Solanaceae two seasons in a row',
@@ -92,14 +93,21 @@ export function checkRotationRules(input: RotationCheckInput): RotationRule[] {
         ? 'Previous crop was Solanaceae — rest this bed or choose a different family.'
         : 'Previous crop was not Solanaceae. Safe to plant.',
     },
-    {
+  ];
+
+  // Legume coverage only matters for bed types designed around nitrogen-fixers.
+  if (bedExpectsLegumes(bed.type)) {
+    rules.push({
       id: 'legume_coverage',
       rule: `Legume coverage ≥ ${MIN_LEGUME_COVERAGE_PCT}%`,
       passed: hasLegumeCoverage(plants),
       description: hasLegumeCoverage(plants)
         ? `Legume coverage is ${getLegumePct(plants)}%. Soil nitrogen is being replenished.`
         : `Legume coverage is only ${getLegumePct(plants)}%. Add cowpea, beans, or fenugreek.`,
-    },
+    });
+  }
+
+  rules.push(
     {
       id: 'family_diversity',
       rule: 'At least 2 crop families in bed',
@@ -131,6 +139,8 @@ export function checkRotationRules(input: RotationCheckInput): RotationRule[] {
       description: hasSufficientRest(bed)
         ? 'Previous crop family allows direct replanting.'
         : `Previous crop was ${bed.prev_crop_family} — consider green manure rest period of ${SOLANACEAE_REST_SEASONS} seasons.`,
-    },
-  ];
+    }
+  );
+
+  return rules;
 }

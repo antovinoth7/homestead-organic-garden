@@ -4,7 +4,6 @@ import { useTheme } from '@/theme';
 import { Step2Data, Step3Data } from '@/hooks/useBedCreationWizard';
 import { BedType } from '@/types/database.types';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
-import { getSoilPrepSteps } from '@/config/beds/soilPrepEngine';
 import { BED_TYPE_LABEL } from '@/utils/bedNameGenerator';
 import { SOIL_LABELS } from '@/utils/plantLabels';
 import { estimatePlantCapacity } from '@/utils/plantCapacity';
@@ -163,20 +162,6 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
     updateDimension('length_m', m);
   };
 
-  const [prepExpanded, setPrepExpanded] = useState(false);
-
-  const prepSteps = useMemo(() => {
-    if (!step2) return [];
-    return getSoilPrepSteps({
-      soil_type: step2.soil_type,
-      prev_crop_family: step2.prev_crop_family,
-      prev_crop_season: step2.prev_crop_season,
-      pest_history: step2.pest_history,
-      currentMonth: new Date().getMonth() + 1,
-      bed_type: bedType,
-    });
-  }, [step2, bedType]);
-
   const rec = data.sizeRecommendation;
 
   return (
@@ -280,34 +265,6 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
         step={lengthStep}
         onChange={handleLengthChange}
       />
-
-      {/* Before planting prep card — collapsed by default */}
-      {prepSteps.length > 0 && (
-        <View style={styles.szPrepCard}>
-          <TouchableOpacity
-            style={styles.szPrepToggleRow}
-            activeOpacity={0.7}
-            onPress={() => setPrepExpanded((v) => !v)}
-          >
-            <Text style={styles.szPrepCardTitle}>
-              🌱 Prep checklist · {prepSteps.length} steps
-            </Text>
-            <Text style={styles.szPrepChevron}>{prepExpanded ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {prepExpanded &&
-            prepSteps.map((s, i) => (
-              <View key={i} style={[styles.szPrepStepRow, i === 0 && styles.szPrepFirstStep]}>
-                <View style={styles.szPrepStepNumber}>
-                  <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
-                </View>
-                <View style={styles.szPrepStepContent}>
-                  <Text style={styles.szPrepStepText}>{s.text}</Text>
-                  <Text style={styles.szPrepStepDetail}>{s.detail}</Text>
-                </View>
-              </View>
-            ))}
-        </View>
-      )}
     </ScrollView>
   );
 }
