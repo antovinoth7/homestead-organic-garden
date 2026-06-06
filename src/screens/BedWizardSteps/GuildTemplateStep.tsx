@@ -266,9 +266,11 @@ export function GuildTemplateStep({
       const bedWidthCm = Math.round(widthM * 100);
       const plantsToAdd = isMainCrop ? computePlantsPerRow(bedWidthCm, candidate.spacingCm) : 1;
 
-      // Capacity check — need room for a full row
-      const remaining = maxFitMap.get(candidate.name) ?? 0;
-      if (remaining < plantsToAdd) return;
+      // Capacity check — need room for a full row (companions interplant; skip for them)
+      if (isMainCrop) {
+        const remaining = maxFitMap.get(candidate.name) ?? 0;
+        if (remaining < plantsToAdd) return;
+      }
 
       const instanceCount = data.plant_entries.filter((e) => e.name === candidate.name).length;
       const makeEntry = (name: string, layer: BedLayer, spacingCm: number): PlantEntry => ({
@@ -409,6 +411,12 @@ export function GuildTemplateStep({
     }
   }, [template, widthM, lengthM, bedTypeForEngine, construction, onChange]);
 
+  const handleReset = useCallback(() => {
+    onChange({ plant_entries: [] });
+    setQuickStartApplied(false);
+    setAutoAddedMsg(null);
+  }, [onChange]);
+
   if (!template) {
     return (
       <View style={styles.stepContainer}>
@@ -432,29 +440,49 @@ export function GuildTemplateStep({
         </View>
       )}
 
-      <TouchableOpacity
-        style={[styles.gtUseFullPlanBtn, quickStartApplied && styles.gtUseFullPlanBtnApplied]}
-        onPress={handleUseFullPlan}
-        activeOpacity={0.8}
-      >
+      <View style={[styles.gtUseFullPlanBtn, quickStartApplied && styles.gtUseFullPlanBtnApplied]}>
         <View style={styles.gtQuickStartTextCol}>
           <Text
             style={[styles.gtQuickStartTitle, quickStartApplied && styles.gtQuickStartTitleApplied]}
           >
-            {quickStartApplied ? '✓ Quick Start applied' : 'Quick Start'}
+            {quickStartApplied ? '✓ Quick Start applied' : '⚡ Quick Start'}
           </Text>
           <Text style={styles.gtQuickStartSubtitle} numberOfLines={1}>
             {quickStartApplied
-              ? `Balanced ${template.label} guild · tap to reset`
+              ? `Balanced ${template.label} guild`
               : `Auto-fill a balanced ${template.label}`}
           </Text>
         </View>
-        <View
-          style={[styles.gtQuickStartPill, quickStartApplied && styles.gtQuickStartPillApplied]}
-        >
-          <Text style={styles.gtQuickStartPillText}>{quickStartApplied ? 'Reapply' : 'Apply'}</Text>
-        </View>
-      </TouchableOpacity>
+
+        {quickStartApplied ? (
+          <View style={styles.gtQuickStartActionsRow}>
+            <TouchableOpacity
+              style={styles.gtQuickStartResetBtn}
+              onPress={handleReset}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="trash-outline" size={14} color={theme.error} />
+              <Text style={styles.gtQuickStartResetBtnText}>Clear</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.gtQuickStartReapplyBtn}
+              onPress={handleUseFullPlan}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="refresh" size={14} color={theme.textInverse} />
+              <Text style={styles.gtQuickStartReapplyBtnText}>Reapply</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.gtQuickStartPill}
+            onPress={handleUseFullPlan}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.gtQuickStartPillText}>Apply</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {data.plant_entries.length === 0 && (
         <Text style={styles.gtEmptyHint}>
@@ -610,8 +638,6 @@ export function GuildTemplateStep({
               const compCandidate = candidateForCompanion(comp);
               const compCount = data.plant_entries.filter((e) => e.name === comp).length;
               const compBlocked = compCount === 0 && !!getBlockedReason(comp);
-              const compRemaining = maxFitMap.get(comp) ?? 0;
-              const compCapReached = compRemaining === 0;
               return (
                 <View key={comp} style={styles.gtCompanionRow}>
                   <Text style={styles.gtCompanionEmoji}>{getPlantEmoji(comp)}</Text>
@@ -625,7 +651,7 @@ export function GuildTemplateStep({
                     count={compCount}
                     onIncrement={() => incrementPlant(compCandidate, false)}
                     onDecrement={() => decrementPlant(comp, COMPANION_DEFAULT_SPACING, false)}
-                    disabled={compBlocked || compCapReached}
+                    disabled={compBlocked}
                   />
                 </View>
               );
@@ -657,8 +683,6 @@ export function GuildTemplateStep({
             const accCount = data.plant_entries.filter((e) => e.name === acc.name).length;
             const isAdded = accCount > 0;
             const accBlocked = !isAdded && !!getBlockedReason(acc.name);
-            const accRemaining = maxFitMap.get(acc.name) ?? 0;
-            const accCapReached = accRemaining === 0;
             return (
               <View key={acc.name} style={[styles.gtAccCard, isAdded && styles.gtAccCardSelected]}>
                 <View style={styles.gtAccHeader}>
@@ -674,7 +698,7 @@ export function GuildTemplateStep({
                     count={accCount}
                     onIncrement={() => incrementPlant(accCandidate, false)}
                     onDecrement={() => decrementPlant(acc.name, ACCUMULATOR_DEFAULT_SPACING, false)}
-                    disabled={accBlocked || accCapReached}
+                    disabled={accBlocked}
                   />
                 </View>
                 <Text style={[styles.gtIntervalText, isAdded && styles.gtIntervalTextSelected]}>
