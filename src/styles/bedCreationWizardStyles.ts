@@ -1622,6 +1622,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center' as const,
       justifyContent: 'space-between' as const,
     },
+    gtSlotStatus: {
+      fontSize: 11,
+      color: theme.textSecondary,
+      marginTop: 2,
+      marginBottom: 6,
+    },
     // Layout step — planting schedule
     blScheduleCard: {
       backgroundColor: theme.backgroundSecondary,

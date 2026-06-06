@@ -250,6 +250,46 @@ export function GuildTemplateStep({
     candidateForAccumulator,
   ]);
 
+  // ── Companion & accumulator capacity ────────────────────────────────────────
+
+  // Sum of (plantsPerRow − 1) gaps across every main-crop row currently planted.
+  const totalInterplantSlots = useMemo(() => {
+    if (!template) return 0;
+    const widthCm = widthM * 100;
+    let slots = 0;
+    for (const row of template.plant_rows) {
+      const count = data.plant_entries.filter((e) => e.name === row.name).length;
+      if (count === 0) continue;
+      const ppr = computePlantsPerRow(widthCm, row.spacing_cm);
+      const rowCount = Math.ceil(count / ppr);
+      slots += rowCount * Math.max(0, ppr - 1);
+    }
+    return slots;
+  }, [data.plant_entries, template, widthM]);
+
+  // Perimeter-based border slots for chop-and-drop accumulators.
+  const totalAccumulatorSlots = useMemo(
+    () => Math.floor((2 * (widthM + lengthM) * 100) / ACCUMULATOR_DEFAULT_SPACING),
+    [widthM, lengthM]
+  );
+
+  const totalCompanionsPlaced = useMemo(
+    () => data.plant_entries.filter((e) => companionSuggestions.includes(e.name)).length,
+    [data.plant_entries, companionSuggestions]
+  );
+
+  const totalAccumulatorsPlaced = useMemo(
+    () =>
+      data.plant_entries.filter((e) => DYNAMIC_ACCUMULATORS.some((a) => a.name === e.name)).length,
+    [data.plant_entries]
+  );
+
+  const companionsAtCapacity =
+    totalInterplantSlots > 0 && totalCompanionsPlaced >= totalInterplantSlots;
+  const accumulatorsAtCapacity =
+    totalAccumulatorSlots > 0 && totalAccumulatorsPlaced >= totalAccumulatorSlots;
+  const noInterplantSlots = totalInterplantSlots === 0;
+
   // ── Increment / decrement handlers ──────────────────────────────────────────
 
   const incrementPlant = useCallback(
@@ -269,6 +309,13 @@ export function GuildTemplateStep({
       if (isMainCrop) {
         const remaining = maxFitMap.get(candidate.name) ?? 0;
         if (remaining < plantsToAdd) return;
+      } else {
+        const isAcc = DYNAMIC_ACCUMULATORS.some((a) => a.name === candidate.name);
+        if (isAcc) {
+          if (totalAccumulatorsPlaced >= totalAccumulatorSlots) return;
+        } else {
+          if (totalCompanionsPlaced >= totalInterplantSlots) return;
+        }
       }
 
       const instanceCount = data.plant_entries.filter((e) => e.name === candidate.name).length;
@@ -334,6 +381,10 @@ export function GuildTemplateStep({
       candidateForCompanion,
       onChange,
       setAutoAddedMsg,
+      totalInterplantSlots,
+      totalCompanionsPlaced,
+      totalAccumulatorSlots,
+      totalAccumulatorsPlaced,
     ]
   );
 
@@ -619,16 +670,20 @@ export function GuildTemplateStep({
               color={theme.textSecondary}
             />
           </TouchableOpacity>
+          <Text style={styles.gtSlotStatus}>
+            {noInterplantSlots
+              ? 'Add main crops first to create row gaps'
+              : `${Math.max(0, totalInterplantSlots - totalCompanionsPlaced)} of ${totalInterplantSlots} gap slots free`}
+          </Text>
           {companionsExpanded &&
             companionSuggestions.map((comp: string) => {
               const compCandidate = candidateForCompanion(comp);
               const compCount = data.plant_entries.filter((e) => e.name === comp).length;
               const compBlocked = compCount === 0 && !!getBlockedReason(comp);
-              const compRemaining = maxFitMap.get(comp) ?? 0;
               const compFitLabel =
-                compRemaining === 0
-                  ? 'Interplants in gaps'
-                  : capacityText(compCandidate, compCount, false);
+                compCount > 0
+                  ? capacityText(compCandidate, compCount, false)
+                  : 'Interplants in gaps';
               return (
                 <View key={comp} style={styles.gtCompanionRow}>
                   <Text style={styles.gtCompanionEmoji}>{getPlantEmoji(comp)}</Text>
@@ -640,7 +695,7 @@ export function GuildTemplateStep({
                     count={compCount}
                     onIncrement={() => incrementPlant(compCandidate, false)}
                     onDecrement={() => decrementPlant(comp, COMPANION_DEFAULT_SPACING, false)}
-                    disabled={compBlocked}
+                    disabled={compBlocked || companionsAtCapacity}
                   />
                 </View>
               );
@@ -661,6 +716,9 @@ export function GuildTemplateStep({
           color={theme.textSecondary}
         />
       </TouchableOpacity>
+      <Text style={styles.gtSlotStatus}>
+        {`${Math.max(0, totalAccumulatorSlots - totalAccumulatorsPlaced)} of ${totalAccumulatorSlots} border slots free`}
+      </Text>
 
       {soilBuildersExpanded && (
         <>
@@ -672,11 +730,9 @@ export function GuildTemplateStep({
             const accCount = data.plant_entries.filter((e) => e.name === acc.name).length;
             const isAdded = accCount > 0;
             const accBlocked = !isAdded && !!getBlockedReason(acc.name);
-            const accRemaining = maxFitMap.get(acc.name) ?? 0;
-            const accFitLabel =
-              accRemaining === 0
-                ? 'Chop & drop — no fixed slot'
-                : capacityText(accCandidate, accCount, false);
+            const accFitLabel = isAdded
+              ? capacityText(accCandidate, accCount, false)
+              : 'Perimeter / border plant';
             return (
               <View key={acc.name} style={[styles.gtAccCard, isAdded && styles.gtAccCardSelected]}>
                 <View style={styles.gtAccHeader}>
@@ -690,7 +746,7 @@ export function GuildTemplateStep({
                     count={accCount}
                     onIncrement={() => incrementPlant(accCandidate, false)}
                     onDecrement={() => decrementPlant(acc.name, ACCUMULATOR_DEFAULT_SPACING, false)}
-                    disabled={accBlocked}
+                    disabled={accBlocked || accumulatorsAtCapacity}
                   />
                 </View>
                 <Text style={[styles.gtIntervalText, isAdded && styles.gtIntervalTextSelected]}>
