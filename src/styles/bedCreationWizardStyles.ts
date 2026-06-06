@@ -1071,25 +1071,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700' as const,
       color: theme.textInverse,
     },
-    gtQuickStartIconRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: 8,
-    },
-    gtQuickStartIconBtnDanger: {
+    gtQuickStartIconBtn: {
       width: 34,
       height: 34,
       borderRadius: 17,
       borderWidth: 1.5,
       borderColor: theme.error,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-    },
-    gtQuickStartIconBtnPrimary: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: theme.primary,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
     },

@@ -64,6 +64,7 @@ export interface Step3Data {
 
 export interface Step4Data {
   plant_entries: PlantEntry[];
+  quick_start_applied?: boolean;
 }
 
 export type { PlantEntry };
@@ -505,7 +506,7 @@ export function useBedCreationWizard(
             area_sqm: bed.dimensions.area_sqm,
             sizeRecommendation: null,
           },
-          4: { plant_entries: plants.map(plantToEntry) },
+          4: { plant_entries: plants.map(plantToEntry), quick_start_applied: bed.quick_start_applied ?? false },
           6: { notes: bed.notes ?? '' },
         });
       } catch (err) {
@@ -680,6 +681,7 @@ export function useBedCreationWizard(
       // fields omitted here are retained on the existing doc.)
       is_permanent: originalBedRef.current?.is_permanent ?? false,
       notes: s6?.notes || null,
+      quick_start_applied: s4?.quick_start_applied ?? false,
       row_layout: rowLayout,
       is_deleted: false,
     };

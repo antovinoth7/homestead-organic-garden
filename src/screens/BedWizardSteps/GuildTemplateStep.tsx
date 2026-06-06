@@ -108,7 +108,7 @@ export function GuildTemplateStep({
   const template = bedType ? getGuildTemplate(bedType) : null;
 
   const [autoAddedMsg, setAutoAddedMsg] = useState<string | null>(null);
-  const [quickStartApplied, setQuickStartApplied] = useState(false);
+  const quickStartApplied = data.quick_start_applied ?? false;
   const [companionsExpanded, setCompanionsExpanded] = useState(true);
   const [soilBuildersExpanded, setSoilBuildersExpanded] = useState(false);
 
@@ -255,7 +255,6 @@ export function GuildTemplateStep({
   const incrementPlant = useCallback(
     (candidate: RowPlantInput, isMainCrop: boolean, companionsToAutoAdd?: string[]): void => {
       setAutoAddedMsg(null);
-      setQuickStartApplied(false);
       // Antagonist check vs any *different* species already in the bed
       for (const entry of data.plant_entries) {
         if (entry.name === candidate.name) continue;
@@ -318,7 +317,7 @@ export function GuildTemplateStep({
         }
       }
 
-      onChange({ plant_entries: newEntries });
+      onChange({ plant_entries: newEntries, quick_start_applied: false });
       if (addedCompanions.length > 0) {
         const label = addedCompanions.length === 1 ? 'companion' : 'companions';
         setAutoAddedMsg(`✓ Also added to your bed: ${addedCompanions.join(', ')} (${label})`);
@@ -341,7 +340,6 @@ export function GuildTemplateStep({
   const decrementPlant = useCallback(
     (plantName: string, spacingCm: number, isMainCrop: boolean): void => {
       setAutoAddedMsg(null);
-      setQuickStartApplied(false);
       const bedWidthCm = Math.round(widthM * 100);
       const plantsToRemove = isMainCrop ? computePlantsPerRow(bedWidthCm, spacingCm) : 1;
       let toRemove = plantsToRemove;
@@ -352,7 +350,7 @@ export function GuildTemplateStep({
           toRemove--;
         }
       }
-      onChange({ plant_entries: next });
+      onChange({ plant_entries: next, quick_start_applied: false });
     },
     [data.plant_entries, widthM, onChange]
   );
@@ -404,16 +402,14 @@ export function GuildTemplateStep({
       bedTypeForEngine,
       construction
     );
-    onChange({ plant_entries: entries });
-    setQuickStartApplied(true);
+    onChange({ plant_entries: entries, quick_start_applied: true });
     if (dropped.length > 0) {
       setAutoAddedMsg(`⚠️ Bed full — couldn't fit ${dropped.join(', ')}. Try a larger bed size.`);
     }
   }, [template, widthM, lengthM, bedTypeForEngine, construction, onChange]);
 
   const handleReset = useCallback(() => {
-    onChange({ plant_entries: [] });
-    setQuickStartApplied(false);
+    onChange({ plant_entries: [], quick_start_applied: false });
     setAutoAddedMsg(null);
   }, [onChange]);
 
@@ -455,24 +451,14 @@ export function GuildTemplateStep({
         </View>
 
         {quickStartApplied ? (
-          <View style={styles.gtQuickStartIconRow}>
-            <TouchableOpacity
-              style={styles.gtQuickStartIconBtnDanger}
-              onPress={handleReset}
-              activeOpacity={0.8}
-              accessibilityLabel="Clear Quick Start plan"
-            >
-              <Ionicons name="trash-outline" size={16} color={theme.error} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.gtQuickStartIconBtnPrimary}
-              onPress={handleUseFullPlan}
-              activeOpacity={0.8}
-              accessibilityLabel="Reapply Quick Start plan"
-            >
-              <Ionicons name="refresh" size={16} color={theme.textInverse} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.gtQuickStartIconBtn}
+            onPress={handleReset}
+            activeOpacity={0.8}
+            accessibilityLabel="Clear Quick Start plan"
+          >
+            <Ionicons name="refresh" size={16} color={theme.error} />
+          </TouchableOpacity>
         ) : (
           <TouchableOpacity
             style={styles.gtQuickStartPill}

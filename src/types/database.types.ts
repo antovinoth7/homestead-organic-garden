@@ -218,6 +218,7 @@ export interface Bed {
   last_jeevamrutha_date?: string | null;
   last_weeding_date?: string | null;
   notes?: string | null;
+  quick_start_applied?: boolean;
   row_layout?: BedRowSnapshot[];
   row_history?: BedRowHistoryEntry[];
   is_deleted: boolean;
