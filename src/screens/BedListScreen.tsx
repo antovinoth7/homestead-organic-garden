@@ -423,9 +423,6 @@ export default function BedListScreen(): React.JSX.Element {
           <>
             <View>
               <Text style={styles.title}>Beds</Text>
-              <Text style={styles.bedCount}>
-                {beds.length > 0 ? `${beds.length} Bed${beds.length > 1 ? 's' : ''}` : ''}
-              </Text>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity
@@ -472,9 +469,7 @@ export default function BedListScreen(): React.JSX.Element {
                 </View>
               </>
             ) : (
-              <Text style={styles.resultsLabel}>
-                {visibleBeds.length === 1 ? 'Bed' : 'Beds'}
-              </Text>
+              <Text style={styles.resultsLabel}>{visibleBeds.length === 1 ? 'Bed' : 'Beds'}</Text>
             )}
           </View>
           <View style={styles.resultsRight}>
