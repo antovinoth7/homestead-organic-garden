@@ -1071,38 +1071,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700' as const,
       color: theme.textInverse,
     },
-    gtQuickStartActionsRow: {
+    gtQuickStartIconRow: {
       flexDirection: 'row' as const,
+      alignItems: 'center' as const,
       gap: 8,
     },
-    gtQuickStartResetBtn: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: 4,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 8,
+    gtQuickStartIconBtnDanger: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       borderWidth: 1.5,
       borderColor: theme.error,
-    },
-    gtQuickStartResetBtnText: {
-      fontSize: 12,
-      fontWeight: '700' as const,
-      color: theme.error,
-    },
-    gtQuickStartReapplyBtn: {
-      flexDirection: 'row' as const,
       alignItems: 'center' as const,
-      gap: 4,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 8,
-      backgroundColor: theme.primary,
+      justifyContent: 'center' as const,
     },
-    gtQuickStartReapplyBtnText: {
-      fontSize: 12,
-      fontWeight: '700' as const,
-      color: theme.textInverse,
+    gtQuickStartIconBtnPrimary: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: theme.primary,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
     },
     gtEmptyHint: {
       fontSize: 12,

@@ -455,22 +455,22 @@ export function GuildTemplateStep({
         </View>
 
         {quickStartApplied ? (
-          <View style={styles.gtQuickStartActionsRow}>
+          <View style={styles.gtQuickStartIconRow}>
             <TouchableOpacity
-              style={styles.gtQuickStartResetBtn}
+              style={styles.gtQuickStartIconBtnDanger}
               onPress={handleReset}
               activeOpacity={0.8}
+              accessibilityLabel="Clear Quick Start plan"
             >
-              <Ionicons name="trash-outline" size={14} color={theme.error} />
-              <Text style={styles.gtQuickStartResetBtnText}>Clear</Text>
+              <Ionicons name="trash-outline" size={16} color={theme.error} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.gtQuickStartReapplyBtn}
+              style={styles.gtQuickStartIconBtnPrimary}
               onPress={handleUseFullPlan}
               activeOpacity={0.8}
+              accessibilityLabel="Reapply Quick Start plan"
             >
-              <Ionicons name="refresh" size={14} color={theme.textInverse} />
-              <Text style={styles.gtQuickStartReapplyBtnText}>Reapply</Text>
+              <Ionicons name="refresh" size={16} color={theme.textInverse} />
             </TouchableOpacity>
           </View>
         ) : (
@@ -638,14 +638,17 @@ export function GuildTemplateStep({
               const compCandidate = candidateForCompanion(comp);
               const compCount = data.plant_entries.filter((e) => e.name === comp).length;
               const compBlocked = compCount === 0 && !!getBlockedReason(comp);
+              const compRemaining = maxFitMap.get(comp) ?? 0;
+              const compFitLabel =
+                compRemaining === 0
+                  ? 'Interplants in gaps'
+                  : capacityText(compCandidate, compCount, false);
               return (
                 <View key={comp} style={styles.gtCompanionRow}>
                   <Text style={styles.gtCompanionEmoji}>{getPlantEmoji(comp)}</Text>
                   <View style={styles.gtCompanionNameBlock}>
                     <Text style={styles.gtCompanionName}>{comp}</Text>
-                    <Text style={styles.gtCompanionFitText}>
-                      {capacityText(compCandidate, compCount, false)}
-                    </Text>
+                    <Text style={styles.gtCompanionFitText}>{compFitLabel}</Text>
                   </View>
                   <PlantQtyStepper
                     count={compCount}
@@ -683,6 +686,11 @@ export function GuildTemplateStep({
             const accCount = data.plant_entries.filter((e) => e.name === acc.name).length;
             const isAdded = accCount > 0;
             const accBlocked = !isAdded && !!getBlockedReason(acc.name);
+            const accRemaining = maxFitMap.get(acc.name) ?? 0;
+            const accFitLabel =
+              accRemaining === 0
+                ? 'Chop & drop — no fixed slot'
+                : capacityText(accCandidate, accCount, false);
             return (
               <View key={acc.name} style={[styles.gtAccCard, isAdded && styles.gtAccCardSelected]}>
                 <View style={styles.gtAccHeader}>
@@ -690,9 +698,7 @@ export function GuildTemplateStep({
                     <Text style={[styles.gtAccName, isAdded && styles.gtAccNameSelected]}>
                       {acc.name}
                     </Text>
-                    <Text style={styles.gtAccFitText}>
-                      {capacityText(accCandidate, accCount, false)}
-                    </Text>
+                    <Text style={styles.gtAccFitText}>{accFitLabel}</Text>
                   </View>
                   <PlantQtyStepper
                     count={accCount}
