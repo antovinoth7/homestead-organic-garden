@@ -337,7 +337,21 @@ export function GuildTemplateStep({
       // On first add of a main crop, auto-add recommended companions that fit
       const addedCompanions: string[] = [];
       if (instanceCount === 0 && companionsToAutoAdd && companionsToAutoAdd.length > 0) {
+        // Cap auto-add to available gap slots so companions never spill into their own rows.
+        let gapSlots = 0;
+        if (template) {
+          for (const tRow of template.plant_rows) {
+            const cnt = newEntries.filter((e) => e.name === tRow.name).length;
+            if (cnt === 0) continue;
+            const ppr = computePlantsPerRow(bedWidthCm, tRow.spacing_cm);
+            gapSlots += Math.ceil(cnt / ppr) * Math.max(0, ppr - 1);
+          }
+        }
+        const alreadyPlaced = newEntries.filter((e) => companionSuggestions.includes(e.name)).length;
+        let slotsRemaining = Math.max(0, gapSlots - alreadyPlaced);
+
         for (const compName of companionsToAutoAdd) {
+          if (slotsRemaining <= 0) break;
           if (newEntries.some((e) => e.name === compName)) continue;
           let antag = false;
           for (const existing of newEntries) {
@@ -361,6 +375,7 @@ export function GuildTemplateStep({
           if (!fitResult.fitsInBed) continue;
           newEntries.push(makeEntry(compName, COMPANION_DEFAULT_LAYER, COMPANION_DEFAULT_SPACING));
           addedCompanions.push(compName);
+          slotsRemaining--;
         }
       }
 
