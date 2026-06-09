@@ -711,7 +711,7 @@ export function useBedCreationWizard(
       const updated = entries.map((e) =>
         e.id === entryId ? { ...e, resolution: { kind: 'link', plantId } as const } : e
       );
-      return { ...prev, 4: { plant_entries: updated } };
+      return { ...prev, 4: { ...(prev[4] ?? {}), plant_entries: updated } };
     });
   }, []);
 
