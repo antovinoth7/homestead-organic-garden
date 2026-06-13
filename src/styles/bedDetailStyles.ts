@@ -4,7 +4,7 @@ import type { Theme } from '@/theme/colors';
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
-    content: { padding: 16, paddingBottom: 40 },
+    content: { paddingHorizontal: 16, paddingBottom: 40 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
     errorText: { color: theme.error, marginBottom: 12 },
     retryText: { color: theme.primary },

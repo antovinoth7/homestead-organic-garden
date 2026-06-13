@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
@@ -40,6 +41,7 @@ function formatRelativeDate(isoDate: string | null | undefined): string {
 export default function BedDetailScreen(): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<BedDetailScreenNavigationProp>();
   const route = useRoute<BedDetailScreenRouteProp>();
   const { bedId } = route.params;
@@ -147,7 +149,7 @@ export default function BedDetailScreen(): React.JSX.Element {
     : 0;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
