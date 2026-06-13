@@ -2,6 +2,29 @@
  * Theme colors for dark and light mode
  */
 
+import type { BedLayer } from '@/types/database.types';
+
+type LayerColorMap = Record<BedLayer, { color: string; bg: string }>;
+
+// Per-layer accent (border) + tile background colors. Light values preserve the
+// original hand-picked hues; dark values use the same low-saturation tinting
+// strategy as the *Light status tokens so tiles stay readable on dark surfaces.
+const lightLayerColors: LayerColorMap = {
+  canopy: { color: '#2e7d32', bg: '#f1f8f1' },
+  climber: { color: '#7b1fa2', bg: '#f5f0fa' },
+  understory: { color: '#558b2f', bg: '#f4f8ee' },
+  root: { color: '#e65100', bg: '#fff8f0' },
+  ground_cover: { color: '#c8842a', bg: '#fdf5e8' },
+};
+
+const darkLayerColors: LayerColorMap = {
+  canopy: { color: '#66bb6a', bg: '#1b3a1e' },
+  climber: { color: '#ce93d8', bg: '#3a1a4a' },
+  understory: { color: '#9ccc65', bg: '#24331a' },
+  root: { color: '#ffb74d', bg: '#3a2515' },
+  ground_cover: { color: '#e0b072', bg: '#3a2e1a' },
+};
+
 export const lightTheme = {
   // Background colors
   background: '#fbf9f5',
@@ -79,6 +102,9 @@ export const lightTheme = {
   tabBarActive: '#1a4a2e',
   tabBarInactive: '#7a6858',
   tabBarBackground: '#fbf9f5',
+
+  // Bed layer accent + tile background colors
+  layerColors: lightLayerColors,
 };
 
 export const darkTheme = {
@@ -158,6 +184,9 @@ export const darkTheme = {
   tabBarActive: '#4caf50',
   tabBarInactive: '#808080',
   tabBarBackground: '#1e1e1e',
+
+  // Bed layer accent + tile background colors
+  layerColors: darkLayerColors,
 };
 
 export type Theme = typeof lightTheme;

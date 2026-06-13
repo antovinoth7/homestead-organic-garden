@@ -177,14 +177,21 @@ export const createWizardStyles = (theme: Theme): ReturnType<typeof StyleSheet.c
       justifyContent: 'center',
       marginLeft: 12,
     },
-    stepErrorText: {
-      fontSize: 13,
-      color: theme.error,
-      marginTop: 4,
+    // Inline blocking-reason banner — matches the bed creation wizard.
+    blockedBanner: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 8,
+      marginHorizontal: 16,
       marginBottom: 8,
-      marginHorizontal: 4,
-      fontWeight: '600' as const,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 8,
+      backgroundColor: theme.errorLight,
+      borderWidth: 1,
+      borderColor: theme.error,
     },
+    blockedBannerText: { flex: 1, fontSize: 12, color: theme.error, lineHeight: 17 },
     saveBanner: {
       position: 'absolute' as const,
       left: 16,

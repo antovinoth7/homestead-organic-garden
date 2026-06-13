@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
+import type { BedLayer } from '@/types/database.types';
 import { Step6Data, WizardStepData } from '@/hooks/useBedCreationWizard';
 import { getGuildTemplate, getSoilPrepSteps } from '@/config/beds';
 import { getLayerColor } from '@/config/beds/layerMeta';
@@ -21,6 +22,10 @@ interface Props {
 export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const resolveLayerColor = useCallback(
+    (layer: BedLayer): string => getLayerColor(theme, layer),
+    [theme]
+  );
   const [prepExpanded, setPrepExpanded] = useState(false);
 
   const s1 = stepData[1];
@@ -141,7 +146,7 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
             lengthM={s3.length_m}
             rows={rowLayout.rows}
             plantEmoji={getPlantEmoji}
-            layerColor={getLayerColor}
+            layerColor={resolveLayerColor}
             walkingPathCm={rowLayout.walkingPathCm}
             edgeBufferCm={rowLayout.edgeBufferCm}
             overflowCm={rowLayout.overflowCm}

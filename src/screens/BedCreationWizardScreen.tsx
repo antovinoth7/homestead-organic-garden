@@ -16,6 +16,7 @@ import { logger } from '@/utils/logger';
 import { useBedCreationWizard } from '@/hooks/useBedCreationWizard';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import DiscardChangesModal from '@/components/modals/DiscardChangesModal';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import type {
   BedCreationWizardNavigationProp,
   BedCreationWizardRouteProp,
@@ -220,13 +221,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={requestExit} style={styles.closeButton}>
-          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isEditMode ? 'Edit Bed' : 'Create Bed'}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title={isEditMode ? 'Edit Bed' : 'Create Bed'} onBack={requestExit} />
 
       {/* Progress stepper */}
       <View style={styles.progressContainer}>
@@ -286,13 +281,12 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
         {renderStep()}
       </ScrollView>
 
-      {/* Solanaceae block banner — sits above the footer, not inline with buttons */}
-      {wizard.solanaceaeBlocked && wizard.currentStep === 2 && (
+      {/* Inline reason the Next button is disabled — sits above the footer so the
+          user knows what to fix instead of tapping a greyed-out button. */}
+      {wizard.blockReason && !wizard.submitting && (
         <View style={styles.blockedBanner}>
-          <Ionicons name="warning" size={18} color={theme.error} />
-          <Text style={styles.blockedBannerText}>
-            Solanaceae was planted here — choose a different previous crop to continue.
-          </Text>
+          <Ionicons name="alert-circle" size={18} color={theme.error} />
+          <Text style={styles.blockedBannerText}>{wizard.blockReason}</Text>
         </View>
       )}
 

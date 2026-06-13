@@ -5,16 +5,15 @@ export const ROW_TILE_WIDTH = 90;
 export const ROW_TILE_GAP = 8;
 export const ROW_TILE_STEP = ROW_TILE_WIDTH + ROW_TILE_GAP;
 
-// Companion tile fixed design — matches LAYER_BORDER['climber'] purple
-const COMPANION_BORDER = '#7b1fa2';
-const COMPANION_BG = '#f5f0fa';
-// Ground cover legend swatch — matches LAYER_BORDER['ground_cover'] amber
-const GROUND_BORDER = '#c8842a';
-// Main crop legend swatch — matches LAYER_BORDER['understory'] green
-const MAIN_BORDER = '#558b2f';
+export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> => {
+  // Companion tile design follows the climber layer; legend swatches follow the
+  // ground_cover / understory layers. Sourced from the theme so they adapt to dark mode.
+  const COMPANION_BORDER = theme.layerColors.climber.color;
+  const COMPANION_BG = theme.layerColors.climber.bg;
+  const GROUND_BORDER = theme.layerColors.ground_cover.color;
+  const MAIN_BORDER = theme.layerColors.understory.color;
 
-export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
-  StyleSheet.create({
+  return StyleSheet.create({
     container: {
       marginBottom: 16,
     },
@@ -630,3 +629,4 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textInverse,
     },
   });
+};

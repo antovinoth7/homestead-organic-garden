@@ -222,17 +222,29 @@ export async function endBedRest(id: string): Promise<void> {
   await updateBed(id, { is_resting: false, resting_until: null });
 }
 
-export async function logBedInput(
-  id: string,
-  inputType: 'water' | 'jeevamrutha' | 'weeding'
-): Promise<void> {
+type BedInputType = 'water' | 'jeevamrutha' | 'weeding';
+
+const INPUT_DATE_FIELD = {
+  water: 'last_water_date',
+  jeevamrutha: 'last_jeevamrutha_date',
+  weeding: 'last_weeding_date',
+} as const;
+
+export async function logBedInput(id: string, inputType: BedInputType): Promise<void> {
   const now = new Date().toISOString();
-  const fieldMap = {
-    water: 'last_water_date',
-    jeevamrutha: 'last_jeevamrutha_date',
-    weeding: 'last_weeding_date',
-  } as const;
-  await updateBed(id, { [fieldMap[inputType]]: now });
+  await updateBed(id, { [INPUT_DATE_FIELD[inputType]]: now });
+}
+
+/**
+ * Restore a soil-input date to a previous value — used to undo a `logBedInput`.
+ * Pass the date captured before logging (or null to clear it).
+ */
+export async function restoreBedInput(
+  id: string,
+  inputType: BedInputType,
+  prevValue: string | null
+): Promise<void> {
+  await updateBed(id, { [INPUT_DATE_FIELD[inputType]]: prevValue });
 }
 
 // ─── Domain helpers ───────────────────────────────────────────────────────────

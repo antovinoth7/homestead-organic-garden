@@ -835,7 +835,7 @@ export default function PlantsScreen(): React.JSX.Element {
         ListFooterComponent={
           loadingMore ? (
             <View style={styles.loadingMore}>
-              <ActivityIndicator size="small" color="#2e7d32" />
+              <ActivityIndicator size="small" color={theme.primary} />
               <Text style={styles.loadingText}>Loading more plants...</Text>
             </View>
           ) : hasMore && displayedPlants.length > 0 ? (

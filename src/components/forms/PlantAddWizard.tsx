@@ -40,7 +40,6 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
     returnTo,
   } = formState;
 
-  const [stepError, setStepError] = useState<string | null>(null);
   const [saveBannerVisible, setSaveBannerVisible] = useState(false);
   const bannerOpacity = useRef(new Animated.Value(0)).current;
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,20 +63,18 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
     }, 3100);
   }, [bannerOpacity, navigateToPlantsAfterSave]);
 
+  // Reactive blocking reason for the current step — surfaced proactively in the
+  // banner below, mirroring the bed creation wizard.
+  const blockReason = getWizardStepErrors(wizardStep);
+
   const handleNext = useCallback(() => {
-    const error = getWizardStepErrors(wizardStep);
-    if (error) {
-      setStepError(error);
-      return;
-    }
-    setStepError(null);
+    if (getWizardStepErrors(wizardStep)) return;
     if (wizardStep < 3) {
       runSlideTransition('forward', (wizardStep + 1) as 2 | 3);
     }
   }, [wizardStep, getWizardStepErrors, runSlideTransition]);
 
   const handleBack = useCallback(() => {
-    setStepError(null);
     if (wizardStep > 1) {
       runSlideTransition('back', (wizardStep - 1) as 1 | 2);
     } else {
@@ -86,12 +83,7 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
   }, [wizardStep, runSlideTransition, handleBackPress]);
 
   const handleWizardSave = useCallback(() => {
-    const error = getWizardStepErrors(3);
-    if (error) {
-      setStepError(error);
-      return;
-    }
-    setStepError(null);
+    if (getWizardStepErrors(3)) return;
     // When opened from the bed wizard (returnTo set), skip the "going to your
     // plants" banner and let handleSave's built-in returnTo branch navigate back
     // to BedCreationWizard. Otherwise show the banner → PlantsList as usual.
@@ -206,7 +198,12 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
             </Text>
           </Animated.View>
         )}
-        {stepError ? <Text style={wizardStyles.stepErrorText}>{stepError}</Text> : null}
+        {blockReason && !loading ? (
+          <View style={wizardStyles.blockedBanner}>
+            <Ionicons name="alert-circle" size={18} color={theme.error} />
+            <Text style={wizardStyles.blockedBannerText}>{blockReason}</Text>
+          </View>
+        ) : null}
         <View style={[wizardStyles.wizardNavBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
           {wizardStep === 3 ? (
             <TouchableOpacity

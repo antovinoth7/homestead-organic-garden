@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { Step2Data } from '@/hooks/useBedCreationWizard';
 import { SunlightLevel, BedSlope, CropFamily, SoilType, BedType, PestHistoryItem, Bed } from '@/types/database.types';
@@ -198,45 +199,62 @@ export function LandConditionsStep({
         </View>
       )}
 
-      {/* Bed name — auto-generated from location + bed type, or custom */}
+      {/* Bed name — auto-generated from location + bed type, or custom.
+          Styled to match the plant form's Name field (field-look row + floating label). */}
       <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Bed name *</Text>
         {!showCustomName && generatedBedName ? (
-          <View style={[styles.infoBadge, styles.namePreviewRow]}>
-            <Text style={styles.namePreviewText}>{generatedBedName}</Text>
+          <View style={styles.namePreviewRow}>
+            <Text style={styles.namePreviewFloatingLabel}>Bed name *</Text>
+            <Text style={styles.namePreviewValue} numberOfLines={1}>
+              {generatedBedName}
+            </Text>
             <TouchableOpacity
+              style={styles.namePreviewActionCustom}
               activeOpacity={0.7}
               onPress={() => {
                 setShowCustomName(true);
                 onChange({ name: data.name || generatedBedName });
               }}
             >
-              <Text style={styles.infoBadgeText}>Edit</Text>
+              <Text style={styles.namePreviewActionTextMuted}>Edit</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <>
+          <View style={styles.nameCustomRow}>
+            <Text style={styles.namePreviewFloatingLabel}>Bed name *</Text>
             <TextInput
-              style={styles.textInput}
+              style={styles.nameCustomInput}
               value={data.name ?? ''}
               onChangeText={(v) => onChange({ name: v })}
               placeholder={generatedBedName || 'e.g. Front Leafy Bed'}
-              placeholderTextColor={theme.textSecondary}
+              placeholderTextColor={theme.inputPlaceholder}
               maxLength={60}
               autoFocus={showCustomName}
             />
             {generatedBedName ? (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => {
-                  setShowCustomName(false);
-                  onChange({ name: generatedBedName });
-                }}
-              >
-                <Text style={styles.nameAutoRevertText}>Use auto name ✓</Text>
-              </TouchableOpacity>
+              <View style={styles.nameCustomActions}>
+                {data.name?.trim() ? (
+                  <TouchableOpacity
+                    style={styles.nameCustomClear}
+                    accessibilityLabel="Reset to auto-generated name"
+                    onPress={() => onChange({ name: generatedBedName })}
+                  >
+                    <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                ) : null}
+                <TouchableOpacity
+                  style={styles.namePreviewActionUse}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setShowCustomName(false);
+                    onChange({ name: generatedBedName });
+                  }}
+                >
+                  <Text style={styles.namePreviewActionText}>Use Auto ✓</Text>
+                </TouchableOpacity>
+              </View>
             ) : null}
-          </>
+          </View>
         )}
       </View>
 

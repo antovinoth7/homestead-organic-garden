@@ -22,15 +22,16 @@ import { BedCard } from '@/components/BedCard';
 import { BedFilterSheet, BedCounts } from '@/components/BedFilterSheet';
 import { BedDeleteModal } from '@/components/modals/BedDeleteModal';
 import { AnimatedFAB, useTabBarScroll, TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
+import { ScreenHeader } from '@/components/ScreenHeader';
+import { UndoToast } from '@/components/UndoToast';
 import { createStyles } from '@/styles/bedListStyles';
 import {
   filterAndSortBeds,
   BedActiveFilters,
   BedSortOption,
   DEFAULT_BED_FILTERS,
-  LOW_LEGUME_THRESHOLD,
 } from '@/utils/filterAndSortBeds';
-import { bedExpectsLegumes } from '@/config/beds';
+import { getBedStatus } from '@/utils/bedStatus';
 import type { BedListScreenNavigationProp } from '@/types/navigation.types';
 
 const SORT_LABELS: Record<BedSortOption, string> = {
@@ -300,14 +301,8 @@ export default function BedListScreen(): React.JSX.Element {
     [navigation]
   );
 
-  const lowLegumeBeds = useMemo(
-    () =>
-      beds.filter(
-        (b) =>
-          bedExpectsLegumes(b.type) &&
-          b.legume_coverage_pct < LOW_LEGUME_THRESHOLD &&
-          b.plant_count > 0
-      ),
+  const attentionCount = useMemo(
+    () => beds.filter((b) => getBedStatus(b).attention.length > 0).length,
     [beds]
   );
 
@@ -325,34 +320,15 @@ export default function BedListScreen(): React.JSX.Element {
     [navigateToBed, requestDelete, handleEdit, handleRotation, handleSwipeableOpen]
   );
 
-  const renderUndoToast = (): React.JSX.Element | null => {
-    if (!pendingDelete) return null;
-    const progressWidth = undoProgress.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['0%', '100%'],
-    });
-    return (
-      <View
-        style={[styles.undoToast, { bottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8 }]}
-      >
-        <View style={styles.undoToastRow}>
-          <View style={styles.undoToastLeft}>
-            <Ionicons name="trash-outline" size={16} color={theme.textSecondary} />
-            <Text style={styles.undoToastText}>{pendingDelete.name} deleted</Text>
-          </View>
-          <TouchableOpacity
-            onPress={handleUndo}
-            hitSlop={{ top: 8, bottom: 8, left: 12, right: 4 }}
-          >
-            <Text style={styles.undoToastAction}>Undo</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.undoProgressTrack}>
-          <Animated.View style={[styles.undoProgressBar, { width: progressWidth }]} />
-        </View>
-      </View>
-    );
-  };
+  const renderUndoToast = (): React.JSX.Element => (
+    <UndoToast
+      visible={pendingDelete !== null}
+      message={pendingDelete ? `${pendingDelete.name} deleted` : ''}
+      onUndo={handleUndo}
+      progress={undoProgress}
+      bottomOffset={TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8}
+    />
+  );
 
   if (loading && beds.length === 0) {
     return (
@@ -375,8 +351,8 @@ export default function BedListScreen(): React.JSX.Element {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        {searchActive ? (
+      {searchActive ? (
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
           <View style={styles.searchExpandedRow}>
             <TouchableOpacity
               style={styles.searchBackBtn}
@@ -419,12 +395,12 @@ export default function BedListScreen(): React.JSX.Element {
               )}
             </View>
           </View>
-        ) : (
-          <>
-            <View>
-              <Text style={styles.title}>Beds</Text>
-            </View>
-            <View style={styles.headerActions}>
+        </View>
+      ) : (
+        <ScreenHeader
+          title="Beds"
+          right={
+            <>
               <TouchableOpacity
                 style={styles.headerIconBtn}
                 onPress={() => {
@@ -451,10 +427,10 @@ export default function BedListScreen(): React.JSX.Element {
                   </View>
                 )}
               </TouchableOpacity>
-            </View>
-          </>
-        )}
-      </View>
+            </>
+          }
+        />
+      )}
 
       {beds.length > 0 && (
         <View style={styles.resultsHeader}>
@@ -482,12 +458,12 @@ export default function BedListScreen(): React.JSX.Element {
         </View>
       )}
 
-      {lowLegumeBeds.length > 0 && (
+      {attentionCount > 0 && (
         <View style={styles.legumeBanner}>
           <Ionicons name="warning-outline" size={16} color={theme.warning ?? '#f59e0b'} />
           <Text style={styles.legumeBannerText}>
-            {lowLegumeBeds.length} bed{lowLegumeBeds.length > 1 ? 's' : ''} under 20% legume
-            coverage
+            {attentionCount} bed{attentionCount > 1 ? 's' : ''} need
+            {attentionCount === 1 ? 's' : ''} attention
           </Text>
         </View>
       )}
