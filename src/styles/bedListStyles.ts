@@ -130,6 +130,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 4,
       paddingVertical: 1,
     },
+    statusPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      flexShrink: 0,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+    },
+    statusPillText: { fontSize: 11, fontWeight: '700' },
+    attentionDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: 6,
+    },
     cardMetaRow: {
       flexDirection: 'row',
       alignItems: 'center',

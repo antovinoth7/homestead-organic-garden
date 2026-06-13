@@ -30,9 +30,8 @@ import {
   BedActiveFilters,
   BedSortOption,
   DEFAULT_BED_FILTERS,
-  LOW_LEGUME_THRESHOLD,
 } from '@/utils/filterAndSortBeds';
-import { bedExpectsLegumes } from '@/config/beds';
+import { getBedStatus } from '@/utils/bedStatus';
 import type { BedListScreenNavigationProp } from '@/types/navigation.types';
 
 const SORT_LABELS: Record<BedSortOption, string> = {
@@ -302,14 +301,8 @@ export default function BedListScreen(): React.JSX.Element {
     [navigation]
   );
 
-  const lowLegumeBeds = useMemo(
-    () =>
-      beds.filter(
-        (b) =>
-          bedExpectsLegumes(b.type) &&
-          b.legume_coverage_pct < LOW_LEGUME_THRESHOLD &&
-          b.plant_count > 0
-      ),
+  const attentionCount = useMemo(
+    () => beds.filter((b) => getBedStatus(b).attention.length > 0).length,
     [beds]
   );
 
@@ -465,12 +458,12 @@ export default function BedListScreen(): React.JSX.Element {
         </View>
       )}
 
-      {lowLegumeBeds.length > 0 && (
+      {attentionCount > 0 && (
         <View style={styles.legumeBanner}>
           <Ionicons name="warning-outline" size={16} color={theme.warning ?? '#f59e0b'} />
           <Text style={styles.legumeBannerText}>
-            {lowLegumeBeds.length} bed{lowLegumeBeds.length > 1 ? 's' : ''} under 20% legume
-            coverage
+            {attentionCount} bed{attentionCount > 1 ? 's' : ''} need
+            {attentionCount === 1 ? 's' : ''} attention
           </Text>
         </View>
       )}
