@@ -151,10 +151,17 @@ export default function BedDetailScreen(): React.JSX.Element {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
+          <Ionicons name="chevron-back" size={24} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>{bed.name}</Text>
+        <Text style={styles.title} numberOfLines={1}>{bed.name}</Text>
         <Text style={styles.typeBadge}>{bed.type.replace(/_/g, ' ')}</Text>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => navigation.navigate('BedCreationWizard', { editBedId: bedId })}
+          accessibilityLabel="Edit bed"
+        >
+          <Ionicons name="pencil" size={18} color={theme.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Resting banner */}
@@ -210,62 +217,30 @@ export default function BedDetailScreen(): React.JSX.Element {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Soil Input Log</Text>
         <View style={styles.inputLogGrid}>
-          <View style={styles.inputLogItem}>
+          <TouchableOpacity style={styles.inputLogItem} onPress={() => handleLogInput('water')}>
             <Ionicons name="water-outline" size={16} color={theme.primary} />
             <Text style={styles.inputLogLabel}>Last water</Text>
             <Text style={styles.inputLogValue}>{formatRelativeDate(bed.last_water_date)}</Text>
-          </View>
-          <View style={styles.inputLogItem}>
+            <Text style={styles.inputLogTapHint}>Tap to log</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.inputLogItem}
+            onPress={() => handleLogInput('jeevamrutha')}
+          >
             <Ionicons name="flask-outline" size={16} color={theme.primary} />
             <Text style={styles.inputLogLabel}>Last Jeevamrutha</Text>
             <Text style={styles.inputLogValue}>
               {formatRelativeDate(bed.last_jeevamrutha_date)}
             </Text>
-          </View>
-          <View style={styles.inputLogItem}>
+            <Text style={styles.inputLogTapHint}>Tap to log</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.inputLogItem} onPress={() => handleLogInput('weeding')}>
             <Ionicons name="cut-outline" size={16} color={theme.primary} />
             <Text style={styles.inputLogLabel}>Last weeding</Text>
             <Text style={styles.inputLogValue}>{formatRelativeDate(bed.last_weeding_date)}</Text>
-          </View>
-        </View>
-        <View style={styles.logInputButtons}>
-          <TouchableOpacity style={styles.logInputChip} onPress={() => handleLogInput('water')}>
-            <Text style={styles.logInputChipText}>💧 Log Water</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.logInputChip}
-            onPress={() => handleLogInput('jeevamrutha')}
-          >
-            <Text style={styles.logInputChipText}>🧪 Log Jeevamrutha</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.logInputChip} onPress={() => handleLogInput('weeding')}>
-            <Text style={styles.logInputChipText}>✂️ Log Weeding</Text>
+            <Text style={styles.inputLogTapHint}>Tap to log</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Plants summary */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Plants ({plants.length})</Text>
-        {plants.length === 0 ? (
-          <Text style={styles.emptyText}>No plants assigned to this bed yet.</Text>
-        ) : (
-          plants.map((p) => (
-            <View key={p.id} style={styles.plantRow}>
-              <Text style={styles.plantName}>{p.name}</Text>
-              {p.bed_layer && (
-                <Text style={styles.layerBadge}>{p.bed_layer.replace(/_/g, ' ')}</Text>
-              )}
-            </View>
-          ))
-        )}
-        <TouchableOpacity
-          style={styles.addPlantButton}
-          onPress={() => navigation.navigate('BedPlantPicker', { bedId })}
-        >
-          <Ionicons name="add-circle-outline" size={18} color={theme.primary} />
-          <Text style={styles.addPlantText}>Add plants to bed</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Transition Inputs */}
@@ -342,21 +317,21 @@ export default function BedDetailScreen(): React.JSX.Element {
       <View style={styles.actions}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate('BedPlantPicker', { bedId })}
-        >
-          <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
-          <Text style={styles.actionText}>Add Plant</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButton}
           onPress={() => navigation.navigate('BedTasks', { bedId })}
         >
           <Ionicons name="checkmark-circle-outline" size={20} color={theme.primary} />
           <Text style={styles.actionText}>View Tasks</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('BedPlantPicker', { bedId })}
+        >
+          <Ionicons name="swap-horizontal-outline" size={20} color={theme.primary} />
+          <Text style={styles.actionText}>Rotate Bed</Text>
+        </TouchableOpacity>
       </View>
-      <View style={styles.actions}>
-        {!bed.is_resting && (
+      {!bed.is_resting && (
+        <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, styles.restButton]}
             onPress={handleMarkResting}
@@ -367,15 +342,8 @@ export default function BedDetailScreen(): React.JSX.Element {
               Mark as Resting
             </Text>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('BedPlantPicker', { bedId })}
-        >
-          <Ionicons name="swap-horizontal-outline" size={20} color={theme.primary} />
-          <Text style={styles.actionText}>Rotate Bed</Text>
-        </TouchableOpacity>
-      </View>
+        </View>
+      )}
     </ScrollView>
   );
 }
