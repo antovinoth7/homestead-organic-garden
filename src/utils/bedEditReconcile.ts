@@ -11,7 +11,7 @@ import { Plant, PlantEntry } from '@/types/database.types';
 export function plantToEntry(plant: Plant): PlantEntry {
   return {
     id: plant.id,
-    name: plant.name,
+    name: plant.plant_variety ?? plant.name,
     layer: plant.bed_layer ?? 'understory',
     spacingCm: plant.spacing_cm ?? 30,
     sortOrder: plant.sort_order ?? 0,

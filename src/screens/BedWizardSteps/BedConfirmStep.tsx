@@ -88,33 +88,54 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
     });
   }, [s2, s1?.bed_type]);
 
+  const autoTasks = [
+    'Bed watering (min interval from plants)',
+    'Jeevamrutha application (every 21 days)',
+    'Weeding (every 14 days)',
+  ];
+
   return (
     <ScrollView contentContainerStyle={styles.stepContainer}>
-      {s2?.name ? (
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Bed name</Text>
-          <Text style={styles.summaryRow}>{s2.name}</Text>
+      {/* Overview — bed name, type, and key details in one card */}
+      <View style={styles.cfOverviewCard}>
+        <View style={styles.cfOverviewHead}>
+          <View style={styles.cfOverviewIcon}>
+            <Ionicons name="leaf" size={22} color={theme.primary} />
+          </View>
+          <View style={styles.cfOverviewTextCol}>
+            <Text style={styles.cfOverviewName} numberOfLines={1}>
+              {s2?.name?.trim() || template?.label || 'New bed'}
+            </Text>
+            {template ? (
+              <Text style={styles.cfOverviewType} numberOfLines={1}>
+                {template.label}
+              </Text>
+            ) : null}
+          </View>
         </View>
-      ) : null}
 
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Notes (optional)</Text>
-        <TextInput
-          style={[styles.textInput, styles.textArea]}
-          value={data.notes}
-          onChangeText={(v) => onChange({ notes: v })}
-          placeholder="Any additional notes about this bed"
-          placeholderTextColor={theme.textSecondary}
-          multiline
-          numberOfLines={3}
-          maxLength={300}
-        />
+        {summaryItems.length > 0 && (
+          <>
+            <View style={styles.cfDivider} />
+            {summaryItems.map((item) => (
+              <View key={item.icon} style={styles.cfSummaryRow}>
+                <Ionicons
+                  name={item.icon}
+                  size={16}
+                  color={theme.textSecondary}
+                  style={styles.cfSummaryIcon}
+                />
+                <Text style={styles.cfSummaryValue}>{item.value}</Text>
+              </View>
+            ))}
+          </>
+        )}
       </View>
 
       {/* Row-by-row layout preview */}
       {rowLayout && s3 && (
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Bed layout</Text>
+        <View style={styles.cfSection}>
+          <Text style={styles.cfEyebrow}>Bed layout</Text>
           <BedTopDownMap
             widthM={s3.width_m}
             lengthM={s3.length_m}
@@ -128,78 +149,86 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
         </View>
       )}
 
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Summary</Text>
-        {summaryItems.map((item) => (
-          <View key={item.icon} style={styles.summaryItemRow}>
-            <Ionicons
-              name={item.icon}
-              size={16}
-              color={theme.textSecondary}
-              style={styles.summaryItemIcon}
-            />
-            <Text style={styles.summaryItemValue}>{item.value}</Text>
-          </View>
-        ))}
-      </View>
-
       {/* First-harvest timeline */}
       {harvestPreview.length > 1 && (
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>First harvest from this bed</Text>
-          {harvestPreview.map((item) => {
-            const maxDays = harvestPreview[harvestPreview.length - 1]!.days;
-            const barWidth = Math.max(20, Math.round((item.days / maxDays) * 140));
-            return (
-              <View key={item.name} style={styles.gtHarvestRow}>
-                <View style={styles.gtHarvestLabelCol}>
-                  <Text style={styles.gtHarvestName}>
-                    {item.emoji} {item.name}
-                  </Text>
+        <View style={styles.cfSection}>
+          <Text style={styles.cfEyebrow}>First harvest from this bed</Text>
+          <View style={styles.cfCard}>
+            {harvestPreview.map((item) => {
+              const maxDays = harvestPreview[harvestPreview.length - 1]!.days;
+              const barWidth = Math.max(20, Math.round((item.days / maxDays) * 140));
+              return (
+                <View key={item.name} style={styles.gtHarvestRow}>
+                  <View style={styles.gtHarvestLabelCol}>
+                    <Text style={styles.gtHarvestName}>
+                      {item.emoji} {item.name}
+                    </Text>
+                  </View>
+                  <View style={styles.gtHarvestBarTrack}>
+                    <View style={[styles.gtHarvestBar, { width: barWidth }]} />
+                  </View>
+                  <Text style={styles.gtHarvestDays}>{item.days}d</Text>
                 </View>
-                <View style={styles.gtHarvestBarTrack}>
-                  <View style={[styles.gtHarvestBar, { width: barWidth }]} />
-                </View>
-                <Text style={styles.gtHarvestDays}>{item.days}d</Text>
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
         </View>
       )}
 
       {/* Before-planting prep checklist — collapsed by default */}
       {prepSteps.length > 0 && (
-        <View style={styles.szPrepCard}>
-          <TouchableOpacity
-            style={styles.szPrepToggleRow}
-            activeOpacity={0.7}
-            onPress={() => setPrepExpanded((v) => !v)}
-          >
-            <Text style={styles.szPrepCardTitle}>
-              🌱 Prep checklist · {prepSteps.length} steps
-            </Text>
-            <Text style={styles.szPrepChevron}>{prepExpanded ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {prepExpanded &&
-            prepSteps.map((s, i) => (
-              <View key={i} style={[styles.szPrepStepRow, i === 0 && styles.szPrepFirstStep]}>
-                <View style={styles.szPrepStepNumber}>
-                  <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+        <View style={styles.cfSection}>
+          <View style={styles.szPrepCard}>
+            <TouchableOpacity
+              style={styles.szPrepToggleRow}
+              activeOpacity={0.7}
+              onPress={() => setPrepExpanded((v) => !v)}
+            >
+              <Text style={styles.szPrepCardTitle}>
+                🌱 Prep checklist · {prepSteps.length} steps
+              </Text>
+              <Text style={styles.szPrepChevron}>{prepExpanded ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+            {prepExpanded &&
+              prepSteps.map((s, i) => (
+                <View key={i} style={[styles.szPrepStepRow, i === 0 && styles.szPrepFirstStep]}>
+                  <View style={styles.szPrepStepNumber}>
+                    <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+                  </View>
+                  <View style={styles.szPrepStepContent}>
+                    <Text style={styles.szPrepStepText}>{s.text}</Text>
+                    <Text style={styles.szPrepStepDetail}>{s.detail}</Text>
+                  </View>
                 </View>
-                <View style={styles.szPrepStepContent}>
-                  <Text style={styles.szPrepStepText}>{s.text}</Text>
-                  <Text style={styles.szPrepStepDetail}>{s.detail}</Text>
-                </View>
-              </View>
-            ))}
+              ))}
+          </View>
         </View>
       )}
 
-      <View style={styles.autoTasksCard}>
-        <Text style={styles.autoTasksTitle}>Auto-tasks that will be created</Text>
-        <Text style={styles.autoTaskRow}>• Bed watering (min interval from plants)</Text>
-        <Text style={styles.autoTaskRow}>• Jeevamrutha application (every 21 days)</Text>
-        <Text style={styles.autoTaskRow}>• Weeding (every 14 days)</Text>
+      {/* Auto-tasks */}
+      <View style={styles.cfAutoCard}>
+        <Text style={styles.cfAutoTitle}>Auto-tasks that will be created</Text>
+        {autoTasks.map((task) => (
+          <View key={task} style={styles.cfAutoRow}>
+            <Ionicons name="checkmark-circle" size={15} color={theme.primary} />
+            <Text style={styles.cfAutoText}>{task}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Notes — editable, at the bottom */}
+      <View style={styles.cfSection}>
+        <Text style={styles.cfEyebrow}>Notes (optional)</Text>
+        <TextInput
+          style={[styles.textInput, styles.cfNotesArea]}
+          value={data.notes}
+          onChangeText={(v) => onChange({ notes: v })}
+          placeholder="Any additional notes about this bed"
+          placeholderTextColor={theme.textSecondary}
+          multiline
+          numberOfLines={3}
+          maxLength={300}
+        />
       </View>
     </ScrollView>
   );

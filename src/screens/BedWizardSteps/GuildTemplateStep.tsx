@@ -108,7 +108,7 @@ export function GuildTemplateStep({
   const template = bedType ? getGuildTemplate(bedType) : null;
 
   const [autoAddedMsg, setAutoAddedMsg] = useState<string | null>(null);
-  const [quickStartApplied, setQuickStartApplied] = useState(false);
+  const quickStartApplied = data.quick_start_applied ?? false;
   const [companionsExpanded, setCompanionsExpanded] = useState(true);
   const [soilBuildersExpanded, setSoilBuildersExpanded] = useState(false);
 
@@ -250,12 +250,52 @@ export function GuildTemplateStep({
     candidateForAccumulator,
   ]);
 
+  // ── Companion & accumulator capacity ────────────────────────────────────────
+
+  // Sum of (plantsPerRow − 1) gaps across every main-crop row currently planted.
+  const totalInterplantSlots = useMemo(() => {
+    if (!template) return 0;
+    const widthCm = widthM * 100;
+    let slots = 0;
+    for (const row of template.plant_rows) {
+      const count = data.plant_entries.filter((e) => e.name === row.name).length;
+      if (count === 0) continue;
+      const ppr = computePlantsPerRow(widthCm, row.spacing_cm);
+      const rowCount = Math.ceil(count / ppr);
+      slots += rowCount * Math.max(0, ppr - 1);
+    }
+    return slots;
+  }, [data.plant_entries, template, widthM]);
+
+  // Perimeter-based border slots for chop-and-drop accumulators.
+  const totalAccumulatorSlots = useMemo(
+    () => Math.floor((2 * (widthM + lengthM) * 100) / ACCUMULATOR_DEFAULT_SPACING),
+    [widthM, lengthM]
+  );
+
+  const totalCompanionsPlaced = useMemo(
+    () => data.plant_entries.filter((e) => companionSuggestions.includes(e.name)).length,
+    [data.plant_entries, companionSuggestions]
+  );
+
+  const totalAccumulatorsPlaced = useMemo(
+    () =>
+      data.plant_entries.filter((e) => DYNAMIC_ACCUMULATORS.some((a) => a.name === e.name)).length,
+    [data.plant_entries]
+  );
+
+  const noInterplantSlots = totalInterplantSlots === 0;
+
+  // True per-species capacity comes from maxFitMap (the same row-layout engine Step 5
+  // uses), so the slot-status text never contradicts a disabled "+" button.
+  const anyCompanionFits = companionSuggestions.some((c: string) => (maxFitMap.get(c) ?? 0) > 0);
+  const anyAccumulatorFits = DYNAMIC_ACCUMULATORS.some((a) => (maxFitMap.get(a.name) ?? 0) > 0);
+
   // ── Increment / decrement handlers ──────────────────────────────────────────
 
   const incrementPlant = useCallback(
     (candidate: RowPlantInput, isMainCrop: boolean, companionsToAutoAdd?: string[]): void => {
       setAutoAddedMsg(null);
-      setQuickStartApplied(false);
       // Antagonist check vs any *different* species already in the bed
       for (const entry of data.plant_entries) {
         if (entry.name === candidate.name) continue;
@@ -266,7 +306,8 @@ export function GuildTemplateStep({
       const bedWidthCm = Math.round(widthM * 100);
       const plantsToAdd = isMainCrop ? computePlantsPerRow(bedWidthCm, candidate.spacingCm) : 1;
 
-      // Capacity check — need room for a full row
+      // Capacity check — ground truth from the same row-layout engine Step 5 uses.
+      // Mains need room for a full row; companions/accumulators need room for one.
       const remaining = maxFitMap.get(candidate.name) ?? 0;
       if (remaining < plantsToAdd) return;
 
@@ -289,7 +330,21 @@ export function GuildTemplateStep({
       // On first add of a main crop, auto-add recommended companions that fit
       const addedCompanions: string[] = [];
       if (instanceCount === 0 && companionsToAutoAdd && companionsToAutoAdd.length > 0) {
+        // Cap auto-add to available gap slots so companions never spill into their own rows.
+        let gapSlots = 0;
+        if (template) {
+          for (const tRow of template.plant_rows) {
+            const cnt = newEntries.filter((e) => e.name === tRow.name).length;
+            if (cnt === 0) continue;
+            const ppr = computePlantsPerRow(bedWidthCm, tRow.spacing_cm);
+            gapSlots += Math.ceil(cnt / ppr) * Math.max(0, ppr - 1);
+          }
+        }
+        const alreadyPlaced = newEntries.filter((e) => companionSuggestions.includes(e.name)).length;
+        let slotsRemaining = Math.max(0, gapSlots - alreadyPlaced);
+
         for (const compName of companionsToAutoAdd) {
+          if (slotsRemaining <= 0) break;
           if (newEntries.some((e) => e.name === compName)) continue;
           let antag = false;
           for (const existing of newEntries) {
@@ -313,10 +368,11 @@ export function GuildTemplateStep({
           if (!fitResult.fitsInBed) continue;
           newEntries.push(makeEntry(compName, COMPANION_DEFAULT_LAYER, COMPANION_DEFAULT_SPACING));
           addedCompanions.push(compName);
+          slotsRemaining--;
         }
       }
 
-      onChange({ plant_entries: newEntries });
+      onChange({ plant_entries: newEntries, quick_start_applied: false });
       if (addedCompanions.length > 0) {
         const label = addedCompanions.length === 1 ? 'companion' : 'companions';
         setAutoAddedMsg(`✓ Also added to your bed: ${addedCompanions.join(', ')} (${label})`);
@@ -331,6 +387,7 @@ export function GuildTemplateStep({
       construction,
       maxFitMap,
       candidateForCompanion,
+      companionSuggestions,
       onChange,
       setAutoAddedMsg,
     ]
@@ -339,7 +396,6 @@ export function GuildTemplateStep({
   const decrementPlant = useCallback(
     (plantName: string, spacingCm: number, isMainCrop: boolean): void => {
       setAutoAddedMsg(null);
-      setQuickStartApplied(false);
       const bedWidthCm = Math.round(widthM * 100);
       const plantsToRemove = isMainCrop ? computePlantsPerRow(bedWidthCm, spacingCm) : 1;
       let toRemove = plantsToRemove;
@@ -350,7 +406,7 @@ export function GuildTemplateStep({
           toRemove--;
         }
       }
-      onChange({ plant_entries: next });
+      onChange({ plant_entries: next, quick_start_applied: false });
     },
     [data.plant_entries, widthM, onChange]
   );
@@ -402,12 +458,16 @@ export function GuildTemplateStep({
       bedTypeForEngine,
       construction
     );
-    onChange({ plant_entries: entries });
-    setQuickStartApplied(true);
+    onChange({ plant_entries: entries, quick_start_applied: true });
     if (dropped.length > 0) {
       setAutoAddedMsg(`⚠️ Bed full — couldn't fit ${dropped.join(', ')}. Try a larger bed size.`);
     }
   }, [template, widthM, lengthM, bedTypeForEngine, construction, onChange]);
+
+  const handleReset = useCallback(() => {
+    onChange({ plant_entries: [], quick_start_applied: false });
+    setAutoAddedMsg(null);
+  }, [onChange]);
 
   if (!template) {
     return (
@@ -432,29 +492,39 @@ export function GuildTemplateStep({
         </View>
       )}
 
-      <TouchableOpacity
-        style={[styles.gtUseFullPlanBtn, quickStartApplied && styles.gtUseFullPlanBtnApplied]}
-        onPress={handleUseFullPlan}
-        activeOpacity={0.8}
-      >
+      <View style={[styles.gtUseFullPlanBtn, quickStartApplied && styles.gtUseFullPlanBtnApplied]}>
         <View style={styles.gtQuickStartTextCol}>
           <Text
             style={[styles.gtQuickStartTitle, quickStartApplied && styles.gtQuickStartTitleApplied]}
           >
-            {quickStartApplied ? '✓ Quick Start applied' : 'Quick Start'}
+            {quickStartApplied ? '✓ Quick Start applied' : '⚡ Quick Start'}
           </Text>
           <Text style={styles.gtQuickStartSubtitle} numberOfLines={1}>
             {quickStartApplied
-              ? `Balanced ${template.label} guild · tap to reset`
+              ? `Balanced ${template.label} guild`
               : `Auto-fill a balanced ${template.label}`}
           </Text>
         </View>
-        <View
-          style={[styles.gtQuickStartPill, quickStartApplied && styles.gtQuickStartPillApplied]}
-        >
-          <Text style={styles.gtQuickStartPillText}>{quickStartApplied ? 'Reapply' : 'Apply'}</Text>
-        </View>
-      </TouchableOpacity>
+
+        {quickStartApplied ? (
+          <TouchableOpacity
+            style={styles.gtQuickStartIconBtn}
+            onPress={handleReset}
+            activeOpacity={0.8}
+            accessibilityLabel="Clear Quick Start plan"
+          >
+            <Ionicons name="refresh" size={16} color={theme.error} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.gtQuickStartPill}
+            onPress={handleUseFullPlan}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.gtQuickStartPillText}>Apply</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {data.plant_entries.length === 0 && (
         <Text style={styles.gtEmptyHint}>
@@ -605,27 +675,34 @@ export function GuildTemplateStep({
               color={theme.textSecondary}
             />
           </TouchableOpacity>
+          <Text style={styles.gtSlotStatus}>
+            {noInterplantSlots
+              ? 'Add main crops first to create row gaps'
+              : anyCompanionFits
+                ? `${Math.max(0, totalInterplantSlots - totalCompanionsPlaced)} of ${totalInterplantSlots} gap slots free`
+                : 'Bed full — no room for more companions'}
+          </Text>
           {companionsExpanded &&
             companionSuggestions.map((comp: string) => {
               const compCandidate = candidateForCompanion(comp);
               const compCount = data.plant_entries.filter((e) => e.name === comp).length;
               const compBlocked = compCount === 0 && !!getBlockedReason(comp);
-              const compRemaining = maxFitMap.get(comp) ?? 0;
-              const compCapReached = compRemaining === 0;
+              const compFitLabel =
+                compCount > 0
+                  ? capacityText(compCandidate, compCount, false)
+                  : 'Interplants in gaps';
               return (
                 <View key={comp} style={styles.gtCompanionRow}>
                   <Text style={styles.gtCompanionEmoji}>{getPlantEmoji(comp)}</Text>
                   <View style={styles.gtCompanionNameBlock}>
                     <Text style={styles.gtCompanionName}>{comp}</Text>
-                    <Text style={styles.gtCompanionFitText}>
-                      {capacityText(compCandidate, compCount, false)}
-                    </Text>
+                    <Text style={styles.gtCompanionFitText}>{compFitLabel}</Text>
                   </View>
                   <PlantQtyStepper
                     count={compCount}
                     onIncrement={() => incrementPlant(compCandidate, false)}
                     onDecrement={() => decrementPlant(comp, COMPANION_DEFAULT_SPACING, false)}
-                    disabled={compBlocked || compCapReached}
+                    disabled={compBlocked || (maxFitMap.get(comp) ?? 0) < 1}
                   />
                 </View>
               );
@@ -646,6 +723,11 @@ export function GuildTemplateStep({
           color={theme.textSecondary}
         />
       </TouchableOpacity>
+      <Text style={styles.gtSlotStatus}>
+        {anyAccumulatorFits
+          ? `${Math.max(0, totalAccumulatorSlots - totalAccumulatorsPlaced)} of ${totalAccumulatorSlots} border slots free`
+          : 'Bed full — no room for more soil builders'}
+      </Text>
 
       {soilBuildersExpanded && (
         <>
@@ -657,8 +739,9 @@ export function GuildTemplateStep({
             const accCount = data.plant_entries.filter((e) => e.name === acc.name).length;
             const isAdded = accCount > 0;
             const accBlocked = !isAdded && !!getBlockedReason(acc.name);
-            const accRemaining = maxFitMap.get(acc.name) ?? 0;
-            const accCapReached = accRemaining === 0;
+            const accFitLabel = isAdded
+              ? capacityText(accCandidate, accCount, false)
+              : 'Perimeter / border plant';
             return (
               <View key={acc.name} style={[styles.gtAccCard, isAdded && styles.gtAccCardSelected]}>
                 <View style={styles.gtAccHeader}>
@@ -666,15 +749,13 @@ export function GuildTemplateStep({
                     <Text style={[styles.gtAccName, isAdded && styles.gtAccNameSelected]}>
                       {acc.name}
                     </Text>
-                    <Text style={styles.gtAccFitText}>
-                      {capacityText(accCandidate, accCount, false)}
-                    </Text>
+                    <Text style={styles.gtAccFitText}>{accFitLabel}</Text>
                   </View>
                   <PlantQtyStepper
                     count={accCount}
                     onIncrement={() => incrementPlant(accCandidate, false)}
                     onDecrement={() => decrementPlant(acc.name, ACCUMULATOR_DEFAULT_SPACING, false)}
-                    disabled={accBlocked || accCapReached}
+                    disabled={accBlocked || (maxFitMap.get(acc.name) ?? 0) < 1}
                   />
                 </View>
                 <Text style={[styles.gtIntervalText, isAdded && styles.gtIntervalTextSelected]}>

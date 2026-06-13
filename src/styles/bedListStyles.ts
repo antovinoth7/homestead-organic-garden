@@ -30,6 +30,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    headerIconBtnActive: {
+      backgroundColor: theme.background,
+      borderWidth: 1.5,
+      borderColor: theme.primary,
+    },
     searchActiveDot: {
       position: 'absolute',
       bottom: 6,
@@ -88,7 +93,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 10,
     },
     legumeBannerText: { color: theme.warning, fontSize: 13 },
-    list: { padding: 12, gap: 12, paddingBottom: 120 },
+    list: { padding: 12, gap: 12 },
     emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
     emptyTitle: { fontSize: 18, fontWeight: '600', color: theme.text, marginTop: 16 },
     emptySubtitle: { color: theme.textSecondary, marginTop: 8, textAlign: 'center' },

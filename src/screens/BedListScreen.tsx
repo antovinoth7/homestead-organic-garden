@@ -10,6 +10,7 @@ import {
   Alert,
   LayoutAnimation,
 } from 'react-native';
+import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import type Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,7 +48,7 @@ export default function BedListScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<BedListScreenNavigationProp>();
   const { beds: bedsData, loading, error, refresh } = useBedData();
-  const { resetTabBar } = useTabBarScroll();
+  const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
 
   // Ids hidden from the list: covers both the in-flight undo window and the gap
   // between committing a delete and the hook reload dropping the bed. Deriving the
@@ -184,6 +185,13 @@ export default function BedListScreen(): React.JSX.Element {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     },
     []
+  );
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      onTabBarScroll(e);
+    },
+    [onTabBarScroll]
   );
 
   // Ensure the bottom tab bar is shown whenever the list regains focus (e.g.
@@ -415,9 +423,6 @@ export default function BedListScreen(): React.JSX.Element {
           <>
             <View>
               <Text style={styles.title}>Beds</Text>
-              <Text style={styles.bedCount}>
-                {beds.length > 0 ? `${beds.length} Bed${beds.length > 1 ? 's' : ''}` : ''}
-              </Text>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity
@@ -429,6 +434,22 @@ export default function BedListScreen(): React.JSX.Element {
               >
                 <Ionicons name="search" size={20} color={theme.textInverse} />
                 {searchInput.trim() !== '' && <View style={styles.searchActiveDot} />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.headerIconBtn, showFilters && styles.headerIconBtnActive]}
+                onPress={toggleFilters}
+                accessibilityLabel="Sort and filter beds"
+              >
+                <Ionicons
+                  name="funnel"
+                  size={20}
+                  color={showFilters ? theme.primary : theme.textInverse}
+                />
+                {activeFilterCount > 0 && !showFilters && (
+                  <View style={styles.filterBadge}>
+                    <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
           </>
@@ -448,9 +469,7 @@ export default function BedListScreen(): React.JSX.Element {
                 </View>
               </>
             ) : (
-              <Text style={styles.resultsLabel}>
-                {visibleBeds.length === 1 ? 'Bed' : 'Beds'}
-              </Text>
+              <Text style={styles.resultsLabel}>{visibleBeds.length === 1 ? 'Bed' : 'Beds'}</Text>
             )}
           </View>
           <View style={styles.resultsRight}>
@@ -458,22 +477,6 @@ export default function BedListScreen(): React.JSX.Element {
               <Ionicons name="swap-vertical" size={13} color={theme.textSecondary} />
               <Text style={styles.sortPillText}>{SORT_LABELS[sortBy]}</Text>
               <Ionicons name="chevron-down" size={12} color={theme.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.filterToggleButton, showFilters && styles.filterToggleButtonActive]}
-              onPress={toggleFilters}
-              accessibilityLabel="Sort and filter beds"
-            >
-              <Ionicons
-                name="funnel"
-                size={16}
-                color={showFilters ? theme.textInverse : theme.primary}
-              />
-              {activeFilterCount > 0 && !showFilters && (
-                <View style={styles.filterBadge}>
-                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                </View>
-              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -512,7 +515,12 @@ export default function BedListScreen(): React.JSX.Element {
           data={visibleBeds}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 },
+          ]}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           onRefresh={refresh}
           refreshing={loading}
           initialNumToRender={8}
