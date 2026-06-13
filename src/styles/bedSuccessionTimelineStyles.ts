@@ -91,6 +91,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 4,
       opacity: 0.8,
     },
+    // Growing-period bar (sow → harvest window start)
+    growingBar: {
+      position: 'absolute' as const,
+      backgroundColor: theme.primaryLight,
+      borderRadius: 4,
+      opacity: 0.85,
+    },
     // Green manure fallow bar
     greenManureBar: {
       position: 'absolute' as const,
@@ -137,6 +144,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     legendDotToday: {
       backgroundColor: theme.primary,
+    },
+    legendDotGrowing: {
+      backgroundColor: theme.primaryLight,
     },
     legendText: {
       fontSize: 10,
