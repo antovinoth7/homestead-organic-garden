@@ -4,14 +4,14 @@
 
 export const lightTheme = {
   // Background colors
-  background: '#faf6f0',
+  background: '#fbf9f5',
   backgroundSecondary: '#ffffff',
-  backgroundTertiary: '#edf7f2',
+  backgroundTertiary: '#f4eee6',
 
   // Text colors
   text: '#1a110a',
   textSecondary: '#4a3828',
-  textTertiary: '#7a6858',
+  textTertiary: '#645242',
   textInverse: '#ffffff',
 
   // Primary colors
@@ -24,9 +24,9 @@ export const lightTheme = {
   accentLight: '#fff8ed',
 
   // Border colors
-  border: '#e8ddd4',
-  borderLight: '#f0e8dc',
-  borderDark: '#ddd0c4',
+  border: '#dccfc0',
+  borderLight: '#e7dccf',
+  borderDark: '#d0c1b0',
 
   // Status colors
   success: '#4caf50',
@@ -66,19 +66,19 @@ export const lightTheme = {
 
   // Input colors
   inputBackground: '#ffffff',
-  inputText: '#1a1a1a',
+  inputText: '#1a110a',
   inputPlaceholder: '#7a6858',
-  inputBorder: '#e8ddd4',
+  inputBorder: '#dccfc0',
 
   // Picker colors
   pickerBackground: '#ffffff',
   pickerText: '#1a110a',
-  pickerBorder: '#e8ddd4',
+  pickerBorder: '#dccfc0',
 
   // Tab bar
   tabBarActive: '#1a4a2e',
   tabBarInactive: '#7a6858',
-  tabBarBackground: '#faf6f0',
+  tabBarBackground: '#fbf9f5',
 };
 
 export const darkTheme = {
