@@ -19,6 +19,7 @@ import {
   createPlantBatch,
   updatePlant,
   getPlantsByBed,
+  getAllPlants,
   deletePlantsForBed,
 } from '@/services/plants';
 import { plantToEntry, computeRemovedPlants } from '@/utils/bedEditReconcile';
@@ -33,6 +34,10 @@ import { logger } from '@/utils/logger';
 import { getLocationConfig } from '@/services/locations';
 import { plantTypeFromName } from '@/utils/plantTypeFromName';
 import { cropFamilyFromName } from '@/utils/cropFamilyFromName';
+import {
+  buildGeneratedPlantNameBase,
+  buildGeneratedPlantName,
+} from '@/utils/plantNameGenerator';
 
 // ─── Per-step data shapes ─────────────────────────────────────────────────────
 
@@ -193,9 +198,14 @@ function buildPlantPayload(opts: {
   sortOrder: number;
 }): NewPlantPayload {
   return {
+    // `name` is a placeholder here — the batch builder overwrites it with the
+    // auto-generated display name once all payloads exist (for unique suffixes).
     name: opts.name,
     plant_type: plantTypeFromName(opts.name),
-    plant_variety: opts.variety,
+    // The wizard entry's `name` is the species; it belongs in `plant_variety`
+    // (the "Plant" selector), with any cultivar going to `variety`.
+    plant_variety: opts.name,
+    variety: opts.variety,
     photo_filename: null,
     photo_url: null,
     space_type: 'bed',
@@ -235,7 +245,9 @@ function buildPlantBatchFromEntries(
   bedLocation: string,
   bedSunlight: SunlightLevel,
   s3: Step3Data,
-  constructionType: 'raised' | 'in_ground'
+  constructionType: 'raised' | 'in_ground',
+  locationShortName: string,
+  existingPlants: ReadonlyArray<Partial<Pick<Plant, 'id' | 'name'>>>
 ): {
   newPlants: NewPlantPayload[];
   linkEntries: PlantEntry[];
@@ -358,7 +370,27 @@ function buildPlantBatchFromEntries(
     }
   }
 
-  return { newPlants, linkEntries };
+  // Final pass: assign auto-generated display names, matching the manual Plant
+  // form. Seed the dedup list with existing garden plants plus each payload as
+  // it's named so repeated species get unique " #N" suffixes.
+  const named: NewPlantPayload[] = [];
+  const seed: Array<Partial<Pick<Plant, 'id' | 'name'>>> = [...existingPlants];
+  for (const p of newPlants) {
+    const base = buildGeneratedPlantNameBase(
+      p.plant_type,
+      p.plant_variety ?? '',
+      p.variety ?? '',
+      p.planting_date ?? undefined,
+      bedLocation,
+      locationShortName
+    );
+    const name = base ? buildGeneratedPlantName(base, seed) : p.plant_variety ?? '';
+    const withName = { ...p, name };
+    named.push(withName);
+    seed.push(withName);
+  }
+
+  return { newPlants: named, linkEntries };
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -772,6 +804,28 @@ export function useBedCreationWizard(
       if (entries.length > 0) {
         const bedLocation = s2.parent_location ?? s2.child_location ?? '';
         const s3 = stepData[3] ?? DEFAULT_STEP3;
+
+        // Context for auto-naming, matching the manual Plant form. Both reads
+        // degrade gracefully — naming falls back to the location's first word.
+        let allPlants: Plant[] = [];
+        let locationShortName = '';
+        try {
+          allPlants = await getAllPlants();
+        } catch (err) {
+          logError('network', 'useBedCreationWizard: getAllPlants for naming failed', err as Error);
+        }
+        try {
+          const config = await getLocationConfig();
+          locationShortName =
+            config.parentLocationShortNames?.[s2.parent_location ?? ''] ?? '';
+        } catch (err) {
+          logError(
+            'network',
+            'useBedCreationWizard: getLocationConfig for naming failed',
+            err as Error
+          );
+        }
+
         const { newPlants, linkEntries } = buildPlantBatchFromEntries(
           entries,
           bedId,
@@ -779,7 +833,9 @@ export function useBedCreationWizard(
           bedLocation,
           s2.sunlight,
           s3,
-          s2.construction_type
+          s2.construction_type,
+          locationShortName,
+          allPlants
         );
 
         const linkResults = await Promise.allSettled(

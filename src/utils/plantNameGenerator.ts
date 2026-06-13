@@ -61,7 +61,7 @@ export const isGeneratedPlantName = (value: string, baseName: string): boolean =
  */
 export const buildGeneratedPlantName = (
   baseName: string,
-  existingPlants: Plant[],
+  existingPlants: ReadonlyArray<Partial<Pick<Plant, 'id' | 'name'>>>,
   currentPlantId?: string,
   currentGeneratedName?: string
 ): string => {
