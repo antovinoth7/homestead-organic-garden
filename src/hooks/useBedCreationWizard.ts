@@ -14,6 +14,7 @@ import {
   Plant,
 } from '@/types/database.types';
 
+import { canProceedStep, blockReasonForStep } from '@/hooks/bedWizardValidation';
 import { addBed, updateBed, deleteBed, getBeds, getBed } from '@/services/beds';
 import {
   createPlantBatch,
@@ -151,34 +152,6 @@ function computeRowLayoutSnapshot(
       planted_at: plantedAt,
     };
   });
-}
-
-// ─── Per-step validation ──────────────────────────────────────────────────────
-
-function canProceedStep(step: WizardStep, data: Partial<WizardStepData>): boolean {
-  switch (step) {
-    case 1:
-      return !!data[1]?.bed_type;
-    case 2: {
-      const s2 = data[2];
-      if (!s2) return false;
-      if (!s2.name?.trim()) return false;
-      if (s2.prev_crop_family === 'solanaceae') return false;
-      return true;
-    }
-    case 3: {
-      const s3 = data[3];
-      return !!s3 && s3.width_m > 0 && s3.length_m > 0;
-    }
-    case 4:
-      return (data[4]?.plant_entries.length ?? 0) > 0; // at least one crop required
-    case 5:
-      return true; // layout designer — always proceed
-    case 6:
-      return true; // notes optional; name was validated in Step 2
-    default:
-      return false;
-  }
 }
 
 // ─── Plant materialization (turn wizard PlantEntry into real Plant records) ───
@@ -408,6 +381,8 @@ export interface UseBedCreationWizardResult {
   currentStep: WizardStep;
   stepData: Partial<WizardStepData>;
   canProceed: boolean;
+  /** Human-readable reason the current step can't advance, or null when valid. */
+  blockReason: string | null;
   solanaceaeBlocked: boolean;
   directionMissing: boolean;
   existingBeds: Bed[];
@@ -563,6 +538,7 @@ export function useBedCreationWizard(
     locationConfig.childLocations.length > 0 &&
     !stepData[2]?.child_location;
   const canProceed = canProceedStep(currentStep, stepData) && !directionMissing;
+  const blockReason = blockReasonForStep(currentStep, stepData, directionMissing);
   const isDirty = isEditMode
     ? userTouched
     : currentStep > 1 || !!stepData[1]?.bed_type;
@@ -935,6 +911,7 @@ export function useBedCreationWizard(
     currentStep,
     stepData,
     canProceed,
+    blockReason,
     solanaceaeBlocked,
     directionMissing,
     existingBeds,

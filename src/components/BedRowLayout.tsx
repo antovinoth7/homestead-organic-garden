@@ -64,22 +64,6 @@ interface Props {
   bedType?: BedType;
 }
 
-const LAYER_BORDER: Record<BedLayer, string> = {
-  canopy: '#2e7d32',
-  climber: '#7b1fa2',
-  understory: '#558b2f',
-  root: '#e65100',
-  ground_cover: '#c8842a',
-};
-
-const LAYER_BG: Record<BedLayer, string> = {
-  canopy: '#f1f8f1',
-  climber: '#f5f0fa',
-  understory: '#f4f8ee',
-  root: '#fff8f0',
-  ground_cover: '#fdf5e8',
-};
-
 const LAYER_ICON: Record<BedLayer, string> = {
   canopy: '🌳',
   climber: '🌿',
@@ -319,8 +303,8 @@ function RowCard({
     [draggingId, localPlants, onReorder, row.layer, translateX]
   );
 
-  const borderColor = LAYER_BORDER[row.layer];
-  const bgColor = LAYER_BG[row.layer];
+  const borderColor = theme.layerColors[row.layer].color;
+  const bgColor = theme.layerColors[row.layer].bg;
   const icon = LAYER_ICON[row.layer];
   const displayName = getRowDisplayName(row.layer, row.isStaggered);
   const hasNFixer = row.plants.some((p) => p.isNFixer);
@@ -575,7 +559,7 @@ function AvailableLayersSection({
               <View
                 style={[
                   styles.availableLayerItemDot,
-                  { backgroundColor: LAYER_BORDER[ghost.layer] },
+                  { backgroundColor: theme.layerColors[ghost.layer].color },
                 ]}
               />
             </TouchableOpacity>
@@ -829,8 +813,8 @@ export function GhostRowCard({
 }): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const borderColor = LAYER_BORDER[ghost.layer];
-  const bgColor = LAYER_BG[ghost.layer];
+  const borderColor = theme.layerColors[ghost.layer].color;
+  const bgColor = theme.layerColors[ghost.layer].bg;
   const icon = LAYER_ICON[ghost.layer];
   const displayName = getRowDisplayName(ghost.layer, false);
 

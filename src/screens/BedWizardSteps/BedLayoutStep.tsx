@@ -56,6 +56,10 @@ export function BedLayoutStep({
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const resolveLayerColor = useCallback(
+    (layer: BedLayer): string => getLayerColor(theme, layer),
+    [theme]
+  );
 
   const [pickerVisible, setPickerVisible] = useState(false);
   const [targetLayer, setTargetLayer] = useState<BedLayer | null>(null);
@@ -305,7 +309,7 @@ export function BedLayoutStep({
             lengthM={step3.length_m}
             rows={rowLayout.rows}
             plantEmoji={getPlantEmoji}
-            layerColor={getLayerColor}
+            layerColor={resolveLayerColor}
             walkingPathCm={rowLayout.walkingPathCm}
             edgeBufferCm={rowLayout.edgeBufferCm}
             overflowCm={rowLayout.overflowCm}

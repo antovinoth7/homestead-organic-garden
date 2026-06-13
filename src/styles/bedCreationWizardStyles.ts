@@ -5,26 +5,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
     loadingContainer: { alignItems: 'center', justifyContent: 'center' },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingBottom: 10,
-      backgroundColor: theme.backgroundSecondary,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    closeButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: 12,
-      backgroundColor: theme.primary,
-    },
-    headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: theme.text },
-    headerSpacer: { width: 32 },
     progressContainer: {
       backgroundColor: theme.backgroundSecondary,
       borderBottomWidth: 1,
