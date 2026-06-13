@@ -284,11 +284,12 @@ export function GuildTemplateStep({
     [data.plant_entries]
   );
 
-  const companionsAtCapacity =
-    totalInterplantSlots > 0 && totalCompanionsPlaced >= totalInterplantSlots;
-  const accumulatorsAtCapacity =
-    totalAccumulatorSlots > 0 && totalAccumulatorsPlaced >= totalAccumulatorSlots;
   const noInterplantSlots = totalInterplantSlots === 0;
+
+  // True per-species capacity comes from maxFitMap (the same row-layout engine Step 5
+  // uses), so the slot-status text never contradicts a disabled "+" button.
+  const anyCompanionFits = companionSuggestions.some((c: string) => (maxFitMap.get(c) ?? 0) > 0);
+  const anyAccumulatorFits = DYNAMIC_ACCUMULATORS.some((a) => (maxFitMap.get(a.name) ?? 0) > 0);
 
   // ── Increment / decrement handlers ──────────────────────────────────────────
 
@@ -305,18 +306,10 @@ export function GuildTemplateStep({
       const bedWidthCm = Math.round(widthM * 100);
       const plantsToAdd = isMainCrop ? computePlantsPerRow(bedWidthCm, candidate.spacingCm) : 1;
 
-      // Capacity check — need room for a full row (companions interplant; skip for them)
-      if (isMainCrop) {
-        const remaining = maxFitMap.get(candidate.name) ?? 0;
-        if (remaining < plantsToAdd) return;
-      } else {
-        const isAcc = DYNAMIC_ACCUMULATORS.some((a) => a.name === candidate.name);
-        if (isAcc) {
-          if (totalAccumulatorsPlaced >= totalAccumulatorSlots) return;
-        } else {
-          if (totalCompanionsPlaced >= totalInterplantSlots) return;
-        }
-      }
+      // Capacity check — ground truth from the same row-layout engine Step 5 uses.
+      // Mains need room for a full row; companions/accumulators need room for one.
+      const remaining = maxFitMap.get(candidate.name) ?? 0;
+      if (remaining < plantsToAdd) return;
 
       const instanceCount = data.plant_entries.filter((e) => e.name === candidate.name).length;
       const makeEntry = (name: string, layer: BedLayer, spacingCm: number): PlantEntry => ({
@@ -396,10 +389,6 @@ export function GuildTemplateStep({
       candidateForCompanion,
       onChange,
       setAutoAddedMsg,
-      totalInterplantSlots,
-      totalCompanionsPlaced,
-      totalAccumulatorSlots,
-      totalAccumulatorsPlaced,
     ]
   );
 
@@ -688,7 +677,9 @@ export function GuildTemplateStep({
           <Text style={styles.gtSlotStatus}>
             {noInterplantSlots
               ? 'Add main crops first to create row gaps'
-              : `${Math.max(0, totalInterplantSlots - totalCompanionsPlaced)} of ${totalInterplantSlots} gap slots free`}
+              : anyCompanionFits
+                ? `${Math.max(0, totalInterplantSlots - totalCompanionsPlaced)} of ${totalInterplantSlots} gap slots free`
+                : 'Bed full — no room for more companions'}
           </Text>
           {companionsExpanded &&
             companionSuggestions.map((comp: string) => {
@@ -710,7 +701,7 @@ export function GuildTemplateStep({
                     count={compCount}
                     onIncrement={() => incrementPlant(compCandidate, false)}
                     onDecrement={() => decrementPlant(comp, COMPANION_DEFAULT_SPACING, false)}
-                    disabled={compBlocked || companionsAtCapacity}
+                    disabled={compBlocked || (maxFitMap.get(comp) ?? 0) < 1}
                   />
                 </View>
               );
@@ -732,7 +723,9 @@ export function GuildTemplateStep({
         />
       </TouchableOpacity>
       <Text style={styles.gtSlotStatus}>
-        {`${Math.max(0, totalAccumulatorSlots - totalAccumulatorsPlaced)} of ${totalAccumulatorSlots} border slots free`}
+        {anyAccumulatorFits
+          ? `${Math.max(0, totalAccumulatorSlots - totalAccumulatorsPlaced)} of ${totalAccumulatorSlots} border slots free`
+          : 'Bed full — no room for more soil builders'}
       </Text>
 
       {soilBuildersExpanded && (
@@ -761,7 +754,7 @@ export function GuildTemplateStep({
                     count={accCount}
                     onIncrement={() => incrementPlant(accCandidate, false)}
                     onDecrement={() => decrementPlant(acc.name, ACCUMULATOR_DEFAULT_SPACING, false)}
-                    disabled={accBlocked || accumulatorsAtCapacity}
+                    disabled={accBlocked || (maxFitMap.get(acc.name) ?? 0) < 1}
                   />
                 </View>
                 <Text style={[styles.gtIntervalText, isAdded && styles.gtIntervalTextSelected]}>
