@@ -387,6 +387,7 @@ export function GuildTemplateStep({
       construction,
       maxFitMap,
       candidateForCompanion,
+      companionSuggestions,
       onChange,
       setAutoAddedMsg,
     ]

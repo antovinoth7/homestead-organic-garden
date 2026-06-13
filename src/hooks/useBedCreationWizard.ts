@@ -247,7 +247,7 @@ function buildPlantBatchFromEntries(
   s3: Step3Data,
   constructionType: 'raised' | 'in_ground',
   locationShortName: string,
-  existingPlants: ReadonlyArray<Partial<Pick<Plant, 'id' | 'name'>>>
+  existingPlants: readonly Partial<Pick<Plant, 'id' | 'name'>>[]
 ): {
   newPlants: NewPlantPayload[];
   linkEntries: PlantEntry[];
@@ -374,7 +374,7 @@ function buildPlantBatchFromEntries(
   // form. Seed the dedup list with existing garden plants plus each payload as
   // it's named so repeated species get unique " #N" suffixes.
   const named: NewPlantPayload[] = [];
-  const seed: Array<Partial<Pick<Plant, 'id' | 'name'>>> = [...existingPlants];
+  const seed: Partial<Pick<Plant, 'id' | 'name'>>[] = [...existingPlants];
   for (const p of newPlants) {
     const base = buildGeneratedPlantNameBase(
       p.plant_type,
