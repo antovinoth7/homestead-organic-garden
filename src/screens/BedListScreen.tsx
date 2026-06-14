@@ -31,17 +31,7 @@ import {
   BedSortOption,
   DEFAULT_BED_FILTERS,
 } from '@/utils/filterAndSortBeds';
-import { getBedStatus } from '@/utils/bedStatus';
 import type { BedListScreenNavigationProp } from '@/types/navigation.types';
-
-const SORT_LABELS: Record<BedSortOption, string> = {
-  newest: 'Newest',
-  oldest: 'Oldest',
-  name: 'A–Z',
-  area: 'Area',
-  plants: 'Plants',
-  legume: 'Legume',
-};
 
 export default function BedListScreen(): React.JSX.Element {
   const theme = useTheme();
@@ -301,11 +291,6 @@ export default function BedListScreen(): React.JSX.Element {
     [navigation]
   );
 
-  const attentionCount = useMemo(
-    () => beds.filter((b) => getBedStatus(b).attention.length > 0).length,
-    [beds]
-  );
-
   const renderItem = useCallback(
     ({ item }: { item: BedWithCoverage }): React.JSX.Element => (
       <BedCard
@@ -443,23 +428,6 @@ export default function BedListScreen(): React.JSX.Element {
               <Text style={styles.resultsLabel}>{visibleBeds.length === 1 ? 'Bed' : 'Beds'}</Text>
             )}
           </View>
-          <View style={styles.resultsRight}>
-            <TouchableOpacity style={styles.sortPill} onPress={toggleFilters}>
-              <Ionicons name="swap-vertical" size={13} color={theme.textSecondary} />
-              <Text style={styles.sortPillText}>{SORT_LABELS[sortBy]}</Text>
-              <Ionicons name="chevron-down" size={12} color={theme.textSecondary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {attentionCount > 0 && (
-        <View style={styles.legumeBanner}>
-          <Ionicons name="warning-outline" size={16} color={theme.warning ?? '#f59e0b'} />
-          <Text style={styles.legumeBannerText}>
-            {attentionCount} bed{attentionCount > 1 ? 's' : ''} need
-            {attentionCount === 1 ? 's' : ''} attention
-          </Text>
         </View>
       )}
 
