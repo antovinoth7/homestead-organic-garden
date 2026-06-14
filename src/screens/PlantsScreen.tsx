@@ -724,36 +724,35 @@ export default function PlantsScreen(): React.JSX.Element {
             </Text>
           )}
         </View>
-      </View>
-
-      {/* ── All / Bed / Other segmented control ── */}
-      <View style={styles.segmentRow}>
-        {(
+        {/* ── All / Bed / Other segmented control ── */}
+        <View style={styles.segmentRow}>
+          {(
           [
-            ['all', 'All', segmentCounts.all],
-            ['bed', 'Bed', segmentCounts.bed],
-            ['other', 'Other', segmentCounts.other],
-          ] as const
-        ).map(([value, label, count]) => {
-          const active = bedSegment === value;
-          return (
-            <TouchableOpacity
-              key={value}
-              style={[styles.segmentChip, active && styles.segmentChipActive]}
-              onPress={() => setBedSegment(value)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={`${label} plants, ${count}`}
-            >
-              <Text style={[styles.segmentChipText, active && styles.segmentChipTextActive]}>
-                {label}
-              </Text>
-              <Text style={[styles.segmentCount, active && styles.segmentChipTextActive]}>
-                {count}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+              ['all', 'All', segmentCounts.all],
+              ['bed', 'Bed', segmentCounts.bed],
+              ['other', 'Other', segmentCounts.other],
+            ] as const
+          ).map(([value, label, count]) => {
+            const active = bedSegment === value;
+            return (
+              <TouchableOpacity
+                key={value}
+                style={[styles.segmentChip, active && styles.segmentChipActive]}
+                onPress={() => setBedSegment(value)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${label} plants, ${count}`}
+              >
+                <Text style={[styles.segmentChipText, active && styles.segmentChipTextActive]}>
+                  {label}
+                </Text>
+                <Text style={[styles.segmentCount, active && styles.segmentChipTextActive]}>
+                  {count}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       <FlatList
