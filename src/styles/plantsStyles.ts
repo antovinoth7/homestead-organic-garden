@@ -109,9 +109,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     filterToggleButtonActive: {
       backgroundColor: theme.primary,
     },
-    gridRow: {
-      justifyContent: 'space-between',
-    },
 
     sortMenu: {
       backgroundColor: theme.backgroundSecondary,
@@ -256,36 +253,39 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 6,
     },
-    resultsRight: {
+    segmentRow: {
       flexDirection: 'row',
-      alignItems: 'center',
       gap: 8,
+      paddingHorizontal: 16,
+      paddingBottom: 10,
     },
-    sortPill: {
+    segmentChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 14,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    sortPillText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.text,
-    },
-    viewToggleBtn: {
-      width: 32,
-      height: 32,
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
       borderRadius: 16,
       backgroundColor: theme.backgroundSecondary,
       borderWidth: 1,
       borderColor: theme.border,
-      alignItems: 'center',
-      justifyContent: 'center',
+    },
+    segmentChipActive: {
+      backgroundColor: theme.primaryLight,
+      borderColor: theme.primary,
+    },
+    segmentChipText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    segmentChipTextActive: {
+      color: theme.primary,
+    },
+    segmentCount: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.textTertiary,
     },
     resultsCount: {
       fontSize: 16,
@@ -464,19 +464,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
-    },
-    groupToggleBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    groupToggleBtnActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
     },
   });
