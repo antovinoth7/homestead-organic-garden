@@ -9,6 +9,8 @@ import { getCurrentSeason } from '@/utils/seasonHelpers';
 interface Props {
   data: Partial<Step1Data>;
   onChange: (data: Partial<Step1Data>) => void;
+  /** Edit mode: bed type can't be changed once a bed exists, so render read-only. */
+  locked?: boolean;
 }
 
 type SeasonFit = 'ideal' | 'ok' | 'avoid';
@@ -94,7 +96,7 @@ const SEASON_LABEL: Record<string, string> = {
   cool_dry: 'Cool & Dry',
 };
 
-export function BedTypeStep({ data, onChange }: Props): React.JSX.Element {
+export function BedTypeStep({ data, onChange, locked = false }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const currentSeason = useMemo(() => getCurrentSeason(), []);
@@ -104,7 +106,9 @@ export function BedTypeStep({ data, onChange }: Props): React.JSX.Element {
     <ScrollView contentContainerStyle={styles.stepContainer}>
       <View style={styles.btSeasonBanner}>
         <Text style={styles.btSeasonBannerText}>
-          🌦 Now: {seasonLabel} — ideal beds highlighted below
+          {locked
+            ? "🔒 Bed type can't be changed after creation"
+            : `🌦 Now: ${seasonLabel} — ideal beds highlighted below`}
         </Text>
       </View>
 
@@ -118,9 +122,11 @@ export function BedTypeStep({ data, onChange }: Props): React.JSX.Element {
               style={[
                 styles.typeCard,
                 isSelected && styles.typeCardSelected,
-                fit === 'avoid' && !isSelected && styles.typeCardDimmed,
+                ((locked && !isSelected) || (fit === 'avoid' && !isSelected)) &&
+                  styles.typeCardDimmed,
               ]}
               onPress={() => onChange({ bed_type: opt.type })}
+              disabled={locked}
               activeOpacity={0.7}
             >
               {fit === 'ideal' && !isSelected && (

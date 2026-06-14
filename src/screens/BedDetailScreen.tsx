@@ -1,28 +1,54 @@
-import React, { useMemo, useCallback, useState, useRef } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  Alert,
+  Animated,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { useBedDetail } from '@/hooks/useBedDetail';
 import { RotationStatusCard } from '@/components/RotationStatusCard';
-import { BedDiagram } from '@/components/BedDiagram';
+import { ScreenHeader } from '@/components/ScreenHeader';
+import { UndoToast } from '@/components/UndoToast';
+import { tapFeedback } from '@/utils/haptics';
+import { BedTopDownMap } from '@/components/BedTopDownMap';
 import { BedSuccessionTimeline } from '@/components/BedSuccessionTimeline';
 import {
   markBedAsResting,
   endBedRest,
   logBedInput,
+  restoreBedInput,
   getTransitionInputs,
   getHarvestGapWarnings,
 } from '@/services/beds';
-import { updatePlant } from '@/services/plants';
-import { getRecommendedPlantsForBed } from '@/config/beds';
+import { getRecommendedPlantsForBed, getGuildTemplate } from '@/config/beds';
+import { getLayerColor } from '@/config/beds/layerMeta';
+import { computeRowLayout } from '@/utils/rowLayoutEngine';
+import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
+import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
+import { plantToEntry } from '@/utils/bedEditReconcile';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedDetailStyles';
 import { logger } from '@/utils/logger';
-import type { BedPosition } from '@/types/database.types';
+import type { BedLayer } from '@/types/database.types';
 import type {
   BedDetailScreenNavigationProp,
   BedDetailScreenRouteProp,
 } from '@/types/navigation.types';
+
+type SoilInput = 'water' | 'jeevamrutha' | 'weeding';
+
+const SOIL_INPUT_LABEL: Record<SoilInput, string> = {
+  water: 'Watering',
+  jeevamrutha: 'Jeevamrutha',
+  weeding: 'Weeding',
+};
 
 function formatRelativeDate(isoDate: string | null | undefined): string {
   if (!isoDate) return 'Never';
@@ -39,8 +65,27 @@ export default function BedDetailScreen(): React.JSX.Element {
   const navigation = useNavigation<BedDetailScreenNavigationProp>();
   const route = useRoute<BedDetailScreenRouteProp>();
   const { bedId } = route.params;
+  const insets = useSafeAreaInsets();
   const { bed, plants, rotationStatus, loading, error, refresh } = useBedDetail(bedId);
   const [actionLoading, setActionLoading] = useState(false);
+  const resolveLayerColor = useCallback(
+    (layer: BedLayer): string => getLayerColor(theme, layer),
+    [theme]
+  );
+
+  // Soil-input quick-log: log optimistically, then offer a 4s undo window.
+  const [pendingLog, setPendingLog] = useState<{ type: SoilInput; prev: string | null } | null>(
+    null
+  );
+  const undoProgress = useRef(new Animated.Value(1)).current;
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    },
+    []
+  );
 
   const handleMarkResting = useCallback(async () => {
     if (!bed) return;
@@ -70,43 +115,76 @@ export default function BedDetailScreen(): React.JSX.Element {
   }, [bed, refresh]);
 
   const handleLogInput = useCallback(
-    async (inputType: 'water' | 'jeevamrutha' | 'weeding') => {
+    async (inputType: SoilInput) => {
       if (!bed) return;
+      const prevMap: Record<SoilInput, string | null | undefined> = {
+        water: bed.last_water_date,
+        jeevamrutha: bed.last_jeevamrutha_date,
+        weeding: bed.last_weeding_date,
+      };
+      const prev = prevMap[inputType] ?? null;
+      tapFeedback();
+      // Any previous pending log is already persisted; just retire its timer.
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current);
+        undoTimerRef.current = null;
+      }
       try {
         await logBedInput(bed.id, inputType);
         refresh();
       } catch (err) {
         logger.warn('logBedInput failed', err as Error);
+        return;
       }
+      setPendingLog({ type: inputType, prev });
+      undoProgress.setValue(1);
+      Animated.timing(undoProgress, {
+        toValue: 0,
+        duration: 4000,
+        useNativeDriver: false,
+      }).start();
+      undoTimerRef.current = setTimeout(() => {
+        setPendingLog(null);
+        undoTimerRef.current = null;
+      }, 4000);
     },
-    [bed, refresh]
+    [bed, refresh, undoProgress]
   );
 
-  // Drag-and-drop position persistence (debounced)
-  const positionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handlePositionChange = useCallback((plantId: string, pos: BedPosition) => {
-    if (positionTimerRef.current) {
-      clearTimeout(positionTimerRef.current);
+  const handleUndoLog = useCallback(async () => {
+    if (!bed || !pendingLog) return;
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
     }
-    positionTimerRef.current = setTimeout(async () => {
-      try {
-        await updatePlant(plantId, { position_in_bed: pos });
-      } catch (err) {
-        logger.warn('Failed to save plant position', err as Error);
-      }
-    }, 300);
-  }, []);
-
-  const handleResetLayout = useCallback(async () => {
-    if (plants.length === 0) return;
+    undoProgress.stopAnimation();
+    const { type, prev } = pendingLog;
+    setPendingLog(null);
     try {
-      await Promise.all(plants.map((p) => updatePlant(p.id, { position_in_bed: null })));
+      await restoreBedInput(bed.id, type, prev);
       refresh();
     } catch (err) {
-      logger.warn('Reset layout failed', err as Error);
+      logger.warn('restoreBedInput failed', err as Error);
     }
-  }, [plants, refresh]);
+  }, [bed, pendingLog, refresh, undoProgress]);
+
+  // Read-only top-down layout, recomputed from the bed's plants (same pipeline
+  // as the wizard's Step 6 review).
+  const rowLayout = useMemo<RowLayoutResult | null>(() => {
+    if (!bed || plants.length === 0) return null;
+    const entries = plants.map(plantToEntry);
+    const tpl = getGuildTemplate(bed.type);
+    const inputs = mapPlantEntriesToRowInputs(entries, tpl);
+    if (inputs.length === 0) return null;
+    const construction = bed.is_raised_bed ? 'raised' : 'in_ground';
+    return computeRowLayout(
+      inputs,
+      bed.dimensions.width_m,
+      bed.dimensions.length_m,
+      bed.type,
+      construction
+    );
+  }, [bed, plants]);
 
   const transitionInputs = useMemo(() => {
     if (!bed?.prev_crop_family) return [];
@@ -151,16 +229,24 @@ export default function BedDetailScreen(): React.JSX.Element {
     : 0;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>{bed.name}</Text>
-        <Text style={styles.typeBadge}>{bed.type.replace(/_/g, ' ')}</Text>
-      </View>
-
+    <View style={styles.container}>
+      <ScreenHeader
+        title={bed.name}
+        onBack={() => navigation.goBack()}
+        right={
+          <>
+            <Text style={styles.typeBadge}>{bed.type.replace(/_/g, ' ')}</Text>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => navigation.navigate('BedCreationWizard', { editBedId: bedId })}
+              accessibilityLabel="Edit bed"
+            >
+              <Ionicons name="pencil" size={18} color={theme.primary} />
+            </TouchableOpacity>
+          </>
+        }
+      />
+      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.content}>
       {/* Resting banner */}
       {bed.is_resting && (
         <View style={styles.restingBanner}>
@@ -187,16 +273,22 @@ export default function BedDetailScreen(): React.JSX.Element {
         )}
       </View>
 
-      {/* Bed Layout Diagram */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Bed Layout</Text>
-        <BedDiagram
-          bed={bed}
-          plants={plants}
-          onPositionChange={handlePositionChange}
-          onResetLayout={handleResetLayout}
-        />
-      </View>
+      {/* Bed Layout — read-only top-down row map */}
+      {rowLayout && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Bed Layout</Text>
+          <BedTopDownMap
+            widthM={bed.dimensions.width_m}
+            lengthM={bed.dimensions.length_m}
+            rows={rowLayout.rows}
+            plantEmoji={getPlantEmoji}
+            layerColor={resolveLayerColor}
+            walkingPathCm={rowLayout.walkingPathCm}
+            edgeBufferCm={rowLayout.edgeBufferCm}
+            overflowCm={rowLayout.overflowCm}
+          />
+        </View>
+      )}
 
       {/* Succession & Season Timeline */}
       <View style={styles.section}>
@@ -208,62 +300,30 @@ export default function BedDetailScreen(): React.JSX.Element {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Soil Input Log</Text>
         <View style={styles.inputLogGrid}>
-          <View style={styles.inputLogItem}>
+          <TouchableOpacity style={styles.inputLogItem} onPress={() => handleLogInput('water')}>
             <Ionicons name="water-outline" size={16} color={theme.primary} />
             <Text style={styles.inputLogLabel}>Last water</Text>
             <Text style={styles.inputLogValue}>{formatRelativeDate(bed.last_water_date)}</Text>
-          </View>
-          <View style={styles.inputLogItem}>
+            <Text style={styles.inputLogTapHint}>Tap to log</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.inputLogItem}
+            onPress={() => handleLogInput('jeevamrutha')}
+          >
             <Ionicons name="flask-outline" size={16} color={theme.primary} />
             <Text style={styles.inputLogLabel}>Last Jeevamrutha</Text>
             <Text style={styles.inputLogValue}>
               {formatRelativeDate(bed.last_jeevamrutha_date)}
             </Text>
-          </View>
-          <View style={styles.inputLogItem}>
+            <Text style={styles.inputLogTapHint}>Tap to log</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.inputLogItem} onPress={() => handleLogInput('weeding')}>
             <Ionicons name="cut-outline" size={16} color={theme.primary} />
             <Text style={styles.inputLogLabel}>Last weeding</Text>
             <Text style={styles.inputLogValue}>{formatRelativeDate(bed.last_weeding_date)}</Text>
-          </View>
-        </View>
-        <View style={styles.logInputButtons}>
-          <TouchableOpacity style={styles.logInputChip} onPress={() => handleLogInput('water')}>
-            <Text style={styles.logInputChipText}>💧 Log Water</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.logInputChip}
-            onPress={() => handleLogInput('jeevamrutha')}
-          >
-            <Text style={styles.logInputChipText}>🧪 Log Jeevamrutha</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.logInputChip} onPress={() => handleLogInput('weeding')}>
-            <Text style={styles.logInputChipText}>✂️ Log Weeding</Text>
+            <Text style={styles.inputLogTapHint}>Tap to log</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Plants summary */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Plants ({plants.length})</Text>
-        {plants.length === 0 ? (
-          <Text style={styles.emptyText}>No plants assigned to this bed yet.</Text>
-        ) : (
-          plants.map((p) => (
-            <View key={p.id} style={styles.plantRow}>
-              <Text style={styles.plantName}>{p.name}</Text>
-              {p.bed_layer && (
-                <Text style={styles.layerBadge}>{p.bed_layer.replace(/_/g, ' ')}</Text>
-              )}
-            </View>
-          ))
-        )}
-        <TouchableOpacity
-          style={styles.addPlantButton}
-          onPress={() => navigation.navigate('BedPlantPicker', { bedId })}
-        >
-          <Ionicons name="add-circle-outline" size={18} color={theme.primary} />
-          <Text style={styles.addPlantText}>Add plants to bed</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Transition Inputs */}
@@ -332,7 +392,7 @@ export default function BedDetailScreen(): React.JSX.Element {
             {rotationStatus.coordinator_checklist.filter((r) => r.passed).length}/
             {rotationStatus.coordinator_checklist.length} rotation rules met
           </Text>
-          <RotationStatusCard status={rotationStatus} />
+          <RotationStatusCard status={rotationStatus} bedType={bed.type} />
         </View>
       )}
 
@@ -340,21 +400,21 @@ export default function BedDetailScreen(): React.JSX.Element {
       <View style={styles.actions}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate('BedPlantPicker', { bedId })}
-        >
-          <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
-          <Text style={styles.actionText}>Add Plant</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButton}
           onPress={() => navigation.navigate('BedTasks', { bedId })}
         >
           <Ionicons name="checkmark-circle-outline" size={20} color={theme.primary} />
           <Text style={styles.actionText}>View Tasks</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('BedPlantPicker', { bedId })}
+        >
+          <Ionicons name="swap-horizontal-outline" size={20} color={theme.primary} />
+          <Text style={styles.actionText}>Rotate Bed</Text>
+        </TouchableOpacity>
       </View>
-      <View style={styles.actions}>
-        {!bed.is_resting && (
+      {!bed.is_resting && (
+        <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, styles.restButton]}
             onPress={handleMarkResting}
@@ -365,15 +425,17 @@ export default function BedDetailScreen(): React.JSX.Element {
               Mark as Resting
             </Text>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('BedPlantPicker', { bedId })}
-        >
-          <Ionicons name="swap-horizontal-outline" size={20} color={theme.primary} />
-          <Text style={styles.actionText}>Rotate Bed</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        </View>
+      )}
+      </ScrollView>
+      <UndoToast
+        visible={pendingLog !== null}
+        message={pendingLog ? `${SOIL_INPUT_LABEL[pendingLog.type]} logged` : ''}
+        onUndo={handleUndoLog}
+        progress={undoProgress}
+        bottomOffset={Math.max(insets.bottom, 16) + 8}
+        icon="leaf-outline"
+      />
+    </View>
   );
 }

@@ -4,13 +4,24 @@ import type { Theme } from '@/theme/colors';
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
-    content: { padding: 16, paddingBottom: 40 },
+    scrollArea: { flex: 1 },
+    content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 40 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
     errorText: { color: theme.error, marginBottom: 12 },
     retryText: { color: theme.primary },
-    header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
-    backButton: { padding: 4 },
-    title: { flex: 1, fontSize: 20, fontWeight: '700', color: theme.text },
+    editButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
     typeBadge: {
       fontSize: 12,
       color: theme.primary,
@@ -59,6 +70,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     inputLogLabel: { fontSize: 11, color: theme.textSecondary, textAlign: 'center' },
     inputLogValue: { fontSize: 12, fontWeight: '600', color: theme.text, textAlign: 'center' },
+    inputLogTapHint: { fontSize: 10, color: theme.primary, marginTop: 2 },
     logInputButtons: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
     logInputChip: {
       paddingHorizontal: 10,

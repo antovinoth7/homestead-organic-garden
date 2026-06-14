@@ -28,10 +28,10 @@ import OrganicInputDetailScreen from '../screens/OrganicInputDetailScreen';
 // Bed screens
 import BedListScreen from '../screens/BedListScreen';
 import BedDetailScreen from '../screens/BedDetailScreen';
-import BedEditScreen from '../screens/BedEditScreen';
 import BedCreationWizardScreen from '../screens/BedCreationWizardScreen';
 import BedPlantPickerScreen from '../screens/BedPlantPickerScreen';
 import BedTasksScreen from '../screens/BedTasksScreen';
+import BedRotationScreen from '../screens/BedRotationScreen';
 import MyFarmScreen from '../screens/MyFarmScreen';
 import InputRecipesScreen from '../screens/InputRecipesScreen';
 
@@ -42,10 +42,10 @@ const BedsStack = (): React.JSX.Element => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="BedList" component={BedListScreen} />
     <Stack.Screen name="BedDetail" component={BedDetailScreen} />
-    <Stack.Screen name="BedEdit" component={BedEditScreen} />
     <Stack.Screen name="BedCreationWizard" component={BedCreationWizardScreen} />
     <Stack.Screen name="BedPlantPicker" component={BedPlantPickerScreen} />
     <Stack.Screen name="BedTasks" component={BedTasksScreen} />
+    <Stack.Screen name="BedRotation" component={BedRotationScreen} />
     <Stack.Screen name="PlantForm" component={PlantFormScreen} />
     <Stack.Screen name="PlantDetail" component={PlantDetailScreen} />
   </Stack.Navigator>

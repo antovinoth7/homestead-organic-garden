@@ -63,7 +63,7 @@ export function BedLayerStack({
   const renderPlantTile = (
     entry: PlantEntry,
     isDragging: boolean,
-    meta: (typeof LAYER_META)[BedLayer]
+    accentColor: string
   ): React.ReactNode => {
     const { text: chipText, resolved } = resolutionLabel(entry.resolution);
     const isCompanion = isCompanionById.get(entry.id) === true;
@@ -71,7 +71,7 @@ export function BedLayerStack({
       <View
         style={[
           styles.tile,
-          { borderColor: meta.color },
+          { borderColor: accentColor },
           isCompanion ? styles.tileCompanion : null,
           isDragging ? styles.tileDragging : null,
         ]}
@@ -130,6 +130,7 @@ export function BedLayerStack({
 
       {(visibleLayers ?? LAYER_ORDER).map((layer) => {
         const meta = LAYER_META[layer];
+        const layerColor = theme.layerColors[layer];
         const layerEntries = entriesByLayer.get(layer) ?? [];
         if (layerEntries.length === 0) {
           return (
@@ -152,9 +153,12 @@ export function BedLayerStack({
         return (
           <View
             key={layer}
-            style={[styles.layerCard, { borderColor: meta.color, backgroundColor: meta.bg }]}
+            style={[
+              styles.layerCard,
+              { borderColor: layerColor.color, backgroundColor: layerColor.bg },
+            ]}
           >
-            <View style={[styles.layerAccent, { backgroundColor: meta.color }]} />
+            <View style={[styles.layerAccent, { backgroundColor: layerColor.color }]} />
             <View style={styles.layerHeader}>
               <Text style={styles.layerIcon}>{meta.icon}</Text>
               <View style={styles.layerTitleCol}>
@@ -172,7 +176,7 @@ export function BedLayerStack({
               layer={layer}
               entries={layerEntries}
               onReorder={onReorder}
-              renderTile={(entry, isDragging) => renderPlantTile(entry, isDragging, meta)}
+              renderTile={(entry, isDragging) => renderPlantTile(entry, isDragging, layerColor.color)}
             />
           </View>
         );

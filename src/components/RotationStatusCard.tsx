@@ -2,14 +2,22 @@ import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
-import { RotationStatus } from '@/types/database.types';
+import { BedType, RotationStatus } from '@/types/database.types';
+import { bedExpectsLegumes } from '@/config/beds';
 import { createStyles } from '@/styles/bedDetailStyles';
 
 interface Props {
   status: RotationStatus;
+  bedType: BedType;
+  /** Suppress the green-manure banner (e.g. when shown once in a farm summary above a list). */
+  hideGreenManure?: boolean;
 }
 
-export function RotationStatusCard({ status }: Props): React.JSX.Element {
+export function RotationStatusCard({
+  status,
+  bedType,
+  hideGreenManure = false,
+}: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -24,24 +32,26 @@ export function RotationStatusCard({ status }: Props): React.JSX.Element {
         </View>
       )}
 
-      <View style={styles.legumeRow}>
-        <Text style={styles.legumeLabel}>Legume coverage</Text>
-        <Text
-          style={[
-            styles.legumeValue,
-            {
-              color:
-                status.legume_coverage_pct < 20
-                  ? theme.warning ?? '#f59e0b'
-                  : theme.success ?? '#22c55e',
-            },
-          ]}
-        >
-          {status.legume_coverage_pct}%
-        </Text>
-      </View>
+      {bedExpectsLegumes(bedType) && (
+        <View style={styles.legumeRow}>
+          <Text style={styles.legumeLabel}>Legume coverage</Text>
+          <Text
+            style={[
+              styles.legumeValue,
+              {
+                color:
+                  status.legume_coverage_pct < 20
+                    ? theme.warning ?? '#f59e0b'
+                    : theme.success ?? '#22c55e',
+              },
+            ]}
+          >
+            {status.legume_coverage_pct}%
+          </Text>
+        </View>
+      )}
 
-      {status.green_manure_recommendation && (
+      {!hideGreenManure && status.green_manure_recommendation && (
         <View style={styles.greenManureBanner}>
           <Ionicons name="leaf-outline" size={14} color={theme.primary} />
           <Text style={styles.greenManureText}>
@@ -54,7 +64,9 @@ export function RotationStatusCard({ status }: Props): React.JSX.Element {
         </View>
       )}
 
-      <Text style={styles.checklistTitle}>6-Rule Rotation Coordinator</Text>
+      <Text style={styles.checklistTitle}>
+        {status.coordinator_checklist.length}-Rule Rotation Coordinator
+      </Text>
       {status.coordinator_checklist.map((rule) => (
         <View key={rule.id} style={styles.checklistRow}>
           <Ionicons

@@ -7,7 +7,6 @@ import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { createStyles } from '@/styles/bedSuccessionTimelineStyles';
 
 const DAY_PX = 2;
-const TOTAL_WIDTH = 365 * DAY_PX;
 const BAND_HEIGHT = 22;
 const MONTH_HEIGHT = 18;
 const BAR_HEIGHT = 10;
@@ -18,34 +17,18 @@ type SeasonId = 'cool_dry' | 'summer' | 'sw_monsoon' | 'ne_monsoon';
 interface SeasonBand {
   id: SeasonId;
   shortLabel: string;
-  startDay: number;
-  endDay: number;
+  startOffset: number;
+  endOffset: number;
 }
 
-const SEASON_BANDS: SeasonBand[] = [
-  { id: 'cool_dry', shortLabel: 'Cool & Dry', startDay: 1, endDay: 59 },
-  { id: 'summer', shortLabel: 'Summer', startDay: 60, endDay: 151 },
-  { id: 'sw_monsoon', shortLabel: 'SW Monsoon', startDay: 152, endDay: 273 },
-  { id: 'ne_monsoon', shortLabel: 'NE Monsoon', startDay: 274, endDay: 365 },
-];
-
-const MONTH_STARTS: { label: string; doy: number }[] = [
-  { label: 'Jan', doy: 1 },
-  { label: 'Feb', doy: 32 },
-  { label: 'Mar', doy: 60 },
-  { label: 'Apr', doy: 91 },
-  { label: 'May', doy: 121 },
-  { label: 'Jun', doy: 152 },
-  { label: 'Jul', doy: 182 },
-  { label: 'Aug', doy: 213 },
-  { label: 'Sep', doy: 244 },
-  { label: 'Oct', doy: 274 },
-  { label: 'Nov', doy: 305 },
-  { label: 'Dec', doy: 335 },
-];
+const SEASON_MONTHS = [
+  { id: 'cool_dry' as SeasonId, shortLabel: 'Cool & Dry', startM: 1, endM: 2 },
+  { id: 'summer' as SeasonId, shortLabel: 'Summer', startM: 3, endM: 5 },
+  { id: 'sw_monsoon' as SeasonId, shortLabel: 'SW Monsoon', startM: 6, endM: 9 },
+  { id: 'ne_monsoon' as SeasonId, shortLabel: 'NE Monsoon', startM: 10, endM: 12 },
+] as const;
 
 // Build a guild-template harvest-days index keyed by plant name.
-// Populated lazily the first time it's needed (avoids importing all 8 templates at module load).
 const GUILD_HARVEST_DAYS_CACHE = new Map<string, number>();
 let guildCacheBuilt = false;
 
@@ -65,18 +48,16 @@ function buildGuildCacheIfNeeded(): void {
   }
 }
 
-function getDaysToHarvest(plant: Plant): number {
-  // 1. Plant care profile (170+ varieties, returns midpoint of min/max range)
+function getDaysToHarvestRange(plant: Plant): { min: number; max: number } {
   const profile = getPlantCareProfile(plant.name, plant.plant_type ?? undefined);
   const range = profile?.daysToHarvest;
-  if (range) return Math.round((range.min + range.max) / 2);
+  if (range) return { min: range.min, max: range.max };
 
-  // 2. Guild template plant_rows (single integer, covers all 8 guilds)
   buildGuildCacheIfNeeded();
   const fromGuild = GUILD_HARVEST_DAYS_CACHE.get(plant.name);
-  if (fromGuild !== undefined) return fromGuild;
+  if (fromGuild !== undefined) return { min: fromGuild, max: fromGuild };
 
-  return 60; // generic fallback
+  return { min: 55, max: 75 };
 }
 
 const NEXT_CROP_AFTER: Partial<Record<CropFamily, string>> = {
@@ -88,9 +69,17 @@ const NEXT_CROP_AFTER: Partial<Record<CropFamily, string>> = {
   other: 'Legume recommended for soil recovery',
 };
 
-function dayOfYear(date: Date): number {
-  const start = new Date(date.getFullYear(), 0, 1);
-  return Math.floor((date.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+// 0-indexed day offset from Jan 1 of baseYear; exceeds 365 for next-year dates
+function dayOffset(date: Date, baseYear: number): number {
+  const yearStart = new Date(baseYear, 0, 1);
+  return Math.round((date.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// Calendar month (1–12) for a given day offset
+function monthForOffset(offset: number, baseYear: number): number {
+  const d = new Date(baseYear, 0, 1);
+  d.setDate(d.getDate() + offset);
+  return d.getMonth() + 1;
 }
 
 function parseDate(iso: string | null | undefined): Date | null {
@@ -99,18 +88,46 @@ function parseDate(iso: string | null | undefined): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-function monthForDoy(doy: number): number {
-  let idx = 0;
-  for (let i = 0; i < MONTH_STARTS.length; i++) {
-    if (MONTH_STARTS[i]!.doy <= doy) idx = i;
+function buildMonthLabels(
+  baseYear: number,
+  maxOffset: number,
+): { label: string; offset: number }[] {
+  const result: { label: string; offset: number }[] = [];
+  let year = baseYear;
+  let month = 0;
+  for (;;) {
+    const date = new Date(year, month, 1);
+    const off = dayOffset(date, baseYear);
+    if (off > maxOffset + 30) break;
+    const short = date.toLocaleString('en', { month: 'short' });
+    const suffix = year > baseYear ? ` '${String(year).slice(2)}` : '';
+    result.push({ label: short + suffix, offset: off });
+    if (++month === 12) { month = 0; year++; }
+    if (year > baseYear + 2) break;
   }
-  return idx + 1;
+  return result;
+}
+
+function buildSeasonBands(baseYear: number, maxOffset: number): SeasonBand[] {
+  const bands: SeasonBand[] = [];
+  for (let y = baseYear; y <= baseYear + 2; y++) {
+    for (const s of SEASON_MONTHS) {
+      const start = new Date(y, s.startM - 1, 1);
+      const end = new Date(y, s.endM, 0); // last day of endM
+      const startOff = dayOffset(start, baseYear);
+      const endOff = dayOffset(end, baseYear);
+      if (startOff > maxOffset + 60) return bands;
+      bands.push({ id: s.id, shortLabel: s.shortLabel, startOffset: startOff, endOffset: endOff });
+    }
+  }
+  return bands;
 }
 
 interface PlantBar {
   name: string;
-  startDay: number;
-  endDay: number;
+  startOffset: number;
+  growEndOffset: number;
+  harvestEndOffset: number;
 }
 
 interface Props {
@@ -124,12 +141,12 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
   const scrollRef = useRef<ScrollView>(null);
 
   const today = useMemo(() => new Date(), []);
-  const todayDoy = useMemo(() => dayOfYear(today), [today]);
+  const baseYear = today.getFullYear();
   const currentMonth = today.getMonth() + 1;
+  const todayOffset = useMemo(() => dayOffset(today, baseYear), [today, baseYear]);
 
   // Build one bar per unique plant species (earliest planting date wins)
   const plantBars = useMemo((): PlantBar[] => {
-    // Collect earliest planting date and a representative Plant per species
     const earliestDate = new Map<string, Date>();
     const representativePlant = new Map<string, Plant>();
     for (const p of plants) {
@@ -144,25 +161,54 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
     return uniqueNames
       .map((name) => {
         const plantDate = earliestDate.get(name) ?? fallback;
-        const startDay = Math.min(dayOfYear(plantDate), 364);
+        const startOff = dayOffset(plantDate, baseYear);
         const rep = representativePlant.get(name);
-        const dth = rep ? getDaysToHarvest(rep) : 60;
-        const endDay = Math.min(startDay + dth, 365);
-        return { name, startDay, endDay };
+        const dth = rep ? getDaysToHarvestRange(rep) : { min: 55, max: 75 };
+        return {
+          name,
+          startOffset: startOff,
+          growEndOffset: startOff + dth.min,
+          harvestEndOffset: startOff + dth.max,
+        };
       })
-      .filter((bar) => bar.startDay < 365);
-  }, [plants, bed.created_at, today]);
+      .filter((bar) => bar.startOffset < 730);
+  }, [plants, bed.created_at, today, baseYear]);
+
+  const canvasWidth = useMemo(() => {
+    const maxHarvest =
+      plantBars.length > 0
+        ? Math.max(...plantBars.map((b) => b.harvestEndOffset))
+        : todayOffset + 30;
+    return Math.max(maxHarvest + 30, 365) * DAY_PX;
+  }, [plantBars, todayOffset]);
 
   // Green manure window: 1 week after last harvest, 30 days long
   const greenManureInfo = useMemo(() => {
     const lastEnd =
-      plantBars.length > 0 ? Math.max(...plantBars.map((b: PlantBar) => b.endDay)) : todayDoy;
-    const gmStart = Math.min(lastEnd + 7, 358);
-    const gmEnd = Math.min(gmStart + 30, 365);
-    const month = monthForDoy(gmStart);
+      plantBars.length > 0
+        ? Math.max(...plantBars.map((b: PlantBar) => b.harvestEndOffset))
+        : todayOffset;
+    const gmStart = lastEnd + 7;
+    const gmEnd = gmStart + 30;
+    const month = monthForOffset(gmStart, baseYear);
     const gm = getGreenManureForMonth(month > 0 ? month : currentMonth);
-    return { startDay: gmStart, endDay: gmEnd, gm };
-  }, [plantBars, todayDoy, currentMonth]);
+    return { startOffset: gmStart, endOffset: gmEnd, gm };
+  }, [plantBars, todayOffset, baseYear, currentMonth]);
+
+  const maxOffset = Math.max(
+    greenManureInfo.endOffset,
+    plantBars.length > 0 ? Math.max(...plantBars.map((b) => b.harvestEndOffset)) : todayOffset,
+  );
+
+  const monthLabels = useMemo(
+    () => buildMonthLabels(baseYear, maxOffset),
+    [baseYear, maxOffset],
+  );
+
+  const seasonBands = useMemo(
+    () => buildSeasonBands(baseYear, maxOffset),
+    [baseYear, maxOffset],
+  );
 
   const nextCropHint = bed.prev_crop_family
     ? (NEXT_CROP_AFTER[bed.prev_crop_family] ?? null)
@@ -170,9 +216,9 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
 
   // Scroll so "today" is visible with some left margin
   useEffect(() => {
-    const scrollX = Math.max(0, (todayDoy - 1) * DAY_PX - 80);
+    const scrollX = Math.max(0, todayOffset * DAY_PX - 80);
     scrollRef.current?.scrollTo({ x: scrollX, y: 0, animated: false });
-  }, [todayDoy]);
+  }, [todayOffset]);
 
   const totalRows = plantBars.length + 1; // +1 for green manure
   const canvasHeight = BAND_HEIGHT + MONTH_HEIGHT + totalRows * ROW_HEIGHT + 4;
@@ -186,7 +232,6 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
           : id === 'ne_monsoon'
             ? styles.bandNeMonsoon
             : styles.bandCoolDry;
-    // createStyles() returns the loose StyleSheet union; these keys are ViewStyles.
     return s as ViewStyle;
   };
 
@@ -226,20 +271,20 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
           </View>
         </View>
 
-        {/* Horizontally scrollable year canvas */}
+        {/* Horizontally scrollable canvas */}
         <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false}>
-          <View style={[styles.canvasRelative, { width: TOTAL_WIDTH, height: canvasHeight }]}>
+          <View style={[styles.canvasRelative, { width: canvasWidth, height: canvasHeight }]}>
 
             {/* Season bands */}
-            {SEASON_BANDS.map((band) => (
+            {seasonBands.map((band, idx) => (
               <View
-                key={band.id}
+                key={`${band.id}-${idx}`}
                 style={[
                   styles.band,
                   bandBg(band.id),
                   {
-                    left: (band.startDay - 1) * DAY_PX,
-                    width: (band.endDay - band.startDay + 1) * DAY_PX,
+                    left: band.startOffset * DAY_PX,
+                    width: (band.endOffset - band.startOffset + 1) * DAY_PX,
                     height: BAND_HEIGHT,
                   },
                 ]}
@@ -251,47 +296,64 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
             ))}
 
             {/* Month tick labels */}
-            {MONTH_STARTS.map(({ label, doy }) => (
+            {monthLabels.map(({ label, offset }) => (
               <Text
                 key={label}
                 style={[
                   styles.monthLabel,
-                  { left: (doy - 1) * DAY_PX + 1, top: BAND_HEIGHT + 2 },
+                  { left: offset * DAY_PX + 1, top: BAND_HEIGHT + 2 },
                 ]}
               >
                 {label}
               </Text>
             ))}
 
-            {/* Plant harvest bars */}
-            {plantBars.map((bar: PlantBar, i: number) => (
-              <View
-                key={bar.name}
-                style={[
-                  styles.harvestBar,
-                  {
-                    left: (bar.startDay - 1) * DAY_PX,
-                    width: Math.max((bar.endDay - bar.startDay) * DAY_PX, 6),
-                    top:
-                      BAND_HEIGHT +
-                      MONTH_HEIGHT +
-                      i * ROW_HEIGHT +
-                      Math.round((ROW_HEIGHT - BAR_HEIGHT) / 2),
-                    height: BAR_HEIGHT,
-                  },
-                ]}
-              />
-            ))}
+            {/* Plant bars: growing period + harvest window */}
+            {plantBars.map((bar: PlantBar, i: number) => {
+              const barTop =
+                BAND_HEIGHT +
+                MONTH_HEIGHT +
+                i * ROW_HEIGHT +
+                Math.round((ROW_HEIGHT - BAR_HEIGHT) / 2);
+              return (
+                <React.Fragment key={bar.name}>
+                  {/* Growing period: sow → harvest window start */}
+                  <View
+                    style={[
+                      styles.growingBar,
+                      {
+                        left: bar.startOffset * DAY_PX,
+                        width: Math.max((bar.growEndOffset - bar.startOffset) * DAY_PX, 4),
+                        top: barTop,
+                        height: BAR_HEIGHT,
+                      },
+                    ]}
+                  />
+                  {/* Harvest window: harvest start → harvest end */}
+                  <View
+                    style={[
+                      styles.harvestBar,
+                      {
+                        left: bar.growEndOffset * DAY_PX,
+                        width: Math.max((bar.harvestEndOffset - bar.growEndOffset) * DAY_PX, 4),
+                        top: barTop,
+                        height: BAR_HEIGHT,
+                      },
+                    ]}
+                  />
+                </React.Fragment>
+              );
+            })}
 
             {/* Green manure fallow bar */}
             <View
               style={[
                 styles.greenManureBar,
                 {
-                  left: (greenManureInfo.startDay - 1) * DAY_PX,
+                  left: greenManureInfo.startOffset * DAY_PX,
                   width: Math.max(
-                    (greenManureInfo.endDay - greenManureInfo.startDay) * DAY_PX,
-                    6
+                    (greenManureInfo.endOffset - greenManureInfo.startOffset) * DAY_PX,
+                    6,
                   ),
                   top:
                     BAND_HEIGHT +
@@ -307,7 +369,7 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
             <View
               style={[
                 styles.todayLine,
-                { left: (todayDoy - 1) * DAY_PX, height: canvasHeight },
+                { left: todayOffset * DAY_PX, height: canvasHeight },
               ]}
             />
 
@@ -315,7 +377,7 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
             <Text
               style={[
                 styles.todayTick,
-                { left: (todayDoy - 1) * DAY_PX - 5, top: BAND_HEIGHT },
+                { left: todayOffset * DAY_PX - 5, top: BAND_HEIGHT },
               ]}
             >
               ▼
@@ -327,8 +389,12 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
       {/* Legend */}
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
+          <View style={[styles.legendDot, styles.legendDotGrowing]} />
+          <Text style={styles.legendText}>Growing period</Text>
+        </View>
+        <View style={styles.legendItem}>
           <View style={[styles.legendDot, styles.legendDotGreen]} />
-          <Text style={styles.legendText}>Crop harvest window</Text>
+          <Text style={styles.legendText}>Harvest window</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, styles.legendDotAccent]} />

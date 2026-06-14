@@ -74,6 +74,9 @@ function normalizeBed(id: string, data: Record<string, unknown>): Bed {
     last_jeevamrutha_date: (data.last_jeevamrutha_date as string) ?? null,
     last_weeding_date: (data.last_weeding_date as string) ?? null,
     notes: (data.notes as string) ?? null,
+    quick_start_applied: (data.quick_start_applied as boolean) ?? false,
+    row_layout: data.row_layout as Bed['row_layout'],
+    row_history: data.row_history as Bed['row_history'],
     is_deleted: (data.is_deleted as boolean) ?? false,
     created_at: convertTimestamp(data.created_at as Timestamp | string) ?? new Date().toISOString(),
     updated_at: convertTimestamp(data.updated_at as Timestamp | string) ?? new Date().toISOString(),
@@ -219,17 +222,29 @@ export async function endBedRest(id: string): Promise<void> {
   await updateBed(id, { is_resting: false, resting_until: null });
 }
 
-export async function logBedInput(
-  id: string,
-  inputType: 'water' | 'jeevamrutha' | 'weeding'
-): Promise<void> {
+type BedInputType = 'water' | 'jeevamrutha' | 'weeding';
+
+const INPUT_DATE_FIELD = {
+  water: 'last_water_date',
+  jeevamrutha: 'last_jeevamrutha_date',
+  weeding: 'last_weeding_date',
+} as const;
+
+export async function logBedInput(id: string, inputType: BedInputType): Promise<void> {
   const now = new Date().toISOString();
-  const fieldMap = {
-    water: 'last_water_date',
-    jeevamrutha: 'last_jeevamrutha_date',
-    weeding: 'last_weeding_date',
-  } as const;
-  await updateBed(id, { [fieldMap[inputType]]: now });
+  await updateBed(id, { [INPUT_DATE_FIELD[inputType]]: now });
+}
+
+/**
+ * Restore a soil-input date to a previous value — used to undo a `logBedInput`.
+ * Pass the date captured before logging (or null to clear it).
+ */
+export async function restoreBedInput(
+  id: string,
+  inputType: BedInputType,
+  prevValue: string | null
+): Promise<void> {
+  await updateBed(id, { [INPUT_DATE_FIELD[inputType]]: prevValue });
 }
 
 // ─── Domain helpers ───────────────────────────────────────────────────────────

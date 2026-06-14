@@ -24,3 +24,5 @@ export type { BedRecommendation } from './bedRecommendations';
 
 export { getSoilPrepSteps } from './soilPrepEngine';
 export type { PrepStep, SoilPrepParams } from './soilPrepEngine';
+
+export { LEGUME_RELEVANT_BED_TYPES, bedExpectsLegumes } from './legumeRelevance';
