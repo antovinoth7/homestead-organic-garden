@@ -242,7 +242,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     resultsHeader: {
       flexDirection: 'row',
-      justifyContent: 'flex-end',
+      justifyContent: 'flex-start',
       alignItems: 'center',
       gap: 8,
       paddingHorizontal: 16,

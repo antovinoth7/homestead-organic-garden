@@ -706,11 +706,6 @@ export default function PlantsScreen(): React.JSX.Element {
 
       {/* ── Results & Toolbar Bar ── */}
       <View style={styles.resultsHeader}>
-        {hasActiveFilters && (
-          <View style={styles.resultsFilteredBadge}>
-            <Text style={styles.resultsFilteredText}>filtered</Text>
-          </View>
-        )}
         {/* ── All / Bed / Other segmented control ── */}
         <View style={styles.segmentRow}>
           {(
@@ -740,6 +735,11 @@ export default function PlantsScreen(): React.JSX.Element {
             );
           })}
         </View>
+        {hasActiveFilters && (
+          <View style={styles.resultsFilteredBadge}>
+            <Text style={styles.resultsFilteredText}>filtered</Text>
+          </View>
+        )}
       </View>
 
       <FlatList
