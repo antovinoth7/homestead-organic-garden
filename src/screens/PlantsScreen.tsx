@@ -706,14 +706,11 @@ export default function PlantsScreen(): React.JSX.Element {
 
       {/* ── Results & Toolbar Bar ── */}
       <View style={styles.resultsHeader}>
-        <View style={styles.resultsLeft}>
-          <Ionicons name="leaf" size={14} color={theme.primary} />
-          {hasActiveFilters && (
-            <View style={styles.resultsFilteredBadge}>
-              <Text style={styles.resultsFilteredText}>filtered</Text>
-            </View>
-          )}
-        </View>
+        {hasActiveFilters && (
+          <View style={styles.resultsFilteredBadge}>
+            <Text style={styles.resultsFilteredText}>filtered</Text>
+          </View>
+        )}
         {/* ── All / Bed / Other segmented control ── */}
         <View style={styles.segmentRow}>
           {(

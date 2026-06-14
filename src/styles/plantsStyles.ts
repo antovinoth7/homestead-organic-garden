@@ -242,16 +242,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     resultsHeader: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'flex-end',
       alignItems: 'center',
+      gap: 8,
       paddingHorizontal: 16,
       paddingVertical: 8,
       backgroundColor: theme.background,
-    },
-    resultsLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
     },
     segmentRow: {
       flexDirection: 'row',
