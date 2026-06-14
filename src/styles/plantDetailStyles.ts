@@ -21,7 +21,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: theme.card,
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
       shadowColor: theme.shadow,

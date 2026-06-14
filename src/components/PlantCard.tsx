@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import type { ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { Plant } from '../types/database.types';
@@ -14,7 +14,6 @@ interface PlantCardProps {
   onPress: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  compact?: boolean;
   searchQuery?: string;
   onSwipeableOpen?: (ref: Swipeable) => void;
 }
@@ -24,14 +23,12 @@ export default function PlantCard({
   onPress,
   onEdit,
   onDelete,
-  compact = false,
   searchQuery = '',
   onSwipeableOpen,
 }: PlantCardProps): React.JSX.Element {
   const theme = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const [imageError, setImageError] = useState(false);
-  const [actionOverlayVisible, setActionOverlayVisible] = useState(false);
   const isMountedRef = useRef(true);
   const swipeableRef = useRef<Swipeable>(null);
 
@@ -158,113 +155,6 @@ export default function PlantCard({
     daysSinceWatered > plant.watering_frequency_days;
 
   const activePestCount = (plant.pest_disease_history || []).filter((r) => !r.resolved).length;
-
-  // ── Compact Grid Card ──
-  if (compact) {
-    return (
-      <TouchableOpacity
-        style={styles.compactCard}
-        onPress={onPress}
-        onLongPress={() => setActionOverlayVisible(true)}
-        delayLongPress={350}
-        activeOpacity={0.7}
-      >
-        {/* Health dot */}
-        <View style={[styles.healthDot, { backgroundColor: getHealthColor() }]} />
-
-        {/* Image */}
-        {plant.photo_url && !imageError ? (
-          <Image
-            source={{ uri: plant.photo_url }}
-            style={styles.compactImage as ImageStyle}
-            contentFit="cover"
-            transition={200}
-            onError={handleImageError}
-            recyclingKey={plant.id}
-            cachePolicy="memory-disk"
-            priority="normal"
-          />
-        ) : (
-          <View
-            style={[
-              styles.compactImage,
-              styles.compactPlaceholder,
-              { backgroundColor: getPlantTypeBg() },
-            ]}
-          >
-            <Text style={styles.compactEmoji}>{getPlantTypeIcon()}</Text>
-          </View>
-        )}
-
-        {/* Water badge */}
-        {daysSinceWatered !== null && (
-          <View style={[styles.waterBadge, isOverdueWater && styles.waterBadgeOverdue]}>
-            <Ionicons name="water" size={10} color={isOverdueWater ? '#f44336' : '#2196f3'} />
-            <Text style={[styles.waterBadgeText, isOverdueWater && styles.waterBadgeTextOverdue]}>
-              {daysSinceWatered === 0 ? 'Today' : `${daysSinceWatered}d`}
-            </Text>
-          </View>
-        )}
-
-        {/* Pest badge */}
-        {activePestCount > 0 && (
-          <View style={styles.pestBadgeCompact}>
-            <Ionicons name="bug" size={10} color="#f44336" />
-            <Text style={styles.pestBadgeCompactText}>{activePestCount}</Text>
-          </View>
-        )}
-
-        {/* Bottom info */}
-        <View style={styles.compactInfo}>
-          <Text style={styles.compactName} numberOfLines={1}>
-            {renderHighlighted(plant.name)}
-          </Text>
-          <Text style={styles.compactMeta} numberOfLines={1}>
-            {plant.plant_variety || getPlantTypeLabel()}
-          </Text>
-          <Text style={styles.compactLocation} numberOfLines={1}>
-            {plant.location}
-          </Text>
-        </View>
-
-        {/* Long-press action overlay */}
-        {actionOverlayVisible && (
-          <View style={styles.cardActionOverlay}>
-            <Pressable
-              style={StyleSheet.absoluteFillObject}
-              onPress={() => setActionOverlayVisible(false)}
-            />
-            <View style={styles.cardActionBtnRow}>
-              <TouchableOpacity
-                style={[styles.cardActionBtn, styles.cardActionBtnEdit]}
-                onPress={() => {
-                  setActionOverlayVisible(false);
-                  setTimeout(onEdit, 150);
-                }}
-                accessibilityLabel="Edit plant"
-                accessibilityRole="button"
-              >
-                <Ionicons name="create-outline" size={15} color="#fff" />
-                <Text style={styles.cardActionBtnText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.cardActionBtn, styles.cardActionBtnDelete]}
-                onPress={() => {
-                  setActionOverlayVisible(false);
-                  setTimeout(onDelete, 150);
-                }}
-                accessibilityLabel="Delete plant"
-                accessibilityRole="button"
-              >
-                <Ionicons name="trash-outline" size={15} color="#fff" />
-                <Text style={styles.cardActionBtnText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  }
 
   // ── Standard List Card ──
   return (

@@ -81,6 +81,23 @@ export function hasUrgentAttention(attention: BedAttentionReason[]): boolean {
   return attention.some((r) => URGENT_ATTENTION.has(r));
 }
 
+/** Short, grower-facing label for each attention reason — shown on the bed card. */
+export const ATTENTION_LABEL: Record<BedAttentionReason, string> = {
+  rotation_violation: 'Rotation risk',
+  overdue_water: 'Needs water',
+  rest_complete: 'Rest done',
+  low_legume: 'Low legume',
+};
+
+/**
+ * The single reason most worth surfacing on a compact card: urgent reasons win, otherwise
+ * the first flagged reason. Returns null when nothing needs attention.
+ */
+export function primaryAttention(attention: BedAttentionReason[]): BedAttentionReason | null {
+  if (attention.length === 0) return null;
+  return attention.find((r) => URGENT_ATTENTION.has(r)) ?? attention[0]!;
+}
+
 // ─── Presentation maps (theme-token keys, resolved by the card for dark mode) ──
 
 /** Theme keys whose value is a plain color string (excludes structured tokens). */

@@ -1,5 +1,6 @@
 import { GUILD_TEMPLATES } from '@/config/beds/guildTemplates';
 import type { BedType } from '@/types/database.types';
+import { computePlantsPerRow } from '@/utils/rowLayoutEngine';
 
 const MAX_DENSITY_PER_SQM = 8;
 
@@ -36,9 +37,10 @@ export function estimatePlantCapacity(
   const densityCap = Math.ceil(shareAreaSqm * MAX_DENSITY_PER_SQM);
 
   const companionTotal = rows.reduce((sum, row) => {
-    const spacingM = row.spacing_cm / 100;
     const rowGapM = (row.row_gap_cm ?? row.spacing_cm) / 100;
-    const perRow = Math.max(1, Math.floor(widthM / spacingM));
+    // Match the layout engine's per-row math (edge buffer + 1) so this estimate
+    // doesn't under-count vs what the Arrange step actually allows.
+    const perRow = computePlantsPerRow(Math.round(widthM * 100), row.spacing_cm);
     const strips = Math.max(1, Math.floor(stripLengthM / rowGapM));
     const count = Math.min(perRow * strips, densityCap);
     return sum + count;

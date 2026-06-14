@@ -58,13 +58,7 @@ interface ActiveFilters {
 
 const ITEMS_PER_PAGE = 20;
 
-const SORT_LABELS: Record<SortOption, string> = {
-  name: 'A–Z',
-  newest: 'Newest',
-  oldest: 'Oldest',
-  health: 'Health',
-  age: 'Age',
-};
+type BedSegment = 'all' | 'bed' | 'other';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -83,8 +77,7 @@ export default function PlantsScreen(): React.JSX.Element {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [groupByBed, setGroupByBed] = useState(false);
+  const [bedSegment, setBedSegment] = useState<BedSegment>('all');
   const { beds } = useBedData();
   const bedNameMap = useMemo(() => new Map(beds.map((b) => [b.id, b.name])), [beds]);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -465,9 +458,28 @@ export default function PlantsScreen(): React.JSX.Element {
     setShowFilters((prev) => !prev);
   };
 
+  // Search + filter result, before the All/Bed/Other segment is applied — drives the
+  // segment counts so they reflect the active search and filters.
+  const baseFiltered = useMemo(() => getFilteredPlants(), [getFilteredPlants]);
+
+  const segmentCounts = useMemo(
+    () => ({
+      all: baseFiltered.length,
+      bed: baseFiltered.filter((p) => p.bed_id != null).length,
+      other: baseFiltered.filter((p) => p.bed_id == null).length,
+    }),
+    [baseFiltered]
+  );
+
+  const segmentFiltered = useMemo(() => {
+    if (bedSegment === 'bed') return baseFiltered.filter((p) => p.bed_id != null);
+    if (bedSegment === 'other') return baseFiltered.filter((p) => p.bed_id == null);
+    return baseFiltered;
+  }, [baseFiltered, bedSegment]);
+
   const filteredPlants = useMemo(
-    () => getSortedPlants(getFilteredPlants()),
-    [getFilteredPlants, getSortedPlants]
+    () => getSortedPlants(segmentFiltered),
+    [getSortedPlants, segmentFiltered]
   );
 
   const displayedPlants = useMemo(() => {
@@ -476,8 +488,11 @@ export default function PlantsScreen(): React.JSX.Element {
 
   const hasMore = displayCount < filteredPlants.length;
 
+  // Group under bed headers automatically when viewing the Bed segment.
+  const autoGroup = bedSegment === 'bed';
+
   const groupedListData = useMemo((): ListItem[] => {
-    if (!groupByBed) {
+    if (!autoGroup) {
       return displayedPlants.map((p): ListItem => ({ kind: 'plant', data: p }));
     }
     const buckets = new Map<string, Plant[]>();
@@ -499,7 +514,7 @@ export default function PlantsScreen(): React.JSX.Element {
       for (const p of bPlants) items.push({ kind: 'plant', data: p });
     }
     return items;
-  }, [groupByBed, displayedPlants, filteredPlants, bedNameMap]);
+  }, [autoGroup, displayedPlants, filteredPlants, bedNameMap]);
 
   const loadMore = (): void => {
     if (loadingMore || !hasMore) return;
@@ -514,7 +529,7 @@ export default function PlantsScreen(): React.JSX.Element {
 
   useEffect(() => {
     setDisplayCount(ITEMS_PER_PAGE);
-  }, [filters, searchQuery, sortBy]);
+  }, [filters, searchQuery, sortBy, bedSegment]);
 
   const listItemKeyExtractor = useCallback(
     (item: ListItem) => (item.kind === 'plant' ? item.data.id : `header-${item.title}`),
@@ -541,7 +556,6 @@ export default function PlantsScreen(): React.JSX.Element {
       return (
         <PlantCard
           plant={item.data}
-          compact={viewMode === 'grid' && !groupByBed}
           searchQuery={searchQuery}
           onSwipeableOpen={handleSwipeableOpen}
           onPress={() => navigation.navigate('PlantDetail', { plantId: item.data.id })}
@@ -550,16 +564,7 @@ export default function PlantsScreen(): React.JSX.Element {
         />
       );
     },
-    [
-      viewMode,
-      groupByBed,
-      navigation,
-      handleDelete,
-      searchQuery,
-      handleSwipeableOpen,
-      styles,
-      theme,
-    ]
+    [navigation, handleDelete, searchQuery, handleSwipeableOpen, styles, theme]
   );
 
   const renderUndoToast = (): React.JSX.Element | null => {
@@ -701,65 +706,46 @@ export default function PlantsScreen(): React.JSX.Element {
 
       {/* ── Results & Toolbar Bar ── */}
       <View style={styles.resultsHeader}>
-        <View style={styles.resultsLeft}>
-          <Ionicons name="leaf" size={14} color={theme.primary} />
-          <Text style={styles.resultsCount}>{filteredPlants.length}</Text>
-          {hasActiveFilters ? (
-            <>
-              <Text style={styles.resultsLabel}>
-                of {plants.length} {plants.length === 1 ? 'Plant' : 'Plants'}
-              </Text>
-              <View style={styles.resultsFilteredBadge}>
-                <Text style={styles.resultsFilteredText}>filtered</Text>
-              </View>
-            </>
-          ) : (
-            <Text style={styles.resultsLabel}>
-              {filteredPlants.length === 1 ? 'Plant' : 'Plants'}
-            </Text>
-          )}
-        </View>
-        <View style={styles.resultsRight}>
-          <TouchableOpacity style={styles.sortPill} onPress={toggleFilters}>
-            <Ionicons name="swap-vertical" size={13} color={theme.textSecondary} />
-            <Text style={styles.sortPillText}>{SORT_LABELS[sortBy]}</Text>
-            <Ionicons name="chevron-down" size={12} color={theme.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.groupToggleBtn, groupByBed && styles.groupToggleBtnActive]}
-            onPress={() => setGroupByBed((v) => !v)}
-          >
-            <Ionicons
-              name="grid-outline"
-              size={15}
-              color={groupByBed ? theme.primary : theme.textSecondary}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.viewToggleBtn}
-            onPress={() => setViewMode((v) => (v === 'list' ? 'grid' : 'list'))}
-          >
-            <Ionicons
-              name={viewMode === 'list' ? 'grid' : 'list'}
-              size={16}
-              color={theme.textSecondary}
-            />
-          </TouchableOpacity>
+        {/* ── All / Bed / Other segmented control ── */}
+        <View style={styles.segmentRow}>
+          {(
+          [
+              ['all', 'All', segmentCounts.all],
+              ['bed', 'Bed', segmentCounts.bed],
+              ['other', 'Other', segmentCounts.other],
+            ] as const
+          ).map(([value, label, count]) => {
+            const active = bedSegment === value;
+            return (
+              <TouchableOpacity
+                key={value}
+                style={[styles.segmentChip, active && styles.segmentChipActive]}
+                onPress={() => setBedSegment(value)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${label} plants, ${count}`}
+              >
+                <Text style={[styles.segmentChipText, active && styles.segmentChipTextActive]}>
+                  {label}
+                </Text>
+                <Text style={[styles.segmentCount, active && styles.segmentChipTextActive]}>
+                  {count}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
       <FlatList
         ref={flatListRef}
         data={groupedListData}
-        key={`${viewMode}-${groupByBed ? 'grouped' : 'flat'}`}
-        numColumns={viewMode === 'grid' && !groupByBed ? 2 : 1}
         keyExtractor={listItemKeyExtractor}
         renderItem={renderListItem}
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 },
         ]}
-        columnWrapperStyle={viewMode === 'grid' && !groupByBed ? styles.gridRow : undefined}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadPlants} />}

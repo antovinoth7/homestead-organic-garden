@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { BedType, RotationStatus } from '@/types/database.types';
 import { bedExpectsLegumes } from '@/config/beds';
+import { LOW_LEGUME_THRESHOLD } from '@/utils/filterAndSortBeds';
 import { createStyles } from '@/styles/bedDetailStyles';
 
 interface Props {
@@ -40,7 +41,7 @@ export function RotationStatusCard({
               styles.legumeValue,
               {
                 color:
-                  status.legume_coverage_pct < 20
+                  status.legume_coverage_pct < LOW_LEGUME_THRESHOLD
                     ? theme.warning ?? '#f59e0b'
                     : theme.success ?? '#22c55e',
               },

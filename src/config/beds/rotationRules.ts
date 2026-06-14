@@ -1,9 +1,14 @@
 import { Bed, Plant, CropFamily, RotationRule } from '@/types/database.types';
 import { bedExpectsLegumes } from './legumeRelevance';
+import { DYNAMIC_ACCUMULATORS } from './dynamicAccumulators';
+import { LOW_LEGUME_THRESHOLD } from '@/utils/filterAndSortBeds';
 
 const SOLANACEAE_REST_SEASONS = 2;
-const MIN_LEGUME_COVERAGE_PCT = 20;
+const MIN_LEGUME_COVERAGE_PCT = LOW_LEGUME_THRESHOLD;
 const _MAX_SAME_FAMILY_CONSECUTIVE = 3;
+
+// Canonical accumulator names — single-sourced from the dynamic-accumulator config.
+const ACCUMULATOR_NAMES = DYNAMIC_ACCUMULATORS.map((a) => a.name);
 
 // Families that must rest before replanting same-family in the same row.
 const ROW_REST_FAMILIES: CropFamily[] = ['solanaceae', 'cucurbit'];
@@ -66,8 +71,7 @@ function hasVariedFamilies(plants: Plant[]): boolean {
 }
 
 function hasDynamicAccumulator(plants: Plant[]): boolean {
-  const accumulators = ['Agathi', 'Moringa', 'Comfrey', 'Banana'];
-  return plants.some((p) => accumulators.includes(p.plant_variety ?? p.name));
+  return plants.some((p) => ACCUMULATOR_NAMES.includes(p.plant_variety ?? p.name));
 }
 
 function hasNoPestRecurrence(bed: Bed): boolean {
@@ -77,8 +81,13 @@ function hasNoPestRecurrence(bed: Bed): boolean {
   return recentHighSeverity.length === 0;
 }
 
-function hasSufficientRest(bed: Bed): boolean {
-  return bed.prev_crop_family !== 'solanaceae';
+/**
+ * True when the bed is not simply repeating last season's crop family. Distinct from the
+ * solanaceae-specific rule: this catches replanting ANY family (e.g. cucurbit after cucurbit).
+ */
+function hasFamilyRotation(bed: Bed, plants: Plant[]): boolean {
+  if (!bed.prev_crop_family) return true;
+  return !plants.some((p) => p.crop_family === bed.prev_crop_family);
 }
 
 export function checkRotationRules(input: RotationCheckInput): RotationRule[] {
@@ -133,12 +142,12 @@ export function checkRotationRules(input: RotationCheckInput): RotationRule[] {
         : 'High-severity pests recorded. Apply neem cake and Trichoderma before next planting.',
     },
     {
-      id: 'adequate_rest',
-      rule: 'Adequate rest between heavy-feeding crops',
-      passed: hasSufficientRest(bed),
-      description: hasSufficientRest(bed)
-        ? 'Previous crop family allows direct replanting.'
-        : `Previous crop was ${bed.prev_crop_family} — consider green manure rest period of ${SOLANACEAE_REST_SEASONS} seasons.`,
+      id: 'family_rotation',
+      rule: "Not repeating last season's crop family",
+      passed: hasFamilyRotation(bed, plants),
+      description: hasFamilyRotation(bed, plants)
+        ? "This season's crops differ from last season's family — good rotation."
+        : `Bed still grows ${bed.prev_crop_family} like last season — rotate to a different family or rest ${SOLANACEAE_REST_SEASONS} seasons.`,
     }
   );
 

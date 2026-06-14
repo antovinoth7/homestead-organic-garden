@@ -109,9 +109,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     filterToggleButtonActive: {
       backgroundColor: theme.primary,
     },
-    gridRow: {
-      justifyContent: 'space-between',
-    },
 
     sortMenu: {
       backgroundColor: theme.backgroundSecondary,
@@ -245,23 +242,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     resultsHeader: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'flex-start',
       alignItems: 'center',
+      gap: 8,
       paddingHorizontal: 16,
       paddingVertical: 8,
       backgroundColor: theme.background,
     },
-    resultsLeft: {
+    segmentRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      flexShrink: 1,
       gap: 6,
     },
-    resultsRight: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    sortPill: {
+    segmentChip: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
@@ -272,45 +265,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.border,
     },
-    sortPillText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.text,
-    },
-    viewToggleBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    resultsCount: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    resultsLabel: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
-    resultsFilteredBadge: {
+    segmentChipActive: {
       backgroundColor: theme.primaryLight,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
-      borderWidth: 1,
       borderColor: theme.primary,
     },
-    resultsFilteredText: {
-      fontSize: 10,
-      fontWeight: '700',
+    segmentChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    segmentChipTextActive: {
       color: theme.primary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
+    },
+    segmentCount: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: theme.textTertiary,
     },
     resultsShowing: {
       fontSize: 12,
@@ -464,19 +434,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
-    },
-    groupToggleBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    groupToggleBtnActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
     },
   });
