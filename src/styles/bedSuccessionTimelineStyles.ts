@@ -98,6 +98,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 4,
       opacity: 0.85,
     },
+    // Estimated bar (plant has no recorded planting date — anchored at today)
+    estimatedBar: {
+      opacity: 0.4,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderStyle: 'dashed' as const,
+    },
     // Green manure fallow bar
     greenManureBar: {
       position: 'absolute' as const,

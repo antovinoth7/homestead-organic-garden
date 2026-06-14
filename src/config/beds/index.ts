@@ -20,7 +20,7 @@ export type { CompanionValidation } from './companionRules';
 export { checkRotationRules } from './rotationRules';
 export type { RotationCheckInput } from './rotationRules';
 
-export { getRecommendedPlantsForBed, BED_PLANT_CATALOG } from './bedPlantCatalog';
+export { getRecommendedPlantsForBed, getSmartNextCrops, BED_PLANT_CATALOG } from './bedPlantCatalog';
 
 export { getBedRecommendationForArea, getUsableBedArea } from './bedRecommendations';
 export type { BedRecommendation } from './bedRecommendations';

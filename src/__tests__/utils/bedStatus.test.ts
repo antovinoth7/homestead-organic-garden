@@ -121,6 +121,14 @@ describe('getBedStatus — attention', () => {
     expect(irrelevant.attention).not.toContain('low_legume');
   });
 
+  it('does not flag low legume on an empty legume-relevant bed (plant_count === 0)', () => {
+    const s = getBedStatus(
+      makeBed({ type: 'root_legume', legume_coverage_pct: 0, plant_count: 0, active_plant_count: 0 }),
+      NOW
+    );
+    expect(s.attention).not.toContain('low_legume');
+  });
+
   it('reports no attention for a healthy growing bed', () => {
     expect(getBedStatus(makeBed(), NOW).attention).toEqual([]);
   });

@@ -6,6 +6,7 @@ import { useTheme } from '@/theme';
 import { BedType } from '@/types/database.types';
 import { BedWithCoverage } from '@/hooks/useBedData';
 import { bedExpectsLegumes } from '@/config/beds';
+import { LOW_LEGUME_THRESHOLD } from '@/utils/filterAndSortBeds';
 import {
   getBedStatus,
   hasUrgentAttention,
@@ -59,7 +60,7 @@ export const BedCard = React.memo(function BedCard({
 
   const emoji = BED_TYPE_EMOJI[bed.type] ?? '🌿';
   const showLegume = bedExpectsLegumes(bed.type);
-  const lowLegume = showLegume && bed.legume_coverage_pct < 20;
+  const lowLegume = showLegume && bed.legume_coverage_pct < LOW_LEGUME_THRESHOLD;
 
   const status = useMemo(() => getBedStatus(bed), [bed]);
   const stripeColor = theme[LIFECYCLE_STRIPE_TOKEN[status.lifecycle]];
