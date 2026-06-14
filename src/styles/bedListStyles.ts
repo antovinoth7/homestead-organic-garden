@@ -146,6 +146,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 4,
       marginRight: 6,
     },
+    attentionTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginRight: 4,
+    },
+    attentionTagText: { fontSize: 11, fontWeight: '700' },
     cardMetaRow: {
       flexDirection: 'row',
       alignItems: 'center',

@@ -9,6 +9,8 @@ import { bedExpectsLegumes } from '@/config/beds';
 import {
   getBedStatus,
   hasUrgentAttention,
+  primaryAttention,
+  ATTENTION_LABEL,
   LIFECYCLE_LABEL,
   LIFECYCLE_STRIPE_TOKEN,
   LIFECYCLE_PILL_BG_TOKEN,
@@ -69,6 +71,8 @@ export const BedCard = React.memo(function BedCard({
       : LIFECYCLE_LABEL[status.lifecycle];
   const needsAttention = status.attention.length > 0;
   const attentionColor = hasUrgentAttention(status.attention) ? theme.error : theme.warning;
+  const attentionReason = primaryAttention(status.attention);
+  const attentionLabel = attentionReason ? ATTENTION_LABEL[attentionReason] : null;
 
   const handlePress = useCallback(() => onPress(bed), [onPress, bed]);
   const handleDelete = useCallback(() => {
@@ -203,11 +207,13 @@ export const BedCard = React.memo(function BedCard({
             )}
           </View>
         </View>
-        {needsAttention && (
-          <View
-            style={[styles.attentionDot, { backgroundColor: attentionColor }]}
-            accessibilityLabel="Needs attention"
-          />
+        {needsAttention && attentionLabel && (
+          <View style={styles.attentionTag} accessibilityLabel={`Needs attention: ${attentionLabel}`}>
+            <View style={[styles.attentionDot, { backgroundColor: attentionColor }]} />
+            <Text style={[styles.attentionTagText, { color: attentionColor }]} numberOfLines={1}>
+              {attentionLabel}
+            </Text>
+          </View>
         )}
         <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
       </TouchableOpacity>

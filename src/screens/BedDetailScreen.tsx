@@ -246,7 +246,13 @@ export default function BedDetailScreen(): React.JSX.Element {
           </>
         }
       />
-      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom, 24) + 24 },
+        ]}
+      >
       {/* Resting banner */}
       {bed.is_resting && (
         <View style={styles.restingBanner}>

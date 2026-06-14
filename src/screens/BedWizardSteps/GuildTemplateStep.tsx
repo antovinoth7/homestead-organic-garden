@@ -4,7 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { BedType, BedLayer, CropFamily, PlantEntry } from '@/types/database.types';
 import { Step2Data, Step3Data, Step4Data } from '@/hooks/useBedCreationWizard';
-import { getGuildTemplate, validateCompanionPair, DYNAMIC_ACCUMULATORS } from '@/config/beds';
+import {
+  getGuildTemplate,
+  validateCompanionPair,
+  DYNAMIC_ACCUMULATORS,
+  getPlantingSequence,
+} from '@/config/beds';
 import type { PlantRow } from '@/config/beds/guildTemplates';
 import { computeRowLayout, maxFitForSpecies, computePlantsPerRow } from '@/utils/rowLayoutEngine';
 import type { RowPlantInput } from '@/utils/rowLayoutEngine';
@@ -134,6 +139,11 @@ export function GuildTemplateStep({
     }
     return Array.from(all);
   }, [template, plantRowNames]);
+
+  const plantingSequence = useMemo(
+    () => (template ? getPlantingSequence(template) : []),
+    [template]
+  );
 
   const getBlockedReason = useCallback(
     (plantName: string): string | null => {
@@ -546,10 +556,11 @@ export function GuildTemplateStep({
         </View>
       )}
 
-      {template.three_sisters_sequence && (
+      {plantingSequence.length > 0 && (
         <View style={styles.sequenceCard}>
           <Text style={styles.sequenceTitle}>Planting Sequence</Text>
-          {template.three_sisters_sequence.map((seq) => (
+          <Text style={styles.sequenceSubtitle}>Suggested sowing order for this guild</Text>
+          {plantingSequence.map((seq) => (
             <View key={seq.week} style={styles.sequenceRow}>
               <Text style={styles.sequenceWeek}>Week {seq.week}</Text>
               <Text style={styles.sequenceAction}>{seq.action}</Text>

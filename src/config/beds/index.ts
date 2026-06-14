@@ -1,6 +1,9 @@
 export { getGuildTemplate, GUILD_TEMPLATES } from './guildTemplates';
 export type { GuildTemplate, PlantRow, ThreeSistersSequence } from './guildTemplates';
 
+export { getPlantingSequence } from './plantingSequence';
+export type { PlantingSequenceStep } from './plantingSequence';
+
 export { getGreenManureForMonth } from './greenManureEngine';
 
 export { DYNAMIC_ACCUMULATORS, getAccumulatorByName } from './dynamicAccumulators';

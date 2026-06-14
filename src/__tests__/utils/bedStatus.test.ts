@@ -1,4 +1,10 @@
-import { getBedStatus, WATER_OVERDUE_DAYS } from '@/utils/bedStatus';
+import {
+  getBedStatus,
+  primaryAttention,
+  ATTENTION_LABEL,
+  WATER_OVERDUE_DAYS,
+  type BedAttentionReason,
+} from '@/utils/bedStatus';
 import type { BedWithCoverage } from '@/hooks/useBedData';
 
 const NOW = Date.parse('2026-06-13T12:00:00.000Z');
@@ -117,5 +123,33 @@ describe('getBedStatus — attention', () => {
 
   it('reports no attention for a healthy growing bed', () => {
     expect(getBedStatus(makeBed(), NOW).attention).toEqual([]);
+  });
+});
+
+describe('attention presentation', () => {
+  const ALL_REASONS: BedAttentionReason[] = [
+    'rotation_violation',
+    'overdue_water',
+    'rest_complete',
+    'low_legume',
+  ];
+
+  it('has a non-empty label for every attention reason', () => {
+    for (const reason of ALL_REASONS) {
+      expect(ATTENTION_LABEL[reason]).toBeTruthy();
+    }
+  });
+
+  it('returns null when nothing needs attention', () => {
+    expect(primaryAttention([])).toBeNull();
+  });
+
+  it('prioritises urgent reasons over advisory ones regardless of order', () => {
+    expect(primaryAttention(['low_legume', 'overdue_water'])).toBe('overdue_water');
+    expect(primaryAttention(['rest_complete', 'rotation_violation'])).toBe('rotation_violation');
+  });
+
+  it('falls back to the first reason when none are urgent', () => {
+    expect(primaryAttention(['rest_complete', 'low_legume'])).toBe('rest_complete');
   });
 });
