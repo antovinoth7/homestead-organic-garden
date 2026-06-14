@@ -286,16 +286,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.textTertiary,
     },
-    resultsCount: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    resultsLabel: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
     resultsFilteredBadge: {
       backgroundColor: theme.primaryLight,
       paddingHorizontal: 8,

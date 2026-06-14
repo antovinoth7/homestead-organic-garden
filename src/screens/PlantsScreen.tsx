@@ -708,20 +708,10 @@ export default function PlantsScreen(): React.JSX.Element {
       <View style={styles.resultsHeader}>
         <View style={styles.resultsLeft}>
           <Ionicons name="leaf" size={14} color={theme.primary} />
-          <Text style={styles.resultsCount}>{filteredPlants.length}</Text>
-          {hasActiveFilters ? (
-            <>
-              <Text style={styles.resultsLabel}>
-                of {plants.length} {plants.length === 1 ? 'Plant' : 'Plants'}
-              </Text>
-              <View style={styles.resultsFilteredBadge}>
-                <Text style={styles.resultsFilteredText}>filtered</Text>
-              </View>
-            </>
-          ) : (
-            <Text style={styles.resultsLabel}>
-              {filteredPlants.length === 1 ? 'Plant' : 'Plants'}
-            </Text>
+          {hasActiveFilters && (
+            <View style={styles.resultsFilteredBadge}>
+              <Text style={styles.resultsFilteredText}>filtered</Text>
+            </View>
           )}
         </View>
         {/* ── All / Bed / Other segmented control ── */}
