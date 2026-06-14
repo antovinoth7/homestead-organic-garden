@@ -1,6 +1,9 @@
 export { getGuildTemplate, GUILD_TEMPLATES } from './guildTemplates';
 export type { GuildTemplate, PlantRow, ThreeSistersSequence } from './guildTemplates';
 
+export { getPlantingSequence } from './plantingSequence';
+export type { PlantingSequenceStep } from './plantingSequence';
+
 export { getGreenManureForMonth } from './greenManureEngine';
 
 export { DYNAMIC_ACCUMULATORS, getAccumulatorByName } from './dynamicAccumulators';
@@ -17,7 +20,7 @@ export type { CompanionValidation } from './companionRules';
 export { checkRotationRules } from './rotationRules';
 export type { RotationCheckInput } from './rotationRules';
 
-export { getRecommendedPlantsForBed, BED_PLANT_CATALOG } from './bedPlantCatalog';
+export { getRecommendedPlantsForBed, getSmartNextCrops, BED_PLANT_CATALOG } from './bedPlantCatalog';
 
 export { getBedRecommendationForArea, getUsableBedArea } from './bedRecommendations';
 export type { BedRecommendation } from './bedRecommendations';

@@ -27,7 +27,7 @@ import {
   getTransitionInputs,
   getHarvestGapWarnings,
 } from '@/services/beds';
-import { getRecommendedPlantsForBed, getGuildTemplate } from '@/config/beds';
+import { getSmartNextCrops, getGuildTemplate } from '@/config/beds';
 import { getLayerColor } from '@/config/beds/layerMeta';
 import { computeRowLayout } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
@@ -199,8 +199,8 @@ export default function BedDetailScreen(): React.JSX.Element {
 
   const nextCropSuggestions = useMemo(() => {
     if (!bed) return [];
-    return getRecommendedPlantsForBed(bed.type).slice(0, 5);
-  }, [bed]);
+    return getSmartNextCrops(bed, plants);
+  }, [bed, plants]);
 
   if (loading) {
     return (
@@ -246,7 +246,13 @@ export default function BedDetailScreen(): React.JSX.Element {
           </>
         }
       />
-      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom, 24) + 24 },
+        ]}
+      >
       {/* Resting banner */}
       {bed.is_resting && (
         <View style={styles.restingBanner}>

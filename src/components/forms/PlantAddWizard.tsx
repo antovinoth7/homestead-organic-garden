@@ -21,7 +21,6 @@ interface Props {
 }
 
 const STEP_LABELS = ['What', 'Where', 'How'];
-const STEP_SUBTITLES = ['Pick your plant', 'Choose where it grows', 'Set care schedule'];
 
 export function PlantAddWizard({ formState }: Props): React.JSX.Element {
   const {
@@ -161,8 +160,6 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
           );
         })}
       </View>
-
-      <Text style={wizardStyles.stepSubtitle}>{STEP_SUBTITLES[wizardStep - 1]}</Text>
 
       <KeyboardAvoidingView
         style={wizardStyles.stepContent}

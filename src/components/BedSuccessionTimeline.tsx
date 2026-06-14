@@ -128,6 +128,8 @@ interface PlantBar {
   startOffset: number;
   growEndOffset: number;
   harvestEndOffset: number;
+  /** True when no sow/planting date was recorded — the bar is anchored at today as an estimate. */
+  estimated: boolean;
 }
 
 interface Props {
@@ -156,11 +158,13 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
       const existing = earliestDate.get(p.name);
       if (!existing || d < existing) earliestDate.set(p.name, d);
     }
-    const fallback = parseDate(bed.created_at) ?? today;
     const uniqueNames = [...new Set(plants.map((p) => p.name))];
     return uniqueNames
       .map((name) => {
-        const plantDate = earliestDate.get(name) ?? fallback;
+        // No recorded sow/planting date → anchor at today and flag as an estimate
+        // (rather than the bed's creation date, which can be months off).
+        const recorded = earliestDate.get(name);
+        const plantDate = recorded ?? today;
         const startOff = dayOffset(plantDate, baseYear);
         const rep = representativePlant.get(name);
         const dth = rep ? getDaysToHarvestRange(rep) : { min: 55, max: 75 };
@@ -169,10 +173,11 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
           startOffset: startOff,
           growEndOffset: startOff + dth.min,
           harvestEndOffset: startOff + dth.max,
+          estimated: !recorded,
         };
       })
       .filter((bar) => bar.startOffset < 730);
-  }, [plants, bed.created_at, today, baseYear]);
+  }, [plants, today, baseYear]);
 
   const canvasWidth = useMemo(() => {
     const maxHarvest =
@@ -258,6 +263,7 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
             <View key={bar.name} style={styles.leftLabel}>
               <Text style={styles.leftLabelText} numberOfLines={1}>
                 {bar.name}
+                {bar.estimated ? ' (est.)' : ''}
               </Text>
             </View>
           ))}
@@ -327,6 +333,7 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
                         top: barTop,
                         height: BAR_HEIGHT,
                       },
+                      bar.estimated && styles.estimatedBar,
                     ]}
                   />
                   {/* Harvest window: harvest start → harvest end */}
@@ -339,6 +346,7 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
                         top: barTop,
                         height: BAR_HEIGHT,
                       },
+                      bar.estimated && styles.estimatedBar,
                     ]}
                   />
                 </React.Fragment>

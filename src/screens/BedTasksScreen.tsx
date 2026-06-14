@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { TaskTemplate } from '@/types/database.types';
@@ -24,6 +25,7 @@ export default function BedTasksScreen(): React.JSX.Element {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation<BedTasksScreenNavigationProp>();
   const route = useRoute<BedTasksScreenRouteProp>();
+  const insets = useSafeAreaInsets();
   const { bedId } = route.params;
 
   const [activeTab, setActiveTab] = useState<TabKey>('bed');
@@ -131,7 +133,10 @@ export default function BedTasksScreen(): React.JSX.Element {
           data={activeData}
           keyExtractor={(item) => item.id}
           renderItem={renderTask}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: Math.max(insets.bottom, 24) + 24 },
+          ]}
         />
       )}
 

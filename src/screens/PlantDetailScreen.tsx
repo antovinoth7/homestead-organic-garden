@@ -323,7 +323,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
       >
         <View style={[styles.header, { top: insets.top + 12 }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color={theme.text} />
+            <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('PlantForm', { plantId })}
