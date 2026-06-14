@@ -735,11 +735,6 @@ export default function PlantsScreen(): React.JSX.Element {
             );
           })}
         </View>
-        {hasActiveFilters && (
-          <View style={styles.resultsFilteredBadge}>
-            <Text style={styles.resultsFilteredText}>filtered</Text>
-          </View>
-        )}
       </View>
 
       <FlatList

@@ -282,21 +282,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.textTertiary,
     },
-    resultsFilteredBadge: {
-      backgroundColor: theme.primaryLight,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.primary,
-    },
-    resultsFilteredText: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: theme.primary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
     resultsShowing: {
       fontSize: 12,
       color: theme.textTertiary,

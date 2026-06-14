@@ -205,21 +205,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     resultsRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     resultsCount: { fontSize: 16, fontWeight: '700', color: theme.text },
     resultsLabel: { fontSize: 14, color: theme.textSecondary, fontWeight: '500' },
-    resultsFilteredBadge: {
-      backgroundColor: theme.primaryLight,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.primary,
-    },
-    resultsFilteredText: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: theme.primary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
     sortPill: {
       flexDirection: 'row',
       alignItems: 'center',

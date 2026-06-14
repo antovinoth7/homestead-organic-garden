@@ -438,12 +438,7 @@ export default function BedListScreen(): React.JSX.Element {
             <Ionicons name="grid" size={14} color={theme.primary} />
             <Text style={styles.resultsCount}>{visibleBeds.length}</Text>
             {hasActiveFilters ? (
-              <>
-                <Text style={styles.resultsLabel}>of {beds.length} Beds</Text>
-                <View style={styles.resultsFilteredBadge}>
-                  <Text style={styles.resultsFilteredText}>filtered</Text>
-                </View>
-              </>
+              <Text style={styles.resultsLabel}>of {beds.length} Beds</Text>
             ) : (
               <Text style={styles.resultsLabel}>{visibleBeds.length === 1 ? 'Bed' : 'Beds'}</Text>
             )}
