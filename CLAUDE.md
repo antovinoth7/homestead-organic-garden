@@ -87,3 +87,5 @@ Read these on demand when working in specific areas:
 - **`docs/DOMAIN_LOGIC.md`** — agro-climatic zones, seasons, plant/care helpers
 - **`docs/TESTING.md`** — test standards, fixture factories, coverage targets
 - **`docs/IMAGE_STORAGE.md`** — image storage rules, platform behavior, migration flow
+- **`docs/IMPLEMENTATION_ROADMAP.md`** — phased build plan, progress tracker, gap analysis
+- **`docs/BEST_PRACTICES.md`** — prioritized performance, product, and architecture recommendations
