@@ -1,11 +1,12 @@
 # Organic Gardening Planner — Implementation Roadmap
 
 > Generated: April 12, 2026
-> Last updated: June 3, 2026 — B2.16 shipped: farm-wide **Rotation tab** on the bed listing (Beds/Rotation segmented toggle on `BedListScreen`), reuse-first (composes `useCrossBedStatus` + `RotationStatusCard`); tasks intentionally kept in Care Plan (no Tasks tab); create/edit bed wizards untouched
+> Last updated: June 15, 2026 — Roadmap reconciled against shipped code: **Phase B3 (Farm Setup + Capacity) marked Complete** (consolidated into `MyFarmScreen` + `farmCapacity.ts` capacity engine + `FarmConfig` persistence); **Phase B4 (Input Recipes) marked In Progress** (`InputRecipesScreen` + recipe engine shipped; `SeasonalAdaptationScreen` still open); "Key Problems / Risks" section refreshed (schema migration + test-coverage risks resolved); gap rows G32–G36 + G1/G28 statuses updated. No code changed in this pass.
+> Previous: June 3, 2026 — B2.16 shipped: farm-wide **Rotation tab** on the bed listing (Beds/Rotation segmented toggle on `BedListScreen`), reuse-first (composes `useCrossBedStatus` + `RotationStatusCard`); tasks intentionally kept in Care Plan (no Tasks tab); create/edit bed wizards untouched
 > Previous: May 1, 2026 — Phase B2 complete; B2.1–B2.10 + B2.13–B2.15 shipped; B2.11 (SVG diagram) deferred; B2.12 (tests) open; gap rows G7/G12/G31/G37–G43/G45 closed; BedSizeStep raised-bed/permanent toggles removed (all beds are raised, `is_raised_bed` hardcoded `true`)
 > Previous: April 30, 2026 — Roadmap expanded from bed_creation_flow.html prototype; B2 significantly expanded (6-step wizard, 8 bed types, two-tier tasks, domain helpers); Phases B3/B4 added; Phase C dashboard overhaul added; G32–G45 gap rows added; F13–F19 feature sections added
 > Previous: April 26, 2026 — B.4 (growth stage auto-progression) complete; B.3 harvest tracking next
-> Status: Phase 0 shipped; Phase A shipped; Phase A2 shipped; Phase B in progress; Phase B2 shipped
+> Status: Phase 0 / A / A2 / B2 / B3 shipped; Phase B + B4 in progress; Phase C–H planned
 > Scope: Solo developer, iterative build, Firebase free-tier
 
 ---
@@ -19,8 +20,8 @@
 | Phase A2 — Config: Catalog Enrichment        | ✅ Complete    | 2026-04-18 |
 | Phase B — Plants                             | 🔄 In Progress | —          |
 | Phase B2 — Bed Management (expanded)         | ✅ Complete    | 2026-05-01 |
-| Phase B3 — Farm Setup + Capacity             | ⚪ Planned     | —          |
-| Phase B4 — Input Recipes + Seasonal Adapt.   | ⚪ Planned     | —          |
+| Phase B3 — Farm Setup + Capacity             | ✅ Complete    | 2026-06-06 |
+| Phase B4 — Input Recipes + Seasonal Adapt.   | 🔄 In Progress | —          |
 | Phase C — Home (dashboard overhaul)          | ⚪ Planned     | —          |
 | Phase D — Calendar                           | ⚪ Planned     | —          |
 | Phase E — Journal                            | ⚪ Planned     | —          |
@@ -59,6 +60,22 @@
 - Migration: `002_seed_catalog_enrichment.ts` — re-normalises existing user catalogs to merge enriched defaults; `LATEST_SCHEMA_VERSION` bumped to 2
 - UI: Known Pests and Known Diseases `CollapsibleSection`s with emoji chips in ManagePlantCatalog care modal
 - Tests: `plantCareDefaultsA2.test.ts` + `plantHelpersA2.test.ts` (22 tests) — field completeness, NumericRange validation, harvest date calculation, season lookup, pest/disease retrieval
+
+**Phase B3 delivered:**
+
+- Type: `FarmConfig` in `database.types.ts` (`coconut_tree_count`, `families_count`, `goals[]`; `land_cents` since moved to per-plot `LocationProfile.land_cents`)
+- Capacity engine: `src/services/farmCapacity.ts` — `calcUsableSqm()`, `calcMaxBeds()`, `calcWeeklyVegNeed()`, `calcCapacityFromProfiles()`, `calcCategoryPct()`, `getPhase3YearPlan()` (`YearPlan[]`), plus `getFarmConfig()`/`saveFarmConfig()` (sub-document on `user_settings/{uid}`)
+- Hook: `useFarmCapacity.ts` wraps the service, reactive to FarmConfig + per-plot soil profiles
+- UI: Farm Setup + Land Capacity were **consolidated into a single `MyFarmScreen`** (originally scoped as separate `FarmSetupScreen`/`LandCapacityScreen`) — plot/soil management, capacity preview (usable sqm → max beds), 3-year phase plan; reachable from MoreStack; `myFarmStyles.ts`
+- Tests: capacity math covered via `plantCapacity.test.ts` + `quickStartPlanner.test.ts` (a dedicated `farmCapacity.test.ts` per B3.8 is still open)
+
+**Phase B4 delivered (partial — In Progress):**
+
+- Config: `src/config/organicInputs/` — `recipes.ts` (Jeevamrutha, Beejamrutha, Panchagavya, Vermiwash: ingredients, prep steps, when-to-apply, season mapping), `seasonalAdaptations.ts`, `index.ts`
+- Recipe quantity engine: scales ingredient amounts by farm/bed area (pure function); `InputRecipesScreen.tsx` + `inputRecipesStyles.ts` render personalized quantities
+- Pre-monsoon batch: `getPreMonsoonTasks()` task generation near the SW-monsoon onset
+- Tests: `organicInputs.test.ts`, `recipeQuantity.test.ts`, `preMonsoonTasks.test.ts`
+- **Still open:** `SeasonalAdaptationScreen` (B4.5) — config data exists but the dedicated screen is not yet built; Beejamrutha lifecycle deep-link (B4.4)
 
 ---
 
@@ -106,24 +123,27 @@
 
 ## 2. Key Problems / Risks
 
+> Reviewed 2026-06-15. Two previously-listed risks are now **resolved** and removed: _No Schema
+> Migration System_ (migration runner + `LATEST_SCHEMA_VERSION` = 4 shipped in Phase 0; see
+> `docs/SCHEMA_MIGRATIONS.md`) and _Minimal Test Coverage_ (was 2 files; now ~29 test files
+> spanning utils/config/services/hooks/components). A residual test risk is reframed under Medium.
+
 ### Critical
 
-1. **No Schema Migration System**: Schema evolves by changing `database.types.ts` with no mechanism to transform existing data. Journal's legacy `photo_url` → `photo_filenames` migration is handled in application code. Every future schema change (harvest_logs, growth_stage_history, planting_windows) will compound this debt.
-2. **Empty Catalog on First Login**: `plantCatalog` in `user_settings` starts empty until the user manually configures it, OR the normalization code merges defaults. The current `getPlantCatalog()` does merge with `DEFAULT_PLANT_CATALOG` on read — so the catalog is technically not empty, but users don't see pre-loaded variety-level data with local context.
-3. **No Onboarding**: Users land on an empty TodayScreen after signup with no guidance.
+1. **No Offline Mutation Queue**: Write failures during poor connectivity silently fail. `withTimeoutAndRetry()` retries but if all retries fail, the user's action is lost. This is the highest real-world risk for rural / low-connectivity farmers — promoted to Critical.
+2. **No Onboarding**: Users land on an empty TodayScreen after signup with no guidance (G17, Phase F).
 
 ### High
 
 1. **Hardcoded Kanyakumari Constants**: Season boundaries, location defaults ("Mangarai", "Velliavilai"), pest alerts all embedded directly in code. Expanding to other districts requires parameterization.
-2. **No i18n Infrastructure**: All 13 screens and 12+ components have hardcoded English strings. Tamil support requires extracting every string first.
-3. **Minimal Test Coverage**: Only 2 utility test files (`dateHelpers.test.ts`, `locations.test.ts`). Zero service tests. Zero component tests. Risk when refactoring.
-4. **No Offline Mutation Queue**: Write failures during poor connectivity silently fail. `withTimeoutAndRetry()` retries but if all retries fail, the user's action is lost.
+2. **No i18n Infrastructure**: UI screens and components have hardcoded English strings. Tamil support (Phase G) requires extracting every string first; `tamilName` data already exists from Phase A2.
+3. **No Full Data Export**: Can export images but not plant/journal/task records — users cannot back up their actual data (G18, Phase F).
 
 ### Medium
 
-1. **Direct Firestore Coupling**: Every service imports from `firebase/firestore`. Not a problem now but increases cost of backend migration.
+1. **Direct Firestore Coupling**: Every service imports from `firebase/firestore`. Not a problem now but increases cost of any backend migration (G19).
 2. **Large Hook**: `usePlantFormState` returns 120+ properties. Works but difficult to maintain.
-3. **No Data Export**: Can export images but not plant/journal/task data. Users can't back up their actual records.
+3. **Test Coverage Shallow Despite Breadth**: ~29 test files exist, but coverage thresholds sit at 30% and only `src/utils` + `src/config` are measured; services/hooks lack emulator-backed tests, and CLAUDE.md rule #7 ("never mock Firestore — use emulator") has no emulator wired into CI. Tighten thresholds and add an emulator harness as the suite grows.
 
 ---
 
@@ -158,15 +178,15 @@
 | G25 | Water Management                                                | None                                                           | Nice-to-Have         | M      | Low       | Defer                               |
 | G26 | Lifecycle Economics                                             | Age calc exists, no ROI projection                             | Nice-to-Have         | M      | Medium    | Phase H                             |
 | G27 | Zone-Aware Config (State-Level Expansion)                       | Hardcoded Kanyakumari                                          | Nice-to-Have         | XL     | Low (now) | Defer                               |
-| G28 | Test Coverage (30% minimum)                                     | ~2%                                                            | Critical             | L      | High      | Ongoing                             |
+| G28 | Test Coverage (30% minimum)                                     | ~29 test files, 30% threshold (utils/config only)             | Critical             | L      | High      | Ongoing 🔄 (raise threshold + emulator)|
 | G29 | Pest/Disease/Beneficial Reference (detail pages)                | 160+ treatments exist, no detail pages or browseable reference | High-Value           | M      | High      | Phase A (done) / A3 (deferred)      |
 | G30 | Per-Variety Custom Pests/Diseases/Beneficials                   | Static lists only, no user customisation per variety           | High-Value           | S      | Medium    | Phase A3 (deferred)                 |
 | G31 | Bed Management                                                  | Free-text `bed_name` on Plant, no bed entity or rotation       | High-Value           | XL     | High      | Phase B2 ✅                         |
-| G32 | Farm Setup Screen (cents, trees, families, goals)               | None                                                           | High-Value           | S      | High      | Phase B3                            |
-| G33 | Land Capacity Engine (usable sqm, max beds, food category bars) | None                                                           | High-Value           | M      | High      | Phase B3                            |
-| G34 | Full-Year Harvest Guarantee Grid (category × season)            | None                                                           | High-Value           | M      | High      | Phase B3                            |
-| G35 | Organic Input Recipes (personalized by farm size)               | Deferred in A3.7 — accelerated by prototype                    | High-Value           | M      | High      | Phase B4                            |
-| G36 | Seasonal Adaptation Screen + Pre-Monsoon Batch                  | None                                                           | High-Value           | M      | Medium    | Phase B4                            |
+| G32 | Farm Setup Screen (cents, trees, families, goals)               | Shipped in `MyFarmScreen` + `FarmConfig`                       | High-Value           | S      | High      | Phase B3 ✅                         |
+| G33 | Land Capacity Engine (usable sqm, max beds, food category bars) | `farmCapacity.ts` engine + `useFarmCapacity`                   | High-Value           | M      | High      | Phase B3 ✅                         |
+| G34 | Full-Year Harvest Guarantee Grid (category × season)            | `calcCategoryPct` + `getPhase3YearPlan` shipped               | High-Value           | M      | High      | Phase B3 ✅                         |
+| G35 | Organic Input Recipes (personalized by farm size)               | `InputRecipesScreen` + recipe engine + config                 | High-Value           | M      | High      | Phase B4 ✅                         |
+| G36 | Seasonal Adaptation Screen + Pre-Monsoon Batch                  | Pre-monsoon batch + config done; screen pending               | High-Value           | M      | Medium    | Phase B4 🔄 (screen open)           |
 | G37 | Dynamic Accumulators (chop-drop tracking, 4 plants)             | None — Agathi, Moringa, Comfrey, Banana with intervals         | High-Value           | S      | High      | Phase B2 ✅                         |
 | G38 | Harvest Gap Detector (cross-bed same-guild clearing)            | None                                                           | High-Value           | S      | High      | Phase B2 ✅                         |
 | G39 | Cross-Bed Coordinator (6-rule farm-wide rotation check)         | None                                                           | High-Value           | S      | High      | Phase B2 ✅                         |
