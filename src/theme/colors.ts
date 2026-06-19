@@ -28,7 +28,7 @@ const darkLayerColors: LayerColorMap = {
 export const lightTheme = {
   // Background colors
   background: '#fbf9f5',
-  backgroundSecondary: '#ffffff',
+  backgroundSecondary: '#f4f6f7',
   backgroundTertiary: '#f4eee6',
 
   // Text colors
@@ -84,7 +84,7 @@ export const lightTheme = {
   shadow: '#000',
 
   // Card & button
-  card: '#ffffff',
+  card: '#f4f6f7',
   buttonText: '#ffffff',
 
   // Input colors
