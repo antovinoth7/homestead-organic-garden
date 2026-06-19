@@ -272,9 +272,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     segmentChipActive: {
       backgroundColor: theme.primaryLight,
     },
-    segmentIcon: {
-      fontSize: 12,
-    },
     segmentChipText: {
       fontSize: 12,
       fontWeight: '600',
@@ -283,10 +280,25 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     segmentChipTextActive: {
       color: theme.primary,
     },
-    segmentCount: {
-      fontSize: 11,
+    segmentBadge: {
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+    },
+    segmentBadgeActive: {
+      backgroundColor: theme.primary,
+    },
+    segmentBadgeText: {
+      fontSize: 10,
       fontWeight: '700',
       color: theme.textTertiary,
+    },
+    segmentBadgeTextActive: {
+      color: theme.textInverse,
     },
     resultsShowing: {
       fontSize: 12,
