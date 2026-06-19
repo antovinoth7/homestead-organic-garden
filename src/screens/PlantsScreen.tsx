@@ -710,11 +710,11 @@ export default function PlantsScreen(): React.JSX.Element {
         <View style={styles.segmentRow}>
           {(
           [
-              ['all', 'All', segmentCounts.all],
-              ['bed', 'Bed', segmentCounts.bed],
-              ['other', 'Other', segmentCounts.other],
+              ['all', 'All', '🌱', segmentCounts.all],
+              ['bed', 'Beds', '🟫', segmentCounts.bed],
+              ['other', 'Pots & Ground', '🪴', segmentCounts.other],
             ] as const
-          ).map(([value, label, count]) => {
+          ).map(([value, label, icon, count]) => {
             const active = bedSegment === value;
             return (
               <TouchableOpacity
@@ -725,6 +725,7 @@ export default function PlantsScreen(): React.JSX.Element {
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={`${label} plants, ${count}`}
               >
+                <Text style={styles.segmentIcon}>{icon}</Text>
                 <Text style={[styles.segmentChipText, active && styles.segmentChipTextActive]}>
                   {label}
                 </Text>

@@ -251,8 +251,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     segmentRow: {
       flexDirection: 'row',
+      alignSelf: 'flex-start',
       flexShrink: 1,
-      gap: 6,
+      gap: 2,
+      padding: 2,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.backgroundSecondary,
+      overflow: 'hidden',
     },
     segmentChip: {
       flexDirection: 'row',
@@ -260,14 +267,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 14,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
+      borderRadius: 12,
     },
     segmentChipActive: {
       backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
+    },
+    segmentIcon: {
+      fontSize: 12,
     },
     segmentChipText: {
       fontSize: 12,
