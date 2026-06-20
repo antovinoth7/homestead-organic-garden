@@ -286,6 +286,20 @@ export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> 
   invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS, CACHE_KEYS.TODAY_TASK_LOGS);
 };
 
+/**
+ * Bed-task subtypes whose completion should stamp the bed's last-input date,
+ * so the bed detail's Soil Input Log stays in sync with the Care Plan (which is
+ * the single completion surface). Subtypes with no date field (mulch, wood_ash,
+ * chop_and_drop) simply complete as normal.
+ */
+const BED_TASK_SUBTYPE_DATE_FIELD: Partial<
+  Record<string, 'last_water_date' | 'last_jeevamrutha_date' | 'last_weeding_date'>
+> = {
+  water_bed: 'last_water_date',
+  jeevamrutha: 'last_jeevamrutha_date',
+  weeding: 'last_weeding_date',
+};
+
 export const markTaskDone = async (
   template: TaskTemplate,
   notes?: string,
@@ -440,6 +454,20 @@ export const markTaskDone = async (
     CACHE_KEYS.TODAY_TASK_LOGS,
     CACHE_KEYS.ALL_PLANTS
   );
+
+  // Bed tasks: stamp the bed's matching last-input date so the bed detail's
+  // Soil Input Log reflects this completion (Care Plan is the single "do" surface).
+  const bedDateField = template.task_subtype
+    ? BED_TASK_SUBTYPE_DATE_FIELD[template.task_subtype]
+    : undefined;
+  if (template.bed_id && bedDateField) {
+    try {
+      const { updateBed } = await import('./beds');
+      await updateBed(template.bed_id, { [bedDateField]: doneAtIso });
+    } catch (err) {
+      logger.warn('markTaskDone: failed to stamp bed input date', err as Error);
+    }
+  }
 
   // For one_shot annual plants: completing a harvest task auto-archives the plant.
   if (template.task_type === 'harvest' && template.plant_id) {

@@ -611,7 +611,13 @@ Shared foundations (types, services, config files) are built in the phase that f
 
 - Watering task on a ≥2mm-rain day shows the rain badge and stays actionable; harvest tasks show the estimate; **Beds** segment groups tasks under bed headers, **Pots & Ground** filters to non-bed tasks; lint + 470 tests green.
 
-> **Deferred follow-up (not Phase D):** `BedDetailScreen`'s Water/Jeevamrutha/Weeding quick-log buttons still write `bed.last_*_date` separately and don't complete the matching bed task — the one remaining bed-task duplication. Unify (complete the task / derive last-done from task history) in a later pass.
+**D.5 — Bed quick-log ↔ task unified ✅ (2026-06-20):** resolved the last bed-task
+duplication. `markTaskDone` now stamps the bed's `last_water_date` / `last_jeevamrutha_date`
+/ `last_weeding_date` when a `water_bed` / `jeevamrutha` / `weeding` bed task is completed
+(subtype→field map; dynamic `import('./beds')` to avoid a cycle). `BedDetailScreen`'s Soil
+Input Log is now **read-only** (the separate `logBedInput`/`restoreBedInput` write path +
+undo were removed) — the Care Plan is the single completion surface, and the bed detail shows
+the derived "Last X" status. No more two-places-to-update.
 
 ---
 
