@@ -82,7 +82,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
     emptyTitle: { fontSize: 18, fontWeight: '600', color: theme.text, marginTop: 16 },
     emptySubtitle: { color: theme.textSecondary, marginTop: 8, textAlign: 'center' },
-    // BedCard — compact row
+    // BedCard — richer single-column card
     card: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -102,14 +102,33 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       bottom: 0,
       width: 4,
     },
-    cardEmoji: { fontSize: 26, marginRight: 12 },
+    emojiTile: {
+      width: 44,
+      height: 44,
+      borderRadius: 10,
+      backgroundColor: theme.primaryLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    emojiTileText: { fontSize: 24 },
     cardContent: { flex: 1 },
-    cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    cardTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
     cardName: { flexShrink: 1, fontSize: 16, fontWeight: '700', color: theme.text },
+    cardSubtitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 2,
+    },
     cardType: {
       fontSize: 12,
       color: theme.textSecondary,
-      marginTop: 1,
       textTransform: 'capitalize',
     },
     raisedTag: {
@@ -131,25 +150,44 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 10,
     },
     statusPillText: { fontSize: 11, fontWeight: '700' },
+    occupancyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 8,
+    },
+    occupancyTrack: {
+      width: 92,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: theme.backgroundTertiary,
+      overflow: 'hidden',
+    },
+    occupancyFill: {
+      height: '100%',
+      borderRadius: 3,
+      backgroundColor: theme.primary,
+    },
+    occupancyText: { fontSize: 12, color: theme.textSecondary, fontWeight: '500' },
+    cardBottomRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      marginTop: 8,
+    },
     attentionDot: {
       width: 8,
       height: 8,
       borderRadius: 4,
       marginRight: 6,
     },
-    attentionTag: {
+    attentionBanner: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginRight: 4,
+      flexShrink: 1,
     },
-    attentionTagText: { fontSize: 11, fontWeight: '700' },
-    cardMetaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: 12,
-      marginTop: 6,
-    },
+    attentionTagText: { fontSize: 12, fontWeight: '700' },
     metaChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     metaChipText: { fontSize: 11, color: theme.textSecondary, fontWeight: '500' },
     // Swipe actions

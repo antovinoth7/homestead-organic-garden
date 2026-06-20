@@ -25,6 +25,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { useTabBarScroll, TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { getErrorMessage } from '../utils/errorLogging';
+import { getPlantWaterStatus } from '../utils/plantWatering';
 
 type AttentionSeverity = 'critical' | 'high' | 'medium';
 
@@ -296,35 +297,29 @@ export default function TodayScreen(): React.JSX.Element {
         });
       }
 
-      const frequency = Number(plant.watering_frequency_days);
-      if (!Number.isFinite(frequency) || frequency <= 0) return;
-
-      const daysSinceLastWatered = getDaysSince(plant.last_watered_date);
-      if (daysSinceLastWatered !== null && daysSinceLastWatered >= frequency) {
-        const daysOverdue = Math.max(0, daysSinceLastWatered - frequency);
+      const water = getPlantWaterStatus(plant);
+      if (water.reason === 'overdue' || water.reason === 'due_today') {
+        const frequency = Number(plant.watering_frequency_days);
         addPlantAttention(plant, {
-          severity: daysOverdue >= Math.max(2, Math.ceil(frequency / 2)) ? 'high' : 'medium',
+          severity: water.daysOverdue >= Math.max(2, Math.ceil(frequency / 2)) ? 'high' : 'medium',
           icon: 'water',
           reason:
-            daysOverdue > 0
-              ? `Watering overdue by ${daysOverdue} day${daysOverdue === 1 ? '' : 's'}`
+            water.daysOverdue > 0
+              ? `Watering overdue by ${water.daysOverdue} day${water.daysOverdue === 1 ? '' : 's'}`
               : 'Watering due today',
-          daysOverdue,
+          daysOverdue: water.daysOverdue,
         });
         return;
       }
 
-      if (plant.last_watered_date) return;
-
-      const plantAgeDays = getDaysSince(plant.planting_date || plant.created_at);
-      if (plantAgeDays === null || plantAgeDays < frequency) return;
-
-      addPlantAttention(plant, {
-        severity: 'medium',
-        icon: 'water',
-        reason: 'No watering history logged',
-        daysOverdue: Math.max(0, plantAgeDays - frequency),
-      });
+      if (water.reason === 'no_history') {
+        addPlantAttention(plant, {
+          severity: 'medium',
+          icon: 'water',
+          reason: 'No watering history logged',
+          daysOverdue: water.daysOverdue,
+        });
+      }
     });
 
     // Fertilising overdue check

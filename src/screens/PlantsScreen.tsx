@@ -509,7 +509,7 @@ export default function PlantsScreen(): React.JSX.Element {
       return (bedNameMap.get(a) ?? '').localeCompare(bedNameMap.get(b) ?? '');
     });
     for (const [bedId, bPlants] of sortedEntries) {
-      const title = bedId ? bedNameMap.get(bedId) ?? 'Unknown Bed' : 'Unassigned';
+      const title = bedId ? (bedNameMap.get(bedId) ?? 'Unknown Bed') : 'Unassigned';
       items.push({ kind: 'header', title });
       for (const p of bPlants) items.push({ kind: 'plant', data: p });
     }
@@ -709,12 +709,12 @@ export default function PlantsScreen(): React.JSX.Element {
         {/* ── All / Bed / Other segmented control ── */}
         <View style={styles.segmentRow}>
           {(
-          [
-              ['all', 'All', segmentCounts.all],
-              ['bed', 'Bed', segmentCounts.bed],
-              ['other', 'Other', segmentCounts.other],
+            [
+              ['all', 'All', 'flower-outline', segmentCounts.all],
+              ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
+              ['other', 'Pots & Ground', 'cube-outline', segmentCounts.other],
             ] as const
-          ).map(([value, label, count]) => {
+          ).map(([value, label, icon, count]) => {
             const active = bedSegment === value;
             return (
               <TouchableOpacity
@@ -725,12 +725,19 @@ export default function PlantsScreen(): React.JSX.Element {
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={`${label} plants, ${count}`}
               >
+                <Ionicons
+                  name={icon}
+                  size={14}
+                  color={active ? theme.primary : theme.textSecondary}
+                />
                 <Text style={[styles.segmentChipText, active && styles.segmentChipTextActive]}>
                   {label}
                 </Text>
-                <Text style={[styles.segmentCount, active && styles.segmentChipTextActive]}>
-                  {count}
-                </Text>
+                <View style={[styles.segmentBadge, active && styles.segmentBadgeActive]}>
+                  <Text style={[styles.segmentBadgeText, active && styles.segmentBadgeTextActive]}>
+                    {count}
+                  </Text>
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -759,47 +766,47 @@ export default function PlantsScreen(): React.JSX.Element {
                   plants.length === 0
                     ? 'leaf-outline'
                     : homeHealthFilter === 'healthy'
-                    ? 'happy-outline'
-                    : homeHealthFilter === 'sick'
-                    ? 'medkit-outline'
-                    : homeHealthFilter === 'stressed'
-                    ? 'warning-outline'
-                    : 'search-outline'
+                      ? 'happy-outline'
+                      : homeHealthFilter === 'sick'
+                        ? 'medkit-outline'
+                        : homeHealthFilter === 'stressed'
+                          ? 'warning-outline'
+                          : 'search-outline'
                 }
                 size={64}
                 color={
                   plants.length === 0
                     ? theme.primary
                     : homeHealthFilter === 'healthy'
-                    ? theme.success
-                    : homeHealthFilter === 'sick'
-                    ? theme.error
-                    : homeHealthFilter === 'stressed'
-                    ? theme.warning
-                    : theme.border
+                      ? theme.success
+                      : homeHealthFilter === 'sick'
+                        ? theme.error
+                        : homeHealthFilter === 'stressed'
+                          ? theme.warning
+                          : theme.border
                 }
               />
               <Text style={styles.emptyText}>
                 {plants.length === 0
                   ? 'Your garden is empty'
                   : homeHealthFilter === 'healthy'
-                  ? 'No healthy plants yet'
-                  : homeHealthFilter === 'sick'
-                  ? 'No sick plants — great news!'
-                  : homeHealthFilter === 'stressed'
-                  ? 'No stressed plants — looking good!'
-                  : 'No plants match'}
+                    ? 'No healthy plants yet'
+                    : homeHealthFilter === 'sick'
+                      ? 'No sick plants — great news!'
+                      : homeHealthFilter === 'stressed'
+                        ? 'No stressed plants — looking good!'
+                        : 'No plants match'}
               </Text>
               <Text style={styles.emptySubtext}>
                 {plants.length === 0
                   ? 'Tap + to add your first plant and start tracking your garden'
                   : homeHealthFilter === 'healthy'
-                  ? 'Add plants and keep them thriving'
-                  : homeHealthFilter === 'sick'
-                  ? 'All your plants are doing well 🌱'
-                  : homeHealthFilter === 'stressed'
-                  ? 'Your garden is healthy and happy 🎉'
-                  : 'Try adjusting your filters or search'}
+                    ? 'Add plants and keep them thriving'
+                    : homeHealthFilter === 'sick'
+                      ? 'All your plants are doing well 🌱'
+                      : homeHealthFilter === 'stressed'
+                        ? 'Your garden is healthy and happy 🎉'
+                        : 'Try adjusting your filters or search'}
               </Text>
               {plants.length === 0 ? (
                 <TouchableOpacity
