@@ -59,7 +59,6 @@ interface UseCalendarDataOptions {
   groupBy: GroupBy;
   filterTaskTypes: Set<string>;
   filterOverdueOnly: boolean;
-  filterBedId?: string;
   bedSegment?: BedSegment;
   bedNames?: Map<string, string>;
 }
@@ -74,7 +73,6 @@ export function useCalendarData({
   groupBy,
   filterTaskTypes,
   filterOverdueOnly,
-  filterBedId,
   bedSegment = 'other',
   bedNames,
 }: UseCalendarDataOptions): UseCalendarDataReturn {
@@ -299,11 +297,8 @@ export function useCalendarData({
       todayStart.setHours(0, 0, 0, 0);
       result = result.filter((t) => t.next_due_at && new Date(t.next_due_at) < todayStart);
     }
-    if (filterBedId) {
-      result = result.filter((t) => t.bed_id === filterBedId);
-    }
     return result;
-  }, [searchFilteredTasks, filterTaskTypes, filterOverdueOnly, filterBedId]);
+  }, [searchFilteredTasks, filterTaskTypes, filterOverdueOnly]);
 
   // Tasks visible in the current view = overdue OR within the current week/month window
   // (mirrors overdueTasks + weekTasks below). Drives accurate, non-misleading segment counts.

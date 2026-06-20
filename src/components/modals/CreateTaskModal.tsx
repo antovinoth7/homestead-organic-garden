@@ -18,6 +18,9 @@ const TASK_TYPE_ITEMS: DropdownItem[] = [
   { label: '🪴 Repot', value: 'repot' },
   { label: '🧴 Spray (Pesticide/Neem)', value: 'spray' },
   { label: '🍂 Mulch', value: 'mulch' },
+  { label: '🌾 Weeding', value: 'weeding' },
+  { label: '🌱 Transplanting', value: 'transplanting' },
+  { label: '⛏️ Cultivating', value: 'cultivating' },
 ];
 
 interface CreateTaskModalProps {

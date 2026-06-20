@@ -82,7 +82,6 @@ export default function CalendarScreen(): React.JSX.Element {
   const [showGroupMenu, setShowGroupMenu] = useState(false);
   const [filterTaskTypes, setFilterTaskTypes] = useState<Set<string>>(new Set());
   const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
-  const [filterBedId, setFilterBedId] = useState<string>('');
   const { beds: bedList } = useBedData();
   const bedMap = useMemo(() => new Map(bedList.map((b) => [b.id, b.name])), [bedList]);
   const [bedSegment, setBedSegment] = useState<'bed' | 'other'>('other');
@@ -141,7 +140,6 @@ export default function CalendarScreen(): React.JSX.Element {
     groupBy: effectiveGroupBy,
     filterTaskTypes,
     filterOverdueOnly,
-    filterBedId,
     bedSegment,
     bedNames: bedMap,
   });
@@ -855,20 +853,6 @@ export default function CalendarScreen(): React.JSX.Element {
               );
             })}
           </View>
-
-          {/* Active bed filter (from deep-link) — single removable pill */}
-          {filterBedId !== '' && (
-            <View style={styles.activeBedPillRow}>
-              <TouchableOpacity
-                style={styles.activeBedPill}
-                onPress={() => setFilterBedId('')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.activeBedPillText}>🛏 {bedMap.get(filterBedId) ?? 'Bed'}</Text>
-                <Ionicons name="close" size={14} color={theme.textInverse} />
-              </TouchableOpacity>
-            </View>
-          )}
 
           {/* Selected Date Tasks */}
           {!isSearching && selectedDate && (

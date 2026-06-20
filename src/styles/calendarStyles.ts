@@ -1524,24 +1524,4 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     segmentBadgeTextActive: {
       color: theme.textInverse,
     },
-    // Single removable pill shown when a bed filter arrives via deep-link
-    activeBedPillRow: {
-      flexDirection: 'row',
-      paddingHorizontal: 12,
-      marginBottom: 8,
-    },
-    activeBedPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      backgroundColor: theme.primary,
-    },
-    activeBedPillText: {
-      fontSize: 13,
-      color: theme.textInverse,
-      fontWeight: '600',
-    },
   });

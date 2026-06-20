@@ -13,6 +13,9 @@ export const TASK_EMOJIS: Record<TaskType, string> = {
   mulch: '🍂',
   harvest: '🧺',
   harvest_leaves: '🍃',
+  weeding: '🌾',
+  transplanting: '🌱',
+  cultivating: '⛏️',
 };
 
 export const TASK_COLORS: Record<TaskType, string> = {
@@ -24,6 +27,9 @@ export const TASK_COLORS: Record<TaskType, string> = {
   mulch: '#795548',
   harvest: '#8BC34A',
   harvest_leaves: '#66BB6A',
+  weeding: '#7CB342',
+  transplanting: '#26A69A',
+  cultivating: '#8D6E63',
 };
 
 export const TASK_ICONS: Record<TaskType, keyof typeof Ionicons.glyphMap> = {
@@ -35,6 +41,9 @@ export const TASK_ICONS: Record<TaskType, keyof typeof Ionicons.glyphMap> = {
   mulch: 'layers',
   harvest: 'basket',
   harvest_leaves: 'leaf',
+  weeding: 'trash-bin',
+  transplanting: 'swap-horizontal',
+  cultivating: 'build',
 };
 
 export const TASK_LABELS: Record<TaskType, string> = {
@@ -46,4 +55,7 @@ export const TASK_LABELS: Record<TaskType, string> = {
   mulch: 'Mulch',
   harvest: 'Harvest',
   harvest_leaves: 'Harvest Leaves',
+  weeding: 'Weeding',
+  transplanting: 'Transplanting',
+  cultivating: 'Cultivating',
 };
