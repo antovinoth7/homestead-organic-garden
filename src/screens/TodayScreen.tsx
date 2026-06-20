@@ -8,19 +8,22 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { getTodayTasks, getTodayTaskLogs, getSeasonalCareReminder } from '../services/tasks';
+import {
+  getTodayTasks,
+  getTodayTaskLogs,
+  getSeasonalCareReminder,
+  markTaskDone,
+} from '../services/tasks';
 import { getAllPlants } from '../services/plants';
-import { TaskTemplate, Plant, TaskLog, TaskType, FarmAlert } from '../types/database.types';
+import { TaskTemplate, Plant, TaskLog, FarmAlert } from '../types/database.types';
 import { useBedData } from '../hooks/useBedData';
-import { bedExpectsLegumes } from '../config/beds';
 import { Ionicons } from '@expo/vector-icons';
-import { TASK_EMOJIS, TASK_COLORS } from '../utils/taskConstants';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { TodayScreenNavigationProp, TodayScreenRouteProp } from '../types/navigation.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useThemeMode } from '../theme';
 import { createStyles } from '../styles/todayStyles';
-import Svg, { Circle, Path } from 'react-native-svg';
+import { summarizeTodayTasks, computeDonutSegments } from '../utils/taskSummary';
 import { useTabBarScroll, TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { getErrorMessage } from '../utils/errorLogging';
@@ -38,87 +41,17 @@ import { PlantNowSection } from '../components/PlantNowSection';
 import { AlmanacHighlight } from '../components/AlmanacHighlight';
 import { InputReminderStrip } from '../components/InputReminderStrip';
 import { FarmHealthCard } from '../components/FarmHealthCard';
-
-type TaskGroup = {
-  type: TaskType;
-  overdue: TaskTemplate[];
-  today: TaskTemplate[];
-};
-
-const groupTasksByType = (
-  overdueTasks: TaskTemplate[],
-  todayTasksList: TaskTemplate[]
-): TaskGroup[] => {
-  const map = new Map<TaskType, TaskGroup>();
-
-  for (const task of overdueTasks) {
-    let group = map.get(task.task_type);
-    if (!group) {
-      group = { type: task.task_type, overdue: [], today: [] };
-      map.set(task.task_type, group);
-    }
-    group.overdue.push(task);
-  }
-
-  for (const task of todayTasksList) {
-    let group = map.get(task.task_type);
-    if (!group) {
-      group = { type: task.task_type, overdue: [], today: [] };
-      map.set(task.task_type, group);
-    }
-    group.today.push(task);
-  }
-
-  // Sort: groups with overdue tasks first, then by total count descending
-  return Array.from(map.values()).sort((a, b) => {
-    if (a.overdue.length > 0 && b.overdue.length === 0) return -1;
-    if (b.overdue.length > 0 && a.overdue.length === 0) return 1;
-    const totalA = a.overdue.length + a.today.length;
-    const totalB = b.overdue.length + b.today.length;
-    return totalB - totalA;
-  });
-};
-
-/** Compact number display: 0-99 exact, 100-999 → "99+", 1000+ → "1k"/"1.5k" */
-const fmtCount = (n: number): string => {
-  if (n >= 1000) {
-    const k = n / 1000;
-    return `${Number.isInteger(k) ? k : k.toFixed(1)}k`;
-  }
-  if (n >= 100) return '99+';
-  return String(n);
-};
+import { TodayProgressCard } from '../components/TodayProgressCard';
+import { TaskListSection } from '../components/TaskListSection';
+import { BedsQuickScroll } from '../components/BedsQuickScroll';
+import { TipStrip } from '../components/TipStrip';
+import type { BedWithCoverage } from '../hooks/useBedData';
 
 const getGreeting = (): string => {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good Morning';
   if (hour < 17) return 'Good Afternoon';
   return 'Good Evening';
-};
-
-const DONUT_SIZE = 140;
-const DONUT_STROKE = 14;
-const DONUT_RADIUS = (DONUT_SIZE - DONUT_STROKE) / 2;
-const DONUT_CENTER = DONUT_SIZE / 2;
-
-/** Build an SVG arc path for a donut segment */
-const describeArc = (
-  cx: number,
-  cy: number,
-  r: number,
-  startAngle: number,
-  endAngle: number
-): string => {
-  // Clamp arcs to avoid full-circle rendering bugs
-  const clampedEnd = Math.min(endAngle, startAngle + 359.99);
-  const startRad = ((clampedEnd - 90) * Math.PI) / 180;
-  const endRad = ((startAngle - 90) * Math.PI) / 180;
-  const largeArc = clampedEnd - startAngle > 180 ? 1 : 0;
-  const x1 = cx + r * Math.cos(endRad);
-  const y1 = cy + r * Math.sin(endRad);
-  const x2 = cx + r * Math.cos(startRad);
-  const y2 = cy + r * Math.sin(startRad);
-  return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`;
 };
 
 const THEME_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; label: string }> = {
@@ -140,22 +73,8 @@ export default function TodayScreen(): React.JSX.Element {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
   const isMountedRef = React.useRef(true);
   const { beds: bedList } = useBedData();
-
-  // Check if banner was already dismissed today
-  useEffect(() => {
-    safeGetItem('seasonal_banner_dismissed_date').then((stored) => {
-      const today = new Date().toDateString();
-      if (stored === today) setBannerDismissed(true);
-    });
-  }, []);
-
-  const dismissBanner = useCallback(async () => {
-    setBannerDismissed(true);
-    await safeSetItem('seasonal_banner_dismissed_date', new Date().toDateString());
-  }, []);
 
   // Pre-monsoon prep card — shown within 21 days of monsoon onset, dismissible per day
   const [preMonsoonDismissed, setPreMonsoonDismissed] = useState(false);
@@ -174,10 +93,6 @@ export default function TodayScreen(): React.JSX.Element {
   const preMonsoonTasks = useMemo(() => getPreMonsoonTasks(daysToMonsoon), [daysToMonsoon]);
   const seasonRhythm = useMemo(() => getSeasonalCareRhythm(), []);
   const seasonLabel = useMemo(() => getSeasonLabel(), []);
-  const completedTemplateIds = useMemo(
-    () => new Set(taskLogs.map((log) => log.template_id)),
-    [taskLogs]
-  );
 
   const loadData = useCallback(async (options?: { silent?: boolean }) => {
     if (isMountedRef.current && !options?.silent) {
@@ -239,15 +154,9 @@ export default function TodayScreen(): React.JSX.Element {
     }, [loadData, resetTabBar])
   );
 
-  // Task progress stats for the donut + center label.
-  const stats = useMemo(() => {
-    const taskIds = new Set((tasks || []).map((task) => task.id));
-    completedTemplateIds.forEach((id) => taskIds.add(id));
-    const totalTasks = taskIds.size;
-    const completed = completedTemplateIds.size;
-    const completionRate = totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
-    return { totalTasks, completed, completionRate };
-  }, [tasks, completedTemplateIds]);
+  // Task progress + per-type stats for the donut, pills and on-screen list.
+  const taskSummary = useMemo(() => summarizeTodayTasks(tasks, taskLogs), [tasks, taskLogs]);
+  const donutSegments = useMemo(() => computeDonutSegments(taskSummary), [taskSummary]);
 
   // Plant health counts (Garden Health tiles).
   const health = useMemo(() => getPlantHealthSummary(plants), [plants]);
@@ -260,16 +169,17 @@ export default function TodayScreen(): React.JSX.Element {
     () => Object.fromEntries(bedList.map((b) => [b.id, b.name])),
     [bedList]
   );
-  const actionableAlerts = useMemo(
+  const farmAlerts = useMemo(
     () =>
       getFarmAlerts({
         plants,
         rotationStatuses,
         harvestGapWarnings: getHarvestGapWarnings(bedList),
         bedNames,
-      }).filter(isActionable),
+      }),
     [plants, rotationStatuses, bedList, bedNames]
   );
+  const actionableAlerts = useMemo(() => farmAlerts.filter(isActionable), [farmAlerts]);
 
   const handleAlertPress = useCallback(
     (alert: FarmAlert) => {
@@ -306,105 +216,58 @@ export default function TodayScreen(): React.JSX.Element {
     [navigation]
   );
 
+  const handlePressBed = useCallback(
+    (bed: BedWithCoverage) => {
+      navigation.navigate('Beds', { screen: 'BedDetail', params: { bedId: bed.id } });
+    },
+    [navigation]
+  );
+
+  const handleNewBed = useCallback(() => {
+    navigation.navigate('Beds', { screen: 'BedCreationWizard' });
+  }, [navigation]);
+
   const cycleTheme = useCallback(() => {
     const order: ('light' | 'dark' | 'system')[] = ['light', 'dark', 'system'];
     const idx = order.indexOf(mode);
     setMode(order[(idx + 1) % order.length]!);
   }, [mode, setMode]);
 
-  const overdueTasks = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return (tasks || []).filter((t) => {
-      if (!t || !t.next_due_at) return false;
-      if (completedTemplateIds.has(t.id)) return false;
-      const dueDate = new Date(t.next_due_at);
-      return dueDate < today;
-    });
-  }, [tasks, completedTemplateIds]);
-
-  const todayTasks = useMemo(() => {
-    const today = new Date();
-    return (tasks || []).filter((t) => {
-      if (!t || !t.next_due_at) return false;
-      if (completedTemplateIds.has(t.id)) return false;
-      const dueDate = new Date(t.next_due_at);
-      return dueDate.toDateString() === today.toDateString();
-    });
-  }, [tasks, completedTemplateIds]);
-
-  const taskGroups = useMemo(
-    () => groupTasksByType(overdueTasks, todayTasks),
-    [overdueTasks, todayTasks]
+  const handleCompleteTask = useCallback(
+    async (template: TaskTemplate) => {
+      const ok = await markTaskDone(template);
+      if (ok) void loadData({ silent: true });
+    },
+    [loadData]
   );
 
-  // Per-type done/total stats for donut + chips
-  type TypeStat = {
-    type: TaskType;
-    done: number;
-    total: number;
-    remaining: number;
-    overdueCount: number;
-  };
+  const targetNames = useMemo(() => {
+    const map: Record<string, string> = { ...bedNames };
+    for (const plant of plants) map[plant.id] = plant.name;
+    return map;
+  }, [plants, bedNames]);
 
-  const typeStats: TypeStat[] = useMemo(() => {
-    // Count completed tasks per type (from today's logs)
-    const doneByType = new Map<TaskType, number>();
-    for (const log of taskLogs) {
-      doneByType.set(log.task_type, (doneByType.get(log.task_type) || 0) + 1);
-    }
-    // Gather all task types that appear (remaining or completed)
-    const allTypes = new Set<TaskType>();
-    for (const group of taskGroups) allTypes.add(group.type);
-    for (const [type] of doneByType) allTypes.add(type);
+  const goToCarePlan = useCallback(
+    () => navigation.navigate('Care Plan', { resetFilters: true }),
+    [navigation]
+  );
+  const goToOverdue = useCallback(
+    () => navigation.navigate('Care Plan', { filterOverdue: true }),
+    [navigation]
+  );
+  const goToCarePlanPlain = useCallback(() => navigation.navigate('Care Plan'), [navigation]);
 
-    const result: TypeStat[] = [];
-    for (const type of allTypes) {
-      const group = taskGroups.find((g) => g.type === type);
-      const remaining = group ? group.overdue.length + group.today.length : 0;
-      const done = doneByType.get(type) || 0;
-      const overdueCount = group ? group.overdue.length : 0;
-      result.push({ type, done, total: done + remaining, remaining, overdueCount });
-    }
-
-    // Sort: types with remaining work first (overdue first), then fully done
-    return result.sort((a, b) => {
-      if (a.remaining > 0 && b.remaining === 0) return -1;
-      if (b.remaining > 0 && a.remaining === 0) return 1;
-      if (a.overdueCount > 0 && b.overdueCount === 0) return -1;
-      if (b.overdueCount > 0 && a.overdueCount === 0) return 1;
-      return b.total - a.total;
-    });
-  }, [taskGroups, taskLogs]);
-
-  // Compute donut segments: one per task type (full arc = total for that type)
-  const donutSegments = useMemo(() => {
-    if (stats.totalTasks === 0) return [];
-
-    let angle = 0;
-    return typeStats.map((ts) => {
-      const sweep = (ts.total / stats.totalTasks) * 360;
-      const startAngle = angle;
-      angle += sweep;
-      // Completed fraction within this type's arc
-      const doneSweep = ts.total > 0 ? (ts.done / ts.total) * sweep : 0;
-      return {
-        key: ts.type,
-        color: TASK_COLORS[ts.type] || '#999',
-        startAngle,
-        sweep,
-        doneSweep,
-      };
-    });
-  }, [stats.totalTasks, typeStats]);
-
-  const seasonalTip = useMemo(() => {
+  // Daily tip (C.14): prefer the top informational farm alert (e.g. green
+  // manure / pest note), else fall back to a season-specific care reminder.
+  const tipText = useMemo(() => {
+    const info = farmAlerts.find((a) => !isActionable(a));
+    if (info) return info.message;
     for (const plant of plants) {
       const tip = getSeasonalCareReminder(plant);
       if (tip) return tip;
     }
     return null;
-  }, [plants]);
+  }, [farmAlerts, plants]);
 
   if (loading && tasks.length === 0 && plants.length === 0) {
     return (
@@ -442,130 +305,27 @@ export default function TodayScreen(): React.JSX.Element {
         </View>
       </View>
 
-      {/* Task Donut — segmented by type */}
-      <View style={styles.donutCard}>
-        <Text style={styles.gardenHealthTitle}>📋 Today&apos;s Progress</Text>
-        <View style={styles.donutRow}>
-          {/* Donut (left) — wrapped to stack ring + overdue badge */}
-          <View style={styles.donutWrap}>
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={() => navigation.navigate('Care Plan', { resetFilters: true })}
-            >
-              <View style={styles.donutContainer}>
-                <Svg width={DONUT_SIZE} height={DONUT_SIZE}>
-                  {/* Background track */}
-                  <Circle
-                    cx={DONUT_CENTER}
-                    cy={DONUT_CENTER}
-                    r={DONUT_RADIUS}
-                    stroke={theme.border}
-                    strokeWidth={DONUT_STROKE}
-                    fill="none"
-                  />
-                  {/* Per-type arcs: faded = total, solid = done portion */}
-                  {donutSegments.map((seg) => (
-                    <React.Fragment key={seg.key}>
-                      {/* Full arc (faded) — remaining portion */}
-                      {seg.sweep > 0.5 && (
-                        <Path
-                          d={describeArc(
-                            DONUT_CENTER,
-                            DONUT_CENTER,
-                            DONUT_RADIUS,
-                            seg.startAngle,
-                            seg.startAngle + seg.sweep
-                          )}
-                          stroke={seg.color + '40'}
-                          strokeWidth={DONUT_STROKE}
-                          strokeLinecap="round"
-                          fill="none"
-                        />
-                      )}
-                      {/* Done portion (solid) */}
-                      {seg.doneSweep > 0.5 && (
-                        <Path
-                          d={describeArc(
-                            DONUT_CENTER,
-                            DONUT_CENTER,
-                            DONUT_RADIUS,
-                            seg.startAngle,
-                            seg.startAngle + seg.doneSweep
-                          )}
-                          stroke={seg.color}
-                          strokeWidth={DONUT_STROKE}
-                          strokeLinecap="round"
-                          fill="none"
-                        />
-                      )}
-                    </React.Fragment>
-                  ))}
-                </Svg>
-                <View style={styles.donutCenter}>
-                  <Text style={styles.donutPercent}>{stats.completionRate}%</Text>
-                  <Text style={styles.donutSubtext}>
-                    {stats.completed}/{stats.totalTasks}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-            {/* Overdue pill anchored below the ring */}
-            {overdueTasks.length > 0 && (
-              <TouchableOpacity
-                style={styles.donutOverdueBadge}
-                activeOpacity={0.75}
-                onPress={() => navigation.navigate('Care Plan', { filterOverdue: true })}
-              >
-                <Ionicons name="alert-circle" size={11} color="#fff" />
-                <Text style={styles.donutOverdueBadgeText}>{overdueTasks.length} overdue</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+      {/* Today's progress donut + task-type pills (C.11) */}
+      <TodayProgressCard
+        completionRate={taskSummary.completionRate}
+        completed={taskSummary.completed}
+        totalTasks={taskSummary.totalTasks}
+        overdueCount={taskSummary.overdueCount}
+        typeStats={taskSummary.typeStats}
+        donutSegments={donutSegments}
+        onPressRing={goToCarePlan}
+        onPressOverdue={goToOverdue}
+        onPressType={goToCarePlanPlain}
+      />
 
-          {/* Tiles (right) — all 7 task types always visible */}
-          <View style={styles.chipColumn}>
-            {(Object.keys(TASK_EMOJIS) as TaskType[]).map((type) => {
-              const ts = typeStats.find((s) => s.type === type);
-              const color = TASK_COLORS[type];
-              const emoji = TASK_EMOJIS[type];
-              const done = ts?.done ?? 0;
-              const total = ts?.total ?? 0;
-              const remaining = ts?.remaining ?? 0;
-              const overdueCount = ts?.overdueCount ?? 0;
-              const hasNothing = total === 0;
-              const allDone = !hasNothing && remaining === 0;
-              const hasOverdue = overdueCount > 0;
-              return (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.chip,
-                    { backgroundColor: color + '14' },
-                    hasNothing && styles.chipEmpty,
-                    allDone && styles.chipDone,
-                    hasOverdue && styles.chipOverdue,
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => navigation.navigate('Care Plan')}
-                >
-                  <Text style={styles.chipEmoji}>{emoji}</Text>
-                  <Text
-                    style={[
-                      styles.chipText,
-                      { color: hasNothing ? theme.textSecondary : color },
-                      allDone && styles.chipTextDone,
-                    ]}
-                  >
-                    {fmtCount(done)}/{fmtCount(total)}
-                  </Text>
-                  {hasOverdue && <Ionicons name="alert-circle" size={12} color={theme.error} />}
-                  {allDone && <Ionicons name="checkmark" size={13} color={color} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      </View>
+      {/* On-screen task list with inline completion (C.15) */}
+      <TaskListSection
+        overdue={taskSummary.overdueTasks}
+        today={taskSummary.todayTasks}
+        targetNames={targetNames}
+        onComplete={handleCompleteTask}
+        onSeeAll={goToCarePlanPlain}
+      />
 
       {/* Needs Attention — actionable alerts from alerts.ts (C.8/C.10) */}
       <NeedsAttentionScroll alerts={actionableAlerts} onPressAlert={handleAlertPress} />
@@ -584,59 +344,8 @@ export default function TodayScreen(): React.JSX.Element {
         onPressHealth={handlePressHealth}
       />
 
-      {/* Bed Overview Card */}
-      {bedList.length > 0 &&
-        (() => {
-          const totalBeds = bedList.length;
-          const avgOccupancy =
-            bedList.reduce(
-              (sum, b) => sum + Math.min(100, Math.round((b.plant_count / 5) * 100)),
-              0
-            ) / totalBeds;
-          // Only beds designed around legumes count toward the farm legume average.
-          const legumeBeds = bedList.filter((b) => bedExpectsLegumes(b.type));
-          const avgLegume =
-            legumeBeds.length > 0
-              ? legumeBeds.reduce((sum, b) => sum + b.legume_coverage_pct, 0) / legumeBeds.length
-              : null;
-          return (
-            <TouchableOpacity
-              style={styles.bedOverviewCard}
-              onPress={() => navigation.navigate('Beds', { screen: 'BedList' })}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.bedOverviewTitle}>🪴 Beds Overview</Text>
-              <View style={styles.bedOverviewRow}>
-                <View style={styles.bedOverviewStat}>
-                  <Text style={styles.bedOverviewStatValue}>{totalBeds}</Text>
-                  <Text style={styles.bedOverviewStatLabel}>Beds</Text>
-                </View>
-                <View style={styles.bedOverviewDivider} />
-                <View style={styles.bedOverviewStat}>
-                  <Text style={styles.bedOverviewStatValue}>{Math.round(avgOccupancy)}%</Text>
-                  <Text style={styles.bedOverviewStatLabel}>Occupancy</Text>
-                </View>
-                {avgLegume !== null && (
-                  <>
-                    <View style={styles.bedOverviewDivider} />
-                    <View style={styles.bedOverviewStat}>
-                      <Text
-                        style={
-                          avgLegume >= 20
-                            ? styles.bedOverviewStatValueOk
-                            : styles.bedOverviewStatValueWarn
-                        }
-                      >
-                        {Math.round(avgLegume)}%
-                      </Text>
-                      <Text style={styles.bedOverviewStatLabel}>Legume</Text>
-                    </View>
-                  </>
-                )}
-              </View>
-            </TouchableOpacity>
-          );
-        })()}
+      {/* Bed mini-cards horizontal scroll (C.12) */}
+      <BedsQuickScroll beds={bedList} onPressBed={handlePressBed} onNewBed={handleNewBed} />
 
       {/* Current-season care rhythm */}
       {seasonRhythm !== null && (
@@ -684,20 +393,8 @@ export default function TodayScreen(): React.JSX.Element {
         </View>
       )}
 
-      {/* Seasonal tip banner — shown once per day, dismissible */}
-      {seasonalTip !== null && !bannerDismissed && (
-        <View style={styles.seasonalBanner}>
-          <Ionicons name="sunny-outline" size={16} color={theme.warning} />
-          <Text style={styles.seasonalBannerText}>{seasonalTip}</Text>
-          <TouchableOpacity
-            style={styles.seasonalBannerClose}
-            onPress={dismissBanner}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close" size={16} color={theme.textSecondary} />
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* Daily tip strip — dismissible per day (C.14) */}
+      <TipStrip tip={tipText} />
 
       {/* Jeevamrutha batch reminder (C.13) */}
       <InputReminderStrip
