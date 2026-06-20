@@ -256,6 +256,63 @@ export interface RotationStatus {
   green_manure_recommendation?: GreenManureRecommendation | null;
 }
 
+// ─── Phase C: Farm Alerts (dashboard "Needs Attention") ──────────────────────
+
+export type FarmAlertType =
+  | 'harvest_due'
+  | 'water_needed'
+  | 'fertilise_due'
+  | 'trellis_repair'
+  | 'prune_due'
+  | 'rotation_due'
+  | 'pest_spotted'
+  | 'bed_resting_end'
+  | 'health_sick'
+  | 'health_stressed';
+
+export type FarmAlertSeverity = 'info' | 'warning' | 'critical';
+
+/**
+ * Aggregated, derived dashboard alert. Computed on-the-fly from already-loaded
+ * plants/beds/tasks — never persisted to Firestore.
+ */
+export interface FarmAlert {
+  id: string;
+  type: FarmAlertType;
+  bedId?: string;
+  plantId?: string;
+  /** Display heading (e.g. plant or bed name). */
+  title: string;
+  /** Short action/explanation line. */
+  message: string;
+  severity: FarmAlertSeverity;
+  /** Emoji/icon hint for the card. */
+  icon: string;
+  /** Sortable urgency — higher is more urgent. */
+  daysOverdue: number;
+  created_at: string;
+}
+
+// ─── Phase C: Weather (Open-Meteo) ───────────────────────────────────────────
+
+export interface DailyWeather {
+  /** ISO date (YYYY-MM-DD). */
+  date: string;
+  tempMaxC: number;
+  tempMinC: number;
+  /** Total precipitation in mm for the day. */
+  precipitationMm: number;
+}
+
+export interface WeatherForecast {
+  latitude: number;
+  longitude: number;
+  /** 7-day daily forecast, soonest first. */
+  daily: DailyWeather[];
+  /** ISO timestamp the forecast was fetched. */
+  fetched_at: string;
+}
+
 export interface LocationProfile {
   soilPH?: number | null;
   soilType?: SoilType | null;
