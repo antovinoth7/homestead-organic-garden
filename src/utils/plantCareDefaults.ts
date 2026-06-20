@@ -4096,6 +4096,23 @@ export function getPlantCareProfile(
   return base ? applyOverrides(base, overrides) : null;
 }
 
+/**
+ * Enumerate every known variety with its growing season, for the dashboard
+ * "What to Plant Now" section (Phase C, C.1). Structurally a `PlantingCandidate`.
+ */
+export function getPlantingCandidates(): {
+  plantType: PlantType;
+  variety: string;
+  growingSeason?: string;
+}[] {
+  return Object.entries(PLANT_CARE_PROFILES).map(([key, profile]) => {
+    const sep = key.indexOf(':');
+    const plantType = key.slice(0, sep) as PlantType;
+    const variety = key.slice(sep + 1);
+    return { plantType, variety, growingSeason: profile.growingSeason };
+  });
+}
+
 export function hasPlantCareProfile(
   plantVariety: string,
   plantType?: PlantType,

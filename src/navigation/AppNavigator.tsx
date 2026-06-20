@@ -33,6 +33,7 @@ import BedPlantPickerScreen from '../screens/BedPlantPickerScreen';
 import BedRotationScreen from '../screens/BedRotationScreen';
 import MyFarmScreen from '../screens/MyFarmScreen';
 import InputRecipesScreen from '../screens/InputRecipesScreen';
+import SeasonalAlmanacScreen from '../screens/SeasonalAlmanacScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -82,6 +83,7 @@ const MoreStack = (): React.JSX.Element => (
     <Stack.Screen name="Settings" component={SettingsScreen} />
     <Stack.Screen name="MyFarm" component={MyFarmScreen} />
     <Stack.Screen name="InputRecipes" component={InputRecipesScreen} />
+    <Stack.Screen name="SeasonalAlmanac" component={SeasonalAlmanacScreen} />
   </Stack.Navigator>
 );
 
