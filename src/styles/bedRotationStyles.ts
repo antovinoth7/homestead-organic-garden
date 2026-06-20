@@ -67,6 +67,41 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 8,
     },
     greenManureText: { flex: 1, fontSize: 12, color: theme.primary, lineHeight: 17 },
+    // Season countdown banner
+    seasonBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: theme.infoLight,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    seasonBannerText: { flex: 1, fontSize: 12, color: theme.text, fontWeight: '600' },
+    // Harvest-gap warnings
+    gapBlock: { gap: 6 },
+    gapTitle: { fontSize: 13, fontWeight: '700', color: theme.text },
+    gapRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+      backgroundColor: theme.warningLight,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    gapText: { flex: 1, fontSize: 12, color: theme.text, lineHeight: 17 },
+    // Per-bed transition-input prescription
+    transitionBanner: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+      backgroundColor: theme.cautionLight,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    transitionText: { flex: 1, fontSize: 12, color: theme.text, lineHeight: 17 },
     // Per-bed block
     bedBlock: { gap: 6 },
     bedHeader: {

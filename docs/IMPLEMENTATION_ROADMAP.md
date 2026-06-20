@@ -7,7 +7,7 @@
 > Previous: May 1, 2026 — Phase B2 complete; B2.1–B2.10 + B2.13–B2.15 shipped; B2.11 (SVG diagram) deferred; B2.12 (tests) open; gap rows G7/G12/G31/G37–G43/G45 closed; BedSizeStep raised-bed/permanent toggles removed (all beds are raised, `is_raised_bed` hardcoded `true`)
 > Previous: April 30, 2026 — Roadmap expanded from bed_creation_flow.html prototype; B2 significantly expanded (6-step wizard, 8 bed types, two-tier tasks, domain helpers); Phases B3/B4 added; Phase C dashboard overhaul added; G32–G45 gap rows added; F13–F19 feature sections added
 > Previous: April 26, 2026 — B.4 (growth stage auto-progression) complete; B.3 harvest tracking next
-> Status: Phase 0 / A / A2 / B / B2 / B3 / B4 shipped (Phase B with deliberate deferrals); Phase C–H planned
+> Status: Phase 0 / A / A2 / B / B2 / B3 / B4 / C shipped (Phase B with deliberate deferrals); Phase D–H planned
 > Scope: Solo developer, iterative build, Firebase free-tier
 
 ---
@@ -23,7 +23,7 @@
 | Phase B2 — Bed Management (expanded)         | ✅ Complete    | 2026-05-01 |
 | Phase B3 — Farm Setup + Capacity             | ✅ Complete    | 2026-06-06 |
 | Phase B4 — Input Recipes + Seasonal Adapt.   | ✅ Complete    | 2026-06-20 |
-| Phase C — Home (dashboard overhaul)          | 🔄 In Progress | —          |
+| Phase C — Home (dashboard overhaul)          | ✅ Complete    | 2026-06-20 |
 | Phase D — Calendar                           | ⚪ Planned     | —          |
 | Phase E — Journal                            | ⚪ Planned     | —          |
 | Phase F — Settings & Cross-Cutting           | ⚪ Planned     | —          |
@@ -549,9 +549,9 @@ Shared foundations (types, services, config files) are built in the phase that f
 **Status (reconciled 2026-06-20)** — much of this was pre-shipped inline in `TodayScreen` during B2/B3/B4; now being refactored onto the service/component architecture below:
 
 - **Stage 1 foundations — ✅ Done**: `FarmAlert`/`FarmAlertType`/`WeatherForecast`/`DailyWeather` types; `services/alertsLogic.ts` (pure `getFarmAlerts`/`isActionable`/`getTopAlert`) + `services/alerts.ts`; `services/weather.ts` (Open-Meteo, 3h cache); `hooks/useTodayTasks.ts`, `hooks/useWeather.ts`; utils `plantHealth.ts`/`taskSummary.ts`/`svgArc.ts`/`plantingNow.ts`; `config/almanac.ts`; 31 tests.
-- **✅ Shipped**: C.1 `PlantNowSection`; C.2 weather service + C.3 `WeatherCard`; C.4 `AlmanacHighlight` + `SeasonalAlmanacScreen` (MoreStack route); C.6 season pest alerts via `alerts.ts`; C.7 `FarmHealthCard` (farm header + health tiles + legume/leafy/fruiting capacity bars); C.8 `NeedsAttentionScroll` now fed by `alerts.ts` (was inline, plant-only); C.10 alert service; C.13 `InputReminderStrip`. Garden-health counts use `getPlantHealthSummary`.
-- **Still pending (built inline, works; extraction/refinement remaining)**: C.11 `TodayProgressCard` (donut+chips still inline; `useTodayTasks`/`taskSummary` built but not yet wired), C.12 `BedsQuickScroll` (still the aggregate "Beds Overview" card, not horizontal mini-cards), C.14 `TipStrip` (still the inline seasonal banner, not yet wired to `alerts.ts`), C.15 on-screen task list (tasks still only in Care Plan).
-- **C.9 — re-homed to the Beds tab (pending)**: enhance the existing B2.16 `BedRotationView`/`BedListScreen` Rotation tab with season countdown, harvest-gap warnings, full 6-rule checklist, transition-input prescriptions. Home stays a glanceable dashboard (no rotation tab on Home).
+- **✅ Shipped (all 15 dashboard steps + C.9)**: C.1 `PlantNowSection`; C.2 weather service + C.3 `WeatherCard`; C.4 `AlmanacHighlight` + `SeasonalAlmanacScreen` (MoreStack route); C.5 styles; C.6 season pest alerts via `alerts.ts`; C.7 `FarmHealthCard` (farm header + health tiles + legume/leafy/fruiting capacity bars); C.8 `NeedsAttentionScroll` fed by `alerts.ts`; C.10 alert service; C.11 `TodayProgressCard` (donut + pills via tested `taskSummary`/`svgArc`, ring fade-in); C.12 `BedsQuickScroll` (horizontal bed mini-cards + ghost New-bed); C.13 `InputReminderStrip`; C.14 `TipStrip` (per-day dismiss, driven by top informational alert); C.15 `TaskListSection` (on-screen checkable task list, inline completion). `TodayScreen` recomposed to pure composition; `getPlantHealthSummary` for counts.
+- **C.9 — shipped on the Beds tab**: `BedRotationView` enhanced with season countdown banner, farm-wide harvest-gap warnings (`getHarvestGapWarnings`), and per-bed transition-input prescriptions (`getTransitionInputs`). The full 6-rule checklist + legume bar + green-manure banner were already present (B2.16). Home stays a glanceable dashboard (no rotation tab on Home).
+- **Phase C — feature-complete.** Follow-up housekeeping only: prune now-dead style keys in `todayStyles.ts`; optional component smoke tests; `useTodayTasks` hook is available for a future single-source task-load consolidation.
 
 | Step | Feature                                                                                                                                                                                                                                                                                                                                                                                                                                     | Effort | Risk   | Dependencies            |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------ | ----------------------- |
