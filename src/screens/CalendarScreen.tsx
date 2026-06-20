@@ -1358,6 +1358,7 @@ export default function CalendarScreen(): React.JSX.Element {
         <CreateTaskModal
           visible={showModal}
           plants={plants}
+          beds={bedList}
           styles={styles}
           bottomInset={insets.bottom}
           initialStartDate={createTaskInitialDate}

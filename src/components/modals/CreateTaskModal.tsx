@@ -6,7 +6,7 @@ import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
 import type { DropdownItem } from '../ThemedDropdown';
 import { createTaskTemplate } from '../../services/tasks';
-import { Plant, TaskType } from '../../types/database.types';
+import { Plant, TaskType, Bed } from '../../types/database.types';
 import { getErrorMessage } from '../../utils/errorLogging';
 import { createStyles } from '../../styles/calendarStyles';
 import { useTheme } from '../../theme';
@@ -23,6 +23,7 @@ const TASK_TYPE_ITEMS: DropdownItem[] = [
 interface CreateTaskModalProps {
   visible: boolean;
   plants: Plant[];
+  beds: Bed[];
   styles: ReturnType<typeof createStyles>;
   bottomInset: number;
   initialStartDate?: Date;
@@ -33,6 +34,7 @@ interface CreateTaskModalProps {
 export default function CreateTaskModal({
   visible,
   plants,
+  beds,
   styles,
   bottomInset,
   initialStartDate,
@@ -42,6 +44,7 @@ export default function CreateTaskModal({
   const theme = useTheme();
   const [taskType, setTaskType] = useState<TaskType>('water');
   const [selectedPlant, setSelectedPlant] = useState('');
+  const [selectedBed, setSelectedBed] = useState('');
   const [frequencyDays, setFrequencyDays] = useState('7');
   const [isOneTimeTask, setIsOneTimeTask] = useState(false);
   const [startDate, setStartDate] = useState(new Date());
@@ -60,6 +63,7 @@ export default function CreateTaskModal({
   const resetForm = (): void => {
     setTaskType('water');
     setSelectedPlant('');
+    setSelectedBed('');
     setFrequencyDays('7');
     setIsOneTimeTask(false);
     setStartDate(new Date());
@@ -104,6 +108,7 @@ export default function CreateTaskModal({
       await createTaskTemplate({
         task_type: taskType,
         plant_id: selectedPlant || null,
+        bed_id: selectedBed || null,
         frequency_days: isOneTimeTask ? 0 : parseInt(frequencyDays),
         next_due_at: dueDate.toISOString(),
         enabled: true,
@@ -155,6 +160,18 @@ export default function CreateTaskModal({
                 onValueChange={setSelectedPlant}
                 label="Plant (Optional)"
                 placeholder="Plant"
+                searchable
+              />
+
+              <ThemedDropdown
+                items={[
+                  { label: 'No Bed', value: '' },
+                  ...beds.map((b) => ({ label: b.name, value: b.id })),
+                ]}
+                selectedValue={selectedBed}
+                onValueChange={setSelectedBed}
+                label="Bed (Optional)"
+                placeholder="Bed"
                 searchable
               />
 
