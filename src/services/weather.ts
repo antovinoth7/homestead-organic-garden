@@ -14,6 +14,9 @@ import { getCached, setCached, dedup, CACHE_KEYS } from '@/lib/dataCache';
 import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 
+// Pure helpers live in weatherLogic (no native deps) — re-exported for callers.
+export { hasRainSoon, isRainPredictedOnDate } from './weatherLogic';
+
 /** Kanyakumari town — default until a per-plot lat/lng is supplied. */
 export const KANYAKUMARI_LAT = 8.0883;
 export const KANYAKUMARI_LNG = 77.5385;
@@ -109,10 +112,4 @@ export async function getWeatherForecast(
       return null;
     }
   });
-}
-
-/** True when any of the next `days` days has meaningful rain (≥ 2mm). */
-export function hasRainSoon(forecast: WeatherForecast | null, days = 2): boolean {
-  if (!forecast) return false;
-  return forecast.daily.slice(0, days).some((d) => d.precipitationMm >= 2);
 }

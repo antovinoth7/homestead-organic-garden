@@ -32,6 +32,9 @@ import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { useCalendarData, HarvestReadyItem } from '../hooks/useCalendarData';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { useBedData } from '../hooks/useBedData';
+import { useWeather } from '../hooks/useWeather';
+import { isRainPredictedOnDate } from '../services/weather';
+import { calculateExpectedHarvestDate } from '../utils/plantHelpers';
 import CreateTaskModal from '../components/modals/CreateTaskModal';
 import TaskCompletionModal from '../components/modals/TaskCompletionModal';
 import WeekCalendarView from '../components/calendar/WeekCalendarView';
@@ -82,6 +85,10 @@ export default function CalendarScreen(): React.JSX.Element {
   const [filterBedId, setFilterBedId] = useState<string>('');
   const { beds: bedList } = useBedData();
   const bedMap = useMemo(() => new Map(bedList.map((b) => [b.id, b.name])), [bedList]);
+  const [bedSegment, setBedSegment] = useState<'all' | 'bed' | 'other'>('all');
+  const { forecast } = useWeather();
+  // The Beds segment forces bed grouping; otherwise the View Options group menu applies.
+  const effectiveGroupBy = bedSegment === 'bed' ? 'bed' : groupBy;
   const [searchQuery, setSearchQuery] = useState('');
   const [searchActive, setSearchActive] = useState(false);
   const [showSkipModal, setShowSkipModal] = useState(false);
@@ -118,6 +125,7 @@ export default function CalendarScreen(): React.JSX.Element {
     weekTasks,
     tasksForDisplay,
     groupedTasks,
+    segmentCounts,
     overdueTasks,
     isSearching,
     getTasksForDate,
@@ -130,10 +138,12 @@ export default function CalendarScreen(): React.JSX.Element {
     currentWeekStart,
     currentMonth,
     selectedDate,
-    groupBy,
+    groupBy: effectiveGroupBy,
     filterTaskTypes,
     filterOverdueOnly,
     filterBedId,
+    bedSegment,
+    bedNames: bedMap,
   });
 
   const isFilterActive = filterTaskTypes.size > 0 || filterOverdueOnly;
@@ -146,7 +156,7 @@ export default function CalendarScreen(): React.JSX.Element {
   const overdueIdSet = React.useMemo(() => new Set(overdueTasks.map((t) => t.id)), [overdueTasks]);
 
   const dayGroupedTasks = React.useMemo(() => {
-    if (groupBy !== 'none' || isSearching || selectedView !== 'week') return null;
+    if (effectiveGroupBy !== 'none' || isSearching || selectedView !== 'week') return null;
     const todayStr = new Date().toDateString();
     const grouped: Record<string, TaskTemplate[]> = {};
     for (const task of tasksForDisplay) {
@@ -174,7 +184,7 @@ export default function CalendarScreen(): React.JSX.Element {
         isToday,
       };
     });
-  }, [groupBy, isSearching, selectedView, tasksForDisplay, overdueIdSet]);
+  }, [effectiveGroupBy, isSearching, selectedView, tasksForDisplay, overdueIdSet]);
 
   const setTodayView = React.useCallback(() => {
     const today = new Date();
@@ -524,6 +534,26 @@ export default function CalendarScreen(): React.JSX.Element {
     setShowTaskDetail(true);
   }, []);
 
+  // Estimated harvest date for harvest tasks, from enriched (A2) care data.
+  const computeHarvestHint = useCallback(
+    (task: TaskTemplate): string | null => {
+      if (task.task_type !== 'harvest' && task.task_type !== 'harvest_leaves') return null;
+      if (!task.plant_id) return null;
+      const plant = plantMap.get(task.plant_id);
+      if (!plant) return null;
+      const iso = calculateExpectedHarvestDate(
+        plant.plant_variety,
+        plant.planting_date,
+        plant.plant_type
+      );
+      if (!iso) return null;
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return null;
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    },
+    [plantMap]
+  );
+
   const renderSwipeableTask = useCallback(
     (task: TaskTemplate): React.JSX.Element | null => (
       <SwipeableTaskCard
@@ -539,6 +569,12 @@ export default function CalendarScreen(): React.JSX.Element {
         onSelectToggle={toggleTaskSelection}
         onDetail={handleShowDetail}
         bedMap={bedMap}
+        rainExpected={
+          task.task_type === 'water' &&
+          !!task.next_due_at &&
+          isRainPredictedOnDate(forecast, new Date(task.next_due_at))
+        }
+        harvestHint={computeHarvestHint(task)}
       />
     ),
     [
@@ -551,6 +587,8 @@ export default function CalendarScreen(): React.JSX.Element {
       handleOpenSkipModal,
       toggleTaskSelection,
       handleShowDetail,
+      forecast,
+      computeHarvestHint,
     ]
   );
 
@@ -782,45 +820,55 @@ export default function CalendarScreen(): React.JSX.Element {
             </View>
           )}
 
-          {/* Bed filter chips */}
-          {bedList.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.bedFilterRow}
-              contentContainerStyle={styles.bedFilterRowContent}
-            >
-              <TouchableOpacity
-                onPress={() => setFilterBedId('')}
-                style={[styles.bedFilterChip, !filterBedId && styles.bedFilterChipActive]}
-              >
-                <Text
-                  style={!filterBedId ? styles.bedFilterChipTextActive : styles.bedFilterChipText}
-                >
-                  All
-                </Text>
-              </TouchableOpacity>
-              {bedList.map((bed) => (
+          {/* All / Beds / Pots & Ground segmented control */}
+          <View style={styles.segmentRow}>
+            {(
+              [
+                ['all', 'All', 'apps-outline', segmentCounts.all],
+                ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
+                ['other', 'Pots & Ground', 'cube-outline', segmentCounts.other],
+              ] as const
+            ).map(([value, label, icon, count]) => {
+              const active = bedSegment === value;
+              return (
                 <TouchableOpacity
-                  key={bed.id}
-                  onPress={() => setFilterBedId(filterBedId === bed.id ? '' : bed.id)}
-                  style={[
-                    styles.bedFilterChip,
-                    filterBedId === bed.id && styles.bedFilterChipActive,
-                  ]}
+                  key={value}
+                  style={[styles.segmentChip, active && styles.segmentChipActive]}
+                  onPress={() => setBedSegment(value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`${label} tasks, ${count}`}
                 >
-                  <Text
-                    style={
-                      filterBedId === bed.id
-                        ? styles.bedFilterChipTextActive
-                        : styles.bedFilterChipText
-                    }
-                  >
-                    {bed.name}
+                  <Ionicons
+                    name={icon}
+                    size={14}
+                    color={active ? theme.primary : theme.textSecondary}
+                  />
+                  <Text style={[styles.segmentChipText, active && styles.segmentChipTextActive]}>
+                    {label}
                   </Text>
+                  <View style={[styles.segmentBadge, active && styles.segmentBadgeActive]}>
+                    <Text style={[styles.segmentBadgeText, active && styles.segmentBadgeTextActive]}>
+                      {count}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              );
+            })}
+          </View>
+
+          {/* Active bed filter (from deep-link) — single removable pill */}
+          {filterBedId !== '' && (
+            <View style={styles.activeBedPillRow}>
+              <TouchableOpacity
+                style={styles.activeBedPill}
+                onPress={() => setFilterBedId('')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.activeBedPillText}>🛏 {bedMap.get(filterBedId) ?? 'Bed'}</Text>
+                <Ionicons name="close" size={14} color={theme.textInverse} />
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Selected Date Tasks */}
@@ -1048,15 +1096,17 @@ export default function CalendarScreen(): React.JSX.Element {
                       <View style={styles.sectionHeaderRow}>
                         {renderSectionCheckbox(nonOverdue)}
                         <Text style={[styles.sectionTitle, styles.sectionTitleFlex]}>
-                          {groupBy === 'location'
+                          {effectiveGroupBy === 'location'
                             ? `📍 ${groupName}`
-                            : groupBy === 'type'
+                            : effectiveGroupBy === 'type'
                             ? `${
                                 TASK_LABELS[groupName as TaskType] ||
                                 groupName.charAt(0).toUpperCase() + groupName.slice(1)
                               }`
-                            : groupBy === 'plant'
+                            : effectiveGroupBy === 'plant'
                             ? `🌿 ${groupName}`
+                            : effectiveGroupBy === 'bed'
+                            ? `🛏 ${groupName}`
                             : selectedView === 'month'
                             ? 'This Month'
                             : 'This Week'}

@@ -26,6 +26,10 @@ interface Props {
   onSelectToggle: (taskId: string) => void;
   onDetail: (task: TaskTemplate) => void;
   bedMap?: Map<string, string>;
+  /** Watering tasks: rain predicted on the due date — show a "may skip" badge. */
+  rainExpected?: boolean;
+  /** Harvest tasks: formatted estimated harvest date hint (e.g. "Aug 12"). */
+  harvestHint?: string | null;
 }
 
 export function SwipeableTaskCard({
@@ -40,6 +44,8 @@ export function SwipeableTaskCard({
   onSelectToggle,
   onDetail,
   bedMap,
+  rainExpected,
+  harvestHint,
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -175,6 +181,11 @@ export function SwipeableTaskCard({
                       </Text>
                     </View>
                   )}
+                  {rainExpected && (
+                    <View style={styles.taskRainBadge}>
+                      <Text style={styles.taskRainBadgeText}>🌧️ Rain expected — may skip</Text>
+                    </View>
+                  )}
                 </View>
                 <Text style={styles.taskPlant}>{plantDetails.name}</Text>
                 {plantDetails.location && (
@@ -191,6 +202,9 @@ export function SwipeableTaskCard({
                       ? '☀️ Afternoon'
                       : '🌙 Evening'}
                   </Text>
+                )}
+                {harvestHint && (
+                  <Text style={styles.taskHarvestHint}>🧺 Est. harvest: {harvestHint}</Text>
                 )}
               </View>
               <View style={styles.taskRight}>

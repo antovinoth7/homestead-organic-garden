@@ -1262,6 +1262,25 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       marginTop: 2,
     },
+    taskRainBadge: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+      marginTop: 3,
+      alignSelf: 'flex-start',
+      backgroundColor: theme.info + '22',
+    },
+    taskRainBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+      color: theme.info,
+    },
+    taskHarvestHint: {
+      fontSize: 11,
+      color: theme.success,
+      marginTop: 2,
+    },
     weekDoneChip: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1451,31 +1470,76 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sectionTitleFlex: {
       flex: 1,
     },
-    bedFilterRow: {
+    // All / Beds / Pots & Ground segmented control (mirrors plantsStyles)
+    segmentRow: {
+      flexDirection: 'row',
+      alignSelf: 'flex-start',
+      flexShrink: 1,
+      gap: 2,
+      marginHorizontal: 12,
+      marginBottom: 8,
+      padding: 2,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.backgroundSecondary,
+      overflow: 'hidden',
+    },
+    segmentChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 12,
+    },
+    segmentChipActive: {
+      backgroundColor: theme.primaryLight,
+    },
+    segmentChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    segmentChipTextActive: {
+      color: theme.primary,
+    },
+    segmentBadge: {
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+    },
+    segmentBadgeActive: {
+      backgroundColor: theme.primary,
+    },
+    segmentBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: theme.textTertiary,
+    },
+    segmentBadgeTextActive: {
+      color: theme.textInverse,
+    },
+    // Single removable pill shown when a bed filter arrives via deep-link
+    activeBedPillRow: {
+      flexDirection: 'row',
       paddingHorizontal: 12,
       marginBottom: 8,
     },
-    bedFilterRowContent: {
-      gap: 8,
-      paddingVertical: 4,
-    },
-    bedFilterChip: {
+    activeBedPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 16,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    bedFilterChipActive: {
       backgroundColor: theme.primary,
-      borderColor: theme.primary,
     },
-    bedFilterChipText: {
-      fontSize: 13,
-      color: theme.textSecondary,
-    },
-    bedFilterChipTextActive: {
+    activeBedPillText: {
       fontSize: 13,
       color: theme.textInverse,
       fontWeight: '600',
