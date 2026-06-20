@@ -594,6 +594,8 @@ export interface JournalEntry {
   harvest_unit?: string | null; // 'kg', 'g', 'lbs', 'pieces', 'bunches'
   harvest_quality?: 'excellent' | 'good' | 'fair' | 'poor' | null;
   harvest_notes?: string | null; // Storage method, taste notes, etc.
+  // For coconut groves (record_kind 'row'): which tree this harvest came from (B.6)
+  harvest_tree_number?: number | null;
   // Bed association (Phase B2)
   bed_id?: string | null;
   created_at: string;

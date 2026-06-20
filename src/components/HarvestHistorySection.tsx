@@ -5,6 +5,8 @@ import { JournalEntry, PlantType } from '../types/database.types';
 import { createStyles as createLocalStyles } from '../styles/harvestHistorySectionStyles';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/colors';
+import { summarizeHarvests, groupHarvestsBySeason, groupHarvestsByTree } from '../utils/harvestStats';
+import HarvestYieldChart from './HarvestYieldChart';
 
 interface HarvestHistorySectionProps {
   plantType: PlantType;
@@ -23,6 +25,12 @@ export default function HarvestHistorySection({
 }: HarvestHistorySectionProps): React.JSX.Element | null {
   const theme = useTheme() as Theme;
   const localStyles = useMemo(() => createLocalStyles(theme), [theme]);
+  const summary = useMemo(() => summarizeHarvests(harvestEntries), [harvestEntries]);
+  const seasonYield = useMemo(() => groupHarvestsBySeason(harvestEntries), [harvestEntries]);
+  const treeYields = useMemo(
+    () => (plantType === 'coconut_tree' ? groupHarvestsByTree(harvestEntries) : []),
+    [harvestEntries, plantType]
+  );
   if (plantType !== 'fruit_tree' && plantType !== 'coconut_tree') {
     return null;
   }
@@ -42,24 +50,15 @@ export default function HarvestHistorySection({
           {/* Harvest Statistics */}
           <View style={styles.harvestStats}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{harvestEntries.length}</Text>
+              <Text style={styles.statValue}>{summary.count}</Text>
               <Text style={styles.statLabel}>Harvests</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>
-                {harvestEntries.reduce((sum, e) => sum + (e.harvest_quantity || 0), 0).toFixed(1)}
-              </Text>
-              <Text style={styles.statLabel}>
-                Total {harvestEntries[0]?.harvest_unit || 'units'}
-              </Text>
+              <Text style={styles.statValue}>{summary.total.toFixed(1)}</Text>
+              <Text style={styles.statLabel}>Total {summary.unit}</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>
-                {(
-                  harvestEntries.reduce((sum, e) => sum + (e.harvest_quantity || 0), 0) /
-                  harvestEntries.length
-                ).toFixed(1)}
-              </Text>
+              <Text style={styles.statValue}>{summary.average.toFixed(1)}</Text>
               <Text style={styles.statLabel}>Avg/harvest</Text>
             </View>
             {plantType === 'coconut_tree' &&
@@ -88,6 +87,27 @@ export default function HarvestHistorySection({
                 );
               })()}
           </View>
+
+          {/* Yield chart */}
+          <HarvestYieldChart data={seasonYield} unit={summary.unit} />
+
+          {/* Per-tree breakdown (coconut groves) */}
+          {treeYields.length > 0 && (
+            <>
+              <Text style={styles.recentTitle}>Yield by Tree</Text>
+              {treeYields.map((tree) => (
+                <View key={tree.treeNumber} style={styles.harvestItem}>
+                  <View style={styles.harvestLeft}>
+                    <Text style={styles.harvestDate}>Tree {tree.treeNumber}</Text>
+                    <Text style={styles.harvestQuantity}>
+                      {tree.total} {summary.unit} · {tree.count} harvest
+                      {tree.count === 1 ? '' : 's'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
 
           {/* Recent Harvests */}
           <Text style={styles.recentTitle}>Recent Harvests</Text>
