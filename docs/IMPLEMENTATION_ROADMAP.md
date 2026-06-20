@@ -7,7 +7,7 @@
 > Previous: May 1, 2026 — Phase B2 complete; B2.1–B2.10 + B2.13–B2.15 shipped; B2.11 (SVG diagram) deferred; B2.12 (tests) open; gap rows G7/G12/G31/G37–G43/G45 closed; BedSizeStep raised-bed/permanent toggles removed (all beds are raised, `is_raised_bed` hardcoded `true`)
 > Previous: April 30, 2026 — Roadmap expanded from bed_creation_flow.html prototype; B2 significantly expanded (6-step wizard, 8 bed types, two-tier tasks, domain helpers); Phases B3/B4 added; Phase C dashboard overhaul added; G32–G45 gap rows added; F13–F19 feature sections added
 > Previous: April 26, 2026 — B.4 (growth stage auto-progression) complete; B.3 harvest tracking next
-> Status: Phase 0 / A / A2 / B / B2 / B3 / B4 / C / D / E shipped (Phase B with deliberate deferrals); Phase F–H planned
+> Status: Phase 0 / A / A2 / B / B2 / B3 / B4 / C / D / E / F shipped (Phase B with deliberate deferrals); Phase G–H planned
 > Scope: Solo developer, iterative build, Firebase free-tier
 
 ---
@@ -26,7 +26,7 @@
 | Phase C — Home (dashboard overhaul)          | ✅ Complete    | 2026-06-20 |
 | Phase D — Calendar                           | ✅ Complete    | 2026-06-20 |
 | Phase E — Journal                            | ✅ Complete    | 2026-06-20 |
-| Phase F — Settings & Cross-Cutting           | ⚪ Planned     | —          |
+| Phase F — Settings & Cross-Cutting           | ✅ Complete    | 2026-06-20 |
 | Phase G — Tamil i18n                         | ⚪ Planned     | —          |
 | Phase H — Advanced                           | ⚪ Planned     | —          |
 | Phase A3 — Config: Beneficials + Custom CRUD | ⏭ Deferred     | —          |
@@ -648,20 +648,26 @@ the derived "Last X" status. No more two-places-to-update.
 
 ---
 
-### Phase F: Settings & Cross-Cutting (G18, G17)
+### Phase F: Settings & Cross-Cutting (G18, G17) — ✅ Complete (2026-06-20)
 
 **Goal**: Full data backup and onboarding flow.
 **Screens**: SettingsScreen, OnboardingScreen (NEW)
 
-| Step | Feature                                                                                              | Effort | Risk   | Dependencies                                |
-| ---- | ---------------------------------------------------------------------------------------------------- | ------ | ------ | ------------------------------------------- |
-| F.1  | G18 full data backup — extend `backup.ts` for plants + tasks + journal + settings as JSON+images ZIP | M      | Medium | Phase 0 (migration compat)                  |
-| F.2  | G17 onboarding flow — district selection (Kanyakumari default), guided first-plant wizard            | M      | Low    | Phase A2 (catalog), Phase 0 (season config) |
+| Step | Feature                                                                                              | Effort | Risk   | Dependencies                                | Status |
+| ---- | ---------------------------------------------------------------------------------------------------- | ------ | ------ | ------------------------------------------- | ------ |
+| F.1  | G18 full data backup — `exportFullBackup`/`importFullBackup` in `backup.ts`: plants + beds + tasks + journal + settings as JSON+images ZIP, restore rehydrates local storage + Firestore | M      | Medium | Phase 0 (migration compat)                  | ✅     |
+| F.2  | G17 onboarding flow — district selection (Kanyakumari default) captured into FarmConfig, guided first-bed wizard handing off to BedCreationWizard | M      | Low    | Phase A2 (catalog), Phase 0 (season config) | ✅     |
 
 **Verification**:
 
-- Export creates complete backup. Import restores all data
-- New user sees onboarding flow with district selection and guided first-plant wizard
+- Export creates complete backup. Import restores all data ✅
+- New user sees onboarding flow with district selection and guided first-plant wizard ✅
+- Backup restore rejects archives from a newer schema version; older schemas restore and upgrade on next launch
+
+**Notes / adaptations**:
+
+- Data backup had been deliberately reduced to images-only; F.1 re-introduces full backup as new `exportFullBackup`/`importFullBackup` functions (sharing the image-relink helper with images-only import) rather than touching the existing images-only flow.
+- Onboarding district selection captures `district` + `zone_id` on `FarmConfig` (additive optional fields, no new migration). Only the Kanyakumari high-rainfall zone is tuned today; `resolveActiveZone()` is forward-compatible with Phase H.5 multi-zone.
 
 ---
 
