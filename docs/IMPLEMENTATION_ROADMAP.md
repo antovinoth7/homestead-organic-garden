@@ -1,7 +1,7 @@
 # Organic Gardening Planner — Implementation Roadmap
 
 > Generated: April 12, 2026
-> Last updated: June 20, 2026 — **Phase B2 reconciled against the shipped bed tab** (see `docs/BED_TAB_ROADMAP_ALIGNMENT.md`): B2.11 (SVG diagram) marked superseded by the shipped visualization components (`BedTopDownMap`/`BedLayerStack`/`BedSuccessionTimeline`/`BedRowLayout`/`BedZoneIllustration`); B2.12 tests marked partially done; `BedType`/`BedLayer` and the wizard step list corrected to shipped values (6 steps incl. `BedLayoutStep`); June row-layout / succession-timeline / occupancy work captured in a new B2.17 block; dedicated `BedTasksScreen` removed from the bed tab — bed-level tasks now surface in the Care Plan only (resolves the B2.13 ↔ B2.16 contradiction). Also: **B2.12 closed** (`services/beds.test.ts` + `bedLogic.ts` extraction; backup N/A; emulator CRUD deferred). Also: **B4.5 `SeasonalAdaptationScreen` cut** — re-homed to `TodayScreen` as a Pre-Monsoon Prep card + current-season Care Rhythm card (no standalone screen/route).
+> Last updated: June 20, 2026 — **Phase B2 reconciled against the shipped bed tab** (see `docs/BED_TAB_ROADMAP_ALIGNMENT.md`): B2.11 (SVG diagram) marked superseded by the shipped visualization components (`BedTopDownMap`/`BedLayerStack`/`BedSuccessionTimeline`/`BedRowLayout`/`BedZoneIllustration`); B2.12 tests marked partially done; `BedType`/`BedLayer` and the wizard step list corrected to shipped values (6 steps incl. `BedLayoutStep`); June row-layout / succession-timeline / occupancy work captured in a new B2.17 block; dedicated `BedTasksScreen` removed from the bed tab — bed-level tasks now surface in the Care Plan only (resolves the B2.13 ↔ B2.16 contradiction). Also: **B2.12 closed** (`services/beds.test.ts` + `bedLogic.ts` extraction; backup N/A; emulator CRUD deferred). Also: **B4.5 `SeasonalAdaptationScreen` cut** — re-homed to `TodayScreen` as a Pre-Monsoon Prep card + current-season Care Rhythm card (no standalone screen/route). Also: **fixed pre-existing `growthStage` test flakiness** (`computeExpectedGrowthStage`/`computeAnnualCycleStage` now anchor "now" to noon → stable calendar-day counts; full suite deterministically green).
 > Previous: June 15, 2026 — Roadmap reconciled against shipped code: **Phase B3 (Farm Setup + Capacity) marked Complete** (consolidated into `MyFarmScreen` + `farmCapacity.ts` capacity engine + `FarmConfig` persistence); **Phase B4 (Input Recipes) marked In Progress** (`InputRecipesScreen` + recipe engine shipped; `SeasonalAdaptationScreen` still open); "Key Problems / Risks" section refreshed (schema migration + test-coverage risks resolved); gap rows G32–G36 + G1/G28 statuses updated. No code changed in this pass.
 > Previous: June 3, 2026 — B2.16 shipped: farm-wide **Rotation tab** on the bed listing (Beds/Rotation segmented toggle on `BedListScreen`), reuse-first (composes `useCrossBedStatus` + `RotationStatusCard`); tasks intentionally kept in Care Plan (no Tasks tab); create/edit bed wizards untouched
 > Previous: May 1, 2026 — Phase B2 complete; B2.1–B2.10 + B2.13–B2.15 shipped; B2.11 (SVG diagram) deferred; B2.12 (tests) open; gap rows G7/G12/G31/G37–G43/G45 closed; BedSizeStep raised-bed/permanent toggles removed (all beds are raised, `is_raised_bed` hardcoded `true`)
@@ -126,7 +126,7 @@
 
 > Reviewed 2026-06-15. Two previously-listed risks are now **resolved** and removed: _No Schema
 > Migration System_ (migration runner + `LATEST_SCHEMA_VERSION` = 4 shipped in Phase 0; see
-> `docs/SCHEMA_MIGRATIONS.md`) and _Minimal Test Coverage_ (was 2 files; now ~29 test files
+> `docs/SCHEMA_MIGRATIONS.md`) and _Minimal Test Coverage_ (was 2 files; now 33 test files
 > spanning utils/config/services/hooks/components). A residual test risk is reframed under Medium.
 
 ### Critical
@@ -144,7 +144,7 @@
 
 1. **Direct Firestore Coupling**: Every service imports from `firebase/firestore`. Not a problem now but increases cost of any backend migration (G19).
 2. **Large Hook**: `usePlantFormState` returns 120+ properties. Works but difficult to maintain.
-3. **Test Coverage Shallow Despite Breadth**: ~29 test files exist, but coverage thresholds sit at 30% and only `src/utils` + `src/config` are measured; services/hooks lack emulator-backed tests, and CLAUDE.md rule #7 ("never mock Firestore — use emulator") has no emulator wired into CI. Tighten thresholds and add an emulator harness as the suite grows.
+3. **Test Coverage Shallow Despite Breadth**: 33 test files exist, but coverage thresholds sit at 30% and only `src/utils` + `src/config` are measured; services/hooks lack emulator-backed tests, and CLAUDE.md rule #7 ("never mock Firestore — use emulator") has no emulator wired into CI. Tighten thresholds and add an emulator harness as the suite grows. _(Resolved 2026-06-20: the date-dependent `growthStage` test flakiness — `computeExpectedGrowthStage`/`computeAnnualCycleStage` dropped a day when run before local noon — is fixed by anchoring "now" to noon for a stable calendar-day count; full suite is now deterministically green.)_
 
 ---
 
@@ -179,7 +179,7 @@
 | G25 | Water Management                                                | None                                                           | Nice-to-Have         | M      | Low       | Defer                               |
 | G26 | Lifecycle Economics                                             | Age calc exists, no ROI projection                             | Nice-to-Have         | M      | Medium    | Phase H                             |
 | G27 | Zone-Aware Config (State-Level Expansion)                       | Hardcoded Kanyakumari                                          | Nice-to-Have         | XL     | Low (now) | Defer                               |
-| G28 | Test Coverage (30% minimum)                                     | ~29 test files, 30% threshold (utils/config only)             | Critical             | L      | High      | Ongoing 🔄 (raise threshold + emulator)|
+| G28 | Test Coverage (30% minimum)                                     | 33 test files, 30% threshold (utils/config only); suite deterministically green | Critical             | L      | High      | Ongoing 🔄 (raise threshold + emulator)|
 | G29 | Pest/Disease/Beneficial Reference (detail pages)                | 160+ treatments exist, no detail pages or browseable reference | High-Value           | M      | High      | Phase A (done) / A3 (deferred)      |
 | G30 | Per-Variety Custom Pests/Diseases/Beneficials                   | Static lists only, no user customisation per variety           | High-Value           | S      | Medium    | Phase A3 (deferred)                 |
 | G31 | Bed Management                                                  | Free-text `bed_name` on Plant, no bed entity or rotation       | High-Value           | XL     | High      | Phase B2 ✅                         |

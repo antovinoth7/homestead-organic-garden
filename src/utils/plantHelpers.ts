@@ -1568,8 +1568,12 @@ export function computeExpectedGrowthStage(
   const planted = new Date(plantingDate + 'T12:00:00');
   if (isNaN(planted.getTime())) return null;
 
+  // Anchor "now" to local noon to match the planted-date noon anchor, so the
+  // elapsed-day count is a stable calendar-day difference (independent of the
+  // time of day the app is opened). Round keeps it whole across DST shifts.
   const now = new Date();
-  const elapsedDays = Math.floor((now.getTime() - planted.getTime()) / (24 * 60 * 60 * 1000));
+  now.setHours(12, 0, 0, 0);
+  const elapsedDays = Math.round((now.getTime() - planted.getTime()) / (24 * 60 * 60 * 1000));
   if (elapsedDays < 0) return null;
 
   // Walk stages in order, accumulating days
@@ -1639,8 +1643,12 @@ export function computeAnnualCycleStage(
   const planted = new Date(plantingDate + 'T12:00:00');
   if (isNaN(planted.getTime())) return null;
 
+  // Anchor "now" to local noon to match the planted-date noon anchor, so the
+  // elapsed-day count is a stable calendar-day difference (independent of the
+  // time of day the app is opened). Round keeps it whole across DST shifts.
   const now = new Date();
-  const elapsedDays = Math.floor((now.getTime() - planted.getTime()) / (24 * 60 * 60 * 1000));
+  now.setHours(12, 0, 0, 0);
+  const elapsedDays = Math.round((now.getTime() - planted.getTime()) / (24 * 60 * 60 * 1000));
   const maturityDays = yearsToFirstHarvest * 365;
 
   // Tree not yet mature enough for annual cycling
