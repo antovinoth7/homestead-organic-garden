@@ -64,6 +64,13 @@ export default function PlantDetailScreen(): React.JSX.Element {
     });
   }, [navigation, plantId]);
 
+  const openBeejamruthaRecipe = useCallback(() => {
+    navigation.navigate('More', {
+      screen: 'InputRecipes',
+      params: { initialTab: 'beejamrutha' },
+    });
+  }, [navigation]);
+
   if (!plantId) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -214,6 +221,20 @@ export default function PlantDetailScreen(): React.JSX.Element {
           />
 
           <CareScheduleSection styles={styles} theme={theme} plant={plant} />
+
+          {plant.plant_type !== 'coconut_tree' && (
+            <TouchableOpacity
+              style={styles.beejamruthaCta}
+              onPress={openBeejamruthaRecipe}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="leaf-outline" size={20} color={theme.primary} />
+              <Text style={styles.beejamruthaCtaText}>
+                Treat seeds with Beejamrutha before sowing
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+            </TouchableOpacity>
+          )}
 
           <BedContextSection plant={plant} />
 
