@@ -15,10 +15,13 @@ import * as ImagePicker from 'expo-image-picker';
 import PhotoSourceModal from '../components/modals/PhotoSourceModal';
 import FloatingLabelInput from '../components/FloatingLabelInput';
 import ThemedDropdown from '../components/ThemedDropdown';
+import VoiceInputButton from '../components/VoiceInputButton';
 import { createJournalEntry, updateJournalEntry, saveJournalImage } from '../services/journal';
 import { getAllPlants } from '../services/plants';
 import { Plant, JournalEntryType } from '../types/database.types';
 import { useBedData } from '../hooks/useBedData';
+import { useVoiceInput } from '../hooks/useVoiceInput';
+import { appendVoiceTranscript } from '../utils/voiceInput';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -96,6 +99,40 @@ export default function JournalFormScreen(): React.JSX.Element {
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   }, []);
+
+  // Voice-to-text (Phase E): dictate journal content in Tamil or English.
+  const VOICE_LOCALES = [
+    { code: 'ta-IN', label: 'தமிழ்' },
+    { code: 'en-IN', label: 'English' },
+  ] as const;
+  const [voiceLocale, setVoiceLocale] = useState<string>('ta-IN');
+
+  const appendVoiceText = useCallback((text: string) => {
+    setContent((prev) => appendVoiceTranscript(prev, text));
+  }, []);
+
+  const {
+    isListening,
+    partialTranscript,
+    error: voiceError,
+    isAvailable: voiceAvailable,
+    start: startVoice,
+    stop: stopVoice,
+  } = useVoiceInput({ locale: voiceLocale, onResult: appendVoiceText });
+
+  const handleMicPress = useCallback(() => {
+    if (isListening) {
+      stopVoice();
+    } else {
+      startVoice();
+    }
+  }, [isListening, startVoice, stopVoice]);
+
+  useEffect(() => {
+    if (voiceError) {
+      Alert.alert('Voice Input', voiceError);
+    }
+  }, [voiceError]);
 
   // Harvest-specific fields
   const [harvestQuantity, setHarvestQuantity] = useState(
@@ -594,6 +631,41 @@ export default function JournalFormScreen(): React.JSX.Element {
         )}
 
         <View style={styles.notesWrapper}>
+          {voiceAvailable && (
+            <>
+              <View style={styles.voiceRow}>
+                <View style={styles.voiceLocaleRow}>
+                  {VOICE_LOCALES.map((loc) => (
+                    <TouchableOpacity
+                      key={loc.code}
+                      style={[
+                        styles.voiceLocaleChip,
+                        voiceLocale === loc.code && styles.voiceLocaleChipActive,
+                      ]}
+                      onPress={() => setVoiceLocale(loc.code)}
+                      disabled={isListening}
+                    >
+                      <Text
+                        style={[
+                          styles.voiceLocaleChipText,
+                          voiceLocale === loc.code && styles.voiceLocaleChipTextActive,
+                        ]}
+                      >
+                        {loc.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <VoiceInputButton
+                  isListening={isListening}
+                  onPress={handleMicPress}
+                />
+              </View>
+              {isListening && (
+                <Text style={styles.voicePreview}>{partialTranscript || 'Listening…'}</Text>
+              )}
+            </>
+          )}
           <FloatingLabelInput
             label="What's happening in your garden today?"
             value={content}
