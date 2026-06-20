@@ -17,6 +17,7 @@ const STORAGE_KEYS = {
   BEDS: '@garden_beds',
   FARM_CONFIG: '@garden_farm_config',
   WEATHER: '@garden_weather',
+  ONBOARDING_COMPLETE: '@garden_onboarding_complete',
 };
 
 // Export as KEYS for backwards compatibility
