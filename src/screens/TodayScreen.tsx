@@ -37,6 +37,7 @@ import { WeatherCard } from '../components/WeatherCard';
 import { PlantNowSection } from '../components/PlantNowSection';
 import { AlmanacHighlight } from '../components/AlmanacHighlight';
 import { InputReminderStrip } from '../components/InputReminderStrip';
+import { FarmHealthCard } from '../components/FarmHealthCard';
 
 type TaskGroup = {
   type: TaskType;
@@ -253,7 +254,7 @@ export default function TodayScreen(): React.JSX.Element {
 
   // Farm-wide alerts now flow through the alerts service (C.10) rather than
   // inline computation. Bed rotation context comes from useCrossBedStatus.
-  const { config: farmConfig } = useFarmCapacity();
+  const { config: farmConfig, metrics: farmMetrics } = useFarmCapacity();
   const { rotationStatuses } = useCrossBedStatus(bedList);
   const bedNames = useMemo(
     () => Object.fromEntries(bedList.map((b) => [b.id, b.name])),
@@ -297,6 +298,13 @@ export default function TodayScreen(): React.JSX.Element {
   const openAlmanac = useCallback(() => {
     navigation.navigate('More', { screen: 'SeasonalAlmanac' });
   }, [navigation]);
+
+  const handlePressHealth = useCallback(
+    (healthFilter: 'healthy' | 'stressed' | 'sick') => {
+      navigation.navigate('Plants', { screen: 'PlantsList', params: { healthFilter } });
+    },
+    [navigation]
+  );
 
   const cycleTheme = useCallback(() => {
     const order: ('light' | 'dark' | 'system')[] = ['light', 'dark', 'system'];
@@ -566,53 +574,15 @@ export default function TodayScreen(): React.JSX.Element {
       <WeatherCard />
       <PlantNowSection />
 
-      {/* Garden Health Overview */}
-      <View style={styles.gardenHealthCard}>
-        <Text style={styles.gardenHealthTitle}>🌱 Garden Health</Text>
-        <View style={styles.gardenHealthRow}>
-          <TouchableOpacity
-            style={styles.healthColumn}
-            onPress={() =>
-              navigation.navigate('Plants', {
-                screen: 'PlantsList',
-                params: { healthFilter: 'healthy' },
-              })
-            }
-          >
-            <View style={[styles.healthDot, { backgroundColor: theme.success }]} />
-            <Text style={styles.healthCount}>{health.healthy}</Text>
-            <Text style={styles.healthLabel}>Healthy</Text>
-          </TouchableOpacity>
-          <View style={styles.healthDivider} />
-          <TouchableOpacity
-            style={styles.healthColumn}
-            onPress={() =>
-              navigation.navigate('Plants', {
-                screen: 'PlantsList',
-                params: { healthFilter: 'stressed' },
-              })
-            }
-          >
-            <View style={[styles.healthDot, { backgroundColor: theme.warning }]} />
-            <Text style={styles.healthCount}>{health.stressed}</Text>
-            <Text style={styles.healthLabel}>Stressed</Text>
-          </TouchableOpacity>
-          <View style={styles.healthDivider} />
-          <TouchableOpacity
-            style={styles.healthColumn}
-            onPress={() =>
-              navigation.navigate('Plants', {
-                screen: 'PlantsList',
-                params: { healthFilter: 'sick' },
-              })
-            }
-          >
-            <View style={[styles.healthDot, { backgroundColor: theme.error }]} />
-            <Text style={styles.healthCount}>{health.sick}</Text>
-            <Text style={styles.healthLabel}>Sick</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Farm health: header + health tiles + capacity bars (C.7) */}
+      <FarmHealthCard
+        health={health}
+        categoryBreakdown={farmMetrics?.categoryBreakdown}
+        bedCount={bedList.length}
+        usableSqm={farmMetrics?.usableSqm}
+        familiesCount={farmConfig?.families_count}
+        onPressHealth={handlePressHealth}
+      />
 
       {/* Bed Overview Card */}
       {bedList.length > 0 &&
@@ -731,7 +701,7 @@ export default function TodayScreen(): React.JSX.Element {
 
       {/* Jeevamrutha batch reminder (C.13) */}
       <InputReminderStrip
-        landCents={farmConfig?.land_cents ?? 0}
+        landCents={farmConfig?.land_cents ?? 5}
         bedCount={bedList.length}
         cadenceLabel={seasonRhythm?.jeevamruthaInterval}
         onPress={openJeevamruthaRecipe}
