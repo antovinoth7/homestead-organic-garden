@@ -30,7 +30,6 @@ import BedListScreen from '../screens/BedListScreen';
 import BedDetailScreen from '../screens/BedDetailScreen';
 import BedCreationWizardScreen from '../screens/BedCreationWizardScreen';
 import BedPlantPickerScreen from '../screens/BedPlantPickerScreen';
-import BedTasksScreen from '../screens/BedTasksScreen';
 import BedRotationScreen from '../screens/BedRotationScreen';
 import MyFarmScreen from '../screens/MyFarmScreen';
 import InputRecipesScreen from '../screens/InputRecipesScreen';
@@ -44,7 +43,6 @@ const BedsStack = (): React.JSX.Element => (
     <Stack.Screen name="BedDetail" component={BedDetailScreen} />
     <Stack.Screen name="BedCreationWizard" component={BedCreationWizardScreen} />
     <Stack.Screen name="BedPlantPicker" component={BedPlantPickerScreen} />
-    <Stack.Screen name="BedTasks" component={BedTasksScreen} />
     <Stack.Screen name="BedRotation" component={BedRotationScreen} />
     <Stack.Screen name="PlantForm" component={PlantFormScreen} />
     <Stack.Screen name="PlantDetail" component={PlantDetailScreen} />
