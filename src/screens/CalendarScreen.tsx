@@ -18,7 +18,12 @@ import {
   Modal,
 } from 'react-native';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
-import { markTaskDone, updateTaskTemplate, calculateTaskPriority } from '../services/tasks';
+import {
+  markTaskDone,
+  markTasksDone,
+  updateTaskTemplate,
+  calculateTaskPriority,
+} from '../services/tasks';
 import { TaskTemplate, TaskType } from '../types/database.types';
 import { Ionicons } from '@expo/vector-icons';
 import { TASK_EMOJIS, TASK_COLORS, TASK_LABELS } from '../utils/taskConstants';
@@ -342,19 +347,12 @@ export default function CalendarScreen(): React.JSX.Element {
     setCompletedCount(0);
     setCompletingTotal(selected.length);
 
-    // Fire all in parallel for speed; track completions via allSettled
-    const results = await Promise.allSettled(
-      selected.map(async (task) => {
-        const result = await markTaskDone(task, undefined, undefined, {
-          skipAlreadyDoneCheck: true,
-        });
-        setCompletedCount((prev) => prev + 1);
-        return result;
-      })
-    );
+    // One batched commit + single cache write — no per-task re-render storm.
+    const { succeeded, failed } = await markTasksDone(selected, {
+      skipAlreadyDoneCheck: true,
+    });
 
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    setCompletedCount(succeeded);
     setIsCompletingAll(false);
     setCompletedCount(0);
     setSelectedTaskIds(new Set());
@@ -566,6 +564,7 @@ export default function CalendarScreen(): React.JSX.Element {
         onSkipOpen={handleOpenSkipModal}
         onSelectToggle={toggleTaskSelection}
         onDetail={handleShowDetail}
+        styles={styles}
         bedMap={bedMap}
         rainExpected={
           task.task_type === 'water' &&
@@ -579,6 +578,7 @@ export default function CalendarScreen(): React.JSX.Element {
       selectedTaskIds,
       plantMap,
       bedMap,
+      styles,
       getPlantDetails,
       handleTaskComplete,
       handleSnooze,

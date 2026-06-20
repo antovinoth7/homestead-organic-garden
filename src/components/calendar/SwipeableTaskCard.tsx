@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +25,8 @@ interface Props {
   onSkipOpen: (task: TaskTemplate) => void;
   onSelectToggle: (taskId: string) => void;
   onDetail: (task: TaskTemplate) => void;
+  /** Shared StyleSheet from the screen — avoids rebuilding the large factory per card. */
+  styles: ReturnType<typeof createStyles>;
   bedMap?: Map<string, string>;
   /** Watering tasks: rain predicted on the due date — show a "may skip" badge. */
   rainExpected?: boolean;
@@ -32,7 +34,7 @@ interface Props {
   harvestHint?: string | null;
 }
 
-export function SwipeableTaskCard({
+function SwipeableTaskCardComponent({
   task,
   isSelected,
   plantMap,
@@ -43,12 +45,12 @@ export function SwipeableTaskCard({
   onSkipOpen,
   onSelectToggle,
   onDetail,
+  styles,
   bedMap,
   rainExpected,
   harvestHint,
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
 
   if (!task || !task.next_due_at) return null;
 
@@ -236,3 +238,8 @@ export function SwipeableTaskCard({
     </Swipeable>
   );
 }
+
+// Memoized so toggling one task's selection (or batch progress) only re-renders
+// the affected card, not every mounted card. All props are primitives or stable
+// refs from the screen, so the default shallow comparison is correct.
+export const SwipeableTaskCard = React.memo(SwipeableTaskCardComponent);
