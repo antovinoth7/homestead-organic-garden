@@ -96,6 +96,7 @@ export type MoreStackParamList = {
   Settings: undefined;
   MyFarm: undefined;
   InputRecipes: { initialTab?: string } | undefined;
+  SeasonalAlmanac: undefined;
 };
 
 // ─── Global declaration (makes useNavigation() auto-typed) ───────────────────

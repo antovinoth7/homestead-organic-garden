@@ -7,11 +7,10 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
-  FlatList,
 } from 'react-native';
 import { getTodayTasks, getTodayTaskLogs, getSeasonalCareReminder } from '../services/tasks';
 import { getAllPlants } from '../services/plants';
-import { TaskTemplate, Plant, TaskLog, TaskType } from '../types/database.types';
+import { TaskTemplate, Plant, TaskLog, TaskType, FarmAlert } from '../types/database.types';
 import { useBedData } from '../hooks/useBedData';
 import { bedExpectsLegumes } from '../config/beds';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,26 +24,19 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { useTabBarScroll, TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { getErrorMessage } from '../utils/errorLogging';
-import { getPlantWaterStatus } from '../utils/plantWatering';
 import { getDaysToSWMonsoon, getPreMonsoonTasks } from '../utils/preMonsoonTasks';
 import { getSeasonalCareRhythm } from '../config/organicInputs/seasonalAdaptations';
 import { getSeasonLabel } from '../utils/seasonHelpers';
-
-type AttentionSeverity = 'critical' | 'high' | 'medium';
-
-type PlantAttentionItem = {
-  plant: Plant;
-  severity: AttentionSeverity;
-  icon: 'medical' | 'warning' | 'water' | 'leaf' | 'basket';
-  reasons: string[];
-  daysOverdue: number;
-};
-
-const ATTENTION_SEVERITY_RANK: Record<AttentionSeverity, number> = {
-  critical: 3,
-  high: 2,
-  medium: 1,
-};
+import { getPlantHealthSummary } from '../utils/plantHealth';
+import { getFarmAlerts, isActionable } from '../services/alerts';
+import { getHarvestGapWarnings } from '../services/beds';
+import { useCrossBedStatus } from '../hooks/useCrossBedStatus';
+import { useFarmCapacity } from '../hooks/useFarmCapacity';
+import { NeedsAttentionScroll } from '../components/NeedsAttentionScroll';
+import { WeatherCard } from '../components/WeatherCard';
+import { PlantNowSection } from '../components/PlantNowSection';
+import { AlmanacHighlight } from '../components/AlmanacHighlight';
+import { InputReminderStrip } from '../components/InputReminderStrip';
 
 type TaskGroup = {
   type: TaskType;
@@ -246,160 +238,65 @@ export default function TodayScreen(): React.JSX.Element {
     }, [loadData, resetTabBar])
   );
 
-  const getDaysSince = useCallback((dateValue?: string | null) => {
-    if (!dateValue) return null;
-    const date = new Date(dateValue);
-    if (Number.isNaN(date.getTime())) return null;
-    const startOfDate = new Date(date);
-    startOfDate.setHours(0, 0, 0, 0);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return Math.floor((today.getTime() - startOfDate.getTime()) / (1000 * 60 * 60 * 24));
-  }, []);
-
-  // Calculate stats
+  // Task progress stats for the donut + center label.
   const stats = useMemo(() => {
     const taskIds = new Set((tasks || []).map((task) => task.id));
     completedTemplateIds.forEach((id) => taskIds.add(id));
     const totalTasks = taskIds.size;
     const completed = completedTemplateIds.size;
     const completionRate = totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
-    // Pure health_status counts for Garden Health tiles
-    const healthyCount = (plants || []).filter(
-      (p) => !p.health_status || p.health_status === 'healthy' || p.health_status === 'recovering'
-    ).length;
-    const stressedCount = (plants || []).filter((p) => p.health_status === 'stressed').length;
-    const sickCount = (plants || []).filter((p) => p.health_status === 'sick').length;
-    const attentionByPlant = new Map<string, PlantAttentionItem>();
+    return { totalTasks, completed, completionRate };
+  }, [tasks, completedTemplateIds]);
 
-    const addPlantAttention = (
-      plant: Plant,
-      alert: Omit<PlantAttentionItem, 'plant' | 'reasons'> & { reason: string }
-    ): void => {
-      const existing = attentionByPlant.get(plant.id);
-      if (!existing) {
-        attentionByPlant.set(plant.id, {
-          plant,
-          severity: alert.severity,
-          icon: alert.icon,
-          reasons: [alert.reason],
-          daysOverdue: alert.daysOverdue,
+  // Plant health counts (Garden Health tiles).
+  const health = useMemo(() => getPlantHealthSummary(plants), [plants]);
+
+  // Farm-wide alerts now flow through the alerts service (C.10) rather than
+  // inline computation. Bed rotation context comes from useCrossBedStatus.
+  const { config: farmConfig } = useFarmCapacity();
+  const { rotationStatuses } = useCrossBedStatus(bedList);
+  const bedNames = useMemo(
+    () => Object.fromEntries(bedList.map((b) => [b.id, b.name])),
+    [bedList]
+  );
+  const actionableAlerts = useMemo(
+    () =>
+      getFarmAlerts({
+        plants,
+        rotationStatuses,
+        harvestGapWarnings: getHarvestGapWarnings(bedList),
+        bedNames,
+      }).filter(isActionable),
+    [plants, rotationStatuses, bedList, bedNames]
+  );
+
+  const handleAlertPress = useCallback(
+    (alert: FarmAlert) => {
+      if (alert.plantId) {
+        navigation.navigate('Plants', {
+          screen: 'PlantDetail',
+          params: { plantId: alert.plantId },
         });
-        return;
-      }
-
-      if (!existing.reasons.includes(alert.reason)) {
-        existing.reasons.push(alert.reason);
-      }
-      existing.daysOverdue = Math.max(existing.daysOverdue, alert.daysOverdue);
-
-      const incomingRank = ATTENTION_SEVERITY_RANK[alert.severity];
-      const existingRank = ATTENTION_SEVERITY_RANK[existing.severity];
-      if (incomingRank > existingRank) {
-        existing.severity = alert.severity;
-        existing.icon = alert.icon;
-      }
-    };
-
-    (plants || []).forEach((plant) => {
-      if (plant.health_status === 'sick') {
-        addPlantAttention(plant, {
-          severity: 'critical',
-          icon: 'medical',
-          reason: 'Status: Sick',
-          daysOverdue: 0,
-        });
-      } else if (plant.health_status === 'stressed') {
-        addPlantAttention(plant, {
-          severity: 'high',
-          icon: 'warning',
-          reason: 'Status: Stressed',
-          daysOverdue: 0,
+      } else if (alert.bedId) {
+        navigation.navigate('Beds', {
+          screen: 'BedDetail',
+          params: { bedId: alert.bedId },
         });
       }
+    },
+    [navigation]
+  );
 
-      const water = getPlantWaterStatus(plant);
-      if (water.reason === 'overdue' || water.reason === 'due_today') {
-        const frequency = Number(plant.watering_frequency_days);
-        addPlantAttention(plant, {
-          severity: water.daysOverdue >= Math.max(2, Math.ceil(frequency / 2)) ? 'high' : 'medium',
-          icon: 'water',
-          reason:
-            water.daysOverdue > 0
-              ? `Watering overdue by ${water.daysOverdue} day${water.daysOverdue === 1 ? '' : 's'}`
-              : 'Watering due today',
-          daysOverdue: water.daysOverdue,
-        });
-        return;
-      }
-
-      if (water.reason === 'no_history') {
-        addPlantAttention(plant, {
-          severity: 'medium',
-          icon: 'water',
-          reason: 'No watering history logged',
-          daysOverdue: water.daysOverdue,
-        });
-      }
+  const openJeevamruthaRecipe = useCallback(() => {
+    navigation.navigate('More', {
+      screen: 'InputRecipes',
+      params: { initialTab: 'jeevamrutha' },
     });
+  }, [navigation]);
 
-    // Fertilising overdue check
-    (plants || []).forEach((plant) => {
-      const fertFreq = Number(plant.fertilising_frequency_days);
-      if (!Number.isFinite(fertFreq) || fertFreq <= 0) return;
-
-      const daysSinceFert = getDaysSince(plant.last_fertilised_date);
-      if (daysSinceFert !== null && daysSinceFert >= fertFreq) {
-        const daysOverdue = Math.max(0, daysSinceFert - fertFreq);
-        addPlantAttention(plant, {
-          severity: daysOverdue >= Math.ceil(fertFreq / 2) ? 'high' : 'medium',
-          icon: 'leaf',
-          reason:
-            daysOverdue > 0
-              ? `Fertilising overdue by ${daysOverdue} day${daysOverdue === 1 ? '' : 's'}`
-              : 'Fertilising due today',
-          daysOverdue,
-        });
-      }
-    });
-
-    // Harvest-ready check
-    (plants || []).forEach((plant) => {
-      if (!plant.expected_harvest_date) return;
-      const daysToHarvest = getDaysSince(plant.expected_harvest_date);
-      if (daysToHarvest === null || daysToHarvest < 0) return;
-      addPlantAttention(plant, {
-        severity: 'medium',
-        icon: 'basket',
-        reason:
-          daysToHarvest === 0
-            ? 'Ready to harvest today'
-            : `Harvest overdue by ${daysToHarvest} day${daysToHarvest === 1 ? '' : 's'}`,
-        daysOverdue: daysToHarvest,
-      });
-    });
-
-    const plantAttention = Array.from(attentionByPlant.values()).sort((a, b) => {
-      const bySeverity = ATTENTION_SEVERITY_RANK[b.severity] - ATTENTION_SEVERITY_RANK[a.severity];
-      if (bySeverity !== 0) return bySeverity;
-
-      const byOverdue = b.daysOverdue - a.daysOverdue;
-      if (byOverdue !== 0) return byOverdue;
-
-      return a.plant.name.localeCompare(b.plant.name);
-    });
-
-    return {
-      totalTasks,
-      completed,
-      completionRate,
-      healthyCount,
-      stressedCount,
-      sickCount,
-      needsAttentionCount: plantAttention.length,
-      plantAttention,
-    };
-  }, [tasks, plants, completedTemplateIds, getDaysSince]);
+  const openAlmanac = useCallback(() => {
+    navigation.navigate('More', { screen: 'SeasonalAlmanac' });
+  }, [navigation]);
 
   const cycleTheme = useCallback(() => {
     const order: ('light' | 'dark' | 'system')[] = ['light', 'dark', 'system'];
@@ -500,45 +397,6 @@ export default function TodayScreen(): React.JSX.Element {
     }
     return null;
   }, [plants]);
-
-  const attentionKeyExtractor = useCallback((item: PlantAttentionItem) => item.plant.id, []);
-
-  const renderAttentionItem = useCallback(
-    ({ item: attention }: { item: PlantAttentionItem }) => (
-      <TouchableOpacity
-        style={[
-          styles.alertCardH,
-          attention.severity === 'critical' && styles.alertCardHCritical,
-          attention.severity === 'high' && styles.alertCardHWarning,
-          attention.severity === 'medium' && styles.alertCardHInfo,
-        ]}
-        onPress={() =>
-          navigation.navigate('Plants', {
-            screen: 'PlantDetail',
-            params: { plantId: attention.plant.id },
-          })
-        }
-      >
-        <View
-          style={[
-            styles.alertIconH,
-            attention.severity === 'critical' && { backgroundColor: theme.error },
-            attention.severity === 'high' && { backgroundColor: theme.warning },
-            attention.severity === 'medium' && { backgroundColor: theme.primary },
-          ]}
-        >
-          <Ionicons name={attention.icon} size={18} color="#fff" />
-        </View>
-        <Text style={styles.alertPlantNameH} numberOfLines={1}>
-          {attention.plant.name}
-        </Text>
-        <Text style={styles.alertTextH} numberOfLines={2}>
-          {attention.reasons.join(' • ')}
-        </Text>
-      </TouchableOpacity>
-    ),
-    [styles, navigation, theme]
-  );
 
   if (loading && tasks.length === 0 && plants.length === 0) {
     return (
@@ -701,6 +559,13 @@ export default function TodayScreen(): React.JSX.Element {
         </View>
       </View>
 
+      {/* Needs Attention — actionable alerts from alerts.ts (C.8/C.10) */}
+      <NeedsAttentionScroll alerts={actionableAlerts} onPressAlert={handleAlertPress} />
+
+      {/* Weather (C.3) + What to Plant Now (C.1) */}
+      <WeatherCard />
+      <PlantNowSection />
+
       {/* Garden Health Overview */}
       <View style={styles.gardenHealthCard}>
         <Text style={styles.gardenHealthTitle}>🌱 Garden Health</Text>
@@ -715,7 +580,7 @@ export default function TodayScreen(): React.JSX.Element {
             }
           >
             <View style={[styles.healthDot, { backgroundColor: theme.success }]} />
-            <Text style={styles.healthCount}>{stats.healthyCount}</Text>
+            <Text style={styles.healthCount}>{health.healthy}</Text>
             <Text style={styles.healthLabel}>Healthy</Text>
           </TouchableOpacity>
           <View style={styles.healthDivider} />
@@ -729,7 +594,7 @@ export default function TodayScreen(): React.JSX.Element {
             }
           >
             <View style={[styles.healthDot, { backgroundColor: theme.warning }]} />
-            <Text style={styles.healthCount}>{stats.stressedCount}</Text>
+            <Text style={styles.healthCount}>{health.stressed}</Text>
             <Text style={styles.healthLabel}>Stressed</Text>
           </TouchableOpacity>
           <View style={styles.healthDivider} />
@@ -743,7 +608,7 @@ export default function TodayScreen(): React.JSX.Element {
             }
           >
             <View style={[styles.healthDot, { backgroundColor: theme.error }]} />
-            <Text style={styles.healthCount}>{stats.sickCount}</Text>
+            <Text style={styles.healthCount}>{health.sick}</Text>
             <Text style={styles.healthLabel}>Sick</Text>
           </TouchableOpacity>
         </View>
@@ -864,22 +729,16 @@ export default function TodayScreen(): React.JSX.Element {
         </View>
       )}
 
-      {/* Plant Health Alerts — horizontal cards */}
-      {stats.plantAttention.length > 0 && (
-        <View style={styles.alertsSection}>
-          <Text style={[styles.sectionTitle, styles.sectionTitleMarginBottom]}>
-            ⚠️ Needs Attention ({stats.needsAttentionCount})
-          </Text>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={stats.plantAttention}
-            keyExtractor={attentionKeyExtractor}
-            contentContainerStyle={styles.attentionListContent}
-            renderItem={renderAttentionItem}
-          />
-        </View>
-      )}
+      {/* Jeevamrutha batch reminder (C.13) */}
+      <InputReminderStrip
+        landCents={farmConfig?.land_cents ?? 0}
+        bedCount={bedList.length}
+        cadenceLabel={seasonRhythm?.jeevamruthaInterval}
+        onPress={openJeevamruthaRecipe}
+      />
+
+      {/* Monthly almanac highlight (C.4) */}
+      <AlmanacHighlight onViewAll={openAlmanac} />
 
       {tasks.length === 0 && !loading && (
         <View style={styles.emptyState}>
