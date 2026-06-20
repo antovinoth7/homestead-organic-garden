@@ -58,7 +58,7 @@ interface ActiveFilters {
 
 const ITEMS_PER_PAGE = 20;
 
-type BedSegment = 'all' | 'bed' | 'other';
+type BedSegment = 'bed' | 'other';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -77,7 +77,7 @@ export default function PlantsScreen(): React.JSX.Element {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
-  const [bedSegment, setBedSegment] = useState<BedSegment>('all');
+  const [bedSegment, setBedSegment] = useState<BedSegment>('other');
   const { beds } = useBedData();
   const bedNameMap = useMemo(() => new Map(beds.map((b) => [b.id, b.name])), [beds]);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -464,7 +464,6 @@ export default function PlantsScreen(): React.JSX.Element {
 
   const segmentCounts = useMemo(
     () => ({
-      all: baseFiltered.length,
       bed: baseFiltered.filter((p) => p.bed_id != null).length,
       other: baseFiltered.filter((p) => p.bed_id == null).length,
     }),
@@ -473,8 +472,7 @@ export default function PlantsScreen(): React.JSX.Element {
 
   const segmentFiltered = useMemo(() => {
     if (bedSegment === 'bed') return baseFiltered.filter((p) => p.bed_id != null);
-    if (bedSegment === 'other') return baseFiltered.filter((p) => p.bed_id == null);
-    return baseFiltered;
+    return baseFiltered.filter((p) => p.bed_id == null);
   }, [baseFiltered, bedSegment]);
 
   const filteredPlants = useMemo(
@@ -706,13 +704,12 @@ export default function PlantsScreen(): React.JSX.Element {
 
       {/* ── Results & Toolbar Bar ── */}
       <View style={styles.resultsHeader}>
-        {/* ── All / Bed / Other segmented control ── */}
+        {/* ── Pots & Ground / Beds segmented control ── */}
         <View style={styles.segmentRow}>
           {(
             [
-              ['all', 'All', 'flower-outline', segmentCounts.all],
-              ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
               ['other', 'Pots & Ground', 'cube-outline', segmentCounts.other],
+              ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
             ] as const
           ).map(([value, label, icon, count]) => {
             const active = bedSegment === value;

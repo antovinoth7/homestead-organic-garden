@@ -824,8 +824,8 @@ export default function CalendarScreen(): React.JSX.Element {
           <View style={styles.segmentRow}>
             {(
               [
-                ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
                 ['other', 'Pots & Ground', 'cube-outline', segmentCounts.other],
+                ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
               ] as const
             ).map(([value, label, icon, count]) => {
               const active = bedSegment === value;
