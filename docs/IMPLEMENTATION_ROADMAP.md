@@ -7,7 +7,7 @@
 > Previous: May 1, 2026 — Phase B2 complete; B2.1–B2.10 + B2.13–B2.15 shipped; B2.11 (SVG diagram) deferred; B2.12 (tests) open; gap rows G7/G12/G31/G37–G43/G45 closed; BedSizeStep raised-bed/permanent toggles removed (all beds are raised, `is_raised_bed` hardcoded `true`)
 > Previous: April 30, 2026 — Roadmap expanded from bed_creation_flow.html prototype; B2 significantly expanded (6-step wizard, 8 bed types, two-tier tasks, domain helpers); Phases B3/B4 added; Phase C dashboard overhaul added; G32–G45 gap rows added; F13–F19 feature sections added
 > Previous: April 26, 2026 — B.4 (growth stage auto-progression) complete; B.3 harvest tracking next
-> Status: Phase 0 / A / A2 / B / B2 / B3 / B4 / C shipped (Phase B with deliberate deferrals); Phase D–H planned
+> Status: Phase 0 / A / A2 / B / B2 / B3 / B4 / C / D shipped (Phase B with deliberate deferrals); Phase E–H planned
 > Scope: Solo developer, iterative build, Firebase free-tier
 
 ---
@@ -24,7 +24,7 @@
 | Phase B3 — Farm Setup + Capacity             | ✅ Complete    | 2026-06-06 |
 | Phase B4 — Input Recipes + Seasonal Adapt.   | ✅ Complete    | 2026-06-20 |
 | Phase C — Home (dashboard overhaul)          | ✅ Complete    | 2026-06-20 |
-| Phase D — Calendar                           | ⚪ Planned     | —          |
+| Phase D — Calendar                           | ✅ Complete    | 2026-06-20 |
 | Phase E — Journal                            | ⚪ Planned     | —          |
 | Phase F — Settings & Cross-Cutting           | ⚪ Planned     | —          |
 | Phase G — Tamil i18n                         | ⚪ Planned     | —          |
@@ -590,20 +590,34 @@ Shared foundations (types, services, config files) are built in the phase that f
 
 ---
 
-### Phase D: Calendar
+### Phase D: Calendar ✅ Complete (2026-06-20)
 
-**Goal**: Weather-aware refinements to CalendarScreen.
+**Goal**: Weather-aware + bed-aware refinements to CalendarScreen (Care Plan).
 **Screens**: CalendarScreen
 
 | Step | Feature                                                                                                       | Effort | Risk | Dependencies              |
 | ---- | ------------------------------------------------------------------------------------------------------------- | ------ | ---- | ------------------------- |
-| D.1  | Weather-aware task suppression — suppress watering reminder if rain predicted (uses weather service from C.2) | S      | Low  | Phase C (weather service) |
-| D.2  | Any enriched-data display refinements                                                                         | S      | Low  | Phase A/B                 |
+| D.1  | Weather-aware watering suppression — non-destructive "🌧️ Rain expected — may skip" badge on watering cards when rain is predicted on the due date (uses C.2 weather service). No mutation of `next_due_at`. ✅ | S      | Low  | Phase C (weather service) |
+| D.2  | Enriched-data display — "🧺 Est. harvest: <date>" hint on harvest / harvest-leaves cards via `calculateExpectedHarvestDate` (A2 data). ✅ | S      | Low  | Phase A/B                 |
+| D.3  | Bed-aware Care Plan — replaced the non-scalable horizontal bed-chip strip with the Plants-screen **All / Beds / Pots & Ground** segmented control + auto-group-by-bed (`groupBy: 'bed'`). Tasks stay solely in the Care Plan. ✅ | S      | Low  | Phase B2 (beds)           |
 
-**Verification**:
+**Delivered:**
 
-- Rainy day suppresses watering tasks
-- Calendar reflects enriched plant data
+- Pure helpers split into `services/weatherLogic.ts` (`isRainPredictedOnDate` added; `hasRainSoon` moved) and re-exported from `weather.ts`; `services/weather.test.ts` (NEW).
+- `utils/taskBed.ts` (`resolveTaskBedId`) + `utils/taskBed.test.ts`; `useCalendarData` gains `bedSegment`/`bedNames` options, a `'bed'` grouping branch, and `segmentCounts`.
+- `SwipeableTaskCard` gains optional `rainExpected` / `harvestHint` badges; calendar styles add rain/harvest/segment/active-bed-pill tokens.
+
+**Verification:**
+
+- Watering task on a ≥2mm-rain day shows the rain badge and stays actionable; harvest tasks show the estimate; **Beds** segment groups tasks under bed headers, **Pots & Ground** filters to non-bed tasks; lint + 470 tests green.
+
+**D.5 — Bed quick-log ↔ task unified ✅ (2026-06-20):** resolved the last bed-task
+duplication. `markTaskDone` now stamps the bed's `last_water_date` / `last_jeevamrutha_date`
+/ `last_weeding_date` when a `water_bed` / `jeevamrutha` / `weeding` bed task is completed
+(subtype→field map; dynamic `import('./beds')` to avoid a cycle). `BedDetailScreen`'s Soil
+Input Log is now **read-only** (the separate `logBedInput`/`restoreBedInput` write path +
+undo were removed) — the Care Plan is the single completion surface, and the bed detail shows
+the derived "Last X" status. No more two-places-to-update.
 
 ---
 

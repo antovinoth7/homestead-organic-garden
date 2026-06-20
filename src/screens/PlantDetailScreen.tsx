@@ -9,6 +9,7 @@ import { pinGrowthStage, unpinGrowthStage, archivePlant } from '@/services/plant
 import { JournalEntryType } from '@/types/database.types';
 import type { GrowthStage } from '@/types/database.types';
 import { useTheme } from '@/theme';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { createStyles } from '@/styles/plantDetailStyles';
 import {
   getCompanionSuggestions,
@@ -154,22 +155,24 @@ export default function PlantDetailScreen(): React.JSX.Element {
 
   return (
     <>
+      <ScreenHeader
+        title={plant.name}
+        onBack={() => navigation.goBack()}
+        right={
+          <TouchableOpacity
+            onPress={() => navigation.navigate('PlantForm', { plantId })}
+            style={styles.editButton}
+            accessibilityRole="button"
+            accessibilityLabel="Edit plant"
+          >
+            <Ionicons name="pencil" size={22} color={theme.primary} />
+          </TouchableOpacity>
+        }
+      />
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
       >
-        <View style={[styles.header, { top: insets.top + 12 }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('PlantForm', { plantId })}
-            style={styles.editButton}
-          >
-            <Ionicons name="pencil" size={24} color={theme.primary} />
-          </TouchableOpacity>
-        </View>
-
         {plant.photo_url ? (
           <TouchableOpacity activeOpacity={0.9} onPress={() => setZoomVisible(true)}>
             <Image

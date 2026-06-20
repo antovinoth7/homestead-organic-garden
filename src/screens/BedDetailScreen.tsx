@@ -1,13 +1,5 @@
-import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  ActivityIndicator,
-  TouchableOpacity,
-  Alert,
-  Animated,
-} from 'react-native';
+import React, { useMemo, useCallback, useState } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,15 +7,11 @@ import { useTheme } from '@/theme';
 import { useBedDetail } from '@/hooks/useBedDetail';
 import { RotationStatusCard } from '@/components/RotationStatusCard';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { UndoToast } from '@/components/UndoToast';
-import { tapFeedback } from '@/utils/haptics';
 import { BedTopDownMap } from '@/components/BedTopDownMap';
 import { BedSuccessionTimeline } from '@/components/BedSuccessionTimeline';
 import {
   markBedAsResting,
   endBedRest,
-  logBedInput,
-  restoreBedInput,
   getTransitionInputs,
   getHarvestGapWarnings,
 } from '@/services/beds';
@@ -41,14 +29,6 @@ import type {
   BedDetailScreenNavigationProp,
   BedDetailScreenRouteProp,
 } from '@/types/navigation.types';
-
-type SoilInput = 'water' | 'jeevamrutha' | 'weeding';
-
-const SOIL_INPUT_LABEL: Record<SoilInput, string> = {
-  water: 'Watering',
-  jeevamrutha: 'Jeevamrutha',
-  weeding: 'Weeding',
-};
 
 function formatRelativeDate(isoDate: string | null | undefined): string {
   if (!isoDate) return 'Never';
@@ -71,20 +51,6 @@ export default function BedDetailScreen(): React.JSX.Element {
   const resolveLayerColor = useCallback(
     (layer: BedLayer): string => getLayerColor(theme, layer),
     [theme]
-  );
-
-  // Soil-input quick-log: log optimistically, then offer a 4s undo window.
-  const [pendingLog, setPendingLog] = useState<{ type: SoilInput; prev: string | null } | null>(
-    null
-  );
-  const undoProgress = useRef(new Animated.Value(1)).current;
-  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    },
-    []
   );
 
   const handleMarkResting = useCallback(async () => {
@@ -113,60 +79,6 @@ export default function BedDetailScreen(): React.JSX.Element {
       setActionLoading(false);
     }
   }, [bed, refresh]);
-
-  const handleLogInput = useCallback(
-    async (inputType: SoilInput) => {
-      if (!bed) return;
-      const prevMap: Record<SoilInput, string | null | undefined> = {
-        water: bed.last_water_date,
-        jeevamrutha: bed.last_jeevamrutha_date,
-        weeding: bed.last_weeding_date,
-      };
-      const prev = prevMap[inputType] ?? null;
-      tapFeedback();
-      // Any previous pending log is already persisted; just retire its timer.
-      if (undoTimerRef.current) {
-        clearTimeout(undoTimerRef.current);
-        undoTimerRef.current = null;
-      }
-      try {
-        await logBedInput(bed.id, inputType);
-        refresh();
-      } catch (err) {
-        logger.warn('logBedInput failed', err as Error);
-        return;
-      }
-      setPendingLog({ type: inputType, prev });
-      undoProgress.setValue(1);
-      Animated.timing(undoProgress, {
-        toValue: 0,
-        duration: 4000,
-        useNativeDriver: false,
-      }).start();
-      undoTimerRef.current = setTimeout(() => {
-        setPendingLog(null);
-        undoTimerRef.current = null;
-      }, 4000);
-    },
-    [bed, refresh, undoProgress]
-  );
-
-  const handleUndoLog = useCallback(async () => {
-    if (!bed || !pendingLog) return;
-    if (undoTimerRef.current) {
-      clearTimeout(undoTimerRef.current);
-      undoTimerRef.current = null;
-    }
-    undoProgress.stopAnimation();
-    const { type, prev } = pendingLog;
-    setPendingLog(null);
-    try {
-      await restoreBedInput(bed.id, type, prev);
-      refresh();
-    } catch (err) {
-      logger.warn('restoreBedInput failed', err as Error);
-    }
-  }, [bed, pendingLog, refresh, undoProgress]);
 
   // Read-only top-down layout, recomputed from the bed's plants (same pipeline
   // as the wizard's Step 6 review).
@@ -306,30 +218,25 @@ export default function BedDetailScreen(): React.JSX.Element {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Soil Input Log</Text>
         <View style={styles.inputLogGrid}>
-          <TouchableOpacity style={styles.inputLogItem} onPress={() => handleLogInput('water')}>
+          <View style={styles.inputLogItem}>
             <Ionicons name="water-outline" size={16} color={theme.primary} />
             <Text style={styles.inputLogLabel}>Last water</Text>
             <Text style={styles.inputLogValue}>{formatRelativeDate(bed.last_water_date)}</Text>
-            <Text style={styles.inputLogTapHint}>Tap to log</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.inputLogItem}
-            onPress={() => handleLogInput('jeevamrutha')}
-          >
+          </View>
+          <View style={styles.inputLogItem}>
             <Ionicons name="flask-outline" size={16} color={theme.primary} />
             <Text style={styles.inputLogLabel}>Last Jeevamrutha</Text>
             <Text style={styles.inputLogValue}>
               {formatRelativeDate(bed.last_jeevamrutha_date)}
             </Text>
-            <Text style={styles.inputLogTapHint}>Tap to log</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.inputLogItem} onPress={() => handleLogInput('weeding')}>
+          </View>
+          <View style={styles.inputLogItem}>
             <Ionicons name="cut-outline" size={16} color={theme.primary} />
             <Text style={styles.inputLogLabel}>Last weeding</Text>
             <Text style={styles.inputLogValue}>{formatRelativeDate(bed.last_weeding_date)}</Text>
-            <Text style={styles.inputLogTapHint}>Tap to log</Text>
-          </TouchableOpacity>
+          </View>
         </View>
+        <Text style={styles.inputLogHint}>Logged when you complete the bed task in Care Plan</Text>
       </View>
 
       {/* Transition Inputs */}
@@ -427,14 +334,6 @@ export default function BedDetailScreen(): React.JSX.Element {
         </View>
       )}
       </ScrollView>
-      <UndoToast
-        visible={pendingLog !== null}
-        message={pendingLog ? `${SOIL_INPUT_LABEL[pendingLog.type]} logged` : ''}
-        onUndo={handleUndoLog}
-        progress={undoProgress}
-        bottomOffset={Math.max(insets.bottom, 16) + 8}
-        icon="leaf-outline"
-      />
     </View>
   );
 }

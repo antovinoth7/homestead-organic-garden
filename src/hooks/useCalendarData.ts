@@ -4,9 +4,17 @@ import { getAllPlants, plantExists } from '../services/plants';
 import { getJournalMetadata } from '../services/journal';
 import { TaskTemplate, Plant, JournalEntryType, JournalEntry } from '../types/database.types';
 import { isNetworkAvailable } from '../utils/networkState';
+import { resolveTaskBedId } from '../utils/taskBed';
 import { logger } from '../utils/logger';
 
-type GroupBy = 'none' | 'location' | 'type' | 'plant';
+type GroupBy = 'none' | 'location' | 'type' | 'plant' | 'bed';
+
+export type BedSegment = 'bed' | 'other';
+
+export interface BedSegmentCounts {
+  bed: number;
+  other: number;
+}
 
 export interface HarvestReadyItem {
   plant: Plant;
@@ -32,6 +40,7 @@ export interface UseCalendarDataReturn {
   weekTasks: TaskTemplate[];
   tasksForDisplay: TaskTemplate[];
   groupedTasks: Record<string, TaskTemplate[]>;
+  segmentCounts: BedSegmentCounts;
   isSearching: boolean;
   getTasksForDate: (date: Date) => TaskTemplate[];
   getRawTasksForDate: (date: Date) => TaskTemplate[];
@@ -50,7 +59,8 @@ interface UseCalendarDataOptions {
   groupBy: GroupBy;
   filterTaskTypes: Set<string>;
   filterOverdueOnly: boolean;
-  filterBedId?: string;
+  bedSegment?: BedSegment;
+  bedNames?: Map<string, string>;
 }
 
 export function useCalendarData({
@@ -63,7 +73,8 @@ export function useCalendarData({
   groupBy,
   filterTaskTypes,
   filterOverdueOnly,
-  filterBedId,
+  bedSegment = 'other',
+  bedNames,
 }: UseCalendarDataOptions): UseCalendarDataReturn {
   const [tasks, setTasks] = useState<TaskTemplate[]>([]);
   const [plants, setPlants] = useState<Plant[]>([]);
@@ -164,6 +175,12 @@ export function useCalendarData({
     return map;
   }, [plants]);
 
+  // A task's bed: bed-level tasks carry bed_id directly; plant tasks inherit it.
+  const resolveBedId = React.useCallback(
+    (task: TaskTemplate): string | null => resolveTaskBedId(task, plantMap),
+    [plantMap]
+  );
+
   const getPlantDetails = React.useCallback(
     (plantId: string | null) => {
       if (!plantId) return { name: 'General', location: '', type: '' };
@@ -245,9 +262,19 @@ export function useCalendarData({
         }, {});
       }
 
+      if (groupBy === 'bed') {
+        return sorted.reduce<Record<string, TaskTemplate[]>>((acc, task) => {
+          const bedId = resolveBedId(task);
+          const label = bedId ? bedNames?.get(bedId) ?? 'Bed' : 'Unassigned';
+          if (!acc[label]) acc[label] = [];
+          acc[label].push(task);
+          return acc;
+        }, {});
+      }
+
       return { '': sorted };
     },
-    [sortTasks, getPlantDetails, groupBy]
+    [sortTasks, getPlantDetails, groupBy, resolveBedId, bedNames]
   );
 
   const isSearching = normalizedSearchQuery.length > 0;
@@ -258,7 +285,9 @@ export function useCalendarData({
     [tasks, filterTasksBySearch]
   );
 
-  const filteredTasks = useMemo(() => {
+  // Search + type/overdue/bed filters, before the All/Beds/Other segment is applied —
+  // drives the segment counts so they reflect the active search and filters.
+  const preSegmentTasks = useMemo(() => {
     let result = searchFilteredTasks;
     if (filterTaskTypes.size > 0) {
       result = result.filter((t) => filterTaskTypes.has(t.task_type));
@@ -268,11 +297,58 @@ export function useCalendarData({
       todayStart.setHours(0, 0, 0, 0);
       result = result.filter((t) => t.next_due_at && new Date(t.next_due_at) < todayStart);
     }
-    if (filterBedId) {
-      result = result.filter((t) => t.bed_id === filterBedId);
-    }
     return result;
-  }, [searchFilteredTasks, filterTaskTypes, filterOverdueOnly, filterBedId]);
+  }, [searchFilteredTasks, filterTaskTypes, filterOverdueOnly]);
+
+  // Tasks visible in the current view = overdue OR within the current week/month window
+  // (mirrors overdueTasks + weekTasks below). Drives accurate, non-misleading segment counts.
+  // When searching, the view isn't windowed, so count all matches (mirrors tasksForDisplay).
+  const windowTasks = useMemo(() => {
+    if (isSearching) return preSegmentTasks;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    let inWindow: (due: Date) => boolean;
+    if (selectedView === 'week') {
+      const weekStart = new Date(currentWeekStart);
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      weekEnd.setHours(0, 0, 0, 0);
+      inWindow = (due) => {
+        const d = new Date(due);
+        d.setHours(0, 0, 0, 0);
+        return d >= weekStart && d < weekEnd;
+      };
+    } else {
+      const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      monthEnd.setHours(23, 59, 59, 999);
+      inWindow = (due) => due >= monthStart && due <= monthEnd;
+    }
+
+    return preSegmentTasks.filter((t) => {
+      if (!t.next_due_at) return false;
+      const due = new Date(t.next_due_at);
+      return due < todayStart || inWindow(due);
+    });
+  }, [isSearching, preSegmentTasks, selectedView, currentWeekStart, currentMonth]);
+
+  const segmentCounts = useMemo<BedSegmentCounts>(() => {
+    let bed = 0;
+    let other = 0;
+    for (const t of windowTasks) {
+      if (resolveBedId(t) != null) bed += 1;
+      else other += 1;
+    }
+    return { bed, other };
+  }, [windowTasks, resolveBedId]);
+
+  const filteredTasks = useMemo(() => {
+    if (bedSegment === 'bed') return preSegmentTasks.filter((t) => resolveBedId(t) != null);
+    return preSegmentTasks.filter((t) => resolveBedId(t) == null);
+  }, [preSegmentTasks, bedSegment, resolveBedId]);
 
   // Pre-build a date→tasks map so calendar cells do O(1) lookups instead of O(tasks) per cell
   const tasksByDateKey = useMemo(() => {
@@ -451,6 +527,7 @@ export function useCalendarData({
     weekTasks,
     tasksForDisplay,
     groupedTasks,
+    segmentCounts,
     isSearching,
     // Helpers
     getTasksForDate,

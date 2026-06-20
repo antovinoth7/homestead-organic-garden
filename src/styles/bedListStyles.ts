@@ -203,7 +203,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     swipeEditAction: {
       width: 72,
-      backgroundColor: theme.primary,
+      backgroundColor: theme.info,
       alignItems: 'center',
       justifyContent: 'center',
     },

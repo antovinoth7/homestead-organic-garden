@@ -55,7 +55,10 @@ export type TaskType =
   | 'spray'
   | 'mulch'
   | 'harvest'
-  | 'harvest_leaves';
+  | 'harvest_leaves'
+  | 'weeding'
+  | 'transplanting'
+  | 'cultivating';
 export type PlantType =
   | 'vegetable'
   | 'herb'
