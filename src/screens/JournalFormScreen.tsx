@@ -106,6 +106,9 @@ export default function JournalFormScreen(): React.JSX.Element {
     editEntry?.harvest_quality || 'good'
   );
   const [harvestNotes, setHarvestNotes] = useState(editEntry?.harvest_notes || '');
+  const [harvestTreeNumber, setHarvestTreeNumber] = useState(
+    editEntry?.harvest_tree_number?.toString() || ''
+  );
 
   useEffect(() => {
     loadPlants();
@@ -271,6 +274,10 @@ export default function JournalFormScreen(): React.JSX.Element {
         harvest_unit: entryType === JournalEntryType.Harvest ? harvestUnit : null,
         harvest_quality: entryType === JournalEntryType.Harvest ? harvestQuality : null,
         harvest_notes: entryType === JournalEntryType.Harvest ? harvestNotes : null,
+        harvest_tree_number:
+          entryType === JournalEntryType.Harvest && harvestTreeNumber.trim() !== ''
+            ? parseInt(harvestTreeNumber, 10)
+            : null,
       };
 
       if (isEditing && editEntry) {
@@ -570,6 +577,18 @@ export default function JournalFormScreen(): React.JSX.Element {
                 maxLength={500}
               />
               <Text style={styles.charCounter}>{harvestNotes.length}/500</Text>
+            </View>
+
+            <View style={[styles.notesWrapper, styles.notesWrapperMarginTop]}>
+              <Text style={styles.label}>Tree no. (for groves, optional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. 3"
+                placeholderTextColor={theme.inputPlaceholder}
+                value={harvestTreeNumber}
+                onChangeText={(text) => setHarvestTreeNumber(text.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
+              />
             </View>
           </View>
         )}

@@ -694,4 +694,23 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.warning,
       backgroundColor: theme.warning + '20',
     },
+    beejamruthaCta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginHorizontal: 16,
+      marginBottom: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: theme.primaryLight,
+      borderWidth: 1,
+      borderColor: theme.primary + '40',
+    },
+    beejamruthaCtaText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '600' as const,
+      color: theme.text,
+    },
   });

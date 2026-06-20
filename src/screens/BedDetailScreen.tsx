@@ -406,13 +406,6 @@ export default function BedDetailScreen(): React.JSX.Element {
       <View style={styles.actions}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate('BedTasks', { bedId })}
-        >
-          <Ionicons name="checkmark-circle-outline" size={20} color={theme.primary} />
-          <Text style={styles.actionText}>View Tasks</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButton}
           onPress={() => navigation.navigate('BedPlantPicker', { bedId })}
         >
           <Ionicons name="swap-horizontal-outline" size={20} color={theme.primary} />
