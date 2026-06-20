@@ -85,7 +85,7 @@ export default function CalendarScreen(): React.JSX.Element {
   const [filterBedId, setFilterBedId] = useState<string>('');
   const { beds: bedList } = useBedData();
   const bedMap = useMemo(() => new Map(bedList.map((b) => [b.id, b.name])), [bedList]);
-  const [bedSegment, setBedSegment] = useState<'all' | 'bed' | 'other'>('all');
+  const [bedSegment, setBedSegment] = useState<'bed' | 'other'>('other');
   const { forecast } = useWeather();
   // The Beds segment forces bed grouping; otherwise the View Options group menu applies.
   const effectiveGroupBy = bedSegment === 'bed' ? 'bed' : groupBy;
@@ -824,7 +824,6 @@ export default function CalendarScreen(): React.JSX.Element {
           <View style={styles.segmentRow}>
             {(
               [
-                ['all', 'All', 'apps-outline', segmentCounts.all],
                 ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
                 ['other', 'Pots & Ground', 'cube-outline', segmentCounts.other],
               ] as const

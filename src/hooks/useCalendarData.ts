@@ -9,10 +9,9 @@ import { logger } from '../utils/logger';
 
 type GroupBy = 'none' | 'location' | 'type' | 'plant' | 'bed';
 
-export type BedSegment = 'all' | 'bed' | 'other';
+export type BedSegment = 'bed' | 'other';
 
 export interface BedSegmentCounts {
-  all: number;
   bed: number;
   other: number;
 }
@@ -76,7 +75,7 @@ export function useCalendarData({
   filterTaskTypes,
   filterOverdueOnly,
   filterBedId,
-  bedSegment = 'all',
+  bedSegment = 'other',
   bedNames,
 }: UseCalendarDataOptions): UseCalendarDataReturn {
   const [tasks, setTasks] = useState<TaskTemplate[]>([]);
@@ -306,20 +305,54 @@ export function useCalendarData({
     return result;
   }, [searchFilteredTasks, filterTaskTypes, filterOverdueOnly, filterBedId]);
 
+  // Tasks visible in the current view = overdue OR within the current week/month window
+  // (mirrors overdueTasks + weekTasks below). Drives accurate, non-misleading segment counts.
+  // When searching, the view isn't windowed, so count all matches (mirrors tasksForDisplay).
+  const windowTasks = useMemo(() => {
+    if (isSearching) return preSegmentTasks;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    let inWindow: (due: Date) => boolean;
+    if (selectedView === 'week') {
+      const weekStart = new Date(currentWeekStart);
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      weekEnd.setHours(0, 0, 0, 0);
+      inWindow = (due) => {
+        const d = new Date(due);
+        d.setHours(0, 0, 0, 0);
+        return d >= weekStart && d < weekEnd;
+      };
+    } else {
+      const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      monthEnd.setHours(23, 59, 59, 999);
+      inWindow = (due) => due >= monthStart && due <= monthEnd;
+    }
+
+    return preSegmentTasks.filter((t) => {
+      if (!t.next_due_at) return false;
+      const due = new Date(t.next_due_at);
+      return due < todayStart || inWindow(due);
+    });
+  }, [isSearching, preSegmentTasks, selectedView, currentWeekStart, currentMonth]);
+
   const segmentCounts = useMemo<BedSegmentCounts>(() => {
     let bed = 0;
     let other = 0;
-    for (const t of preSegmentTasks) {
+    for (const t of windowTasks) {
       if (resolveBedId(t) != null) bed += 1;
       else other += 1;
     }
-    return { all: preSegmentTasks.length, bed, other };
-  }, [preSegmentTasks, resolveBedId]);
+    return { bed, other };
+  }, [windowTasks, resolveBedId]);
 
   const filteredTasks = useMemo(() => {
     if (bedSegment === 'bed') return preSegmentTasks.filter((t) => resolveBedId(t) != null);
-    if (bedSegment === 'other') return preSegmentTasks.filter((t) => resolveBedId(t) == null);
-    return preSegmentTasks;
+    return preSegmentTasks.filter((t) => resolveBedId(t) == null);
   }, [preSegmentTasks, bedSegment, resolveBedId]);
 
   // Pre-build a date→tasks map so calendar cells do O(1) lookups instead of O(tasks) per cell
