@@ -7,7 +7,7 @@
 > Previous: May 1, 2026 — Phase B2 complete; B2.1–B2.10 + B2.13–B2.15 shipped; B2.11 (SVG diagram) deferred; B2.12 (tests) open; gap rows G7/G12/G31/G37–G43/G45 closed; BedSizeStep raised-bed/permanent toggles removed (all beds are raised, `is_raised_bed` hardcoded `true`)
 > Previous: April 30, 2026 — Roadmap expanded from bed_creation_flow.html prototype; B2 significantly expanded (6-step wizard, 8 bed types, two-tier tasks, domain helpers); Phases B3/B4 added; Phase C dashboard overhaul added; G32–G45 gap rows added; F13–F19 feature sections added
 > Previous: April 26, 2026 — B.4 (growth stage auto-progression) complete; B.3 harvest tracking next
-> Status: Phase 0 / A / A2 / B / B2 / B3 / B4 / C / D shipped (Phase B with deliberate deferrals); Phase E–H planned
+> Status: Phase 0 / A / A2 / B / B2 / B3 / B4 / C / D / E shipped (Phase B with deliberate deferrals); Phase F–H planned
 > Scope: Solo developer, iterative build, Firebase free-tier
 
 ---
@@ -25,7 +25,7 @@
 | Phase B4 — Input Recipes + Seasonal Adapt.   | ✅ Complete    | 2026-06-20 |
 | Phase C — Home (dashboard overhaul)          | ✅ Complete    | 2026-06-20 |
 | Phase D — Calendar                           | ✅ Complete    | 2026-06-20 |
-| Phase E — Journal                            | ⚪ Planned     | —          |
+| Phase E — Journal                            | ✅ Complete    | 2026-06-20 |
 | Phase F — Settings & Cross-Cutting           | ⚪ Planned     | —          |
 | Phase G — Tamil i18n                         | ⚪ Planned     | —          |
 | Phase H — Advanced                           | ⚪ Planned     | —          |
@@ -164,7 +164,7 @@
 | G7  | Multi-Layer / Zone-Based Planting                               | No zone concept                                                | High-Value           | L      | High      | Phase B2 ✅                         |
 | G8  | Organic Pest & Disease Advisor (enriched)                       | 160+ treatments exist, no recipes/calendar                     | High-Value           | M      | Medium    | Phase A (done) / A3 (deferred)      |
 | G9  | Coconut Individual Tree Tracking                                | Coconut fields exist, per-tree not streamlined                 | High-Value           | M      | High      | Phase B                             |
-| G10 | Voice-to-Text (Tamil)                                           | None (expo-speech available)                                   | High-Value           | S      | Medium    | Phase E                             |
+| G10 | Voice-to-Text (Tamil)                                           | ✅ Shipped (expo-speech-recognition, Tamil + English toggle)   | High-Value           | S      | Medium    | Phase E ✅                          |
 | G11 | Journal Tags                                                    | No structured tags                                             | Nice-to-Have         | S      | Medium    | Phase 0 ✅                          |
 | G12 | Crop Rotation Planner                                           | No rotation logic                                              | High-Value           | M      | Medium    | Phase B2 ✅ (subsumed)              |
 | G13 | Organic Input Recipes (static reference)                        | FertiliserType enum exists                                     | High-Value           | S      | Medium    | Phase A3 (deferred)                 |
@@ -621,20 +621,30 @@ the derived "Last X" status. No more two-places-to-update.
 
 ---
 
-### Phase E: Journal (F8)
+### Phase E: Journal (F8) ✅ Complete (2026-06-20)
 
-**Goal**: Add voice-to-text Tamil input to JournalFormScreen.
+**Goal**: Add voice-to-text input (Tamil default, English toggle) to JournalFormScreen.
 **Screens**: JournalFormScreen
 
-| Step | Feature                                                   | Effort | Risk | Dependencies |
-| ---- | --------------------------------------------------------- | ------ | ---- | ------------ |
-| E.1  | Install `@react-native-voice/voice`, configure dev client | S      | Low  | None         |
-| E.2  | Mic button on JournalFormScreen content input             | S      | Low  | E.1          |
-| E.3  | `journalFormStyles.ts` update                             | S      | Low  | E.2          |
+| Step | Feature                                                                       | Effort | Risk | Dependencies | Status |
+| ---- | ----------------------------------------------------------------------------- | ------ | ---- | ------------ | ------ |
+| E.1  | Install `expo-speech-recognition` + config plugin (dev client already in use) | S      | Low  | None         | ✅     |
+| E.2  | `useVoiceInput` hook + `VoiceInputButton`; wire mic into content field         | S      | Low  | E.1          | ✅     |
+| E.3  | `journalFormStyles.ts` + Tamil/English locale toggle                          | S      | Low  | E.2          | ✅     |
+| E.4  | Fix `sanitizeAlphaNumericSpaces` to preserve Tamil combining marks (`\p{M}`)  | S      | Low  | —            | ✅     |
+
+**Notes**:
+
+- Chose `expo-speech-recognition` over `@react-native-voice/voice` for clean Expo
+  SDK 54 config-plugin support, locale control, and partial results.
+- Discovered the shared sanitizer stripped Tamil vowel signs / virama (Unicode `\p{M}`),
+  mangling all Tamil text app-wide; added `\p{M}` to the allow-set (E.4).
+- Requires a dev-client rebuild before the native module is available (not Expo Go).
 
 **Verification**:
 
-- Mic button captures Tamil speech, transcribes to text in journal content field
+- Mic button captures Tamil/English speech, transcribes (with live partial preview) and
+  appends to the journal content field; permission denial degrades gracefully.
 
 ---
 
@@ -1184,14 +1194,19 @@ bed_id?: string | null;
 
 ---
 
-### F8: Voice-to-Text (Phase E)
+### F8: Voice-to-Text (Phase E) ✅ Shipped
 
-**Files Modified**:
+**Files**:
 
-- `src/screens/JournalFormScreen.tsx` — add microphone button next to content input
-- `src/styles/journalFormStyles.ts` — mic button styles
+- `src/hooks/useVoiceInput.ts` — recognition state, permissions, error mapping (new)
+- `src/components/VoiceInputButton.tsx` + `src/styles/voiceInputButtonStyles.ts` — mic (new)
+- `src/utils/voiceInput.ts` — pure error-message + append helpers (new, unit-tested)
+- `src/screens/JournalFormScreen.tsx` — mic + Tamil/English toggle in content field
+- `src/styles/journalFormStyles.ts` — voice row / locale chip / preview styles
+- `src/utils/textSanitizer.ts` — preserve Tamil combining marks (`\p{M}`)
+- `app.json` — `expo-speech-recognition` config plugin (mic + speech permissions)
 
-**Dependencies**: `@react-native-voice/voice` (requires dev client, not Expo Go)
+**Dependencies**: `expo-speech-recognition` (requires dev client, not Expo Go)
 
 ---
 
@@ -2065,7 +2080,7 @@ interface DynamicAccumulator {
 ### DO AFTER (Phase D–F)
 
 1. **Calendar weather refinements (Phase D)** — watering suppression on rainy days
-2. **Voice-to-text Tamil (F8, Phase E)** — removes literacy barrier
+2. ~~**Voice-to-text Tamil (F8, Phase E)**~~ — ✅ shipped Phase E (removes literacy barrier)
 3. **Full data backup (G18, Phase F)** — data loss is a trust-breaker
 4. **Onboarding flow (G17, Phase F)** — district selection + guided first-plant wizard
 
@@ -2111,11 +2126,13 @@ interface DynamicAccumulator {
 - **Option B**: Dedicated screen in More tab with full-year view
 - **Recommendation**: Both — monthly highlight on TodayScreen with "View full almanac" link.
 
-### Voice-to-Text Library
+### Voice-to-Text Library ✅ Decided (Phase E)
 
-- `expo-speech` handles TTS only, not STT
-- `@react-native-voice/voice` requires dev client (not Expo Go), supports Tamil well
-- **Recommendation**: `@react-native-voice/voice` since `expo-dev-client` is already in use.
+- `expo-speech` handles TTS only, not STT — not applicable.
+- `@react-native-voice/voice` requires dev client (not Expo Go), supports Tamil well.
+- **Chosen**: `expo-speech-recognition` — Expo SDK 54 config-plugin support, BCP-47 locale
+  control (`ta-IN`/`en-IN`), interim/partial results, on-device + network. Dev client was
+  already in use, so the native rebuild is the only extra step.
 
 ### Harvest Logs vs. Extended Task Logs
 
