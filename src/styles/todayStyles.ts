@@ -336,4 +336,84 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     bedOverviewStat: {
       alignItems: 'center' as const,
     },
+    // Current-season care rhythm card
+    rhythmCard: {
+      marginHorizontal: 16,
+      marginBottom: 12,
+      backgroundColor: theme.backgroundSecondary,
+      borderRadius: 12,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    rhythmTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.text,
+      marginBottom: 10,
+    },
+    rhythmRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
+    rhythmLabel: {
+      fontSize: 13,
+      color: theme.textSecondary,
+    },
+    rhythmValue: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    // Pre-monsoon prep card
+    preMonsoonCard: {
+      marginHorizontal: 16,
+      marginBottom: 12,
+      backgroundColor: theme.backgroundSecondary,
+      borderRadius: 12,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.primary + '40',
+    },
+    preMonsoonHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+    preMonsoonTitle: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    preMonsoonClose: {
+      padding: 2,
+    },
+    preMonsoonTaskRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+      paddingVertical: 6,
+    },
+    preMonsoonTaskIcon: {
+      fontSize: 18,
+      lineHeight: 22,
+    },
+    preMonsoonTaskText: {
+      flex: 1,
+    },
+    preMonsoonTaskTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    preMonsoonTaskDesc: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      lineHeight: 16,
+      marginTop: 2,
+    },
   });

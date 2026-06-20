@@ -3,6 +3,8 @@
  * Shows how task frequencies change across the 4 seasons.
  */
 
+import { getCurrentSeason } from '@/utils/seasonHelpers';
+
 export interface SeasonalFrequency {
   seasonId: string;
   seasonLabel: string;
@@ -120,4 +122,12 @@ export const PRE_MONSOON_TASKS: PreMonsoonTask[] = [
  */
 export function getFrequencyForSeason(seasonId: string): SeasonalFrequency | undefined {
   return SEASONAL_FREQUENCIES.find((f) => f.seasonId === seasonId);
+}
+
+/**
+ * Resolve the care-rhythm row for the current (or given) date's season.
+ * Returns `null` when the season has no mapped frequency row.
+ */
+export function getSeasonalCareRhythm(date?: Date): SeasonalFrequency | null {
+  return getFrequencyForSeason(getCurrentSeason(date)) ?? null;
 }

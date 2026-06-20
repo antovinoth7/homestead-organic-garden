@@ -26,6 +26,9 @@ import { useTabBarScroll, TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { getErrorMessage } from '../utils/errorLogging';
 import { getPlantWaterStatus } from '../utils/plantWatering';
+import { getDaysToSWMonsoon, getPreMonsoonTasks } from '../utils/preMonsoonTasks';
+import { getSeasonalCareRhythm } from '../config/organicInputs/seasonalAdaptations';
+import { getSeasonLabel } from '../utils/seasonHelpers';
 
 type AttentionSeverity = 'critical' | 'high' | 'medium';
 
@@ -160,6 +163,24 @@ export default function TodayScreen(): React.JSX.Element {
     setBannerDismissed(true);
     await safeSetItem('seasonal_banner_dismissed_date', new Date().toDateString());
   }, []);
+
+  // Pre-monsoon prep card — shown within 21 days of monsoon onset, dismissible per day
+  const [preMonsoonDismissed, setPreMonsoonDismissed] = useState(false);
+  useEffect(() => {
+    safeGetItem('premonsoon_card_dismissed_date').then((stored) => {
+      const today = new Date().toDateString();
+      if (stored === today) setPreMonsoonDismissed(true);
+    });
+  }, []);
+  const dismissPreMonsoon = useCallback(async () => {
+    setPreMonsoonDismissed(true);
+    await safeSetItem('premonsoon_card_dismissed_date', new Date().toDateString());
+  }, []);
+
+  const daysToMonsoon = useMemo(() => getDaysToSWMonsoon(), []);
+  const preMonsoonTasks = useMemo(() => getPreMonsoonTasks(daysToMonsoon), [daysToMonsoon]);
+  const seasonRhythm = useMemo(() => getSeasonalCareRhythm(), []);
+  const seasonLabel = useMemo(() => getSeasonLabel(), []);
   const completedTemplateIds = useMemo(
     () => new Set(taskLogs.map((log) => log.template_id)),
     [taskLogs]
@@ -781,6 +802,52 @@ export default function TodayScreen(): React.JSX.Element {
             </TouchableOpacity>
           );
         })()}
+
+      {/* Current-season care rhythm */}
+      {seasonRhythm !== null && (
+        <View style={styles.rhythmCard}>
+          <Text style={styles.rhythmTitle}>🗓️ This Season&apos;s Rhythm · {seasonLabel}</Text>
+          <View style={styles.rhythmRow}>
+            <Text style={styles.rhythmLabel}>💧 Water</Text>
+            <Text style={styles.rhythmValue}>{seasonRhythm.waterInterval}</Text>
+          </View>
+          <View style={styles.rhythmRow}>
+            <Text style={styles.rhythmLabel}>🍂 Mulch</Text>
+            <Text style={styles.rhythmValue}>{seasonRhythm.mulchCheck}</Text>
+          </View>
+          <View style={styles.rhythmRow}>
+            <Text style={styles.rhythmLabel}>🧪 Jeevamrutha</Text>
+            <Text style={styles.rhythmValue}>{seasonRhythm.jeevamruthaInterval}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Pre-monsoon prep — only within the 21-day window, dismissible per day */}
+      {preMonsoonTasks.length > 0 && !preMonsoonDismissed && (
+        <View style={styles.preMonsoonCard}>
+          <View style={styles.preMonsoonHeader}>
+            <Text style={styles.preMonsoonTitle}>
+              🌧️ Pre-Monsoon Prep · {daysToMonsoon} day{daysToMonsoon === 1 ? '' : 's'} to monsoon
+            </Text>
+            <TouchableOpacity
+              style={styles.preMonsoonClose}
+              onPress={dismissPreMonsoon}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close" size={16} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          {preMonsoonTasks.map((task) => (
+            <View key={task.id} style={styles.preMonsoonTaskRow}>
+              <Text style={styles.preMonsoonTaskIcon}>{task.icon}</Text>
+              <View style={styles.preMonsoonTaskText}>
+                <Text style={styles.preMonsoonTaskTitle}>{task.title}</Text>
+                <Text style={styles.preMonsoonTaskDesc}>{task.description}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Seasonal tip banner — shown once per day, dismissible */}
       {seasonalTip !== null && !bannerDismissed && (

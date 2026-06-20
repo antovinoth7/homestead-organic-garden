@@ -1,7 +1,7 @@
 # Organic Gardening Planner — Implementation Roadmap
 
 > Generated: April 12, 2026
-> Last updated: June 20, 2026 — **Phase B2 reconciled against the shipped bed tab** (see `docs/BED_TAB_ROADMAP_ALIGNMENT.md`): B2.11 (SVG diagram) marked superseded by the shipped visualization components (`BedTopDownMap`/`BedLayerStack`/`BedSuccessionTimeline`/`BedRowLayout`/`BedZoneIllustration`); B2.12 tests marked partially done; `BedType`/`BedLayer` and the wizard step list corrected to shipped values (6 steps incl. `BedLayoutStep`); June row-layout / succession-timeline / occupancy work captured in a new B2.17 block; dedicated `BedTasksScreen` removed from the bed tab — bed-level tasks now surface in the Care Plan only (resolves the B2.13 ↔ B2.16 contradiction).
+> Last updated: June 20, 2026 — **Phase B2 reconciled against the shipped bed tab** (see `docs/BED_TAB_ROADMAP_ALIGNMENT.md`): B2.11 (SVG diagram) marked superseded by the shipped visualization components (`BedTopDownMap`/`BedLayerStack`/`BedSuccessionTimeline`/`BedRowLayout`/`BedZoneIllustration`); B2.12 tests marked partially done; `BedType`/`BedLayer` and the wizard step list corrected to shipped values (6 steps incl. `BedLayoutStep`); June row-layout / succession-timeline / occupancy work captured in a new B2.17 block; dedicated `BedTasksScreen` removed from the bed tab — bed-level tasks now surface in the Care Plan only (resolves the B2.13 ↔ B2.16 contradiction). Also: **B2.12 closed** (`services/beds.test.ts` + `bedLogic.ts` extraction; backup N/A; emulator CRUD deferred). Also: **B4.5 `SeasonalAdaptationScreen` cut** — re-homed to `TodayScreen` as a Pre-Monsoon Prep card + current-season Care Rhythm card (no standalone screen/route).
 > Previous: June 15, 2026 — Roadmap reconciled against shipped code: **Phase B3 (Farm Setup + Capacity) marked Complete** (consolidated into `MyFarmScreen` + `farmCapacity.ts` capacity engine + `FarmConfig` persistence); **Phase B4 (Input Recipes) marked In Progress** (`InputRecipesScreen` + recipe engine shipped; `SeasonalAdaptationScreen` still open); "Key Problems / Risks" section refreshed (schema migration + test-coverage risks resolved); gap rows G32–G36 + G1/G28 statuses updated. No code changed in this pass.
 > Previous: June 3, 2026 — B2.16 shipped: farm-wide **Rotation tab** on the bed listing (Beds/Rotation segmented toggle on `BedListScreen`), reuse-first (composes `useCrossBedStatus` + `RotationStatusCard`); tasks intentionally kept in Care Plan (no Tasks tab); create/edit bed wizards untouched
 > Previous: May 1, 2026 — Phase B2 complete; B2.1–B2.10 + B2.13–B2.15 shipped; B2.11 (SVG diagram) deferred; B2.12 (tests) open; gap rows G7/G12/G31/G37–G43/G45 closed; BedSizeStep raised-bed/permanent toggles removed (all beds are raised, `is_raised_bed` hardcoded `true`)
@@ -76,7 +76,7 @@
 - Recipe quantity engine: scales ingredient amounts by farm/bed area (pure function); `InputRecipesScreen.tsx` + `inputRecipesStyles.ts` render personalized quantities
 - Pre-monsoon batch: `getPreMonsoonTasks()` task generation near the SW-monsoon onset
 - Tests: `organicInputs.test.ts`, `recipeQuantity.test.ts`, `preMonsoonTasks.test.ts`
-- **Still open:** `SeasonalAdaptationScreen` (B4.5) — config data exists but the dedicated screen is not yet built; Beejamrutha lifecycle deep-link (B4.4)
+- **Still open:** Beejamrutha lifecycle deep-link (B4.4). _(B4.5 `SeasonalAdaptationScreen` was cut — content re-homed to TodayScreen cards.)_
 
 ---
 
@@ -187,7 +187,7 @@
 | G33 | Land Capacity Engine (usable sqm, max beds, food category bars) | `farmCapacity.ts` engine + `useFarmCapacity`                   | High-Value           | M      | High      | Phase B3 ✅                         |
 | G34 | Full-Year Harvest Guarantee Grid (category × season)            | `calcCategoryPct` + `getPhase3YearPlan` shipped               | High-Value           | M      | High      | Phase B3 ✅                         |
 | G35 | Organic Input Recipes (personalized by farm size)               | `InputRecipesScreen` + recipe engine + config                 | High-Value           | M      | High      | Phase B4 ✅                         |
-| G36 | Seasonal Adaptation Screen + Pre-Monsoon Batch                  | Pre-monsoon batch + config done; screen pending               | High-Value           | M      | Medium    | Phase B4 🔄 (screen open)           |
+| G36 | Seasonal Adaptation + Pre-Monsoon Batch                         | ✅ Done — standalone screen cut; surfaced as TodayScreen cards | High-Value           | M      | Medium    | Phase B4 ✅ (re-homed to Today)     |
 | G37 | Dynamic Accumulators (chop-drop tracking, 4 plants)             | None — Agathi, Moringa, Comfrey, Banana with intervals         | High-Value           | S      | High      | Phase B2 ✅                         |
 | G38 | Harvest Gap Detector (cross-bed same-guild clearing)            | None                                                           | High-Value           | S      | High      | Phase B2 ✅                         |
 | G39 | Cross-Bed Coordinator (6-rule farm-wide rotation check)         | None                                                           | High-Value           | S      | High      | Phase B2 ✅                         |
@@ -524,19 +524,18 @@ Shared foundations (types, services, config files) are built in the phase that f
 | B4.2 | `RecipeQuantityEngine` — scales ingredient amounts by `farmConfig.land_cents × bed_area`; exported as pure function                                                          | S      | Low  | B4.1, B3.1       |
 | B4.3 | `InputRecipesScreen` — 4 tab panels, personalized ingredient quantities using FarmConfig, season-aware "when to apply" instructions                                          | M      | Low  | B4.1, B4.2       |
 | B4.4 | Deep-link: Beejamrutha event in plant lifecycle card → `InputRecipesScreen#beejamrutha` tab                                                                                  | S      | Low  | B4.3, Phase B2   |
-| B4.5 | `SeasonalAdaptationScreen` — current season task frequency changes (water/mulch/Jeevamrutha per season), pre-monsoon batch tasks section, summer shade-net prompt            | M      | Low  | None             |
-| B4.6 | Pre-monsoon batch scheduler: `getPreMonsoonTasks(daysToSWMonsoon)` in `tasks.ts` — generates prep tasks when within 21 days of Jun 1                                         | S      | Low  | B4.5             |
-| B4.7 | Navigation — `InputRecipes` + `SeasonalAdaptation` routes in MoreStack                                                                                                       | S      | Low  | B4.3, B4.5       |
-| B4.8 | `inputRecipesStyles.ts`, `seasonalAdaptationStyles.ts`                                                                                                                       | S      | Low  | B4.3, B4.5       |
+| B4.5 | ✅ ~~`SeasonalAdaptationScreen`~~ **CUT** (product decision) — a standalone More-tab reference screen contradicts the app's surface-in-context direction (cf. `BedTasksScreen` removal). Content re-homed to `TodayScreen`: a **Pre-Monsoon Prep card** (gated to the 21-day window; renders `PRE_MONSOON_TASKS` incl. summer shade-net) + a **current-season Care Rhythm card** (`getSeasonalCareRhythm()` → water/mulch/Jeevamrutha for the current season). No new screen/route. | M | Low | None |
+| B4.6 | ✅ Pre-monsoon batch scheduler — `getDaysToSWMonsoon()` / `getPreMonsoonTasks(days)` in `src/utils/preMonsoonTasks.ts` (pure, unit-tested); surfaced on **`TodayScreen`** (Pre-Monsoon Prep card) within 21 days of Jun 1 | S | Low | B4.5 |
+| B4.7 | Navigation — `InputRecipes` route in MoreStack (the `SeasonalAdaptation` route is dropped — B4.5 cut)                                                                          | S      | Low  | B4.3             |
+| B4.8 | `inputRecipesStyles.ts`; seasonal-adaptation styles folded into `todayStyles.ts` (no separate `seasonalAdaptationStyles.ts` — B4.5 cut)                                       | S      | Low  | B4.3             |
 | B4.9 | Tests: `organicInputs.test.ts` (recipe data completeness), `recipeQuantity.test.ts` (scaling formula), `preMonsoonTasks.test.ts` (task generation near Jun 1)                | S      | Low  | B4.1, B4.2, B4.6 |
 
 **Verification**:
 
 - Recipe quantities update when farm cents change in FarmSetup
 - Beejamrutha deep-link from plant lifecycle card navigates to InputRecipesScreen on Beejamrutha tab
-- Within 21 days of Jun 1 → pre-monsoon tasks appear in CalendarScreen
-- Summer season → shade-net task prompt visible in SeasonalAdaptation
-- NE Monsoon → all task frequencies shown with correct seasonal adjustments
+- Within 21 days of Jun 1 → Pre-Monsoon Prep card appears on TodayScreen (shade-net task included); hidden outside the window; dismissible per day
+- Current season → Care Rhythm card on TodayScreen shows correct water/mulch/Jeevamrutha intervals (e.g. SW Monsoon → Rain-fed / fortnightly / every 15 days)
 
 ---
 
@@ -1838,11 +1837,11 @@ interface OrganicInputRecipe {
 - `src/config/organicInputs/recipes.ts` — 4 recipe objects
 - `src/utils/recipeQuantityEngine.ts` — `scaleRecipe(recipe, farmConfig)` pure function
 - `src/screens/InputRecipesScreen.tsx` — 4 tab panels with personalized quantities
-- `src/screens/SeasonalAdaptationScreen.tsx` — current season task frequencies, pre-monsoon batch tasks, shade-net prompt
-- `src/styles/inputRecipesStyles.ts`, `src/styles/seasonalAdaptationStyles.ts`
-- `src/__tests__/utils/recipeQuantity.test.ts`
+- ~~`src/screens/SeasonalAdaptationScreen.tsx`~~ **CUT** — content re-homed to `TodayScreen` (Pre-Monsoon Prep card + current-season Care Rhythm card)
+- `src/styles/inputRecipesStyles.ts` (seasonal-adaptation styles folded into `todayStyles.ts`)
+- `src/__tests__/utils/recipeQuantity.test.ts`, `src/__tests__/config/organicInputs.seasonalRhythm.test.ts`
 
-**Pre-monsoon batch scheduler** (`src/services/tasks.ts`): `getPreMonsoonTasks(daysToSWMonsoon)` — generates bed-prep, mulch, shade-net tasks when `daysToSWMonsoon ≤ 21`.
+**Pre-monsoon batch scheduler** (`src/utils/preMonsoonTasks.ts`): `getDaysToSWMonsoon()` + `getPreMonsoonTasks(daysToSWMonsoon)` — returns bed-prep, mulch, shade-net tasks when `0 ≤ daysToSWMonsoon ≤ 21`; rendered as the TodayScreen Pre-Monsoon Prep card.
 
 **Deep-link**: Beejamrutha event on plant lifecycle card navigates to `InputRecipesScreen` on the `beejamrutha` tab.
 
@@ -1851,6 +1850,8 @@ interface OrganicInputRecipe {
 ### F15: Seasonal Adaptation + Pre-Monsoon Batch Scheduler (Phase B4)
 
 **Goal**: Surface season-specific task frequency changes to the user and auto-generate a batch of pre-monsoon preparation tasks when the season approaches.
+
+> **Delivery note (B4.5 cut):** no standalone screen. The adaptation table is surfaced as a current-season Care Rhythm card on `TodayScreen` (`getSeasonalCareRhythm()`), and the pre-monsoon batch as a dismissible Pre-Monsoon Prep card gated to the 21-day window.
 
 **Season Adaptation Rules** (stored in `src/config/organicInputs/seasonalAdaptations.ts`):
 
