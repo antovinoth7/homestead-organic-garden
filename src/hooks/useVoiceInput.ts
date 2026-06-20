@@ -3,17 +3,32 @@
  * dictate free text in Tamil (default) or English. Owns listening state, live
  * partial transcripts, permission handling, and user-safe error messages.
  *
- * Note: the native module is only available in a dev/production build, not in
- * Expo Go. `isAvailable` reflects on-device recognizer support.
+ * The native module is resolved with `requireOptionalNativeModule`, which
+ * returns `null` (instead of throwing) when the binary lacks it — e.g. Expo Go
+ * or a stale dev client built before the dependency was added. In that case
+ * `isAvailable` is `false` and callers should hide the mic; the app must never
+ * crash just because the module is missing. Web works via the package's own
+ * web shim, which this hook does not touch.
  */
 
-import { useCallback, useEffect, useState } from 'react';
-import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { requireOptionalNativeModule } from 'expo';
+// Type-only imports — erased at compile time, so they never trigger the
+// package's runtime native-module resolution (which throws when absent).
+import type {
+  ExpoSpeechRecognitionModule as ExpoSpeechRecognitionModuleValue,
+  ExpoSpeechRecognitionResultEvent,
+  ExpoSpeechRecognitionErrorEvent,
 } from 'expo-speech-recognition';
 import { logError } from '@/utils/errorLogging';
 import { voiceErrorMessage, VOICE_FALLBACK_ERROR } from '@/utils/voiceInput';
+
+// Resolved once at module load. `null` when the native module is not compiled in.
+const SpeechModule = requireOptionalNativeModule<typeof ExpoSpeechRecognitionModuleValue>(
+  'ExpoSpeechRecognition'
+);
+
+const UNAVAILABLE_ERROR = 'Speech recognition is not available on this device.';
 
 export interface UseVoiceInputOptions {
   /** BCP-47 locale, e.g. "ta-IN" or "en-IN". */
@@ -40,61 +55,85 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
   const [transcript, setTranscript] = useState('');
   const [partialTranscript, setPartialTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isAvailable, setIsAvailable] = useState(true);
+  const [isAvailable, setIsAvailable] = useState(false);
+
+  // Keep the latest onResult without resubscribing native listeners.
+  const onResultRef = useRef(onResult);
+  useEffect(() => {
+    onResultRef.current = onResult;
+  }, [onResult]);
 
   useEffect(() => {
+    if (!SpeechModule) {
+      setIsAvailable(false);
+      return;
+    }
+
     try {
-      setIsAvailable(ExpoSpeechRecognitionModule.isRecognitionAvailable());
+      setIsAvailable(SpeechModule.isRecognitionAvailable());
     } catch {
       setIsAvailable(false);
     }
+
+    const subscriptions = [
+      SpeechModule.addListener('start', () => setIsListening(true)),
+      SpeechModule.addListener('end', () => {
+        setIsListening(false);
+        setPartialTranscript('');
+      }),
+      SpeechModule.addListener('result', (event: ExpoSpeechRecognitionResultEvent) => {
+        const text = event.results[0]?.transcript ?? '';
+        if (event.isFinal) {
+          setPartialTranscript('');
+          if (text) {
+            setTranscript(text);
+            onResultRef.current?.(text);
+          }
+        } else {
+          setPartialTranscript(text);
+        }
+      }),
+      SpeechModule.addListener('error', (event: ExpoSpeechRecognitionErrorEvent) => {
+        setIsListening(false);
+        setPartialTranscript('');
+        setError(voiceErrorMessage(event.error));
+        logError('error', `useVoiceInput: ${event.error}`, new Error(event.message));
+      }),
+    ];
+
+    return () => {
+      subscriptions.forEach((sub) => sub.remove());
+      try {
+        SpeechModule.abort();
+      } catch {
+        // no-op
+      }
+    };
   }, []);
 
-  useSpeechRecognitionEvent('start', () => setIsListening(true));
-
-  useSpeechRecognitionEvent('end', () => {
-    setIsListening(false);
-    setPartialTranscript('');
-  });
-
-  useSpeechRecognitionEvent('result', (event) => {
-    const text = event.results[0]?.transcript ?? '';
-    if (event.isFinal) {
-      setPartialTranscript('');
-      if (text) {
-        setTranscript(text);
-        onResult?.(text);
-      }
-    } else {
-      setPartialTranscript(text);
-    }
-  });
-
-  useSpeechRecognitionEvent('error', (event) => {
-    setIsListening(false);
-    setPartialTranscript('');
-    setError(voiceErrorMessage(event.error));
-    logError('error', `useVoiceInput: ${event.error}`, new Error(event.message));
-  });
-
   const stop = useCallback(() => {
+    if (!SpeechModule) return;
     try {
-      ExpoSpeechRecognitionModule.stop();
+      SpeechModule.stop();
     } catch (err) {
       logError('error', 'useVoiceInput: stop failed', err);
     }
   }, []);
 
   const start = useCallback(async () => {
+    if (!SpeechModule) {
+      setError(UNAVAILABLE_ERROR);
+      return;
+    }
     setError(null);
     setPartialTranscript('');
     try {
-      const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      const permission = await SpeechModule.requestPermissionsAsync();
       if (!permission.granted) {
         setError(voiceErrorMessage('not-allowed'));
         return;
       }
-      ExpoSpeechRecognitionModule.start({
+      SpeechModule.start({
         lang: locale,
         interimResults: true,
         continuous: false,
@@ -105,17 +144,6 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
       logError('error', 'useVoiceInput: start failed', err);
     }
   }, [locale]);
-
-  // Abort any in-flight recognition when the consuming screen unmounts.
-  useEffect(() => {
-    return () => {
-      try {
-        ExpoSpeechRecognitionModule.abort();
-      } catch {
-        // no-op: native module may be unavailable (e.g. Expo Go)
-      }
-    };
-  }, []);
 
   return { isListening, transcript, partialTranscript, error, isAvailable, start, stop };
 }

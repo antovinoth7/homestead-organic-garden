@@ -631,37 +631,40 @@ export default function JournalFormScreen(): React.JSX.Element {
         )}
 
         <View style={styles.notesWrapper}>
-          <View style={styles.voiceRow}>
-            <View style={styles.voiceLocaleRow}>
-              {VOICE_LOCALES.map((loc) => (
-                <TouchableOpacity
-                  key={loc.code}
-                  style={[
-                    styles.voiceLocaleChip,
-                    voiceLocale === loc.code && styles.voiceLocaleChipActive,
-                  ]}
-                  onPress={() => setVoiceLocale(loc.code)}
-                  disabled={isListening}
-                >
-                  <Text
-                    style={[
-                      styles.voiceLocaleChipText,
-                      voiceLocale === loc.code && styles.voiceLocaleChipTextActive,
-                    ]}
-                  >
-                    {loc.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <VoiceInputButton
-              isListening={isListening}
-              disabled={!voiceAvailable}
-              onPress={handleMicPress}
-            />
-          </View>
-          {isListening && (
-            <Text style={styles.voicePreview}>{partialTranscript || 'Listening…'}</Text>
+          {voiceAvailable && (
+            <>
+              <View style={styles.voiceRow}>
+                <View style={styles.voiceLocaleRow}>
+                  {VOICE_LOCALES.map((loc) => (
+                    <TouchableOpacity
+                      key={loc.code}
+                      style={[
+                        styles.voiceLocaleChip,
+                        voiceLocale === loc.code && styles.voiceLocaleChipActive,
+                      ]}
+                      onPress={() => setVoiceLocale(loc.code)}
+                      disabled={isListening}
+                    >
+                      <Text
+                        style={[
+                          styles.voiceLocaleChipText,
+                          voiceLocale === loc.code && styles.voiceLocaleChipTextActive,
+                        ]}
+                      >
+                        {loc.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <VoiceInputButton
+                  isListening={isListening}
+                  onPress={handleMicPress}
+                />
+              </View>
+              {isListening && (
+                <Text style={styles.voicePreview}>{partialTranscript || 'Listening…'}</Text>
+              )}
+            </>
           )}
           <FloatingLabelInput
             label="What's happening in your garden today?"
