@@ -17,6 +17,7 @@ import {
 } from '@/services/beds';
 import { getSmartNextCrops, getGuildTemplate } from '@/config/beds';
 import { getLayerColor } from '@/config/beds/layerMeta';
+import { BED_TYPE_NAME, BED_TYPE_EMOJI } from '@/config/beds/bedTypeMeta';
 import { computeRowLayout } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
@@ -146,16 +147,13 @@ export default function BedDetailScreen(): React.JSX.Element {
         title={bed.name}
         onBack={() => navigation.goBack()}
         right={
-          <>
-            <Text style={styles.typeBadge}>{bed.type.replace(/_/g, ' ')}</Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => navigation.navigate('BedCreationWizard', { editBedId: bedId })}
-              accessibilityLabel="Edit bed"
-            >
-              <Ionicons name="pencil" size={18} color={theme.primary} />
-            </TouchableOpacity>
-          </>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => navigation.navigate('BedCreationWizard', { editBedId: bedId })}
+            accessibilityLabel="Edit bed"
+          >
+            <Ionicons name="pencil" size={18} color={theme.primary} />
+          </TouchableOpacity>
         }
       />
       <ScrollView
@@ -178,17 +176,30 @@ export default function BedDetailScreen(): React.JSX.Element {
         </View>
       )}
 
-      {/* Dimensions */}
-      <View style={styles.infoRow}>
-        <Ionicons name="resize-outline" size={16} color={theme.textSecondary} />
-        <Text style={styles.infoText}>
-          {bed.dimensions.width_m} m × {bed.dimensions.length_m} m ({bed.dimensions.area_sqm} sqm)
-        </Text>
+      {/* Bed meta: type · size · raised */}
+      <View style={styles.metaRow}>
+        <View style={styles.typeChip}>
+          <Text style={styles.typeChipText}>
+            {BED_TYPE_EMOJI[bed.type]} {BED_TYPE_NAME[bed.type]}
+          </Text>
+        </View>
+        <View style={styles.metaDim}>
+          <Ionicons name="resize-outline" size={14} color={theme.textSecondary} />
+          <Text style={styles.metaDimText}>
+            {bed.dimensions.width_m} × {bed.dimensions.length_m} m · {bed.dimensions.area_sqm} m²
+          </Text>
+        </View>
         {bed.is_raised_bed && (
           <View style={styles.raisedBadge}>
             <Text style={styles.raisedBadgeText}>Raised</Text>
           </View>
         )}
+      </View>
+
+      {/* Succession & Season Timeline */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Season Timeline</Text>
+        <BedSuccessionTimeline bed={bed} plants={plants} />
       </View>
 
       {/* Bed Layout — read-only top-down row map */}
@@ -207,12 +218,6 @@ export default function BedDetailScreen(): React.JSX.Element {
           />
         </View>
       )}
-
-      {/* Succession & Season Timeline */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Season Timeline</Text>
-        <BedSuccessionTimeline bed={bed} plants={plants} />
-      </View>
 
       {/* Soil Input Log */}
       <View style={styles.section}>

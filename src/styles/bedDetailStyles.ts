@@ -22,16 +22,25 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       shadowRadius: 4,
       elevation: 3,
     },
-    typeBadge: {
-      fontSize: 12,
-      color: theme.primary,
+    // Bed meta strip: type chip · dimensions · raised
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 4,
+    },
+    typeChip: {
+      backgroundColor: theme.primaryLight,
       borderWidth: 1,
       borderColor: theme.primary,
       borderRadius: 8,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      textTransform: 'capitalize',
     },
+    typeChipText: { fontSize: 12, fontWeight: '600', color: theme.primary },
+    metaDim: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    metaDimText: { fontSize: 13, color: theme.textSecondary },
     restingBanner: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -44,8 +53,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     restingText: { flex: 1, fontSize: 13, color: theme.warning ?? '#f59e0b', fontWeight: '600' },
     endRestText: { fontSize: 12, color: theme.primary, fontWeight: '600' },
-    infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-    infoText: { fontSize: 14, color: theme.textSecondary },
     raisedBadge: {
       backgroundColor: theme.primaryLight,
       borderRadius: 4,
