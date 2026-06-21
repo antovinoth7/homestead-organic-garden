@@ -19,7 +19,7 @@ import { Image } from 'expo-image';
 import { getJournalEntries, deleteJournalEntry } from '../services/journal';
 import { getAllPlants } from '../services/plants';
 import { JournalEntry, JournalEntryType, Plant } from '../types/database.types';
-import { useBedData } from '../hooks/useBedData';
+import { useBedOptions } from '../hooks/useBedOptions';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
@@ -57,7 +57,7 @@ export default function JournalScreen(): React.JSX.Element {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   // Bed filter state
   const [filterBedId, setFilterBedId] = useState<string>('');
-  const { beds: bedList } = useBedData();
+  const { beds: bedList } = useBedOptions();
 
   // View mode state
   const [viewMode, setViewMode] = useState<'list' | 'gallery'>('list');

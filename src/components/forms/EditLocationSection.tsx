@@ -9,7 +9,7 @@ import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
 import { sanitizeAlphaNumericSpaces, sanitizeLandmarkText } from '../../utils/textSanitizer';
 import type { SpaceType } from '../../types/database.types';
-import { useBedData } from '@/hooks/useBedData';
+import { useBedOptions } from '@/hooks/useBedOptions';
 
 interface Props {
   formState: PlantFormStateReturn;
@@ -44,7 +44,7 @@ export function EditLocationSection({ formState }: Props): React.JSX.Element {
 
   const styles = useMemo(() => createStyles(theme), [theme]);
   const editStyles = useMemo(() => createEditStyles(theme), [theme]);
-  const { beds } = useBedData();
+  const { beds } = useBedOptions();
 
   return (
     <CollapsibleSection

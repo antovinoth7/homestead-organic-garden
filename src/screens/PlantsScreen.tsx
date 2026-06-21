@@ -37,7 +37,7 @@ import { logger } from '../utils/logger';
 import { getErrorMessage } from '../utils/errorLogging';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { PlantFilterSheet } from '../components/PlantFilterSheet';
-import { useBedData } from '../hooks/useBedData';
+import { useBedOptions } from '../hooks/useBedOptions';
 import { isPlantArchived } from '../utils/plantHelpers';
 
 type FilterType = 'all' | PlantType;
@@ -78,7 +78,7 @@ export default function PlantsScreen(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const [bedSegment, setBedSegment] = useState<BedSegment>('other');
-  const { beds } = useBedData();
+  const { beds } = useBedOptions();
   const bedNameMap = useMemo(() => new Map(beds.map((b) => [b.id, b.name])), [beds]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{

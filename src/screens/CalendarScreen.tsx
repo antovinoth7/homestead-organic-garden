@@ -36,7 +36,7 @@ import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { useCalendarData, HarvestReadyItem } from '../hooks/useCalendarData';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
-import { useBedData } from '../hooks/useBedData';
+import { useBedOptions } from '../hooks/useBedOptions';
 import { useWeather } from '../hooks/useWeather';
 import { isRainPredictedOnDate } from '../services/weather';
 import { calculateExpectedHarvestDate } from '../utils/plantHelpers';
@@ -87,7 +87,7 @@ export default function CalendarScreen(): React.JSX.Element {
   const [showGroupMenu, setShowGroupMenu] = useState(false);
   const [filterTaskTypes, setFilterTaskTypes] = useState<Set<string>>(new Set());
   const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
-  const { beds: bedList } = useBedData();
+  const { beds: bedList } = useBedOptions();
   const bedMap = useMemo(() => new Map(bedList.map((b) => [b.id, b.name])), [bedList]);
   const [bedSegment, setBedSegment] = useState<'bed' | 'other'>('other');
   const { forecast } = useWeather();

@@ -19,7 +19,7 @@ import VoiceInputButton from '../components/VoiceInputButton';
 import { createJournalEntry, updateJournalEntry, saveJournalImage } from '../services/journal';
 import { getAllPlants } from '../services/plants';
 import { Plant, JournalEntryType } from '../types/database.types';
-import { useBedData } from '../hooks/useBedData';
+import { useBedOptions } from '../hooks/useBedOptions';
 import { useVoiceInput } from '../hooks/useVoiceInput';
 import { appendVoiceTranscript } from '../utils/voiceInput';
 import { Ionicons } from '@expo/vector-icons';
@@ -79,7 +79,7 @@ export default function JournalFormScreen(): React.JSX.Element {
   );
   const [selectedBedId, setSelectedBedId] = useState<string>(editEntry?.bed_id || '');
   const [plants, setPlants] = useState<Plant[]>([]);
-  const { beds: bedList } = useBedData();
+  const { beds: bedList } = useBedOptions();
   const [loading, setLoading] = useState(false);
   const [showPhotoSourceModal, setShowPhotoSourceModal] = useState(false);
 
