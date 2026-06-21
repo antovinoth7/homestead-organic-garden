@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '@/theme';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 import FieldHelp from '@/components/FieldHelp';
-import { getGroupedOrganicInputs, CATEGORY_DESCRIPTIONS } from '@/config/organicInputs';
+import { getGroupedOrganicInputs, CATEGORY_DESCRIPTIONS, ORGANIC_RECIPES } from '@/config/organicInputs';
 import { createStyles } from '@/styles/referenceListStyles';
 import type { OrganicInputListScreenNavigationProp } from '@/types/navigation.types';
 import type { OrganicInputEntry, OrganicInputCategory } from '@/types/database.types';
@@ -16,6 +16,9 @@ interface SectionData {
   category: OrganicInputCategory;
   data: OrganicInputEntry[];
 }
+
+/** Input ids that have a farm-scaled DIY recipe — deep-link these to the recipe calculator. */
+const RECIPE_INPUT_IDS = new Set<string>(ORGANIC_RECIPES.map((r) => r.id));
 
 export default function OrganicInputListScreen(): React.JSX.Element {
   const navigation = useNavigation<OrganicInputListScreenNavigationProp>();
@@ -46,9 +49,41 @@ export default function OrganicInputListScreen(): React.JSX.Element {
 
   const handlePress = useCallback(
     (inputId: string) => {
+      // Inputs that have a farm-scaled DIY recipe (e.g. Jeevamrutha) open the
+      // recipe calculator directly rather than the static reference card.
+      if (RECIPE_INPUT_IDS.has(inputId)) {
+        navigation.navigate('InputRecipes', { initialTab: inputId });
+        return;
+      }
       navigation.navigate('OrganicInputDetail', { inputId });
     },
     [navigation]
+  );
+
+  const handleOpenRecipes = useCallback(() => {
+    navigation.navigate('InputRecipes', {});
+  }, [navigation]);
+
+  const renderListHeader = useCallback(
+    () => (
+      <TouchableOpacity
+        style={styles.recipeBanner}
+        onPress={handleOpenRecipes}
+        activeOpacity={0.7}
+      >
+        <View style={styles.recipeBannerIcon}>
+          <Ionicons name="flask" size={24} color={theme.primary} />
+        </View>
+        <View style={styles.recipeBannerContent}>
+          <Text style={styles.recipeBannerTitle}>Make your own (Recipes)</Text>
+          <Text style={styles.recipeBannerSubtitle} numberOfLines={2}>
+            Jeevamrutha, Panchagavya &amp; more — ingredients scaled to your farm size
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={theme.primary} />
+      </TouchableOpacity>
+    ),
+    [styles, theme, handleOpenRecipes]
   );
 
   const renderItem = useCallback(
@@ -121,6 +156,7 @@ export default function OrganicInputListScreen(): React.JSX.Element {
         sections={sections}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
+        ListHeaderComponent={search.trim() ? null : renderListHeader}
         keyExtractor={keyExtractor}
         contentContainerStyle={[
           styles.listContent,

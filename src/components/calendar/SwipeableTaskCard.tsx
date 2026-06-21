@@ -63,6 +63,11 @@ function SwipeableTaskCardComponent({
   const plantObj = task.plant_id ? plantMap.get(task.plant_id) : undefined;
   const effectivePriority = task.priority_level || calculateTaskPriority(task, plantObj || null);
 
+  // Bed-level tasks have no plant — surface the bed name as the label so the
+  // farmer can tell *where* to act instead of a generic "General".
+  const bedLabel = task.bed_id != null ? bedMap?.get(task.bed_id) ?? null : null;
+  const displayName = task.plant_id ? plantDetails.name : bedLabel ?? plantDetails.name;
+
   const priorityColor =
     effectivePriority === 'critical'
       ? theme.error
@@ -189,12 +194,12 @@ function SwipeableTaskCardComponent({
                     </View>
                   )}
                 </View>
-                <Text style={styles.taskPlant}>{plantDetails.name}</Text>
+                <Text style={styles.taskPlant}>{displayName}</Text>
                 {plantDetails.location && (
                   <Text style={styles.taskLocation}>📍 {plantDetails.location}</Text>
                 )}
-                {task.bed_id != null && bedMap?.get(task.bed_id) != null && (
-                  <Text style={styles.taskBed}>🪴 {bedMap.get(task.bed_id)}</Text>
+                {task.plant_id != null && bedLabel != null && (
+                  <Text style={styles.taskBed}>🪴 {bedLabel}</Text>
                 )}
                 {task.preferred_time && (
                   <Text style={styles.taskPreferredTime}>

@@ -9,6 +9,10 @@ export interface FarmConfig {
   land_cents?: number;
   families_count: number;
   goals: FarmGoal[];
+  /** Tamil Nadu district selected during onboarding. Defaults to Kanyakumari. */
+  district?: string;
+  /** Agro-climatic zone id derived from the district. Drives seasons/watering. */
+  zone_id?: string;
   updated_at?: string;
 }
 

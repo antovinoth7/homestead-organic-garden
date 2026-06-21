@@ -172,23 +172,16 @@ export function LandConditionsStep({
             labelStyle={styles.fieldLabel}
             style={styles.fieldLabelRow}
           />
-          <View style={styles.chipRow}>
-            {childOptions.map((loc) => {
-              const selected = data.child_location === loc;
-              return (
-                <TouchableOpacity
-                  key={loc}
-                  activeOpacity={0.7}
-                  style={[styles.chip, selected && styles.chipSelected]}
-                  onPress={() => onChange({ child_location: selected ? null : loc })}
-                >
-                  <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
-                    {loc}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <ThemedDropdown
+            items={[
+              { label: 'Select section / direction', value: '' },
+              ...childOptions.map((loc) => ({ label: loc, value: loc })),
+            ]}
+            selectedValue={data.child_location ?? ''}
+            onValueChange={(value: string) => onChange({ child_location: value || null })}
+            label="Section / Direction"
+            placeholder="Select section / direction"
+          />
           {directionMissing && (
             <View style={styles.sunlightWarning}>
               <Text style={styles.sunlightWarningText}>

@@ -154,7 +154,7 @@ export default function InputRecipesScreen(): React.JSX.Element {
         >
           <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
         </TouchableOpacity>
-        <Text style={styles.title}>Organic Inputs</Text>
+        <Text style={styles.title}>Input Recipes</Text>
         <View style={styles.headerSpacer} />
       </View>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,25 +10,12 @@ import { invalidateAll } from '../lib/dataCache';
 import { createStyles } from '../styles/moreStyles';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
 import { getErrorMessage } from '../utils/errorLogging';
-import { exportPlantsAsJson } from '../utils/exportData';
 
 export default function MoreScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const [exporting, setExporting] = useState(false);
-
-  const handleExport = async (): Promise<void> => {
-    setExporting(true);
-    try {
-      await exportPlantsAsJson();
-    } catch (error: unknown) {
-      Alert.alert('Export Failed', getErrorMessage(error) || 'Could not export data');
-    } finally {
-      setExporting(false);
-    }
-  };
 
   const handleSignOut = async (): Promise<void> => {
     try {
@@ -109,18 +96,7 @@ export default function MoreScreen(): React.JSX.Element {
           <View style={styles.menuIcon}>
             <Ionicons name="flask-outline" size={20} color={theme.primary} />
           </View>
-          <Text style={styles.menuText}>Organic Input Guide</Text>
-          <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('InputRecipes')}
-        >
-          <View style={styles.menuIcon}>
-            <Ionicons name="beaker-outline" size={20} color={theme.primary} />
-          </View>
-          <Text style={styles.menuText}>Input Recipes</Text>
+          <Text style={styles.menuText}>Organic Inputs</Text>
           <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
         </TouchableOpacity>
 
@@ -129,14 +105,6 @@ export default function MoreScreen(): React.JSX.Element {
             <Ionicons name="settings-outline" size={20} color={theme.primary} />
           </View>
           <Text style={styles.menuText}>Settings</Text>
-          <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem} onPress={handleExport} disabled={exporting}>
-          <View style={styles.menuIcon}>
-            <Ionicons name="download-outline" size={20} color={theme.primary} />
-          </View>
-          <Text style={styles.menuText}>{exporting ? 'Exporting…' : 'Export Data (JSON)'}</Text>
           <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
         </TouchableOpacity>
 

@@ -1,4 +1,4 @@
-import { resolveTaskBedId } from '@/utils/taskBed';
+import { resolveTaskBedId, isBedLevelOrphanTask } from '@/utils/taskBed';
 import { makeTaskTemplate } from '../fixtures/task.fixtures';
 
 const plantsById = new Map<string, { bed_id?: string | null }>([
@@ -35,5 +35,34 @@ describe('resolveTaskBedId', () => {
   it('prefers the task bed_id even when the plant is in a different bed', () => {
     const task = makeTaskTemplate({ bed_id: 'bed-override', plant_id: 'plant-in-bed' });
     expect(resolveTaskBedId(task, plantsById)).toBe('bed-override');
+  });
+});
+
+describe('isBedLevelOrphanTask', () => {
+  const liveBedIds = new Set(['bed-1', 'bed-2']);
+
+  it('flags a bed-level task whose bed no longer exists', () => {
+    const task = makeTaskTemplate({ bed_id: 'bed-gone', plant_id: null });
+    expect(isBedLevelOrphanTask(task, liveBedIds)).toBe(true);
+  });
+
+  it('does not flag a bed-level task whose bed is still live', () => {
+    const task = makeTaskTemplate({ bed_id: 'bed-1', plant_id: null });
+    expect(isBedLevelOrphanTask(task, liveBedIds)).toBe(false);
+  });
+
+  it('never flags a plant task (covered by plant orphan cleanup)', () => {
+    const task = makeTaskTemplate({ bed_id: 'bed-gone', plant_id: 'plant-in-bed' });
+    expect(isBedLevelOrphanTask(task, liveBedIds)).toBe(false);
+  });
+
+  it('does not flag a pot/ground task with no bed', () => {
+    const task = makeTaskTemplate({ bed_id: null, plant_id: null });
+    expect(isBedLevelOrphanTask(task, liveBedIds)).toBe(false);
+  });
+
+  it('flags every bed-level task when there are no live beds', () => {
+    const task = makeTaskTemplate({ bed_id: 'bed-1', plant_id: null });
+    expect(isBedLevelOrphanTask(task, new Set())).toBe(true);
   });
 });

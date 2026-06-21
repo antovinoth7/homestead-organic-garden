@@ -12,3 +12,18 @@ export function resolveTaskBedId(
 ): string | null {
   return task.bed_id ?? (task.plant_id ? plantsById.get(task.plant_id)?.bed_id ?? null : null);
 }
+
+/**
+ * A bed-level task (no plant, has a `bed_id`) whose bed no longer exists.
+ *
+ * These are left behind when a bed is deleted before the cascade ran; the Care
+ * Plan hides them (and self-heals by deleting them) so they don't show as a
+ * generic "General" task with no clue where to act. Plant-level tasks are
+ * covered by the separate orphaned-plant cleanup, so they are never flagged here.
+ */
+export function isBedLevelOrphanTask(
+  task: Pick<TaskTemplate, 'bed_id' | 'plant_id'>,
+  liveBedIds: ReadonlySet<string>
+): boolean {
+  return !task.plant_id && task.bed_id != null && !liveBedIds.has(task.bed_id);
+}

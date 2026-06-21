@@ -344,19 +344,10 @@ export default function JournalFormScreen(): React.JSX.Element {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={24} color={theme.textInverse} />
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
         </TouchableOpacity>
         <Text style={styles.title}>{isEditing ? 'Edit Entry' : 'New Entry'}</Text>
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={loading}
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-        >
-          <Text style={[styles.saveText, loading && styles.saveTextDisabled]}>
-            {loading ? 'Saving...' : 'Save'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
@@ -680,6 +671,19 @@ export default function JournalFormScreen(): React.JSX.Element {
         {/* Extra spacing for keyboard */}
         <View style={styles.keyboardSpacer} />
       </ScrollView>
+
+      <View style={[styles.stickySaveContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={loading}
+          style={[styles.stickySaveButton, loading && styles.stickySaveButtonDisabled]}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.stickySaveButtonText}>
+            {loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Save Entry'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <PhotoSourceModal
         visible={showPhotoSourceModal}

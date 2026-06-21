@@ -262,7 +262,7 @@ export const createStyles = (theme: Theme) =>
       backgroundColor: theme.background,
     },
     profileChipSelected: {
-      backgroundColor: theme.primary,
+      backgroundColor: theme.primaryLight,
       borderColor: theme.primary,
     },
     profileChipText: {
@@ -270,7 +270,7 @@ export const createStyles = (theme: Theme) =>
       color: theme.textSecondary,
     },
     profileChipTextSelected: {
-      color: theme.textInverse,
+      color: theme.primary,
       fontWeight: '600',
     },
     profileNpkRow: {
@@ -301,14 +301,14 @@ export const createStyles = (theme: Theme) =>
     },
     profileNpkChipSelected: {
       borderColor: theme.primary,
-      backgroundColor: theme.primary,
+      backgroundColor: theme.primaryLight,
     },
     profileNpkChipText: {
       fontSize: 12,
       color: theme.textSecondary,
     },
     profileNpkChipTextSelected: {
-      color: theme.textInverse,
+      color: theme.primary,
       fontWeight: '600',
     },
     profileDateCard: {

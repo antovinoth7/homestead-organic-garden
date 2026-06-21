@@ -140,6 +140,12 @@ export async function deleteBed(id: string): Promise<void> {
   // batched in one shot so the cascade doesn't stall the UI thread.
   const plants = await getPlantsByBed(id);
   if (plants.length > 0) await deletePlantsForBed(plants);
+  // Bed-level tasks (Water/soil inputs) carry no plant_id, so the plant cascade
+  // above misses them — delete them (and their logs) explicitly so they don't
+  // linger in the Care Plan as orphaned "General" tasks. Dynamic import avoids a
+  // beds↔tasks static import cycle.
+  const { deleteTasksForBedIds } = await import('@/services/tasks');
+  await deleteTasksForBedIds([id]);
 }
 
 export async function restoreBed(id: string): Promise<void> {

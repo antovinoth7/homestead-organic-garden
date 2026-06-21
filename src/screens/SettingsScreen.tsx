@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { exportImagesOnly, importImagesOnly, getImagesOnlyStorageSize } from '@/services/backup';
+import {
+  exportImagesOnly,
+  importImagesOnly,
+  getImagesOnlyStorageSize,
+  exportFullBackup,
+  importFullBackup,
+} from '@/services/backup';
 import { useTheme } from '@/theme';
 import {
   useFocusEffect,
@@ -21,7 +27,9 @@ export default function SettingsScreen(): React.JSX.Element {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
-  const [loadingAction, setLoadingAction] = useState<'export' | 'import' | 'cache' | null>(null);
+  const [loadingAction, setLoadingAction] = useState<
+    'export' | 'import' | 'cache' | 'full-export' | 'full-restore' | null
+  >(null);
   const [imageStorageSize, setImageStorageSize] = useState(0);
   const loading = loadingAction !== null;
 
@@ -50,6 +58,65 @@ export default function SettingsScreen(): React.JSX.Element {
     if (bytes === 0) return '0 MB';
     const mb = bytes / (1024 * 1024);
     return mb.toFixed(2) + ' MB';
+  };
+
+  const handleExportFullBackup = async (): Promise<void> => {
+    Alert.alert(
+      'Export Complete Backup',
+      'This creates a single ZIP with all your plants, beds, tasks, journal, settings and photos. Keep it safe — you can restore it on any device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Export',
+          onPress: async () => {
+            try {
+              setLoadingAction('full-export');
+              await exportFullBackup();
+              Alert.alert(
+                'Backup Created',
+                'Your complete backup was saved. Store it on Google Drive or share it to keep it safe.',
+                [{ text: 'OK', onPress: loadStats }]
+              );
+            } catch (error: unknown) {
+              Alert.alert('Export Failed', getErrorMessage(error));
+            } finally {
+              setLoadingAction(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRestoreFullBackup = async (): Promise<void> => {
+    Alert.alert(
+      'Restore Complete Backup',
+      'This replaces the data on this device with the backup contents, then syncs it to your account. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Restore',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoadingAction('full-restore');
+              const summary = await importFullBackup();
+              Alert.alert(
+                'Restore Complete',
+                `Restored ${summary.plants} plants, ${summary.beds} beds, ${summary.journal} journal entries and ${summary.images} photos.`,
+                [{ text: 'OK', onPress: loadStats }]
+              );
+            } catch (error: unknown) {
+              if (getErrorMessage(error) !== 'Import cancelled') {
+                Alert.alert('Restore Failed', getErrorMessage(error));
+              }
+            } finally {
+              setLoadingAction(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleExportImagesOnly = async (): Promise<void> => {
@@ -151,6 +218,51 @@ export default function SettingsScreen(): React.JSX.Element {
         style={styles.content}
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
       >
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Complete Backup</Text>
+          <Text style={styles.sectionDescription}>
+            Save everything — plants, beds, tasks, journal, settings and photos — in one ZIP you can
+            keep on Drive or share. Your data also syncs to the cloud; this is a portable archive you
+            own and can restore on any device.
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.backupButton, styles.exportButton]}
+            onPress={handleExportFullBackup}
+            disabled={loading}
+          >
+            {loadingAction === 'full-export' ? (
+              <ActivityIndicator color={theme.textInverse} />
+            ) : (
+              <>
+                <Ionicons name="archive-outline" size={20} color="#fff" />
+                <Text style={styles.backupButtonText}>Export All Data + Photos (ZIP)</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.backupButton, styles.importButton]}
+            onPress={handleRestoreFullBackup}
+            disabled={loading}
+          >
+            {loadingAction === 'full-restore' ? (
+              <ActivityIndicator color={theme.success} />
+            ) : (
+              <>
+                <Ionicons name="cloud-upload-outline" size={20} color={theme.success} />
+                <Text style={[styles.backupButtonText, styles.backupButtonTextSuccess]}>
+                  Restore from Backup
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <Text style={styles.backupNote}>
+            ⚠️ Restoring replaces the data on this device with the backup contents.
+          </Text>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Images-Only Backup</Text>
           <Text style={styles.sectionDescription}>

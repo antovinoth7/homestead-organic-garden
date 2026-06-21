@@ -288,6 +288,67 @@ export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> 
 };
 
 /**
+ * Delete bed-level tasks (and their logs) for the given beds — the cascade
+ * counterpart to `deleteTasksForPlantIds`, run when a bed is deleted so its
+ * "Water the bed" / soil-input tasks don't linger as orphans. Bed-level tasks
+ * carry `bed_id`; their logs are matched by `template_id` (TaskLog has no
+ * `bed_id`). Plant-level tasks for the bed are handled by the plant cascade.
+ */
+export const deleteTasksForBedIds = async (bedIds: string[]): Promise<void> => {
+  const uniqueBedIds = Array.from(
+    new Set(bedIds.filter((bedId) => bedId && bedId.trim() !== ''))
+  );
+  if (uniqueBedIds.length === 0) return;
+
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const bedIdSet = new Set(uniqueBedIds);
+  const tasks = await getTaskTemplates();
+  const logs = await getTaskLogs();
+
+  const tasksToDelete = tasks.filter((task) => task.bed_id != null && bedIdSet.has(task.bed_id));
+  if (tasksToDelete.length === 0) return;
+
+  const deletedTaskIds = new Set(tasksToDelete.map((task) => task.id));
+  const logsToDelete = logs.filter((log) => deletedTaskIds.has(log.template_id));
+
+  // Batch delete templates + logs atomically (Firestore caps batches at 500 ops)
+  const BATCH_LIMIT = 500;
+  const allDeletes = [
+    ...tasksToDelete.map((task) => doc(db, TASKS_COLLECTION, task.id)),
+    ...logsToDelete.map((log) => doc(db, TASK_LOGS_COLLECTION, log.id)),
+  ];
+
+  for (let i = 0; i < allDeletes.length; i += BATCH_LIMIT) {
+    const chunk = allDeletes.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    for (const ref of chunk) {
+      batch.delete(ref);
+    }
+    await withTimeoutAndRetry(() => batch.commit(), {
+      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+    });
+  }
+
+  const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+  if (cachedTasks.length > 0) {
+    const filteredTasks = cachedTasks.filter(
+      (task) => task.bed_id == null || !bedIdSet.has(task.bed_id)
+    );
+    await setData(KEYS.TASKS, filteredTasks);
+  }
+
+  const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
+  if (cachedLogs.length > 0) {
+    const filteredLogs = cachedLogs.filter((log) => !deletedTaskIds.has(log.template_id));
+    await setData(KEYS.TASK_LOGS, filteredLogs);
+  }
+
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS, CACHE_KEYS.TODAY_TASK_LOGS);
+};
+
+/**
  * Bed-task subtypes whose completion should stamp the bed's last-input date,
  * so the bed detail's Soil Input Log stays in sync with the Care Plan (which is
  * the single completion surface). Subtypes with no date field (mulch, wood_ash,

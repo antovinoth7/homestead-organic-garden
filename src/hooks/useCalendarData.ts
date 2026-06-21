@@ -1,10 +1,22 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { getTaskTemplates, deleteTasksForPlantIds } from '../services/tasks';
+import {
+  getTaskTemplates,
+  deleteTasksForPlantIds,
+  deleteTasksForBedIds,
+  getTodayTaskLogs,
+} from '../services/tasks';
 import { getAllPlants, plantExists } from '../services/plants';
+import { getBeds } from '../services/beds';
 import { getJournalMetadata } from '../services/journal';
-import { TaskTemplate, Plant, JournalEntryType, JournalEntry } from '../types/database.types';
+import {
+  TaskTemplate,
+  Plant,
+  JournalEntryType,
+  JournalEntry,
+  TaskLog,
+} from '../types/database.types';
 import { isNetworkAvailable } from '../utils/networkState';
-import { resolveTaskBedId } from '../utils/taskBed';
+import { resolveTaskBedId, isBedLevelOrphanTask } from '../utils/taskBed';
 import { logger } from '../utils/logger';
 
 type GroupBy = 'none' | 'location' | 'type' | 'plant' | 'bed';
@@ -78,7 +90,11 @@ export function useCalendarData({
 }: UseCalendarDataOptions): UseCalendarDataReturn {
   const [tasks, setTasks] = useState<TaskTemplate[]>([]);
   const [plants, setPlants] = useState<Plant[]>([]);
+  const [todayLogs, setTodayLogs] = useState<TaskLog[]>([]);
   const [harvestEntries, setHarvestEntries] = useState<JournalEntry[]>([]);
+  // Bed-level tasks whose bed was deleted — hidden from the Care Plan and
+  // self-healed (see loadData). Keyed by task id so display filtering is O(1).
+  const [orphanBedTaskIds, setOrphanBedTaskIds] = useState<Set<string>>(new Set());
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -99,10 +115,11 @@ export function useCalendarData({
     lastLoadTimeRef.current = now;
 
     try {
-      const [tasksData, plantsData, journalData] = await Promise.all([
+      const [tasksData, plantsData, journalData, todayLogsData] = await Promise.all([
         getTaskTemplates(),
         getAllPlants(),
         getJournalMetadata(),
+        getTodayTaskLogs(),
       ]);
 
       if (!isMountedRef.current) return;
@@ -121,6 +138,7 @@ export function useCalendarData({
 
       setTasks(filteredTasks);
       setPlants(plantsData);
+      setTodayLogs(todayLogsData);
       setHarvestEntries(journalData.filter((e) => e.entry_type === JournalEntryType.Harvest));
 
       if (orphanPlantIds.length > 0 && isNetworkAvailable()) {
@@ -144,6 +162,27 @@ export function useCalendarData({
         if (confirmedOrphans.length > 0) {
           await deleteTasksForPlantIds(confirmedOrphans);
         }
+      }
+
+      // Bed-level tasks whose bed was deleted (getBeds excludes is_deleted beds)
+      // are orphans: hide them now and self-heal by deleting them. Guarded so a
+      // transient beds fetch failure never hides live bed tasks.
+      try {
+        const liveBedIds = new Set((await getBeds()).map((bed) => bed.id));
+        if (!isMountedRef.current) return;
+        const orphanBedTasks = filteredTasks.filter((task) =>
+          isBedLevelOrphanTask(task, liveBedIds)
+        );
+        setOrphanBedTaskIds(new Set(orphanBedTasks.map((task) => task.id)));
+
+        if (orphanBedTasks.length > 0 && isNetworkAvailable()) {
+          const orphanBedIds = Array.from(
+            new Set(orphanBedTasks.map((task) => task.bed_id as string))
+          );
+          await deleteTasksForBedIds(orphanBedIds);
+        }
+      } catch (error) {
+        logger.warn('Failed to resolve orphaned bed tasks', error as Error);
       }
     } catch (error) {
       if (!isMountedRef.current) return;
@@ -279,10 +318,17 @@ export function useCalendarData({
 
   const isSearching = normalizedSearchQuery.length > 0;
 
+  // Drop bed-level tasks whose bed was deleted so they never surface in the
+  // lists, calendar cells, or segment counts (they're also being self-healed).
+  const visibleTasks = useMemo(
+    () => (orphanBedTaskIds.size > 0 ? tasks.filter((t) => !orphanBedTaskIds.has(t.id)) : tasks),
+    [tasks, orphanBedTaskIds]
+  );
+
   // Tasks after search only — used for raw date lookups (ignores type/overdue filters)
   const searchFilteredTasks = useMemo(
-    () => filterTasksBySearch(tasks),
-    [tasks, filterTasksBySearch]
+    () => filterTasksBySearch(visibleTasks),
+    [visibleTasks, filterTasksBySearch]
   );
 
   // Search + type/overdue/bed filters, before the All/Beds/Other segment is applied —
@@ -335,15 +381,24 @@ export function useCalendarData({
     });
   }, [isSearching, preSegmentTasks, selectedView, currentWeekStart, currentMonth]);
 
+  // Templates already completed today — excluded from the segment badge so the
+  // count visibly drops the moment a task is marked done (a completed recurring
+  // task only reschedules forward and would otherwise stay inside the window).
+  const completedTodayIds = useMemo(
+    () => new Set(todayLogs.map((log) => log.template_id)),
+    [todayLogs]
+  );
+
   const segmentCounts = useMemo<BedSegmentCounts>(() => {
     let bed = 0;
     let other = 0;
     for (const t of windowTasks) {
+      if (completedTodayIds.has(t.id)) continue;
       if (resolveBedId(t) != null) bed += 1;
       else other += 1;
     }
     return { bed, other };
-  }, [windowTasks, resolveBedId]);
+  }, [windowTasks, resolveBedId, completedTodayIds]);
 
   const filteredTasks = useMemo(() => {
     if (bedSegment === 'bed') return preSegmentTasks.filter((t) => resolveBedId(t) != null);
@@ -508,8 +563,8 @@ export function useCalendarData({
   const groupedTasks = useMemo(() => groupTasks(tasksForDisplay), [tasksForDisplay, groupTasks]);
 
   return {
-    // Raw state
-    tasks,
+    // Raw state — orphaned (deleted-bed) tasks excluded so they never surface
+    tasks: visibleTasks,
     plants,
     initialLoading,
     refreshing,

@@ -2,8 +2,8 @@ import React, { useMemo, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, type ViewStyle, type TextStyle } from 'react-native';
 import { useTheme } from '@/theme';
 import type { Bed, Plant, CropFamily } from '@/types/database.types';
-import { getGreenManureForMonth, getGuildTemplate } from '@/config/beds';
-import { getPlantCareProfile } from '@/utils/plantCareDefaults';
+import { getGreenManureForMonth } from '@/config/beds';
+import { getDaysToHarvestRange, isTreeLikePlant } from '@/utils/timelineHarvest';
 import { createStyles } from '@/styles/bedSuccessionTimelineStyles';
 
 const DAY_PX = 2;
@@ -27,38 +27,6 @@ const SEASON_MONTHS = [
   { id: 'sw_monsoon' as SeasonId, shortLabel: 'SW Monsoon', startM: 6, endM: 9 },
   { id: 'ne_monsoon' as SeasonId, shortLabel: 'NE Monsoon', startM: 10, endM: 12 },
 ] as const;
-
-// Build a guild-template harvest-days index keyed by plant name.
-const GUILD_HARVEST_DAYS_CACHE = new Map<string, number>();
-let guildCacheBuilt = false;
-
-function buildGuildCacheIfNeeded(): void {
-  if (guildCacheBuilt) return;
-  guildCacheBuilt = true;
-  const BED_TYPES = [
-    'leafy', 'fruiting', 'spice', 'root_legume',
-    'climber_trellis', 'three_sisters', 'medicinal_guild',
-  ] as const;
-  for (const t of BED_TYPES) {
-    for (const row of getGuildTemplate(t).plant_rows) {
-      if (row.days_to_harvest !== undefined && !GUILD_HARVEST_DAYS_CACHE.has(row.name)) {
-        GUILD_HARVEST_DAYS_CACHE.set(row.name, row.days_to_harvest);
-      }
-    }
-  }
-}
-
-function getDaysToHarvestRange(plant: Plant): { min: number; max: number } {
-  const profile = getPlantCareProfile(plant.name, plant.plant_type ?? undefined);
-  const range = profile?.daysToHarvest;
-  if (range) return { min: range.min, max: range.max };
-
-  buildGuildCacheIfNeeded();
-  const fromGuild = GUILD_HARVEST_DAYS_CACHE.get(plant.name);
-  if (fromGuild !== undefined) return { min: fromGuild, max: fromGuild };
-
-  return { min: 55, max: 75 };
-}
 
 const NEXT_CROP_AFTER: Partial<Record<CropFamily, string>> = {
   solanaceae: 'Legume — N-fixer restores soil after tomato/brinjal',
@@ -158,7 +126,13 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
       const existing = earliestDate.get(p.name);
       if (!existing || d < existing) earliestDate.set(p.name, d);
     }
-    const uniqueNames = [...new Set(plants.map((p) => p.name))];
+    // Trees take years to first harvest and their catalog days-to-harvest is a
+    // recurring picking interval, not sow-to-harvest — the annual grow→harvest
+    // succession model doesn't fit them, so omit tree-like plants entirely.
+    const uniqueNames = [...new Set(plants.map((p) => p.name))].filter((name) => {
+      const rep = representativePlant.get(name);
+      return !rep || !isTreeLikePlant(rep);
+    });
     return uniqueNames
       .map((name) => {
         // No recorded sow/planting date → anchor at today and flag as an estimate
@@ -167,7 +141,9 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
         const plantDate = recorded ?? today;
         const startOff = dayOffset(plantDate, baseYear);
         const rep = representativePlant.get(name);
-        const dth = rep ? getDaysToHarvestRange(rep) : { min: 55, max: 75 };
+        const dth = rep
+          ? getDaysToHarvestRange(rep)
+          : { min: 55, max: 75, source: 'fallback' as const, known: false };
         return {
           name,
           startOffset: startOff,

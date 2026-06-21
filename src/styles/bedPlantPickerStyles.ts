@@ -41,8 +41,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 14,
       backgroundColor: theme.border,
     },
-    layerChipActive: { backgroundColor: theme.primary },
+    layerChipActive: { backgroundColor: theme.primaryLight },
     layerChipText: { fontSize: 11, color: theme.text },
+    layerChipTextActive: { color: theme.primary, fontWeight: '600' },
     confirmButton: {
       position: 'absolute',
       bottom: 24,
