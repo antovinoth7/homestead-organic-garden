@@ -127,7 +127,7 @@ export function PlantEntryResolverSheet({
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={styles.scroll}>
+          <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scroll}>
             {activeTab === 'create' ? (
               <>
                 <Text style={styles.sectionLabel}>VARIETY (OPTIONAL)</Text>

@@ -60,6 +60,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tabTextActive: {
       color: theme.primary,
     },
+    // flexShrink lets the list shrink within the sheet's maxHeight so it scrolls
+    // internally and the footer buttons stay pinned/visible (not pushed off-screen).
+    scrollArea: { flexShrink: 1 },
     scroll: { paddingVertical: 12, paddingHorizontal: 14 },
     sectionLabel: {
       fontSize: 10,
