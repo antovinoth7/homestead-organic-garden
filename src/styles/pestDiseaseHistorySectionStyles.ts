@@ -27,4 +27,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     severityLowText: {
       color: theme.primary,
     },
+    photoThumbWrap: {
+      marginTop: 10,
+      borderRadius: 8,
+      overflow: 'hidden',
+      alignSelf: 'flex-start',
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    photoThumb: {
+      width: 96,
+      height: 96,
+      backgroundColor: theme.backgroundTertiary,
+    },
   });

@@ -23,6 +23,7 @@ import {
   getTreatmentEffortDot,
 } from '../../utils/plantHelpers';
 import { saveImageLocallyWithFilename } from '../../lib/imageStorage';
+import { compressImage } from '../../utils/imageCompression';
 import { createTaskTemplate } from '../../services/tasks';
 import { createStyles as createPlantFormStyles } from '../../styles/plantFormStyles';
 import { sanitizeAlphaNumericSpaces } from '../../utils/textSanitizer';
@@ -82,6 +83,9 @@ export default function PestDiseaseModal({
 }: PestDiseaseModalProps): React.JSX.Element {
   const [currentRecord, setCurrentRecord] = useState<PestDiseaseRecord>(DEFAULT_RECORD);
   const [pestPhotoUri, setPestPhotoUri] = useState<string | null>(null);
+  const [pestPhotoDims, setPestPhotoDims] = useState<{ width: number; height: number } | null>(
+    null
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPhotoSource, setShowPhotoSource] = useState(false);
   const [customTreatmentMode, setCustomTreatmentMode] = useState(false);
@@ -98,6 +102,7 @@ export default function PestDiseaseModal({
         });
         setPestPhotoUri(null);
       }
+      setPestPhotoDims(null);
       setShowDatePicker(false);
       setCustomTreatmentMode(false);
     }
@@ -117,11 +122,17 @@ export default function PestDiseaseModal({
     try {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: 'images',
-        allowsEditing: false,
+        allowsEditing: true,
         quality: 0.7,
         cameraType: ImagePicker.CameraType.back,
       });
-      if (!result.canceled) setPestPhotoUri(result.assets[0]!.uri);
+      if (!result.canceled) {
+        const asset = result.assets[0]!;
+        setPestPhotoUri(asset.uri);
+        setPestPhotoDims(
+          asset.width && asset.height ? { width: asset.width, height: asset.height } : null
+        );
+      }
     } catch (error) {
       logger.warn('Camera launch failed', error as Error);
       Alert.alert('Camera Error', 'Failed to open camera. Please try again.');
@@ -136,10 +147,16 @@ export default function PestDiseaseModal({
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: 'images',
-      allowsEditing: false,
+      allowsEditing: true,
       quality: 0.7,
     });
-    if (!result.canceled) setPestPhotoUri(result.assets[0]!.uri);
+    if (!result.canceled) {
+      const asset = result.assets[0]!;
+      setPestPhotoUri(asset.uri);
+      setPestPhotoDims(
+        asset.width && asset.height ? { width: asset.width, height: asset.height } : null
+      );
+    }
   };
 
   const handleSave = async (): Promise<void> => {
@@ -157,10 +174,15 @@ export default function PestDiseaseModal({
       return;
     }
 
-    // Save pest photo if provided
+    // Save pest photo if provided. Compress/resize first so the device-local
+    // file stays a sensible size.
     let photoFilename = currentRecord.photo_filename;
     if (pestPhotoUri && pestPhotoUri !== currentRecord.photo_filename) {
-      const saved = await saveImageLocallyWithFilename(pestPhotoUri, `pest_${Date.now()}`);
+      const compressedUri = await compressImage(pestPhotoUri, {
+        width: pestPhotoDims?.width,
+        height: pestPhotoDims?.height,
+      });
+      const saved = await saveImageLocallyWithFilename(compressedUri, `pest_${Date.now()}`);
       if (saved && saved.filename) photoFilename = saved.filename;
     }
 
@@ -648,6 +670,7 @@ export default function PestDiseaseModal({
                       onPress={(e) => {
                         e.stopPropagation?.();
                         setPestPhotoUri(null);
+                        setPestPhotoDims(null);
                       }}
                     >
                       <Ionicons name="close-circle" size={22} color="#f44336" />
