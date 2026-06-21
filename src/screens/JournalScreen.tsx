@@ -8,7 +8,6 @@ import {
   RefreshControl,
   Alert,
   TextInput,
-  Modal,
   LayoutAnimation,
   Platform,
   UIManager,
@@ -28,6 +27,7 @@ import { JournalScreenNavigationProp, JournalScreenRouteProp } from '../types/na
 import { getErrorMessage } from '../utils/errorLogging';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
+import { ImageZoomModal } from '../components/ImageZoomModal';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -744,32 +744,14 @@ export default function JournalScreen(): React.JSX.Element {
         </View>
       )}
 
-      {/* Image Modal */}
-      <Modal
-        visible={selectedImage !== null}
-        transparent={true}
-        onRequestClose={() => setSelectedImage(null)}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity
-            style={[styles.modalClose, { top: insets.top + 12 }]}
-            onPress={() => setSelectedImage(null)}
-          >
-            <Ionicons name="close" size={32} color="#fff" />
-          </TouchableOpacity>
-          {selectedImage && (
-            <Image
-              source={{ uri: selectedImage }}
-              style={styles.modalImage as ImageStyle}
-              contentFit="contain"
-              transition={200}
-              cachePolicy="memory-disk"
-              placeholder={null}
-              priority="high"
-            />
-          )}
-        </View>
-      </Modal>
+      {/* Fullscreen image viewer with pinch/pan/double-tap zoom */}
+      {selectedImage && (
+        <ImageZoomModal
+          visible={selectedImage !== null}
+          uri={selectedImage}
+          onClose={() => setSelectedImage(null)}
+        />
+      )}
     </View>
   );
 }

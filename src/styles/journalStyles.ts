@@ -452,22 +452,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       color: theme.textInverse,
     },
-    modalContainer: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modalClose: {
-      position: 'absolute',
-      top: 12,
-      right: 16,
-      zIndex: 10,
-    },
-    modalImage: {
-      width: width,
-      height: width,
-    },
     journalTagBadge: {
       backgroundColor: theme.backgroundSecondary,
       paddingHorizontal: 8,
