@@ -15,7 +15,8 @@ import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 
 // Pure helpers live in weatherLogic (no native deps) — re-exported for callers.
-export { hasRainSoon, isRainPredictedOnDate } from './weatherLogic';
+export { hasRainSoon, isRainPredictedOnDate, resolveWeatherCoords } from './weatherLogic';
+export type { WeatherCoords } from './weatherLogic';
 
 /** Kanyakumari town — default until a per-plot lat/lng is supplied. */
 export const KANYAKUMARI_LAT = 8.0883;

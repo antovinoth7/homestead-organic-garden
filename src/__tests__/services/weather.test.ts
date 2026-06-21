@@ -1,4 +1,5 @@
-import { hasRainSoon, isRainPredictedOnDate } from '@/services/weatherLogic';
+import { hasRainSoon, isRainPredictedOnDate, resolveWeatherCoords } from '@/services/weatherLogic';
+import { DEFAULT_COORDINATES, DISTRICT_COORDINATES } from '@/config/zones/districtCoordinates';
 import { WeatherForecast, DailyWeather } from '@/types/database.types';
 
 function day(date: string, precipitationMm: number): DailyWeather {
@@ -60,5 +61,33 @@ describe('hasRainSoon', () => {
 
   it('is false for a null forecast', () => {
     expect(hasRainSoon(null)).toBe(false);
+  });
+});
+
+describe('resolveWeatherCoords', () => {
+  it('prefers a plot GPS pin when both lat and lng are set', () => {
+    const result = resolveWeatherCoords({ latitude: 12.34, longitude: 56.78 }, 'Madurai');
+    expect(result).toEqual({ lat: 12.34, lng: 56.78, source: 'plot' });
+  });
+
+  it('falls back to district coordinates when the plot has no GPS', () => {
+    const result = resolveWeatherCoords({ latitude: null, longitude: null }, 'Madurai');
+    expect(result).toEqual({ ...DISTRICT_COORDINATES.Madurai, source: 'district' });
+  });
+
+  it('ignores a partial GPS pin (lat only) and falls through to district', () => {
+    const result = resolveWeatherCoords({ latitude: 12.34, longitude: null }, 'Madurai');
+    expect(result).toEqual({ ...DISTRICT_COORDINATES.Madurai, source: 'district' });
+  });
+
+  it('uses the default coordinates for an unknown or absent district', () => {
+    expect(resolveWeatherCoords(undefined, 'Atlantis')).toEqual({
+      ...DEFAULT_COORDINATES,
+      source: 'default',
+    });
+    expect(resolveWeatherCoords(undefined, undefined)).toEqual({
+      ...DEFAULT_COORDINATES,
+      source: 'default',
+    });
   });
 });
