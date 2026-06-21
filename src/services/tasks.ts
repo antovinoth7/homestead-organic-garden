@@ -841,6 +841,45 @@ export const getTodayTaskLogs = async (): Promise<TaskLog[]> => {
   }
 };
 
+/**
+ * Warm read of today's tasks for an instant first paint: the fresh in-memory
+ * cache if present, otherwise the AsyncStorage copy filtered to today's window.
+ * Mirrors the offline fallback in `getTodayTasks` but never touches the network.
+ */
+export const getStoredTodayTasks = async (): Promise<TaskTemplate[]> => {
+  const cached = getCached<TaskTemplate[]>(CACHE_KEYS.TODAY_TASKS);
+  if (cached) return cached;
+
+  const now = new Date();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const stored = await getData<TaskTemplate>(KEYS.TASKS);
+  const filtered = stored.filter((task) => {
+    if (!task.enabled || !task.next_due_at) return false;
+    return new Date(task.next_due_at) <= todayEnd;
+  });
+  filtered.sort((a, b) => a.next_due_at.localeCompare(b.next_due_at));
+  return filtered;
+};
+
+/**
+ * Warm read of today's task logs for an instant first paint: the fresh
+ * in-memory cache if present, otherwise the AsyncStorage copy filtered to today.
+ */
+export const getStoredTodayTaskLogs = async (): Promise<TaskLog[]> => {
+  const cached = getCached<TaskLog[]>(CACHE_KEYS.TODAY_TASK_LOGS);
+  if (cached) return cached;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(today);
+  todayEnd.setHours(23, 59, 59, 999);
+  const stored = await getData<TaskLog>(KEYS.TASK_LOGS);
+  return stored.filter((log) => {
+    const logDate = new Date(log.done_at);
+    return logDate >= today && logDate <= todayEnd;
+  });
+};
+
 const parseDateValue = (value?: string | null): Date | null => {
   if (!value) return null;
   const date = new Date(value);

@@ -6,15 +6,16 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import {
   getTodayTasks,
   getTodayTaskLogs,
+  getStoredTodayTasks,
+  getStoredTodayTaskLogs,
   getSeasonalCareReminder,
   markTaskDone,
 } from '../services/tasks';
-import { getAllPlants } from '../services/plants';
+import { getAllPlants, getStoredPlants } from '../services/plants';
 import { TaskTemplate, Plant, TaskLog, FarmAlert } from '../types/database.types';
 import { useBedData } from '../hooks/useBedData';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +24,7 @@ import { TodayScreenNavigationProp, TodayScreenRouteProp } from '../types/naviga
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useThemeMode } from '../theme';
 import { createStyles } from '../styles/todayStyles';
-import { summarizeTodayTasks, computeDonutSegments } from '../utils/taskSummary';
+import { summarizeTodayTasks, computeDonutSegments, filterToKnownPlants } from '../utils/taskSummary';
 import { useTabBarScroll, TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { getErrorMessage } from '../utils/errorLogging';
@@ -76,6 +77,21 @@ export default function TodayScreen(): React.JSX.Element {
   const isMountedRef = React.useRef(true);
   const { beds: bedList } = useBedData();
 
+  // Seasonal guidance (rhythm + jeevamrutha + almanac) is collapsed by default
+  // to keep the daily-value cards above the fold and reduce dashboard clutter.
+  const [seasonalExpanded, setSeasonalExpanded] = useState(false);
+  const toggleSeasonal = useCallback(() => setSeasonalExpanded((prev) => !prev), []);
+
+  const todayLabel = useMemo(
+    () =>
+      new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      }),
+    []
+  );
+
   // Pre-monsoon prep card — shown within 21 days of monsoon onset, dismissible per day
   const [preMonsoonDismissed, setPreMonsoonDismissed] = useState(false);
   useEffect(() => {
@@ -108,14 +124,9 @@ export default function TodayScreen(): React.JSX.Element {
       if (!isMountedRef.current) return;
 
       const plantIds = new Set(plantsData.map((plant) => plant.id));
-      const filteredTasks = tasksData.filter(
-        (task) => !task.plant_id || plantIds.has(task.plant_id)
-      );
-      const filteredLogs = todayLogs.filter((log) => !log.plant_id || plantIds.has(log.plant_id));
-
-      setTasks(filteredTasks);
+      setTasks(filterToKnownPlants(tasksData, plantIds));
       setPlants(plantsData);
-      setTaskLogs(filteredLogs);
+      setTaskLogs(filterToKnownPlants(todayLogs, plantIds));
     } catch (error: unknown) {
       if (!isMountedRef.current) return;
       if (!options?.silent) {
@@ -128,13 +139,42 @@ export default function TodayScreen(): React.JSX.Element {
     }
   }, []);
 
+  // Cold-start fast paint: render whatever is in the local caches before the
+  // network resolves, so the dashboard isn't blocked behind Firestore + image
+  // resolution. Returns true when it painted real data.
+  const hydrateFromCache = useCallback(async (): Promise<boolean> => {
+    try {
+      const [storedTasks, storedPlants, storedLogs] = await Promise.all([
+        getStoredTodayTasks(),
+        getStoredPlants(),
+        getStoredTodayTaskLogs(),
+      ]);
+      if (!isMountedRef.current) return false;
+      if (storedTasks.length === 0 && storedPlants.length === 0) return false;
+
+      const plantIds = new Set(storedPlants.map((plant) => plant.id));
+      setTasks(filterToKnownPlants(storedTasks, plantIds));
+      setPlants(storedPlants);
+      setTaskLogs(filterToKnownPlants(storedLogs, plantIds));
+      setLoading(false);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   useEffect(() => {
     isMountedRef.current = true;
-    loadData();
+    void (async () => {
+      const painted = await hydrateFromCache();
+      // If the cache already painted, revalidate silently (no spinner/alert);
+      // otherwise let loadData drive the skeleton for a true first-ever launch.
+      await loadData({ silent: painted });
+    })();
     return () => {
       isMountedRef.current = false;
     };
-  }, [loadData]);
+  }, [hydrateFromCache, loadData]);
 
   // Listen for refresh param (e.g., after completing tasks)
   useEffect(() => {
@@ -271,8 +311,18 @@ export default function TodayScreen(): React.JSX.Element {
 
   if (loading && tasks.length === 0 && plants.length === 0) {
     return (
-      <View style={[styles.container, styles.containerCentered, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={styles.container}>
+        <View style={[styles.heroHeader, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerRow}>
+            <View style={styles.flexOne}>
+              <Text style={styles.heroGreeting}>{getGreeting()}</Text>
+              <Text style={styles.heroDate}>{todayLabel}</Text>
+            </View>
+          </View>
+        </View>
+        <View style={[styles.skeletonCard, styles.skeletonCardTall]} />
+        <View style={styles.skeletonCard} />
+        <View style={styles.skeletonCard} />
       </View>
     );
   }
@@ -291,16 +341,10 @@ export default function TodayScreen(): React.JSX.Element {
         <View style={styles.headerRow}>
           <View style={styles.flexOne}>
             <Text style={styles.heroGreeting}>{getGreeting()}</Text>
-            <Text style={styles.heroDate}>
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
+            <Text style={styles.heroDate}>{todayLabel}</Text>
           </View>
           <TouchableOpacity style={styles.heroThemeToggle} onPress={cycleTheme}>
-            <Ionicons name={THEME_ICONS[mode]!.icon} size={20} color="#fff" />
+            <Ionicons name={THEME_ICONS[mode]!.icon} size={20} color={theme.textInverse} />
           </TouchableOpacity>
         </View>
       </View>
@@ -347,25 +391,6 @@ export default function TodayScreen(): React.JSX.Element {
       {/* Bed mini-cards horizontal scroll (C.12) */}
       <BedsQuickScroll beds={bedList} onPressBed={handlePressBed} onNewBed={handleNewBed} />
 
-      {/* Current-season care rhythm */}
-      {seasonRhythm !== null && (
-        <View style={styles.rhythmCard}>
-          <Text style={styles.rhythmTitle}>🗓️ This Season&apos;s Rhythm · {seasonLabel}</Text>
-          <View style={styles.rhythmRow}>
-            <Text style={styles.rhythmLabel}>💧 Water</Text>
-            <Text style={styles.rhythmValue}>{seasonRhythm.waterInterval}</Text>
-          </View>
-          <View style={styles.rhythmRow}>
-            <Text style={styles.rhythmLabel}>🍂 Mulch</Text>
-            <Text style={styles.rhythmValue}>{seasonRhythm.mulchCheck}</Text>
-          </View>
-          <View style={styles.rhythmRow}>
-            <Text style={styles.rhythmLabel}>🧪 Jeevamrutha</Text>
-            <Text style={styles.rhythmValue}>{seasonRhythm.jeevamruthaInterval}</Text>
-          </View>
-        </View>
-      )}
-
       {/* Pre-monsoon prep — only within the 21-day window, dismissible per day */}
       {preMonsoonTasks.length > 0 && !preMonsoonDismissed && (
         <View style={styles.preMonsoonCard}>
@@ -396,20 +421,65 @@ export default function TodayScreen(): React.JSX.Element {
       {/* Daily tip strip — dismissible per day (C.14) */}
       <TipStrip tip={tipText} />
 
-      {/* Jeevamrutha batch reminder (C.13) */}
-      <InputReminderStrip
-        landCents={farmConfig?.land_cents ?? 5}
-        bedCount={bedList.length}
-        cadenceLabel={seasonRhythm?.jeevamruthaInterval}
-        onPress={openJeevamruthaRecipe}
-      />
+      {/* Seasonal guidance — low-frequency cards grouped behind one collapsible
+          header (collapsed by default) to keep the dashboard uncluttered:
+          season rhythm + jeevamrutha reminder + monthly almanac. */}
+      <TouchableOpacity
+        style={styles.seasonalToggle}
+        onPress={toggleSeasonal}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={
+          seasonalExpanded ? 'Collapse seasonal guidance' : 'Expand seasonal guidance'
+        }
+      >
+        <Text style={styles.seasonalToggleText}>🌿 Seasonal guidance</Text>
+        <Ionicons
+          name={seasonalExpanded ? 'chevron-up' : 'chevron-down'}
+          size={18}
+          color={theme.textSecondary}
+        />
+      </TouchableOpacity>
 
-      {/* Monthly almanac highlight (C.4) */}
-      <AlmanacHighlight onViewAll={openAlmanac} />
+      {seasonalExpanded && (
+        <>
+          {/* Current-season care rhythm */}
+          {seasonRhythm !== null && (
+            <View style={styles.rhythmCard}>
+              <Text style={styles.rhythmTitle}>
+                🗓️ This Season&apos;s Rhythm · {seasonLabel}
+              </Text>
+              <View style={styles.rhythmRow}>
+                <Text style={styles.rhythmLabel}>💧 Water</Text>
+                <Text style={styles.rhythmValue}>{seasonRhythm.waterInterval}</Text>
+              </View>
+              <View style={styles.rhythmRow}>
+                <Text style={styles.rhythmLabel}>🍂 Mulch</Text>
+                <Text style={styles.rhythmValue}>{seasonRhythm.mulchCheck}</Text>
+              </View>
+              <View style={styles.rhythmRow}>
+                <Text style={styles.rhythmLabel}>🧪 Jeevamrutha</Text>
+                <Text style={styles.rhythmValue}>{seasonRhythm.jeevamruthaInterval}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Jeevamrutha batch reminder (C.13) */}
+          <InputReminderStrip
+            landCents={farmConfig?.land_cents ?? 5}
+            bedCount={bedList.length}
+            cadenceLabel={seasonRhythm?.jeevamruthaInterval}
+            onPress={openJeevamruthaRecipe}
+          />
+
+          {/* Monthly almanac highlight (C.4) */}
+          <AlmanacHighlight onViewAll={openAlmanac} />
+        </>
+      )}
 
       {tasks.length === 0 && !loading && (
         <View style={styles.emptyState}>
-          <Ionicons name="checkmark-circle-outline" size={64} color="#4caf50" />
+          <Ionicons name="checkmark-circle-outline" size={64} color={theme.success} />
           <Text style={styles.emptyText}>All caught up! 🎉</Text>
           <Text style={styles.emptySubtext}>No tasks due today</Text>
           <TouchableOpacity

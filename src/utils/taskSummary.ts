@@ -43,6 +43,18 @@ function startOfToday(now: number): Date {
 }
 
 /**
+ * Drop items that reference a plant we don't know about. Tasks/logs with no
+ * `plant_id` (bed- or farm-scoped) are always kept. Shared by the dashboard's
+ * warm-cache first paint and its network refresh so both filter identically.
+ */
+export function filterToKnownPlants<T extends { plant_id?: string | null }>(
+  items: T[],
+  plantIds: Set<string>
+): T[] {
+  return items.filter((item) => !item.plant_id || plantIds.has(item.plant_id));
+}
+
+/**
  * Summarize today's tasks. `templates` are today's due/overdue templates,
  * `logs` are today's completion logs. Mirrors the previous TodayScreen stats.
  */
