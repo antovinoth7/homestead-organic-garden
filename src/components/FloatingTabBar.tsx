@@ -9,6 +9,7 @@ import {
   NativeSyntheticEvent,
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
@@ -19,6 +20,15 @@ export const TAB_BAR_HEIGHT = 56;
 const SCROLL_THRESHOLD = 10;
 const ANIMATION_DURATION = 250;
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
+
+// Tabs whose component is a nested stack: the tab bar is only shown on the
+// stack's root screen. Tabs not listed here (Home, Care Plan) always show it.
+const ROOT_ROUTES: Record<string, string> = {
+  Plants: 'PlantsList',
+  Beds: 'BedList',
+  Journal: 'JournalList',
+  More: 'MoreHome',
+};
 
 // ─── Context ────────────────────────────────────────────────
 interface TabBarScrollContextValue {
@@ -132,8 +142,17 @@ export const FloatingTabBarProvider: React.FC<{
     lastOffsetRef.current = 0;
     anchorRef.current = 0;
     directionRef.current = null;
-    show();
-  }, [show]);
+    // Force the bar fully visible, bypassing the `show()` guard. This prevents a
+    // desync (isHiddenRef=false but translateY left at the hidden offset) from
+    // stranding the bar off-screen on a root screen.
+    isHiddenRef.current = false;
+    translateY.stopAnimation();
+    Animated.timing(translateY, {
+      toValue: 0,
+      duration: ANIMATION_DURATION,
+      useNativeDriver: USE_NATIVE_DRIVER,
+    }).start();
+  }, [translateY]);
 
   const scrollValue = React.useMemo(() => ({ onScroll, resetTabBar }), [onScroll, resetTabBar]);
 
@@ -156,20 +175,24 @@ export function FloatingTabBar({
   const { resetTabBar } = useContext(TabBarScrollContext);
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
-  // Hide tab bar when a nested stack is showing a non-root screen
+  // Hide the tab bar when a nested stack is showing a non-root screen. Resolve
+  // by focused route *name* (not numeric index) so a transient render where the
+  // nested state isn't read yet can't momentarily resolve a form/detail screen
+  // as "root" and flash the bar onto it.
   const focusedRoute = state.routes[state.index]!;
-  const nestedState = focusedRoute.state;
-  const nestedIndex = nestedState && nestedState.index !== undefined ? nestedState.index : 0;
+  const rootName = ROOT_ROUTES[focusedRoute.name];
+  const focusedNested = getFocusedRouteNameFromRoute(focusedRoute) ?? rootName;
+  const hidden = rootName ? focusedNested !== rootName : false;
 
   // Restore visibility whenever the focused tab/screen changes, so the global
   // scroll-hide state left over from a previous screen can't strand the bar
   // off-screen on a root screen that never resets it itself.
-  const focusSignature = `${state.index}:${nestedIndex}`;
+  const focusSignature = `${state.index}:${focusedNested ?? ''}`;
   useEffect(() => {
     resetTabBar();
   }, [focusSignature, resetTabBar]);
 
-  if (nestedIndex > 0) {
+  if (hidden) {
     return null;
   }
 

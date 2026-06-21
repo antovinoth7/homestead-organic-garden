@@ -28,6 +28,7 @@ import { getErrorMessage } from '../utils/errorLogging';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { ImageZoomModal } from '../components/ImageZoomModal';
+import { ConfirmDeleteModal } from '../components/modals/ConfirmDeleteModal';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -63,6 +64,7 @@ export default function JournalScreen(): React.JSX.Element {
 
   // Gallery modal state
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const loadData = async (options?: { silent?: boolean }): Promise<void> => {
     if (!options?.silent) {
@@ -261,22 +263,16 @@ export default function JournalScreen(): React.JSX.Element {
     return photos;
   }, [filteredEntries]);
 
-  const handleDelete = async (id: string): Promise<void> => {
-    Alert.alert('Delete Entry', 'Are you sure you want to delete this journal entry?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteJournalEntry(id);
-            loadData();
-          } catch (error: unknown) {
-            Alert.alert('Error', getErrorMessage(error));
-          }
-        },
-      },
-    ]);
+  const confirmDelete = async (): Promise<void> => {
+    if (!deleteId) return;
+    const id = deleteId;
+    setDeleteId(null);
+    try {
+      await deleteJournalEntry(id);
+      loadData();
+    } catch (error: unknown) {
+      Alert.alert('Error', getErrorMessage(error));
+    }
   };
 
   return (
@@ -453,7 +449,7 @@ export default function JournalScreen(): React.JSX.Element {
                         <TouchableOpacity
                           onPress={(e) => {
                             e.stopPropagation();
-                            handleDelete(entry.id);
+                            setDeleteId(entry.id);
                           }}
                           style={styles.actionBtn}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -752,6 +748,15 @@ export default function JournalScreen(): React.JSX.Element {
           onClose={() => setSelectedImage(null)}
         />
       )}
+
+      <ConfirmDeleteModal
+        visible={deleteId !== null}
+        title="Delete entry?"
+        message="This journal entry will be permanently removed. This can't be undone."
+        confirmLabel="Delete"
+        onCancel={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+      />
     </View>
   );
 }
