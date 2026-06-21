@@ -36,10 +36,10 @@ export const BED_TYPE_SHORT: Record<BedType, string> = {
 };
 
 /**
- * Build the bed wizard header title, e.g. "🥬 Create Leafy Greens" /
- * "🍅 Edit Veggie Bed". Keeps the emoji + mode + type wording in one place.
+ * Build the bed wizard header title, e.g. "🥬 Leafy Greens - Create" /
+ * "🍅 Veggie Bed - Edit". Keeps the emoji + type + mode wording in one place.
  */
 export function bedTypeTitle(bedType: BedType, mode: 'create' | 'edit'): string {
   const action = mode === 'edit' ? 'Edit' : 'Create';
-  return `${BED_TYPE_EMOJI[bedType]} ${action} ${BED_TYPE_NAME[bedType]}`;
+  return `${BED_TYPE_EMOJI[bedType]} ${BED_TYPE_NAME[bedType]} - ${action}`;
 }

@@ -33,14 +33,14 @@ describe('bed type metadata', () => {
 });
 
 describe('bedTypeTitle', () => {
-  it('builds an emoji + Create + name title', () => {
-    expect(bedTypeTitle('leafy', 'create')).toBe('🥬 Create Leafy Greens');
-    expect(bedTypeTitle('fruiting', 'create')).toBe('🍅 Create Veggie Bed');
+  it('builds an emoji + name + Create title', () => {
+    expect(bedTypeTitle('leafy', 'create')).toBe('🥬 Leafy Greens - Create');
+    expect(bedTypeTitle('fruiting', 'create')).toBe('🍅 Veggie Bed - Create');
   });
 
-  it('builds an emoji + Edit + name title', () => {
-    expect(bedTypeTitle('leafy', 'edit')).toBe('🥬 Edit Leafy Greens');
-    expect(bedTypeTitle('three_sisters', 'edit')).toBe('🌽 Edit Three Sisters');
+  it('builds an emoji + name + Edit title', () => {
+    expect(bedTypeTitle('leafy', 'edit')).toBe('🥬 Leafy Greens - Edit');
+    expect(bedTypeTitle('three_sisters', 'edit')).toBe('🌽 Three Sisters - Edit');
   });
 
   it('produces a non-empty title for every bed type in both modes', () => {
