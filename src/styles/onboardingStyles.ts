@@ -110,10 +110,11 @@ export const createStyles = (theme: Theme) =>
       borderRadius: 20,
       borderWidth: 1,
       borderColor: theme.border,
+      backgroundColor: theme.backgroundSecondary,
     },
-    chipActive: { backgroundColor: theme.primary, borderColor: theme.primary },
-    chipText: { fontSize: 13, color: theme.textSecondary },
-    chipTextActive: { fontSize: 13, color: theme.textInverse, fontWeight: '600' },
+    chipActive: { backgroundColor: theme.primaryLight, borderColor: theme.primary },
+    chipText: { fontSize: 13, color: theme.textSecondary, fontWeight: '500' },
+    chipTextActive: { fontSize: 13, color: theme.primary, fontWeight: '600' },
     // First bed
     recommendCard: {
       backgroundColor: theme.backgroundSecondary,
