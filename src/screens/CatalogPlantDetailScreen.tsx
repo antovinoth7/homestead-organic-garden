@@ -23,6 +23,7 @@ import VoiceDictation from '@/components/VoiceDictation';
 import ThemedDropdown from '@/components/ThemedDropdown';
 import CollapsibleSection from '@/components/CollapsibleSection';
 import FieldLabelWithHelp from '@/components/FieldLabelWithHelp';
+import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import {
   DEFAULT_PLANT_PROFILES,
   getPlantProfiles,
@@ -1604,47 +1605,17 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       </Modal>
 
       {/* Delete confirmation modal */}
-      <Modal
+      <ConfirmDeleteModal
         visible={showDeleteConfirm}
-        transparent
-        animationType="fade"
-        hardwareAccelerated
-        onRequestClose={() => setShowDeleteConfirm(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Delete Plant</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowDeleteConfirm(false)}
-              >
-                <Ionicons name="close" size={16} color={theme.textInverse} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalHint}>
-              Remove &quot;{initialName}&quot; from the catalog? This cannot be undone.
-            </Text>
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSecondary]}
-                onPress={() => setShowDeleteConfirm(false)}
-              >
-                <Text style={styles.modalButtonTextSecondary}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonDanger]}
-                onPress={() => {
-                  setShowDeleteConfirm(false);
-                  void doDelete();
-                }}
-              >
-                <Text style={styles.modalButtonTextPrimary}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        title="Delete plant?"
+        message={`Remove "${initialName}" from the catalog? This cannot be undone.`}
+        confirmLabel="Delete"
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          setShowDeleteConfirm(false);
+          void doDelete();
+        }}
+      />
 
       {/* Reassign modal */}
       <Modal

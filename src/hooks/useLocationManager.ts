@@ -87,6 +87,11 @@ export type ReassignModalState = {
   replacement: string;
 };
 
+export type DeleteConfirmState = {
+  type: 'parent' | 'child';
+  target: string;
+};
+
 // ─── Return type ──────────────────────────────────────────────────────────────
 
 export interface LocationManagerState {
@@ -99,14 +104,17 @@ export interface LocationManagerState {
   saving: boolean;
   editModal: EditModalState | null;
   reassignModal: ReassignModalState | null;
+  deleteConfirm: DeleteConfirmState | null;
 }
 
 export interface LocationManagerActions {
   loadData: () => Promise<void>;
   setEditModal: React.Dispatch<React.SetStateAction<EditModalState | null>>;
   setReassignModal: React.Dispatch<React.SetStateAction<ReassignModalState | null>>;
+  setDeleteConfirm: React.Dispatch<React.SetStateAction<DeleteConfirmState | null>>;
   handleRename: () => Promise<void>;
   handleDeleteRequest: (type: 'parent' | 'child', name: string) => void;
+  handleDeleteConfirm: () => void;
   handleReassignConfirm: () => void;
   updateProfile: (patch: Partial<LocationProfile>) => void;
 }
@@ -137,6 +145,7 @@ export function useLocationManager(): UseLocationManagerReturn {
   const [saving, setSaving] = useState(false);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
   const [reassignModal, setReassignModal] = useState<ReassignModalState | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -450,10 +459,7 @@ export function useLocationManager(): UseLocationManagerReturn {
       const count = type === 'parent' ? parentCounts[name] || 0 : childCounts[name] || 0;
 
       if (count === 0) {
-        Alert.alert('Delete Location', 'Remove this item?', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: () => handleDelete(type, name) },
-        ]);
+        setDeleteConfirm({ type, target: name });
         return;
       }
       const options = list.filter((item) => item !== name);
@@ -466,13 +472,19 @@ export function useLocationManager(): UseLocationManagerReturn {
       }
       setReassignModal({ type, target: name, replacement: options[0]! });
     },
-    [parentLocations, childLocations, parentCounts, childCounts, handleDelete]
+    [parentLocations, childLocations, parentCounts, childCounts]
   );
 
   const handleReassignConfirm = useCallback((): void => {
     if (!reassignModal) return;
     handleDelete(reassignModal.type, reassignModal.target, reassignModal.replacement);
   }, [reassignModal, handleDelete]);
+
+  const handleDeleteConfirm = useCallback((): void => {
+    if (!deleteConfirm) return;
+    handleDelete(deleteConfirm.type, deleteConfirm.target);
+    setDeleteConfirm(null);
+  }, [deleteConfirm, handleDelete]);
 
   const updateProfile = useCallback((patch: Partial<LocationProfile>): void => {
     setEditModal((prev) =>
@@ -513,13 +525,16 @@ export function useLocationManager(): UseLocationManagerReturn {
       saving,
       editModal,
       reassignModal,
+      deleteConfirm,
     },
     actions: {
       loadData,
       setEditModal,
       setReassignModal,
+      setDeleteConfirm,
       handleRename,
       handleDeleteRequest,
+      handleDeleteConfirm,
       handleReassignConfirm,
       updateProfile,
     },

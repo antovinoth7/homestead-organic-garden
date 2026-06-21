@@ -10,6 +10,7 @@ import { createStyles } from '@/styles/myFarmStyles';
 import FieldLabelWithHelp from '@/components/FieldLabelWithHelp';
 import { LocationEditModal } from '@/components/modals/LocationEditModal';
 import { LocationReassignModal } from '@/components/modals/LocationReassignModal';
+import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import { useLocationManager, hasSoilData } from '@/hooks/useLocationManager';
 import { calcUsableSqm, calcMaxBeds, calcCapacityFromProfiles } from '@/services/farmCapacity';
 
@@ -57,12 +58,15 @@ export default function MyFarmScreen(): React.JSX.Element {
     saving,
     editModal,
     reassignModal,
+    deleteConfirm,
   } = state;
   const {
     setEditModal,
     setReassignModal,
+    setDeleteConfirm,
     handleRename,
     handleDeleteRequest,
+    handleDeleteConfirm,
     handleReassignConfirm,
     updateProfile,
   } = actions;
@@ -410,6 +414,19 @@ export default function MyFarmScreen(): React.JSX.Element {
         onConfirm={handleReassignConfirm}
         onClose={() => setReassignModal(null)}
         onReplacementChange={onReplacementChange}
+      />
+
+      <ConfirmDeleteModal
+        visible={deleteConfirm !== null}
+        title="Delete location?"
+        message={
+          deleteConfirm
+            ? `Remove "${deleteConfirm.target}" from your farm? This can't be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteConfirm}
       />
 
       <Modal visible={saving} transparent animationType="fade" hardwareAccelerated>
