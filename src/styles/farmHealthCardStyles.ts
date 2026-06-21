@@ -54,36 +54,4 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       height: 40,
       backgroundColor: theme.border,
     },
-    capacitySection: {
-      marginTop: 14,
-      gap: 8,
-    },
-    capacityRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    capacityLabel: {
-      width: 64,
-      fontSize: 11,
-      color: theme.textSecondary,
-    },
-    capacityTrack: {
-      flex: 1,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: theme.border,
-      overflow: 'hidden',
-    },
-    capacityFill: {
-      height: 8,
-      borderRadius: 4,
-    },
-    capacityPct: {
-      width: 36,
-      fontSize: 11,
-      fontWeight: '600',
-      color: theme.text,
-      textAlign: 'right',
-    },
   });

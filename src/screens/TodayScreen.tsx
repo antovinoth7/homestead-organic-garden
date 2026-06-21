@@ -346,22 +346,20 @@ export default function TodayScreen(): React.JSX.Element {
         onPressType={goToCarePlanPlain}
       />
 
+      {/* Garden health: header + health tiles (C.7) */}
+      <FarmHealthCard
+        health={health}
+        bedCount={bedList.length}
+        usableSqm={farmMetrics?.usableSqm}
+        onPressHealth={handlePressHealth}
+      />
+
       {/* Needs Attention — actionable alerts from alerts.ts (C.8/C.10) */}
       <NeedsAttentionScroll alerts={actionableAlerts} onPressAlert={handleAlertPress} />
 
       {/* Weather (C.3) + What to Plant Now (C.1) */}
       <WeatherCard />
       <PlantNowSection />
-
-      {/* Farm health: header + health tiles + capacity bars (C.7) */}
-      <FarmHealthCard
-        health={health}
-        categoryBreakdown={farmMetrics?.categoryBreakdown}
-        bedCount={bedList.length}
-        usableSqm={farmMetrics?.usableSqm}
-        familiesCount={farmConfig?.families_count}
-        onPressHealth={handlePressHealth}
-      />
 
       {/* Bed mini-cards horizontal scroll (C.12) */}
       <BedsQuickScroll beds={bedList} onPressBed={handlePressBed} onNewBed={handleNewBed} />
