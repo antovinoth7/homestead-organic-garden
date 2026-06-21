@@ -20,7 +20,7 @@ import { useBedData, BedWithCoverage } from '@/hooks/useBedData';
 import { deleteBed } from '@/services/beds';
 import { BedCard } from '@/components/BedCard';
 import { BedFilterSheet, BedCounts } from '@/components/BedFilterSheet';
-import { BedDeleteModal } from '@/components/modals/BedDeleteModal';
+import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import { AnimatedFAB, useTabBarScroll, TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { UndoToast } from '@/components/UndoToast';
@@ -32,6 +32,13 @@ import {
   DEFAULT_BED_FILTERS,
 } from '@/utils/filterAndSortBeds';
 import type { BedListScreenNavigationProp } from '@/types/navigation.types';
+
+const bedDeleteMessage = (activePlantCount: number): string => {
+  const plantLabel = `${activePlantCount} active plant${activePlantCount === 1 ? '' : 's'}`;
+  return `This bed has ${plantLabel}. Deleting the bed will remove ${
+    activePlantCount === 1 ? 'it' : 'them'
+  } too. This can't be undone after the toast disappears.`;
+};
 
 export default function BedListScreen(): React.JSX.Element {
   const theme = useTheme();
@@ -476,10 +483,11 @@ export default function BedListScreen(): React.JSX.Element {
         iconName="add"
       />
 
-      <BedDeleteModal
+      <ConfirmDeleteModal
         visible={deleteTarget !== null}
-        bedName={deleteTarget?.name ?? ''}
-        activePlantCount={deleteTarget?.active_plant_count ?? 0}
+        title={`Delete “${deleteTarget?.name ?? ''}”?`}
+        message={bedDeleteMessage(deleteTarget?.active_plant_count ?? 0)}
+        confirmLabel="Delete"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => {
           const target = deleteTarget;
