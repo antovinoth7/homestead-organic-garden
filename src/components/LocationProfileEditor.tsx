@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, Platform } from 'r
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../theme';
+import VoiceDictation from './VoiceDictation';
 import { createStyles } from '@/styles/locationModalStyles';
 import {
   DrainageQuality,
@@ -347,6 +348,10 @@ export function LocationProfileEditor({
       {/* Notes */}
       <View style={styles.profileSection}>
         <Text style={styles.profileSectionTitle}>Notes</Text>
+        <VoiceDictation
+          value={profile.notes ?? ''}
+          onChangeText={(text) => updateProfile({ notes: text.slice(0, 200) })}
+        />
         <TextInput
           style={styles.profileNotesInput}
           placeholder="e.g. Floods during heavy rain, coconut shade after 2pm..."

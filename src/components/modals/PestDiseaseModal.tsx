@@ -7,6 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
+import VoiceDictation from '../VoiceDictation';
 import PhotoSourceModal from './PhotoSourceModal';
 import {
   PestDiseaseRecord,
@@ -603,6 +604,15 @@ export default function PestDiseaseModal({
                 </>
               )}
 
+              <VoiceDictation
+                value={currentRecord.notes || ''}
+                onChangeText={(text) =>
+                  setCurrentRecord({
+                    ...currentRecord,
+                    notes: sanitizeAlphaNumericSpaces(text),
+                  })
+                }
+              />
               <FloatingLabelInput
                 label="Notes"
                 value={currentRecord.notes || ''}

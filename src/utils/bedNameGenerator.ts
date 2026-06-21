@@ -1,14 +1,5 @@
 import type { BedType, Bed } from '@/types/database.types';
-
-export const BED_TYPE_LABEL: Partial<Record<BedType, string>> = {
-  leafy: 'Leafy',
-  fruiting: 'Veggie',
-  spice: 'Spice',
-  root_legume: 'Root',
-  climber_trellis: 'Climber',
-  three_sisters: 'Three Sisters',
-  medicinal_guild: 'Medicinal',
-};
+import { BED_TYPE_SHORT } from '@/config/beds';
 
 export function buildGeneratedBedNameBase(
   parentLocation: string | null | undefined,
@@ -16,7 +7,7 @@ export function buildGeneratedBedNameBase(
   childLocation?: string | null
 ): string {
   const parent = parentLocation?.trim();
-  const typeLabel = bedType ? BED_TYPE_LABEL[bedType] : undefined;
+  const typeLabel = bedType ? BED_TYPE_SHORT[bedType] : undefined;
   if (!parent || !typeLabel) return '';
   const child = childLocation?.trim();
   const locPart = child ? `${parent} ${child}` : parent;

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PlantFormStateReturn, sanitizeNumberText } from '../../hooks/usePlantFormState';
-import { useBedData } from '../../hooks/useBedData';
+import { useBedOptions } from '../../hooks/useBedOptions';
 import { createStyles } from '../../styles/plantFormStyles';
 import { createWizardStyles } from '../../styles/plantAddWizardStyles';
 import ThemedDropdown from '../ThemedDropdown';
@@ -43,7 +43,7 @@ export function WizardStep2({ formState }: Props): React.JSX.Element {
     setName,
   } = formState;
 
-  const { beds } = useBedData();
+  const { beds } = useBedOptions();
 
   const formStyles = useMemo(() => createStyles(theme), [theme]);
   const wizardStyles = useMemo(() => createWizardStyles(theme), [theme]);

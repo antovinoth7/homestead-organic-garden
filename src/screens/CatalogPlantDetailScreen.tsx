@@ -19,6 +19,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/catalogPlantDetailStyles';
 import FloatingLabelInput from '@/components/FloatingLabelInput';
+import VoiceDictation from '@/components/VoiceDictation';
 import ThemedDropdown from '@/components/ThemedDropdown';
 import CollapsibleSection from '@/components/CollapsibleSection';
 import FieldLabelWithHelp from '@/components/FieldLabelWithHelp';
@@ -858,6 +859,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
                 labelStyle={styles.pruningTipsLabel}
                 style={styles.fieldLabelRow}
               />
+              <VoiceDictation
+                value={careForm.description}
+                onChangeText={(v) => setForm({ description: v })}
+              />
               <TextInput
                 style={styles.descriptionInput}
                 multiline
@@ -1251,6 +1256,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               labelStyle={styles.pruningTipsLabel}
               style={styles.fieldLabelRow}
             />
+            <VoiceDictation
+              value={careForm?.pruningTips ?? ''}
+              onChangeText={(v) => setForm({ pruningTips: v })}
+            />
             <TextInput
               style={styles.pruningTipsInput}
               multiline
@@ -1568,6 +1577,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
             />
 
             <Text style={styles.pruningTipsLabel}>Notes</Text>
+            <VoiceDictation
+              value={varietyDetailDraft.notes ?? ''}
+              onChangeText={(t) => setVarietyDetailDraft((d) => ({ ...d, notes: t }))}
+            />
             <TextInput
               style={styles.varietyNotesInput}
               value={varietyDetailDraft.notes ?? ''}

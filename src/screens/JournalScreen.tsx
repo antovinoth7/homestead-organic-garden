@@ -19,7 +19,6 @@ import { Image } from 'expo-image';
 import { getJournalEntries, deleteJournalEntry } from '../services/journal';
 import { getAllPlants } from '../services/plants';
 import { JournalEntry, JournalEntryType, Plant } from '../types/database.types';
-import { useBedData } from '../hooks/useBedData';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
@@ -55,9 +54,6 @@ export default function JournalScreen(): React.JSX.Element {
 
   // Tag filter state
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  // Bed filter state
-  const [filterBedId, setFilterBedId] = useState<string>('');
-  const { beds: bedList } = useBedData();
 
   // View mode state
   const [viewMode, setViewMode] = useState<'list' | 'gallery'>('list');
@@ -224,25 +220,19 @@ export default function JournalScreen(): React.JSX.Element {
       filtered = filtered.filter((e) => new Date(e.created_at) >= filterStart);
     }
 
-    // Bed filter
-    if (filterBedId) {
-      filtered = filtered.filter((e) => e.bed_id === filterBedId);
-    }
-
     // Sort by newest first
     filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return filtered;
-  }, [entries, searchQuery, selectedType, selectedTag, dateFilter, filterBedId, getPlantName]);
+  }, [entries, searchQuery, selectedType, selectedTag, dateFilter, getPlantName]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (dateFilter !== 'week') count++;
     if (selectedType) count++;
     if (selectedTag) count++;
-    if (filterBedId) count++;
     return count;
-  }, [dateFilter, selectedType, selectedTag, filterBedId]);
+  }, [dateFilter, selectedType, selectedTag]);
 
   const toggleFilters = (): void => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -254,7 +244,6 @@ export default function JournalScreen(): React.JSX.Element {
     setSelectedType(null);
     setSelectedTag(null);
     setDateFilter('week');
-    setFilterBedId('');
   };
 
   // Get all photos for gallery view
@@ -750,42 +739,6 @@ export default function JournalScreen(): React.JSX.Element {
                   </TouchableOpacity>
                 ))}
               </View>
-              {/* Bed Filter */}
-              {bedList.length > 0 && (
-                <>
-                  <Text style={styles.sheetSectionTitle}>
-                    <Ionicons name="grid-outline" size={14} color={theme.textSecondary} /> Bed
-                  </Text>
-                  <View style={styles.sheetChipWrap}>
-                    <TouchableOpacity
-                      style={[styles.sheetChip, !filterBedId && styles.sheetChipActive]}
-                      onPress={() => setFilterBedId('')}
-                    >
-                      <Text
-                        style={[styles.sheetChipText, !filterBedId && styles.sheetChipTextActive]}
-                      >
-                        All Beds
-                      </Text>
-                    </TouchableOpacity>
-                    {bedList.map((bed) => (
-                      <TouchableOpacity
-                        key={bed.id}
-                        style={[styles.sheetChip, filterBedId === bed.id && styles.sheetChipActive]}
-                        onPress={() => setFilterBedId(filterBedId === bed.id ? '' : bed.id)}
-                      >
-                        <Text
-                          style={[
-                            styles.sheetChipText,
-                            filterBedId === bed.id && styles.sheetChipTextActive,
-                          ]}
-                        >
-                          {bed.name}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </>
-              )}
             </ScrollView>
           </View>
         </View>

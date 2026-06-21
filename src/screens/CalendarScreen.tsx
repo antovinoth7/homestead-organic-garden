@@ -36,12 +36,13 @@ import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { useCalendarData, HarvestReadyItem } from '../hooks/useCalendarData';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
-import { useBedData } from '../hooks/useBedData';
+import { useBedOptions } from '../hooks/useBedOptions';
 import { useWeather } from '../hooks/useWeather';
 import { isRainPredictedOnDate } from '../services/weather';
 import { calculateExpectedHarvestDate } from '../utils/plantHelpers';
 import CreateTaskModal from '../components/modals/CreateTaskModal';
 import TaskCompletionModal from '../components/modals/TaskCompletionModal';
+import VoiceDictation from '../components/VoiceDictation';
 import WeekCalendarView from '../components/calendar/WeekCalendarView';
 import MonthCalendarView from '../components/calendar/MonthCalendarView';
 import { SwipeableTaskCard } from '../components/calendar/SwipeableTaskCard';
@@ -87,7 +88,7 @@ export default function CalendarScreen(): React.JSX.Element {
   const [showGroupMenu, setShowGroupMenu] = useState(false);
   const [filterTaskTypes, setFilterTaskTypes] = useState<Set<string>>(new Set());
   const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
-  const { beds: bedList } = useBedData();
+  const { beds: bedList } = useBedOptions();
   const bedMap = useMemo(() => new Map(bedList.map((b) => [b.id, b.name])), [bedList]);
   const [bedSegment, setBedSegment] = useState<'bed' | 'other'>('other');
   const { forecast } = useWeather();
@@ -1574,6 +1575,10 @@ export default function CalendarScreen(): React.JSX.Element {
                 ))}
               </View>
 
+              <VoiceDictation
+                value={skipReason}
+                onChangeText={(text) => setSkipReason(sanitizeAlphaNumericSpaces(text))}
+              />
               <TextInput
                 style={styles.skipModalInput}
                 placeholder="Reason (optional)"

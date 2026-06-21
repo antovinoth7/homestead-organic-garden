@@ -29,3 +29,5 @@ export { getSoilPrepSteps } from './soilPrepEngine';
 export type { PrepStep, SoilPrepParams } from './soilPrepEngine';
 
 export { LEGUME_RELEVANT_BED_TYPES, bedExpectsLegumes } from './legumeRelevance';
+
+export { BED_TYPE_EMOJI, BED_TYPE_NAME, BED_TYPE_SHORT, bedTypeTitle } from './bedTypeMeta';
