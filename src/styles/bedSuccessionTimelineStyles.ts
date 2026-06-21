@@ -109,13 +109,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.primary,
     },
-    // Perennial "established" bar — continuous, no harvest-window split.
-    perennialBar: {
-      position: 'absolute' as const,
-      backgroundColor: theme.primary,
-      borderRadius: 4,
-      opacity: 0.35,
-    },
     // Estimated bar (plant has no recorded planting date — anchored at today)
     estimatedBar: {
       opacity: 0.4,
@@ -174,10 +167,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primaryLight,
       borderWidth: 1,
       borderColor: theme.primary,
-    },
-    legendDotPerennial: {
-      backgroundColor: theme.primary,
-      opacity: 0.35,
     },
     legendText: {
       fontSize: 10,

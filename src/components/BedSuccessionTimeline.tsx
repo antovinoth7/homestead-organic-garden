@@ -98,15 +98,7 @@ interface PlantBar {
   harvestEndOffset: number;
   /** True when no sow/planting date was recorded — the bar is anchored at today as an estimate. */
   estimated: boolean;
-  /**
-   * Perennial with no real maturity data → render one continuous "established"
-   * bar (no grow/harvest split) instead of a fabricated short harvest window.
-   */
-  continuous: boolean;
 }
-
-// How long a continuous (perennial, no-data) bar spans, in days.
-const PERENNIAL_SPAN_DAYS = 365;
 
 interface Props {
   bed: Bed;
@@ -134,7 +126,13 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
       const existing = earliestDate.get(p.name);
       if (!existing || d < existing) earliestDate.set(p.name, d);
     }
-    const uniqueNames = [...new Set(plants.map((p) => p.name))];
+    // Trees take years to first harvest and their catalog days-to-harvest is a
+    // recurring picking interval, not sow-to-harvest — the annual grow→harvest
+    // succession model doesn't fit them, so omit tree-like plants entirely.
+    const uniqueNames = [...new Set(plants.map((p) => p.name))].filter((name) => {
+      const rep = representativePlant.get(name);
+      return !rep || !isTreeLikePlant(rep);
+    });
     return uniqueNames
       .map((name) => {
         // No recorded sow/planting date → anchor at today and flag as an estimate
@@ -146,19 +144,12 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
         const dth = rep
           ? getDaysToHarvestRange(rep)
           : { min: 55, max: 75, source: 'fallback' as const, known: false };
-        // Trees take years to first harvest and their catalog days-to-harvest is
-        // a recurring picking interval — the annual grow→harvest window would be
-        // misleading, so render one continuous "established" bar instead.
-        const continuous = rep ? isTreeLikePlant(rep) : false;
-        const growDays = continuous ? PERENNIAL_SPAN_DAYS : dth.min;
-        const harvestDays = continuous ? PERENNIAL_SPAN_DAYS : dth.max;
         return {
           name,
           startOffset: startOff,
-          growEndOffset: startOff + growDays,
-          harvestEndOffset: startOff + harvestDays,
+          growEndOffset: startOff + dth.min,
+          harvestEndOffset: startOff + dth.max,
           estimated: !recorded,
-          continuous,
         };
       })
       .filter((bar) => bar.startOffset < 730);
@@ -306,24 +297,6 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
                 MONTH_HEIGHT +
                 i * ROW_HEIGHT +
                 Math.round((ROW_HEIGHT - BAR_HEIGHT) / 2);
-              if (bar.continuous) {
-                // Perennial with no maturity data: one neutral continuous bar,
-                // no fabricated harvest window.
-                return (
-                  <View
-                    key={bar.name}
-                    style={[
-                      styles.perennialBar,
-                      {
-                        left: bar.startOffset * DAY_PX,
-                        width: Math.max((bar.harvestEndOffset - bar.startOffset) * DAY_PX, 6),
-                        top: barTop,
-                        height: BAR_HEIGHT,
-                      },
-                    ]}
-                  />
-                );
-              }
               return (
                 <React.Fragment key={bar.name}>
                   {/* Growing period: sow → harvest window start */}
@@ -407,12 +380,6 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
           <View style={[styles.legendDot, styles.legendDotGreen]} />
           <Text style={styles.legendText}>Harvest window</Text>
         </View>
-        {plantBars.some((b) => b.continuous) && (
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, styles.legendDotPerennial]} />
-            <Text style={styles.legendText}>Perennial (established)</Text>
-          </View>
-        )}
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, styles.legendDotAccent]} />
           <Text style={styles.legendText}>{greenManureInfo.gm.name} (green manure)</Text>
