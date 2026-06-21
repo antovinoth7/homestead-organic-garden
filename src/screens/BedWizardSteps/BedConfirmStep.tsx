@@ -12,6 +12,7 @@ import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
 import { getPlantEmoji, buildHarvestPreview } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import { BedTopDownMap } from '@/components/BedTopDownMap';
+import VoiceDictation from '@/components/VoiceDictation';
 
 interface Props {
   stepData: Partial<WizardStepData>;
@@ -224,6 +225,7 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
       {/* Notes — editable, at the bottom */}
       <View style={styles.cfSection}>
         <Text style={styles.cfEyebrow}>Notes (optional)</Text>
+        <VoiceDictation value={data.notes} onChangeText={(v) => onChange({ notes: v })} />
         <TextInput
           style={[styles.textInput, styles.cfNotesArea]}
           value={data.notes}

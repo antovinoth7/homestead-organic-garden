@@ -22,6 +22,7 @@ import {
 import { createStyles } from '../../styles/plantFormStyles';
 import { createEditStyles } from '../../styles/plantEditFormStyles';
 import CollapsibleSection from '../CollapsibleSection';
+import VoiceDictation from '../VoiceDictation';
 import PestDiseaseModal from '../modals/PestDiseaseModal';
 import { EditBasicInfoSection } from './EditBasicInfoSection';
 import { EditLocationSection } from './EditLocationSection';
@@ -406,6 +407,10 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
                 <Ionicons name="document-text-outline" size={16} color={theme.textTertiary} />
                 <Text style={styles.fieldGroupLabel}>Notes</Text>
               </View>
+              <VoiceDictation
+                value={notes}
+                onChangeText={(text) => setNotes(sanitizeAlphaNumericSpaces(text))}
+              />
               <TextInput
                 style={styles.notesCardInput}
                 value={notes}

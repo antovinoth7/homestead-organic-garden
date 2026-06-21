@@ -42,6 +42,7 @@ import { isRainPredictedOnDate } from '../services/weather';
 import { calculateExpectedHarvestDate } from '../utils/plantHelpers';
 import CreateTaskModal from '../components/modals/CreateTaskModal';
 import TaskCompletionModal from '../components/modals/TaskCompletionModal';
+import VoiceDictation from '../components/VoiceDictation';
 import WeekCalendarView from '../components/calendar/WeekCalendarView';
 import MonthCalendarView from '../components/calendar/MonthCalendarView';
 import { SwipeableTaskCard } from '../components/calendar/SwipeableTaskCard';
@@ -1574,6 +1575,10 @@ export default function CalendarScreen(): React.JSX.Element {
                 ))}
               </View>
 
+              <VoiceDictation
+                value={skipReason}
+                onChangeText={(text) => setSkipReason(sanitizeAlphaNumericSpaces(text))}
+              />
               <TextInput
                 style={styles.skipModalInput}
                 placeholder="Reason (optional)"
