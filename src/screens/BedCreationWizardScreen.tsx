@@ -17,6 +17,7 @@ import { useBedCreationWizard } from '@/hooks/useBedCreationWizard';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import DiscardChangesModal from '@/components/modals/DiscardChangesModal';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { bedTypeTitle } from '@/config/beds';
 import type {
   BedCreationWizardNavigationProp,
   BedCreationWizardRouteProp,
@@ -210,6 +211,15 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
 
   const isLastInputStep = wizard.currentStep === 6;
 
+  // Header shows the bed type once chosen (emoji + mode + name), e.g.
+  // "🥬 Create Leafy Greens". Falls back to a plain label on step 1.
+  const selectedBedType = wizard.stepData[1]?.bed_type;
+  const headerTitle = selectedBedType
+    ? bedTypeTitle(selectedBedType, isEditMode ? 'edit' : 'create')
+    : isEditMode
+      ? 'Edit Bed'
+      : 'Create Bed';
+
   if (wizard.initializing) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -221,7 +231,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <ScreenHeader title={isEditMode ? 'Edit Bed' : 'Create Bed'} onBack={requestExit} />
+      <ScreenHeader title={headerTitle} onBack={requestExit} />
 
       {/* Progress stepper */}
       <View style={styles.progressContainer}>

@@ -4,7 +4,7 @@ import { useTheme } from '@/theme';
 import { Step2Data, Step3Data } from '@/hooks/useBedCreationWizard';
 import { BedType } from '@/types/database.types';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
-import { BED_TYPE_LABEL } from '@/utils/bedNameGenerator';
+import { BED_TYPE_SHORT } from '@/config/beds';
 import { SOIL_LABELS } from '@/utils/plantLabels';
 import { estimatePlantCapacity } from '@/utils/plantCapacity';
 
@@ -134,7 +134,7 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
 
   const conditionTags = useMemo(() => {
     const tags: string[] = [];
-    if (bedType) tags.push(BED_TYPE_LABEL[bedType] ?? bedType);
+    if (bedType) tags.push(BED_TYPE_SHORT[bedType] ?? bedType);
     if (step2?.soil_type) tags.push(SOIL_LABELS[step2.soil_type]);
     if (step2?.slope) tags.push(SLOPE_SHORT[step2.slope] ?? step2.slope);
     return tags;

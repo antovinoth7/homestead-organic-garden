@@ -490,6 +490,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sequenceRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
     sequenceWeek: { fontSize: 12, color: theme.primary, fontWeight: '600', width: 48 },
     sequenceAction: { flex: 1, fontSize: 12, color: theme.textSecondary },
+    sequenceNote: { fontSize: 12, color: theme.textSecondary, lineHeight: 16 },
     sectionLabel: { fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 8 },
     plantRowCard: {
       flexDirection: 'row',

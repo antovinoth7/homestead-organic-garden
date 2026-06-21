@@ -6,7 +6,7 @@ import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedListStyles';
 import { BedType, SunlightLevel } from '@/types/database.types';
 import { BedActiveFilters, BedSortOption } from '@/utils/filterAndSortBeds';
-import { BED_TYPE_EMOJI } from '@/components/BedCard';
+import { BED_TYPE_EMOJI, BED_TYPE_NAME } from '@/config/beds';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 
 export interface BedCounts {
@@ -39,16 +39,6 @@ const SORT_OPTIONS: [BedSortOption, string][] = [
   ['plants', '🌱 Plants'],
   ['legume', '🫛 Legume'],
 ];
-
-const BED_TYPE_LABELS: Record<BedType, string> = {
-  leafy: 'Leafy',
-  fruiting: 'Fruiting',
-  spice: 'Spice',
-  root_legume: 'Root/Legume',
-  climber_trellis: 'Climber',
-  three_sisters: 'Three Sisters',
-  medicinal_guild: 'Medicinal',
-};
 
 const BED_TYPE_ORDER: BedType[] = [
   'leafy',
@@ -149,7 +139,7 @@ export function BedFilterSheet({
                 <Text
                   style={[styles.sheetChipText, filters.type === val && styles.sheetChipTextActive]}
                 >
-                  {BED_TYPE_EMOJI[val]} {BED_TYPE_LABELS[val]}
+                  {BED_TYPE_EMOJI[val]} {BED_TYPE_NAME[val]}
                   {bedCounts.type[val] ? ` (${bedCounts.type[val]})` : ''}
                 </Text>
               </TouchableOpacity>

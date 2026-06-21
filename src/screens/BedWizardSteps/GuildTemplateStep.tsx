@@ -556,7 +556,7 @@ export function GuildTemplateStep({
         </View>
       )}
 
-      {plantingSequence.length > 0 && (
+      {plantingSequence.length > 0 ? (
         <View style={styles.sequenceCard}>
           <Text style={styles.sequenceTitle}>Planting Sequence</Text>
           <Text style={styles.sequenceSubtitle}>Suggested sowing order for this guild</Text>
@@ -566,6 +566,14 @@ export function GuildTemplateStep({
               <Text style={styles.sequenceAction}>{seq.action}</Text>
             </View>
           ))}
+        </View>
+      ) : (
+        <View style={styles.sequenceCard}>
+          <Text style={styles.sequenceTitle}>Planting Sequence</Text>
+          <Text style={styles.sequenceNote}>
+            🌱 Sow all crops together — this guild has no staggering, so plant the whole bed in
+            one go.
+          </Text>
         </View>
       )}
 

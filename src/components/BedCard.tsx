@@ -3,9 +3,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useTheme } from '@/theme';
-import { BedType } from '@/types/database.types';
 import { BedWithCoverage } from '@/hooks/useBedData';
-import { bedExpectsLegumes } from '@/config/beds';
+import { bedExpectsLegumes, BED_TYPE_EMOJI } from '@/config/beds';
 import { LOW_LEGUME_THRESHOLD } from '@/utils/filterAndSortBeds';
 import { getBedOccupancy } from '@/utils/bedOccupancy';
 import {
@@ -30,15 +29,9 @@ interface Props {
   onSwipeableOpen?: (ref: Swipeable) => void;
 }
 
-export const BED_TYPE_EMOJI: Record<BedType, string> = {
-  leafy: '🥬',
-  fruiting: '🍅',
-  spice: '🌿',
-  root_legume: '🥕',
-  climber_trellis: '🌱',
-  three_sisters: '🌽',
-  medicinal_guild: '🌾',
-};
+// Re-exported from the shared bed-type metadata so existing importers
+// (BedsQuickScroll, BedFilterSheet) keep working from one source of truth.
+export { BED_TYPE_EMOJI };
 
 const LIFECYCLE_ICON: Record<BedLifecycle, keyof typeof Ionicons.glyphMap> = {
   empty: 'add-circle-outline',
