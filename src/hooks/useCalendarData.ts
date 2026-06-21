@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { getTaskTemplates, deleteTasksForPlantIds, getTodayTaskLogs } from '../services/tasks';
+import {
+  getTaskTemplates,
+  deleteTasksForPlantIds,
+  deleteTasksForBedIds,
+  getTodayTaskLogs,
+} from '../services/tasks';
 import { getAllPlants, plantExists } from '../services/plants';
+import { getBeds } from '../services/beds';
 import { getJournalMetadata } from '../services/journal';
 import {
   TaskTemplate,
@@ -10,7 +16,7 @@ import {
   TaskLog,
 } from '../types/database.types';
 import { isNetworkAvailable } from '../utils/networkState';
-import { resolveTaskBedId } from '../utils/taskBed';
+import { resolveTaskBedId, isBedLevelOrphanTask } from '../utils/taskBed';
 import { logger } from '../utils/logger';
 
 type GroupBy = 'none' | 'location' | 'type' | 'plant' | 'bed';
@@ -86,6 +92,9 @@ export function useCalendarData({
   const [plants, setPlants] = useState<Plant[]>([]);
   const [todayLogs, setTodayLogs] = useState<TaskLog[]>([]);
   const [harvestEntries, setHarvestEntries] = useState<JournalEntry[]>([]);
+  // Bed-level tasks whose bed was deleted — hidden from the Care Plan and
+  // self-healed (see loadData). Keyed by task id so display filtering is O(1).
+  const [orphanBedTaskIds, setOrphanBedTaskIds] = useState<Set<string>>(new Set());
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -153,6 +162,27 @@ export function useCalendarData({
         if (confirmedOrphans.length > 0) {
           await deleteTasksForPlantIds(confirmedOrphans);
         }
+      }
+
+      // Bed-level tasks whose bed was deleted (getBeds excludes is_deleted beds)
+      // are orphans: hide them now and self-heal by deleting them. Guarded so a
+      // transient beds fetch failure never hides live bed tasks.
+      try {
+        const liveBedIds = new Set((await getBeds()).map((bed) => bed.id));
+        if (!isMountedRef.current) return;
+        const orphanBedTasks = filteredTasks.filter((task) =>
+          isBedLevelOrphanTask(task, liveBedIds)
+        );
+        setOrphanBedTaskIds(new Set(orphanBedTasks.map((task) => task.id)));
+
+        if (orphanBedTasks.length > 0 && isNetworkAvailable()) {
+          const orphanBedIds = Array.from(
+            new Set(orphanBedTasks.map((task) => task.bed_id as string))
+          );
+          await deleteTasksForBedIds(orphanBedIds);
+        }
+      } catch (error) {
+        logger.warn('Failed to resolve orphaned bed tasks', error as Error);
       }
     } catch (error) {
       if (!isMountedRef.current) return;
@@ -288,10 +318,17 @@ export function useCalendarData({
 
   const isSearching = normalizedSearchQuery.length > 0;
 
+  // Drop bed-level tasks whose bed was deleted so they never surface in the
+  // lists, calendar cells, or segment counts (they're also being self-healed).
+  const visibleTasks = useMemo(
+    () => (orphanBedTaskIds.size > 0 ? tasks.filter((t) => !orphanBedTaskIds.has(t.id)) : tasks),
+    [tasks, orphanBedTaskIds]
+  );
+
   // Tasks after search only — used for raw date lookups (ignores type/overdue filters)
   const searchFilteredTasks = useMemo(
-    () => filterTasksBySearch(tasks),
-    [tasks, filterTasksBySearch]
+    () => filterTasksBySearch(visibleTasks),
+    [visibleTasks, filterTasksBySearch]
   );
 
   // Search + type/overdue/bed filters, before the All/Beds/Other segment is applied —
@@ -526,8 +563,8 @@ export function useCalendarData({
   const groupedTasks = useMemo(() => groupTasks(tasksForDisplay), [tasksForDisplay, groupTasks]);
 
   return {
-    // Raw state
-    tasks,
+    // Raw state — orphaned (deleted-bed) tasks excluded so they never surface
+    tasks: visibleTasks,
     plants,
     initialLoading,
     refreshing,
