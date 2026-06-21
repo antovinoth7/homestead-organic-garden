@@ -436,15 +436,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.text,
     },
-    // First-paint skeleton placeholders
-    skeletonCard: {
-      height: 110,
-      marginTop: 12,
-      marginHorizontal: 16,
-      borderRadius: 12,
-      backgroundColor: theme.backgroundSecondary,
-    },
-    skeletonCardTall: {
-      height: 170,
+    // First-paint loading spinner (matches the rest of the app)
+    loadingState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
     },
   });
