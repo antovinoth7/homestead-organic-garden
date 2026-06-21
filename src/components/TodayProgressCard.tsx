@@ -27,6 +27,9 @@ interface Props {
   onPressRing: () => void;
   onPressOverdue: () => void;
   onPressType: () => void;
+  /** Label for the most-urgent remaining task, or null when nothing is pending. */
+  upNextLabel?: string | null;
+  onPressUpNext?: () => void;
 }
 
 /** Compact number display: 0-99 exact, 100-999 → "99+", 1000+ → "1k"/"1.5k". */
@@ -49,6 +52,8 @@ export const TodayProgressCard = React.memo(function TodayProgressCard({
   onPressRing,
   onPressOverdue,
   onPressType,
+  upNextLabel,
+  onPressUpNext,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -169,6 +174,23 @@ export const TodayProgressCard = React.memo(function TodayProgressCard({
           })}
         </View>
       </View>
+
+      {upNextLabel ? (
+        <TouchableOpacity
+          style={styles.upNextRow}
+          activeOpacity={0.7}
+          onPress={onPressUpNext}
+          accessibilityRole="button"
+        >
+          <Text style={styles.upNextText} numberOfLines={1}>
+            <Text style={styles.upNextLead}>Up next: </Text>
+            {upNextLabel}
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+        </TouchableOpacity>
+      ) : totalTasks > 0 ? (
+        <Text style={styles.upNextDone}>All caught up 🎉</Text>
+      ) : null}
     </View>
   );
 });

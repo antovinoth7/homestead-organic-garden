@@ -2,6 +2,7 @@ import {
   summarizeTodayTasks,
   computeDonutSegments,
   filterToKnownPlants,
+  getNextTask,
 } from '@/utils/taskSummary';
 import { makeTaskTemplate, makeTaskLog } from '../fixtures/task.fixtures';
 
@@ -87,5 +88,32 @@ describe('filterToKnownPlants', () => {
     ];
     const kept = filterToKnownPlants(logs, new Set<string>());
     expect(kept.map((l) => l.id)).toEqual(['l1']);
+  });
+});
+
+describe('getNextTask', () => {
+  it('prefers a remaining overdue task over a due-today one', () => {
+    const summary = summarizeTodayTasks(
+      [
+        makeTaskTemplate({ id: 'a', task_type: 'water', next_due_at: yesterdayIso }),
+        makeTaskTemplate({ id: 'b', task_type: 'water', next_due_at: todayIso }),
+      ],
+      [],
+      NOW
+    );
+    expect(getNextTask(summary)?.id).toBe('a');
+  });
+
+  it('falls back to a due-today task when nothing is overdue', () => {
+    const summary = summarizeTodayTasks(
+      [makeTaskTemplate({ id: 'b', task_type: 'water', next_due_at: todayIso })],
+      [],
+      NOW
+    );
+    expect(getNextTask(summary)?.id).toBe('b');
+  });
+
+  it('returns null when nothing is pending', () => {
+    expect(getNextTask(summarizeTodayTasks([], [], NOW))).toBeNull();
   });
 });

@@ -96,4 +96,33 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     chipTextDone: {
       textDecorationLine: 'line-through',
     },
+    upNextRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    upNextText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    upNextLead: {
+      color: theme.textSecondary,
+      fontWeight: '400',
+    },
+    upNextDone: {
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      fontSize: 13,
+      color: theme.textSecondary,
+      textAlign: 'center',
+    },
   });

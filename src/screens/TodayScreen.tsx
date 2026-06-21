@@ -13,7 +13,6 @@ import {
   getStoredTodayTasks,
   getStoredTodayTaskLogs,
   getSeasonalCareReminder,
-  markTaskDone,
 } from '../services/tasks';
 import { getAllPlants, getStoredPlants } from '../services/plants';
 import { TaskTemplate, Plant, TaskLog, FarmAlert } from '../types/database.types';
@@ -24,7 +23,13 @@ import { TodayScreenNavigationProp, TodayScreenRouteProp } from '../types/naviga
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useThemeMode } from '../theme';
 import { createStyles } from '../styles/todayStyles';
-import { summarizeTodayTasks, computeDonutSegments, filterToKnownPlants } from '../utils/taskSummary';
+import {
+  summarizeTodayTasks,
+  computeDonutSegments,
+  filterToKnownPlants,
+  getNextTask,
+} from '../utils/taskSummary';
+import { TASK_EMOJIS, TASK_LABELS } from '../utils/taskConstants';
 import { useTabBarScroll, TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { getErrorMessage } from '../utils/errorLogging';
@@ -43,7 +48,6 @@ import { AlmanacHighlight } from '../components/AlmanacHighlight';
 import { InputReminderStrip } from '../components/InputReminderStrip';
 import { FarmHealthCard } from '../components/FarmHealthCard';
 import { TodayProgressCard } from '../components/TodayProgressCard';
-import { TaskListSection } from '../components/TaskListSection';
 import { BedsQuickScroll } from '../components/BedsQuickScroll';
 import { TipStrip } from '../components/TipStrip';
 import type { BedWithCoverage } from '../hooks/useBedData';
@@ -273,14 +277,6 @@ export default function TodayScreen(): React.JSX.Element {
     setMode(order[(idx + 1) % order.length]!);
   }, [mode, setMode]);
 
-  const handleCompleteTask = useCallback(
-    async (template: TaskTemplate) => {
-      const ok = await markTaskDone(template);
-      if (ok) void loadData({ silent: true });
-    },
-    [loadData]
-  );
-
   const targetNames = useMemo(() => {
     const map: Record<string, string> = { ...bedNames };
     for (const plant of plants) map[plant.id] = plant.name;
@@ -296,6 +292,26 @@ export default function TodayScreen(): React.JSX.Element {
     [navigation]
   );
   const goToCarePlanPlain = useCallback(() => navigation.navigate('Care Plan'), [navigation]);
+
+  // Single "Up next" task shown under the progress donut (replaces the old
+  // on-dashboard task list). Tapping jumps to the Care Plan where it's completed.
+  const upNext = useMemo(() => {
+    const next = getNextTask(taskSummary);
+    if (!next) return null;
+    const targetName =
+      (next.plant_id && targetNames[next.plant_id]) ||
+      (next.bed_id && targetNames[next.bed_id]) ||
+      '';
+    const label = `${TASK_EMOJIS[next.task_type]} ${TASK_LABELS[next.task_type]}${
+      targetName ? ` · ${targetName}` : ''
+    }`;
+    return { label, isOverdue: next === taskSummary.overdueTasks[0] };
+  }, [taskSummary, targetNames]);
+
+  const handlePressUpNext = useCallback(() => {
+    if (upNext?.isOverdue) goToOverdue();
+    else goToCarePlanPlain();
+  }, [upNext, goToOverdue, goToCarePlanPlain]);
 
   // Daily tip (C.14): prefer the top informational farm alert (e.g. green
   // manure / pest note), else fall back to a season-specific care reminder.
@@ -349,7 +365,7 @@ export default function TodayScreen(): React.JSX.Element {
         </View>
       </View>
 
-      {/* Today's progress donut + task-type pills (C.11) */}
+      {/* Today's progress donut + task-type pills + "Up next" task (C.11) */}
       <TodayProgressCard
         completionRate={taskSummary.completionRate}
         completed={taskSummary.completed}
@@ -360,15 +376,8 @@ export default function TodayScreen(): React.JSX.Element {
         onPressRing={goToCarePlan}
         onPressOverdue={goToOverdue}
         onPressType={goToCarePlanPlain}
-      />
-
-      {/* On-screen task list with inline completion (C.15) */}
-      <TaskListSection
-        overdue={taskSummary.overdueTasks}
-        today={taskSummary.todayTasks}
-        targetNames={targetNames}
-        onComplete={handleCompleteTask}
-        onSeeAll={goToCarePlanPlain}
+        upNextLabel={upNext?.label ?? null}
+        onPressUpNext={handlePressUpNext}
       />
 
       {/* Needs Attention — actionable alerts from alerts.ts (C.8/C.10) */}
