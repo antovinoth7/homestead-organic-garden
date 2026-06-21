@@ -23,13 +23,7 @@ import { TodayScreenNavigationProp, TodayScreenRouteProp } from '../types/naviga
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useThemeMode } from '../theme';
 import { createStyles } from '../styles/todayStyles';
-import {
-  summarizeTodayTasks,
-  computeDonutSegments,
-  filterToKnownPlants,
-  getNextTask,
-} from '../utils/taskSummary';
-import { TASK_EMOJIS, TASK_LABELS } from '../utils/taskConstants';
+import { summarizeTodayTasks, computeDonutSegments, filterToKnownPlants } from '../utils/taskSummary';
 import { useTabBarScroll, TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { getErrorMessage } from '../utils/errorLogging';
@@ -277,12 +271,6 @@ export default function TodayScreen(): React.JSX.Element {
     setMode(order[(idx + 1) % order.length]!);
   }, [mode, setMode]);
 
-  const targetNames = useMemo(() => {
-    const map: Record<string, string> = { ...bedNames };
-    for (const plant of plants) map[plant.id] = plant.name;
-    return map;
-  }, [plants, bedNames]);
-
   const goToCarePlan = useCallback(
     () => navigation.navigate('Care Plan', { resetFilters: true }),
     [navigation]
@@ -292,26 +280,6 @@ export default function TodayScreen(): React.JSX.Element {
     [navigation]
   );
   const goToCarePlanPlain = useCallback(() => navigation.navigate('Care Plan'), [navigation]);
-
-  // Single "Up next" task shown under the progress donut (replaces the old
-  // on-dashboard task list). Tapping jumps to the Care Plan where it's completed.
-  const upNext = useMemo(() => {
-    const next = getNextTask(taskSummary);
-    if (!next) return null;
-    const targetName =
-      (next.plant_id && targetNames[next.plant_id]) ||
-      (next.bed_id && targetNames[next.bed_id]) ||
-      '';
-    const label = `${TASK_EMOJIS[next.task_type]} ${TASK_LABELS[next.task_type]}${
-      targetName ? ` · ${targetName}` : ''
-    }`;
-    return { label, isOverdue: next === taskSummary.overdueTasks[0] };
-  }, [taskSummary, targetNames]);
-
-  const handlePressUpNext = useCallback(() => {
-    if (upNext?.isOverdue) goToOverdue();
-    else goToCarePlanPlain();
-  }, [upNext, goToOverdue, goToCarePlanPlain]);
 
   // Daily tip (C.14): prefer the top informational farm alert (e.g. green
   // manure / pest note), else fall back to a season-specific care reminder.
@@ -376,8 +344,6 @@ export default function TodayScreen(): React.JSX.Element {
         onPressRing={goToCarePlan}
         onPressOverdue={goToOverdue}
         onPressType={goToCarePlanPlain}
-        upNextLabel={upNext?.label ?? null}
-        onPressUpNext={handlePressUpNext}
       />
 
       {/* Needs Attention — actionable alerts from alerts.ts (C.8/C.10) */}

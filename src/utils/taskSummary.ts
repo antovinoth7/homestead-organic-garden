@@ -43,15 +43,6 @@ function startOfToday(now: number): Date {
 }
 
 /**
- * The single most-urgent remaining task for the dashboard "Up next" line: the
- * first not-yet-done overdue template, else the first due-today template, else
- * null when nothing is pending.
- */
-export function getNextTask(summary: TodayTaskSummary): TaskTemplate | null {
-  return summary.overdueTasks[0] ?? summary.todayTasks[0] ?? null;
-}
-
-/**
  * Drop items that reference a plant we don't know about. Tasks/logs with no
  * `plant_id` (bed- or farm-scoped) are always kept. Shared by the dashboard's
  * warm-cache first paint and its network refresh so both filter identically.
