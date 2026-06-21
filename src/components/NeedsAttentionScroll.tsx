@@ -1,9 +1,11 @@
 /**
  * NeedsAttentionScroll (Phase C, C.8).
  *
- * Horizontal scroll of the most-urgent actionable farm alerts (max 4). Fed by
- * `alerts.ts` (`getFarmAlerts(...).filter(isActionable)`) — no inline alert
- * logic. Tapping a card bubbles the alert up so the screen can navigate.
+ * Horizontal scroll of the actionable farm alerts, ordered most-urgent first.
+ * Fed by `alerts.ts` (`getFarmAlerts(...).filter(isActionable)`) — no inline
+ * alert logic. By default every actionable alert is shown so the header count
+ * matches what's reachable; pass `maxItems` to cap. Tapping a card bubbles the
+ * alert up so the screen can navigate.
  */
 
 import React, { useMemo, useCallback } from 'react';
@@ -15,7 +17,7 @@ import { createStyles } from '@/styles/needsAttentionScrollStyles';
 interface Props {
   alerts: FarmAlert[];
   onPressAlert: (alert: FarmAlert) => void;
-  /** Max cards to show. Defaults to 4. */
+  /** Optional cap on cards shown. Defaults to showing all actionable alerts. */
   maxItems?: number;
 }
 
@@ -24,11 +26,14 @@ const keyExtractor = (item: FarmAlert): string => item.id;
 export const NeedsAttentionScroll = React.memo(function NeedsAttentionScroll({
   alerts,
   onPressAlert,
-  maxItems = 4,
+  maxItems,
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const visible = useMemo(() => alerts.slice(0, maxItems), [alerts, maxItems]);
+  const visible = useMemo(
+    () => (maxItems != null ? alerts.slice(0, maxItems) : alerts),
+    [alerts, maxItems]
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: FarmAlert }) => (
@@ -41,7 +46,7 @@ export const NeedsAttentionScroll = React.memo(function NeedsAttentionScroll({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.title}>⚠️ Needs Attention ({alerts.length})</Text>
+      <Text style={styles.title}>⚠️ Needs Attention ({visible.length})</Text>
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}

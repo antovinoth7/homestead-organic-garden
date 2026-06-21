@@ -50,6 +50,28 @@ describe('getFarmAlerts', () => {
     expect(alerts).toHaveLength(0);
   });
 
+  it('emits one actionable water alert per due plant (badge count is truthful)', () => {
+    // Several plants all watered exactly their frequency ago → each is due today.
+    const dueDate = '2026-03-13T08:00:00.000Z'; // 2 days before NOW
+    const plants = ['Mahogany VVP 01', 'Mahogany VVP 02', 'Teak VVP 01', 'Neem VVP 01'].map(
+      (name, i) =>
+        makePlant({
+          id: `p${i}`,
+          name,
+          watering_frequency_days: 2,
+          last_watered_date: dueDate,
+        })
+    );
+
+    const actionable = getFarmAlerts({ plants, now: NOW }).filter(isActionable);
+    const waterAlerts = actionable.filter((a) => a.type === 'water_needed');
+
+    // One water alert per plant, none silently dropped, ids unique.
+    expect(waterAlerts).toHaveLength(plants.length);
+    expect(waterAlerts.every((a) => a.message === 'Watering due today')).toBe(true);
+    expect(new Set(waterAlerts.map((a) => a.id)).size).toBe(plants.length);
+  });
+
   it('emits rotation alerts from cross-bed status', () => {
     const alerts = getFarmAlerts({
       plants: [],
