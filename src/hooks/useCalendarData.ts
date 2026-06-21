@@ -1,8 +1,14 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { getTaskTemplates, deleteTasksForPlantIds } from '../services/tasks';
+import { getTaskTemplates, deleteTasksForPlantIds, getTodayTaskLogs } from '../services/tasks';
 import { getAllPlants, plantExists } from '../services/plants';
 import { getJournalMetadata } from '../services/journal';
-import { TaskTemplate, Plant, JournalEntryType, JournalEntry } from '../types/database.types';
+import {
+  TaskTemplate,
+  Plant,
+  JournalEntryType,
+  JournalEntry,
+  TaskLog,
+} from '../types/database.types';
 import { isNetworkAvailable } from '../utils/networkState';
 import { resolveTaskBedId } from '../utils/taskBed';
 import { logger } from '../utils/logger';
@@ -78,6 +84,7 @@ export function useCalendarData({
 }: UseCalendarDataOptions): UseCalendarDataReturn {
   const [tasks, setTasks] = useState<TaskTemplate[]>([]);
   const [plants, setPlants] = useState<Plant[]>([]);
+  const [todayLogs, setTodayLogs] = useState<TaskLog[]>([]);
   const [harvestEntries, setHarvestEntries] = useState<JournalEntry[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -99,10 +106,11 @@ export function useCalendarData({
     lastLoadTimeRef.current = now;
 
     try {
-      const [tasksData, plantsData, journalData] = await Promise.all([
+      const [tasksData, plantsData, journalData, todayLogsData] = await Promise.all([
         getTaskTemplates(),
         getAllPlants(),
         getJournalMetadata(),
+        getTodayTaskLogs(),
       ]);
 
       if (!isMountedRef.current) return;
@@ -121,6 +129,7 @@ export function useCalendarData({
 
       setTasks(filteredTasks);
       setPlants(plantsData);
+      setTodayLogs(todayLogsData);
       setHarvestEntries(journalData.filter((e) => e.entry_type === JournalEntryType.Harvest));
 
       if (orphanPlantIds.length > 0 && isNetworkAvailable()) {
@@ -335,15 +344,24 @@ export function useCalendarData({
     });
   }, [isSearching, preSegmentTasks, selectedView, currentWeekStart, currentMonth]);
 
+  // Templates already completed today — excluded from the segment badge so the
+  // count visibly drops the moment a task is marked done (a completed recurring
+  // task only reschedules forward and would otherwise stay inside the window).
+  const completedTodayIds = useMemo(
+    () => new Set(todayLogs.map((log) => log.template_id)),
+    [todayLogs]
+  );
+
   const segmentCounts = useMemo<BedSegmentCounts>(() => {
     let bed = 0;
     let other = 0;
     for (const t of windowTasks) {
+      if (completedTodayIds.has(t.id)) continue;
       if (resolveBedId(t) != null) bed += 1;
       else other += 1;
     }
     return { bed, other };
-  }, [windowTasks, resolveBedId]);
+  }, [windowTasks, resolveBedId, completedTodayIds]);
 
   const filteredTasks = useMemo(() => {
     if (bedSegment === 'bed') return preSegmentTasks.filter((t) => resolveBedId(t) != null);
