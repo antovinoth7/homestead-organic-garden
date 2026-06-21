@@ -2,8 +2,8 @@ import React, { useMemo, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, type ViewStyle, type TextStyle } from 'react-native';
 import { useTheme } from '@/theme';
 import type { Bed, Plant, CropFamily } from '@/types/database.types';
-import { getGreenManureForMonth, getGuildTemplate } from '@/config/beds';
-import { getPlantCareProfile } from '@/utils/plantCareDefaults';
+import { getGreenManureForMonth } from '@/config/beds';
+import { getDaysToHarvestRange, isTreeLikePlant } from '@/utils/timelineHarvest';
 import { createStyles } from '@/styles/bedSuccessionTimelineStyles';
 
 const DAY_PX = 2;
@@ -27,38 +27,6 @@ const SEASON_MONTHS = [
   { id: 'sw_monsoon' as SeasonId, shortLabel: 'SW Monsoon', startM: 6, endM: 9 },
   { id: 'ne_monsoon' as SeasonId, shortLabel: 'NE Monsoon', startM: 10, endM: 12 },
 ] as const;
-
-// Build a guild-template harvest-days index keyed by plant name.
-const GUILD_HARVEST_DAYS_CACHE = new Map<string, number>();
-let guildCacheBuilt = false;
-
-function buildGuildCacheIfNeeded(): void {
-  if (guildCacheBuilt) return;
-  guildCacheBuilt = true;
-  const BED_TYPES = [
-    'leafy', 'fruiting', 'spice', 'root_legume',
-    'climber_trellis', 'three_sisters', 'medicinal_guild',
-  ] as const;
-  for (const t of BED_TYPES) {
-    for (const row of getGuildTemplate(t).plant_rows) {
-      if (row.days_to_harvest !== undefined && !GUILD_HARVEST_DAYS_CACHE.has(row.name)) {
-        GUILD_HARVEST_DAYS_CACHE.set(row.name, row.days_to_harvest);
-      }
-    }
-  }
-}
-
-function getDaysToHarvestRange(plant: Plant): { min: number; max: number } {
-  const profile = getPlantCareProfile(plant.name, plant.plant_type ?? undefined);
-  const range = profile?.daysToHarvest;
-  if (range) return { min: range.min, max: range.max };
-
-  buildGuildCacheIfNeeded();
-  const fromGuild = GUILD_HARVEST_DAYS_CACHE.get(plant.name);
-  if (fromGuild !== undefined) return { min: fromGuild, max: fromGuild };
-
-  return { min: 55, max: 75 };
-}
 
 const NEXT_CROP_AFTER: Partial<Record<CropFamily, string>> = {
   solanaceae: 'Legume — N-fixer restores soil after tomato/brinjal',
@@ -130,7 +98,15 @@ interface PlantBar {
   harvestEndOffset: number;
   /** True when no sow/planting date was recorded — the bar is anchored at today as an estimate. */
   estimated: boolean;
+  /**
+   * Perennial with no real maturity data → render one continuous "established"
+   * bar (no grow/harvest split) instead of a fabricated short harvest window.
+   */
+  continuous: boolean;
 }
+
+// How long a continuous (perennial, no-data) bar spans, in days.
+const PERENNIAL_SPAN_DAYS = 365;
 
 interface Props {
   bed: Bed;
@@ -167,13 +143,22 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
         const plantDate = recorded ?? today;
         const startOff = dayOffset(plantDate, baseYear);
         const rep = representativePlant.get(name);
-        const dth = rep ? getDaysToHarvestRange(rep) : { min: 55, max: 75 };
+        const dth = rep
+          ? getDaysToHarvestRange(rep)
+          : { min: 55, max: 75, source: 'fallback' as const, known: false };
+        // Trees take years to first harvest and their catalog days-to-harvest is
+        // a recurring picking interval — the annual grow→harvest window would be
+        // misleading, so render one continuous "established" bar instead.
+        const continuous = rep ? isTreeLikePlant(rep) : false;
+        const growDays = continuous ? PERENNIAL_SPAN_DAYS : dth.min;
+        const harvestDays = continuous ? PERENNIAL_SPAN_DAYS : dth.max;
         return {
           name,
           startOffset: startOff,
-          growEndOffset: startOff + dth.min,
-          harvestEndOffset: startOff + dth.max,
+          growEndOffset: startOff + growDays,
+          harvestEndOffset: startOff + harvestDays,
           estimated: !recorded,
+          continuous,
         };
       })
       .filter((bar) => bar.startOffset < 730);
@@ -321,6 +306,24 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
                 MONTH_HEIGHT +
                 i * ROW_HEIGHT +
                 Math.round((ROW_HEIGHT - BAR_HEIGHT) / 2);
+              if (bar.continuous) {
+                // Perennial with no maturity data: one neutral continuous bar,
+                // no fabricated harvest window.
+                return (
+                  <View
+                    key={bar.name}
+                    style={[
+                      styles.perennialBar,
+                      {
+                        left: bar.startOffset * DAY_PX,
+                        width: Math.max((bar.harvestEndOffset - bar.startOffset) * DAY_PX, 6),
+                        top: barTop,
+                        height: BAR_HEIGHT,
+                      },
+                    ]}
+                  />
+                );
+              }
               return (
                 <React.Fragment key={bar.name}>
                   {/* Growing period: sow → harvest window start */}
@@ -404,6 +407,12 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
           <View style={[styles.legendDot, styles.legendDotGreen]} />
           <Text style={styles.legendText}>Harvest window</Text>
         </View>
+        {plantBars.some((b) => b.continuous) && (
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, styles.legendDotPerennial]} />
+            <Text style={styles.legendText}>Perennial (established)</Text>
+          </View>
+        )}
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, styles.legendDotAccent]} />
           <Text style={styles.legendText}>{greenManureInfo.gm.name} (green manure)</Text>
