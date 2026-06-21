@@ -33,18 +33,11 @@ export const FarmHealthCard = React.memo(function FarmHealthCard({
   const onStressed = useCallback(() => onPressHealth('stressed'), [onPressHealth]);
   const onSick = useCallback(() => onPressHealth('sick'), [onPressHealth]);
 
-  const subtitleParts: string[] = [];
-  if (bedCount > 0) subtitleParts.push(`${bedCount} bed${bedCount === 1 ? '' : 's'}`);
-  if (usableSqm && usableSqm > 0) subtitleParts.push(`${Math.round(usableSqm)} m² usable`);
-
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>🌱 Garden Health</Text>
-          {subtitleParts.length > 0 && (
-            <Text style={styles.subtitle}>{subtitleParts.join(' · ')}</Text>
-          )}
         </View>
       </View>
 
