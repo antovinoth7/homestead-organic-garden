@@ -15,10 +15,13 @@ import * as ImagePicker from 'expo-image-picker';
 import PhotoSourceModal from '../components/modals/PhotoSourceModal';
 import FloatingLabelInput from '../components/FloatingLabelInput';
 import ThemedDropdown from '../components/ThemedDropdown';
+import VoiceInputButton from '../components/VoiceInputButton';
 import { createJournalEntry, updateJournalEntry, saveJournalImage } from '../services/journal';
 import { getAllPlants } from '../services/plants';
 import { Plant, JournalEntryType } from '../types/database.types';
 import { useBedData } from '../hooks/useBedData';
+import { useVoiceInput } from '../hooks/useVoiceInput';
+import { appendVoiceTranscript } from '../utils/voiceInput';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -97,6 +100,40 @@ export default function JournalFormScreen(): React.JSX.Element {
     );
   }, []);
 
+  // Voice-to-text (Phase E): dictate journal content in Tamil or English.
+  const VOICE_LOCALES = [
+    { code: 'ta-IN', label: 'தமிழ்' },
+    { code: 'en-IN', label: 'English' },
+  ] as const;
+  const [voiceLocale, setVoiceLocale] = useState<string>('ta-IN');
+
+  const appendVoiceText = useCallback((text: string) => {
+    setContent((prev) => appendVoiceTranscript(prev, text));
+  }, []);
+
+  const {
+    isListening,
+    partialTranscript,
+    error: voiceError,
+    isAvailable: voiceAvailable,
+    start: startVoice,
+    stop: stopVoice,
+  } = useVoiceInput({ locale: voiceLocale, onResult: appendVoiceText });
+
+  const handleMicPress = useCallback(() => {
+    if (isListening) {
+      stopVoice();
+    } else {
+      startVoice();
+    }
+  }, [isListening, startVoice, stopVoice]);
+
+  useEffect(() => {
+    if (voiceError) {
+      Alert.alert('Voice Input', voiceError);
+    }
+  }, [voiceError]);
+
   // Harvest-specific fields
   const [harvestQuantity, setHarvestQuantity] = useState(
     editEntry?.harvest_quantity?.toString() || ''
@@ -106,6 +143,9 @@ export default function JournalFormScreen(): React.JSX.Element {
     editEntry?.harvest_quality || 'good'
   );
   const [harvestNotes, setHarvestNotes] = useState(editEntry?.harvest_notes || '');
+  const [harvestTreeNumber, setHarvestTreeNumber] = useState(
+    editEntry?.harvest_tree_number?.toString() || ''
+  );
 
   useEffect(() => {
     loadPlants();
@@ -271,6 +311,10 @@ export default function JournalFormScreen(): React.JSX.Element {
         harvest_unit: entryType === JournalEntryType.Harvest ? harvestUnit : null,
         harvest_quality: entryType === JournalEntryType.Harvest ? harvestQuality : null,
         harvest_notes: entryType === JournalEntryType.Harvest ? harvestNotes : null,
+        harvest_tree_number:
+          entryType === JournalEntryType.Harvest && harvestTreeNumber.trim() !== ''
+            ? parseInt(harvestTreeNumber, 10)
+            : null,
       };
 
       if (isEditing && editEntry) {
@@ -300,19 +344,10 @@ export default function JournalFormScreen(): React.JSX.Element {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={24} color={theme.textInverse} />
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
         </TouchableOpacity>
         <Text style={styles.title}>{isEditing ? 'Edit Entry' : 'New Entry'}</Text>
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={loading}
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-        >
-          <Text style={[styles.saveText, loading && styles.saveTextDisabled]}>
-            {loading ? 'Saving...' : 'Save'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
@@ -571,10 +606,57 @@ export default function JournalFormScreen(): React.JSX.Element {
               />
               <Text style={styles.charCounter}>{harvestNotes.length}/500</Text>
             </View>
+
+            <View style={[styles.notesWrapper, styles.notesWrapperMarginTop]}>
+              <Text style={styles.label}>Tree no. (for groves, optional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. 3"
+                placeholderTextColor={theme.inputPlaceholder}
+                value={harvestTreeNumber}
+                onChangeText={(text) => setHarvestTreeNumber(text.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
+              />
+            </View>
           </View>
         )}
 
         <View style={styles.notesWrapper}>
+          {voiceAvailable && (
+            <>
+              <View style={styles.voiceRow}>
+                <View style={styles.voiceLocaleRow}>
+                  {VOICE_LOCALES.map((loc) => (
+                    <TouchableOpacity
+                      key={loc.code}
+                      style={[
+                        styles.voiceLocaleChip,
+                        voiceLocale === loc.code && styles.voiceLocaleChipActive,
+                      ]}
+                      onPress={() => setVoiceLocale(loc.code)}
+                      disabled={isListening}
+                    >
+                      <Text
+                        style={[
+                          styles.voiceLocaleChipText,
+                          voiceLocale === loc.code && styles.voiceLocaleChipTextActive,
+                        ]}
+                      >
+                        {loc.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <VoiceInputButton
+                  isListening={isListening}
+                  onPress={handleMicPress}
+                />
+              </View>
+              {isListening && (
+                <Text style={styles.voicePreview}>{partialTranscript || 'Listening…'}</Text>
+              )}
+            </>
+          )}
           <FloatingLabelInput
             label="What's happening in your garden today?"
             value={content}
@@ -589,6 +671,19 @@ export default function JournalFormScreen(): React.JSX.Element {
         {/* Extra spacing for keyboard */}
         <View style={styles.keyboardSpacer} />
       </ScrollView>
+
+      <View style={[styles.stickySaveContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={loading}
+          style={[styles.stickySaveButton, loading && styles.stickySaveButtonDisabled]}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.stickySaveButtonText}>
+            {loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Save Entry'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <PhotoSourceModal
         visible={showPhotoSourceModal}

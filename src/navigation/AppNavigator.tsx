@@ -30,13 +30,16 @@ import BedListScreen from '../screens/BedListScreen';
 import BedDetailScreen from '../screens/BedDetailScreen';
 import BedCreationWizardScreen from '../screens/BedCreationWizardScreen';
 import BedPlantPickerScreen from '../screens/BedPlantPickerScreen';
-import BedTasksScreen from '../screens/BedTasksScreen';
 import BedRotationScreen from '../screens/BedRotationScreen';
 import MyFarmScreen from '../screens/MyFarmScreen';
 import InputRecipesScreen from '../screens/InputRecipesScreen';
+import SeasonalAlmanacScreen from '../screens/SeasonalAlmanacScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
+import { useOnboardingStatus } from '../hooks/useOnboardingStatus';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+const AuthedStack = createNativeStackNavigator();
 
 const BedsStack = (): React.JSX.Element => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -44,7 +47,6 @@ const BedsStack = (): React.JSX.Element => (
     <Stack.Screen name="BedDetail" component={BedDetailScreen} />
     <Stack.Screen name="BedCreationWizard" component={BedCreationWizardScreen} />
     <Stack.Screen name="BedPlantPicker" component={BedPlantPickerScreen} />
-    <Stack.Screen name="BedTasks" component={BedTasksScreen} />
     <Stack.Screen name="BedRotation" component={BedRotationScreen} />
     <Stack.Screen name="PlantForm" component={PlantFormScreen} />
     <Stack.Screen name="PlantDetail" component={PlantDetailScreen} />
@@ -84,6 +86,7 @@ const MoreStack = (): React.JSX.Element => (
     <Stack.Screen name="Settings" component={SettingsScreen} />
     <Stack.Screen name="MyFarm" component={MyFarmScreen} />
     <Stack.Screen name="InputRecipes" component={InputRecipesScreen} />
+    <Stack.Screen name="SeasonalAlmanac" component={SeasonalAlmanacScreen} />
   </Stack.Navigator>
 );
 
@@ -167,5 +170,28 @@ export const AppTabs = (): React.JSX.Element => {
         />
       </Tab.Navigator>
     </FloatingTabBarProvider>
+  );
+};
+
+/**
+ * Authenticated root: gates the first-run onboarding flow in front of the main
+ * tabs. Both screens stay mounted so onboarding can hand off into the Beds tab
+ * (e.g. the guided first-bed wizard); `initialRouteName` only decides the entry.
+ */
+export const AuthedNavigator = (): React.JSX.Element | null => {
+  const { status, markComplete } = useOnboardingStatus();
+
+  if (status === 'loading') return null;
+
+  return (
+    <AuthedStack.Navigator
+      screenOptions={{ headerShown: false }}
+      initialRouteName={status === 'needed' ? 'Onboarding' : 'AppTabs'}
+    >
+      <AuthedStack.Screen name="AppTabs" component={AppTabs} />
+      <AuthedStack.Screen name="Onboarding">
+        {() => <OnboardingScreen onComplete={markComplete} />}
+      </AuthedStack.Screen>
+    </AuthedStack.Navigator>
   );
 };

@@ -70,7 +70,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     inputLogLabel: { fontSize: 11, color: theme.textSecondary, textAlign: 'center' },
     inputLogValue: { fontSize: 12, fontWeight: '600', color: theme.text, textAlign: 'center' },
-    inputLogTapHint: { fontSize: 10, color: theme.primary, marginTop: 2 },
+    inputLogHint: { fontSize: 11, color: theme.textTertiary, fontStyle: 'italic' },
     logInputButtons: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
     logInputChip: {
       paddingHorizontal: 10,

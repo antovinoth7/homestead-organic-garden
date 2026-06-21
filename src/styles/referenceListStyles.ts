@@ -56,6 +56,35 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 16,
       paddingBottom: 24,
     },
+    recipeBanner: {
+      backgroundColor: theme.primaryLight,
+      borderRadius: 12,
+      padding: 14,
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: theme.primary,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    recipeBannerIcon: {
+      width: 36,
+      alignItems: 'center',
+    },
+    recipeBannerContent: {
+      flex: 1,
+      minWidth: 0,
+    },
+    recipeBannerTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: theme.primary,
+    },
+    recipeBannerSubtitle: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
     sectionHeaderRow: {
       flexDirection: 'row',
       alignItems: 'center',

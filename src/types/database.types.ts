@@ -9,6 +9,10 @@ export interface FarmConfig {
   land_cents?: number;
   families_count: number;
   goals: FarmGoal[];
+  /** Tamil Nadu district selected during onboarding. Defaults to Kanyakumari. */
+  district?: string;
+  /** Agro-climatic zone id derived from the district. Drives seasons/watering. */
+  zone_id?: string;
   updated_at?: string;
 }
 
@@ -55,7 +59,10 @@ export type TaskType =
   | 'spray'
   | 'mulch'
   | 'harvest'
-  | 'harvest_leaves';
+  | 'harvest_leaves'
+  | 'weeding'
+  | 'transplanting'
+  | 'cultivating';
 export type PlantType =
   | 'vegetable'
   | 'herb'
@@ -254,6 +261,63 @@ export interface RotationStatus {
   harvest_gap_warnings: HarvestGapWarning[];
   coordinator_checklist: RotationRule[];
   green_manure_recommendation?: GreenManureRecommendation | null;
+}
+
+// ─── Phase C: Farm Alerts (dashboard "Needs Attention") ──────────────────────
+
+export type FarmAlertType =
+  | 'harvest_due'
+  | 'water_needed'
+  | 'fertilise_due'
+  | 'trellis_repair'
+  | 'prune_due'
+  | 'rotation_due'
+  | 'pest_spotted'
+  | 'bed_resting_end'
+  | 'health_sick'
+  | 'health_stressed';
+
+export type FarmAlertSeverity = 'info' | 'warning' | 'critical';
+
+/**
+ * Aggregated, derived dashboard alert. Computed on-the-fly from already-loaded
+ * plants/beds/tasks — never persisted to Firestore.
+ */
+export interface FarmAlert {
+  id: string;
+  type: FarmAlertType;
+  bedId?: string;
+  plantId?: string;
+  /** Display heading (e.g. plant or bed name). */
+  title: string;
+  /** Short action/explanation line. */
+  message: string;
+  severity: FarmAlertSeverity;
+  /** Emoji/icon hint for the card. */
+  icon: string;
+  /** Sortable urgency — higher is more urgent. */
+  daysOverdue: number;
+  created_at: string;
+}
+
+// ─── Phase C: Weather (Open-Meteo) ───────────────────────────────────────────
+
+export interface DailyWeather {
+  /** ISO date (YYYY-MM-DD). */
+  date: string;
+  tempMaxC: number;
+  tempMinC: number;
+  /** Total precipitation in mm for the day. */
+  precipitationMm: number;
+}
+
+export interface WeatherForecast {
+  latitude: number;
+  longitude: number;
+  /** 7-day daily forecast, soonest first. */
+  daily: DailyWeather[];
+  /** ISO timestamp the forecast was fetched. */
+  fetched_at: string;
 }
 
 export interface LocationProfile {
@@ -594,6 +658,8 @@ export interface JournalEntry {
   harvest_unit?: string | null; // 'kg', 'g', 'lbs', 'pieces', 'bunches'
   harvest_quality?: 'excellent' | 'good' | 'fair' | 'poor' | null;
   harvest_notes?: string | null; // Storage method, taste notes, etc.
+  // For coconut groves (record_kind 'row'): which tree this harvest came from (B.6)
+  harvest_tree_number?: number | null;
   // Bed association (Phase B2)
   bed_id?: string | null;
   created_at: string;

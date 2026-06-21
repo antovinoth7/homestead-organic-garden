@@ -9,15 +9,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     header: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
+      gap: 12,
       padding: 16,
       paddingTop: 12,
       backgroundColor: theme.tabBarBackground,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
-    closeButton: {
+    backButton: {
       width: 36,
       height: 36,
       borderRadius: 18,
@@ -30,22 +30,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       color: theme.text,
     },
-    saveText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: theme.buttonText,
+    stickySaveContainer: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: theme.background,
+      borderTopWidth: 1,
+      borderTopColor: theme.borderLight,
     },
-    saveButton: {
+    stickySaveButton: {
       backgroundColor: theme.primary,
-      paddingHorizontal: 18,
-      paddingVertical: 8,
-      borderRadius: 20,
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    saveButtonDisabled: {
+    stickySaveButtonDisabled: {
       backgroundColor: theme.borderDark,
     },
-    saveTextDisabled: {
-      color: theme.textTertiary,
+    stickySaveButtonText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.textInverse,
     },
     content: {
       flex: 1,
@@ -268,5 +273,41 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     keyboardSpacer: {
       height: 300,
+    },
+    voiceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+    },
+    voiceLocaleRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    voiceLocaleChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    voiceLocaleChipActive: {
+      backgroundColor: theme.primaryLight,
+      borderColor: theme.primary,
+    },
+    voiceLocaleChipText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      fontWeight: '500',
+    },
+    voiceLocaleChipTextActive: {
+      color: theme.primary,
+    },
+    voicePreview: {
+      fontSize: 14,
+      fontStyle: 'italic',
+      color: theme.textSecondary,
+      marginBottom: 8,
     },
   });

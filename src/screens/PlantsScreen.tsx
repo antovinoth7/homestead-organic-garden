@@ -58,7 +58,7 @@ interface ActiveFilters {
 
 const ITEMS_PER_PAGE = 20;
 
-type BedSegment = 'all' | 'bed' | 'other';
+type BedSegment = 'bed' | 'other';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -77,7 +77,7 @@ export default function PlantsScreen(): React.JSX.Element {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
-  const [bedSegment, setBedSegment] = useState<BedSegment>('all');
+  const [bedSegment, setBedSegment] = useState<BedSegment>('other');
   const { beds } = useBedData();
   const bedNameMap = useMemo(() => new Map(beds.map((b) => [b.id, b.name])), [beds]);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -464,7 +464,6 @@ export default function PlantsScreen(): React.JSX.Element {
 
   const segmentCounts = useMemo(
     () => ({
-      all: baseFiltered.length,
       bed: baseFiltered.filter((p) => p.bed_id != null).length,
       other: baseFiltered.filter((p) => p.bed_id == null).length,
     }),
@@ -473,8 +472,7 @@ export default function PlantsScreen(): React.JSX.Element {
 
   const segmentFiltered = useMemo(() => {
     if (bedSegment === 'bed') return baseFiltered.filter((p) => p.bed_id != null);
-    if (bedSegment === 'other') return baseFiltered.filter((p) => p.bed_id == null);
-    return baseFiltered;
+    return baseFiltered.filter((p) => p.bed_id == null);
   }, [baseFiltered, bedSegment]);
 
   const filteredPlants = useMemo(
@@ -509,7 +507,7 @@ export default function PlantsScreen(): React.JSX.Element {
       return (bedNameMap.get(a) ?? '').localeCompare(bedNameMap.get(b) ?? '');
     });
     for (const [bedId, bPlants] of sortedEntries) {
-      const title = bedId ? bedNameMap.get(bedId) ?? 'Unknown Bed' : 'Unassigned';
+      const title = bedId ? (bedNameMap.get(bedId) ?? 'Unknown Bed') : 'Unassigned';
       items.push({ kind: 'header', title });
       for (const p of bPlants) items.push({ kind: 'plant', data: p });
     }
@@ -706,15 +704,14 @@ export default function PlantsScreen(): React.JSX.Element {
 
       {/* ── Results & Toolbar Bar ── */}
       <View style={styles.resultsHeader}>
-        {/* ── All / Bed / Other segmented control ── */}
+        {/* ── Pots & Ground / Beds segmented control ── */}
         <View style={styles.segmentRow}>
           {(
-          [
-              ['all', 'All', segmentCounts.all],
-              ['bed', 'Bed', segmentCounts.bed],
-              ['other', 'Other', segmentCounts.other],
+            [
+              ['other', 'Pots & Ground', 'cube-outline', segmentCounts.other],
+              ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
             ] as const
-          ).map(([value, label, count]) => {
+          ).map(([value, label, icon, count]) => {
             const active = bedSegment === value;
             return (
               <TouchableOpacity
@@ -725,12 +722,19 @@ export default function PlantsScreen(): React.JSX.Element {
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={`${label} plants, ${count}`}
               >
+                <Ionicons
+                  name={icon}
+                  size={14}
+                  color={active ? theme.primary : theme.textSecondary}
+                />
                 <Text style={[styles.segmentChipText, active && styles.segmentChipTextActive]}>
                   {label}
                 </Text>
-                <Text style={[styles.segmentCount, active && styles.segmentChipTextActive]}>
-                  {count}
-                </Text>
+                <View style={[styles.segmentBadge, active && styles.segmentBadgeActive]}>
+                  <Text style={[styles.segmentBadgeText, active && styles.segmentBadgeTextActive]}>
+                    {count}
+                  </Text>
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -759,47 +763,47 @@ export default function PlantsScreen(): React.JSX.Element {
                   plants.length === 0
                     ? 'leaf-outline'
                     : homeHealthFilter === 'healthy'
-                    ? 'happy-outline'
-                    : homeHealthFilter === 'sick'
-                    ? 'medkit-outline'
-                    : homeHealthFilter === 'stressed'
-                    ? 'warning-outline'
-                    : 'search-outline'
+                      ? 'happy-outline'
+                      : homeHealthFilter === 'sick'
+                        ? 'medkit-outline'
+                        : homeHealthFilter === 'stressed'
+                          ? 'warning-outline'
+                          : 'search-outline'
                 }
                 size={64}
                 color={
                   plants.length === 0
                     ? theme.primary
                     : homeHealthFilter === 'healthy'
-                    ? theme.success
-                    : homeHealthFilter === 'sick'
-                    ? theme.error
-                    : homeHealthFilter === 'stressed'
-                    ? theme.warning
-                    : theme.border
+                      ? theme.success
+                      : homeHealthFilter === 'sick'
+                        ? theme.error
+                        : homeHealthFilter === 'stressed'
+                          ? theme.warning
+                          : theme.border
                 }
               />
               <Text style={styles.emptyText}>
                 {plants.length === 0
                   ? 'Your garden is empty'
                   : homeHealthFilter === 'healthy'
-                  ? 'No healthy plants yet'
-                  : homeHealthFilter === 'sick'
-                  ? 'No sick plants — great news!'
-                  : homeHealthFilter === 'stressed'
-                  ? 'No stressed plants — looking good!'
-                  : 'No plants match'}
+                    ? 'No healthy plants yet'
+                    : homeHealthFilter === 'sick'
+                      ? 'No sick plants — great news!'
+                      : homeHealthFilter === 'stressed'
+                        ? 'No stressed plants — looking good!'
+                        : 'No plants match'}
               </Text>
               <Text style={styles.emptySubtext}>
                 {plants.length === 0
                   ? 'Tap + to add your first plant and start tracking your garden'
                   : homeHealthFilter === 'healthy'
-                  ? 'Add plants and keep them thriving'
-                  : homeHealthFilter === 'sick'
-                  ? 'All your plants are doing well 🌱'
-                  : homeHealthFilter === 'stressed'
-                  ? 'Your garden is healthy and happy 🎉'
-                  : 'Try adjusting your filters or search'}
+                    ? 'Add plants and keep them thriving'
+                    : homeHealthFilter === 'sick'
+                      ? 'All your plants are doing well 🌱'
+                      : homeHealthFilter === 'stressed'
+                        ? 'Your garden is healthy and happy 🎉'
+                        : 'Try adjusting your filters or search'}
               </Text>
               {plants.length === 0 ? (
                 <TouchableOpacity

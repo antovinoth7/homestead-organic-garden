@@ -12,6 +12,7 @@ import {
   where,
   orderBy,
   Timestamp,
+  type DocumentReference,
 } from 'firebase/firestore';
 import { getData, setData, KEYS } from '../lib/storage';
 import {
@@ -286,28 +287,123 @@ export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> 
   invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS, CACHE_KEYS.TODAY_TASK_LOGS);
 };
 
-export const markTaskDone = async (
-  template: TaskTemplate,
-  notes?: string,
-  productUsed?: string,
-  options?: MarkTaskDoneOptions
-): Promise<boolean> => {
+/**
+ * Delete bed-level tasks (and their logs) for the given beds — the cascade
+ * counterpart to `deleteTasksForPlantIds`, run when a bed is deleted so its
+ * "Water the bed" / soil-input tasks don't linger as orphans. Bed-level tasks
+ * carry `bed_id`; their logs are matched by `template_id` (TaskLog has no
+ * `bed_id`). Plant-level tasks for the bed are handled by the plant cascade.
+ */
+export const deleteTasksForBedIds = async (bedIds: string[]): Promise<void> => {
+  const uniqueBedIds = Array.from(
+    new Set(bedIds.filter((bedId) => bedId && bedId.trim() !== ''))
+  );
+  if (uniqueBedIds.length === 0) return;
+
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
 
-  // Verify the task belongs to the current user
-  if (template.user_id !== user.uid) {
-    throw new Error('Not authorized to complete this task');
+  const bedIdSet = new Set(uniqueBedIds);
+  const tasks = await getTaskTemplates();
+  const logs = await getTaskLogs();
+
+  const tasksToDelete = tasks.filter((task) => task.bed_id != null && bedIdSet.has(task.bed_id));
+  if (tasksToDelete.length === 0) return;
+
+  const deletedTaskIds = new Set(tasksToDelete.map((task) => task.id));
+  const logsToDelete = logs.filter((log) => deletedTaskIds.has(log.template_id));
+
+  // Batch delete templates + logs atomically (Firestore caps batches at 500 ops)
+  const BATCH_LIMIT = 500;
+  const allDeletes = [
+    ...tasksToDelete.map((task) => doc(db, TASKS_COLLECTION, task.id)),
+    ...logsToDelete.map((log) => doc(db, TASK_LOGS_COLLECTION, log.id)),
+  ];
+
+  for (let i = 0; i < allDeletes.length; i += BATCH_LIMIT) {
+    const chunk = allDeletes.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    for (const ref of chunk) {
+      batch.delete(ref);
+    }
+    await withTimeoutAndRetry(() => batch.commit(), {
+      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+    });
   }
 
+  const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+  if (cachedTasks.length > 0) {
+    const filteredTasks = cachedTasks.filter(
+      (task) => task.bed_id == null || !bedIdSet.has(task.bed_id)
+    );
+    await setData(KEYS.TASKS, filteredTasks);
+  }
+
+  const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
+  if (cachedLogs.length > 0) {
+    const filteredLogs = cachedLogs.filter((log) => !deletedTaskIds.has(log.template_id));
+    await setData(KEYS.TASK_LOGS, filteredLogs);
+  }
+
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS, CACHE_KEYS.TODAY_TASK_LOGS);
+};
+
+/**
+ * Bed-task subtypes whose completion should stamp the bed's last-input date,
+ * so the bed detail's Soil Input Log stays in sync with the Care Plan (which is
+ * the single completion surface). Subtypes with no date field (mulch, wood_ash,
+ * chop_and_drop) simply complete as normal.
+ */
+const BED_TASK_SUBTYPE_DATE_FIELD: Partial<
+  Record<string, 'last_water_date' | 'last_jeevamrutha_date' | 'last_weeding_date'>
+> = {
+  water_bed: 'last_water_date',
+  jeevamrutha: 'last_jeevamrutha_date',
+  weeding: 'last_weeding_date',
+};
+
+type BedDateField = 'last_water_date' | 'last_jeevamrutha_date' | 'last_weeding_date';
+
+/**
+ * All the Firestore operations and matching local-cache deltas needed to mark a
+ * single task done. Pure/synchronous: callers feed it the already-loaded cached
+ * plants (for the water-frequency multiplier and the one-shot archive check), so
+ * the same builder serves both the single-complete and batch-complete paths.
+ */
+interface TaskDoneOps {
+  log: { ref: DocumentReference; data: Record<string, unknown> };
+  templateUpdate: {
+    ref: DocumentReference;
+    data: { next_due_at?: Timestamp; enabled?: boolean };
+  } | null;
+  plantUpdate: { ref: DocumentReference; data: Record<string, string> } | null;
+  cache: {
+    newTaskLog: TaskLog;
+    taskId: string;
+    taskPatch: Partial<Pick<TaskTemplate, 'enabled' | 'next_due_at'>> | null;
+    plantPatch: { plantId: string; field: PlantLastCareField; value: string } | null;
+  };
+  sideEffects: {
+    bedStamp: { bedId: string; field: BedDateField; value: string } | null;
+    archiveOneShotPlantId: string | null;
+  };
+}
+
+const buildTaskDoneOps = (
+  template: TaskTemplate,
+  userId: string,
+  cachedPlants: Plant[],
+  notes?: string,
+  productUsed?: string
+): TaskDoneOps => {
   const doneAt = new Date();
+  const doneAtIso = doneAt.toISOString();
   const frequencyDays = Number.isFinite(template.frequency_days) ? template.frequency_days : 0;
 
   // For water tasks, apply Kanyakumari season-aware multiplier so next due
   // date reflects actual rainfall / heat conditions.
   let effectiveDays = frequencyDays;
   if (template.task_type === 'water' && template.plant_id && frequencyDays > 0) {
-    const cachedPlants = await getData<Plant>(KEYS.PLANTS);
     const waterPlant = cachedPlants.find((p) => p.id === template.plant_id);
     if (waterPlant) {
       effectiveDays = Math.max(
@@ -322,12 +418,223 @@ export const markTaskDone = async (
   nextDueAt.setDate(nextDueAt.getDate() + effectiveDays);
   nextDueAt.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0); // Always set to 6:00 PM
 
-  const startOfDay = new Date(doneAt);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(doneAt);
-  endOfDay.setHours(23, 59, 59, 999);
+  // Insert task log with optional notes
+  const logRef = doc(collection(db, TASK_LOGS_COLLECTION));
+  const logData = {
+    user_id: userId,
+    template_id: template.id,
+    plant_id: template.plant_id,
+    task_type: template.task_type,
+    done_at: Timestamp.fromDate(doneAt),
+    notes: notes || null,
+    product_used: productUsed || null,
+    created_at: Timestamp.now(),
+  };
+
+  // Update next due date
+  const templateUpdates: { next_due_at?: Timestamp; enabled?: boolean } = {};
+  let nextDueAtIso: string | undefined;
+  if (frequencyDays <= 0) {
+    templateUpdates.enabled = false;
+    templateUpdates.next_due_at = Timestamp.fromDate(doneAt);
+    nextDueAtIso = doneAtIso;
+  } else if (!Number.isNaN(nextDueAt.getTime())) {
+    templateUpdates.next_due_at = Timestamp.fromDate(nextDueAt);
+    nextDueAtIso = nextDueAt.toISOString();
+  }
+  const hasTemplateUpdate = Object.keys(templateUpdates).length > 0;
+
+  // Determine plant last-care update
+  const plantLastCareField = TASK_TYPE_TO_PLANT_LAST_CARE_FIELD[template.task_type];
+
+  const newTaskLog: TaskLog = {
+    id: logRef.id,
+    user_id: userId,
+    template_id: template.id,
+    plant_id: template.plant_id,
+    task_type: template.task_type,
+    done_at: doneAtIso,
+    notes: notes || null,
+    product_used: productUsed || null,
+    created_at: doneAtIso,
+  };
+
+  // Bed tasks: stamp the bed's matching last-input date so the bed detail's
+  // Soil Input Log reflects this completion (Care Plan is the single "do" surface).
+  const bedDateField = template.task_subtype
+    ? BED_TASK_SUBTYPE_DATE_FIELD[template.task_subtype]
+    : undefined;
+
+  // For one_shot annual plants: completing a harvest task auto-archives the plant.
+  let archiveOneShotPlantId: string | null = null;
+  if (template.task_type === 'harvest' && template.plant_id) {
+    const harvestedPlant = cachedPlants.find((p) => p.id === template.plant_id);
+    if (harvestedPlant?.harvest_mode === 'one_shot' && !isPlantArchived(harvestedPlant)) {
+      archiveOneShotPlantId = template.plant_id;
+    }
+  }
+
+  return {
+    log: { ref: logRef, data: logData },
+    templateUpdate: hasTemplateUpdate
+      ? { ref: doc(db, TASKS_COLLECTION, template.id), data: templateUpdates }
+      : null,
+    plantUpdate:
+      template.plant_id && plantLastCareField
+        ? {
+            ref: doc(db, PLANTS_COLLECTION, template.plant_id),
+            data: { [plantLastCareField]: doneAtIso },
+          }
+        : null,
+    cache: {
+      newTaskLog,
+      taskId: template.id,
+      taskPatch: hasTemplateUpdate
+        ? {
+            ...(typeof templateUpdates.enabled === 'boolean'
+              ? { enabled: templateUpdates.enabled }
+              : {}),
+            ...(nextDueAtIso ? { next_due_at: nextDueAtIso } : {}),
+          }
+        : null,
+      plantPatch:
+        template.plant_id && plantLastCareField
+          ? { plantId: template.plant_id, field: plantLastCareField, value: doneAtIso }
+          : null,
+    },
+    sideEffects: {
+      bedStamp:
+        template.bed_id && bedDateField
+          ? { bedId: template.bed_id, field: bedDateField, value: doneAtIso }
+          : null,
+      archiveOneShotPlantId,
+    },
+  };
+};
+
+/**
+ * Apply the local-cache deltas for one or more completed tasks with a single
+ * read-modify-write per storage key (logs / tasks / plants), then invalidate.
+ * Batch-completing N tasks no longer serialises the whole arrays N times.
+ */
+const applyTaskDoneCacheDeltas = async (opsList: TaskDoneOps[]): Promise<void> => {
+  if (opsList.length === 0) return;
+
+  // Logs — prepend all new logs (preserve input order: newest-first overall).
+  const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
+  for (let i = opsList.length - 1; i >= 0; i--) {
+    cachedLogs.unshift(opsList[i]!.cache.newTaskLog);
+  }
+  await setData(KEYS.TASK_LOGS, cachedLogs);
+
+  // Task templates — apply next_due_at / enabled patches.
+  const taskPatches = opsList.filter((o) => o.cache.taskPatch);
+  if (taskPatches.length > 0) {
+    const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+    let changed = false;
+    for (const o of taskPatches) {
+      const idx = cachedTasks.findIndex((t) => t.id === o.cache.taskId);
+      if (idx !== -1) {
+        cachedTasks[idx] = { ...cachedTasks[idx]!, ...o.cache.taskPatch! };
+        changed = true;
+      }
+    }
+    if (changed) await setData(KEYS.TASKS, cachedTasks);
+  }
+
+  // Plants — apply last-care-date patches.
+  const plantPatches = opsList.filter((o) => o.cache.plantPatch);
+  if (plantPatches.length > 0) {
+    const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+    let changed = false;
+    for (const o of plantPatches) {
+      const p = o.cache.plantPatch!;
+      const idx = cachedPlants.findIndex((pl) => pl.id === p.plantId);
+      if (idx !== -1) {
+        cachedPlants[idx] = { ...cachedPlants[idx]!, [p.field]: p.value };
+        changed = true;
+      }
+    }
+    if (changed) await setData(KEYS.PLANTS, cachedPlants);
+  }
+
+  invalidate(
+    CACHE_KEYS.TODAY_TASKS,
+    CACHE_KEYS.TASK_TEMPLATES,
+    CACHE_KEYS.TODAY_TASK_LOGS,
+    CACHE_KEYS.ALL_PLANTS
+  );
+};
+
+/**
+ * Run the post-commit side-effects for completed tasks: stamp bed last-input
+ * dates (deduped/merged per bed) and auto-archive one_shot harvested plants.
+ */
+const runTaskDoneSideEffects = async (opsList: TaskDoneOps[]): Promise<void> => {
+  // Bed stamps — merge all fields per bed into a single update.
+  const bedUpdates = new Map<string, Partial<Record<BedDateField, string>>>();
+  for (const o of opsList) {
+    const stamp = o.sideEffects.bedStamp;
+    if (stamp) {
+      const existing = bedUpdates.get(stamp.bedId) ?? {};
+      existing[stamp.field] = stamp.value;
+      bedUpdates.set(stamp.bedId, existing);
+    }
+  }
+  if (bedUpdates.size > 0) {
+    try {
+      const { updateBed } = await import('./beds');
+      for (const [bedId, data] of bedUpdates) {
+        await updateBed(bedId, data);
+      }
+    } catch (err) {
+      logger.warn('markTaskDone: failed to stamp bed input date', err as Error);
+    }
+  }
+
+  // One-shot harvest auto-archive — deduped.
+  const archiveIds = Array.from(
+    new Set(
+      opsList
+        .map((o) => o.sideEffects.archiveOneShotPlantId)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  if (archiveIds.length > 0) {
+    try {
+      const { archivePlant } = await import('./plants');
+      for (const id of archiveIds) {
+        await archivePlant(id);
+      }
+    } catch (err) {
+      logger.warn('markTaskDone: failed to auto-archive one_shot plant', err as Error);
+    }
+  }
+};
+
+export const markTaskDone = async (
+  template: TaskTemplate,
+  notes?: string,
+  productUsed?: string,
+  options?: MarkTaskDoneOptions
+): Promise<boolean> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  // Verify the task belongs to the current user
+  if (template.user_id !== user.uid) {
+    throw new Error('Not authorized to complete this task');
+  }
+
+  const frequencyDays = Number.isFinite(template.frequency_days) ? template.frequency_days : 0;
 
   if (!options?.skipAlreadyDoneCheck) {
+    const doneAt = new Date();
+    const startOfDay = new Date(doneAt);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(doneAt);
+    endOfDay.setHours(23, 59, 59, 999);
+
     const existingLogs = await getTaskLogs(template.id);
     const alreadyDoneToday = existingLogs.some((log) => {
       const logDate = new Date(log.done_at);
@@ -344,118 +651,94 @@ export const markTaskDone = async (
     }
   }
 
-  // Insert task log with optional notes
-  const logDocRef = doc(collection(db, TASK_LOGS_COLLECTION));
-  const doneAtIso = doneAt.toISOString();
-  const logData = {
-    user_id: user.uid,
-    template_id: template.id,
-    plant_id: template.plant_id,
-    task_type: template.task_type,
-    done_at: Timestamp.fromDate(doneAt),
-    notes: notes || null,
-    product_used: productUsed || null,
-    created_at: Timestamp.now(),
-  };
-
-  // Update next due date
-  const templateDocRef = doc(db, TASKS_COLLECTION, template.id);
-  const templateUpdates: { next_due_at?: Timestamp; enabled?: boolean } = {};
-  let nextDueAtIso: string | undefined;
-  if (frequencyDays <= 0) {
-    templateUpdates.enabled = false;
-    templateUpdates.next_due_at = Timestamp.fromDate(doneAt);
-    nextDueAtIso = doneAtIso;
-  } else if (!Number.isNaN(nextDueAt.getTime())) {
-    templateUpdates.next_due_at = Timestamp.fromDate(nextDueAt);
-    nextDueAtIso = nextDueAt.toISOString();
-  }
-
-  // Determine plant last-care update
-  const plantLastCareField = TASK_TYPE_TO_PLANT_LAST_CARE_FIELD[template.task_type];
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  const ops = buildTaskDoneOps(template, user.uid, cachedPlants, notes, productUsed);
 
   // Atomic batch: create log + update template + update plant in one commit
   const batch = writeBatch(db);
-  batch.set(logDocRef, logData);
-  if (Object.keys(templateUpdates).length > 0) {
-    batch.update(templateDocRef, templateUpdates);
-  }
-  if (template.plant_id && plantLastCareField) {
-    batch.update(doc(db, PLANTS_COLLECTION, template.plant_id), {
-      [plantLastCareField]: doneAtIso,
-    });
-  }
+  batch.set(ops.log.ref, ops.log.data);
+  if (ops.templateUpdate) batch.update(ops.templateUpdate.ref, ops.templateUpdate.data);
+  if (ops.plantUpdate) batch.update(ops.plantUpdate.ref, ops.plantUpdate.data);
   await withTimeoutAndRetry(() => batch.commit(), {
     timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
   });
 
-  // ── Update local caches after successful batch commit ──
-
-  const newTaskLog: TaskLog = {
-    id: logDocRef.id,
-    user_id: user.uid,
-    template_id: template.id,
-    plant_id: template.plant_id,
-    task_type: template.task_type,
-    done_at: doneAtIso,
-    notes: notes || null,
-    product_used: productUsed || null,
-    created_at: doneAtIso,
-  };
-  const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
-  cachedLogs.unshift(newTaskLog);
-  await setData(KEYS.TASK_LOGS, cachedLogs);
-
-  if (Object.keys(templateUpdates).length > 0) {
-    const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
-    const taskIndex = cachedTasks.findIndex((task) => task.id === template.id);
-    if (taskIndex !== -1) {
-      cachedTasks[taskIndex] = {
-        ...cachedTasks[taskIndex]!,
-        ...(typeof templateUpdates.enabled === 'boolean'
-          ? { enabled: templateUpdates.enabled }
-          : {}),
-        ...(nextDueAtIso ? { next_due_at: nextDueAtIso } : {}),
-      };
-      await setData(KEYS.TASKS, cachedTasks);
-    }
-  }
-
-  if (template.plant_id && plantLastCareField) {
-    const cachedPlants = await getData<Plant>(KEYS.PLANTS);
-    const plantIndex = cachedPlants.findIndex((plant) => plant.id === template.plant_id);
-    if (plantIndex !== -1) {
-      cachedPlants[plantIndex] = {
-        ...cachedPlants[plantIndex]!,
-        [plantLastCareField]: doneAtIso,
-      };
-      await setData(KEYS.PLANTS, cachedPlants);
-    }
-  }
-
-  // Invalidate caches after mutation
-  invalidate(
-    CACHE_KEYS.TODAY_TASKS,
-    CACHE_KEYS.TASK_TEMPLATES,
-    CACHE_KEYS.TODAY_TASK_LOGS,
-    CACHE_KEYS.ALL_PLANTS
-  );
-
-  // For one_shot annual plants: completing a harvest task auto-archives the plant.
-  if (template.task_type === 'harvest' && template.plant_id) {
-    const plants = await getData<Plant>(KEYS.PLANTS);
-    const harvestedPlant = plants.find((p) => p.id === template.plant_id);
-    if (harvestedPlant?.harvest_mode === 'one_shot' && !isPlantArchived(harvestedPlant)) {
-      try {
-        const { archivePlant } = await import('./plants');
-        await archivePlant(template.plant_id);
-      } catch (err) {
-        logger.warn('markTaskDone: failed to auto-archive one_shot plant', err as Error);
-      }
-    }
-  }
+  await applyTaskDoneCacheDeltas([ops]);
+  await runTaskDoneSideEffects([ops]);
 
   return true;
+};
+
+// Each completed task contributes ≤ 3 writes (log + template + plant); cap tasks
+// per batch so we stay under Firestore's 500-operation limit.
+const MAX_TASKS_PER_BATCH = Math.floor(500 / 3);
+
+/**
+ * Complete many tasks in one pass: chunked Firestore batches (one commit per
+ * ≤166 tasks instead of one per task) and a single cache read-modify-write per
+ * key. Used by the Care Plan's "Complete selected" action.
+ *
+ * Callers pass `skipAlreadyDoneCheck: true` (the selection UI is the intent).
+ * Without it we defer to per-task `markTaskDone` to preserve the duplicate guard.
+ */
+export const markTasksDone = async (
+  templates: TaskTemplate[],
+  options?: MarkTaskDoneOptions
+): Promise<{ succeeded: number; failed: number }> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const owned = templates.filter((t) => t.user_id === user.uid);
+  if (owned.length === 0) return { succeeded: 0, failed: templates.length };
+
+  if (!options?.skipAlreadyDoneCheck) {
+    const results = await Promise.allSettled(owned.map((t) => markTaskDone(t)));
+    const succeeded = results.filter((r) => r.status === 'fulfilled' && r.value === true).length;
+    return { succeeded, failed: templates.length - succeeded };
+  }
+
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  const opsList = owned.map((t) => buildTaskDoneOps(t, user.uid, cachedPlants));
+
+  let committed = 0;
+  for (let i = 0; i < opsList.length; i += MAX_TASKS_PER_BATCH) {
+    const chunk = opsList.slice(i, i + MAX_TASKS_PER_BATCH);
+    const batch = writeBatch(db);
+    // Merge plant updates within the chunk so we never write the same plant doc twice.
+    const plantRefs = new Map<string, DocumentReference>();
+    const plantData = new Map<string, Record<string, string>>();
+    for (const ops of chunk) {
+      batch.set(ops.log.ref, ops.log.data);
+      if (ops.templateUpdate) batch.update(ops.templateUpdate.ref, ops.templateUpdate.data);
+      if (ops.plantUpdate) {
+        const key = ops.plantUpdate.ref.path;
+        plantRefs.set(key, ops.plantUpdate.ref);
+        plantData.set(key, { ...(plantData.get(key) ?? {}), ...ops.plantUpdate.data });
+      }
+    }
+    for (const [key, data] of plantData) {
+      batch.update(plantRefs.get(key)!, data);
+    }
+
+    try {
+      await withTimeoutAndRetry(() => batch.commit(), {
+        timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+      });
+      committed += chunk.length;
+    } catch (err) {
+      logger.error('markTasksDone: batch commit failed', err as Error);
+      // Persist whatever committed before the failure, then report the rest as failed.
+      const committedOps = opsList.slice(0, committed);
+      await applyTaskDoneCacheDeltas(committedOps);
+      await runTaskDoneSideEffects(committedOps);
+      return { succeeded: committed, failed: templates.length - committed };
+    }
+  }
+
+  await applyTaskDoneCacheDeltas(opsList);
+  await runTaskDoneSideEffects(opsList);
+
+  return { succeeded: committed, failed: templates.length - committed };
 };
 
 export const getTaskLogs = async (templateId?: string): Promise<TaskLog[]> => {

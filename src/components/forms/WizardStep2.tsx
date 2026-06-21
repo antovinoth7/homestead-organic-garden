@@ -70,33 +70,17 @@ export function WizardStep2({ formState }: Props): React.JSX.Element {
         </Text>
       )}
 
-      {parentLocation !== '' && (
-        <View style={formStyles.directionChipsWrapper}>
-          <Text style={formStyles.directionChipsFloatingLabel}>Direction / Section </Text>
-          <View style={formStyles.directionChipsContainer}>
-            {childLocationOptions.map((loc) => (
-              <TouchableOpacity
-                key={loc}
-                style={[
-                  formStyles.directionChip,
-                  childLocation === loc && formStyles.directionChipActive,
-                ]}
-                onPress={() => setChildLocation(loc)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    formStyles.directionChipText,
-                    childLocation === loc && formStyles.directionChipTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {loc}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+      {parentLocation !== '' && childLocationOptions.length > 0 && (
+        <ThemedDropdown
+          items={[
+            { label: 'Select Direction / Section', value: '' },
+            ...childLocationOptions.map((loc) => ({ label: loc, value: loc })),
+          ]}
+          selectedValue={childLocation}
+          onValueChange={(value) => setChildLocation(value)}
+          label="Direction / Section"
+          placeholder="Direction / Section"
+        />
       )}
 
       {location ? (

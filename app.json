@@ -48,6 +48,14 @@
           "project": "organic-gardening-app",
           "organization": "antovinoth7"
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone for voice journaling.",
+          "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to recognize your speech for voice journaling.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
       ]
     ],
     "extra": {

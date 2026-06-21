@@ -26,7 +26,6 @@ export type BedsStackParamList = {
       }
     | undefined;
   BedPlantPicker: { bedId: string };
-  BedTasks: { bedId: string };
   BedRotation: undefined;
   PlantForm: PlantsStackParamList['PlantForm'];
   PlantDetail: { plantId: string };
@@ -97,6 +96,7 @@ export type MoreStackParamList = {
   Settings: undefined;
   MyFarm: undefined;
   InputRecipes: { initialTab?: string } | undefined;
+  SeasonalAlmanac: undefined;
 };
 
 // ─── Global declaration (makes useNavigation() auto-typed) ───────────────────
@@ -216,12 +216,6 @@ export type BedPlantPickerNavigationProp = NativeStackNavigationProp<
   'BedPlantPicker'
 >;
 export type BedPlantPickerRouteProp = RouteProp<BedsStackParamList, 'BedPlantPicker'>;
-
-export type BedTasksScreenNavigationProp = NativeStackNavigationProp<
-  BedsStackParamList,
-  'BedTasks'
->;
-export type BedTasksScreenRouteProp = RouteProp<BedsStackParamList, 'BedTasks'>;
 
 export type BedRotationScreenNavigationProp = NativeStackNavigationProp<
   BedsStackParamList,

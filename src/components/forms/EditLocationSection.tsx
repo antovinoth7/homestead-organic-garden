@@ -70,30 +70,17 @@ export function EditLocationSection({ formState }: Props): React.JSX.Element {
         placeholder="Location"
       />
 
-      {parentLocation !== '' && (
-        <View style={styles.directionChipsWrapper}>
-          <Text style={styles.directionChipsFloatingLabel}>Direction / Section </Text>
-          <View style={styles.directionChipsContainer}>
-            {childLocationOptions.map((loc) => (
-              <TouchableOpacity
-                key={loc}
-                style={[styles.directionChip, childLocation === loc && styles.directionChipActive]}
-                onPress={() => setChildLocation(loc)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.directionChipText,
-                    childLocation === loc && styles.directionChipTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {loc}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+      {parentLocation !== '' && childLocationOptions.length > 0 && (
+        <ThemedDropdown
+          items={[
+            { label: 'Select Direction / Section', value: '' },
+            ...childLocationOptions.map((loc) => ({ label: loc, value: loc })),
+          ]}
+          selectedValue={childLocation}
+          onValueChange={(value) => setChildLocation(value)}
+          label="Direction / Section"
+          placeholder="Direction / Section"
+        />
       )}
 
       {location ? (

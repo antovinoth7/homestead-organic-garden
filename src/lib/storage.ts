@@ -16,6 +16,8 @@ const STORAGE_KEYS = {
   PLANT_PROFILES: '@garden_plant_profiles',
   BEDS: '@garden_beds',
   FARM_CONFIG: '@garden_farm_config',
+  WEATHER: '@garden_weather',
+  ONBOARDING_COMPLETE: '@garden_onboarding_complete',
 };
 
 // Export as KEYS for backwards compatibility

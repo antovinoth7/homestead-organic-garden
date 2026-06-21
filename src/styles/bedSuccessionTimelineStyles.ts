@@ -8,6 +8,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
   StyleSheet.create({
     container: {
       marginTop: 4,
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 1,
     },
     timelineRow: {
       flexDirection: 'row' as const,
@@ -81,22 +91,23 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     monthLabel: {
       position: 'absolute' as const,
       fontSize: 8,
-      color: theme.textTertiary,
-      fontWeight: '500' as const,
+      color: theme.textSecondary,
+      fontWeight: '600' as const,
     },
     // Harvest bars
     harvestBar: {
       position: 'absolute' as const,
       backgroundColor: theme.success,
       borderRadius: 4,
-      opacity: 0.8,
     },
-    // Growing-period bar (sow → harvest window start)
+    // Growing-period bar (sow → harvest window start). Pale fill + a green
+    // outline so it stays legible on the white card surface.
     growingBar: {
       position: 'absolute' as const,
       backgroundColor: theme.primaryLight,
       borderRadius: 4,
-      opacity: 0.85,
+      borderWidth: 1,
+      borderColor: theme.primary,
     },
     // Estimated bar (plant has no recorded planting date — anchored at today)
     estimatedBar: {
@@ -154,6 +165,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     legendDotGrowing: {
       backgroundColor: theme.primaryLight,
+      borderWidth: 1,
+      borderColor: theme.primary,
     },
     legendText: {
       fontSize: 10,

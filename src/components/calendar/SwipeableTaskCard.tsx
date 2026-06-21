@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,10 +25,16 @@ interface Props {
   onSkipOpen: (task: TaskTemplate) => void;
   onSelectToggle: (taskId: string) => void;
   onDetail: (task: TaskTemplate) => void;
+  /** Shared StyleSheet from the screen — avoids rebuilding the large factory per card. */
+  styles: ReturnType<typeof createStyles>;
   bedMap?: Map<string, string>;
+  /** Watering tasks: rain predicted on the due date — show a "may skip" badge. */
+  rainExpected?: boolean;
+  /** Harvest tasks: formatted estimated harvest date hint (e.g. "Aug 12"). */
+  harvestHint?: string | null;
 }
 
-export function SwipeableTaskCard({
+function SwipeableTaskCardComponent({
   task,
   isSelected,
   plantMap,
@@ -39,10 +45,12 @@ export function SwipeableTaskCard({
   onSkipOpen,
   onSelectToggle,
   onDetail,
+  styles,
   bedMap,
+  rainExpected,
+  harvestHint,
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
 
   if (!task || !task.next_due_at) return null;
 
@@ -54,6 +62,11 @@ export function SwipeableTaskCard({
 
   const plantObj = task.plant_id ? plantMap.get(task.plant_id) : undefined;
   const effectivePriority = task.priority_level || calculateTaskPriority(task, plantObj || null);
+
+  // Bed-level tasks have no plant — surface the bed name as the label so the
+  // farmer can tell *where* to act instead of a generic "General".
+  const bedLabel = task.bed_id != null ? bedMap?.get(task.bed_id) ?? null : null;
+  const displayName = task.plant_id ? plantDetails.name : bedLabel ?? plantDetails.name;
 
   const priorityColor =
     effectivePriority === 'critical'
@@ -175,13 +188,18 @@ export function SwipeableTaskCard({
                       </Text>
                     </View>
                   )}
+                  {rainExpected && (
+                    <View style={styles.taskRainBadge}>
+                      <Text style={styles.taskRainBadgeText}>🌧️ Rain expected — may skip</Text>
+                    </View>
+                  )}
                 </View>
-                <Text style={styles.taskPlant}>{plantDetails.name}</Text>
+                <Text style={styles.taskPlant}>{displayName}</Text>
                 {plantDetails.location && (
                   <Text style={styles.taskLocation}>📍 {plantDetails.location}</Text>
                 )}
-                {task.bed_id != null && bedMap?.get(task.bed_id) != null && (
-                  <Text style={styles.taskBed}>🪴 {bedMap.get(task.bed_id)}</Text>
+                {task.plant_id != null && bedLabel != null && (
+                  <Text style={styles.taskBed}>🪴 {bedLabel}</Text>
                 )}
                 {task.preferred_time && (
                   <Text style={styles.taskPreferredTime}>
@@ -191,6 +209,9 @@ export function SwipeableTaskCard({
                       ? '☀️ Afternoon'
                       : '🌙 Evening'}
                   </Text>
+                )}
+                {harvestHint && (
+                  <Text style={styles.taskHarvestHint}>🧺 Est. harvest: {harvestHint}</Text>
                 )}
               </View>
               <View style={styles.taskRight}>
@@ -222,3 +243,8 @@ export function SwipeableTaskCard({
     </Swipeable>
   );
 }
+
+// Memoized so toggling one task's selection (or batch progress) only re-renders
+// the affected card, not every mounted card. All props are primitives or stable
+// refs from the screen, so the default shallow comparison is correct.
+export const SwipeableTaskCard = React.memo(SwipeableTaskCardComponent);

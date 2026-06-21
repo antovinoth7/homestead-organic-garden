@@ -20,7 +20,13 @@ function makeBed(type: BedType, legumePct: number): BedWithCoverage {
     created_at: '2025-01-01',
     updated_at: '2025-01-01',
   };
-  return { ...base, legume_coverage_pct: legumePct, plant_count: 4, active_plant_count: 4 };
+  return {
+    ...base,
+    legume_coverage_pct: legumePct,
+    plant_count: 4,
+    active_plant_count: 4,
+    water_overdue: false,
+  };
 }
 
 function rule(id: string, passed: boolean): RotationRule {

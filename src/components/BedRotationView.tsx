@@ -6,9 +6,13 @@ import { RotationStatus } from '@/types/database.types';
 import { useCrossBedStatus } from '@/hooks/useCrossBedStatus';
 import { BedWithCoverage } from '@/hooks/useBedData';
 import { getGreenManureForMonth } from '@/config/beds/greenManureEngine';
+import { getTransitionInputs } from '@/config/beds';
 import { RotationStatusCard } from '@/components/RotationStatusCard';
 import { LOW_LEGUME_THRESHOLD } from '@/utils/filterAndSortBeds';
 import { computeFarmRotationSummary } from '@/utils/farmRotationSummary';
+import { getHarvestGapWarnings } from '@/services/beds';
+import { getDaysToSWMonsoon } from '@/utils/preMonsoonTasks';
+import { getSeasonLabel } from '@/utils/seasonHelpers';
 import { createStyles } from '@/styles/bedRotationStyles';
 
 interface Props {
@@ -34,6 +38,16 @@ export function BedRotationView({ beds, onOpenBed }: Props): React.JSX.Element {
 
   const greenManure = useMemo(() => getGreenManureForMonth(new Date().getMonth() + 1), []);
 
+  // C.9 additions: season countdown + farm-wide harvest-gap warnings.
+  const seasonLabel = useMemo(() => getSeasonLabel(), []);
+  const daysToMonsoon = useMemo(() => getDaysToSWMonsoon(), []);
+  const harvestGaps = useMemo(() => getHarvestGapWarnings(beds), [beds]);
+  const bedNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const b of beds) map[b.id] = b.name;
+    return map;
+  }, [beds]);
+
   const legumeHealthy = summary.legumePct !== null && summary.legumePct >= LOW_LEGUME_THRESHOLD;
   const legumeColor = legumeHealthy ? theme.success : theme.warning;
 
@@ -41,6 +55,13 @@ export function BedRotationView({ beds, onOpenBed }: Props): React.JSX.Element {
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Farm rotation status</Text>
+
+        <View style={styles.seasonBanner}>
+          <Ionicons name="calendar-outline" size={14} color={theme.info} />
+          <Text style={styles.seasonBannerText}>
+            {seasonLabel} · SW monsoon in {daysToMonsoon} day{daysToMonsoon === 1 ? '' : 's'}
+          </Text>
+        </View>
 
         <View style={styles.summaryRow}>
           <Ionicons name="checkmark-done-outline" size={16} color={theme.primary} />
@@ -82,6 +103,21 @@ export function BedRotationView({ beds, onOpenBed }: Props): React.JSX.Element {
             {greenManure.tamilName ? ` (${greenManure.tamilName})` : ''} — {greenManure.rationale}
           </Text>
         </View>
+
+        {harvestGaps.length > 0 && (
+          <View style={styles.gapBlock}>
+            <Text style={styles.gapTitle}>Harvest gap warnings</Text>
+            {harvestGaps.map((gap) => (
+              <View key={`${gap.bed_id}-${gap.gap_start}`} style={styles.gapRow}>
+                <Ionicons name="time-outline" size={14} color={theme.warning} />
+                <Text style={styles.gapText}>
+                  {bedNameById[gap.bed_id] ?? 'Bed'} ({gap.category.replace(/_/g, ' ')}) clears within
+                  21 days of another same-guild bed — stagger clearing to avoid a supply gap.
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       {loading && rotationStatuses.length === 0 ? (
@@ -90,6 +126,10 @@ export function BedRotationView({ beds, onOpenBed }: Props): React.JSX.Element {
         beds.map((bed) => {
           const status = statusByBed.get(bed.id);
           if (!status) return null;
+          // Transition-input prescription: soil prep for the previous family.
+          const transitionSteps = bed.prev_crop_family
+            ? getTransitionInputs(bed.prev_crop_family, 'other', bed.pest_history)
+            : [];
           return (
             <View key={bed.id} style={styles.bedBlock}>
               <TouchableOpacity
@@ -108,6 +148,15 @@ export function BedRotationView({ beds, onOpenBed }: Props): React.JSX.Element {
                 </View>
               </TouchableOpacity>
               <RotationStatusCard status={status} bedType={bed.type} hideGreenManure />
+              {transitionSteps.length > 0 && (
+                <View style={styles.transitionBanner}>
+                  <Ionicons name="construct-outline" size={14} color={theme.text} />
+                  <Text style={styles.transitionText}>
+                    Soil prep after {bed.prev_crop_family?.replace(/_/g, ' ')}:{' '}
+                    {transitionSteps.join('; ')}
+                  </Text>
+                </View>
+              )}
             </View>
           );
         })

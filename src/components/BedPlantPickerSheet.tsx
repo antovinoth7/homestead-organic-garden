@@ -329,7 +329,14 @@ function MyPlantsTab({
                       ]}
                       onPress={() => setLayer(item.id, opt.value)}
                     >
-                      <Text style={styles.layerChipText}>{opt.label}</Text>
+                      <Text
+                        style={[
+                          styles.layerChipText,
+                          chosenLayer === opt.value && styles.layerChipTextActive,
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>

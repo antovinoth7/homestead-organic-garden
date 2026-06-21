@@ -7,6 +7,7 @@ import { BedType } from '@/types/database.types';
 import { BedWithCoverage } from '@/hooks/useBedData';
 import { bedExpectsLegumes } from '@/config/beds';
 import { LOW_LEGUME_THRESHOLD } from '@/utils/filterAndSortBeds';
+import { getBedOccupancy } from '@/utils/bedOccupancy';
 import {
   getBedStatus,
   hasUrgentAttention,
@@ -63,6 +64,7 @@ export const BedCard = React.memo(function BedCard({
   const lowLegume = showLegume && bed.legume_coverage_pct < LOW_LEGUME_THRESHOLD;
 
   const status = useMemo(() => getBedStatus(bed), [bed]);
+  const occupancy = useMemo(() => getBedOccupancy(bed), [bed]);
   const stripeColor = theme[LIFECYCLE_STRIPE_TOKEN[status.lifecycle]];
   const pillLabel =
     status.lifecycle === 'resting'
@@ -152,7 +154,9 @@ export const BedCard = React.memo(function BedCard({
     >
       <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.7}>
         <View style={[styles.cardStripe, { backgroundColor: stripeColor }]} />
-        <Text style={styles.cardEmoji}>{emoji}</Text>
+        <View style={styles.emojiTile}>
+          <Text style={styles.emojiTileText}>{emoji}</Text>
+        </View>
         <View style={styles.cardContent}>
           <View style={styles.cardTitleRow}>
             <Text style={styles.cardName} numberOfLines={1}>
@@ -174,48 +178,63 @@ export const BedCard = React.memo(function BedCard({
               </Text>
             </View>
           </View>
-          <Text style={styles.cardType} numberOfLines={1}>
-            {bed.type.replace(/_/g, ' ')}
-          </Text>
-          <View style={styles.cardMetaRow}>
-            <View style={styles.metaChip}>
-              <Ionicons name="leaf-outline" size={12} color={theme.textSecondary} />
-              <Text style={styles.metaChipText}>
-                {bed.plant_count} plant{bed.plant_count === 1 ? '' : 's'}
-              </Text>
-            </View>
-            <View style={styles.metaChip}>
-              <Ionicons name="resize-outline" size={12} color={theme.textSecondary} />
-              <Text style={styles.metaChipText}>{bed.dimensions.area_sqm} m²</Text>
-            </View>
+
+          <View style={styles.cardSubtitleRow}>
+            <Text style={styles.cardType} numberOfLines={1}>
+              {bed.type.replace(/_/g, ' ')}
+            </Text>
             {bed.is_raised_bed && <Text style={styles.raisedTag}>Raised</Text>}
-            {showLegume && (
-              <View style={styles.metaChip}>
-                <Ionicons
-                  name="nutrition-outline"
-                  size={12}
-                  color={lowLegume ? theme.warning ?? '#f59e0b' : theme.success ?? '#22c55e'}
-                />
-                <Text
-                  style={[
-                    styles.metaChipText,
-                    { color: lowLegume ? theme.warning ?? '#f59e0b' : theme.success ?? '#22c55e' },
-                  ]}
-                >
-                  {bed.legume_coverage_pct}% legume
-                </Text>
-              </View>
-            )}
           </View>
-        </View>
-        {needsAttention && attentionLabel && (
-          <View style={styles.attentionTag} accessibilityLabel={`Needs attention: ${attentionLabel}`}>
-            <View style={[styles.attentionDot, { backgroundColor: attentionColor }]} />
-            <Text style={[styles.attentionTagText, { color: attentionColor }]} numberOfLines={1}>
-              {attentionLabel}
+
+          <View style={styles.occupancyRow}>
+            <View style={styles.occupancyTrack}>
+              <View
+                style={[styles.occupancyFill, { width: `${Math.round(occupancy.fraction * 100)}%` }]}
+              />
+            </View>
+            <Text style={styles.occupancyText} numberOfLines={1}>
+              {occupancy.count} plant{occupancy.count === 1 ? '' : 's'} · {bed.dimensions.area_sqm} m²
             </Text>
           </View>
-        )}
+
+          {((needsAttention && attentionLabel) || showLegume) && (
+            <View style={styles.cardBottomRow}>
+              {needsAttention && attentionLabel ? (
+                <View
+                  style={styles.attentionBanner}
+                  accessibilityLabel={`Needs attention: ${attentionLabel}`}
+                >
+                  <View style={[styles.attentionDot, { backgroundColor: attentionColor }]} />
+                  <Text
+                    style={[styles.attentionTagText, { color: attentionColor }]}
+                    numberOfLines={1}
+                  >
+                    {attentionLabel}
+                  </Text>
+                </View>
+              ) : (
+                <View />
+              )}
+              {showLegume && (
+                <View style={styles.metaChip}>
+                  <Ionicons
+                    name="nutrition-outline"
+                    size={12}
+                    color={lowLegume ? theme.warning : theme.success}
+                  />
+                  <Text
+                    style={[
+                      styles.metaChipText,
+                      { color: lowLegume ? theme.warning : theme.success },
+                    ]}
+                  >
+                    {bed.legume_coverage_pct}% legume
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
         <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
       </TouchableOpacity>
     </Swipeable>

@@ -97,4 +97,5 @@ export const CACHE_KEYS = {
   JOURNAL_METADATA: 'journalMetadata',
   BEDS: 'beds',
   LOCATIONS: 'locations',
+  WEATHER: 'weather',
 } as const;

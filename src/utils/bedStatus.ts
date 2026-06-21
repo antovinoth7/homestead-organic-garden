@@ -56,8 +56,11 @@ export function getBedStatus(bed: BedWithCoverage, now: number = Date.now()): Be
     attention.push('rotation_violation');
   }
   if (lifecycle === 'growing') {
-    const sinceWater = daysSince(bed.last_water_date, now);
-    if (sinceWater === null || sinceWater > WATER_OVERDUE_DAYS) attention.push('overdue_water');
+    // Driven by the bed's plants needing water; a recent manual bed-level
+    // "Log water" within WATER_OVERDUE_DAYS clears the flag as an override.
+    const sinceBedWater = daysSince(bed.last_water_date, now);
+    const bedWateredRecently = sinceBedWater !== null && sinceBedWater <= WATER_OVERDUE_DAYS;
+    if (bed.water_overdue && !bedWateredRecently) attention.push('overdue_water');
   }
   if (lifecycle === 'resting' && restComplete) attention.push('rest_complete');
   if (

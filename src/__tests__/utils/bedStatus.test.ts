@@ -37,6 +37,7 @@ function makeBed(overrides: Partial<BedWithCoverage> = {}): BedWithCoverage {
     legume_coverage_pct: 0,
     plant_count: 3,
     active_plant_count: 3,
+    water_overdue: false,
   };
   return { ...base, ...overrides };
 }
@@ -86,24 +87,40 @@ describe('getBedStatus — attention', () => {
     expect(s.attention).not.toContain('rotation_violation');
   });
 
-  it('flags overdue water past the threshold on a growing bed', () => {
-    const s = getBedStatus(makeBed({ last_water_date: daysAgo(WATER_OVERDUE_DAYS + 1) }), NOW);
+  it('flags overdue water when a plant needs water and the bed was not manually watered', () => {
+    const s = getBedStatus(makeBed({ water_overdue: true, last_water_date: null }), NOW);
     expect(s.attention).toContain('overdue_water');
   });
 
-  it('does not flag overdue water within the threshold', () => {
-    const s = getBedStatus(makeBed({ last_water_date: daysAgo(WATER_OVERDUE_DAYS) }), NOW);
+  it('does not flag overdue water when no plant needs water', () => {
+    const s = getBedStatus(makeBed({ water_overdue: false, last_water_date: null }), NOW);
     expect(s.attention).not.toContain('overdue_water');
   });
 
-  it('treats never-watered growing beds as overdue', () => {
-    expect(getBedStatus(makeBed({ last_water_date: null }), NOW).attention).toContain(
-      'overdue_water'
-    );
+  it('does not flag a never-manually-watered growing bed whose plants are all watered', () => {
+    // Regression: previously a null last_water_date alone flagged the bed forever.
+    const s = getBedStatus(makeBed({ water_overdue: false, last_water_date: null }), NOW);
+    expect(s.attention).not.toContain('overdue_water');
   });
 
-  it('does not flag overdue water on an empty bed', () => {
-    const s = getBedStatus(makeBed({ active_plant_count: 0, last_water_date: null }), NOW);
+  it('lets a recent manual bed-level water log override plants needing water', () => {
+    const s = getBedStatus(makeBed({ water_overdue: true, last_water_date: daysAgo(1) }), NOW);
+    expect(s.attention).not.toContain('overdue_water');
+  });
+
+  it('flags again once the manual water log is older than the threshold', () => {
+    const s = getBedStatus(
+      makeBed({ water_overdue: true, last_water_date: daysAgo(WATER_OVERDUE_DAYS + 1) }),
+      NOW
+    );
+    expect(s.attention).toContain('overdue_water');
+  });
+
+  it('does not flag overdue water on an empty bed even when plants would be overdue', () => {
+    const s = getBedStatus(
+      makeBed({ active_plant_count: 0, water_overdue: true, last_water_date: null }),
+      NOW
+    );
     expect(s.attention).not.toContain('overdue_water');
   });
 

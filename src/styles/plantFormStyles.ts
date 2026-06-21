@@ -1109,10 +1109,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.accent,
     },
     suggestionChipActive: {
-      backgroundColor: theme.primary,
+      backgroundColor: theme.primaryLight,
     },
     suggestionChipTextActive: {
-      color: theme.textInverse,
+      color: theme.primary,
+      fontWeight: '600',
     },
     treatmentGroupContainer: {
       marginBottom: 8,
@@ -1142,7 +1143,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 4,
     },
     treatmentChipActive: {
-      backgroundColor: theme.primary,
+      backgroundColor: theme.primaryLight,
       borderColor: theme.primary,
     },
     treatmentChipText: {
@@ -1150,7 +1151,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
     },
     treatmentChipTextActive: {
-      color: theme.textInverse,
+      color: theme.primary,
       fontWeight: '600',
     },
     affectedPartChips: {
@@ -1168,7 +1169,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.border,
     },
     affectedPartChipActive: {
-      backgroundColor: theme.primary,
+      backgroundColor: theme.primaryLight,
       borderColor: theme.primary,
     },
     affectedPartChipText: {
@@ -1176,7 +1177,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
     },
     affectedPartChipTextActive: {
-      color: theme.textInverse,
+      color: theme.primary,
       fontWeight: '600',
     },
     pestPhotoButton: {

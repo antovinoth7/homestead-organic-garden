@@ -21,7 +21,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Screens & Navigation
 import AuthScreen from './src/screens/AuthScreen';
-import { AppTabs } from './src/navigation/AppNavigator';
+import { AuthedNavigator } from './src/navigation/AppNavigator';
 
 const expoExtra = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
 const sentryDsnFromExtra =
@@ -351,7 +351,7 @@ const AppRoot = (): React.JSX.Element | null => {
       <NavigationContainer theme={navigationTheme}>
         <RootStack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (
-            <RootStack.Screen name="AppTabs" component={AppTabs} />
+            <RootStack.Screen name="AppTabs" component={AuthedNavigator} />
           ) : (
             <RootStack.Screen name="Auth" component={AuthScreen} />
           )}
