@@ -1,8 +1,8 @@
 /**
  * FarmHealthCard (Phase C, C.7).
  *
- * Farm header (usable area + bed count) · plant-health tiles
- * (Healthy/Stressed/Sick from getPlantHealthSummary).
+ * Garden header + plant-health tiles (Healthy/Stressed/Sick from
+ * getPlantHealthSummary).
  */
 
 import React, { useMemo, useCallback } from 'react';
@@ -15,15 +15,11 @@ export type HealthFilter = 'healthy' | 'stressed' | 'sick';
 
 interface Props {
   health: PlantHealthSummary;
-  bedCount: number;
-  usableSqm?: number | null;
   onPressHealth: (filter: HealthFilter) => void;
 }
 
 export const FarmHealthCard = React.memo(function FarmHealthCard({
   health,
-  bedCount,
-  usableSqm,
   onPressHealth,
 }: Props): React.JSX.Element {
   const theme = useTheme();
@@ -36,9 +32,7 @@ export const FarmHealthCard = React.memo(function FarmHealthCard({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>🌱 Garden Health</Text>
-        </View>
+        <Text style={styles.title}>🌱 Garden Health</Text>
       </View>
 
       <View style={styles.healthRow}>

@@ -201,7 +201,7 @@ export default function TodayScreen(): React.JSX.Element {
 
   // Farm-wide alerts now flow through the alerts service (C.10) rather than
   // inline computation. Bed rotation context comes from useCrossBedStatus.
-  const { config: farmConfig, metrics: farmMetrics } = useFarmCapacity();
+  const { config: farmConfig } = useFarmCapacity();
   const { rotationStatuses } = useCrossBedStatus(bedList);
   const bedNames = useMemo(
     () => Object.fromEntries(bedList.map((b) => [b.id, b.name])),
@@ -347,12 +347,7 @@ export default function TodayScreen(): React.JSX.Element {
       />
 
       {/* Garden health: header + health tiles (C.7) */}
-      <FarmHealthCard
-        health={health}
-        bedCount={bedList.length}
-        usableSqm={farmMetrics?.usableSqm}
-        onPressHealth={handlePressHealth}
-      />
+      <FarmHealthCard health={health} onPressHealth={handlePressHealth} />
 
       {/* Needs Attention — actionable alerts from alerts.ts (C.8/C.10) */}
       <NeedsAttentionScroll alerts={actionableAlerts} onPressAlert={handleAlertPress} />

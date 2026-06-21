@@ -21,11 +21,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       letterSpacing: 0.3,
     },
-    subtitle: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      marginTop: 2,
-    },
     healthRow: {
       flexDirection: 'row',
       alignItems: 'center',
