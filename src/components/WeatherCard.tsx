@@ -1,67 +1,35 @@
 /**
- * WeatherCard (Phase C, C.3). 7-day forecast + rain alert via `useWeather`.
+ * WeatherCard (Phase C, C.3). Resolves the farm's plot locations and renders a
+ * 7-day forecast for each: a single card for one plot, or a stacked swipeable
+ * deck (`WeatherDeck`) when there are several.
  */
 
 import React, { useMemo } from 'react';
-import { View, Text } from 'react-native';
-import { DailyWeather } from '@/types/database.types';
-import { useWeather } from '@/hooks/useWeather';
+import { View } from 'react-native';
+import { useWeatherLocations } from '@/hooks/useWeatherLocations';
+import { WeatherPlotCard } from '@/components/WeatherPlotCard';
+import { WeatherDeck } from '@/components/WeatherDeck';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/weatherCardStyles';
-
-function weekdayLabel(isoDate: string): string {
-  const d = new Date(isoDate);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('en-US', { weekday: 'short' });
-}
-
-function weatherEmoji(day: DailyWeather): string {
-  if (day.precipitationMm >= 10) return '🌧️';
-  if (day.precipitationMm >= 2) return '🌦️';
-  if (day.tempMaxC >= 35) return '🔥';
-  return '☀️';
-}
 
 export const WeatherCard = React.memo(function WeatherCard(): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const { forecast, rainSoon, loading, error } = useWeather();
+  const { plots, loading } = useWeatherLocations();
 
-  // Hide entirely when there's nothing useful to show (keeps dashboard clean offline).
-  if ((!forecast || forecast.daily.length === 0) && !loading) {
-    if (error) return null;
+  // Nothing resolved yet (config still loading) — avoid a flash of default weather.
+  if (plots.length === 0) {
+    if (loading) return null;
     return null;
   }
 
-  const days = forecast?.daily.slice(0, 7) ?? [];
+  if (plots.length === 1) {
+    return (
+      <View style={styles.outer}>
+        <WeatherPlotCard plot={plots[0]!} />
+      </View>
+    );
+  }
 
-  return (
-    <View style={styles.card}>
-      <Text style={styles.title}>🌤️ 7-Day Forecast</Text>
-      {rainSoon && (
-        <View style={styles.rainAlert}>
-          <Text>🌧️</Text>
-          <Text style={styles.rainAlertText}>Rain expected soon — you may skip watering.</Text>
-        </View>
-      )}
-      {loading && days.length === 0 ? (
-        <Text style={styles.muted}>Loading forecast…</Text>
-      ) : (
-        <View style={styles.daysRow}>
-          {days.map((day) => (
-            <View key={day.date} style={styles.dayCol}>
-              <Text style={styles.dayLabel}>{weekdayLabel(day.date)}</Text>
-              <Text style={styles.dayEmoji}>{weatherEmoji(day)}</Text>
-              <Text style={styles.dayTemp}>
-                {Math.round(day.tempMaxC)}°/{Math.round(day.tempMinC)}°
-              </Text>
-              {day.precipitationMm >= 1 && (
-                <Text style={styles.dayRain}>{Math.round(day.precipitationMm)}mm</Text>
-              )}
-            </View>
-          ))}
-        </View>
-      )}
-    </View>
-  );
+  return <WeatherDeck plots={plots} />;
 });

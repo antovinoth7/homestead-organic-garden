@@ -9,8 +9,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     heroHeader: {
       paddingHorizontal: 20,
-      paddingTop: 16,
-      paddingBottom: 20,
+      paddingTop: 14,
+      paddingBottom: 16,
       backgroundColor: theme.tabBarBackground,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
@@ -21,7 +21,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'space-between',
     },
     heroGreeting: {
-      fontSize: 28,
+      fontSize: 24,
       fontWeight: 'bold',
       color: theme.text,
     },
@@ -42,7 +42,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     donutCard: {
       backgroundColor: theme.backgroundSecondary,
       paddingHorizontal: 12,
-      paddingVertical: 16,
+      paddingVertical: 14,
       marginTop: 1,
     },
     donutRow: {
@@ -415,5 +415,36 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       lineHeight: 16,
       marginTop: 2,
+    },
+    // Seasonal guidance collapsible header
+    seasonalToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 4,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: theme.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    seasonalToggleText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    // First-paint skeleton placeholders
+    skeletonCard: {
+      height: 110,
+      marginTop: 12,
+      marginHorizontal: 16,
+      borderRadius: 12,
+      backgroundColor: theme.backgroundSecondary,
+    },
+    skeletonCardTall: {
+      height: 170,
     },
   });

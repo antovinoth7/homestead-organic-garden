@@ -3,7 +3,34 @@
  * so they are unit-testable in isolation, mirroring `alertsLogic`/`bedLogic`.
  */
 
-import { WeatherForecast } from '@/types/database.types';
+import { WeatherForecast, LocationProfile } from '@/types/database.types';
+import { getDistrictCoordinates, DEFAULT_COORDINATES } from '@/config/zones/districtCoordinates';
+
+export interface WeatherCoords {
+  lat: number;
+  lng: number;
+  /** Where the coordinates came from — drives nothing, but handy for debugging/UI. */
+  source: 'plot' | 'district' | 'default';
+}
+
+/**
+ * Resolve which coordinates to query weather for: a plot's manually-entered GPS
+ * pin wins; otherwise the farm district's HQ-town coordinates; otherwise the
+ * Kanyakumari default. Pure so it can be unit-tested without native deps.
+ */
+export function resolveWeatherCoords(
+  profile?: LocationProfile | null,
+  district?: string | null
+): WeatherCoords {
+  if (profile?.latitude != null && profile?.longitude != null) {
+    return { lat: profile.latitude, lng: profile.longitude, source: 'plot' };
+  }
+  const districtCoords = getDistrictCoordinates(district);
+  if (districtCoords) {
+    return { lat: districtCoords.lat, lng: districtCoords.lng, source: 'district' };
+  }
+  return { lat: DEFAULT_COORDINATES.lat, lng: DEFAULT_COORDINATES.lng, source: 'default' };
+}
 
 /** True when any of the next `days` days has meaningful rain (≥ 2mm). */
 export function hasRainSoon(forecast: WeatherForecast | null, days = 2): boolean {

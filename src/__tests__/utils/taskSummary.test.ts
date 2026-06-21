@@ -1,4 +1,8 @@
-import { summarizeTodayTasks, computeDonutSegments } from '@/utils/taskSummary';
+import {
+  summarizeTodayTasks,
+  computeDonutSegments,
+  filterToKnownPlants,
+} from '@/utils/taskSummary';
 import { makeTaskTemplate, makeTaskLog } from '../fixtures/task.fixtures';
 
 // Anchor "now" so date comparisons are deterministic.
@@ -63,5 +67,25 @@ describe('computeDonutSegments', () => {
     const summary = summarizeTodayTasks(tasks, [], NOW);
     const total = computeDonutSegments(summary).reduce((sum, s) => sum + s.sweep, 0);
     expect(Math.round(total)).toBe(360);
+  });
+});
+
+describe('filterToKnownPlants', () => {
+  it('keeps plant-scoped items whose plant_id is known', () => {
+    const tasks = [
+      makeTaskTemplate({ id: 'a', plant_id: 'p1' }),
+      makeTaskTemplate({ id: 'b', plant_id: 'p2' }),
+    ];
+    const kept = filterToKnownPlants(tasks, new Set(['p1']));
+    expect(kept.map((t) => t.id)).toEqual(['a']);
+  });
+
+  it('always keeps items with no plant_id (bed/farm-scoped)', () => {
+    const logs = [
+      makeTaskLog({ id: 'l1', plant_id: null }),
+      makeTaskLog({ id: 'l2', plant_id: 'gone' }),
+    ];
+    const kept = filterToKnownPlants(logs, new Set<string>());
+    expect(kept.map((l) => l.id)).toEqual(['l1']);
   });
 });

@@ -169,6 +169,19 @@ export const getPlants = async (
 /** Synchronous cache read — returns the warm plant list or null if stale/absent. */
 export const getCachedPlants = (): Plant[] | null => getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
 
+/**
+ * Offline-first warm read for an instant first paint: the fresh in-memory cache
+ * if present, otherwise the AsyncStorage copy. Unlike `getAllPlants` this never
+ * touches the network or resolves images — callers that render thumbnails must
+ * still use `getAllPlants`. The dashboard only needs ids/names/health, so this
+ * keeps image resolution off the cold-start critical path.
+ */
+export const getStoredPlants = async (): Promise<Plant[]> => {
+  const warm = getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
+  if (warm) return warm;
+  return getData<Plant>(KEYS.PLANTS);
+};
+
 export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Promise<Plant[]> => {
   // Return fresh in-memory data if available (< 30s old)
   const cached = getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);

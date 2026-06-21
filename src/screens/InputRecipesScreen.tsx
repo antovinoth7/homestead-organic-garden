@@ -30,16 +30,22 @@ const SEASON_LABELS: Record<string, string> = {
 function RecipePanel({
   recipe,
   landCents,
+  bottomInset,
   styles,
 }: {
   recipe: OrganicInputRecipe;
   landCents: number;
+  bottomInset: number;
   styles: ReturnType<typeof createStyles>;
 }): React.JSX.Element {
   const scaled = useMemo(() => scaleRecipe(recipe, landCents), [recipe, landCents]);
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.content}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 24 }]}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Header */}
       <View style={styles.recipeHeader}>
         <Text style={styles.recipeName}>{recipe.name}</Text>
@@ -174,7 +180,12 @@ export default function InputRecipesScreen(): React.JSX.Element {
       </View>
 
       {/* Active recipe panel */}
-      <RecipePanel recipe={activeRecipe} landCents={landCents} styles={styles} />
+      <RecipePanel
+        recipe={activeRecipe}
+        landCents={landCents}
+        bottomInset={insets.bottom}
+        styles={styles}
+      />
     </View>
   );
 }
