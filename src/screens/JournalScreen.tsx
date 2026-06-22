@@ -15,12 +15,8 @@ import {
   Pressable,
 } from 'react-native';
 import type Swipeable from 'react-native-gesture-handler/Swipeable';
-import {
-  getJournalEntries,
-  getStoredJournalEntries,
-  deleteJournalEntry,
-} from '../services/journal';
-import { getStoredPlants } from '../services/plants';
+import { getJournalEntries, deleteJournalEntry } from '../services/journal';
+import { getAllPlants } from '../services/plants';
 import { JournalEntry, JournalEntryType, Plant } from '../types/database.types';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,7 +25,6 @@ import { createStyles } from '../styles/journalStyles';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { JournalScreenNavigationProp, JournalScreenRouteProp } from '../types/navigation.types';
 import { getErrorMessage } from '../utils/errorLogging';
-import { logger } from '../utils/logger';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { ImageZoomModal } from '../components/ImageZoomModal';
@@ -48,7 +43,6 @@ export default function JournalScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<JournalEntry>>(null);
   const openSwipeableRef = useRef<Swipeable | null>(null);
-  const isMountedRef = useRef(true);
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [plants, setPlants] = useState<Plant[]>([]);
@@ -71,56 +65,33 @@ export default function JournalScreen(): React.JSX.Element {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const loadData = useCallback(async (options?: { silent?: boolean }): Promise<void> => {
+  const loadData = async (options?: { silent?: boolean }): Promise<void> => {
     if (!options?.silent) {
       setLoading(true);
     }
     try {
-      // Foreground: paint from the warm cache as fast as possible. Stored entries already
-      // carry resolved photo_urls, and the plant list is needed only for names (the card
-      // renders entry photos, never plant photos) — so neither read touches the network or
-      // resolves image files.
-      const [storedEntries, storedPlants] = await Promise.all([
-        getStoredJournalEntries(),
-        getStoredPlants(),
-      ]);
-      if (!isMountedRef.current) return;
-      setEntries(storedEntries);
-      setPlants(storedPlants);
+      const [entriesData, plantsData] = await Promise.all([getJournalEntries(), getAllPlants()]);
+      setEntries(entriesData);
+      setPlants(plantsData);
     } catch (error: unknown) {
       if (!options?.silent) {
         Alert.alert('Error', getErrorMessage(error));
       }
     } finally {
-      if (isMountedRef.current && !options?.silent) {
+      if (!options?.silent) {
         setLoading(false);
       }
     }
-
-    // Background: reconcile against the network and re-resolve thumbnail URIs off the
-    // critical path. This preserves the focus-refresh intent (imported image URIs render
-    // immediately) without blocking the first paint on filesystem/image work.
-    void (async () => {
-      try {
-        const freshEntries = await getJournalEntries();
-        if (!isMountedRef.current) return;
-        setEntries(freshEntries);
-      } catch (error: unknown) {
-        if (!options?.silent) {
-          logger.warn('Failed to refresh journal entries', error as Error);
-        }
-      }
-    })();
-  }, []);
+  };
 
   useEffect(() => {
-    isMountedRef.current = true;
+    let isMounted = true;
 
     // Load data on mount
     loadData();
 
     const unsubscribe = navigation.addListener('focus', () => {
-      if (isMountedRef.current) {
+      if (isMounted) {
         // Reset scroll and refresh data so imported image URIs render immediately.
         listRef.current?.scrollToOffset({ offset: 0, animated: false });
         resetTabBar();
@@ -129,10 +100,10 @@ export default function JournalScreen(): React.JSX.Element {
     });
 
     return () => {
-      isMountedRef.current = false;
+      isMounted = false;
       unsubscribe();
     };
-  }, [navigation, resetTabBar, loadData]);
+  }, [navigation, resetTabBar]);
 
   // Listen for refresh param from child screens (after add/edit/delete)
   useEffect(() => {
@@ -140,7 +111,7 @@ export default function JournalScreen(): React.JSX.Element {
       loadData();
       navigation.setParams({ refresh: undefined });
     }
-  }, [route.params, navigation, loadData]);
+  }, [route.params, navigation]);
 
   const getPlantName = useCallback(
     (plantId: string | null) => {
