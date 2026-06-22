@@ -5,7 +5,7 @@ import {
   deleteTasksForBedIds,
   getTodayTaskLogs,
 } from '../services/tasks';
-import { getAllPlants, getStoredPlants, plantExists } from '../services/plants';
+import { getAllPlants, plantExists } from '../services/plants';
 import { getBeds } from '../services/beds';
 import { getJournalMetadata } from '../services/journal';
 import {
@@ -108,14 +108,20 @@ export function useCalendarData({
     };
   }, []);
 
-  // Background reconciliation: refresh the canonical (network) plant list, drop any
-  // plant tasks whose plant is truly gone, and self-heal orphaned plant/bed tasks. This
-  // runs *after* the first paint and is never awaited by loadData, so its network reads
-  // and writes never gate the spinner. Orphan deletes only ever run against the fresh,
-  // complete plant list (getAllPlants) — never the possibly-partial warm cache.
-  const reconcile = React.useCallback(async (tasksData: TaskTemplate[]) => {
+  const loadData = React.useCallback(async (options?: { force?: boolean }) => {
+    // Debounce: skip if loaded recently (within 2s) unless forced
+    const now = Date.now();
+    if (!options?.force && now - lastLoadTimeRef.current < 2000) return;
+    lastLoadTimeRef.current = now;
+
     try {
-      const plantsData = await getAllPlants();
+      const [tasksData, plantsData, journalData, todayLogsData] = await Promise.all([
+        getTaskTemplates(),
+        getAllPlants(),
+        getJournalMetadata(),
+        getTodayTaskLogs(),
+      ]);
+
       if (!isMountedRef.current) return;
 
       const plantIds = new Set(plantsData.map((plant) => plant.id));
@@ -130,8 +136,10 @@ export function useCalendarData({
         )
       );
 
-      setPlants(plantsData);
       setTasks(filteredTasks);
+      setPlants(plantsData);
+      setTodayLogs(todayLogsData);
+      setHarvestEntries(journalData.filter((e) => e.entry_type === JournalEntryType.Harvest));
 
       if (orphanPlantIds.length > 0 && isNetworkAvailable()) {
         const confirmedOrphans = (
@@ -178,51 +186,13 @@ export function useCalendarData({
       }
     } catch (error) {
       if (!isMountedRef.current) return;
-      logger.warn('Failed to reconcile calendar data', error as Error);
+      logger.error('Failed to load calendar data', error as Error);
+    } finally {
+      if (isMountedRef.current) {
+        setInitialLoading(false);
+      }
     }
   }, []);
-
-  const loadData = React.useCallback(
-    async (options?: { force?: boolean }) => {
-      // Debounce: skip if loaded recently (within 2s) unless forced
-      const now = Date.now();
-      if (!options?.force && now - lastLoadTimeRef.current < 2000) return;
-      lastLoadTimeRef.current = now;
-
-      try {
-        // Foreground: paint from warm cache as fast as possible. getStoredPlants is an
-        // offline-first, image-free read (the calendar never renders plant photos), so
-        // nothing here resolves an image file or blocks on the network's slowest read.
-        const [tasksData, storedPlants, journalData, todayLogsData] = await Promise.all([
-          getTaskTemplates(),
-          getStoredPlants(),
-          getJournalMetadata(),
-          getTodayTaskLogs(),
-        ]);
-
-        if (!isMountedRef.current) return;
-
-        // Show all enabled tasks immediately. We deliberately do NOT drop plant-linked
-        // tasks against storedPlants here — the warm cache can be incomplete on a cold
-        // start, and reconcile() filters/self-heals against the fresh full list.
-        setTasks(tasksData.filter((task) => task.enabled));
-        setPlants(storedPlants);
-        setTodayLogs(todayLogsData);
-        setHarvestEntries(journalData.filter((e) => e.entry_type === JournalEntryType.Harvest));
-
-        // Reconcile against the canonical plant list off the critical path.
-        void reconcile(tasksData);
-      } catch (error) {
-        if (!isMountedRef.current) return;
-        logger.error('Failed to load calendar data', error as Error);
-      } finally {
-        if (isMountedRef.current) {
-          setInitialLoading(false);
-        }
-      }
-    },
-    [reconcile]
-  );
 
   const handleRefresh = React.useCallback(async () => {
     setRefreshing(true);
