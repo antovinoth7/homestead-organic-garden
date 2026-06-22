@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Alert } from 'react-native';
 import { generateShortName, getLocationConfig, saveLocationConfig } from '@/services/locations';
-import { getAllPlants, updatePlantLocation } from '@/services/plants';
+import { getAllPlants, getStoredPlants, updatePlantLocation } from '@/services/plants';
 import { LocationProfile, Plant } from '@/types/database.types';
 import { sanitizeLandmarkText } from '@/utils/textSanitizer';
 import { getErrorMessage } from '@/utils/errorLogging';
+import { logger } from '@/utils/logger';
 
 // ─── Pure helpers (exported so modal components can reuse them) ───────────────
 
@@ -146,25 +147,48 @@ export function useLocationManager(): UseLocationManagerReturn {
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
   const [reassignModal, setReassignModal] = useState<ReassignModalState | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState | null>(null);
+  const isMountedRef = useRef(true);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [config, allPlants] = await Promise.all([getLocationConfig(), getAllPlants()]);
+      // Foreground: paint from the warm cache. The screen only renders plant *counts*
+      // (derived from each plant's `location`), never plant images, so getStoredPlants —
+      // an offline-first, image-free, network-free read — is all the first paint needs.
+      const [config, storedPlants] = await Promise.all([getLocationConfig(), getStoredPlants()]);
+      if (!isMountedRef.current) return;
       setParentLocations(config.parentLocations);
       setChildLocations(config.childLocations);
       setShortNames(config.parentLocationShortNames ?? {});
       setLocationProfiles(config.parentLocationProfiles ?? {});
-      setPlants(allPlants);
+      setPlants(storedPlants);
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error) || 'Failed to load locations. Please try again.');
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
+
+    // Background: refresh the canonical, network-fresh plant list off the critical path so
+    // counts stay authoritative across devices and the shared ALL_PLANTS cache stays warm.
+    void (async () => {
+      try {
+        const freshPlants = await getAllPlants();
+        if (!isMountedRef.current) return;
+        setPlants(freshPlants);
+      } catch (error: unknown) {
+        logger.warn('Failed to refresh plants for My Farm', error as Error);
+      }
+    })();
   }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     loadData();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [loadData]);
 
   // ─── Derived counts ─────────────────────────────────────────────────────────

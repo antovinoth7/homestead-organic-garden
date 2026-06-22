@@ -140,6 +140,19 @@ export const getJournalEntries = async (): Promise<JournalEntry[]> => {
   }
 };
 
+/**
+ * Offline-first warm read for an instant first paint: the fresh in-memory cache if
+ * present, otherwise the AsyncStorage copy. Unlike `getJournalEntries` this never touches
+ * the network or re-resolves image files — stored entries already carry the resolved
+ * `photo_urls` from when they were last written, so thumbnails paint immediately. Callers
+ * should still reconcile in the background via `getJournalEntries` to refresh stale URIs.
+ */
+export const getStoredJournalEntries = async (): Promise<JournalEntry[]> => {
+  const warm = getCached<JournalEntry[]>(CACHE_KEYS.JOURNAL_ENTRIES);
+  if (warm) return warm;
+  return getData<JournalEntry>(KEYS.JOURNAL);
+};
+
 export const createJournalEntry = async (
   entry: Omit<JournalEntry, 'id' | 'user_id' | 'created_at'>
 ): Promise<JournalEntry> => {
