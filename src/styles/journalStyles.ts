@@ -1,7 +1,5 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
-
-const { width } = Dimensions.get('window');
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -81,14 +79,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       padding: 0,
     },
-    viewToggle: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.primary,
-    },
     filterToggleButton: {
       width: 40,
       height: 40,
@@ -120,9 +110,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     statsRow: {
       flexDirection: 'row',
-      marginTop: 8,
-      marginBottom: 4,
-      marginHorizontal: 12,
+      marginTop: 4,
+      marginBottom: 6,
       gap: 8,
     },
     statCard: {
@@ -239,14 +228,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     content: {
       flex: 1,
     },
-    entriesContainer: {
+    listContent: {
       padding: 12,
-      paddingBottom: 120,
+      gap: 10,
     },
     card: {
       backgroundColor: theme.card,
       borderRadius: 14,
-      marginBottom: 12,
       overflow: 'hidden',
       flexDirection: 'row',
       borderWidth: 1,
@@ -257,7 +245,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     cardBody: {
       flex: 1,
-      padding: 12,
+      padding: 11,
     },
     cardTopRow: {
       flexDirection: 'row',
@@ -284,34 +272,38 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginTop: 1,
     },
-    cardActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    actionBtn: {
-      padding: 6,
-      borderRadius: 8,
-    },
     tagsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 6,
       marginTop: 8,
     },
-    photosScroll: {
+    // Fixed thumbnail row (no horizontal scroll — never fights the swipe gesture)
+    thumbRow: {
+      flexDirection: 'row',
+      gap: 6,
       marginTop: 10,
-      marginHorizontal: -12,
     },
-    photosScrollContent: {
-      paddingHorizontal: 12,
-      gap: 8,
-    },
-    photo: {
-      width: 120,
-      height: 90,
+    thumb: {
+      width: 72,
+      height: 72,
       borderRadius: 8,
       backgroundColor: theme.backgroundSecondary,
+    },
+    thumbMore: {
+      position: 'relative',
+    },
+    thumbMoreOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: 8,
+      backgroundColor: theme.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    thumbMoreText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.textInverse,
     },
     cardContent: {
       padding: 16,
@@ -406,21 +398,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 20,
       marginTop: 8,
     },
-    galleryGrid: {
+    // Swipe-to-reveal actions (mirrors BedCard / bedListStyles)
+    swipeActions: {
       flexDirection: 'row',
-      padding: 12,
-      paddingBottom: 120,
-      flexWrap: 'wrap',
-      gap: 4,
     },
-    galleryItem: {
-      width: (width - 36) / 3,
-      height: (width - 36) / 3,
+    swipeEditAction: {
+      width: 72,
+      backgroundColor: theme.info,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    galleryImage: {
-      width: '100%',
-      height: '100%',
-      backgroundColor: theme.primaryLight,
+    swipeDeleteAction: {
+      width: 72,
+      backgroundColor: theme.error,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderTopRightRadius: 14,
+      borderBottomRightRadius: 14,
+    },
+    swipeActionText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: theme.textInverse,
+      marginTop: 2,
     },
     emptyState: {
       alignItems: 'center',
