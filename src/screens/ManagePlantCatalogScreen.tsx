@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -8,7 +8,7 @@ import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
 import { MoreStackParamList } from '@/types/navigation.types';
 import { PlantCategoryTabs } from '@/components/PlantCategoryTabs';
-import { PlantCatalogRow } from '@/components/PlantCatalogRow';
+import { PlantCatalogList } from '@/components/PlantCatalogList';
 import { usePlantCatalogManager } from '@/hooks/usePlantCatalogManager';
 
 export default function ManagePlantCatalogScreen(): React.JSX.Element {
@@ -19,8 +19,6 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
 
   const { activeCategory, setActiveCategory, loading, categoryData, allCategoryCounts } =
     usePlantCatalogManager();
-
-  const keyExtractor = useCallback((name: string) => name, []);
 
   const onPlantPress = useCallback(
     (plantName: string) => {
@@ -41,28 +39,6 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     });
   }, [moreNav, activeCategory]);
 
-  const renderItem = useCallback(
-    ({ item }: { item: string }) => (
-      <PlantCatalogRow
-        plantName={item}
-        count={categoryData.counts[item] ?? 0}
-        onPress={onPlantPress}
-      />
-    ),
-    [categoryData.counts, onPlantPress]
-  );
-
-  const renderSeparator = useCallback(() => <View style={styles.rowDivider} />, [styles]);
-
-  const listEmpty = useMemo(
-    () => (
-      <View style={styles.emptyWrapper}>
-        <Text style={styles.emptyText}>No plants yet. Tap + to add one.</Text>
-      </View>
-    ),
-    [styles]
-  );
-
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -80,24 +56,26 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
         </View>
       ) : (
         <View style={styles.contentWrapper}>
-          <PlantCategoryTabs
-            activeCategory={activeCategory}
-            allCategoryCounts={allCategoryCounts}
-            onCategoryChange={setActiveCategory}
-          />
-
-          <View style={styles.listCardWrap}>
-            <FlatList
-              data={categoryData.plantNames}
-              keyExtractor={keyExtractor}
-              renderItem={renderItem}
-              ItemSeparatorComponent={renderSeparator}
-              ListEmptyComponent={listEmpty}
-              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 80 }}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
+          <ScrollView
+            style={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 80 }}
+          >
+            <PlantCategoryTabs
+              activeCategory={activeCategory}
+              allCategoryCounts={allCategoryCounts}
+              onCategoryChange={setActiveCategory}
             />
-          </View>
+
+            <View style={styles.section}>
+              <PlantCatalogList
+                plantNames={categoryData.plantNames}
+                counts={categoryData.counts}
+                onPlantPress={onPlantPress}
+              />
+            </View>
+          </ScrollView>
 
           <TouchableOpacity
             style={[styles.fab, { bottom: Math.max(insets.bottom, 16) + 16 }]}
