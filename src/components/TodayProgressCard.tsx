@@ -6,8 +6,16 @@
  * data comes from the tested `taskSummary` util; the ring fades in on mount.
  */
 
-import React, { useMemo, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Animated,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { TaskType } from '@/types/database.types';
@@ -16,6 +24,32 @@ import { TASK_EMOJIS, TASK_COLORS } from '@/utils/taskConstants';
 import { describeArc, DONUT_SIZE, DONUT_STROKE, DONUT_RADIUS, DONUT_CENTER } from '@/utils/svgArc';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/todayProgressCardStyles';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+/** Chips kept visible when collapsed — ~3 rows, roughly the donut's height. */
+const COLLAPSED_CHIP_COUNT = 6;
+
+interface ChipStat {
+  type: TaskType;
+  done: number;
+  total: number;
+  remaining: number;
+  overdue: number;
+}
+
+/**
+ * Active-first priority so the most meaningful chips lead the grid:
+ * 0 = has overdue, 1 = active today, 2 = done-only, 3 = empty.
+ */
+function chipPriority(c: ChipStat): number {
+  if (c.overdue > 0) return 0;
+  if (c.remaining > 0) return 1;
+  if (c.total > 0) return 2;
+  return 3;
+}
 
 interface Props {
   completionRate: number;
@@ -53,10 +87,37 @@ export const TodayProgressCard = React.memo(function TodayProgressCard({
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const fade = useRef(new Animated.Value(0)).current;
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     Animated.timing(fade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
   }, [fade]);
+
+  // All task types as chip stats, stable-sorted active-first (TASK_EMOJIS order within ties).
+  const orderedChips = useMemo<ChipStat[]>(() => {
+    const chips = (Object.keys(TASK_EMOJIS) as TaskType[]).map((type) => {
+      const ts = typeStats.find((s) => s.type === type);
+      return {
+        type,
+        done: ts?.done ?? 0,
+        total: ts?.total ?? 0,
+        remaining: ts?.remaining ?? 0,
+        overdue: ts?.overdueCount ?? 0,
+      };
+    });
+    return chips
+      .map((chip, index) => ({ chip, index }))
+      .sort((a, b) => chipPriority(a.chip) - chipPriority(b.chip) || a.index - b.index)
+      .map((entry) => entry.chip);
+  }, [typeStats]);
+
+  const hiddenCount = orderedChips.length - COLLAPSED_CHIP_COUNT;
+  const visibleChips = expanded ? orderedChips : orderedChips.slice(0, COLLAPSED_CHIP_COUNT);
+
+  const toggleExpanded = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((prev) => !prev);
+  }, []);
 
   return (
     <View style={styles.card}>
@@ -129,13 +190,8 @@ export const TodayProgressCard = React.memo(function TodayProgressCard({
         </View>
 
         <View style={styles.chipColumn}>
-          {(Object.keys(TASK_EMOJIS) as TaskType[]).map((type) => {
-            const ts = typeStats.find((s) => s.type === type);
+          {visibleChips.map(({ type, done, total, remaining, overdue }) => {
             const color = TASK_COLORS[type];
-            const done = ts?.done ?? 0;
-            const total = ts?.total ?? 0;
-            const remaining = ts?.remaining ?? 0;
-            const overdue = ts?.overdueCount ?? 0;
             const hasNothing = total === 0;
             const allDone = !hasNothing && remaining === 0;
             const hasOverdue = overdue > 0;
@@ -167,6 +223,22 @@ export const TodayProgressCard = React.memo(function TodayProgressCard({
               </TouchableOpacity>
             );
           })}
+          {hiddenCount > 0 && (
+            <TouchableOpacity
+              style={styles.chipToggle}
+              activeOpacity={0.7}
+              onPress={toggleExpanded}
+            >
+              <Text style={styles.chipToggleText}>
+                {expanded ? 'Show less' : `+${hiddenCount} more`}
+              </Text>
+              <Ionicons
+                name={expanded ? 'chevron-up' : 'chevron-down'}
+                size={14}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>

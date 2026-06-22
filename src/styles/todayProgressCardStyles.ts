@@ -86,6 +86,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1.5,
       borderColor: theme.error + '70',
     },
+    chipToggle: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: 2,
+      marginTop: 2,
+      paddingVertical: 2,
+    },
+    chipToggleText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
     chipEmoji: {
       fontSize: 14,
     },
