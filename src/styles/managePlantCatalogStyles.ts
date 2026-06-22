@@ -145,6 +145,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       overflow: 'hidden',
       marginBottom: 16,
     },
+    // Bordered card frame wrapping the plant-row FlatList (rows scroll inside it).
+    listCardWrap: {
+      flex: 1,
+      marginHorizontal: 16,
+      marginTop: 8,
+      marginBottom: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.backgroundSecondary,
+      overflow: 'hidden',
+    },
     fab: {
       position: 'absolute',
       right: 16,
@@ -275,6 +287,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       borderWidth: 1,
       borderColor: theme.border,
+    },
+    emptyWrapper: {
+      paddingVertical: 20,
+      paddingHorizontal: 16,
+      alignItems: 'center',
     },
     emptyText: {
       fontSize: 13,

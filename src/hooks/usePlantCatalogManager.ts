@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -9,7 +9,7 @@ import {
 } from '@/services/plantProfiles';
 import { getAllPlants } from '@/services/plants';
 import { Plant, PlantProfiles, PlantType } from '@/types/database.types';
-import { getErrorMessage } from '@/utils/errorLogging';
+import { getErrorMessage, logError } from '@/utils/errorLogging';
 
 export interface CategoryData {
   plantNames: string[];
@@ -34,24 +34,46 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<PlantType>('vegetable');
+  const hasLoadedRef = useRef(false);
 
-  const reload = useCallback(async (): Promise<void> => {
-    setLoading(true);
+  // Profiles are the essential data — the visible catalog (names + tabs) comes from
+  // here, and they resolve instantly from the in-memory cache / static defaults.
+  const loadProfiles = useCallback(async (): Promise<void> => {
     try {
-      const [profilesData, allPlants] = await Promise.all([getPlantProfiles(), getAllPlants()]);
+      const profilesData = await getPlantProfiles();
       setProfiles(profilesData);
-      setPlants(allPlants);
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error) ?? 'Failed to load plant catalog.');
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   }, []);
 
+  // Plant counts only drive the decorative per-row "how many I'm growing" badge.
+  // getAllPlants() paginates Firestore, so it must never gate the spinner — load it
+  // in the background and fail silently (the catalog stays fully usable without it).
+  const loadCounts = useCallback(async (): Promise<void> => {
+    try {
+      setPlants(await getAllPlants());
+    } catch (error: unknown) {
+      logError('network', 'usePlantCatalogManager: plant counts load failed', error as Error);
+    }
+  }, []);
+
+  const reload = useCallback(async (): Promise<void> => {
+    await Promise.all([loadProfiles(), loadCounts()]);
+  }, [loadProfiles, loadCounts]);
+
   useFocusEffect(
     useCallback(() => {
-      reload();
-    }, [reload])
+      // Only show the full-screen spinner on the very first load. On re-focus, cached
+      // profiles return immediately and counts refresh in place — no spinner flash,
+      // scroll position preserved.
+      if (!hasLoadedRef.current) setLoading(true);
+      void loadProfiles();
+      void loadCounts();
+    }, [loadProfiles, loadCounts])
   );
 
   // Per-type plant counts keyed by variety name
