@@ -2,27 +2,28 @@ import React, { useMemo } from 'react';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
-import { createStyles } from '@/styles/bedDeleteModalStyles';
+import { createStyles } from '@/styles/confirmDeleteModalStyles';
 
 interface Props {
   visible: boolean;
-  bedName: string;
-  activePlantCount: number;
+  title: string;
+  message: string;
+  confirmLabel?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }
 
-export function BedDeleteModal({
+/** Reusable themed delete-confirmation dialog (matches the Beds delete dialog). */
+export function ConfirmDeleteModal({
   visible,
-  bedName,
-  activePlantCount,
+  title,
+  message,
+  confirmLabel = 'Delete',
   onCancel,
   onConfirm,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-
-  const plantLabel = `${activePlantCount} active plant${activePlantCount === 1 ? '' : 's'}`;
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onCancel}>
@@ -32,11 +33,8 @@ export function BedDeleteModal({
             <Ionicons name="trash-outline" size={30} color={theme.error} />
           </View>
 
-          <Text style={styles.title}>Delete “{bedName}”?</Text>
-          <Text style={styles.message}>
-            This bed has {plantLabel}. Deleting the bed will remove {activePlantCount === 1 ? 'it' : 'them'} too.
-            This can’t be undone after the toast disappears.
-          </Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.message}>{message}</Text>
 
           <View style={styles.buttonRow}>
             <TouchableOpacity
@@ -53,10 +51,10 @@ export function BedDeleteModal({
               onPress={onConfirm}
               activeOpacity={0.8}
               accessibilityRole="button"
-              accessibilityLabel="Delete bed and its plants"
+              accessibilityLabel={confirmLabel}
             >
               <Ionicons name="trash-outline" size={18} color={theme.textInverse} />
-              <Text style={styles.deleteButtonText}>Delete</Text>
+              <Text style={styles.deleteButtonText}>{confirmLabel}</Text>
             </TouchableOpacity>
           </View>
         </View>

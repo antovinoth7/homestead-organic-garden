@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Modal, StatusBar, TouchableOpacity, Dimensions, Animated } from 'react-native';
 import {
   PinchGestureHandler,
@@ -8,24 +8,24 @@ import {
 } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import type { EdgeInsets } from 'react-native-safe-area-context';
-import type { createStyles } from '@/styles/plantDetailStyles';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/theme';
+import { createStyles } from '@/styles/imageZoomModalStyles';
 import { usePinchZoom } from '@/hooks/usePinchZoom';
-
-type DetailStyles = ReturnType<typeof createStyles>;
 
 const SCREEN = Dimensions.get('window');
 
 interface Props {
   visible: boolean;
   uri: string;
-  insets: EdgeInsets;
-  styles: DetailStyles;
   onClose: () => void;
 }
 
 /** Fullscreen image viewer with pinch/pan/double-tap zoom. */
-export function ImageZoomModal({ visible, uri, insets, styles, onClose }: Props): React.JSX.Element {
+export function ImageZoomModal({ visible, uri, onClose }: Props): React.JSX.Element {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
   const zoom = usePinchZoom(visible);
 
   return (

@@ -92,18 +92,6 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
         daysOverdue: 0,
         created_at: nowIso,
       });
-    } else if (plant.health_status === 'stressed') {
-      alerts.push({
-        id: `health_stressed_${plant.id}`,
-        type: 'health_stressed',
-        plantId: plant.id,
-        title: plant.name,
-        message: 'Showing stress — check conditions',
-        severity: 'warning',
-        icon: '⚠️',
-        daysOverdue: 0,
-        created_at: nowIso,
-      });
     }
 
     // Water

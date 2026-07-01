@@ -83,7 +83,7 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
   return (
     <View style={styles.outer}>
       <View style={styles.swipeHint}>
-        <Text style={styles.swipeHintText}>✦ Swipe for more plots ✦</Text>
+        <Text style={styles.swipeHintText}>✦ Swipe for more farms ✦</Text>
       </View>
 
       <View style={styles.deckContainer}>
@@ -113,7 +113,10 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
 
       <View style={styles.dotsRow}>
         {plots.map((plot, i) => (
-          <View key={`${plot.name}-${i}`} style={[styles.dot, i === topIndex && styles.dotActive]} />
+          <View
+            key={`${plot.name}-${i}`}
+            style={[styles.dot, i === topIndex && styles.dotActive]}
+          />
         ))}
       </View>
     </View>

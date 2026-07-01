@@ -89,7 +89,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     swipeHint: {
       alignItems: 'center',
-      marginBottom: 8,
+      marginBottom: 13,
     },
     swipeHintText: {
       fontSize: 12,

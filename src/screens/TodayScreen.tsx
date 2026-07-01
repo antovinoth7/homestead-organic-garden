@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
   Alert,
 } from 'react-native';
 import {
@@ -304,9 +305,9 @@ export default function TodayScreen(): React.JSX.Element {
             </View>
           </View>
         </View>
-        <View style={[styles.skeletonCard, styles.skeletonCardTall]} />
-        <View style={styles.skeletonCard} />
-        <View style={styles.skeletonCard} />
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
       </View>
     );
   }

@@ -374,25 +374,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       marginTop: 2,
     },
-    // Image zoom modal
-    zoomOverlay: {
-      flex: 1,
-      backgroundColor: theme.shadow,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    zoomClose: {
-      position: 'absolute',
-      top: 16,
-      right: 16,
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.textInverse + '33',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10,
-    },
     // Coconut metrics
     metricsGrid: {
       flexDirection: 'row',
@@ -531,14 +512,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginBottom: 6,
       marginTop: 8,
-    },
-    gestureRoot: {
-      flex: 1,
-    },
-    zoomGestureContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
     },
     healthStatusHealthy: {
       color: theme.success,

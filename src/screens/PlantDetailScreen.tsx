@@ -194,8 +194,6 @@ export default function PlantDetailScreen(): React.JSX.Element {
           <ImageZoomModal
             visible={zoomVisible}
             uri={plant.photo_url}
-            insets={insets}
-            styles={styles}
             onClose={() => setZoomVisible(false)}
           />
         )}

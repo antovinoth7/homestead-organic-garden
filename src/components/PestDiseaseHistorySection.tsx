@@ -1,10 +1,14 @@
-import React, { useMemo } from 'react';
-import { View, Text } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { ImageStyle } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { PestDiseaseRecord } from '../types/database.types';
 import { getPestDiseaseEmoji } from '../utils/plantHelpers';
+import { resolveLocalImageUri } from '../lib/imageStorage';
 import { createStyles } from '../styles/plantDetailStyles';
 import { createStyles as createLocalStyles } from '../styles/pestDiseaseHistorySectionStyles';
+import { ImageZoomModal } from './ImageZoomModal';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/colors';
 
@@ -27,6 +31,39 @@ export default function PestDiseaseHistorySection({
 }: PestDiseaseHistorySectionProps): React.JSX.Element {
   const theme = useTheme() as Theme;
   const localStyles = useMemo(() => createLocalStyles(theme), [theme]);
+
+  // Resolve stored photo filenames to displayable local URIs (keyed by filename
+  // so it's stable regardless of how records are sorted for display).
+  const photoKey = useMemo(
+    () => records.map((r) => r.photo_filename ?? '').join('|'),
+    [records]
+  );
+  const [resolvedPhotos, setResolvedPhotos] = useState<Map<string, string>>(new Map());
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const filenames = photoKey.split('|').filter(Boolean);
+    if (filenames.length === 0) {
+      setResolvedPhotos(new Map());
+      return;
+    }
+    void (async () => {
+      const entries = await Promise.all(
+        filenames.map(async (filename) => [filename, await resolveLocalImageUri(filename)] as const)
+      );
+      if (cancelled) return;
+      const next = new Map<string, string>();
+      for (const [filename, uri] of entries) {
+        if (uri) next.set(filename, uri);
+      }
+      setResolvedPhotos(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [photoKey]);
+
   return (
     <>
       {records.length > 0 && (
@@ -113,6 +150,25 @@ export default function PestDiseaseHistorySection({
                   </Text>
                 )}
                 {record.notes && <Text style={styles.pestCardNotes}>{record.notes}</Text>}
+                {record.photo_filename && resolvedPhotos.get(record.photo_filename) && (
+                  <TouchableOpacity
+                    style={localStyles.photoThumbWrap}
+                    activeOpacity={0.85}
+                    onPress={() =>
+                      setSelectedPhoto(resolvedPhotos.get(record.photo_filename!) ?? null)
+                    }
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={`View ${record.name} photo`}
+                  >
+                    <Image
+                      source={{ uri: resolvedPhotos.get(record.photo_filename)! }}
+                      style={localStyles.photoThumb as ImageStyle}
+                      contentFit="cover"
+                      transition={200}
+                      cachePolicy="memory-disk"
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
         </View>
@@ -140,6 +196,14 @@ export default function PestDiseaseHistorySection({
             </View>
           ))}
         </View>
+      )}
+
+      {selectedPhoto && (
+        <ImageZoomModal
+          visible={selectedPhoto !== null}
+          uri={selectedPhoto}
+          onClose={() => setSelectedPhoto(null)}
+        />
       )}
     </>
   );
