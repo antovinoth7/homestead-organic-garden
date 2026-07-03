@@ -1,11 +1,17 @@
 import {
   computeRowLayout,
   computeInterleavedEastPositions,
+  computePlantsPerRow,
+  effectiveRowGapCm,
+  maxFitForSpecies,
   EXPECTED_LAYERS_BY_BED,
 } from '@/utils/rowLayoutEngine';
 import type { RowPlantInput } from '@/utils/rowLayoutEngine';
+import { mapPlantEntriesToRowInputs, templateRowToCandidate } from '@/utils/plantEntryMapper';
+import { GUILD_TEMPLATES } from '@/config/beds/guildTemplates';
+import type { PlantRow } from '@/config/beds/guildTemplates';
 import { LAYER_ORDER } from '@/config/beds/layerMeta';
-import type { BedLayer, BedType } from '@/types/database.types';
+import type { BedLayer, BedType, PlantEntry } from '@/types/database.types';
 
 const W = 1.2;
 const L = 3.0;
@@ -199,5 +205,138 @@ describe('computeRowLayout — bed-type placement audit', () => {
       expect(result.fitsInBed).toBe(false);
       expect(result.overflowCm).toBeGreaterThan(0);
     });
+  });
+});
+
+// ── Step 4 capacity ↔ Step 5 layout parity ─────────────────────────────────
+// The wizard's "Bed full" engine (maxFitForSpecies) and the Arrange step's
+// layout (computeRowLayout over mapped plant entries) must agree for every
+// guild template crop under both construction types: the reported max fits,
+// and one more overflows.
+
+const MAX_FIT_HARD_CAP = 200; // mirror of the engine's internal probe cap
+
+function entriesFor(row: PlantRow, n: number): PlantEntry[] {
+  return Array.from({ length: n }, (_, i) => ({
+    id: `${row.name}-${i}`,
+    name: row.name,
+    layer: row.layer,
+    spacingCm: row.spacing_cm,
+  }));
+}
+
+describe('Step 4 capacity ↔ Step 5 layout parity (all bed types × construction)', () => {
+  const constructions = ['raised', 'in_ground'] as const;
+
+  for (const [bedType, template] of Object.entries(GUILD_TEMPLATES)) {
+    for (const construction of constructions) {
+      it(`${bedType} / ${construction}: maxFit fits in Step 5 and maxFit+1 overflows`, () => {
+        for (const row of template.plant_rows) {
+          const candidate = templateRowToCandidate(row);
+          const n = maxFitForSpecies(
+            candidate,
+            [],
+            W,
+            L,
+            template.type,
+            construction
+          );
+          if (n === 0) continue; // species too big for this bed — nothing to lay out
+
+          const fitAtMax = computeRowLayout(
+            mapPlantEntriesToRowInputs(entriesFor(row, n), template),
+            W,
+            L,
+            template.type,
+            construction
+          );
+          expect(fitAtMax.fitsInBed).toBe(true);
+
+          // n+1 must overflow — unless n was clamped by the probe cap rather
+          // than by bed geometry.
+          const ppr = computePlantsPerRow(Math.round(W * 100), row.spacing_cm);
+          const maxRowsCap = Math.max(
+            1,
+            Math.floor(Math.round(L * 100) / effectiveRowGapCm(candidate, construction))
+          );
+          const cap = Math.min(MAX_FIT_HARD_CAP, Math.max(ppr * maxRowsCap, 1));
+          if (n < cap) {
+            const overMax = computeRowLayout(
+              mapPlantEntriesToRowInputs(entriesFor(row, n + 1), template),
+              W,
+              L,
+              template.type,
+              construction
+            );
+            expect(overMax.fitsInBed).toBe(false);
+          }
+        }
+      });
+    }
+  }
+
+  it('probe candidate carries row_gap_cm — omitting it over-estimates capacity (regression)', () => {
+    // Any template row whose explicit N-S gap exceeds its spacing exposes the
+    // bug: a probe without rowGapCm packs rows tighter than Step 5 lays them.
+    const wide = Object.values(GUILD_TEMPLATES)
+      .flatMap((t) => t.plant_rows.map((r) => ({ template: t, row: r })))
+      .find(
+        ({ row }) =>
+          row.is_companion !== true && (row.row_gap_cm ?? 0) > Math.max(row.spacing_cm, 25)
+      );
+    expect(wide).toBeDefined();
+    const { template, row } = wide!;
+
+    const withGap = templateRowToCandidate(row);
+    const { rowGapCm: _omitted, ...withoutGap } = withGap;
+    const nAccurate = maxFitForSpecies(withGap, [], W, L, template.type, 'raised');
+    const nNaive = maxFitForSpecies(withoutGap, [], W, L, template.type, 'raised');
+    expect(nNaive).toBeGreaterThan(nAccurate);
+
+    // Step 5 rejects the naive count: laying out nNaive real entries overflows.
+    const layout = computeRowLayout(
+      mapPlantEntriesToRowInputs(entriesFor(row, nNaive), template),
+      W,
+      L,
+      template.type,
+      'raised'
+    );
+    expect(layout.fitsInBed).toBe(false);
+  });
+
+  it('companion and soil-builder additions at maxFit still fit a seeded bed', () => {
+    const template = GUILD_TEMPLATES.leafy;
+    const anchor = template.plant_rows[0]!;
+    const seeded = mapPlantEntriesToRowInputs(
+      entriesFor(anchor, computePlantsPerRow(Math.round(W * 100), anchor.spacing_cm)),
+      template
+    );
+
+    // Suggested companion (ground cover, interplants into gaps)
+    const companion: RowPlantInput = {
+      name: 'Radish',
+      layer: 'ground_cover',
+      spacingCm: 25,
+      isCompanion: true,
+    };
+    const nComp = maxFitForSpecies(companion, seeded, W, L, template.type, 'raised');
+    const comps: RowPlantInput[] = Array.from({ length: nComp }, (_, i) => ({
+      ...companion,
+      id: `c${i}`,
+    }));
+    expect(computeRowLayout([...seeded, ...comps], W, L, template.type, 'raised').fitsInBed).toBe(
+      true
+    );
+
+    // Soil builder (dynamic accumulator defaults: understory, 60 cm)
+    const accumulator: RowPlantInput = { name: 'Agathi', layer: 'understory', spacingCm: 60 };
+    const nAcc = maxFitForSpecies(accumulator, seeded, W, L, template.type, 'raised');
+    const accs: RowPlantInput[] = Array.from({ length: nAcc }, (_, i) => ({
+      ...accumulator,
+      id: `a${i}`,
+    }));
+    expect(computeRowLayout([...seeded, ...accs], W, L, template.type, 'raised').fitsInBed).toBe(
+      true
+    );
   });
 });
