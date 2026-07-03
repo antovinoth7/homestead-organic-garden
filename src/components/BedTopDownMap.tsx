@@ -21,7 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
-import { computeInterleavedEastPositions } from '@/utils/rowLayoutEngine';
+import { computeEmptySlotPositions, computeInterleavedEastPositions } from '@/utils/rowLayoutEngine';
 import type { BedRow } from '@/utils/rowLayoutEngine';
 import type { BedLayer } from '@/types/database.types';
 
@@ -50,10 +50,15 @@ function shortLabel(name: string): string {
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const LABEL_VISIBLE_SCALE = 1.2;
-// Inline: tdmCard.padding (10) ×2 + tdmRuler.width (26) + tdmMapWrap.gap (6)
-const HORIZONTAL_OVERHEAD = 10 * 2 + 26 + 6;
-// Modal: tdmModalCanvasWrap.padding (12) + tdmRuler.width (26) + tdmMapWrap.gap (6)
-const MODAL_HORIZONTAL_OVERHEAD = 12 * 2 + 26 + 6;
+// Row-tag gutter sits between the ruler and the canvas (see tdmRowTagGutter).
+const ROW_TAG_GUTTER_WIDTH = 34;
+// Skip the row-gap chip when the gap is under this share of the bed length —
+// the chip would collide with the adjacent centerlines/pins.
+const ROW_GAP_LABEL_MIN_PCT = 7;
+// Inline: tdmCard.padding (10) ×2 + tdmRuler.width (26) + row-tag gutter (34) + tdmPlotRow.gap (6) ×2
+const HORIZONTAL_OVERHEAD = 10 * 2 + 26 + ROW_TAG_GUTTER_WIDTH + 6 * 2;
+// Modal: tdmModalCanvasWrap.padding (12) + tdmRuler.width (26) + row-tag gutter (34) + tdmPlotRow.gap (6) ×2
+const MODAL_HORIZONTAL_OVERHEAD = 12 * 2 + 26 + ROW_TAG_GUTTER_WIDTH + 6 * 2;
 // Modal vertical chrome around the canvas: header (~52), compass top+bottom (~58),
 // legend (~36), wrap padding (~24).
 const MODAL_VERTICAL_CHROME = 170;
@@ -189,6 +194,10 @@ function BedTopDownCanvas({
   );
   const companionCount = useMemo(
     () => rows.reduce((sum, r) => sum + r.plants.filter((p) => p.isCompanion === true).length, 0),
+    [rows]
+  );
+  const openSlotCount = useMemo(
+    () => rows.reduce((sum, r) => sum + computeEmptySlotPositions(r).length, 0),
     [rows]
   );
 
@@ -356,6 +365,23 @@ function BedTopDownCanvas({
           ))}
         </View>
 
+        <View style={styles.tdmRowTagGutter}>
+          {rows.map((row) => {
+            const centerPct = (row.northEdgeCm / lengthCm) * 100;
+            const warning = warningByRow.get(row.rowIndex);
+            return (
+              <View
+                key={`rowtag-${row.rowIndex}`}
+                style={[styles.tdmRowTag, { top: `${centerPct}%` }]}
+                accessibilityLabel={`Row ${row.rowIndex}${warning ? ` · ${warning}` : ''}`}
+              >
+                <Text style={styles.tdmRowTagText}>R{row.rowIndex}</Text>
+                {warning ? <Text style={styles.tdmRowTagWarn}> ⚠</Text> : null}
+              </View>
+            );
+          })}
+        </View>
+
         <View style={styles.tdmPlotCol}>
           <CanvasGestureWrap
             isInlinePreview={isInlinePreview}
@@ -451,8 +477,34 @@ function BedTopDownCanvas({
                   );
                 })}
 
+                {rows.slice(0, -1).map((row, i) => {
+                  const next = rows[i + 1];
+                  if (next === undefined) return null;
+                  const gapCm = Math.round(next.northEdgeCm - row.northEdgeCm);
+                  const gapPct = (gapCm / lengthCm) * 100;
+                  if (gapCm <= 0 || gapPct < ROW_GAP_LABEL_MIN_PCT) return null;
+                  const midPct = ((row.northEdgeCm + next.northEdgeCm) / 2 / lengthCm) * 100;
+                  return (
+                    <View
+                      key={`rowgap-${row.rowIndex}`}
+                      style={[styles.tdmRowGapChip, { top: `${midPct}%` }]}
+                      pointerEvents="none"
+                      accessibilityLabel={`${gapCm} cm gap between row ${row.rowIndex} and row ${next.rowIndex}`}
+                    >
+                      <Text style={[styles.tdmRowGapChipText, { fontSize: gapCaretSize }]}>
+                        ↕ {gapCm} cm
+                      </Text>
+                    </View>
+                  );
+                })}
+
                 {rows.map((row) => {
-                  const positions = computeInterleavedEastPositions(row);
+                  // Gaps read across the whole slot grid — planted and open
+                  // slots alike — so every column gap is measured.
+                  const positions = [
+                    ...computeInterleavedEastPositions(row),
+                    ...computeEmptySlotPositions(row),
+                  ].sort((a, b) => a - b);
                   const topPct = (row.northEdgeCm / lengthCm) * 100;
                   const carets: React.ReactNode[] = [];
                   for (let i = 0; i < positions.length - 1; i++) {
@@ -463,14 +515,13 @@ function BedTopDownCanvas({
                     if (gapCm <= 0) continue;
                     const midPct = ((left + right) / 2 / widthCm) * 100;
                     carets.push(
-                      <Animated.View
+                      <View
                         key={`gap-${row.rowIndex}-${i}`}
                         style={[
                           styles.tdmGapCaret,
                           {
                             left: `${midPct}%`,
                             top: `${topPct}%`,
-                            opacity: labelOpacity,
                           },
                         ]}
                         pointerEvents="none"
@@ -478,7 +529,7 @@ function BedTopDownCanvas({
                         <Text style={[styles.tdmGapCaretText, { fontSize: gapCaretSize }]}>
                           ↔{gapCm}
                         </Text>
-                      </Animated.View>
+                      </View>
                     );
                   }
                   return <React.Fragment key={`gaps-${row.rowIndex}`}>{carets}</React.Fragment>;
@@ -539,17 +590,29 @@ function BedTopDownCanvas({
                 })}
 
                 {rows.map((row) => {
-                  const centerPct = (row.northEdgeCm / lengthCm) * 100;
-                  const warning = warningByRow.get(row.rowIndex);
-                  return (
-                    <View
-                      key={`rowtag-${row.rowIndex}`}
-                      style={[styles.tdmRowTag, { top: `${centerPct}%` }]}
-                    >
-                      <Text style={styles.tdmRowTagText}>R{row.rowIndex}</Text>
-                      {warning ? <Text style={styles.tdmRowTagWarn}> ⚠</Text> : null}
-                    </View>
-                  );
+                  const topPct = (row.northEdgeCm / lengthCm) * 100;
+                  return computeEmptySlotPositions(row).map((eastCm, i) => {
+                    const leftPct = (eastCm / widthCm) * 100;
+                    return (
+                      <View
+                        key={`emptyslot-${row.rowIndex}-${i}`}
+                        style={[
+                          styles.tdmEmptySlot,
+                          {
+                            width: pinSize,
+                            height: pinSize,
+                            borderRadius: pinSize / 2,
+                            left: `${leftPct}%`,
+                            top: `${topPct}%`,
+                            marginLeft: -pinSize / 2,
+                            marginTop: -pinSize / 2,
+                          },
+                        ]}
+                        pointerEvents="none"
+                        accessibilityLabel={`Open slot at ${eastCm} cm in row ${row.rowIndex}`}
+                      />
+                    );
+                  });
                 })}
 
                 {overflowCm > 0 && (
@@ -626,6 +689,12 @@ function BedTopDownCanvas({
           <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchCompanion]} />
           <Text style={styles.tdmLegendText}>Companion × {companionCount}</Text>
         </View>
+        {openSlotCount > 0 && (
+          <View style={styles.tdmLegendItem}>
+            <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchOpenSlot]} />
+            <Text style={styles.tdmLegendText}>Open slot × {openSlotCount}</Text>
+          </View>
+        )}
         <Text style={styles.tdmLegendHint}>Tallest crops at North</Text>
       </View>
 

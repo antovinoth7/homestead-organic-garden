@@ -326,6 +326,22 @@ export function computeInterleavedEastPositions(row: BedRow): number[] {
   return positions;
 }
 
+/**
+ * East-west positions of a row's unplanted column slots. `eastPositionsCm` is
+ * the full `plantsPerRow` slot grid and mains occupy its first N slots (with
+ * companions interleaved between them), so the remainder of the grid is open.
+ *
+ * Used by `BedTopDownMap` to draw placeholder markers so every column of the
+ * bed is visible even when a row is only partially planted.
+ */
+export function computeEmptySlotPositions(row: BedRow): number[] {
+  const occupied = row.plants.filter((p) => p.isCompanion !== true).length;
+  // Companion-only rows fall back to the slot grid itself (see
+  // computeInterleavedEastPositions), so those slots count as occupied too.
+  const usedSlots = occupied > 0 ? occupied : row.plants.length;
+  return row.eastPositionsCm.slice(usedSlots);
+}
+
 export interface CompanionWarning {
   plantA: string;
   plantB: string;

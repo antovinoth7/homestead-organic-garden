@@ -1352,9 +1352,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row' as const,
       justifyContent: 'space-between' as const,
       alignItems: 'center' as const,
-      // Indent past the ruler (width 26 + row gap 6) so the N/S markers sit over
-      // the canvas, matching where they sat when nested inside the frame.
-      paddingLeft: 32,
+      // Indent past the ruler (26) + gap (6) + row-tag gutter (34) + gap (6) so
+      // the N/S markers sit over the canvas, matching where they sat when
+      // nested inside the frame.
+      paddingLeft: 72,
     },
     tdmCompassN: {
       fontSize: 10,
@@ -1415,9 +1416,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       opacity: 0.55,
       transform: [{ translateY: -0.5 }],
     },
+    // Dedicated column between the ruler and the canvas so the R-tags never
+    // cover the westmost plant pins inside the bed.
+    tdmRowTagGutter: {
+      width: 34,
+      position: 'relative' as const,
+    },
     tdmRowTag: {
       position: 'absolute' as const,
-      left: 2,
+      left: 0,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       backgroundColor: theme.backgroundSecondary,
@@ -1427,8 +1434,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 1,
       borderRadius: 999,
       // Centre the pill on the row centerline (≈17px tall → lift half its height).
-      // Rendered after the pins so the opaque pill reads cleanly on top of the
-      // westmost pin at the bed edge.
       transform: [{ translateY: -9 }],
     },
     tdmRowTagText: {
@@ -1496,6 +1501,23 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600' as const,
       letterSpacing: 0.1,
       paddingHorizontal: 2,
+      borderRadius: 3,
+      overflow: 'hidden' as const,
+      backgroundColor: theme.backgroundSecondary,
+    },
+    // Chip on the midline between two adjacent rows showing their exact N-S gap.
+    tdmRowGapChip: {
+      position: 'absolute' as const,
+      left: '50%' as const,
+      width: 0,
+      alignItems: 'center' as const,
+      transform: [{ translateY: -6 }],
+    },
+    tdmRowGapChipText: {
+      color: theme.accent,
+      fontWeight: '600' as const,
+      letterSpacing: 0.1,
+      paddingHorizontal: 3,
       borderRadius: 3,
       overflow: 'hidden' as const,
       backgroundColor: theme.backgroundSecondary,
@@ -1638,6 +1660,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       height: 18,
       borderRadius: 9,
     },
+    // Unplanted column slot — faint dashed outline at the slot's true position.
+    // No fill: the bed surface shows through.
+    tdmEmptySlot: {
+      position: 'absolute' as const,
+      borderWidth: 1,
+      borderStyle: 'dashed' as const,
+      borderColor: theme.textTertiary,
+      opacity: 0.6,
+    },
     tdmPinEmoji: {
       fontSize: 11,
       lineHeight: 13,
@@ -1674,8 +1705,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexWrap: 'wrap' as const,
       gap: 8,
       marginTop: 6,
-      // Align under the canvas (past the ruler gutter), matching the compass.
-      paddingLeft: 32,
+      // Align under the canvas (past the ruler + row-tag gutters), matching the compass.
+      paddingLeft: 72,
     },
     tdmLegendItem: {
       flexDirection: 'row' as const,
@@ -1696,6 +1727,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderStyle: 'dashed' as const,
       borderColor: theme.purpleDark,
       backgroundColor: theme.purpleLight,
+    },
+    tdmLegendSwatchOpenSlot: {
+      borderStyle: 'dashed' as const,
+      borderColor: theme.textTertiary,
     },
     tdmLegendText: {
       fontSize: 10,
