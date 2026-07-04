@@ -150,6 +150,22 @@ export default function CalendarScreen(): React.JSX.Element {
     bedNames: bedMap,
   });
 
+  // One-shot after first load: the default "Pots & Ground" segment hides
+  // bed-plant tasks, so when it's empty but Beds has tasks, start on Beds.
+  // Never re-runs, and a manual segment tap disarms it.
+  const segmentAutoSelectDone = useRef(false);
+  const selectSegment = useCallback((value: 'bed' | 'other') => {
+    segmentAutoSelectDone.current = true;
+    setBedSegment(value);
+  }, []);
+  useEffect(() => {
+    if (segmentAutoSelectDone.current || initialLoading) return;
+    segmentAutoSelectDone.current = true;
+    if (segmentCounts.other === 0 && segmentCounts.bed > 0) {
+      setBedSegment('bed');
+    }
+  }, [initialLoading, segmentCounts]);
+
   const isFilterActive = filterTaskTypes.size > 0 || filterOverdueOnly;
 
   const clearFilters = useCallback(() => {
@@ -832,7 +848,7 @@ export default function CalendarScreen(): React.JSX.Element {
                 <TouchableOpacity
                   key={value}
                   style={[styles.segmentChip, active && styles.segmentChipActive]}
-                  onPress={() => setBedSegment(value)}
+                  onPress={() => selectSegment(value)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={`${label} tasks, ${count}`}

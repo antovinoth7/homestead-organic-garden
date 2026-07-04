@@ -28,21 +28,17 @@ import { TASK_DUE_TIME_HOUR, MS_PER_DAY } from '../utils/taskConstants';
 import { getCurrentSeason, getWateringFrequencyMultiplier } from '../utils/seasonHelpers';
 import { getCoconutAgeInfo, getEffectiveGrowthStage, isPlantArchived } from '../utils/plantHelpers';
 import { getPlantCareProfile } from '../utils/plantCareDefaults';
+import {
+  TASK_TYPE_TO_PLANT_LAST_CARE_FIELD,
+  parseDateValue,
+  getLastCareDate,
+  computeNextDueAt,
+  type PlantLastCareField,
+} from './taskSchedulingLogic';
 
 const TASKS_COLLECTION = 'task_templates';
 const TASK_LOGS_COLLECTION = 'task_logs';
 const PLANTS_COLLECTION = 'plants';
-type PlantLastCareField =
-  | 'last_watered_date'
-  | 'last_fertilised_date'
-  | 'last_pruned_date'
-  | 'last_harvest_date';
-const TASK_TYPE_TO_PLANT_LAST_CARE_FIELD: Partial<Record<TaskType, PlantLastCareField>> = {
-  water: 'last_watered_date',
-  fertilise: 'last_fertilised_date',
-  prune: 'last_pruned_date',
-  harvest: 'last_harvest_date',
-};
 type MarkTaskDoneOptions = {
   skipAlreadyDoneCheck?: boolean;
 };
@@ -880,32 +876,6 @@ export const getStoredTodayTaskLogs = async (): Promise<TaskLog[]> => {
   });
 };
 
-const parseDateValue = (value?: string | null): Date | null => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date;
-};
-
-const computeNextDueAt = (plant: Plant, taskType: TaskType, frequency: number): string => {
-  const reference =
-    taskType === 'water'
-      ? plant.last_watered_date
-      : taskType === 'fertilise'
-      ? plant.last_fertilised_date
-      : taskType === 'prune'
-      ? plant.last_pruned_date
-      : null;
-
-  const base = parseDateValue(reference) || new Date();
-
-  const nextDueAt = new Date(base);
-  nextDueAt.setDate(nextDueAt.getDate() + frequency);
-  nextDueAt.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0);
-
-  return nextDueAt.toISOString();
-};
-
 /**
  * Generate recurring tasks from plant care schedules
  * This will create task templates for plants that have care schedules configured
@@ -1059,6 +1029,16 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<void> => {
       if (!existingDueDate) {
         updates.next_due_at = nextDueAt;
       } else if (plantCreatedAt && existingDueDate < plantCreatedAt) {
+        updates.next_due_at = nextDueAt;
+      } else if (
+        TASK_TYPE_TO_PLANT_LAST_CARE_FIELD[taskType] !== undefined &&
+        !parseDateValue(getLastCareDate(plant, taskType)) &&
+        existingDueDate > new Date(nextDueAt)
+      ) {
+        // Older builds seeded the first due date from "now" instead of the
+        // planting date; pull never-completed tasks back into agreement.
+        // Only for task types with a plant last-care field — completions of
+        // other types (harvest_leaves) are invisible on the plant doc.
         updates.next_due_at = nextDueAt;
       }
       if (Object.keys(updates).length > 0) {
