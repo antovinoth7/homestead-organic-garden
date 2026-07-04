@@ -16,6 +16,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import {
@@ -348,12 +349,21 @@ export default function CalendarScreen(): React.JSX.Element {
     setCompletedCount(0);
     setCompletingTotal(selected.length);
 
-    // One batched commit + single cache write — no per-task re-render storm.
+    // One batched commit per ≤166 tasks + single cache write — no per-task
+    // re-render storm. onProgress advances the modal's counter/bar per commit.
     const { succeeded, failed } = await markTasksDone(selected, {
       skipAlreadyDoneCheck: true,
+      onProgress: (done) => {
+        if (isMountedRef.current) setCompletedCount(done);
+      },
     });
 
-    setCompletedCount(succeeded);
+    if (isMountedRef.current) {
+      setCompletedCount(succeeded);
+    }
+    // Hold briefly so the bar visibly fills to 100% before the modal closes.
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    if (!isMountedRef.current) return;
     setIsCompletingAll(false);
     setCompletedCount(0);
     setSelectedTaskIds(new Set());
@@ -365,7 +375,7 @@ export default function CalendarScreen(): React.JSX.Element {
         `${failed} task(s) failed. You can retry them individually.`
       );
     }
-  }, [tasks, selectedTaskIds, isCompletingAll, loadData]);
+  }, [tasks, selectedTaskIds, isCompletingAll, loadData, isMountedRef]);
 
   const handleBulkSnooze = useCallback(async () => {
     const selected = tasks.filter((t) => selectedTaskIds.has(t.id));
@@ -1364,7 +1374,7 @@ export default function CalendarScreen(): React.JSX.Element {
             <View style={styles.completeAllCard}>
               <View style={styles.completeAllIconRow}>
                 <View style={styles.completeAllIconCircle}>
-                  <Ionicons name="hourglass" size={28} color={theme.textInverse} />
+                  <ActivityIndicator size="small" color={theme.textInverse} />
                 </View>
               </View>
               <Text style={styles.completeAllTitle}>

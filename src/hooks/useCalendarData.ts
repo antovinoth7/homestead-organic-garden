@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   getTaskTemplates,
+  getStoredTaskTemplates,
   deleteTasksForPlantIds,
   deleteTasksForBedIds,
   getTodayTaskLogs,
+  getStoredTodayTaskLogs,
 } from '../services/tasks';
-import { getAllPlants, plantExists } from '../services/plants';
+import { getAllPlants, getStoredPlants, plantExists } from '../services/plants';
 import { getBeds } from '../services/beds';
 import { getJournalMetadata } from '../services/journal';
 import {
@@ -100,6 +102,7 @@ export function useCalendarData({
 
   const isMountedRef = useRef(true);
   const lastLoadTimeRef = useRef(0);
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -114,12 +117,47 @@ export function useCalendarData({
     if (!options?.force && now - lastLoadTimeRef.current < 2000) return;
     lastLoadTimeRef.current = now;
 
+    // Cache-first paint (first run only): render the AsyncStorage copies
+    // immediately instead of blanking the screen behind the Firestore
+    // round-trip. The network fetch below then revalidates silently.
+    // Journal metadata has no stored reader — the harvest-ready strip fills
+    // in when the network data lands. Orphan checks stay network-only.
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      try {
+        const [storedTasks, storedPlants, storedLogs] = await Promise.all([
+          getStoredTaskTemplates(),
+          getStoredPlants(),
+          getStoredTodayTaskLogs(),
+        ]);
+        if (isMountedRef.current && (storedTasks.length > 0 || storedPlants.length > 0)) {
+          const storedPlantIds = new Set(storedPlants.map((plant) => plant.id));
+          setTasks(
+            storedTasks.filter(
+              (task) => task.enabled && (!task.plant_id || storedPlantIds.has(task.plant_id))
+            )
+          );
+          setPlants(storedPlants);
+          setTodayLogs(storedLogs);
+          setInitialLoading(false);
+        }
+      } catch (error) {
+        logger.warn('Calendar cache hydrate failed, waiting for network', error as Error);
+      }
+    }
+
     try {
-      const [tasksData, plantsData, journalData, todayLogsData] = await Promise.all([
+      const [tasksData, plantsData, journalData, todayLogsData, bedsResult] = await Promise.all([
         getTaskTemplates(),
         getAllPlants(),
         getJournalMetadata(),
         getTodayTaskLogs(),
+        // Beds load in parallel with the rest; a failure must never hide live
+        // bed tasks, so it degrades to null and skips the orphan-bed pass.
+        getBeds().catch((error) => {
+          logger.warn('Failed to load beds for orphan check', error as Error);
+          return null;
+        }),
       ]);
 
       if (!isMountedRef.current) return;
@@ -165,24 +203,25 @@ export function useCalendarData({
       }
 
       // Bed-level tasks whose bed was deleted (getBeds excludes is_deleted beds)
-      // are orphans: hide them now and self-heal by deleting them. Guarded so a
-      // transient beds fetch failure never hides live bed tasks.
-      try {
-        const liveBedIds = new Set((await getBeds()).map((bed) => bed.id));
-        if (!isMountedRef.current) return;
-        const orphanBedTasks = filteredTasks.filter((task) =>
-          isBedLevelOrphanTask(task, liveBedIds)
-        );
-        setOrphanBedTaskIds(new Set(orphanBedTasks.map((task) => task.id)));
-
-        if (orphanBedTasks.length > 0 && isNetworkAvailable()) {
-          const orphanBedIds = Array.from(
-            new Set(orphanBedTasks.map((task) => task.bed_id as string))
+      // are orphans: hide them now and self-heal by deleting them. A beds fetch
+      // failure (bedsResult null) never hides live bed tasks.
+      if (bedsResult) {
+        try {
+          const liveBedIds = new Set(bedsResult.map((bed) => bed.id));
+          const orphanBedTasks = filteredTasks.filter((task) =>
+            isBedLevelOrphanTask(task, liveBedIds)
           );
-          await deleteTasksForBedIds(orphanBedIds);
+          setOrphanBedTaskIds(new Set(orphanBedTasks.map((task) => task.id)));
+
+          if (orphanBedTasks.length > 0 && isNetworkAvailable()) {
+            const orphanBedIds = Array.from(
+              new Set(orphanBedTasks.map((task) => task.bed_id as string))
+            );
+            await deleteTasksForBedIds(orphanBedIds);
+          }
+        } catch (error) {
+          logger.warn('Failed to resolve orphaned bed tasks', error as Error);
         }
-      } catch (error) {
-        logger.warn('Failed to resolve orphaned bed tasks', error as Error);
       }
     } catch (error) {
       if (!isMountedRef.current) return;
