@@ -245,10 +245,10 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
           ))}
           <View style={styles.leftLabel}>
             <Text style={styles.leftLabelGm} numberOfLines={1}>
-              {greenManureInfo.gm.tamilName}
+              {greenManureInfo.gm.name}
             </Text>
             <Text style={styles.leftLabelGmSub} numberOfLines={1}>
-              {greenManureInfo.gm.name}
+              green manure
             </Text>
           </View>
         </View>

@@ -491,7 +491,10 @@ function BedTopDownCanvas({
                       pointerEvents="none"
                       accessibilityLabel={`${gapCm} cm gap between row ${row.rowIndex} and row ${next.rowIndex}`}
                     >
-                      <Text style={[styles.tdmRowGapChipText, { fontSize: gapCaretSize }]}>
+                      <Text
+                        style={[styles.tdmRowGapChipText, { fontSize: gapCaretSize }]}
+                        numberOfLines={1}
+                      >
                         ↕ {gapCm} cm
                       </Text>
                     </View>
@@ -526,7 +529,10 @@ function BedTopDownCanvas({
                         ]}
                         pointerEvents="none"
                       >
-                        <Text style={[styles.tdmGapCaretText, { fontSize: gapCaretSize }]}>
+                        <Text
+                          style={[styles.tdmGapCaretText, { fontSize: gapCaretSize }]}
+                          numberOfLines={1}
+                        >
                           ↔{gapCm}
                         </Text>
                       </View>
@@ -754,14 +760,17 @@ export function BedTopDownMap(props: BedTopDownMapProps): React.JSX.Element | nu
             style={[styles.tdmModalRoot, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
           >
             <View style={styles.tdmModalHeader}>
-              <Text style={styles.tdmModalTitle}>{dimensionLabel}</Text>
+              <View>
+                <Text style={styles.tdmModalTitle}>{dimensionLabel}</Text>
+                <Text style={styles.tdmModalSubtitle}>Top-down view · 30 cm grid</Text>
+              </View>
               <TouchableOpacity
                 style={styles.tdmModalClose}
                 onPress={() => setIsFullScreen(false)}
                 accessibilityLabel="Close fullscreen map"
                 hitSlop={8}
               >
-                <Ionicons name="close" size={24} color={theme.text} />
+                <Ionicons name="close" size={18} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
             <View style={styles.tdmModalCanvasWrap}>

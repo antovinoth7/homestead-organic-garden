@@ -1488,11 +1488,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       right: 0,
       textAlign: 'center' as const,
     },
-    // Zero-width anchor placed at the gap midpoint; alignItems centers the chip
-    // exactly on that point regardless of digit count. Sits just below the line.
+    // Fixed-width anchor centred on the gap midpoint via negative marginLeft
+    // (same pattern as tdmPinWrap). A zero-width anchor lets Android wrap the
+    // chip text one character per line, leaving stray white slivers on the map.
     tdmGapCaret: {
       position: 'absolute' as const,
-      width: 0,
+      width: 44,
+      marginLeft: -22,
       alignItems: 'center' as const,
       transform: [{ translateY: 7 }],
     },
@@ -1509,7 +1511,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmRowGapChip: {
       position: 'absolute' as const,
       left: '50%' as const,
-      width: 0,
+      width: 72,
+      marginLeft: -36,
       alignItems: 'center' as const,
       transform: [{ translateY: -6 }],
     },
@@ -1610,20 +1613,28 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center' as const,
       justifyContent: 'space-between' as const,
       paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingVertical: 10,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
       backgroundColor: theme.backgroundSecondary,
     },
     tdmModalTitle: {
       fontSize: 16,
-      fontWeight: '600' as const,
+      fontWeight: '700' as const,
       color: theme.text,
     },
+    tdmModalSubtitle: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
     tdmModalClose: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
     },
