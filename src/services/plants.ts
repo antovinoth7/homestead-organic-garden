@@ -124,8 +124,11 @@ export const getPlants = async (
     });
     const activePlants = plants.filter((plant) => !plant.is_deleted);
 
-    // Cache the results locally (only first page to avoid memory issues)
-    if (!lastDoc) {
+    // Persist only when this single page provably holds the whole collection
+    // (first page, not full). A partial page must never overwrite the store —
+    // the offline copy always mirrors the complete active-plant set, which
+    // getAllPlants writes after assembling every page.
+    if (!lastDoc && snapshot.docs.length < pageSize) {
       await setData(KEYS.PLANTS, activePlants);
     }
 
@@ -191,11 +194,17 @@ export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Prom
     const allPlants: Plant[] = [];
     let lastDoc: QueryDocumentSnapshot | undefined = undefined;
     let hasMore = true;
+    let complete = true;
 
     while (hasMore) {
       try {
         const response = await getPlants(pageSize, lastDoc);
         allPlants.push(...(response.plants ?? []));
+
+        // `fetchedCount` is undefined only when getPlants served its offline
+        // AsyncStorage fallback — that result may be partial or overlap pages
+        // already collected, so it must not be persisted as the full set.
+        if (response.fetchedCount === undefined) complete = false;
 
         // Decide on the RAW page size, not the filtered active count: a page full
         // of docs can still yield <pageSize active plants once soft-deleted docs
@@ -212,11 +221,23 @@ export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Prom
         lastDoc = response.lastDoc;
       } catch (error) {
         logger.warn('getAllPlants: page fetch failed, returning partial results', error as Error);
+        complete = false;
         break;
       }
     }
 
-    return allPlants;
+    // De-dupe by id: an offline fallback mid-pagination returns the whole
+    // stored copy, which can repeat plants from earlier pages.
+    const uniquePlants = Array.from(new Map(allPlants.map((p) => [p.id, p])).values());
+
+    // Persist the fully-assembled set so offline cold-starts see every plant,
+    // not just the newest page (pot/ground plants older than the first page
+    // used to vanish from the offline copy).
+    if (complete) {
+      await setData(KEYS.PLANTS, uniquePlants);
+    }
+
+    return uniquePlants;
   });
 };
 
