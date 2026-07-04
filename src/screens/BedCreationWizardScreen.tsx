@@ -156,7 +156,6 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
             data={wizard.stepData[2]!}
             onChange={wizard.setStep2}
             solanaceaeBlocked={wizard.solanaceaeBlocked}
-            directionMissing={wizard.directionMissing}
             existingBeds={wizard.existingBeds}
             parentOptions={wizard.locationConfig.parentLocations}
             childOptions={wizard.locationConfig.childLocations}

@@ -288,6 +288,12 @@ export default function PlantCard({
             )}
           </View>
         </View>
+        <Ionicons
+          name="chevron-forward"
+          size={18}
+          color={theme.textTertiary}
+          style={styles.chevron}
+        />
       </TouchableOpacity>
     </Swipeable>
   );

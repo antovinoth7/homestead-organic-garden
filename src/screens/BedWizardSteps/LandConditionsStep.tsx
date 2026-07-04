@@ -44,7 +44,6 @@ interface Props {
   data: Step2Data;
   onChange: (data: Partial<Step2Data>) => void;
   solanaceaeBlocked: boolean;
-  directionMissing: boolean;
   existingBeds: Bed[];
   parentOptions: string[];
   childOptions: string[];
@@ -105,7 +104,6 @@ export function LandConditionsStep({
   data,
   onChange,
   solanaceaeBlocked,
-  directionMissing,
   existingBeds,
   parentOptions,
   childOptions,
@@ -182,13 +180,6 @@ export function LandConditionsStep({
             label="Section / Direction"
             placeholder="Select section / direction"
           />
-          {directionMissing && (
-            <View style={styles.sunlightWarning}>
-              <Text style={styles.sunlightWarningText}>
-                ⚠️ Choose a section/direction to continue.
-              </Text>
-            </View>
-          )}
         </View>
       )}
 

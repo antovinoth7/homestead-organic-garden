@@ -181,6 +181,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.primary,
       backgroundColor: theme.primaryLight,
     },
+    chevron: {
+      marginLeft: 4,
+    },
     moreBtn: {
       width: 36,
       height: 36,
