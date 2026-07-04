@@ -21,6 +21,7 @@ import type {
   ExpoSpeechRecognitionErrorEvent,
 } from 'expo-speech-recognition';
 import { logError } from '@/utils/errorLogging';
+import { logger } from '@/utils/logger';
 import { voiceErrorMessage, VOICE_FALLBACK_ERROR } from '@/utils/voiceInput';
 
 // Resolved once at module load. `null` when the native module is not compiled in.
@@ -29,6 +30,10 @@ const SpeechModule = requireOptionalNativeModule<typeof ExpoSpeechRecognitionMod
 );
 
 const UNAVAILABLE_ERROR = 'Speech recognition is not available on this device.';
+
+// User-correctable outcomes (silence, pausing too long, denying the mic) —
+// worth showing a message for, but not worth an error-tracker event.
+const BENIGN_VOICE_ERRORS = new Set(['no-speech', 'speech-timeout', 'not-allowed']);
 
 export interface UseVoiceInputOptions {
   /** BCP-47 locale, e.g. "ta-IN" or "en-IN". */
@@ -63,6 +68,12 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
     onResultRef.current = onResult;
   }, [onResult]);
 
+  // The native listeners are module-global: every mounted instance of this
+  // hook receives every recognizer event, including ones for sessions started
+  // on other screens. This ref marks whether *this* instance owns the current
+  // session, so stray events can't surface errors on unrelated forms.
+  const sessionActiveRef = useRef(false);
+
   useEffect(() => {
     if (!SpeechModule) {
       setIsAvailable(false);
@@ -78,6 +89,7 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
     const subscriptions = [
       SpeechModule.addListener('start', () => setIsListening(true)),
       SpeechModule.addListener('end', () => {
+        sessionActiveRef.current = false;
         setIsListening(false);
         setPartialTranscript('');
       }),
@@ -94,10 +106,20 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
         }
       }),
       SpeechModule.addListener('error', (event: ExpoSpeechRecognitionErrorEvent) => {
+        const ownSession = sessionActiveRef.current;
+        sessionActiveRef.current = false;
         setIsListening(false);
         setPartialTranscript('');
+        // Not our session (another screen's recognizer, or a stray OS event),
+        // or an 'aborted' cancellation (navigation away, manual stop, session
+        // superseded) — neither is a failure the user should hear about.
+        if (!ownSession || event.error === 'aborted') return;
         setError(voiceErrorMessage(event.error));
-        logError('error', `useVoiceInput: ${event.error}`, new Error(event.message));
+        if (BENIGN_VOICE_ERRORS.has(event.error)) {
+          logger.warn(`useVoiceInput: ${event.error}`, new Error(event.message));
+        } else {
+          logError('error', `useVoiceInput: ${event.error}`, new Error(event.message));
+        }
       }),
     ];
 
@@ -133,6 +155,7 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
         setError(voiceErrorMessage('not-allowed'));
         return;
       }
+      sessionActiveRef.current = true;
       SpeechModule.start({
         lang: locale,
         interimResults: true,
@@ -140,6 +163,7 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
         addsPunctuation: true,
       });
     } catch (err) {
+      sessionActiveRef.current = false;
       setError(VOICE_FALLBACK_ERROR);
       logError('error', 'useVoiceInput: start failed', err);
     }

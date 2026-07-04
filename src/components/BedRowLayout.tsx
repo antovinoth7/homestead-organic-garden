@@ -27,7 +27,7 @@ import { getPlantEmoji } from '@/utils/plantHelpers';
 import type { BedLayer, BedType, EntryResolution } from '@/types/database.types';
 import { bedExpectsLegumes } from '@/config/beds';
 import type { RowLayoutResult, BedRow, RowPlant } from '@/utils/rowLayoutEngine';
-import { interleavePlants } from '@/utils/rowLayoutEngine';
+import { computeEmptySlotPositions, interleavePlants } from '@/utils/rowLayoutEngine';
 
 // Enable LayoutAnimation on Android old architecture
 const isNewArchitectureEnabled =
@@ -315,9 +315,20 @@ function RowCard({
       ? `${mainPlantCount} main + ${row.interplantedCount} companion`
       : `${row.plants.length} / ${row.plantsPerRow} plant${row.plantsPerRow !== 1 ? 's' : ''}`;
   const careTasks = Array.from(new Set(row.plants.flatMap((p) => p.careTasks ?? [])));
+  // Open slots and their spacing mirror the Layout tab: companions interplant
+  // between mains and don't consume column slots, and the label is the slot
+  // grid's actual column pitch (main-crop spacing), not the smallest spacing
+  // in the row.
+  const emptySlotCount = computeEmptySlotPositions(row).length;
+  const mainSpacings = row.plants
+    .filter((p) => p.isCompanion !== true)
+    .map((p) => p.spacingCm);
   const tileSpacingCm =
-    row.plants.length > 0 ? Math.min(...row.plants.map((p) => p.spacingCm)) : 30;
-  const emptySlotCount = Math.max(0, row.plantsPerRow - row.plants.length);
+    row.eastPositionsCm.length >= 2
+      ? Math.round(row.eastPositionsCm[1]! - row.eastPositionsCm[0]!)
+      : mainSpacings.length > 0
+        ? Math.max(...mainSpacings)
+        : 30;
 
   return (
     <View style={[styles.rowCard, { borderColor, backgroundColor: bgColor }]}>

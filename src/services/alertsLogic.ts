@@ -18,6 +18,7 @@ import {
 } from '@/types/database.types';
 import { getPlantWaterStatus } from '@/utils/plantWatering';
 import { getSeasonalPestAlerts } from '@/utils/seasonHelpers';
+import { getGreenManureForMonth } from '@/config/beds';
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -47,6 +48,13 @@ export interface FarmAlertInputs {
   harvestGapWarnings?: HarvestGapWarning[];
   /** Map of bedId → bed display name, for labelling bed alerts. */
   bedNames?: Record<string, string>;
+  /**
+   * How many beds are empty or resting (candidates for green manure).
+   * `null`/`undefined` = beds not loaded yet — the seasonal green-manure card
+   * still shows (generic wording). `0` = every bed is planted — the card is
+   * considered done and is omitted.
+   */
+  emptyOrRestingBedCount?: number | null;
   /** Injectable clock for deterministic tests. */
   now?: number;
 }
@@ -72,7 +80,14 @@ function plural(n: number): string {
  * most-urgent-first (severity, then days overdue, then name).
  */
 export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
-  const { plants, rotationStatuses, harvestGapWarnings, bedNames, now = Date.now() } = inputs;
+  const {
+    plants,
+    rotationStatuses,
+    harvestGapWarnings,
+    bedNames,
+    emptyOrRestingBedCount,
+    now = Date.now(),
+  } = inputs;
   const nowIso = new Date(now).toISOString();
   const alerts: FarmAlert[] = [];
 
@@ -147,6 +162,23 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
           daysOverdue: overdue,
           created_at: nowIso,
         });
+      } else if (sinceFert === null) {
+        // Never fertilised: due once the plant is older than its fertilising
+        // frequency (mirrors the watering no-history rule in plantWatering.ts).
+        const ageDays = daysSince(plant.planting_date || plant.created_at, now);
+        if (ageDays !== null && ageDays >= fertFreq) {
+          alerts.push({
+            id: `fertilise_${plant.id}`,
+            type: 'fertilise_due',
+            plantId: plant.id,
+            title: plant.name,
+            message: 'First fertilising due — no manure logged yet',
+            severity: 'warning',
+            icon: '🌿',
+            daysOverdue: Math.max(0, ageDays - fertFreq),
+            created_at: nowIso,
+          });
+        }
       }
     }
 
@@ -207,19 +239,28 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
         created_at: nowIso,
       });
     }
-    if (status.green_manure_recommendation) {
-      alerts.push({
-        id: `resting_${status.bed_id}`,
-        type: 'bed_resting_end',
-        bedId: status.bed_id,
-        title: bedLabel,
-        message: `Sow ${status.green_manure_recommendation.name} green manure`,
-        severity: 'info',
-        icon: '🌱',
-        daysOverdue: 0,
-        created_at: nowIso,
-      });
-    }
+  }
+
+  // Seasonal green-manure suggestion — a single farm-level card rather than one
+  // per bed. Computed straight from the calendar so it never blinks out while
+  // bed data loads; it drops away ("completes") once every bed is planted.
+  if (emptyOrRestingBedCount !== 0) {
+    const nowDate = new Date(now);
+    const month = nowDate.getMonth() + 1;
+    const gm = getGreenManureForMonth(month);
+    alerts.push({
+      id: `green_manure_${nowDate.getFullYear()}_${month}`,
+      type: 'bed_resting_end',
+      title: 'Green manure',
+      message:
+        emptyOrRestingBedCount != null
+          ? `Sow ${gm.name} in ${emptyOrRestingBedCount} empty bed${plural(emptyOrRestingBedCount)}`
+          : `Sow ${gm.name} green manure in empty beds`,
+      severity: 'info',
+      icon: '🌱',
+      daysOverdue: 0,
+      created_at: nowIso,
+    });
   }
 
   // Harvest-gap warnings (two same-guild beds clearing within 21 days).

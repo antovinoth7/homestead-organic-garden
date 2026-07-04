@@ -21,7 +21,7 @@ import { BED_TYPE_NAME, BED_TYPE_EMOJI } from '@/config/beds/bedTypeMeta';
 import { computeRowLayout } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
-import { plantToEntry } from '@/utils/bedEditReconcile';
+import { plantToLayoutEntries } from '@/utils/bedEditReconcile';
 import { getPlantEmoji } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedDetailStyles';
 import { logger } from '@/utils/logger';
@@ -85,7 +85,7 @@ export default function BedDetailScreen(): React.JSX.Element {
   // as the wizard's Step 6 review).
   const rowLayout = useMemo<RowLayoutResult | null>(() => {
     if (!bed || plants.length === 0) return null;
-    const entries = plants.map(plantToEntry);
+    const entries = plants.flatMap(plantToLayoutEntries);
     const tpl = getGuildTemplate(bed.type);
     const inputs = mapPlantEntriesToRowInputs(entries, tpl);
     if (inputs.length === 0) return null;
@@ -98,6 +98,25 @@ export default function BedDetailScreen(): React.JSX.Element {
       construction
     );
   }, [bed, plants]);
+
+  // Companion conflicts mapped onto the rows that contain them (⚠ row tags).
+  const rowWarnings = useMemo(() => {
+    if (!rowLayout) return [];
+    const warnings: { rowIndex: number; message: string }[] = [];
+    for (const row of rowLayout.rows) {
+      const names = new Set(row.plants.map((p) => p.name));
+      for (const w of rowLayout.companionWarnings) {
+        if (names.has(w.plantA) || names.has(w.plantB)) {
+          warnings.push({
+            rowIndex: row.rowIndex,
+            message: `${w.plantA} + ${w.plantB} — ${w.reason}`,
+          });
+          break;
+        }
+      }
+    }
+    return warnings;
+  }, [rowLayout]);
 
   const transitionInputs = useMemo(() => {
     if (!bed?.prev_crop_family) return [];
@@ -215,6 +234,7 @@ export default function BedDetailScreen(): React.JSX.Element {
             walkingPathCm={rowLayout.walkingPathCm}
             edgeBufferCm={rowLayout.edgeBufferCm}
             overflowCm={rowLayout.overflowCm}
+            rowWarnings={rowWarnings}
           />
         </View>
       )}

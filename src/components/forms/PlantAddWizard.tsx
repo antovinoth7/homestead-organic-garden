@@ -202,6 +202,18 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
           </View>
         ) : null}
         <View style={[wizardStyles.wizardNavBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+          {wizardStep > 1 ? (
+            <TouchableOpacity
+              style={wizardStyles.wizardBackBtn}
+              onPress={handleBack}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-back" size={18} color={theme.textInverse} />
+              <Text style={wizardStyles.wizardBackText}>Back</Text>
+            </TouchableOpacity>
+          ) : (
+            <View />
+          )}
           {wizardStep === 3 ? (
             <TouchableOpacity
               style={[wizardStyles.wizardSaveBtn, loading && wizardStyles.wizardSaveBtnDisabled]}
@@ -220,6 +232,7 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
               activeOpacity={0.85}
             >
               <Text style={wizardStyles.wizardNextText}>Next</Text>
+              <Ionicons name="arrow-forward" size={18} color={theme.textInverse} />
             </TouchableOpacity>
           )}
         </View>

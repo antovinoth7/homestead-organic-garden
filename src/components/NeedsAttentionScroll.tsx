@@ -5,18 +5,25 @@
  * Fed by `alerts.ts` (`getFarmAlerts(...).filter(isActionable)`) — no inline
  * alert logic. By default every actionable alert is shown so the header count
  * matches what's reachable; pass `maxItems` to cap. Tapping a card bubbles the
- * alert up so the screen can navigate.
+ * alert up so the screen can navigate. Fertilise cards can carry a quick ✓
+ * complete action, and the seasonal green-manure card an ✕ month-dismiss.
  */
 
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { FarmAlert } from '@/types/database.types';
 import { useTheme } from '@/theme';
+import type { Theme } from '@/theme/colors';
 import { createStyles } from '@/styles/needsAttentionScrollStyles';
 
 interface Props {
   alerts: FarmAlert[];
   onPressAlert: (alert: FarmAlert) => void;
+  /** Quick-complete for fertilise alerts (logs manure applied today). */
+  onCompleteAlert?: (alert: FarmAlert) => void;
+  /** Dismiss for the seasonal green-manure card (hides it for the month). */
+  onDismissAlert?: (alert: FarmAlert) => void;
   /** Optional cap on cards shown. Defaults to showing all actionable alerts. */
   maxItems?: number;
 }
@@ -26,6 +33,8 @@ const keyExtractor = (item: FarmAlert): string => item.id;
 export const NeedsAttentionScroll = React.memo(function NeedsAttentionScroll({
   alerts,
   onPressAlert,
+  onCompleteAlert,
+  onDismissAlert,
   maxItems,
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
@@ -37,9 +46,16 @@ export const NeedsAttentionScroll = React.memo(function NeedsAttentionScroll({
 
   const renderItem = useCallback(
     ({ item }: { item: FarmAlert }) => (
-      <AttentionCard alert={item} styles={styles} onPress={onPressAlert} />
+      <AttentionCard
+        alert={item}
+        styles={styles}
+        theme={theme}
+        onPress={onPressAlert}
+        onComplete={onCompleteAlert}
+        onDismiss={onDismissAlert}
+      />
     ),
-    [styles, onPressAlert]
+    [styles, theme, onPressAlert, onCompleteAlert, onDismissAlert]
   );
 
   if (visible.length === 0) return null;
@@ -62,23 +78,38 @@ export const NeedsAttentionScroll = React.memo(function NeedsAttentionScroll({
 interface CardProps {
   alert: FarmAlert;
   styles: ReturnType<typeof createStyles>;
+  theme: Theme;
   onPress: (alert: FarmAlert) => void;
+  onComplete?: (alert: FarmAlert) => void;
+  onDismiss?: (alert: FarmAlert) => void;
 }
 
-function AttentionCard({ alert, styles, onPress }: CardProps): React.JSX.Element {
+function AttentionCard({
+  alert,
+  styles,
+  theme,
+  onPress,
+  onComplete,
+  onDismiss,
+}: CardProps): React.JSX.Element {
   const handlePress = useCallback(() => onPress(alert), [onPress, alert]);
+  const handleComplete = useCallback(() => onComplete?.(alert), [onComplete, alert]);
+  const handleDismiss = useCallback(() => onDismiss?.(alert), [onDismiss, alert]);
   const cardStyle =
     alert.severity === 'critical'
       ? styles.cardCritical
       : alert.severity === 'warning'
-        ? styles.cardWarning
-        : styles.cardInfo;
+      ? styles.cardWarning
+      : styles.cardInfo;
   const bubbleStyle =
     alert.severity === 'critical'
       ? styles.iconBubbleCritical
       : alert.severity === 'warning'
-        ? styles.iconBubbleWarning
-        : styles.iconBubbleInfo;
+      ? styles.iconBubbleWarning
+      : styles.iconBubbleInfo;
+
+  const showComplete = alert.type === 'fertilise_due' && !!onComplete;
+  const showDismiss = alert.type === 'bed_resting_end' && !!onDismiss;
 
   return (
     <TouchableOpacity style={[styles.card, cardStyle]} activeOpacity={0.75} onPress={handlePress}>
@@ -91,6 +122,26 @@ function AttentionCard({ alert, styles, onPress }: CardProps): React.JSX.Element
       <Text style={styles.message} numberOfLines={2}>
         {alert.message}
       </Text>
+      {showComplete && (
+        <TouchableOpacity
+          style={styles.actionChip}
+          onPress={handleComplete}
+          hitSlop={8}
+          accessibilityLabel={`Mark ${alert.title} fertilised today`}
+        >
+          <Ionicons name="checkmark" size={14} color={theme.success} />
+        </TouchableOpacity>
+      )}
+      {showDismiss && (
+        <TouchableOpacity
+          style={styles.actionChip}
+          onPress={handleDismiss}
+          hitSlop={8}
+          accessibilityLabel="Dismiss green manure suggestion for this month"
+        >
+          <Ionicons name="close" size={14} color={theme.textSecondary} />
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 }

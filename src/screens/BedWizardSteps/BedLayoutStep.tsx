@@ -257,16 +257,40 @@ export function BedLayoutStep({
 
   const ghostRowsForWizard = useMemo<GhostRow[]>(() => {
     if (!bedType || !visibleLayers) return [];
+    const template = getGuildTemplate(bedType);
     const occupiedLayers = new Set(rowLayout.rows.map((r) => r.layer));
     const bedWidthCm = Math.round(step3.width_m * 100);
     return visibleLayers
       .filter((layer) => !occupiedLayers.has(layer))
-      .map((layer) => ({
-        layer,
-        plantsPerRow: computePlantsPerRow(bedWidthCm, 30),
-        spacingCm: 30,
-      }));
+      .map((layer) => {
+        // Representative spacing for the layer from the guild template (its
+        // tightest crop) so the advertised slot count matches a real add.
+        const layerSpacings =
+          template?.plant_rows.filter((r) => r.layer === layer).map((r) => r.spacing_cm) ?? [];
+        const spacingCm = layerSpacings.length > 0 ? Math.min(...layerSpacings) : 30;
+        return {
+          layer,
+          plantsPerRow: computePlantsPerRow(bedWidthCm, spacingCm),
+          spacingCm,
+        };
+      });
   }, [bedType, visibleLayers, rowLayout.rows, step3.width_m]);
+
+  // Rows containing either side of a companion conflict — feeds the map's ⚠ tags
+  // so the Layout tab flags the same conflicts the Crops tab lists.
+  const rowWarnings = useMemo(() => {
+    const warnings: { rowIndex: number; message: string }[] = [];
+    for (const row of rowLayout.rows) {
+      const names = new Set(row.plants.map((p) => p.name));
+      for (const w of rowLayout.companionWarnings) {
+        if (names.has(w.plantA) || names.has(w.plantB)) {
+          warnings.push({ rowIndex: row.rowIndex, message: `${w.plantA} + ${w.plantB} — ${w.reason}` });
+          break;
+        }
+      }
+    }
+    return warnings;
+  }, [rowLayout.rows, rowLayout.companionWarnings]);
 
   return (
     <ScrollView
@@ -302,6 +326,17 @@ export function BedLayoutStep({
         </TouchableOpacity>
       </View>
 
+      {/* Companion conflicts apply to the bed, not a tab — visible on both. */}
+      {rowLayout.companionWarnings.length > 0 && (
+        <View style={styles.blCompanionWarningBanner}>
+          {rowLayout.companionWarnings.map((w, i) => (
+            <Text key={i} style={styles.blCompanionWarningText}>
+              {`⚠ ${w.plantA} + ${w.plantB} — ${w.reason}`}
+            </Text>
+          ))}
+        </View>
+      )}
+
       {activeTab === 'layout' ? (
         <>
           <BedTopDownMap
@@ -313,6 +348,7 @@ export function BedLayoutStep({
             walkingPathCm={rowLayout.walkingPathCm}
             edgeBufferCm={rowLayout.edgeBufferCm}
             overflowCm={rowLayout.overflowCm}
+            rowWarnings={rowWarnings}
           />
 
           {hasTrellisRow && (
@@ -326,16 +362,6 @@ export function BedLayoutStep({
         </>
       ) : (
         <>
-          {rowLayout.companionWarnings.length > 0 && (
-            <View style={styles.blCompanionWarningBanner}>
-              {rowLayout.companionWarnings.map((w, i) => (
-                <Text key={i} style={styles.blCompanionWarningText}>
-                  {`⚠ ${w.plantA} + ${w.plantB} — ${w.reason}`}
-                </Text>
-              ))}
-            </View>
-          )}
-
           <BedRowLayout
             result={rowLayout}
             solanaceaeBlocked={solanaceaeBlocked ?? false}

@@ -34,6 +34,16 @@ export function getCached<T>(key: string): T | null {
   return entry.data;
 }
 
+/**
+ * Return cached data regardless of the 30s staleness window (still `null`
+ * after `invalidate`). For callers that manage their own freshness policy
+ * (e.g. the weather service's 3h window) or want stale-while-revalidate UI.
+ */
+export function peekCached<T>(key: string): T | null {
+  const entry = store.get(key) as CacheEntry<T> | undefined;
+  return entry ? entry.data : null;
+}
+
 /** Store freshly-fetched data. */
 export function setCached<T>(key: string, data: T): void {
   store.set(key, { data, fetchedAt: Date.now() });

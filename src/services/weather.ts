@@ -9,9 +9,8 @@
 import { WeatherForecast, DailyWeather } from '@/types/database.types';
 import { safeGetItem, safeSetItem } from '@/utils/safeStorage';
 import { KEYS } from '@/lib/storage';
-import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
-import { getCached, setCached, dedup, CACHE_KEYS } from '@/lib/dataCache';
-import { logError } from '@/utils/errorLogging';
+import { withTimeoutAndRetry } from '@/utils/firestoreTimeout';
+import { peekCached, setCached, dedup, CACHE_KEYS } from '@/lib/dataCache';
 import { logger } from '@/utils/logger';
 
 // Pure helpers live in weatherLogic (no native deps) — re-exported for callers.
@@ -24,6 +23,9 @@ export const KANYAKUMARI_LNG = 77.5385;
 
 /** Open-Meteo forecasts change slowly; refresh at most every 3 hours. */
 const WEATHER_FRESH_MS = 3 * 60 * 60 * 1000;
+
+/** Open-Meteo on slow mobile data needs more headroom than Firestore reads. */
+const WEATHER_TIMEOUT_MS = 15000;
 
 interface OpenMeteoResponse {
   latitude: number;
@@ -69,6 +71,17 @@ function cacheKey(lat: number, lng: number): string {
 }
 
 /**
+ * Synchronous in-memory cache read so UI can paint an already-fetched forecast
+ * on first render (any age — `getWeatherForecast` revalidates by freshness).
+ */
+export function getCachedForecast(
+  lat: number = KANYAKUMARI_LAT,
+  lng: number = KANYAKUMARI_LNG
+): WeatherForecast | null {
+  return peekCached<WeatherForecast>(cacheKey(lat, lng));
+}
+
+/**
  * Fetch a 7-day forecast for the given coordinates (defaults to Kanyakumari).
  * Serves a fresh in-memory copy when available, otherwise fetches and falls
  * back to the last AsyncStorage copy on network failure.
@@ -79,7 +92,9 @@ export async function getWeatherForecast(
 ): Promise<WeatherForecast | null> {
   const key = cacheKey(lat, lng);
 
-  const cached = getCached<WeatherForecast>(key);
+  // peek (not getCached): forecasts carry their own 3h freshness policy, which
+  // the generic cache's 30s staleness window would otherwise defeat.
+  const cached = peekCached<WeatherForecast>(key);
   if (cached && Date.now() - new Date(cached.fetched_at).getTime() < WEATHER_FRESH_MS) {
     return cached;
   }
@@ -92,7 +107,7 @@ export async function getWeatherForecast(
           if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
           return (await res.json()) as OpenMeteoResponse;
         },
-        { timeoutMs: FIRESTORE_READ_TIMEOUT_MS }
+        { timeoutMs: WEATHER_TIMEOUT_MS }
       );
 
       const forecast = parseForecast(json);
@@ -100,8 +115,9 @@ export async function getWeatherForecast(
       await safeSetItem(`${KEYS.WEATHER}:${key}`, JSON.stringify(forecast));
       return forecast;
     } catch (error) {
+      // Recoverable: the AsyncStorage fallback below serves the last forecast,
+      // so a fetch failure is a warning, not an error-tracker event.
       logger.warn('getWeatherForecast: fetch failed, using cache', error as Error);
-      logError('network', 'getWeatherForecast failed', error as Error);
       const stored = await safeGetItem(`${KEYS.WEATHER}:${key}`);
       if (stored) {
         try {

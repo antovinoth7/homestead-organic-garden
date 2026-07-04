@@ -13,7 +13,10 @@ function withoutPest(alerts: FarmAlert[]): FarmAlert[] {
 describe('getFarmAlerts', () => {
   it('emits a critical alert for sick plants', () => {
     const alerts = withoutPest(
-      getFarmAlerts({ plants: [makePlant({ id: 'p1', name: 'Brinjal', health_status: 'sick' })], now: NOW })
+      getFarmAlerts({
+        plants: [makePlant({ id: 'p1', name: 'Brinjal', health_status: 'sick' })],
+        now: NOW,
+      })
     );
     const sick = alerts.find((a) => a.type === 'health_sick');
     expect(sick).toMatchObject({ severity: 'critical', plantId: 'p1' });
@@ -45,9 +48,42 @@ describe('getFarmAlerts', () => {
 
   it('ignores soft-deleted plants', () => {
     const alerts = withoutPest(
-      getFarmAlerts({ plants: [makePlant({ id: 'p4', health_status: 'sick', is_deleted: true })], now: NOW })
+      getFarmAlerts({
+        plants: [makePlant({ id: 'p4', health_status: 'sick', is_deleted: true })],
+        emptyOrRestingBedCount: 0,
+        now: NOW,
+      })
     );
     expect(alerts).toHaveLength(0);
+  });
+
+  it('flags a plant that has never been fertilised once older than its frequency', () => {
+    const plant = makePlant({
+      id: 'p5',
+      name: 'Banana',
+      fertilising_frequency_days: 30,
+      planting_date: '2026-01-01T00:00:00.000Z', // 73 days before NOW
+      last_fertilised_date: null,
+    });
+    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+    const fert = alerts.find((a) => a.type === 'fertilise_due');
+    expect(fert).toMatchObject({
+      plantId: 'p5',
+      severity: 'warning',
+      message: 'First fertilising due — no manure logged yet',
+    });
+    expect(fert?.daysOverdue).toBeGreaterThan(0);
+  });
+
+  it('does not flag a never-fertilised plant younger than its frequency', () => {
+    const plant = makePlant({
+      id: 'p6',
+      fertilising_frequency_days: 90, // older than 73-day plant age
+      planting_date: '2026-01-01T00:00:00.000Z',
+      last_fertilised_date: null,
+    });
+    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+    expect(alerts.some((a) => a.type === 'fertilise_due')).toBe(false);
   });
 
   it('emits one actionable water alert per due plant (badge count is truthful)', () => {
@@ -90,6 +126,32 @@ describe('getFarmAlerts', () => {
     });
     const rotation = alerts.find((a) => a.type === 'rotation_due');
     expect(rotation).toMatchObject({ severity: 'critical', bedId: 'b1', title: 'North Bed' });
+  });
+
+  describe('farm-level green-manure alert', () => {
+    it('emits a single actionable card naming the empty-bed count', () => {
+      const alerts = getFarmAlerts({ plants: [], emptyOrRestingBedCount: 2, now: NOW });
+      const gm = alerts.filter((a) => a.type === 'bed_resting_end');
+      expect(gm).toHaveLength(1);
+      expect(gm[0]).toMatchObject({ severity: 'info', title: 'Green manure' });
+      expect(gm[0]!.bedId).toBeUndefined();
+      expect(gm[0]!.message).toContain('in 2 empty beds');
+      expect(isActionable(gm[0]!)).toBe(true);
+    });
+
+    it('uses generic wording while the bed count is unknown (still shows)', () => {
+      const loading = getFarmAlerts({ plants: [], emptyOrRestingBedCount: null, now: NOW });
+      const omitted = getFarmAlerts({ plants: [], now: NOW });
+      for (const alerts of [loading, omitted]) {
+        const gm = alerts.find((a) => a.type === 'bed_resting_end');
+        expect(gm?.message).toContain('green manure in empty beds');
+      }
+    });
+
+    it('completes (no card) once every bed is planted', () => {
+      const alerts = getFarmAlerts({ plants: [], emptyOrRestingBedCount: 0, now: NOW });
+      expect(alerts.some((a) => a.type === 'bed_resting_end')).toBe(false);
+    });
   });
 });
 

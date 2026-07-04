@@ -7,11 +7,19 @@
  * (`Animated` + `PanResponder`) — no reanimated/gesture-handler needed.
  */
 
-import React, { useMemo, useRef, useState } from 'react';
-import { View, Text, Animated, PanResponder, Dimensions } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  Animated,
+  PanResponder,
+  useWindowDimensions,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/weatherCardStyles';
 import { WeatherPlotCard } from './WeatherPlotCard';
+import { getWeatherForecast } from '@/services/weather';
 import type { WeatherPlot } from '@/hooks/useWeatherLocations';
 
 const SWIPE_THRESHOLD = 120;
@@ -32,12 +40,14 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
   const [topIndex, setTopIndex] = useState(0);
   const [deckHeight, setDeckHeight] = useState(0);
   const pan = useRef(new Animated.ValueXY()).current;
-  const screenW = Dimensions.get('window').width;
+  const screenW = useWindowDimensions().width;
 
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         // Only claim horizontal drags so the parent ScrollView still scrolls vertically.
+        // The drag feed must stay JS-driven (PanResponder gestures can't drive the
+        // native Animated.event path) — only the release animations run natively.
         onMoveShouldSetPanResponder: (_evt, g) =>
           Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 8,
         onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
@@ -50,7 +60,7 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
             Animated.timing(pan, {
               toValue: { x: dir * (screenW + 80), y: g.dy },
               duration: 200,
-              useNativeDriver: false,
+              useNativeDriver: true,
             }).start(() => {
               pan.setValue({ x: 0, y: 0 });
               setTopIndex((i) => (i + 1) % nRef.current);
@@ -59,7 +69,7 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
             Animated.spring(pan, {
               toValue: { x: 0, y: 0 },
               friction: 6,
-              useNativeDriver: false,
+              useNativeDriver: true,
             }).start();
           }
         },
@@ -67,18 +77,61 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
     [pan, screenW]
   );
 
-  const rotate = pan.x.interpolate({
-    inputRange: [-screenW / 2, 0, screenW / 2],
-    outputRange: ['-8deg', '0deg', '8deg'],
-    extrapolate: 'clamp',
-  });
+  const rotate = useMemo(
+    () =>
+      pan.x.interpolate({
+        inputRange: [-screenW / 2, 0, screenW / 2],
+        outputRange: ['-8deg', '0deg', '8deg'],
+        extrapolate: 'clamp',
+      }),
+    [pan.x, screenW]
+  );
+
+  // Drag progress 0→1 toward the swipe threshold (either direction): the next
+  // card grows into place *while* the front card is dragged away, so the index
+  // shuffle at release is visually continuous. Native-driven like the pan.
+  const nextCardScale = useMemo(
+    () =>
+      pan.x.interpolate({
+        inputRange: [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD],
+        outputRange: [1, 0.95, 1],
+        extrapolate: 'clamp',
+      }),
+    [pan.x]
+  );
+  const nextCardTranslateY = useMemo(
+    () =>
+      pan.x.interpolate({
+        inputRange: [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD],
+        outputRange: [0, -10, 0],
+        extrapolate: 'clamp',
+      }),
+    [pan.x]
+  );
+
+  // Warm the forecast cache for every plot up front (dedup + 3h freshness make
+  // this cheap), so swiping to a card beyond the mounted layers never loads.
+  useEffect(() => {
+    plots.forEach((p) => {
+      void getWeatherForecast(p.lat, p.lng);
+    });
+  }, [plots]);
+
+  const onFrontLayout = useCallback((e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    setDeckHeight((prev) => (prev === h ? prev : h));
+  }, []);
 
   // Behind cards: up to MAX_BEHIND, rendered deepest-first so the front card
   // (rendered last, in normal flow) sits on top.
-  const behind: { plot: WeatherPlot; depth: number }[] = [];
-  for (let d = Math.min(n - 1, MAX_BEHIND); d >= 1; d--) {
-    behind.push({ plot: plots[(topIndex + d) % n]!, depth: d });
-  }
+  const behind = useMemo(() => {
+    const layers: { plot: WeatherPlot; plotIndex: number; depth: number }[] = [];
+    for (let d = Math.min(n - 1, MAX_BEHIND); d >= 1; d--) {
+      const plotIndex = (topIndex + d) % n;
+      layers.push({ plot: plots[plotIndex]!, plotIndex, depth: d });
+    }
+    return layers;
+  }, [plots, topIndex, n]);
 
   return (
     <View style={styles.outer}>
@@ -87,14 +140,19 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
       </View>
 
       <View style={styles.deckContainer}>
-        {behind.map(({ plot, depth }) => (
+        {/* Layers are keyed by plot index (not stack position) so cycling the
+            deck reorders existing elements instead of remounting them — card
+            state (fetched forecast, layout) survives every swipe. */}
+        {behind.map(({ plot, plotIndex, depth }) => (
           <Animated.View
-            key={`behind-${depth}`}
+            key={`card-${plotIndex}`}
             pointerEvents="none"
             style={[
               styles.deckCardLayer,
               deckHeight > 0 ? { height: deckHeight } : null,
-              { transform: [{ translateY: -10 * depth }, { scale: 1 - 0.05 * depth }] },
+              depth === 1
+                ? { transform: [{ translateY: nextCardTranslateY }, { scale: nextCardScale }] }
+                : { transform: [{ translateY: -10 * depth }, { scale: 1 - 0.05 * depth }] },
             ]}
           >
             <WeatherPlotCard plot={plot} />
@@ -102,8 +160,8 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
         ))}
 
         <Animated.View
-          key={`front-${topIndex}`}
-          onLayout={(e) => setDeckHeight(e.nativeEvent.layout.height)}
+          key={`card-${topIndex}`}
+          onLayout={onFrontLayout}
           style={{ transform: [{ translateX: pan.x }, { translateY: pan.y }, { rotate }] }}
           {...panResponder.panHandlers}
         >

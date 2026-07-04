@@ -50,6 +50,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       justifyContent: 'space-between',
     },
+    /** First-load placeholder sized like the days row so the card keeps its shape. */
+    daysLoading: {
+      minHeight: 64,
+      justifyContent: 'center',
+    },
     dayCol: {
       alignItems: 'center',
       flex: 1,
@@ -75,6 +80,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     muted: {
       fontSize: 12,
       color: theme.textSecondary,
+    },
+    /** Placeholder while plot locations load — roughly one forecast card tall. */
+    loadingCard: {
+      minHeight: 120,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     // ─── Stacked swipeable deck (multiple plots) ───────────────────────────────
     deckContainer: {

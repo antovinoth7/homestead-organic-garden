@@ -5,7 +5,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { View } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { useWeatherLocations } from '@/hooks/useWeatherLocations';
 import { WeatherPlotCard } from '@/components/WeatherPlotCard';
 import { WeatherDeck } from '@/components/WeatherDeck';
@@ -17,9 +17,18 @@ export const WeatherCard = React.memo(function WeatherCard(): React.JSX.Element 
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { plots, loading } = useWeatherLocations();
 
-  // Nothing resolved yet (config still loading) — avoid a flash of default weather.
+  // Nothing resolved yet: while the config loads, hold the card's space with a
+  // spinner so the dashboard doesn't jump when the forecast arrives.
   if (plots.length === 0) {
-    if (loading) return null;
+    if (loading) {
+      return (
+        <View style={styles.outer}>
+          <View style={[styles.card, styles.loadingCard]}>
+            <ActivityIndicator size="small" color={theme.primary} />
+          </View>
+        </View>
+      );
+    }
     return null;
   }
 

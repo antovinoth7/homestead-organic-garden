@@ -9,9 +9,17 @@ import { JournalEntry, JournalEntryType, BedType, BedLayer, SunlightLevel } from
 
 // ─── Stack param lists ────────────────────────────────────────────────────────
 
+// Root stack: "Main" wraps the whole authed area (AuthedStack), not just the
+// tabs — naming it "AppTabs" too used to trigger React Navigation's duplicate
+// nested-screen-name warning against AuthedStack's own "AppTabs" screen.
 export type RootStackParamList = {
-  AppTabs: NavigatorScreenParams<RootTabParamList>;
+  Main: NavigatorScreenParams<AuthedStackParamList>;
   Auth: undefined;
+};
+
+export type AuthedStackParamList = {
+  AppTabs: NavigatorScreenParams<RootTabParamList>;
+  Onboarding: undefined;
 };
 
 export type BedsStackParamList = {

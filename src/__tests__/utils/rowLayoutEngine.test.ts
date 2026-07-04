@@ -1,6 +1,7 @@
 import {
   computeRowLayout,
   computePlantsPerRow,
+  computeEmptySlotPositions,
   interleavePlants,
   maxFitForSpecies,
   getRecommendedFirstAdd,
@@ -467,5 +468,55 @@ describe('getRecommendedFirstAdd', () => {
   it('returns 1 for a wide-anchor species that only fits one per row', () => {
     // Moringa 300cm in 1.2m bed: plantsPerRow = 1, maxFit = 1.
     expect(getRecommendedFirstAdd(moringa, [], W, L)).toBe(1);
+  });
+});
+
+describe('computeEmptySlotPositions', () => {
+  it('returns the unplanted tail of the slot grid for a partially planted row', () => {
+    // 120cm bed, 30cm spacing → 4 slots at [8, 38, 68, 98]; 1 main leaves 3 open
+    const result = computeRowLayout([plant('Spinach', 'understory', 30)], W, L);
+    const row = result.rows[0]!;
+    expect(row.eastPositionsCm).toEqual([8, 38, 68, 98]);
+    expect(computeEmptySlotPositions(row)).toEqual([38, 68, 98]);
+  });
+
+  it('ignores companions — they interleave between mains, not into slots', () => {
+    const result = computeRowLayout(
+      [plant('Spinach', 'understory', 30), plant('Basil', 'ground_cover', 20, { isCompanion: true })],
+      W,
+      L
+    );
+    const row = result.rows[0]!;
+    expect(row.plants).toHaveLength(2);
+    expect(computeEmptySlotPositions(row)).toEqual([38, 68, 98]);
+  });
+
+  it('returns empty array when all slots are planted', () => {
+    const result = computeRowLayout(
+      [
+        plant('Spinach', 'understory', 30),
+        plant('Spinach', 'understory', 30),
+        plant('Spinach', 'understory', 30),
+        plant('Spinach', 'understory', 30),
+      ],
+      W,
+      L
+    );
+    expect(computeEmptySlotPositions(result.rows[0]!)).toEqual([]);
+  });
+
+  it('treats slot-grid fallback positions as occupied in a companion-only row', () => {
+    // Companion-only bed: 2 basils on a 6-slot grid (20cm spacing) → 4 open slots
+    const result = computeRowLayout(
+      [
+        plant('Basil', 'ground_cover', 20, { isCompanion: true }),
+        plant('Basil', 'ground_cover', 20, { isCompanion: true }),
+      ],
+      W,
+      L
+    );
+    const row = result.rows[0]!;
+    expect(row.eastPositionsCm).toHaveLength(6);
+    expect(computeEmptySlotPositions(row)).toEqual(row.eastPositionsCm.slice(2));
   });
 });

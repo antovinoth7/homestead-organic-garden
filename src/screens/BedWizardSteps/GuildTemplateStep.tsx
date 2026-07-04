@@ -13,7 +13,7 @@ import {
 import type { PlantRow } from '@/config/beds/guildTemplates';
 import { computeRowLayout, maxFitForSpecies, computePlantsPerRow } from '@/utils/rowLayoutEngine';
 import type { RowPlantInput } from '@/utils/rowLayoutEngine';
-import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
+import { mapPlantEntriesToRowInputs, templateRowToCandidate } from '@/utils/plantEntryMapper';
 import {
   buildQuickStartPlan,
   COMPANION_DEFAULT_LAYER,
@@ -168,21 +168,10 @@ export function GuildTemplateStep({
     [data.plant_entries, template]
   );
 
-  // candidate for one instance of a species — used in capacity probes.
-  const candidateForRow = useCallback(
-    (row: PlantRow): RowPlantInput => ({
-      name: row.name,
-      layer: row.layer,
-      spacingCm: row.spacing_cm,
-      cropFamily: row.crop_family,
-      daysToHarvest: row.days_to_harvest,
-      benefitTag: row.benefit_tag,
-      careTasks: row.care_tasks,
-      isCompanion: row.is_companion,
-      successionWeek: row.succession_week,
-    }),
-    []
-  );
+  // candidate for one instance of a species — used in capacity probes. The
+  // shared builder carries rowGapCm so probes pack rows at the template's real
+  // N-S gap, exactly like Step 5's layout of placed entries.
+  const candidateForRow = useCallback((row: PlantRow): RowPlantInput => templateRowToCandidate(row), []);
 
   const candidateForCompanion = useCallback(
     (name: string): RowPlantInput => ({
@@ -438,9 +427,13 @@ export function GuildTemplateStep({
             ? `${ppr} plants (1 row)`
             : `${rowsCanAdd} rows × ${ppr} = ${rowsCanAdd * ppr}`;
         }
+        // "Bed full" only when literally nothing more fits; a partial row may
+        // still have room, but "+" adds whole rows, so say so honestly.
         const suffix =
           rowsCanAdd === 0
-            ? 'Bed full'
+            ? remaining === 0
+              ? 'Bed full'
+              : 'No full row left'
             : rowsCanAdd === 1
               ? '1 more row fits'
               : `${rowsCanAdd} more rows fit`;

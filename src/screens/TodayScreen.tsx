@@ -15,7 +15,7 @@ import {
   getStoredTodayTaskLogs,
   getSeasonalCareReminder,
 } from '../services/tasks';
-import { getAllPlants, getStoredPlants } from '../services/plants';
+import { getAllPlants, getStoredPlants, updatePlant } from '../services/plants';
 import { TaskTemplate, Plant, TaskLog, FarmAlert } from '../types/database.types';
 import { useBedData } from '../hooks/useBedData';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,7 +24,11 @@ import { TodayScreenNavigationProp, TodayScreenRouteProp } from '../types/naviga
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useThemeMode } from '../theme';
 import { createStyles } from '../styles/todayStyles';
-import { summarizeTodayTasks, computeDonutSegments, filterToKnownPlants } from '../utils/taskSummary';
+import {
+  summarizeTodayTasks,
+  computeDonutSegments,
+  filterToKnownPlants,
+} from '../utils/taskSummary';
 import { useTabBarScroll, TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { getErrorMessage } from '../utils/errorLogging';
@@ -74,7 +78,7 @@ export default function TodayScreen(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
   const isMountedRef = React.useRef(true);
-  const { beds: bedList } = useBedData();
+  const { beds: bedList, loading: bedsLoading } = useBedData();
 
   // Seasonal guidance (rhythm + jeevamrutha + almanac) is collapsed by default
   // to keep the daily-value cards above the fold and reduce dashboard clutter.
@@ -103,6 +107,23 @@ export default function TodayScreen(): React.JSX.Element {
     setPreMonsoonDismissed(true);
     await safeSetItem('premonsoon_card_dismissed_date', new Date().toDateString());
   }, []);
+
+  // Green-manure card month-dismiss (same per-period pattern as the
+  // pre-monsoon card above, keyed by YYYY-M so it returns next month).
+  const currentMonthKey = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${d.getMonth() + 1}`;
+  }, []);
+  const [gmDismissedMonth, setGmDismissedMonth] = useState<string | null>(null);
+  useEffect(() => {
+    safeGetItem('green_manure_dismissed_month').then((stored) => {
+      if (stored) setGmDismissedMonth(stored);
+    });
+  }, []);
+  const dismissGreenManure = useCallback(async () => {
+    setGmDismissedMonth(currentMonthKey);
+    await safeSetItem('green_manure_dismissed_month', currentMonthKey);
+  }, [currentMonthKey]);
 
   const daysToMonsoon = useMemo(() => getDaysToSWMonsoon(), []);
   const preMonsoonTasks = useMemo(() => getPreMonsoonTasks(daysToMonsoon), [daysToMonsoon]);
@@ -204,9 +225,14 @@ export default function TodayScreen(): React.JSX.Element {
   // inline computation. Bed rotation context comes from useCrossBedStatus.
   const { config: farmConfig } = useFarmCapacity();
   const { rotationStatuses } = useCrossBedStatus(bedList);
-  const bedNames = useMemo(
-    () => Object.fromEntries(bedList.map((b) => [b.id, b.name])),
-    [bedList]
+  const bedNames = useMemo(() => Object.fromEntries(bedList.map((b) => [b.id, b.name])), [bedList]);
+  // Beds a green-manure sowing could go into. `null` while beds are still
+  // loading keeps the seasonal card visible (generic wording) instead of
+  // blinking out; once loaded, 0 empty beds means the suggestion is done.
+  const emptyOrRestingBedCount = useMemo(
+    () =>
+      bedsLoading ? null : bedList.filter((b) => b.is_resting || b.active_plant_count === 0).length,
+    [bedsLoading, bedList]
   );
   const farmAlerts = useMemo(
     () =>
@@ -215,10 +241,18 @@ export default function TodayScreen(): React.JSX.Element {
         rotationStatuses,
         harvestGapWarnings: getHarvestGapWarnings(bedList),
         bedNames,
+        emptyOrRestingBedCount,
       }),
-    [plants, rotationStatuses, bedList, bedNames]
+    [plants, rotationStatuses, bedList, bedNames, emptyOrRestingBedCount]
   );
-  const actionableAlerts = useMemo(() => farmAlerts.filter(isActionable), [farmAlerts]);
+  const actionableAlerts = useMemo(
+    () =>
+      farmAlerts.filter(
+        (a) =>
+          isActionable(a) && !(a.type === 'bed_resting_end' && gmDismissedMonth === currentMonthKey)
+      ),
+    [farmAlerts, gmDismissedMonth, currentMonthKey]
+  );
 
   const handleAlertPress = useCallback(
     (alert: FarmAlert) => {
@@ -232,9 +266,33 @@ export default function TodayScreen(): React.JSX.Element {
           screen: 'BedDetail',
           params: { bedId: alert.bedId },
         });
+      } else {
+        // Farm-level alert (green manure) — go to the bed list to pick a bed.
+        navigation.navigate('Beds', { screen: 'BedList' });
       }
     },
     [navigation]
+  );
+
+  // Quick ✓ on a fertilise card: log manure applied today. Optimistic — the
+  // alert derives from plant fields, so patching local state clears it at once.
+  const handleCompleteAlert = useCallback(
+    async (alert: FarmAlert) => {
+      if (alert.type !== 'fertilise_due' || !alert.plantId) return;
+      const plantId = alert.plantId;
+      const todayIso = new Date().toISOString();
+      setPlants((prev) =>
+        prev.map((p) => (p.id === plantId ? { ...p, last_fertilised_date: todayIso } : p))
+      );
+      try {
+        await updatePlant(plantId, { last_fertilised_date: todayIso });
+      } catch (error: unknown) {
+        if (!isMountedRef.current) return;
+        Alert.alert('Error', getErrorMessage(error));
+        void loadData({ silent: true });
+      }
+    },
+    [loadData]
   );
 
   const openJeevamruthaRecipe = useCallback(() => {
@@ -307,21 +365,15 @@ export default function TodayScreen(): React.JSX.Element {
         </View>
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={styles.loadingText}>Loading your farm…</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      ref={scrollViewRef}
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 }}
-      onScroll={onTabBarScroll}
-      scrollEventThrottle={16}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
-    >
-      {/* Hero Header */}
+    <View style={styles.container}>
+      {/* Hero Header — fixed above the scroller, like the other tab screens */}
       <View style={[styles.heroHeader, { paddingTop: insets.top + 16 }]}>
         <View style={styles.headerRow}>
           <View style={styles.flexOne}>
@@ -334,131 +386,143 @@ export default function TodayScreen(): React.JSX.Element {
         </View>
       </View>
 
-      {/* Today's progress donut + task-type pills + "Up next" task (C.11) */}
-      <TodayProgressCard
-        completionRate={taskSummary.completionRate}
-        completed={taskSummary.completed}
-        totalTasks={taskSummary.totalTasks}
-        overdueCount={taskSummary.overdueCount}
-        typeStats={taskSummary.typeStats}
-        donutSegments={donutSegments}
-        onPressRing={goToCarePlan}
-        onPressOverdue={goToOverdue}
-        onPressType={goToCarePlanPlain}
-      />
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scrollArea}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 }}
+        onScroll={onTabBarScroll}
+        scrollEventThrottle={16}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+      >
+        {/* Today's progress donut + task-type pills + "Up next" task (C.11) */}
+        <TodayProgressCard
+          completionRate={taskSummary.completionRate}
+          completed={taskSummary.completed}
+          totalTasks={taskSummary.totalTasks}
+          overdueCount={taskSummary.overdueCount}
+          typeStats={taskSummary.typeStats}
+          donutSegments={donutSegments}
+          onPressRing={goToCarePlan}
+          onPressOverdue={goToOverdue}
+          onPressType={goToCarePlanPlain}
+        />
 
-      {/* Garden health: header + health tiles (C.7) */}
-      <FarmHealthCard health={health} onPressHealth={handlePressHealth} />
+        {/* Garden health: header + health tiles (C.7) */}
+        <FarmHealthCard health={health} onPressHealth={handlePressHealth} />
 
-      {/* Needs Attention — actionable alerts from alerts.ts (C.8/C.10) */}
-      <NeedsAttentionScroll alerts={actionableAlerts} onPressAlert={handleAlertPress} />
+        {/* Needs Attention — actionable alerts from alerts.ts (C.8/C.10) */}
+        <NeedsAttentionScroll
+          alerts={actionableAlerts}
+          onPressAlert={handleAlertPress}
+          onCompleteAlert={handleCompleteAlert}
+          onDismissAlert={dismissGreenManure}
+        />
 
-      {/* Weather (C.3) + What to Plant Now (C.1) */}
-      <WeatherCard />
-      <PlantNowSection />
+        {/* Weather (C.3) + What to Plant Now (C.1) */}
+        <WeatherCard />
+        <PlantNowSection />
 
-      {/* Bed mini-cards horizontal scroll (C.12) */}
-      <BedsQuickScroll beds={bedList} onPressBed={handlePressBed} onNewBed={handleNewBed} />
+        {/* Bed mini-cards horizontal scroll (C.12) */}
+        <BedsQuickScroll beds={bedList} onPressBed={handlePressBed} onNewBed={handleNewBed} />
 
-      {/* Pre-monsoon prep — only within the 21-day window, dismissible per day */}
-      {preMonsoonTasks.length > 0 && !preMonsoonDismissed && (
-        <View style={styles.preMonsoonCard}>
-          <View style={styles.preMonsoonHeader}>
-            <Text style={styles.preMonsoonTitle}>
-              🌧️ Pre-Monsoon Prep · {daysToMonsoon} day{daysToMonsoon === 1 ? '' : 's'} to monsoon
-            </Text>
-            <TouchableOpacity
-              style={styles.preMonsoonClose}
-              onPress={dismissPreMonsoon}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="close" size={16} color={theme.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          {preMonsoonTasks.map((task) => (
-            <View key={task.id} style={styles.preMonsoonTaskRow}>
-              <Text style={styles.preMonsoonTaskIcon}>{task.icon}</Text>
-              <View style={styles.preMonsoonTaskText}>
-                <Text style={styles.preMonsoonTaskTitle}>{task.title}</Text>
-                <Text style={styles.preMonsoonTaskDesc}>{task.description}</Text>
-              </View>
+        {/* Pre-monsoon prep — only within the 21-day window, dismissible per day */}
+        {preMonsoonTasks.length > 0 && !preMonsoonDismissed && (
+          <View style={styles.preMonsoonCard}>
+            <View style={styles.preMonsoonHeader}>
+              <Text style={styles.preMonsoonTitle}>
+                🌧️ Pre-Monsoon Prep · {daysToMonsoon} day{daysToMonsoon === 1 ? '' : 's'} to monsoon
+              </Text>
+              <TouchableOpacity
+                style={styles.preMonsoonClose}
+                onPress={dismissPreMonsoon}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={16} color={theme.textSecondary} />
+              </TouchableOpacity>
             </View>
-          ))}
-        </View>
-      )}
+            {preMonsoonTasks.map((task) => (
+              <View key={task.id} style={styles.preMonsoonTaskRow}>
+                <Text style={styles.preMonsoonTaskIcon}>{task.icon}</Text>
+                <View style={styles.preMonsoonTaskText}>
+                  <Text style={styles.preMonsoonTaskTitle}>{task.title}</Text>
+                  <Text style={styles.preMonsoonTaskDesc}>{task.description}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
-      {/* Daily tip strip — dismissible per day (C.14) */}
-      <TipStrip tip={tipText} />
+        {/* Daily tip strip — dismissible per day (C.14) */}
+        <TipStrip tip={tipText} />
 
-      {/* Seasonal guidance — low-frequency cards grouped behind one collapsible
+        {/* Seasonal guidance — low-frequency cards grouped behind one collapsible
           header (collapsed by default) to keep the dashboard uncluttered:
           season rhythm + jeevamrutha reminder + monthly almanac. */}
-      <TouchableOpacity
-        style={styles.seasonalToggle}
-        onPress={toggleSeasonal}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel={
-          seasonalExpanded ? 'Collapse seasonal guidance' : 'Expand seasonal guidance'
-        }
-      >
-        <Text style={styles.seasonalToggleText}>🌿 Seasonal guidance</Text>
-        <Ionicons
-          name={seasonalExpanded ? 'chevron-up' : 'chevron-down'}
-          size={18}
-          color={theme.textSecondary}
-        />
-      </TouchableOpacity>
-
-      {seasonalExpanded && (
-        <>
-          {/* Current-season care rhythm */}
-          {seasonRhythm !== null && (
-            <View style={styles.rhythmCard}>
-              <Text style={styles.rhythmTitle}>
-                🗓️ This Season&apos;s Rhythm · {seasonLabel}
-              </Text>
-              <View style={styles.rhythmRow}>
-                <Text style={styles.rhythmLabel}>💧 Water</Text>
-                <Text style={styles.rhythmValue}>{seasonRhythm.waterInterval}</Text>
-              </View>
-              <View style={styles.rhythmRow}>
-                <Text style={styles.rhythmLabel}>🍂 Mulch</Text>
-                <Text style={styles.rhythmValue}>{seasonRhythm.mulchCheck}</Text>
-              </View>
-              <View style={styles.rhythmRow}>
-                <Text style={styles.rhythmLabel}>🧪 Jeevamrutha</Text>
-                <Text style={styles.rhythmValue}>{seasonRhythm.jeevamruthaInterval}</Text>
-              </View>
-            </View>
-          )}
-
-          {/* Jeevamrutha batch reminder (C.13) */}
-          <InputReminderStrip
-            landCents={farmConfig?.land_cents ?? 5}
-            bedCount={bedList.length}
-            cadenceLabel={seasonRhythm?.jeevamruthaInterval}
-            onPress={openJeevamruthaRecipe}
+        <TouchableOpacity
+          style={styles.seasonalToggle}
+          onPress={toggleSeasonal}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={
+            seasonalExpanded ? 'Collapse seasonal guidance' : 'Expand seasonal guidance'
+          }
+        >
+          <Text style={styles.seasonalToggleText}>🌿 Seasonal guidance</Text>
+          <Ionicons
+            name={seasonalExpanded ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color={theme.textSecondary}
           />
+        </TouchableOpacity>
 
-          {/* Monthly almanac highlight (C.4) */}
-          <AlmanacHighlight onViewAll={openAlmanac} />
-        </>
-      )}
+        {seasonalExpanded && (
+          <>
+            {/* Current-season care rhythm */}
+            {seasonRhythm !== null && (
+              <View style={styles.rhythmCard}>
+                <Text style={styles.rhythmTitle}>🗓️ This Season&apos;s Rhythm · {seasonLabel}</Text>
+                <View style={styles.rhythmRow}>
+                  <Text style={styles.rhythmLabel}>💧 Water</Text>
+                  <Text style={styles.rhythmValue}>{seasonRhythm.waterInterval}</Text>
+                </View>
+                <View style={styles.rhythmRow}>
+                  <Text style={styles.rhythmLabel}>🍂 Mulch</Text>
+                  <Text style={styles.rhythmValue}>{seasonRhythm.mulchCheck}</Text>
+                </View>
+                <View style={styles.rhythmRow}>
+                  <Text style={styles.rhythmLabel}>🧪 Jeevamrutha</Text>
+                  <Text style={styles.rhythmValue}>{seasonRhythm.jeevamruthaInterval}</Text>
+                </View>
+              </View>
+            )}
 
-      {tasks.length === 0 && !loading && (
-        <View style={styles.emptyState}>
-          <Ionicons name="checkmark-circle-outline" size={64} color={theme.success} />
-          <Text style={styles.emptyText}>All caught up! 🎉</Text>
-          <Text style={styles.emptySubtext}>No tasks due today</Text>
-          <TouchableOpacity
-            style={styles.emptyButton}
-            onPress={() => navigation.navigate('Care Plan')}
-          >
-            <Text style={styles.emptyButtonText}>View Schedule</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </ScrollView>
+            {/* Jeevamrutha batch reminder (C.13) */}
+            <InputReminderStrip
+              landCents={farmConfig?.land_cents ?? 5}
+              bedCount={bedList.length}
+              cadenceLabel={seasonRhythm?.jeevamruthaInterval}
+              onPress={openJeevamruthaRecipe}
+            />
+
+            {/* Monthly almanac highlight (C.4) */}
+            <AlmanacHighlight onViewAll={openAlmanac} />
+          </>
+        )}
+
+        {tasks.length === 0 && !loading && (
+          <View style={styles.emptyState}>
+            <Ionicons name="checkmark-circle-outline" size={64} color={theme.success} />
+            <Text style={styles.emptyText}>All caught up! 🎉</Text>
+            <Text style={styles.emptySubtext}>No tasks due today</Text>
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={() => navigation.navigate('Care Plan')}
+            >
+              <Text style={styles.emptyButtonText}>View Schedule</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }

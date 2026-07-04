@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
 
-const LEFT_COL_W = 80;
+const LEFT_COL_W = 96;
 const ROW_HEIGHT = 22;
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
@@ -142,7 +142,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexWrap: 'wrap' as const,
       gap: 10,
       marginTop: 8,
-      marginLeft: LEFT_COL_W,
     },
     legendItem: {
       flexDirection: 'row' as const,
@@ -175,7 +174,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // Green manure rationale text
     gmRationale: {
       marginTop: 8,
-      marginLeft: LEFT_COL_W,
       backgroundColor: theme.backgroundSecondary,
       borderRadius: 6,
       paddingHorizontal: 10,

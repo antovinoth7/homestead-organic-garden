@@ -18,56 +18,48 @@ type SeasonFit = 'ideal' | 'ok' | 'avoid';
 
 const BED_TYPE_OPTIONS: {
   type: BedType;
-  tamilLabel: string;
   desc: string;
   info: string;
   seasonFit: Record<string, SeasonFit>;
 }[] = [
   {
     type: 'leafy',
-    tamilLabel: 'கீரை பாத்தி',
     desc: 'Amaranth, spinach, fenugreek',
     info: 'Full sun · 25–35 days',
     seasonFit: { summer: 'avoid', sw_monsoon: 'ok', ne_monsoon: 'ideal', cool_dry: 'ideal' },
   },
   {
     type: 'fruiting',
-    tamilLabel: 'காய்கறி பாத்தி',
     desc: 'Tomato, brinjal, ladies finger',
     info: 'Full sun · 60–90 days',
     seasonFit: { summer: 'ideal', sw_monsoon: 'avoid', ne_monsoon: 'avoid', cool_dry: 'ok' },
   },
   {
     type: 'spice',
-    tamilLabel: 'மசாலா பாத்தி',
     desc: 'Chilli, ginger, turmeric, curry leaf',
     info: 'Part shade · 3–10 months',
     seasonFit: { summer: 'ok', sw_monsoon: 'ideal', ne_monsoon: 'ideal', cool_dry: 'ok' },
   },
   {
     type: 'root_legume',
-    tamilLabel: 'கிழங்கு / பயிறு',
     desc: 'Beans, cowpea, carrot',
     info: 'Full sun · rotational',
     seasonFit: { summer: 'ok', sw_monsoon: 'avoid', ne_monsoon: 'ok', cool_dry: 'ideal' },
   },
   {
     type: 'climber_trellis',
-    tamilLabel: 'கொடி பந்தல்',
     desc: 'Bitter gourd, snake gourd',
     info: 'Full sun · 55–70 days',
     seasonFit: { summer: 'ideal', sw_monsoon: 'ok', ne_monsoon: 'ok', cool_dry: 'avoid' },
   },
   {
     type: 'three_sisters',
-    tamilLabel: 'மூன்று சகோதரிகள்',
     desc: 'Corn + beans + squash',
     info: 'Full sun · SW Monsoon',
     seasonFit: { summer: 'ok', sw_monsoon: 'ideal', ne_monsoon: 'avoid', cool_dry: 'avoid' },
   },
   {
     type: 'medicinal_guild',
-    tamilLabel: 'மூலிகை தோட்டம்',
     desc: 'Tulsi, brahmi, aloe vera',
     info: 'Low light · under canopy',
     seasonFit: { summer: 'ok', sw_monsoon: 'ideal', ne_monsoon: 'ok', cool_dry: 'ok' },
@@ -132,7 +124,6 @@ export function BedTypeStep({ data, onChange, locked = false }: Props): React.JS
               >
                 {BED_TYPE_NAME[opt.type]}
               </Text>
-              <Text style={styles.btTamilLabel}>{opt.tamilLabel}</Text>
               <Text style={styles.typeDesc} numberOfLines={1}>
                 {opt.desc}
               </Text>

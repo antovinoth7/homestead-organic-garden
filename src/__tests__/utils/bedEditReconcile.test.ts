@@ -1,4 +1,4 @@
-import { plantToEntry, computeRemovedPlants } from '@/utils/bedEditReconcile';
+import { plantToEntry, plantToLayoutEntries, computeRemovedPlants } from '@/utils/bedEditReconcile';
 import { makePlant } from '../fixtures/plant.fixtures';
 
 describe('plantToEntry', () => {
@@ -29,6 +29,45 @@ describe('plantToEntry', () => {
     expect(entry.spacingCm).toBe(30);
     expect(entry.sortOrder).toBe(0);
     expect(entry.resolution).toEqual({ kind: 'link', plantId: 'p2' });
+  });
+});
+
+describe('plantToLayoutEntries', () => {
+  it('returns a single entry for a specimen doc', () => {
+    const plant = makePlant({ id: 'p1', name: 'Brinjal', bed_layer: 'understory', spacing_cm: 45 });
+    const entries = plantToLayoutEntries(plant);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toEqual(plantToEntry(plant));
+  });
+
+  it('expands a row-record into plant_count entries with unique ids', () => {
+    const plant = makePlant({
+      id: 'p2',
+      name: 'Lettuce',
+      bed_layer: 'understory',
+      spacing_cm: 20,
+      record_kind: 'row',
+      plant_count: 6,
+    });
+    const entries = plantToLayoutEntries(plant);
+    expect(entries).toHaveLength(6);
+    expect(new Set(entries.map((e) => e.id)).size).toBe(6);
+    for (const entry of entries) {
+      expect(entry.name).toBe('Lettuce');
+      expect(entry.layer).toBe('understory');
+      expect(entry.spacingCm).toBe(20);
+    }
+  });
+
+  it('treats a row-record without plant_count (or with a bad count) as one plant', () => {
+    expect(plantToLayoutEntries(makePlant({ id: 'p3', record_kind: 'row' }))).toHaveLength(1);
+    expect(
+      plantToLayoutEntries(makePlant({ id: 'p4', record_kind: 'row', plant_count: 0 }))
+    ).toHaveLength(1);
+  });
+
+  it('ignores plant_count on non-row docs', () => {
+    expect(plantToLayoutEntries(makePlant({ id: 'p5', plant_count: 4 }))).toHaveLength(1);
   });
 });
 
