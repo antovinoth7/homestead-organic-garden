@@ -107,7 +107,7 @@ export function EditBasicInfoSection({ formState }: Props): React.JSX.Element {
 
       <ThemedDropdown
         items={[
-          { label: 'Select plant type', value: '' },
+          { label: 'Select plant', value: '' },
           ...(specificPlantOptions.length === 0
             ? [{ label: 'No plants yet — add in More', value: '' }]
             : specificPlantOptions.map((v) => ({ label: v, value: v }))),

@@ -680,7 +680,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 12,
       overflow: 'hidden',
       borderWidth: 1.5,
-      borderColor: theme.card,
+      borderColor: theme.border,
       shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.08,

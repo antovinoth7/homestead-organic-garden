@@ -439,7 +439,7 @@ export function usePlantFormState(): PlantFormStateReturn {
       notesHistory: [],
       pestDisease: [],
     };
-    if (!plantVariety.trim()) errors.basic.push('Please select a specific plant type');
+    if (!plantVariety.trim()) errors.basic.push('Please select a specific plant');
     if (!parentLocation.trim()) errors.location.push('Please select a main location');
     if (!childLocation.trim()) errors.location.push('Please select a direction/section');
     if (
@@ -884,7 +884,7 @@ export function usePlantFormState(): PlantFormStateReturn {
 
   const getWizardStepErrors = useCallback(
     (step: 1 | 2 | 3): string | null => {
-      if (step === 1 && !plantVariety.trim()) return 'Please select a plant type';
+      if (step === 1 && !plantVariety.trim()) return 'Please select a plant';
       if (step === 2 && !parentLocation.trim()) return 'Please select a main location';
       if (step === 2 && !childLocation.trim()) return 'Please select a direction or section';
       if (step === 3) {
