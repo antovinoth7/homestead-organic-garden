@@ -45,8 +45,6 @@ const TASK_TYPE_TO_PLANT_LAST_CARE_FIELD: Partial<Record<TaskType, PlantLastCare
 };
 type MarkTaskDoneOptions = {
   skipAlreadyDoneCheck?: boolean;
-  /** Batch progress callback: called with cumulative completed count. */
-  onProgress?: (done: number, total: number) => void;
 };
 
 /**
@@ -514,36 +512,9 @@ const buildTaskDoneOps = (
   };
 };
 
-/** Enabled templates due today or earlier, soonest first — the "today tasks" view. */
-const filterTasksDueToday = (templates: TaskTemplate[]): TaskTemplate[] => {
-  const now = new Date();
-  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-  const filtered = templates.filter((task) => {
-    if (!task.enabled || !task.next_due_at) return false;
-    return new Date(task.next_due_at) <= todayEnd;
-  });
-  filtered.sort((a, b) => a.next_due_at.localeCompare(b.next_due_at));
-  return filtered;
-};
-
-/** Logs whose done_at falls within today's local calendar day. */
-const filterLogsToToday = (logs: TaskLog[]): TaskLog[] => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(today);
-  todayEnd.setHours(23, 59, 59, 999);
-  return logs.filter((log) => {
-    const logDate = new Date(log.done_at);
-    return logDate >= today && logDate <= todayEnd;
-  });
-};
-
 /**
  * Apply the local-cache deltas for one or more completed tasks with a single
- * read-modify-write per storage key (logs / tasks / plants). The in-memory
- * caches are patched with the same arrays rather than invalidated — the
- * post-write local state is authoritative, so the Care Plan / Home reloads
- * right after a completion stay instant instead of refetching from Firestore.
+ * read-modify-write per storage key (logs / tasks / plants), then invalidate.
  * Batch-completing N tasks no longer serialises the whole arrays N times.
  */
 const applyTaskDoneCacheDeltas = async (opsList: TaskDoneOps[]): Promise<void> => {
@@ -555,7 +526,6 @@ const applyTaskDoneCacheDeltas = async (opsList: TaskDoneOps[]): Promise<void> =
     cachedLogs.unshift(opsList[i]!.cache.newTaskLog);
   }
   await setData(KEYS.TASK_LOGS, cachedLogs);
-  setCached(CACHE_KEYS.TODAY_TASK_LOGS, filterLogsToToday(cachedLogs));
 
   // Task templates — apply next_due_at / enabled patches.
   const taskPatches = opsList.filter((o) => o.cache.taskPatch);
@@ -569,11 +539,7 @@ const applyTaskDoneCacheDeltas = async (opsList: TaskDoneOps[]): Promise<void> =
         changed = true;
       }
     }
-    if (changed) {
-      await setData(KEYS.TASKS, cachedTasks);
-      setCached(CACHE_KEYS.TASK_TEMPLATES, cachedTasks);
-      setCached(CACHE_KEYS.TODAY_TASKS, filterTasksDueToday(cachedTasks));
-    }
+    if (changed) await setData(KEYS.TASKS, cachedTasks);
   }
 
   // Plants — apply last-care-date patches.
@@ -589,11 +555,15 @@ const applyTaskDoneCacheDeltas = async (opsList: TaskDoneOps[]): Promise<void> =
         changed = true;
       }
     }
-    if (changed) {
-      await setData(KEYS.PLANTS, cachedPlants);
-      setCached(CACHE_KEYS.ALL_PLANTS, cachedPlants);
-    }
+    if (changed) await setData(KEYS.PLANTS, cachedPlants);
   }
+
+  invalidate(
+    CACHE_KEYS.TODAY_TASKS,
+    CACHE_KEYS.TASK_TEMPLATES,
+    CACHE_KEYS.TODAY_TASK_LOGS,
+    CACHE_KEYS.ALL_PLANTS
+  );
 };
 
 /**
@@ -722,15 +692,7 @@ export const markTasksDone = async (
   if (owned.length === 0) return { succeeded: 0, failed: templates.length };
 
   if (!options?.skipAlreadyDoneCheck) {
-    let settled = 0;
-    const results = await Promise.allSettled(
-      owned.map(async (t) => {
-        const done = await markTaskDone(t);
-        settled += 1;
-        options?.onProgress?.(settled, owned.length);
-        return done;
-      })
-    );
+    const results = await Promise.allSettled(owned.map((t) => markTaskDone(t)));
     const succeeded = results.filter((r) => r.status === 'fulfilled' && r.value === true).length;
     return { succeeded, failed: templates.length - succeeded };
   }
@@ -763,7 +725,6 @@ export const markTasksDone = async (
         timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
       });
       committed += chunk.length;
-      options?.onProgress?.(committed, owned.length);
     } catch (err) {
       logger.error('markTasksDone: batch commit failed', err as Error);
       // Persist whatever committed before the failure, then report the rest as failed.
@@ -889,19 +850,15 @@ export const getStoredTodayTasks = async (): Promise<TaskTemplate[]> => {
   const cached = getCached<TaskTemplate[]>(CACHE_KEYS.TODAY_TASKS);
   if (cached) return cached;
 
+  const now = new Date();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
   const stored = await getData<TaskTemplate>(KEYS.TASKS);
-  return filterTasksDueToday(stored);
-};
-
-/**
- * Warm read of the full template list for an instant first paint (Care Plan):
- * the fresh in-memory cache if present, otherwise the AsyncStorage copy.
- * Never touches the network.
- */
-export const getStoredTaskTemplates = async (): Promise<TaskTemplate[]> => {
-  const cached = getCached<TaskTemplate[]>(CACHE_KEYS.TASK_TEMPLATES);
-  if (cached) return cached;
-  return getData<TaskTemplate>(KEYS.TASKS);
+  const filtered = stored.filter((task) => {
+    if (!task.enabled || !task.next_due_at) return false;
+    return new Date(task.next_due_at) <= todayEnd;
+  });
+  filtered.sort((a, b) => a.next_due_at.localeCompare(b.next_due_at));
+  return filtered;
 };
 
 /**
@@ -912,8 +869,15 @@ export const getStoredTodayTaskLogs = async (): Promise<TaskLog[]> => {
   const cached = getCached<TaskLog[]>(CACHE_KEYS.TODAY_TASK_LOGS);
   if (cached) return cached;
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(today);
+  todayEnd.setHours(23, 59, 59, 999);
   const stored = await getData<TaskLog>(KEYS.TASK_LOGS);
-  return filterLogsToToday(stored);
+  return stored.filter((log) => {
+    const logDate = new Date(log.done_at);
+    return logDate >= today && logDate <= todayEnd;
+  });
 };
 
 const parseDateValue = (value?: string | null): Date | null => {
