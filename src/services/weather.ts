@@ -10,7 +10,7 @@ import { WeatherForecast, DailyWeather } from '@/types/database.types';
 import { safeGetItem, safeSetItem } from '@/utils/safeStorage';
 import { KEYS } from '@/lib/storage';
 import { withTimeoutAndRetry } from '@/utils/firestoreTimeout';
-import { getCached, setCached, dedup, CACHE_KEYS } from '@/lib/dataCache';
+import { peekCached, setCached, dedup, CACHE_KEYS } from '@/lib/dataCache';
 import { logger } from '@/utils/logger';
 
 // Pure helpers live in weatherLogic (no native deps) — re-exported for callers.
@@ -71,6 +71,17 @@ function cacheKey(lat: number, lng: number): string {
 }
 
 /**
+ * Synchronous in-memory cache read so UI can paint an already-fetched forecast
+ * on first render (any age — `getWeatherForecast` revalidates by freshness).
+ */
+export function getCachedForecast(
+  lat: number = KANYAKUMARI_LAT,
+  lng: number = KANYAKUMARI_LNG
+): WeatherForecast | null {
+  return peekCached<WeatherForecast>(cacheKey(lat, lng));
+}
+
+/**
  * Fetch a 7-day forecast for the given coordinates (defaults to Kanyakumari).
  * Serves a fresh in-memory copy when available, otherwise fetches and falls
  * back to the last AsyncStorage copy on network failure.
@@ -81,7 +92,9 @@ export async function getWeatherForecast(
 ): Promise<WeatherForecast | null> {
   const key = cacheKey(lat, lng);
 
-  const cached = getCached<WeatherForecast>(key);
+  // peek (not getCached): forecasts carry their own 3h freshness policy, which
+  // the generic cache's 30s staleness window would otherwise defeat.
+  const cached = peekCached<WeatherForecast>(key);
   if (cached && Date.now() - new Date(cached.fetched_at).getTime() < WEATHER_FRESH_MS) {
     return cached;
   }

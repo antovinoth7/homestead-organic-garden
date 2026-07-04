@@ -50,6 +50,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       justifyContent: 'space-between',
     },
+    /** First-load placeholder sized like the days row so the card keeps its shape. */
+    daysLoading: {
+      minHeight: 64,
+      justifyContent: 'center',
+    },
     dayCol: {
       alignItems: 'center',
       flex: 1,

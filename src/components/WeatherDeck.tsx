@@ -7,7 +7,7 @@
  * (`Animated` + `PanResponder`) — no reanimated/gesture-handler needed.
  */
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import {
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/weatherCardStyles';
 import { WeatherPlotCard } from './WeatherPlotCard';
+import { getWeatherForecast } from '@/services/weather';
 import type { WeatherPlot } from '@/hooks/useWeatherLocations';
 
 const SWIPE_THRESHOLD = 120;
@@ -86,6 +87,36 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
     [pan.x, screenW]
   );
 
+  // Drag progress 0→1 toward the swipe threshold (either direction): the next
+  // card grows into place *while* the front card is dragged away, so the index
+  // shuffle at release is visually continuous. Native-driven like the pan.
+  const nextCardScale = useMemo(
+    () =>
+      pan.x.interpolate({
+        inputRange: [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD],
+        outputRange: [1, 0.95, 1],
+        extrapolate: 'clamp',
+      }),
+    [pan.x]
+  );
+  const nextCardTranslateY = useMemo(
+    () =>
+      pan.x.interpolate({
+        inputRange: [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD],
+        outputRange: [0, -10, 0],
+        extrapolate: 'clamp',
+      }),
+    [pan.x]
+  );
+
+  // Warm the forecast cache for every plot up front (dedup + 3h freshness make
+  // this cheap), so swiping to a card beyond the mounted layers never loads.
+  useEffect(() => {
+    plots.forEach((p) => {
+      void getWeatherForecast(p.lat, p.lng);
+    });
+  }, [plots]);
+
   const onFrontLayout = useCallback((e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height;
     setDeckHeight((prev) => (prev === h ? prev : h));
@@ -94,9 +125,10 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
   // Behind cards: up to MAX_BEHIND, rendered deepest-first so the front card
   // (rendered last, in normal flow) sits on top.
   const behind = useMemo(() => {
-    const layers: { plot: WeatherPlot; depth: number }[] = [];
+    const layers: { plot: WeatherPlot; plotIndex: number; depth: number }[] = [];
     for (let d = Math.min(n - 1, MAX_BEHIND); d >= 1; d--) {
-      layers.push({ plot: plots[(topIndex + d) % n]!, depth: d });
+      const plotIndex = (topIndex + d) % n;
+      layers.push({ plot: plots[plotIndex]!, plotIndex, depth: d });
     }
     return layers;
   }, [plots, topIndex, n]);
@@ -108,14 +140,19 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
       </View>
 
       <View style={styles.deckContainer}>
-        {behind.map(({ plot, depth }) => (
+        {/* Layers are keyed by plot index (not stack position) so cycling the
+            deck reorders existing elements instead of remounting them — card
+            state (fetched forecast, layout) survives every swipe. */}
+        {behind.map(({ plot, plotIndex, depth }) => (
           <Animated.View
-            key={`behind-${depth}`}
+            key={`card-${plotIndex}`}
             pointerEvents="none"
             style={[
               styles.deckCardLayer,
               deckHeight > 0 ? { height: deckHeight } : null,
-              { transform: [{ translateY: -10 * depth }, { scale: 1 - 0.05 * depth }] },
+              depth === 1
+                ? { transform: [{ translateY: nextCardTranslateY }, { scale: nextCardScale }] }
+                : { transform: [{ translateY: -10 * depth }, { scale: 1 - 0.05 * depth }] },
             ]}
           >
             <WeatherPlotCard plot={plot} />
@@ -123,7 +160,7 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
         ))}
 
         <Animated.View
-          key={`front-${topIndex}`}
+          key={`card-${topIndex}`}
           onLayout={onFrontLayout}
           style={{ transform: [{ translateX: pan.x }, { translateY: pan.y }, { rotate }] }}
           {...panResponder.panHandlers}

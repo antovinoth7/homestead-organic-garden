@@ -55,7 +55,9 @@ export const WeatherPlotCard = React.memo(function WeatherPlotCard({
         </View>
       )}
       {loading && days.length === 0 ? (
-        <Text style={styles.muted}>Loading forecast…</Text>
+        <View style={styles.daysLoading}>
+          <Text style={styles.muted}>Loading forecast…</Text>
+        </View>
       ) : (
         <View style={styles.daysRow}>
           {days.map((day) => (

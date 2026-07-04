@@ -3,10 +3,11 @@
  * WeatherCard with loading/error state and a rain-soon flag.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { WeatherForecast } from '@/types/database.types';
 import {
   getWeatherForecast,
+  getCachedForecast,
   hasRainSoon,
   KANYAKUMARI_LAT,
   KANYAKUMARI_LNG,
@@ -25,17 +26,28 @@ export function useWeather(
   lat: number = KANYAKUMARI_LAT,
   lng: number = KANYAKUMARI_LNG
 ): UseWeatherResult {
-  const [forecast, setForecast] = useState<WeatherForecast | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Cache-first: paint an already-fetched forecast synchronously so remounts
+  // and revisits never flash a loading state over data we already have.
+  const [forecast, setForecast] = useState<WeatherForecast | null>(() =>
+    getCachedForecast(lat, lng)
+  );
+  const [loading, setLoading] = useState(forecast === null);
   const [error, setError] = useState<string | null>(null);
 
+  const hasDataRef = useRef(forecast !== null);
+  useEffect(() => {
+    hasDataRef.current = forecast !== null;
+  }, [forecast]);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    // Only show the loading state on a true first fetch; with data on screen
+    // this is a silent revalidate.
+    if (!hasDataRef.current) setLoading(true);
     setError(null);
     try {
       const result = await getWeatherForecast(lat, lng);
-      setForecast(result);
-      if (!result) setError('Weather unavailable');
+      if (result) setForecast(result);
+      else setError('Weather unavailable');
     } catch (err) {
       logError('network', 'useWeather: failed to load forecast', err as Error);
       setError('Weather unavailable');
