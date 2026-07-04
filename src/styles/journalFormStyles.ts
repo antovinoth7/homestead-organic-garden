@@ -7,6 +7,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       backgroundColor: theme.background,
     },
+    scrollWrapper: {
+      flex: 1,
+    },
     header: {
       flexDirection: 'row',
       alignItems: 'center',

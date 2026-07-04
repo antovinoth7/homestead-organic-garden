@@ -324,10 +324,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     settingSwitchThumbActive: {
       alignSelf: 'flex-end',
     },
-    smartDefaultsToggle: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+    smartDefaultsCard: {
       backgroundColor: theme.backgroundSecondary,
       padding: 14,
       borderRadius: 14,
@@ -335,9 +332,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.border,
     },
-    smartDefaultsToggleActive: {
+    smartDefaultsCardActive: {
       borderColor: theme.primary,
       backgroundColor: theme.primaryLight,
+    },
+    smartDefaultsToggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
     smartDefaultsLeft: {
       flexDirection: 'row',
@@ -1698,17 +1700,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 1,
     },
 
-    // --- H: Smart Defaults Banner ---
-    smartDefaultsBanner: {
+    // --- H: Smart Defaults Summary (nested inside smartDefaultsCard) ---
+    smartDefaultsDivider: {
+      height: 1,
+      backgroundColor: theme.border,
+      marginVertical: 10,
+    },
+    smartDefaultsSummaryRow: {
       flexDirection: 'row' as const,
       alignItems: 'center',
-      backgroundColor: `${theme.info}18`,
-      borderRadius: 12,
-      padding: 12,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: `${theme.info}55`,
-      gap: 10,
+      gap: 8,
     },
     smartDefaultsBannerLeft: {
       flexDirection: 'row' as const,
@@ -1722,7 +1723,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     smartDefaultsBannerTitle: {
       fontSize: 13,
       fontWeight: '700' as const,
-      color: theme.info,
+      color: theme.primary,
       marginBottom: 2,
     },
     smartDefaultsBannerSummary: {

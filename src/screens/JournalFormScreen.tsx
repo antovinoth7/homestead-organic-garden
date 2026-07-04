@@ -303,10 +303,7 @@ export default function JournalFormScreen(): React.JSX.Element {
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
@@ -314,6 +311,10 @@ export default function JournalFormScreen(): React.JSX.Element {
         <Text style={styles.title}>{isEditing ? 'Edit Entry' : 'New Entry'}</Text>
       </View>
 
+      <KeyboardAvoidingView
+        style={styles.scrollWrapper}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
         {/* Entry Type Selector */}
         <View style={styles.typeSelector}>
@@ -608,6 +609,7 @@ export default function JournalFormScreen(): React.JSX.Element {
         {/* Extra spacing for keyboard */}
         <View style={styles.keyboardSpacer} />
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={[styles.stickySaveContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         <TouchableOpacity
@@ -628,6 +630,6 @@ export default function JournalFormScreen(): React.JSX.Element {
         onCamera={openCamera}
         onLibrary={openImageLibrary}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }

@@ -48,90 +48,97 @@ export function WizardStep3({ formState }: Props): React.JSX.Element {
 
   return (
     <View>
-      <TouchableOpacity
+      <View
         style={[
-          formStyles.smartDefaultsToggle,
-          autoApplyCareDefaults && formStyles.smartDefaultsToggleActive,
+          formStyles.smartDefaultsCard,
+          autoApplyCareDefaults && formStyles.smartDefaultsCardActive,
         ]}
-        onPress={() => setAutoApplyCareDefaults(!autoApplyCareDefaults)}
-        activeOpacity={0.85}
-        accessibilityRole="switch"
-        accessibilityState={{ checked: autoApplyCareDefaults }}
       >
-        <View style={formStyles.smartDefaultsLeft}>
+        <TouchableOpacity
+          style={formStyles.smartDefaultsToggleRow}
+          onPress={() => setAutoApplyCareDefaults(!autoApplyCareDefaults)}
+          activeOpacity={0.85}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: autoApplyCareDefaults }}
+        >
+          <View style={formStyles.smartDefaultsLeft}>
+            <View
+              style={[
+                formStyles.smartDefaultsIconWrap,
+                autoApplyCareDefaults && formStyles.smartDefaultsIconWrapActive,
+              ]}
+            >
+              <Ionicons
+                name={autoApplyCareDefaults ? 'sparkles' : 'leaf-outline'}
+                size={18}
+                color={autoApplyCareDefaults ? theme.primary : theme.textSecondary}
+              />
+            </View>
+            <Text
+              style={[
+                formStyles.smartDefaultsLabel,
+                isCompactScreen && formStyles.smartDefaultsLabelCompact,
+                autoApplyCareDefaults && formStyles.smartDefaultsLabelActive,
+              ]}
+              numberOfLines={2}
+            >
+              Apply smart care
+            </Text>
+          </View>
           <View
             style={[
-              formStyles.smartDefaultsIconWrap,
-              autoApplyCareDefaults && formStyles.smartDefaultsIconWrapActive,
+              formStyles.smartDefaultsSwitchTrack,
+              autoApplyCareDefaults && formStyles.smartDefaultsSwitchTrackActive,
             ]}
           >
-            <Ionicons
-              name={autoApplyCareDefaults ? 'sparkles' : 'leaf-outline'}
-              size={18}
-              color={autoApplyCareDefaults ? theme.primary : theme.textSecondary}
+            <View
+              style={[
+                formStyles.smartDefaultsSwitchThumb,
+                autoApplyCareDefaults && formStyles.smartDefaultsSwitchThumbActive,
+              ]}
             />
           </View>
-          <Text
-            style={[
-              formStyles.smartDefaultsLabel,
-              isCompactScreen && formStyles.smartDefaultsLabelCompact,
-              autoApplyCareDefaults && formStyles.smartDefaultsLabelActive,
-            ]}
-            numberOfLines={2}
-          >
-            Apply smart care
+        </TouchableOpacity>
+
+        {autoApplyCareDefaults && !(autoSuggestFired && !careProfileCardDismissed) && (
+          <Text style={formStyles.helperText}>
+            Auto-fills watering, fertilising, pruning, and sunlight settings.
           </Text>
-        </View>
-        <View
-          style={[
-            formStyles.smartDefaultsSwitchTrack,
-            autoApplyCareDefaults && formStyles.smartDefaultsSwitchTrackActive,
-          ]}
-        >
-          <View
-            style={[
-              formStyles.smartDefaultsSwitchThumb,
-              autoApplyCareDefaults && formStyles.smartDefaultsSwitchThumbActive,
-            ]}
-          />
-        </View>
-      </TouchableOpacity>
+        )}
 
-      {autoApplyCareDefaults && !(autoSuggestFired && !careProfileCardDismissed) && (
-        <Text style={formStyles.helperText}>
-          Auto-fills watering, fertilising, pruning, and sunlight settings.
-        </Text>
-      )}
-
-      {autoApplyCareDefaults && autoSuggestFired && !careProfileCardDismissed && (
-        <View style={formStyles.smartDefaultsBanner}>
-          <View style={formStyles.smartDefaultsBannerLeft}>
-            <Ionicons name="sparkles" size={16} color={theme.info} />
-            <View style={formStyles.smartDefaultsBannerTextWrap}>
-              <Text style={formStyles.smartDefaultsBannerTitle}>
-                Smart defaults applied for {plantVariety}
-              </Text>
-              <Text style={formStyles.smartDefaultsBannerSummary}>
-                {'\uD83D\uDCA7'} {wateringFrequency}d {'\u00B7'} {'\uD83C\uDF3F'}{' '}
-                {fertilisingFrequency}d {'\u00B7'}{' '}
-                {sunlight === 'full_sun'
-                  ? '\u2600\uFE0F Full'
-                  : sunlight === 'partial_sun'
-                  ? '\u26C5 Partial'
-                  : '\uD83C\uDF24\uFE0F Shade'}
-              </Text>
+        {autoApplyCareDefaults && autoSuggestFired && !careProfileCardDismissed && (
+          <>
+            <View style={formStyles.smartDefaultsDivider} />
+            <View style={formStyles.smartDefaultsSummaryRow}>
+              <View style={formStyles.smartDefaultsBannerLeft}>
+                <Ionicons name="sparkles" size={16} color={theme.primary} />
+                <View style={formStyles.smartDefaultsBannerTextWrap}>
+                  <Text style={formStyles.smartDefaultsBannerTitle}>
+                    Smart defaults applied for {plantVariety}
+                  </Text>
+                  <Text style={formStyles.smartDefaultsBannerSummary}>
+                    {'\uD83D\uDCA7'} {wateringFrequency}d {'\u00B7'} {'\uD83C\uDF3F'}{' '}
+                    {fertilisingFrequency}d {'\u00B7'}{' '}
+                    {sunlight === 'full_sun'
+                      ? '\u2600\uFE0F Full'
+                      : sunlight === 'partial_sun'
+                      ? '\u26C5 Partial'
+                      : '\uD83C\uDF24\uFE0F Shade'}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={formStyles.smartDefaultsBannerDismiss}
+                onPress={() => setCareProfileCardDismissed(true)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={16} color={theme.textTertiary} />
+              </TouchableOpacity>
             </View>
-          </View>
-          <TouchableOpacity
-            style={formStyles.smartDefaultsBannerDismiss}
-            onPress={() => setCareProfileCardDismissed(true)}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close" size={16} color={theme.textTertiary} />
-          </TouchableOpacity>
-        </View>
-      )}
+          </>
+        )}
+      </View>
 
       <Text style={formStyles.fieldGroupLabel}>{'\uD83C\uDF31'} Growing Conditions</Text>
       <View style={formStyles.stepperCard}>
