@@ -50,15 +50,15 @@ function shortLabel(name: string): string {
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const LABEL_VISIBLE_SCALE = 1.2;
-// Row-tag gutter sits between the ruler and the canvas (see tdmRowTagGutter).
+// Row-tag gutter sits to the left of the canvas (see tdmRowTagGutter).
 const ROW_TAG_GUTTER_WIDTH = 34;
 // Skip the row-gap chip when the gap is under this share of the bed length —
 // the chip would collide with the adjacent centerlines/pins.
 const ROW_GAP_LABEL_MIN_PCT = 7;
-// Inline: tdmCard.padding (10) ×2 + tdmRuler.width (26) + row-tag gutter (34) + tdmPlotRow.gap (6) ×2
-const HORIZONTAL_OVERHEAD = 10 * 2 + 26 + ROW_TAG_GUTTER_WIDTH + 6 * 2;
-// Modal: tdmModalCanvasWrap.padding (12) + tdmRuler.width (26) + row-tag gutter (34) + tdmPlotRow.gap (6) ×2
-const MODAL_HORIZONTAL_OVERHEAD = 12 * 2 + 26 + ROW_TAG_GUTTER_WIDTH + 6 * 2;
+// Inline: tdmCard.padding (10) ×2 + row-tag gutter (34) + tdmPlotRow.gap (6)
+const HORIZONTAL_OVERHEAD = 10 * 2 + ROW_TAG_GUTTER_WIDTH + 6;
+// Modal: tdmModalCanvasWrap.padding (12) ×2 + row-tag gutter (34) + tdmPlotRow.gap (6)
+const MODAL_HORIZONTAL_OVERHEAD = 12 * 2 + ROW_TAG_GUTTER_WIDTH + 6;
 // Modal vertical chrome around the canvas: header (~52), compass top+bottom (~58),
 // legend (~36), wrap padding (~24).
 const MODAL_VERTICAL_CHROME = 170;
@@ -163,14 +163,6 @@ function BedTopDownCanvas({
 
   const widthCm = Math.max(1, Math.round(widthM * 100));
   const lengthCm = Math.max(1, Math.round(lengthM * 100));
-
-  const rulerTicks = useMemo<number[]>(() => {
-    const ticks: number[] = [];
-    for (let m = 0; m <= lengthM + 1e-6; m += 0.5) {
-      ticks.push(Math.round(m * 10) / 10);
-    }
-    return ticks;
-  }, [lengthM]);
 
   const gridColCount = Math.max(0, Math.floor((widthCm - 1) / 30));
   const gridRowCount = Math.max(0, Math.floor((lengthCm - 1) / 30));
@@ -338,7 +330,7 @@ function BedTopDownCanvas({
 
   const pathLabel = `${walkingPathCm} cm path`;
   const edgeLabel = `${edgeBufferCm} cm edge`;
-  const compassDim = `${widthM.toFixed(1)} m wide`;
+  const compassDim = `${widthM.toFixed(1)} m × ${lengthM.toFixed(1)} m`;
   const legendFooter =
     edgeBufferCm > 0
       ? `${walkingPathCm} cm path · ${edgeBufferCm} cm edge`
@@ -357,14 +349,6 @@ function BedTopDownCanvas({
       </View>
 
       <View style={styles.tdmPlotRow}>
-        <View style={styles.tdmRuler}>
-          {rulerTicks.map((m) => (
-            <Text key={m} style={[styles.tdmRulerTick, { top: `${(m / lengthM) * 100}%` }]}>
-              {m.toFixed(1)} m
-            </Text>
-          ))}
-        </View>
-
         <View style={styles.tdmRowTagGutter}>
           {rows.map((row) => {
             const centerPct = (row.northEdgeCm / lengthCm) * 100;
