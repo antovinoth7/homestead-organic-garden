@@ -1,9 +1,24 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { Step2Data } from '@/hooks/useBedCreationWizard';
-import { SunlightLevel, BedSlope, CropFamily, SoilType, BedType, PestHistoryItem, Bed } from '@/types/database.types';
+import {
+  SunlightLevel,
+  BedSlope,
+  CropFamily,
+  SoilType,
+  BedType,
+  PestHistoryItem,
+  Bed,
+} from '@/types/database.types';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import FieldLabelWithHelp from '@/components/FieldLabelWithHelp';
 import ThemedDropdown from '@/components/ThemedDropdown';
@@ -87,10 +102,9 @@ function ChipGroup<T extends string>({
               <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
                 {opt.label}
               </Text>
-              {opt.hint ? (
-                <Text style={[styles.chipHint, selected && styles.chipHintSelected]}>
-                  {opt.hint}
-                </Text>
+              {/* Single-line chips: the hint detail only shows on the selected one */}
+              {opt.hint && selected ? (
+                <Text style={[styles.chipHint, styles.chipHintSelected]}>{opt.hint}</Text>
               ) : null}
             </TouchableOpacity>
           );
@@ -114,6 +128,19 @@ export function LandConditionsStep({
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [showCustomName, setShowCustomName] = useState(false);
+
+  // "More soil details" starts collapsed to keep the page short, but follows
+  // the data until the user toggles it themselves — so edit mode (or a wizard
+  // restore) with non-default advanced values never hides filled-in fields.
+  // A solanaceae block always forces it open so the warning stays visible.
+  const [moreOpenManual, setMoreOpenManual] = useState<boolean | null>(null);
+  const hasAdvancedValues =
+    data.slope !== 'flat' ||
+    data.construction_type !== 'raised' ||
+    data.prev_crop_family != null ||
+    data.pest_history.length > 0 ||
+    data.waterlogging_risk;
+  const moreOpen = solanaceaeBlocked || (moreOpenManual ?? hasAdvancedValues);
 
   const generatedBedName = useMemo(() => {
     const base = buildGeneratedBedNameBase(data.parent_location, bedType, data.child_location);
@@ -270,9 +297,9 @@ export function LandConditionsStep({
                 <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
                   {opt.label}
                 </Text>
-                <Text style={[styles.chipHint, selected && styles.chipHintSelected]}>
-                  {opt.hint}
-                </Text>
+                {selected ? (
+                  <Text style={[styles.chipHint, styles.chipHintSelected]}>{opt.hint}</Text>
+                ) : null}
               </TouchableOpacity>
             );
           })}
@@ -288,20 +315,6 @@ export function LandConditionsStep({
       </View>
 
       <ChipGroup
-        label="Slope"
-        helpText="Slope affects water runoff and erosion risk. Flat ground retains water evenly. Gentle slopes drain well. Moderate to steep slopes need terracing or swales to prevent soil loss and hold moisture."
-        options={[
-          { value: 'flat' as BedSlope, label: 'Flat', hint: 'Level ground' },
-          { value: 'gentle' as BedSlope, label: 'Gentle', hint: '<5° tilt' },
-          { value: 'moderate' as BedSlope, label: 'Moderate', hint: '5–15°' },
-          { value: 'steep' as BedSlope, label: 'Steep', hint: '>15°' },
-        ]}
-        value={data.slope}
-        onSelect={(v) => onChange({ slope: v })}
-        styles={styles}
-      />
-
-      <ChipGroup
         label="Soil Type"
         helpText="Soil type affects bed height and drainage recommendations. Laterite and black cotton soil benefit most from raised beds."
         options={SOIL_TYPE_OPTIONS}
@@ -310,120 +323,170 @@ export function LandConditionsStep({
         styles={styles}
       />
 
-      <ChipGroup
-        label="Bed construction"
-        helpText="Raised beds drain better and allow narrower rows. In-ground beds suit flat terrain and need wider gaps (~40cm) between rows for walking access."
-        options={[
-          { value: 'raised' as const, label: 'Raised', hint: 'Above ground · narrow rows' },
-          { value: 'in_ground' as const, label: 'In-ground', hint: 'Direct soil · wider paths' },
-        ]}
-        value={data.construction_type}
-        onSelect={(v) => onChange({ construction_type: v })}
-        styles={styles}
-      />
-
-      <ChipGroup
-        label="Previous crop family"
-        helpText="Crop rotation prevents disease buildup and nutrient depletion. Avoid planting the same family back-to-back. Legumes fix nitrogen and benefit the next crop. Solanaceae (tomato, chilli) need at least one season's rest before repeating."
-        options={[
-          {
-            value: 'solanaceae' as CropFamily,
-            label: 'Solanaceae',
-            hint: 'Tomato · Chilli · Brinjal',
-          },
-          { value: 'legume' as CropFamily, label: 'Legume', hint: 'Cowpea · Groundnut · Beans' },
-          {
-            value: 'cucurbit' as CropFamily,
-            label: 'Cucurbit',
-            hint: 'Pumpkin · Bitter gourd · Snake gourd',
-          },
-          {
-            value: 'brassica' as CropFamily,
-            label: 'Brassica',
-            hint: 'Cabbage · Cauliflower · Radish',
-          },
-          { value: 'allium' as CropFamily, label: 'Allium', hint: 'Onion · Garlic · Shallot' },
-          {
-            value: 'other' as CropFamily,
-            label: 'Other / Unknown',
-            hint: 'Cereal · Tuber · Mixed',
-          },
-        ]}
-        value={(data.prev_crop_family ?? 'other') as CropFamily}
-        onSelect={(v) => onChange({ prev_crop_family: v === 'other' ? null : v })}
-        styles={styles}
-      />
-
-      {solanaceaeBlocked && (
-        <View style={styles.blockAlert}>
-          <Text style={styles.blockAlertText}>
-            ⛔ Solanaceae was the previous crop. This bed needs at least one season&apos;s rest
-            before planting Solanaceae again. Choose a different previous crop family to continue.
+      {/* Advanced land/soil fields — collapsed by default to keep the page short */}
+      <TouchableOpacity
+        style={styles.lcMoreToggle}
+        activeOpacity={0.7}
+        onPress={() => setMoreOpenManual(!moreOpen)}
+        accessibilityRole="button"
+        accessibilityLabel={moreOpen ? 'Collapse more soil details' : 'Expand more soil details'}
+      >
+        <View style={styles.lcMoreToggleLabelBlock}>
+          <Text style={styles.lcMoreToggleText}>🧱 More soil details (optional)</Text>
+          <Text style={styles.lcMoreToggleHint}>
+            Slope · construction · previous crop · pests · drainage
           </Text>
         </View>
-      )}
-
-      {/* Pest history */}
-      <View style={styles.fieldGroup}>
-        <FieldLabelWithHelp
-          label="Pest issues last season?"
-          helpText="Select any problems from the previous crop. This personalises the soil-prep checklist in the next step."
-          labelStyle={styles.fieldLabel}
-          style={styles.fieldLabelRow}
+        <Ionicons
+          name={moreOpen ? 'chevron-up' : 'chevron-down'}
+          size={18}
+          color={theme.textSecondary}
         />
-        <View style={styles.chipRow}>
-          {PEST_OPTIONS.map((opt) => {
-            const selected = data.pest_history.some((p) => p.pest_name === opt.value);
-            return (
-              <TouchableOpacity
-                key={opt.value}
-                activeOpacity={0.7}
-                style={[styles.chip, selected && styles.chipSelected]}
-                onPress={() => {
-                  const next: PestHistoryItem[] = selected
-                    ? data.pest_history.filter((p) => p.pest_name !== opt.value)
-                    : [
-                        ...data.pest_history,
-                        {
-                          pest_name: opt.value,
-                          severity: 'medium' as const,
-                          season: 'last',
-                          year: new Date().getFullYear(),
-                        },
-                      ];
-                  onChange({ pest_history: next });
-                }}
-              >
-                <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
-                  {opt.label}
-                </Text>
-                <Text style={[styles.chipHint, selected && styles.chipHintSelected]}>
-                  {opt.hint}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <TouchableOpacity
-        activeOpacity={0.8}
-        style={styles.switchRow}
-        onPress={() => onChange({ waterlogging_risk: !data.waterlogging_risk })}
-      >
-        <View style={styles.switchLabelBlock}>
-          <FieldLabelWithHelp
-            label="Waterlogging risk?"
-            helpText="Enable this if the spot is low-lying or water tends to pool after rain. Waterlogged soil causes root rot — raised beds or drainage channels help in flood-prone areas."
-            labelStyle={styles.fieldLabel}
-            style={styles.fieldLabelRow}
-          />
-          <Text style={styles.switchHint}>Low-lying area or water pools after rain</Text>
-        </View>
-        <View style={[styles.switchTrack, data.waterlogging_risk && styles.switchTrackActive]}>
-          <View style={[styles.switchThumb, data.waterlogging_risk && styles.switchThumbActive]} />
-        </View>
       </TouchableOpacity>
+
+      {moreOpen && (
+        <>
+          <ChipGroup
+            label="Slope"
+            helpText="Slope affects water runoff and erosion risk. Flat ground retains water evenly. Gentle slopes drain well. Moderate to steep slopes need terracing or swales to prevent soil loss and hold moisture."
+            options={[
+              { value: 'flat' as BedSlope, label: 'Flat', hint: 'Level ground' },
+              { value: 'gentle' as BedSlope, label: 'Gentle', hint: '<5° tilt' },
+              { value: 'moderate' as BedSlope, label: 'Moderate', hint: '5–15°' },
+              { value: 'steep' as BedSlope, label: 'Steep', hint: '>15°' },
+            ]}
+            value={data.slope}
+            onSelect={(v) => onChange({ slope: v })}
+            styles={styles}
+          />
+
+          <ChipGroup
+            label="Bed construction"
+            helpText="Raised beds drain better and allow narrower rows. In-ground beds suit flat terrain and need wider gaps (~40cm) between rows for walking access."
+            options={[
+              { value: 'raised' as const, label: 'Raised', hint: 'Above ground · narrow rows' },
+              {
+                value: 'in_ground' as const,
+                label: 'In-ground',
+                hint: 'Direct soil · wider paths',
+              },
+            ]}
+            value={data.construction_type}
+            onSelect={(v) => onChange({ construction_type: v })}
+            styles={styles}
+          />
+
+          <ChipGroup
+            label="Previous crop family"
+            helpText="Crop rotation prevents disease buildup and nutrient depletion. Avoid planting the same family back-to-back. Legumes fix nitrogen and benefit the next crop. Solanaceae (tomato, chilli) need at least one season's rest before repeating."
+            options={[
+              {
+                value: 'solanaceae' as CropFamily,
+                label: 'Solanaceae',
+                hint: 'Tomato · Chilli · Brinjal',
+              },
+              {
+                value: 'legume' as CropFamily,
+                label: 'Legume',
+                hint: 'Cowpea · Groundnut · Beans',
+              },
+              {
+                value: 'cucurbit' as CropFamily,
+                label: 'Cucurbit',
+                hint: 'Pumpkin · Bitter gourd · Snake gourd',
+              },
+              {
+                value: 'brassica' as CropFamily,
+                label: 'Brassica',
+                hint: 'Cabbage · Cauliflower · Radish',
+              },
+              { value: 'allium' as CropFamily, label: 'Allium', hint: 'Onion · Garlic · Shallot' },
+              {
+                value: 'other' as CropFamily,
+                label: 'Other / Unknown',
+                hint: 'Cereal · Tuber · Mixed',
+              },
+            ]}
+            value={(data.prev_crop_family ?? 'other') as CropFamily}
+            onSelect={(v) => onChange({ prev_crop_family: v === 'other' ? null : v })}
+            styles={styles}
+          />
+
+          {solanaceaeBlocked && (
+            <View style={styles.blockAlert}>
+              <Text style={styles.blockAlertText}>
+                ⛔ Solanaceae was the previous crop. This bed needs at least one season&apos;s rest
+                before planting Solanaceae again. Choose a different previous crop family to
+                continue.
+              </Text>
+            </View>
+          )}
+
+          {/* Pest history */}
+          <View style={styles.fieldGroup}>
+            <FieldLabelWithHelp
+              label="Pest issues last season?"
+              helpText="Select any problems from the previous crop. This personalises the soil-prep checklist in the next step."
+              labelStyle={styles.fieldLabel}
+              style={styles.fieldLabelRow}
+            />
+            <View style={styles.chipRow}>
+              {PEST_OPTIONS.map((opt) => {
+                const selected = data.pest_history.some((p) => p.pest_name === opt.value);
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    activeOpacity={0.7}
+                    style={[styles.chip, selected && styles.chipSelected]}
+                    onPress={() => {
+                      const next: PestHistoryItem[] = selected
+                        ? data.pest_history.filter((p) => p.pest_name !== opt.value)
+                        : [
+                            ...data.pest_history,
+                            {
+                              pest_name: opt.value,
+                              severity: 'medium' as const,
+                              season: 'last',
+                              year: new Date().getFullYear(),
+                            },
+                          ];
+                      onChange({ pest_history: next });
+                    }}
+                  >
+                    <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                      {opt.label}
+                    </Text>
+                    {selected ? (
+                      <Text style={[styles.chipHint, styles.chipHintSelected]}>{opt.hint}</Text>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.switchRow}
+            onPress={() => onChange({ waterlogging_risk: !data.waterlogging_risk })}
+          >
+            <View style={styles.switchLabelBlock}>
+              <FieldLabelWithHelp
+                label="Waterlogging risk?"
+                helpText="Enable this if the spot is low-lying or water tends to pool after rain. Waterlogged soil causes root rot — raised beds or drainage channels help in flood-prone areas."
+                labelStyle={styles.fieldLabel}
+                style={styles.fieldLabelRow}
+              />
+              <Text style={styles.switchHint}>Low-lying area or water pools after rain</Text>
+            </View>
+            <View style={[styles.switchTrack, data.waterlogging_risk && styles.switchTrackActive]}>
+              <View
+                style={[styles.switchThumb, data.waterlogging_risk && styles.switchThumbActive]}
+              />
+            </View>
+          </TouchableOpacity>
+        </>
+      )}
     </ScrollView>
   );
 }

@@ -7,8 +7,15 @@
  * (`Animated` + `PanResponder`) — no reanimated/gesture-handler needed.
  */
 
-import React, { useMemo, useRef, useState } from 'react';
-import { View, Text, Animated, PanResponder, Dimensions } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  Animated,
+  PanResponder,
+  useWindowDimensions,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/weatherCardStyles';
 import { WeatherPlotCard } from './WeatherPlotCard';
@@ -32,12 +39,14 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
   const [topIndex, setTopIndex] = useState(0);
   const [deckHeight, setDeckHeight] = useState(0);
   const pan = useRef(new Animated.ValueXY()).current;
-  const screenW = Dimensions.get('window').width;
+  const screenW = useWindowDimensions().width;
 
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         // Only claim horizontal drags so the parent ScrollView still scrolls vertically.
+        // The drag feed must stay JS-driven (PanResponder gestures can't drive the
+        // native Animated.event path) — only the release animations run natively.
         onMoveShouldSetPanResponder: (_evt, g) =>
           Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 8,
         onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
@@ -50,7 +59,7 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
             Animated.timing(pan, {
               toValue: { x: dir * (screenW + 80), y: g.dy },
               duration: 200,
-              useNativeDriver: false,
+              useNativeDriver: true,
             }).start(() => {
               pan.setValue({ x: 0, y: 0 });
               setTopIndex((i) => (i + 1) % nRef.current);
@@ -59,7 +68,7 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
             Animated.spring(pan, {
               toValue: { x: 0, y: 0 },
               friction: 6,
-              useNativeDriver: false,
+              useNativeDriver: true,
             }).start();
           }
         },
@@ -67,18 +76,30 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
     [pan, screenW]
   );
 
-  const rotate = pan.x.interpolate({
-    inputRange: [-screenW / 2, 0, screenW / 2],
-    outputRange: ['-8deg', '0deg', '8deg'],
-    extrapolate: 'clamp',
-  });
+  const rotate = useMemo(
+    () =>
+      pan.x.interpolate({
+        inputRange: [-screenW / 2, 0, screenW / 2],
+        outputRange: ['-8deg', '0deg', '8deg'],
+        extrapolate: 'clamp',
+      }),
+    [pan.x, screenW]
+  );
+
+  const onFrontLayout = useCallback((e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    setDeckHeight((prev) => (prev === h ? prev : h));
+  }, []);
 
   // Behind cards: up to MAX_BEHIND, rendered deepest-first so the front card
   // (rendered last, in normal flow) sits on top.
-  const behind: { plot: WeatherPlot; depth: number }[] = [];
-  for (let d = Math.min(n - 1, MAX_BEHIND); d >= 1; d--) {
-    behind.push({ plot: plots[(topIndex + d) % n]!, depth: d });
-  }
+  const behind = useMemo(() => {
+    const layers: { plot: WeatherPlot; depth: number }[] = [];
+    for (let d = Math.min(n - 1, MAX_BEHIND); d >= 1; d--) {
+      layers.push({ plot: plots[(topIndex + d) % n]!, depth: d });
+    }
+    return layers;
+  }, [plots, topIndex, n]);
 
   return (
     <View style={styles.outer}>
@@ -103,7 +124,7 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
 
         <Animated.View
           key={`front-${topIndex}`}
-          onLayout={(e) => setDeckHeight(e.nativeEvent.layout.height)}
+          onLayout={onFrontLayout}
           style={{ transform: [{ translateX: pan.x }, { translateY: pan.y }, { rotate }] }}
           {...panResponder.panHandlers}
         >

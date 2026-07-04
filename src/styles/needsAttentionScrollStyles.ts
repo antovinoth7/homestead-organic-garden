@@ -69,4 +69,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       lineHeight: 15,
     },
+    // Small ✓/✕ action chip in the card's top-right corner (quick-complete a
+    // fertilise alert, or dismiss the seasonal green-manure card for the month).
+    actionChip: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   });

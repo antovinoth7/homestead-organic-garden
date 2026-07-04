@@ -76,6 +76,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       color: theme.textSecondary,
     },
+    /** Placeholder while plot locations load — roughly one forecast card tall. */
+    loadingCard: {
+      minHeight: 120,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     // ─── Stacked swipeable deck (multiple plots) ───────────────────────────────
     deckContainer: {
       position: 'relative',

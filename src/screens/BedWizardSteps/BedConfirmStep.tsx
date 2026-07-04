@@ -9,7 +9,7 @@ import { getLayerColor } from '@/config/beds/layerMeta';
 import { computeRowLayout } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
-import { getPlantEmoji, buildHarvestPreview } from '@/utils/plantHelpers';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import { BedTopDownMap } from '@/components/BedTopDownMap';
 import VoiceDictation from '@/components/VoiceDictation';
@@ -44,8 +44,6 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
     if (inputs.length === 0) return null;
     return computeRowLayout(inputs, s3.width_m, s3.length_m, s1.bed_type, s2?.construction_type);
   }, [s1?.bed_type, s3, entries, s2?.construction_type]);
-
-  const harvestPreview = useMemo(() => buildHarvestPreview(entries, template), [entries, template]);
 
   const plantsLabel = useMemo(() => {
     if (entries.length === 0) return null;
@@ -152,32 +150,6 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
             edgeBufferCm={rowLayout.edgeBufferCm}
             overflowCm={rowLayout.overflowCm}
           />
-        </View>
-      )}
-
-      {/* First-harvest timeline */}
-      {harvestPreview.length > 1 && (
-        <View style={styles.cfSection}>
-          <Text style={styles.cfEyebrow}>First harvest from this bed</Text>
-          <View style={styles.cfCard}>
-            {harvestPreview.map((item) => {
-              const maxDays = harvestPreview[harvestPreview.length - 1]!.days;
-              const barWidth = Math.max(20, Math.round((item.days / maxDays) * 140));
-              return (
-                <View key={item.name} style={styles.gtHarvestRow}>
-                  <View style={styles.gtHarvestLabelCol}>
-                    <Text style={styles.gtHarvestName}>
-                      {item.emoji} {item.name}
-                    </Text>
-                  </View>
-                  <View style={styles.gtHarvestBarTrack}>
-                    <View style={[styles.gtHarvestBar, { width: barWidth }]} />
-                  </View>
-                  <Text style={styles.gtHarvestDays}>{item.days}d</Text>
-                </View>
-              );
-            })}
-          </View>
         </View>
       )}
 

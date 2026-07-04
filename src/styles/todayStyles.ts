@@ -7,6 +7,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       backgroundColor: theme.background,
     },
+    // Scroll body under the fixed hero header
+    scrollArea: {
+      flex: 1,
+    },
     heroHeader: {
       paddingHorizontal: 20,
       paddingTop: 14,
@@ -442,5 +446,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       justifyContent: 'center',
       gap: 12,
+    },
+    loadingText: {
+      fontSize: 14,
+      color: theme.textSecondary,
     },
   });

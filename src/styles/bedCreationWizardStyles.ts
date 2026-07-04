@@ -199,10 +199,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 6,
     },
     // Step 1 — type grid
-    typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     typeCard: {
       width: '47%',
-      padding: 14,
+      padding: 10,
       borderRadius: 10,
       backgroundColor: theme.backgroundSecondary,
       borderWidth: 1.5,
@@ -211,12 +211,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     typeCardSelected: { borderColor: theme.primary, backgroundColor: theme.primaryLight },
     typeCardDimmed: { opacity: 0.5 },
-    typeEmoji: { fontSize: 28, marginBottom: 6 },
+    typeEmoji: { fontSize: 24, marginBottom: 4 },
     typeLabel: { fontSize: 13, fontWeight: '600', color: theme.text, textAlign: 'center' },
     typeLabelSelected: { color: theme.primary },
-    typeDesc: { fontSize: 11, color: theme.textSecondary, textAlign: 'center', marginTop: 4 },
+    typeDesc: { fontSize: 11, color: theme.textSecondary, textAlign: 'center', marginTop: 2 },
     typeInfoTag: {
-      marginTop: 6,
+      marginTop: 4,
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 10,
@@ -224,14 +224,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignSelf: 'center' as const,
     },
     typeInfoTagText: { fontSize: 10, fontWeight: '600' as const, color: theme.primary },
-    // Step 1 — Tamil label under card title
-    btTamilLabel: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      textAlign: 'center' as const,
-      marginTop: 2,
-      fontStyle: 'italic' as const,
-    },
     // Step 1 — Ideal season badge overlaid on card
     btIdealBadge: {
       position: 'absolute' as const,
@@ -295,7 +287,23 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 10,
     },
     // Field groups
-    fieldGroup: { marginBottom: 16 },
+    fieldGroup: { marginBottom: 12 },
+    // Step 2 — collapsible "More soil details" toggle
+    lcMoreToggle: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.backgroundSecondary,
+      marginBottom: 12,
+    },
+    lcMoreToggleLabelBlock: { flex: 1, paddingRight: 8 },
+    lcMoreToggleText: { fontSize: 14, fontWeight: '600' as const, color: theme.text },
+    lcMoreToggleHint: { fontSize: 11, color: theme.textSecondary, marginTop: 2 },
     fieldLabelRow: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
@@ -1261,39 +1269,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 2,
       letterSpacing: 0.2,
     },
-    // Guild step — harvest mini timeline
-    gtHarvestRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      marginBottom: 8,
-    },
-    gtHarvestLabelCol: {
-      width: 120,
-    },
-    gtHarvestName: {
-      fontSize: 12,
-      fontWeight: '600' as const,
-      color: theme.text,
-    },
-    gtHarvestBarTrack: {
-      flex: 1,
-      height: 8,
-      backgroundColor: theme.borderLight,
-      borderRadius: 4,
-      overflow: 'hidden' as const,
-    },
-    gtHarvestBar: {
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: theme.success,
-    },
-    gtHarvestDays: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      fontWeight: '600' as const,
-      marginLeft: 8,
-      width: 34,
-    },
     // Layout step — top-down bed map (Step 5 hero)
     tdmCard: {
       backgroundColor: theme.backgroundSecondary,
@@ -1877,12 +1852,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.backgroundSecondary,
       borderRadius: 22,
       padding: 4,
-      marginBottom: 12,
+      marginBottom: 10,
       alignSelf: 'stretch' as const,
+      borderWidth: 1,
+      borderColor: theme.border,
     },
     blLayoutTab: {
       flex: 1,
-      paddingVertical: 9,
+      paddingVertical: 7,
       paddingHorizontal: 18,
       borderRadius: 18,
       alignItems: 'center' as const,
