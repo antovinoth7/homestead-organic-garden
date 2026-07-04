@@ -9,9 +9,8 @@
 import { WeatherForecast, DailyWeather } from '@/types/database.types';
 import { safeGetItem, safeSetItem } from '@/utils/safeStorage';
 import { KEYS } from '@/lib/storage';
-import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
+import { withTimeoutAndRetry } from '@/utils/firestoreTimeout';
 import { getCached, setCached, dedup, CACHE_KEYS } from '@/lib/dataCache';
-import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 
 // Pure helpers live in weatherLogic (no native deps) — re-exported for callers.
@@ -24,6 +23,9 @@ export const KANYAKUMARI_LNG = 77.5385;
 
 /** Open-Meteo forecasts change slowly; refresh at most every 3 hours. */
 const WEATHER_FRESH_MS = 3 * 60 * 60 * 1000;
+
+/** Open-Meteo on slow mobile data needs more headroom than Firestore reads. */
+const WEATHER_TIMEOUT_MS = 15000;
 
 interface OpenMeteoResponse {
   latitude: number;
@@ -92,7 +94,7 @@ export async function getWeatherForecast(
           if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
           return (await res.json()) as OpenMeteoResponse;
         },
-        { timeoutMs: FIRESTORE_READ_TIMEOUT_MS }
+        { timeoutMs: WEATHER_TIMEOUT_MS }
       );
 
       const forecast = parseForecast(json);
@@ -100,8 +102,9 @@ export async function getWeatherForecast(
       await safeSetItem(`${KEYS.WEATHER}:${key}`, JSON.stringify(forecast));
       return forecast;
     } catch (error) {
+      // Recoverable: the AsyncStorage fallback below serves the last forecast,
+      // so a fetch failure is a warning, not an error-tracker event.
       logger.warn('getWeatherForecast: fetch failed, using cache', error as Error);
-      logError('network', 'getWeatherForecast failed', error as Error);
       const stored = await safeGetItem(`${KEYS.WEATHER}:${key}`);
       if (stored) {
         try {

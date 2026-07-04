@@ -351,7 +351,7 @@ const AppRoot = (): React.JSX.Element | null => {
       <NavigationContainer theme={navigationTheme}>
         <RootStack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (
-            <RootStack.Screen name="AppTabs" component={AuthedNavigator} />
+            <RootStack.Screen name="Main" component={AuthedNavigator} />
           ) : (
             <RootStack.Screen name="Auth" component={AuthScreen} />
           )}
