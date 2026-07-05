@@ -60,6 +60,12 @@ npm run lint       # ESLint (zero errors required)
 npm test           # Jest
 ````
 
+## Working Efficiently (agents)
+
+- Read `docs/CODEMAP.md` (generated; `npm run codemap` to refresh) before exploring `src/` — it lists every file with line counts.
+- Files over 800 lines (flagged ⚠️ in the codemap, e.g. `src/utils/plantCareDefaults.ts`, `src/config/pests/kanyakumari.ts`, `src/styles/plantFormStyles.ts`) — Grep/search inside them; do not read them whole.
+- Scoped checks: `npm run lint:file -- <path>` lints one file; `npm test -- <path-or-pattern>` runs one test file. Prefer these while iterating; run full `npm run lint` + `npm test` before finishing.
+
 ## New Feature Order
 
 1. Define types in `src/types/database.types.ts`
@@ -80,6 +86,7 @@ npm test           # Jest
 
 Read these on demand when working in specific areas:
 
+- **`docs/CODEMAP.md`** — generated file inventory with line counts; read before exploring `src/`
 - **`docs/CONVENTIONS.md`** — TypeScript, naming, component/hook/styling standards, code quality, AI checklist, commit format
 - **`docs/SERVICES.md`** — service layer, Firestore shape, specific service behaviors, caching, utilities
 - **`docs/COMPONENTS.md`** — component/styles inventory, reusable UI, custom hooks, UI conventions
@@ -87,5 +94,5 @@ Read these on demand when working in specific areas:
 - **`docs/DOMAIN_LOGIC.md`** — agro-climatic zones, seasons, plant/care helpers
 - **`docs/TESTING.md`** — test standards, fixture factories, coverage targets
 - **`docs/IMAGE_STORAGE.md`** — image storage rules, platform behavior, migration flow
-- **`docs/IMPLEMENTATION_ROADMAP.md`** — phased build plan, progress tracker, gap analysis
+- **`docs/IMPLEMENTATION_ROADMAP.md`** — active roadmap: progress tracker, gap analysis, planned phases only (completed-phase detail lives in `docs/archive/ROADMAP_ARCHIVE.md` — rarely needed)
 - **`docs/BEST_PRACTICES.md`** — prioritized performance, product, and architecture recommendations

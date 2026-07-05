@@ -1,5 +1,9 @@
 # Components & Styles Inventory
 
+> For the exact per-file inventory with line counts, see the generated [`docs/CODEMAP.md`](CODEMAP.md)
+> (`npm run codemap`). This file explains the conventions and groups components by domain —
+> it deliberately avoids hardcoded counts that go stale.
+
 ## Styles Architecture
 
 - All styles live in `src/styles/` as separate files. No screen or component has inline `StyleSheet.create`.
@@ -10,63 +14,41 @@
 - Naming convention: `src/styles/<camelCaseName>Styles.ts` matching the screen or component name.
 - When adding a new screen or component, create its style file in `src/styles/` following this pattern.
 - In screens/components, import and call `createStyles(theme)` — use `useMemo(() => createStyles(theme), [theme])` for larger screens.
+- Note: several style files exceed 1,500 lines (`bedCreationWizardStyles`, `plantFormStyles`, `calendarStyles`) — Grep for the style key you need rather than reading them whole.
 
-### Current Style Files (25 total)
+## Reusable Primitives (prefer these over rebuilding)
 
-**Screens (13):** `authStyles`, `moreStyles`, `settingsStyles`, `archivedPlantsStyles`, `journalFormStyles`, `manageLocationsStyles`, `journalStyles`, `plantsStyles`, `managePlantCatalogStyles`, `todayStyles`, `calendarStyles`, `plantFormStyles`, `plantDetailStyles`
-
-**Components (12):** `collapsibleSectionStyles`, `errorBoundaryStyles`, `floatingLabelInputStyles`, `floatingTabBarStyles`, `harvestHistorySectionStyles`, `pestDiseaseHistorySectionStyles`, `photoSourceModalStyles`, `plantAddWizardStyles`, `plantCardStyles`, `plantEditFormStyles`, `taskCardStyles`, `themedDropdownStyles`
-
----
-
-## Extracted Components
-
-Larger screens have been decomposed into focused sub-components organized in `src/components/`:
-
-### `calendar/`
-
-- `MonthCalendarView`, `WeekCalendarView`, `SwipeableTaskCard`
-
-### `forms/`
-
-- `PlantEditForm`, `PlantAddWizard`
-- `EditBasicInfoSection`, `EditLocationSection`, `EditCareScheduleSection`, `EditCoconutSection`
-- `WizardStep1`, `WizardStep2`, `WizardStep3`
-
-### `modals/`
-
-- `DiscardChangesModal`, `TaskCompletionModal`, `CreateTaskModal`, `PestDiseaseModal`, `PhotoSourceModal`
-
-### Root components
-
-- `PestDiseaseHistorySection`, `HarvestHistorySection`, `LocationProfileEditor`, `PlantFilterSheet`
-
-Prefer reusing these over rebuilding similar UI in new screens.
-
----
-
-## Reusable Shared Components
-
-- `PlantCard` — plant list item
-- `TaskCard` — task list item
-- `PhotoSourceModal` — camera/gallery picker
 - `CollapsibleSection` — expandable section wrapper
-- `ErrorBoundary` — class component error boundary
+- `ScreenHeader` — standard screen header
 - `FloatingLabelInput` — animated label text input
-- `FloatingTabBar` (includes `AnimatedFAB` and `FloatingTabBarProvider`) — tab bar with scroll-hide
 - `ThemedDropdown` — themed dropdown picker
+- `FloatingTabBar` (includes `AnimatedFAB` and `FloatingTabBarProvider`) — tab bar with scroll-hide
+- `FieldHelp` / `FieldLabelWithHelp` — inline help affordances
+- `UndoToast` — post-action undo snackbar
+- `ErrorBoundary` — class component error boundary
+- `VoiceDictation` / `VoiceInputButton` (+ `useVoiceInput`) — speech-to-text for any text field
+- `ImageZoomModal` (+ `usePinchZoom`) — pinch-zoom photo viewer
+- Modals in `src/components/modals/`: `ConfirmDeleteModal` (shared delete confirmation — use this, not bespoke modals), `DiscardChangesModal`, `PhotoSourceModal`, `TaskCompletionModal`, `CreateTaskModal`, `PestDiseaseModal`, `LocationEditModal`, `LocationReassignModal`, `BedCapacityModal`
 
----
+## Components by Domain
 
-## Custom Hooks
+- **Plant detail sections** (`PlantDetailScreen`): `PlantKeyInfoSection`, `CareScheduleSection`, `GrowthStageSection` (+ `GrowthStageTimeline`, `PinGrowthStageModal`), `HarvestInfoSection`, `HarvestHistorySection` (+ `HarvestYieldChart`, `HarvestWeightInput`), `CompanionPlantingSection`, `CoconutSection`, `PestDiseaseHistorySection`, `PlantNotesSection`, `PlantTasksSection`, `DetailSection`, `PlantInfoRow`
+- **Catalog detail sections** (`CatalogPlantDetailScreen`): `DetailQuickInfoSection`, `DetailNutritionSection`, `DetailCareGuidanceSection`, `PlantCatalogList`, `PlantCategoryTabs`
+- **Plant forms** (`src/components/forms/`): `PlantAddWizard` + `WizardStep1/2/3`; `PlantEditForm` + `Edit*Section` (BasicInfo, Location, CareSchedule, Coconut, QuickInfo, Nutrition, Relationships, CareGuidance, Safety, Beneficials)
+- **Beds**: `BedCard`, `BedTopDownMap`, `BedLayerStack`, `BedRowLayout`, `BedSuccessionTimeline`, `BedZoneIllustration`, `BedRotationView`, `RotationStatusCard`, `BedContextSection`, `BedFilterSheet`, `BedPlantPickerSheet`, `DraggablePlantRow`, `ClearBedCta`, `PlantEntryResolverSheet`
+- **Today dashboard**: `TodayProgressCard`, `FarmHealthCard`, `NeedsAttentionScroll`, `WeatherDeck` + `WeatherPlotCard` (+ legacy `WeatherCard`), `PlantNowSection`, `AlmanacHighlight`, `TipStrip`, `InputReminderStrip`, `BedsQuickScroll`, `PrepCard`
+- **Calendar** (`src/components/calendar/`): `MonthCalendarView`, `WeekCalendarView`, `SwipeableTaskCard`
+- **Lists/cards**: `PlantCard`, `TaskCard`, `JournalEntryCard`, `PlantFilterSheet`
+- **Locations**: `LocationProfileEditor`
 
-- `src/hooks/useCalendarData.ts` — data fetching, filtering, and state logic for `CalendarScreen`.
-- `src/hooks/usePlantFormData.ts` — catalog/location/profile loading for `PlantFormScreen`.
-- `src/hooks/usePlantFormState.ts` — form state management for plant forms.
+## Custom Hooks (`src/hooks/`)
+
+- Plant form: `usePlantFormState` (large — 120+ returned properties), `usePlantFormData`, `usePlantDetail`, `usePlantCatalogManager`
+- Beds: `useBedCreationWizard` (+ `bedWizardValidation` helpers), `useBedData`, `useBedDetail`, `useBedOptions`, `useCrossBedStatus`
+- Dashboard/calendar: `useTodayTasks`, `useCalendarData`, `useWeather`, `useWeatherLocations`, `useFarmCapacity`
+- Misc: `useLocationManager`, `useOnboardingStatus`, `useVoiceInput`, `usePinchZoom`
 
 When adding complex data logic to a screen, extract it into a custom hook in `src/hooks/`.
-
----
 
 ## UI Conventions
 
