@@ -1300,8 +1300,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'stretch' as const,
       gap: 6,
     },
-    // Ruler + canvas live in this row so the ruler stretches to the canvas
-    // height only (not the compass/legend), keeping meter ticks aligned to the
+    // Row-tag gutter + canvas live in this row so the row tags stretch to the
+    // canvas height only (not the compass/legend), keeping tags aligned to the
     // grid at base zoom.
     tdmPlotRow: {
       flexDirection: 'row' as const,
@@ -1311,26 +1311,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmPlotCol: {
       flex: 1,
     },
-    tdmRuler: {
-      width: 26,
-      position: 'relative' as const,
-    },
-    tdmRulerTick: {
-      position: 'absolute' as const,
-      right: 0,
-      fontSize: 10,
-      color: theme.textTertiary,
-      transform: [{ translateY: -6 }],
-      textAlign: 'right' as const,
-    },
     tdmCompass: {
       flexDirection: 'row' as const,
       justifyContent: 'space-between' as const,
       alignItems: 'center' as const,
-      // Indent past the ruler (26) + gap (6) + row-tag gutter (34) + gap (6) so
-      // the N/S markers sit over the canvas, matching where they sat when
-      // nested inside the frame.
-      paddingLeft: 72,
+      // Indent past the row-tag gutter (34) + gap (6) so the N/S markers sit
+      // over the canvas, matching where they sat when nested inside the frame.
+      paddingLeft: 40,
     },
     tdmCompassN: {
       fontSize: 10,
