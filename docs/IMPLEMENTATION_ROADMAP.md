@@ -46,7 +46,7 @@
 | Calendar Views                 | `CalendarScreen`, `useCalendarData`                 | ✅ Week/month, grouping, filtering, swipeable task cards                  |
 | Location Management            | `locations.ts`, `ManageLocationsScreen`             | ✅ Parent/child hierarchy, soil profiles (pH, NPK, drainage)              |
 | Plant Catalog                  | `plantCatalog.ts`, `ManagePlantCatalogScreen`       | ✅ Type→variety mapping, variety aliases, user customization              |
-| Care Profiles                  | `plantCareProfiles.ts`, `plantCareDefaults.ts`      | ✅ 160+ variety defaults, frequency/soil/fertiliser overrides             |
+| Care Profiles                  | `plantCareProfiles.ts`, `plantCareDefaults/`        | ✅ 160+ variety defaults, frequency/soil/fertiliser overrides             |
 | Image Storage                  | `imageStorage.ts`                                   | ✅ MediaLibrary (Android), documentDirectory (iOS), migration             |
 | Images-Only Backup             | `backup.ts`, `SettingsScreen`                       | ✅ ZIP export/import, filename-based matching                             |
 | Theme System                   | `theme/`, 25 style files                            | ✅ Light/dark/system, comprehensive tokens                                |
@@ -60,8 +60,8 @@
 | Companion Planting         | `plantHelpers.ts`                         | 130+ varieties, 770+ companion pairs, 30+ incompatibilities                                            |
 | Pest/Disease Intelligence  | `plantHelpers.ts`                         | Type-specific + 23 crop-specific profiles, 160+ organic treatments                                     |
 | Coconut Age-Based Care     | `plantHelpers.ts`                         | 6 age stages, nutrient deficiencies, yield expectations                                                |
-| Pruning Techniques         | `plantCareDefaults.ts`                    | 40+ variety-specific guides with seasonal timing                                                       |
-| Harvest Date Estimates     | `plantCareDefaults.ts`, `plantHelpers.ts` | 100 vegetables/herbs (daysToHarvest range), 23+ trees (yearsToFirstHarvest), growingSeason per variety |
+| Pruning Techniques         | `plantCareDefaults/`                      | 40+ variety-specific guides with seasonal timing                                                       |
+| Harvest Date Estimates     | `plantCareDefaults/`, `plantHelpers.ts`   | 100 vegetables/herbs (daysToHarvest range), 23+ trees (yearsToFirstHarvest), growingSeason per variety |
 
 ### What's Partially Built
 

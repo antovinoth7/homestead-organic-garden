@@ -28,7 +28,7 @@ Season logic, watering multipliers, and pest alerts are parameterized by zone co
 - Coconut age-based care guidance
 - Coconut nutrient deficiency guidance
 
-`src/utils/plantCareDefaults.ts` provides:
+`src/utils/plantCareDefaults/` (directory module — type defaults, variety lists, per-category override shards in `overrides/`, pruning data; assembled by its `index.ts`) provides:
 
 - Plant care profiles
 - Pruning techniques

@@ -63,7 +63,7 @@ npm test           # Jest
 ## Working Efficiently (agents)
 
 - Read `docs/CODEMAP.md` (generated; `npm run codemap` to refresh) before exploring `src/` — it lists every file with line counts.
-- Files over 800 lines (flagged ⚠️ in the codemap, e.g. `src/utils/plantCareDefaults.ts`, `src/config/pests/kanyakumari.ts`, `src/styles/plantFormStyles.ts`) — Grep/search inside them; do not read them whole.
+- Files over 800 lines (flagged ⚠️ in the codemap, e.g. `src/utils/plantHelpers.ts`, `src/screens/CatalogPlantDetailScreen.tsx`, `src/styles/plantFormStyles.ts`) — Grep/search inside them; do not read them whole.
 - Scoped checks: `npm run lint:file -- <path>` lints one file; `npm test -- <path-or-pattern>` runs one test file. Prefer these while iterating; run full `npm run lint` + `npm test` before finishing.
 
 ## New Feature Order

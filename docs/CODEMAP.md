@@ -1,15 +1,12 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-07-05 — src/: 373 files, 83,231 lines.
+> Snapshot: 2026-07-05 — src/: 399 files, 83,441 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
 ## Large files (search, don't read whole)
 
-- src/utils/plantCareDefaults.ts (4530)
-- src/config/pests/kanyakumari.ts (2070)
-- src/config/diseases/kanyakumari.ts (1965)
 - src/styles/bedCreationWizardStyles.ts (1885)
 - src/screens/CatalogPlantDetailScreen.tsx (1826)
 - src/utils/plantHelpers.ts (1794)
@@ -73,7 +70,7 @@
 - careTaskScheduling.test.ts (87)
 - preMonsoonTasks.test.ts (83)
 
-### src/__tests__/utils/ — 32 files, 3,605 lines
+### src/__tests__/utils/ — 33 files, 3,638 lines
 
 - rowLayoutEngine.test.ts (523)
 - rowLayoutEngine.bedTypes.test.ts (343)
@@ -103,6 +100,7 @@
 - voiceInput.test.ts (50)
 - bedOccupancy.test.ts (44)
 - locations.test.ts (42)
+- dataRegistrySnapshot.test.ts (33)
 - cropFamilyFromName.test.ts (26)
 - svgArc.test.ts (26)
 - plantHealth.test.ts (24)
@@ -234,10 +232,18 @@
 - index.ts (34)
 - legumeRelevance.ts (18)
 
-### src/config/diseases/ — 2 files, 2,044 lines
+### src/config/diseases/ — 1 files, 79 lines
 
-- kanyakumari.ts (1965) ⚠️ large — Grep/search inside, do not read whole
 - index.ts (79)
+
+### src/config/diseases/kanyakumari/ — 6 files, 2,001 lines
+
+- fungal1.ts (588)
+- fungal2.ts (506)
+- bacterial.ts (414)
+- viral.ts (408)
+- physiological.ts (60)
+- index.ts (25)
 
 ### src/config/organicInputs/ — 3 files, 528 lines
 
@@ -245,10 +251,18 @@
 - recipes.ts (169)
 - seasonalAdaptations.ts (134)
 
-### src/config/pests/ — 2 files, 2,158 lines
+### src/config/pests/ — 1 files, 88 lines
 
-- kanyakumari.ts (2070) ⚠️ large — Grep/search inside, do not read whole
 - index.ts (88)
+
+### src/config/pests/kanyakumari/ — 6 files, 2,106 lines
+
+- borersLarvae.ts (673)
+- sapSucking.ts (643)
+- other.ts (277)
+- mites.ts (247)
+- beetlesWeevils.ts (241)
+- index.ts (25)
 
 ### src/config/zones/ — 5 files, 411 lines
 
@@ -439,9 +453,8 @@
 - database.types.ts (743)
 - navigation.types.ts (232)
 
-### src/utils/ — 46 files, 10,510 lines
+### src/utils/ — 45 files, 5,980 lines
 
-- plantCareDefaults.ts (4530) ⚠️ large — Grep/search inside, do not read whole
 - plantHelpers.ts (1794) ⚠️ large — Grep/search inside, do not read whole
 - rowLayoutEngine.ts (660)
 - zipHelper.ts (296)
@@ -488,12 +501,34 @@
 - dragRowMath.ts (16)
 - textSanitizer.ts (14)
 
+### src/utils/plantCareDefaults/ — 5 files, 765 lines
+
+- pruning.ts (401)
+- varieties.ts (154)
+- index.ts (110)
+- typeDefaults.ts (95)
+- profileKey.ts (5)
+
+### src/utils/plantCareDefaults/overrides/ — 11 files, 3,870 lines
+
+- fruitTrees.ts (739)
+- timberCoconutShrubs.ts (559)
+- bedVegetables.ts (503)
+- vegetables1.ts (483)
+- vegetables2.ts (457)
+- herbs.ts (407)
+- flowers.ts (295)
+- herbsSpices.ts (234)
+- newShrubs.ts (95)
+- intercropFruitTrees.ts (69)
+- index.ts (29)
+
 ## docs/
 
 - archive/ROADMAP_ARCHIVE.md (1861)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (66)
-- CODEMAP.md (504)
+- CODEMAP.md (505)
 - COMPONENTS.md (62)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (44)
