@@ -37,7 +37,7 @@ import { logger } from '../utils/logger';
 import { getErrorMessage } from '../utils/errorLogging';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { PlantFilterSheet } from '../components/PlantFilterSheet';
-import { useBedOptions } from '../hooks/useBedOptions';
+import { useBedOptions } from '@/hooks/useBedOptions';
 import { isPlantArchived } from '../utils/plantHelpers';
 
 type FilterType = 'all' | PlantType;

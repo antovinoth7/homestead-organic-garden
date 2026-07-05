@@ -22,7 +22,7 @@ import {
 import { createStyles } from '../../styles/plantFormStyles';
 import { createEditStyles } from '../../styles/plantEditFormStyles';
 import CollapsibleSection from '../CollapsibleSection';
-import VoiceDictation from '../VoiceDictation';
+import VoiceDictation from '@/components/VoiceDictation';
 import PestDiseaseModal from '../modals/PestDiseaseModal';
 import { EditBasicInfoSection } from './EditBasicInfoSection';
 import { EditLocationSection } from './EditLocationSection';

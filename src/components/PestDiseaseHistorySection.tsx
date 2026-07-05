@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { PestDiseaseRecord } from '../types/database.types';
 import { getPestDiseaseEmoji } from '../utils/plantHelpers';
-import { resolveLocalImageUri } from '../lib/imageStorage';
+import { resolveLocalImageUri } from '@/lib/imageStorage';
 import { createStyles } from '../styles/plantDetailStyles';
 import { createStyles as createLocalStyles } from '../styles/pestDiseaseHistorySectionStyles';
 import { ImageZoomModal } from './ImageZoomModal';

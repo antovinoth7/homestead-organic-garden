@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PlantFormStateReturn, sanitizeNumberText } from '../../hooks/usePlantFormState';
-import { useBedOptions } from '../../hooks/useBedOptions';
+import { useBedOptions } from '@/hooks/useBedOptions';
 import { createStyles } from '../../styles/plantFormStyles';
 import { createWizardStyles } from '../../styles/plantAddWizardStyles';
 import ThemedDropdown from '../ThemedDropdown';

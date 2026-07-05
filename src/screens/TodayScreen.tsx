@@ -15,7 +15,7 @@ import {
   getStoredTodayTaskLogs,
   getSeasonalCareReminder,
 } from '../services/tasks';
-import { getAllPlants, getStoredPlants, updatePlant } from '../services/plants';
+import { getAllPlants, getStoredPlants, updatePlant } from '@/services/plants';
 import { TaskTemplate, Plant, TaskLog, FarmAlert } from '../types/database.types';
 import { useBedData } from '../hooks/useBedData';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +28,7 @@ import {
   summarizeTodayTasks,
   computeDonutSegments,
   filterToKnownPlants,
-} from '../utils/taskSummary';
+} from '@/utils/taskSummary';
 import { useTabBarScroll, TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { getErrorMessage } from '../utils/errorLogging';

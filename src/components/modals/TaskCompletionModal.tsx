@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import FloatingLabelInput from '../FloatingLabelInput';
-import VoiceDictation from '../VoiceDictation';
+import VoiceDictation from '@/components/VoiceDictation';
 import { TaskTemplate } from '../../types/database.types';
 import { createStyles } from '../../styles/calendarStyles';
 import { useTheme } from '../../theme';

@@ -7,7 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
-import VoiceDictation from '../VoiceDictation';
+import VoiceDictation from '@/components/VoiceDictation';
 import PhotoSourceModal from './PhotoSourceModal';
 import {
   PestDiseaseRecord,
@@ -23,7 +23,7 @@ import {
   getTreatmentEffortDot,
 } from '../../utils/plantHelpers';
 import { saveImageLocallyWithFilename } from '../../lib/imageStorage';
-import { compressImage } from '../../utils/imageCompression';
+import { compressImage } from '@/utils/imageCompression';
 import { createTaskTemplate } from '../../services/tasks';
 import { createStyles as createPlantFormStyles } from '../../styles/plantFormStyles';
 import { sanitizeAlphaNumericSpaces } from '../../utils/textSanitizer';

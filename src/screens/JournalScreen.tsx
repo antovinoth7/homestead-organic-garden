@@ -27,9 +27,9 @@ import { JournalScreenNavigationProp, JournalScreenRouteProp } from '../types/na
 import { getErrorMessage } from '../utils/errorLogging';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
-import { ImageZoomModal } from '../components/ImageZoomModal';
-import { ConfirmDeleteModal } from '../components/modals/ConfirmDeleteModal';
-import { JournalEntryCard } from '../components/JournalEntryCard';
+import { ImageZoomModal } from '@/components/ImageZoomModal';
+import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
+import { JournalEntryCard } from '@/components/JournalEntryCard';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
