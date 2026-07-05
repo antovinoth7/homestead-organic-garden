@@ -6,6 +6,7 @@ The app uses a client-side migration runner (`src/migrations/`) to evolve Firest
 
 - **Version tracking**: `schema_version: number` in `user_settings/{uid}`. Default `0` for legacy users.
 - **Runner**: `runPendingMigrations(userId)` is called from `App.tsx` after auth, before first screen render.
+- **Launch cost**: the runner caches the confirmed schema version per user in AsyncStorage (`@garden_schema_version_<uid>`); when the cached value is already `>= LATEST_SCHEMA_VERSION` it returns without any auth refresh or Firestore read. The cache is written only after the remote version is confirmed or migrated, so bumping `LATEST_SCHEMA_VERSION` naturally invalidates it.
 - **Migration files**: `src/migrations/NNN_descriptive_name.ts`, each exports `{ version, name, run(userId) }`.
 - **Registry**: Add new migrations to the `migrations` array in `src/migrations/index.ts` and bump `LATEST_SCHEMA_VERSION`.
 - **Idempotent**: Every migration must check before mutating — safe to re-run.

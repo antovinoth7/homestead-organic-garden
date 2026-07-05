@@ -15,10 +15,11 @@ React Native + Expo (SDK 54) app for organic garden management. Android/iOS. Fir
 
 ## Architecture
 
-- **Offline-first**: in-memory cache → AsyncStorage → Firestore.
+- **Offline-first**: in-memory cache → AsyncStorage → Firestore. Reads fall back to AsyncStorage; writes queue offline and auto-sync on reconnect (see `docs/SERVICES.md` → Offline Write Queue).
 - **Separation**: screens orchestrate UI; services own data; hooks own derived state.
 - **Free-tier**: avoid Firestore reads servable from cache. Batch writes.
-- **Service pattern**: cache check → `refreshAuthToken()` → `withTimeoutAndRetry()` → update cache → AsyncStorage fallback.
+- **Service pattern**: cache check → `refreshAuthToken()` → `withTimeoutAndRetry()` (reads) / `writeOrQueue()` (writes) → update cache → AsyncStorage fallback.
+- **Offline writes**: user-data mutations go through `writeOrQueue()` (`src/lib/offlineWrite.ts`); creates use client-generated doc ids (`doc(collection(...))` + `setDoc`, never `addDoc`); queued mutations replay via `src/services/offlineSync.ts`.
 - **Cache**: `src/lib/dataCache.ts` (30s TTL). `invalidate()`/`invalidateAll()` after mutations.
 - **Tamil language strategy**: English ↔ Tamil toggle in Settings (Phase G). No language mixing. `tamilName` fields are data-only until Phase G ships the toggle.
 

@@ -5,7 +5,7 @@ import {
   doc,
   getDocs,
   getDoc,
-  addDoc,
+  setDoc,
   updateDoc,
   writeBatch,
   query,
@@ -15,6 +15,8 @@ import {
   type DocumentReference,
 } from 'firebase/firestore';
 import { getData, setData, KEYS } from '../lib/storage';
+import { writeOrQueue, isOfflineWriteError } from '../lib/offlineWrite';
+import type { OfflineMutationInput } from '../types/offline.types';
 import {
   withTimeoutAndRetry,
   FIRESTORE_WRITE_TIMEOUT_MS,
@@ -161,9 +163,11 @@ export const createTaskTemplate = async (
     next_due_at: template.next_due_at ? Timestamp.fromDate(new Date(template.next_due_at)) : null,
   };
 
-  const docRef = await withTimeoutAndRetry(
-    () => addDoc(collection(db, TASKS_COLLECTION), newTemplate),
-    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+  // Client-generated id so the optimistic local record matches the synced one
+  const docRef = doc(collection(db, TASKS_COLLECTION));
+  await writeOrQueue(
+    { collection: TASKS_COLLECTION, docId: docRef.id, op: 'create', payload: newTemplate },
+    () => setDoc(docRef, newTemplate)
   );
 
   const result = {
@@ -178,6 +182,10 @@ export const createTaskTemplate = async (
 
   invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
 
+  // Keep the AsyncStorage copy in sync so the task is visible offline
+  const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+  await setData(KEYS.TASKS, [...cachedTasks, result]);
+
   return result;
 };
 
@@ -190,13 +198,20 @@ export const updateTaskTemplate = async (
 
   const docRef = doc(db, TASKS_COLLECTION, id);
 
-  // Verify ownership before updating
-  const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!existingSnap.exists() || existingSnap.data().user_id !== user.uid) {
-    throw new Error('Not authorized to update this task');
+  // Verify ownership before updating; offline, fall back to the local copy
+  // (it only ever holds the signed-in user's own tasks).
+  let owned: boolean;
+  try {
+    const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    owned = existingSnap.exists() && existingSnap.data().user_id === user.uid;
+  } catch (error) {
+    if (!isOfflineWriteError(error)) throw error;
+    const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+    owned = cachedTasks.some((t) => t.id === id);
   }
+  if (!owned) throw new Error('Not authorized to update this task');
 
   const firestoreUpdates: Record<string, unknown> = { ...updates };
   if (updates.next_due_at) {
@@ -207,24 +222,36 @@ export const updateTaskTemplate = async (
     firestoreUpdates.next_due_at = Timestamp.fromDate(parsedDate);
   }
 
-  await withTimeoutAndRetry(() => updateDoc(docRef, firestoreUpdates), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  const { queued } = await writeOrQueue(
+    { collection: TASKS_COLLECTION, docId: id, op: 'update', payload: firestoreUpdates },
+    () => updateDoc(docRef, firestoreUpdates)
+  );
 
-  // Use direct document read instead of query for better performance
-  const docSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
+  let result: TaskTemplate;
+  if (queued) {
+    // Offline: build the optimistic record from the local copy
+    const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+    const index = cachedTasks.findIndex((t) => t.id === id);
+    if (index === -1) throw new Error('Task template not found');
+    result = { ...cachedTasks[index]!, ...updates } as TaskTemplate;
+    cachedTasks[index] = result;
+    await setData(KEYS.TASKS, cachedTasks);
+  } else {
+    // Use direct document read instead of query for better performance
+    const docSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
 
-  if (!docSnap.exists()) throw new Error('Task template not found');
+    if (!docSnap.exists()) throw new Error('Task template not found');
 
-  const doc_data = docSnap.data();
-  const result = {
-    id,
-    ...doc_data,
-    created_at: convertTimestamp(doc_data.created_at),
-    next_due_at: convertTimestamp(doc_data.next_due_at),
-  } as TaskTemplate;
+    const doc_data = docSnap.data();
+    result = {
+      id,
+      ...doc_data,
+      created_at: convertTimestamp(doc_data.created_at),
+      next_due_at: convertTimestamp(doc_data.next_due_at),
+    } as TaskTemplate;
+  }
 
   invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
 
@@ -261,9 +288,15 @@ export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> 
     for (const ref of chunk) {
       batch.delete(ref);
     }
-    await withTimeoutAndRetry(() => batch.commit(), {
-      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-    });
+    await writeOrQueue(
+      chunk.map((ref) => ({
+        collection: ref.parent.id,
+        docId: ref.id,
+        op: 'delete' as const,
+        payload: null,
+      })),
+      () => batch.commit()
+    );
   }
 
   const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
@@ -322,9 +355,15 @@ export const deleteTasksForBedIds = async (bedIds: string[]): Promise<void> => {
     for (const ref of chunk) {
       batch.delete(ref);
     }
-    await withTimeoutAndRetry(() => batch.commit(), {
-      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-    });
+    await writeOrQueue(
+      chunk.map((ref) => ({
+        collection: ref.parent.id,
+        docId: ref.id,
+        op: 'delete' as const,
+        payload: null,
+      })),
+      () => batch.commit()
+    );
   }
 
   const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
@@ -509,6 +548,39 @@ const buildTaskDoneOps = (
 };
 
 /**
+ * Map completed-task ops to offline mutations so a batch commit that fails
+ * offline can be queued and replayed per document on reconnect.
+ */
+const taskDoneMutations = (opsList: TaskDoneOps[]): OfflineMutationInput[] =>
+  opsList.flatMap((ops) => {
+    const mutations: OfflineMutationInput[] = [
+      {
+        collection: TASK_LOGS_COLLECTION,
+        docId: ops.log.ref.id,
+        op: 'create',
+        payload: ops.log.data,
+      },
+    ];
+    if (ops.templateUpdate) {
+      mutations.push({
+        collection: TASKS_COLLECTION,
+        docId: ops.templateUpdate.ref.id,
+        op: 'update',
+        payload: ops.templateUpdate.data,
+      });
+    }
+    if (ops.plantUpdate) {
+      mutations.push({
+        collection: PLANTS_COLLECTION,
+        docId: ops.plantUpdate.ref.id,
+        op: 'update',
+        payload: ops.plantUpdate.data,
+      });
+    }
+    return mutations;
+  });
+
+/**
  * Apply the local-cache deltas for one or more completed tasks with a single
  * read-modify-write per storage key (logs / tasks / plants), then invalidate.
  * Batch-completing N tasks no longer serialises the whole arrays N times.
@@ -639,9 +711,15 @@ export const markTaskDone = async (
 
     if (alreadyDoneToday) {
       if (frequencyDays <= 0) {
-        await updateDoc(doc(db, TASKS_COLLECTION, template.id), {
-          enabled: false,
-        });
+        await writeOrQueue(
+          {
+            collection: TASKS_COLLECTION,
+            docId: template.id,
+            op: 'update',
+            payload: { enabled: false },
+          },
+          () => updateDoc(doc(db, TASKS_COLLECTION, template.id), { enabled: false })
+        );
       }
       return false;
     }
@@ -655,9 +733,7 @@ export const markTaskDone = async (
   batch.set(ops.log.ref, ops.log.data);
   if (ops.templateUpdate) batch.update(ops.templateUpdate.ref, ops.templateUpdate.data);
   if (ops.plantUpdate) batch.update(ops.plantUpdate.ref, ops.plantUpdate.data);
-  await withTimeoutAndRetry(() => batch.commit(), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  await writeOrQueue(taskDoneMutations([ops]), () => batch.commit());
 
   await applyTaskDoneCacheDeltas([ops]);
   await runTaskDoneSideEffects([ops]);
@@ -717,9 +793,9 @@ export const markTasksDone = async (
     }
 
     try {
-      await withTimeoutAndRetry(() => batch.commit(), {
-        timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-      });
+      // Queued-offline chunks count as committed: the local cache is updated
+      // and the mutations replay on reconnect.
+      await writeOrQueue(taskDoneMutations(chunk), () => batch.commit());
       committed += chunk.length;
     } catch (err) {
       logger.error('markTasksDone: batch commit failed', err as Error);

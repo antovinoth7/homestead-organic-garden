@@ -1,6 +1,7 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { auth, db, refreshAuthToken } from '../lib/firebase';
 import { getData, setData, getLocationStorageKey } from '../lib/storage';
+import { writeOrQueue } from '../lib/offlineWrite';
 import { getCached, setCached, dedup, CACHE_KEYS } from '../lib/dataCache';
 import { LocationConfig } from '../types/database.types';
 import { logError } from '../utils/errorLogging';
@@ -169,14 +170,21 @@ export const saveLocationConfig = async (config: LocationConfig): Promise<Locati
 
   try {
     const docRef = doc(db, SETTINGS_COLLECTION, user.uid);
-    await withTimeoutAndRetry(
+    // Queued payload uses a concrete Timestamp (serverTimestamp() sentinels
+    // can't be serialized for replay); the online path keeps server time.
+    await writeOrQueue(
+      {
+        collection: SETTINGS_COLLECTION,
+        docId: user.uid,
+        op: 'set',
+        payload: { [LOCATIONS_FIELD]: normalized, updated_at: Timestamp.now() },
+      },
       () =>
         setDoc(
           docRef,
           { [LOCATIONS_FIELD]: normalized, updated_at: serverTimestamp() },
           { merge: true }
-        ),
-      { timeoutMs: FIRESTORE_READ_TIMEOUT_MS, throwOnTimeout: false }
+        )
     );
   } catch (error) {
     logError('network', 'Failed to save location config', error as Error, {

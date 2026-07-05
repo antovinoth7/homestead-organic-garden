@@ -541,6 +541,16 @@ export default function PlantsScreen(): React.JSX.Element {
     openSwipeableRef.current = ref;
   }, []);
 
+  const handleCardPress = useCallback(
+    (plantId: string) => navigation.navigate('PlantDetail', { plantId }),
+    [navigation]
+  );
+
+  const handleCardEdit = useCallback(
+    (plantId: string) => navigation.navigate('PlantForm', { plantId }),
+    [navigation]
+  );
+
   const renderListItem = useCallback(
     ({ item }: { item: ListItem }) => {
       if (item.kind === 'header') {
@@ -556,13 +566,13 @@ export default function PlantsScreen(): React.JSX.Element {
           plant={item.data}
           searchQuery={searchQuery}
           onSwipeableOpen={handleSwipeableOpen}
-          onPress={() => navigation.navigate('PlantDetail', { plantId: item.data.id })}
-          onEdit={() => navigation.navigate('PlantForm', { plantId: item.data.id })}
-          onDelete={() => handleDelete(item.data.id)}
+          onPress={handleCardPress}
+          onEdit={handleCardEdit}
+          onDelete={handleDelete}
         />
       );
     },
-    [navigation, handleDelete, searchQuery, handleSwipeableOpen, styles, theme]
+    [handleCardPress, handleCardEdit, handleDelete, searchQuery, handleSwipeableOpen, styles, theme]
   );
 
   const renderUndoToast = (): React.JSX.Element | null => {

@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  SectionList,
   TouchableOpacity,
   Pressable,
   TextInput,
@@ -52,6 +53,39 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+// ─── Virtualized task list model ────────────────────────────────────────────
+// The task area renders through a SectionList so long schedules stay windowed
+// instead of mounting every SwipeableTaskCard at once.
+
+type CalendarEmptyVariant =
+  | 'selectedDateFiltered'
+  | 'selectedDateNone'
+  | 'searchNone'
+  | 'filtersNone'
+  | 'noUpcoming';
+
+type CalendarRow =
+  | { key: string; kind: 'task'; task: TaskTemplate }
+  | { key: string; kind: 'harvest'; item: HarvestReadyItem }
+  | { key: string; kind: 'empty'; variant: CalendarEmptyVariant; rawCount?: number; isToday?: boolean };
+
+interface CalendarSectionHeader {
+  title: string;
+  count: number;
+  /** Tasks driving the select-all checkbox; omitted for headers without one */
+  checkboxTasks?: TaskTemplate[];
+  overdue?: boolean;
+  showDoneChip?: boolean;
+  /** Title stretches to push the count right (default true) */
+  titleFlex?: boolean;
+}
+
+interface CalendarListSection {
+  key: string;
+  header: CalendarSectionHeader | null;
+  data: CalendarRow[];
+}
+
 const GROUP_OPTIONS: {
   value: 'none' | 'location' | 'type' | 'plant';
   label: string;
@@ -69,7 +103,7 @@ export default function CalendarScreen(): React.JSX.Element {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<SectionList<CalendarRow, CalendarListSection>>(null);
   const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
   const [selectedView, setSelectedView] = useState<'week' | 'month'>('week');
   const [currentWeekStart, setCurrentWeekStart] = useState(getStartOfWeek(new Date()));
@@ -265,22 +299,26 @@ export default function CalendarScreen(): React.JSX.Element {
     [onTabBarScroll, calendarHeight]
   );
 
+  const scrollToTop = useCallback((animated: boolean) => {
+    scrollViewRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated });
+  }, []);
+
   const expandCalendar = useCallback(() => {
     if (calendarCollapsed.current) {
       calendarCollapsed.current = false;
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      scrollToTop(true);
       Animated.timing(calendarHeight, {
         toValue: 1,
         duration: 250,
         useNativeDriver: false,
       }).start();
     }
-  }, [calendarHeight]);
+  }, [calendarHeight, scrollToTop]);
 
   // Reset view and refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      scrollToTop(false);
       resetTabBar();
       calendarCollapsed.current = false;
       calendarHeight.setValue(1);
@@ -298,7 +336,7 @@ export default function CalendarScreen(): React.JSX.Element {
         setFilterOverdueOnly(true);
       }
       void loadData(); // debounced — skips if loaded recently
-    }, [loadData, resetTabBar, route, calendarHeight])
+    }, [loadData, resetTabBar, route, calendarHeight, scrollToTop])
   );
 
   const handleTaskComplete = useCallback(async (task: TaskTemplate) => {
@@ -607,6 +645,392 @@ export default function CalendarScreen(): React.JSX.Element {
     ]
   );
 
+  // Build the virtualized section model for the task area. Mirrors the
+  // previous ScrollView layout: selected date → search empty → harvest ready
+  // → overdue → today → day-grouped week view / grouped views / empty states.
+  const listSections = useMemo((): CalendarListSection[] => {
+    const sections: CalendarListSection[] = [];
+    const todayStr = new Date().toDateString();
+    const selectedIsToday = !!selectedDate && selectedDate.toDateString() === todayStr;
+    const taskRows = (prefix: string, sectionTasks: TaskTemplate[]): CalendarRow[] =>
+      sectionTasks.map((task) => ({ key: `${prefix}-${task.id}`, kind: 'task' as const, task }));
+
+    // Selected Date Tasks
+    if (!isSearching && selectedDate) {
+      const selectedDateTasks = getTasksForDate(selectedDate);
+      const rawSelectedDateTasks = getRawTasksForDate(selectedDate);
+      const hiddenByFilter =
+        selectedDateTasks.length === 0 && rawSelectedDateTasks.length > 0 && isFilterActive;
+      if (selectedDateTasks.length > 0) {
+        sections.push({
+          key: 'selected-date',
+          header: {
+            title: selectedIsToday
+              ? 'Today'
+              : selectedDate.toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                }),
+            checkboxTasks: selectedDateTasks,
+            count: selectedDateTasks.length,
+          },
+          data: taskRows('selected', selectedDateTasks),
+        });
+      } else if (hiddenByFilter && !initialLoading) {
+        sections.push({
+          key: 'selected-date-empty',
+          header: null,
+          data: [
+            {
+              key: 'selected-date-empty',
+              kind: 'empty',
+              variant: 'selectedDateFiltered',
+              rawCount: rawSelectedDateTasks.length,
+            },
+          ],
+        });
+      } else if (!initialLoading) {
+        sections.push({
+          key: 'selected-date-empty',
+          header: null,
+          data: [
+            {
+              key: 'selected-date-empty',
+              kind: 'empty',
+              variant: 'selectedDateNone',
+              isToday: selectedIsToday,
+            },
+          ],
+        });
+      }
+    }
+
+    // Search with no results
+    if (isSearching && filteredTasks.length === 0 && !initialLoading) {
+      sections.push({
+        key: 'search-empty',
+        header: null,
+        data: [{ key: 'search-empty', kind: 'empty', variant: 'searchNone' }],
+      });
+    }
+
+    // Harvest Ready
+    if (filteredHarvestsReady.length > 0) {
+      sections.push({
+        key: 'harvest-ready',
+        header: {
+          title: '🧺 Harvest Ready',
+          count: filteredHarvestsReady.length,
+          titleFlex: false,
+        },
+        data: filteredHarvestsReady
+          .filter((item): item is HarvestReadyItem => !!item)
+          .map((item) => ({ key: `harvest-${item.plant.id}`, kind: 'harvest' as const, item })),
+      });
+    }
+
+    // Overdue — pinned above Today
+    if (!isSearching && overdueTasks.length > 0) {
+      sections.push({
+        key: 'overdue',
+        header: {
+          title: '⚠️ Overdue',
+          checkboxTasks: overdueTasks,
+          count: overdueTasks.length,
+          overdue: true,
+        },
+        data: taskRows('overdue', overdueTasks),
+      });
+    }
+
+    // Today's Tasks — hidden when today is already the selected date
+    if (todayTasks.length > 0 && !selectedIsToday) {
+      sections.push({
+        key: 'today',
+        header: {
+          title: 'Today',
+          checkboxTasks: todayTasks,
+          count: todayTasks.length,
+          showDoneChip: true,
+        },
+        data: taskRows('today', todayTasks),
+      });
+    }
+
+    const upcomingEmpty = (): void => {
+      if (!isSearching && todayTasks.length === 0 && overdueTasks.length === 0 && !initialLoading) {
+        sections.push({
+          key: 'upcoming-empty',
+          header: null,
+          data: [
+            {
+              key: 'upcoming-empty',
+              kind: 'empty',
+              variant: isFilterActive ? 'filtersNone' : 'noUpcoming',
+            },
+          ],
+        });
+      }
+    };
+
+    // Day-by-day week view OR grouped tasks
+    if (dayGroupedTasks) {
+      if (dayGroupedTasks.length > 0) {
+        for (const { dateKey, label, tasks: dayTasks } of dayGroupedTasks) {
+          const isToday = dateKey === todayStr;
+          if (isToday && todayTasks.length > 0 && !selectedIsToday) continue;
+          sections.push({
+            key: `day-${dateKey}`,
+            header: {
+              title: label,
+              checkboxTasks: dayTasks ?? [],
+              count: (dayTasks ?? []).length,
+            },
+            data: taskRows(`day-${dateKey}`, dayTasks ?? []),
+          });
+        }
+      } else {
+        upcomingEmpty();
+      }
+    } else if (
+      Object.keys(groupedTasks).length > 0 &&
+      Object.values(groupedTasks).some((arr) => arr.length > 0)
+    ) {
+      for (const groupName of Object.keys(groupedTasks)) {
+        const nonOverdue = (groupedTasks[groupName] ?? []).filter((t) => !overdueIdSet.has(t.id));
+        if (nonOverdue.length === 0) continue;
+        const fallbackTitle = selectedView === 'month' ? 'This Month' : 'This Week';
+        const title = groupName
+          ? effectiveGroupBy === 'location'
+            ? `📍 ${groupName}`
+            : effectiveGroupBy === 'type'
+            ? TASK_LABELS[groupName as TaskType] ||
+              groupName.charAt(0).toUpperCase() + groupName.slice(1)
+            : effectiveGroupBy === 'plant'
+            ? `🌿 ${groupName}`
+            : effectiveGroupBy === 'bed'
+            ? `🛏 ${groupName}`
+            : fallbackTitle
+          : isSearching
+          ? 'Search Results'
+          : fallbackTitle;
+        sections.push({
+          key: `group-${groupName || 'all'}`,
+          header: {
+            title,
+            checkboxTasks: nonOverdue,
+            count: groupName
+              ? nonOverdue.length
+              : isSearching
+              ? tasksForDisplay.length
+              : weekTasks.length,
+            showDoneChip: !groupName && !isSearching,
+          },
+          data: taskRows(`group-${groupName || 'all'}`, nonOverdue),
+        });
+      }
+    } else {
+      upcomingEmpty();
+    }
+
+    return sections;
+  }, [
+    isSearching,
+    selectedDate,
+    getTasksForDate,
+    getRawTasksForDate,
+    isFilterActive,
+    initialLoading,
+    filteredTasks,
+    filteredHarvestsReady,
+    overdueTasks,
+    todayTasks,
+    dayGroupedTasks,
+    groupedTasks,
+    overdueIdSet,
+    effectiveGroupBy,
+    selectedView,
+    tasksForDisplay,
+    weekTasks,
+  ]);
+
+  const renderEmptyRow = useCallback(
+    (row: Extract<CalendarRow, { kind: 'empty' }>): React.JSX.Element => {
+      switch (row.variant) {
+        case 'selectedDateFiltered':
+          return (
+            <View style={styles.emptyState}>
+              <Ionicons name="options-outline" size={48} color={theme.border} />
+              <Text style={styles.emptyStateText}>No matching tasks for this date</Text>
+              <Text style={styles.emptyStateSubtext}>
+                {row.rawCount ?? 0} task{(row.rawCount ?? 0) !== 1 ? 's' : ''} exist but are hidden
+                by your filters
+              </Text>
+              <TouchableOpacity style={styles.clearSearchButton} onPress={clearFilters}>
+                <Text style={styles.clearSearchText}>Clear Filters</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        case 'selectedDateNone':
+          return (
+            <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={48} color={theme.border} />
+              <Text style={styles.emptyStateText}>No tasks scheduled</Text>
+              <Text style={styles.emptyStateSubtext}>
+                {row.isToday
+                  ? "You're all caught up for today!"
+                  : 'No tasks planned for this date'}
+              </Text>
+              <TouchableOpacity
+                style={styles.addTaskButton}
+                onPress={() => {
+                  setCreateTaskInitialDate(selectedDate ?? undefined);
+                  setShowModal(true);
+                }}
+              >
+                <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
+                <Text style={styles.addTaskButtonText}>Add Task</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        case 'searchNone':
+          return (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={48} color={theme.border} />
+              <Text style={styles.emptyStateText}>No tasks found</Text>
+              <Text style={styles.emptyStateSubtext}>
+                {tasks.length === 0
+                  ? 'Create your first task to get started'
+                  : `No results for "${searchQuery}"`}
+              </Text>
+              {tasks.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearSearchButton}
+                  onPress={() => setSearchQuery('')}
+                >
+                  <Text style={styles.clearSearchText}>Clear Search</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        case 'filtersNone':
+          return (
+            <View style={styles.emptyState}>
+              <Ionicons name="options-outline" size={48} color={theme.border} />
+              <Text style={styles.emptyStateText}>No tasks match your filters</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Try adjusting your filters or clear them to see all tasks
+              </Text>
+              <TouchableOpacity style={styles.clearSearchButton} onPress={clearFilters}>
+                <Text style={styles.clearSearchText}>Clear Filters</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        case 'noUpcoming':
+          return (
+            <View style={styles.emptyState}>
+              <Ionicons name="checkbox-outline" size={48} color={theme.border} />
+              <Text style={styles.emptyStateText}>No upcoming tasks</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Create a care plan to stay on top of your garden
+              </Text>
+              <TouchableOpacity style={styles.addTaskButton} onPress={() => setShowModal(true)}>
+                <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
+                <Text style={styles.addTaskButtonText}>Create Task</Text>
+              </TouchableOpacity>
+            </View>
+          );
+      }
+    },
+    [styles, theme, clearFilters, selectedDate, tasks.length, searchQuery]
+  );
+
+  const renderListItem = useCallback(
+    ({ item }: { item: CalendarRow }): React.JSX.Element | null => {
+      if (item.kind === 'task') {
+        return <View style={styles.listRow}>{renderSwipeableTask(item.task)}</View>;
+      }
+      if (item.kind === 'harvest') {
+        const harvest = item.item;
+        return (
+          <View style={styles.listRow}>
+            <View style={[styles.harvestCard, harvest.isReady && styles.harvestCardReady]}>
+              <View style={styles.harvestIcon}>
+                <Text style={styles.harvestEmoji}>
+                  {harvest.plant.plant_type === 'coconut_tree' ? '🥥' : '🍎'}
+                </Text>
+              </View>
+              <View style={styles.harvestInfo}>
+                <Text style={styles.harvestPlant}>{harvest.plant.name}</Text>
+                <Text style={styles.harvestDate}>
+                  {harvest.isReady
+                    ? '✅ Ready to harvest!'
+                    : `Ready in ${harvest.daysUntil} days`}
+                </Text>
+              </View>
+            </View>
+          </View>
+        );
+      }
+      return <View style={styles.listRow}>{renderEmptyRow(item)}</View>;
+    },
+    [styles, renderSwipeableTask, renderEmptyRow]
+  );
+
+  const renderListSectionHeader = useCallback(
+    ({ section }: { section: CalendarListSection }): React.JSX.Element | null => {
+      const header = section.header;
+      if (!header) return null;
+      return (
+        <View style={styles.listSectionHeader}>
+          <View style={styles.sectionHeaderRow}>
+            {header.checkboxTasks ? renderSectionCheckbox(header.checkboxTasks) : null}
+            <Text
+              style={[
+                styles.sectionTitle,
+                header.overdue
+                  ? styles.sectionTitleOverdue
+                  : header.titleFlex !== false
+                  ? styles.sectionTitleFlex
+                  : null,
+              ]}
+            >
+              {header.title}
+            </Text>
+            {header.showDoneChip ? (
+              <View style={styles.rowCenterGap8}>
+                {sessionCompletedCount > 0 && (
+                  <View style={styles.weekDoneChip}>
+                    <Text style={styles.weekDoneChipText}>✓ {sessionCompletedCount} done</Text>
+                  </View>
+                )}
+                <Text style={styles.sectionCount}>{header.count}</Text>
+              </View>
+            ) : (
+              <Text
+                style={[
+                  styles.sectionCount,
+                  header.overdue && { backgroundColor: theme.errorLight, color: theme.error },
+                ]}
+              >
+                {header.count}
+              </Text>
+            )}
+          </View>
+        </View>
+      );
+    },
+    [styles, theme, renderSectionCheckbox, sessionCompletedCount]
+  );
+
+  const renderListSectionFooter = useCallback(
+    (): React.JSX.Element => <View style={styles.listSectionFooter} />,
+    [styles]
+  );
+
+  const listKeyExtractor = useCallback((row: CalendarRow): string => row.key, []);
+
   const isViewingToday = React.useMemo(() => {
     const today = new Date();
     if (selectedView === 'week') {
@@ -802,9 +1226,15 @@ export default function CalendarScreen(): React.JSX.Element {
           </TouchableOpacity>
         </Animated.View>
 
-        <ScrollView
+        <SectionList
           ref={scrollViewRef}
           style={styles.content}
+          sections={listSections}
+          keyExtractor={listKeyExtractor}
+          renderItem={renderListItem}
+          renderSectionHeader={renderListSectionHeader}
+          renderSectionFooter={renderListSectionFooter}
+          stickySectionHeadersEnabled={false}
           contentContainerStyle={{
             paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16,
           }}
@@ -816,7 +1246,13 @@ export default function CalendarScreen(): React.JSX.Element {
           refreshControl={
             <RefreshControl refreshing={initialLoading || refreshing} onRefresh={handleRefresh} />
           }
-        >
+          initialNumToRender={12}
+          maxToRenderPerBatch={10}
+          windowSize={7}
+          removeClippedSubviews={true}
+          updateCellsBatchingPeriod={50}
+          ListHeaderComponent={
+            <>
           {/* Swipe Hint Banner */}
           {showSwipeHint && (
             <View style={styles.swipeHintBanner}>
@@ -870,306 +1306,9 @@ export default function CalendarScreen(): React.JSX.Element {
               );
             })}
           </View>
-
-          {/* Selected Date Tasks */}
-          {!isSearching && selectedDate && (
-            <View style={styles.section}>
-              {(() => {
-                const selectedDateTasks = getTasksForDate(selectedDate);
-                const rawSelectedDateTasks = getRawTasksForDate(selectedDate);
-                const isToday = selectedDate.toDateString() === new Date().toDateString();
-                const hiddenByFilter =
-                  selectedDateTasks.length === 0 &&
-                  rawSelectedDateTasks.length > 0 &&
-                  isFilterActive;
-                return selectedDateTasks.length > 0 ? (
-                  <>
-                    <View style={styles.sectionHeaderRow}>
-                      {renderSectionCheckbox(selectedDateTasks)}
-                      <Text style={[styles.sectionTitle, styles.sectionTitleFlex]}>
-                        {isToday
-                          ? 'Today'
-                          : selectedDate.toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                      </Text>
-                      <Text style={styles.sectionCount}>{selectedDateTasks.length}</Text>
-                    </View>
-                    {selectedDateTasks.map(renderSwipeableTask)}
-                  </>
-                ) : hiddenByFilter && !initialLoading ? (
-                  <View style={styles.emptyState}>
-                    <Ionicons name="options-outline" size={48} color={theme.border} />
-                    <Text style={styles.emptyStateText}>No matching tasks for this date</Text>
-                    <Text style={styles.emptyStateSubtext}>
-                      {rawSelectedDateTasks.length} task
-                      {rawSelectedDateTasks.length !== 1 ? 's' : ''} exist but are hidden by your
-                      filters
-                    </Text>
-                    <TouchableOpacity style={styles.clearSearchButton} onPress={clearFilters}>
-                      <Text style={styles.clearSearchText}>Clear Filters</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : !initialLoading ? (
-                  <View style={styles.emptyState}>
-                    <Ionicons name="calendar-outline" size={48} color={theme.border} />
-                    <Text style={styles.emptyStateText}>No tasks scheduled</Text>
-                    <Text style={styles.emptyStateSubtext}>
-                      {isToday
-                        ? "You're all caught up for today!"
-                        : 'No tasks planned for this date'}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.addTaskButton}
-                      onPress={() => {
-                        setCreateTaskInitialDate(selectedDate);
-                        setShowModal(true);
-                      }}
-                    >
-                      <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
-                      <Text style={styles.addTaskButtonText}>Add Task</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : null;
-              })()}
-            </View>
-          )}
-
-          {isSearching && filteredTasks.length === 0 && !initialLoading && (
-            <View style={styles.emptyState}>
-              <Ionicons name="search-outline" size={48} color={theme.border} />
-              <Text style={styles.emptyStateText}>No tasks found</Text>
-              <Text style={styles.emptyStateSubtext}>
-                {tasks.length === 0
-                  ? 'Create your first task to get started'
-                  : `No results for "${searchQuery}"`}
-              </Text>
-              {tasks.length > 0 && (
-                <TouchableOpacity
-                  style={styles.clearSearchButton}
-                  onPress={() => setSearchQuery('')}
-                >
-                  <Text style={styles.clearSearchText}>Clear Search</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-
-          {/* Harvest Ready Section */}
-          {filteredHarvestsReady.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>🧺 Harvest Ready</Text>
-                <Text style={styles.sectionCount}>{filteredHarvestsReady.length}</Text>
-              </View>
-              {filteredHarvestsReady.map(
-                (item: HarvestReadyItem) =>
-                  item && (
-                    <View
-                      key={item.plant.id}
-                      style={[styles.harvestCard, item.isReady && styles.harvestCardReady]}
-                    >
-                      <View style={styles.harvestIcon}>
-                        <Text style={styles.harvestEmoji}>
-                          {item.plant.plant_type === 'coconut_tree' ? '🥥' : '🍎'}
-                        </Text>
-                      </View>
-                      <View style={styles.harvestInfo}>
-                        <Text style={styles.harvestPlant}>{item.plant.name}</Text>
-                        <Text style={styles.harvestDate}>
-                          {item.isReady
-                            ? '✅ Ready to harvest!'
-                            : `Ready in ${item.daysUntil} days`}
-                        </Text>
-                      </View>
-                    </View>
-                  )
-              )}
-            </View>
-          )}
-
-          {/* Overdue — pinned above Today */}
-          {!isSearching && overdueTasks.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                {renderSectionCheckbox(overdueTasks)}
-                <Text style={[styles.sectionTitle, styles.sectionTitleOverdue]}>⚠️ Overdue</Text>
-                <Text
-                  style={[
-                    styles.sectionCount,
-                    { backgroundColor: theme.errorLight, color: theme.error },
-                  ]}
-                >
-                  {overdueTasks.length}
-                </Text>
-              </View>
-              {overdueTasks.map(renderSwipeableTask)}
-            </View>
-          )}
-
-          {/* Today's Tasks — hidden when today is already the selected date */}
-          {todayTasks.length > 0 &&
-            !(selectedDate && selectedDate.toDateString() === new Date().toDateString()) && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeaderRow}>
-                  {renderSectionCheckbox(todayTasks)}
-                  <Text style={[styles.sectionTitle, styles.sectionTitleFlex]}>Today</Text>
-                  <View style={styles.rowCenterGap8}>
-                    {sessionCompletedCount > 0 && (
-                      <View style={styles.weekDoneChip}>
-                        <Text style={styles.weekDoneChipText}>✓ {sessionCompletedCount} done</Text>
-                      </View>
-                    )}
-                    <Text style={styles.sectionCount}>{todayTasks.length}</Text>
-                  </View>
-                </View>
-                {todayTasks.map(renderSwipeableTask)}
-              </View>
-            )}
-
-          {/* Day-by-day week view OR grouped tasks */}
-          {dayGroupedTasks
-            ? dayGroupedTasks.length > 0
-              ? dayGroupedTasks.map(({ dateKey, label, tasks: dayTasks }) => {
-                  const isToday = dateKey === new Date().toDateString();
-                  if (
-                    isToday &&
-                    todayTasks.length > 0 &&
-                    !(selectedDate && selectedDate.toDateString() === new Date().toDateString())
-                  ) {
-                    return null;
-                  }
-                  return (
-                    <View key={dateKey} style={styles.section}>
-                      <View style={styles.sectionHeaderRow}>
-                        {renderSectionCheckbox(dayTasks ?? [])}
-                        <Text style={[styles.sectionTitle, styles.sectionTitleFlex]}>{label}</Text>
-                        <Text style={styles.sectionCount}>{(dayTasks ?? []).length}</Text>
-                      </View>
-                      {(dayTasks ?? []).map(renderSwipeableTask)}
-                    </View>
-                  );
-                })
-              : !isSearching &&
-                todayTasks.length === 0 &&
-                overdueTasks.length === 0 &&
-                !initialLoading &&
-                (isFilterActive ? (
-                  <View style={styles.emptyState}>
-                    <Ionicons name="options-outline" size={48} color={theme.border} />
-                    <Text style={styles.emptyStateText}>No tasks match your filters</Text>
-                    <Text style={styles.emptyStateSubtext}>
-                      Try adjusting your filters or clear them to see all tasks
-                    </Text>
-                    <TouchableOpacity style={styles.clearSearchButton} onPress={clearFilters}>
-                      <Text style={styles.clearSearchText}>Clear Filters</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.emptyState}>
-                    <Ionicons name="checkbox-outline" size={48} color={theme.border} />
-                    <Text style={styles.emptyStateText}>No upcoming tasks</Text>
-                    <Text style={styles.emptyStateSubtext}>
-                      Create a care plan to stay on top of your garden
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.addTaskButton}
-                      onPress={() => setShowModal(true)}
-                    >
-                      <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
-                      <Text style={styles.addTaskButtonText}>Create Task</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))
-            : Object.keys(groupedTasks).length > 0 &&
-              Object.values(groupedTasks).some((arr) => arr.length > 0)
-            ? Object.keys(groupedTasks).map((groupName) => {
-                const nonOverdue = (groupedTasks[groupName] ?? []).filter(
-                  (t) => !overdueIdSet.has(t.id)
-                );
-                if (nonOverdue.length === 0) return null;
-                return (
-                  <View key={groupName} style={styles.section}>
-                    {groupName ? (
-                      <View style={styles.sectionHeaderRow}>
-                        {renderSectionCheckbox(nonOverdue)}
-                        <Text style={[styles.sectionTitle, styles.sectionTitleFlex]}>
-                          {effectiveGroupBy === 'location'
-                            ? `📍 ${groupName}`
-                            : effectiveGroupBy === 'type'
-                            ? `${
-                                TASK_LABELS[groupName as TaskType] ||
-                                groupName.charAt(0).toUpperCase() + groupName.slice(1)
-                              }`
-                            : effectiveGroupBy === 'plant'
-                            ? `🌿 ${groupName}`
-                            : effectiveGroupBy === 'bed'
-                            ? `🛏 ${groupName}`
-                            : selectedView === 'month'
-                            ? 'This Month'
-                            : 'This Week'}
-                        </Text>
-                        <Text style={styles.sectionCount}>{nonOverdue.length}</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.sectionHeaderRow}>
-                        {renderSectionCheckbox(nonOverdue)}
-                        <Text style={[styles.sectionTitle, styles.sectionTitleFlex]}>
-                          {isSearching
-                            ? 'Search Results'
-                            : selectedView === 'month'
-                            ? 'This Month'
-                            : 'This Week'}
-                        </Text>
-                        <View style={styles.rowCenterGap8}>
-                          {sessionCompletedCount > 0 && !isSearching && (
-                            <View style={styles.weekDoneChip}>
-                              <Text style={styles.weekDoneChipText}>
-                                ✓ {sessionCompletedCount} done
-                              </Text>
-                            </View>
-                          )}
-                          <Text style={styles.sectionCount}>
-                            {isSearching ? tasksForDisplay.length : weekTasks.length}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                    {nonOverdue.map(renderSwipeableTask)}
-                  </View>
-                );
-              })
-            : !isSearching &&
-              todayTasks.length === 0 &&
-              overdueTasks.length === 0 &&
-              !initialLoading &&
-              (isFilterActive ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="options-outline" size={48} color={theme.border} />
-                  <Text style={styles.emptyStateText}>No tasks match your filters</Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    Try adjusting your filters or clear them to see all tasks
-                  </Text>
-                  <TouchableOpacity style={styles.clearSearchButton} onPress={clearFilters}>
-                    <Text style={styles.clearSearchText}>Clear Filters</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.emptyState}>
-                  <Ionicons name="checkbox-outline" size={48} color={theme.border} />
-                  <Text style={styles.emptyStateText}>No upcoming tasks</Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    Create a care plan to stay on top of your garden
-                  </Text>
-                  <TouchableOpacity style={styles.addTaskButton} onPress={() => setShowModal(true)}>
-                    <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
-                    <Text style={styles.addTaskButtonText}>Create Task</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-        </ScrollView>
+            </>
+          }
+        />
 
         {/* Floating Selection Bar */}
         {selectedTaskIds.size > 0 && (

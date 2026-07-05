@@ -14,7 +14,7 @@ import {
   documentId,
   getDocs,
   getDoc,
-  addDoc,
+  setDoc,
   updateDoc,
   query,
   where,
@@ -41,11 +41,46 @@ import { logger } from '../utils/logger';
 import { convertTimestamp } from '../utils/dateHelpers';
 import { resolvePhotoFilename } from '../utils/photoFilename';
 import { getCached, setCached, invalidate, dedup, CACHE_KEYS } from '../lib/dataCache';
+import { writeOrQueue, isOfflineWriteError } from '../lib/offlineWrite';
 import { LAYER_ORDER as BED_LAYER_ORDER } from '../config/beds/layerMeta';
 
 const PLANTS_COLLECTION = 'plants';
 const DEFAULT_PAGE_SIZE = 50;
 const FETCH_ALL_PAGE_SIZE = 100;
+
+/** Read a single plant from the AsyncStorage copy (active plants only). */
+const getCachedPlant = async (id: string): Promise<Plant | null> => {
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  return cachedPlants.find((p) => p.id === id) ?? null;
+};
+
+/** Merge a patch into the AsyncStorage copy of a plant, if present. */
+const patchCachedPlant = async (id: string, patch: Partial<Plant>): Promise<void> => {
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  const index = cachedPlants.findIndex((p) => p.id === id);
+  if (index === -1) return;
+  cachedPlants[index] = { ...cachedPlants[index]!, ...patch };
+  await setData(KEYS.PLANTS, cachedPlants);
+};
+
+/**
+ * Verify the signed-in user owns the plant. Online this checks Firestore;
+ * offline it falls back to the local cache, which only ever holds the
+ * signed-in user's own plants.
+ */
+const verifyPlantOwnership = async (id: string, userUid: string, action: string): Promise<void> => {
+  let owned: boolean;
+  try {
+    const snap = await withTimeoutAndRetry(() => getDoc(doc(db, PLANTS_COLLECTION, id)), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    owned = snap.exists() && snap.data().user_id === userUid;
+  } catch (error) {
+    if (!isOfflineWriteError(error)) throw error;
+    owned = (await getCachedPlant(id)) !== null;
+  }
+  if (!owned) throw new Error(`Not authorized to ${action} this plant`);
+};
 
 /**
  * Get all plants with offline-first approach and pagination support
@@ -364,9 +399,11 @@ export const createPlant = async (
     created_at: Timestamp.now(),
   };
 
-  const docRef = await withTimeoutAndRetry(
-    () => addDoc(collection(db, PLANTS_COLLECTION), newPlant),
-    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+  // Client-generated id so the optimistic local record matches the synced one
+  const docRef = doc(collection(db, PLANTS_COLLECTION));
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: docRef.id, op: 'create', payload: newPlant },
+    () => setDoc(docRef, newPlant)
   );
 
   const resolvedPhotoUrl = await resolveLocalImageUri(photoFilename ?? null);
@@ -430,9 +467,15 @@ export const createPlantBatch = async (
     return { docRef, newPlant, photoFilename };
   });
 
-  await withTimeoutAndRetry(() => batch.commit(), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  await writeOrQueue(
+    prepared.map(({ docRef, newPlant }) => ({
+      collection: PLANTS_COLLECTION,
+      docId: docRef.id,
+      op: 'create' as const,
+      payload: newPlant,
+    })),
+    () => batch.commit()
+  );
 
   const results = await Promise.all(
     prepared.map(async ({ docRef, newPlant, photoFilename }) => {
@@ -462,13 +505,7 @@ export const updatePlant = async (id: string, updates: Partial<Plant>): Promise<
 
   const docRef = doc(db, PLANTS_COLLECTION, id);
 
-  // Verify ownership before updating
-  const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!existingSnap.exists() || existingSnap.data().user_id !== user.uid) {
-    throw new Error('Not authorized to update this plant');
-  }
+  await verifyPlantOwnership(id, user.uid, 'update');
 
   // CRITICAL: photo_filename should already be set for local images
   // Only the filename (not the image data) is stored in Firestore
@@ -476,11 +513,24 @@ export const updatePlant = async (id: string, updates: Partial<Plant>): Promise<
   if ('photo_url' in firestoreUpdates) {
     delete (firestoreUpdates as Partial<Plant>).photo_url;
   }
-  await withTimeoutAndRetry(() => updateDoc(docRef, firestoreUpdates as Record<string, unknown>), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  const { queued } = await writeOrQueue(
+    {
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'update',
+      payload: firestoreUpdates as Record<string, unknown>,
+    },
+    () => updateDoc(docRef, firestoreUpdates as Record<string, unknown>)
+  );
 
-  const updated = await getPlant(id);
+  let updated: Plant | null;
+  if (queued) {
+    // Offline: build the optimistic record from the local copy
+    const cached = await getCachedPlant(id);
+    updated = cached ? ({ ...cached, ...updates } as Plant) : null;
+  } else {
+    updated = await getPlant(id);
+  }
   if (!updated) throw new Error('Plant not found');
 
   // Invalidate in-memory cache so next getAllPlants re-fetches
@@ -503,26 +553,16 @@ export const updatePlantLocation = async (id: string, location: string): Promise
 
   const docRef = doc(db, PLANTS_COLLECTION, id);
 
-  // Verify ownership before updating
-  const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!existingSnap.exists() || existingSnap.data().user_id !== user.uid) {
-    throw new Error('Not authorized to update this plant');
-  }
+  await verifyPlantOwnership(id, user.uid, 'update');
 
-  await withTimeoutAndRetry(() => updateDoc(docRef, { location }), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: id, op: 'update', payload: { location } },
+    () => updateDoc(docRef, { location })
+  );
 
   invalidate(CACHE_KEYS.ALL_PLANTS);
 
-  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
-  const index = cachedPlants.findIndex((plant) => plant.id === id);
-  if (index !== -1) {
-    cachedPlants[index] = { ...cachedPlants[index]!, location };
-    await setData(KEYS.PLANTS, cachedPlants);
-  }
+  await patchCachedPlant(id, { location });
 };
 
 export const updatePlantVariety = async (id: string, plantVariety: string): Promise<void> => {
@@ -531,29 +571,21 @@ export const updatePlantVariety = async (id: string, plantVariety: string): Prom
 
   const docRef = doc(db, PLANTS_COLLECTION, id);
 
-  // Verify ownership before updating
-  const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!existingSnap.exists() || existingSnap.data().user_id !== user.uid) {
-    throw new Error('Not authorized to update this plant');
-  }
+  await verifyPlantOwnership(id, user.uid, 'update');
 
-  await withTimeoutAndRetry(() => updateDoc(docRef, { plant_variety: plantVariety }), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
+  await writeOrQueue(
+    {
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'update',
+      payload: { plant_variety: plantVariety },
+    },
+    () => updateDoc(docRef, { plant_variety: plantVariety })
+  );
 
   invalidate(CACHE_KEYS.ALL_PLANTS);
 
-  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
-  const index = cachedPlants.findIndex((plant) => plant.id === id);
-  if (index !== -1) {
-    cachedPlants[index] = {
-      ...cachedPlants[index]!,
-      plant_variety: plantVariety,
-    };
-    await setData(KEYS.PLANTS, cachedPlants);
-  }
+  await patchCachedPlant(id, { plant_variety: plantVariety });
 };
 
 export const deletePlant = async (id: string): Promise<void> => {
@@ -562,21 +594,12 @@ export const deletePlant = async (id: string): Promise<void> => {
 
   const docRef = doc(db, PLANTS_COLLECTION, id);
 
-  // Verify ownership before deleting
-  const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!existingSnap.exists() || existingSnap.data().user_id !== user.uid) {
-    throw new Error('Not authorized to delete this plant');
-  }
+  await verifyPlantOwnership(id, user.uid, 'delete');
 
-  await withTimeoutAndRetry(
-    () =>
-      updateDoc(docRef, {
-        is_deleted: true,
-        deleted_at: Timestamp.now(),
-      }),
-    { timeoutMs: FIRESTORE_READ_TIMEOUT_MS }
+  const deletePayload = { is_deleted: true, deleted_at: Timestamp.now() };
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: id, op: 'update', payload: deletePayload },
+    () => updateDoc(docRef, deletePayload)
   );
 
   // Invalidate in-memory cache
@@ -622,9 +645,15 @@ export const deletePlantsForBed = async (plants: Plant[]): Promise<void> => {
       deleted_at: deletedAt,
     });
   }
-  await withTimeoutAndRetry(() => batch.commit(), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  await writeOrQueue(
+    ids.map((id) => ({
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'update' as const,
+      payload: { is_deleted: true, deleted_at: deletedAt },
+    })),
+    () => batch.commit()
+  );
 
   // Surgical in-memory cache update: filter deleted ids out of the warm cache
   // rather than invalidating it entirely, so the Plants tab can still serve
@@ -730,27 +759,32 @@ export const pinGrowthStage = async (plantId: string, stage: GrowthStage): Promi
   await refreshAuthToken();
 
   const plantRef = doc(db, PLANTS_COLLECTION, plantId);
-  const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!snap.exists()) throw new Error('Plant not found');
+  let existing: Plant | null;
+  try {
+    const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    existing = snap.exists() ? (snap.data() as Plant) : null;
+  } catch (error) {
+    if (!isOfflineWriteError(error)) throw error;
+    existing = await getCachedPlant(plantId);
+  }
+  if (!existing) throw new Error('Plant not found');
 
-  const existing = snap.data() as Plant;
   const history: GrowthStageHistoryEntry[] = [
     ...(existing.growth_stage_history ?? []),
     { stage, pinnedAt: new Date().toISOString() },
   ];
 
-  await withTimeoutAndRetry(
-    () =>
-      updateDoc(plantRef, {
-        growth_stage_pinned: stage,
-        growth_stage_history: history,
-      } as Record<string, unknown>),
-    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+  const pinPayload = { growth_stage_pinned: stage, growth_stage_history: history };
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: plantId, op: 'update', payload: pinPayload },
+    () => updateDoc(plantRef, pinPayload as Record<string, unknown>)
   );
 
   invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  await patchCachedPlant(plantId, pinPayload);
 };
 
 /**
@@ -764,12 +798,18 @@ export const unpinGrowthStage = async (plantId: string): Promise<void> => {
   await refreshAuthToken();
 
   const plantRef = doc(db, PLANTS_COLLECTION, plantId);
-  const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!snap.exists()) throw new Error('Plant not found');
+  let existing: Plant | null;
+  try {
+    const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    existing = snap.exists() ? (snap.data() as Plant) : null;
+  } catch (error) {
+    if (!isOfflineWriteError(error)) throw error;
+    existing = await getCachedPlant(plantId);
+  }
+  if (!existing) throw new Error('Plant not found');
 
-  const existing = snap.data() as Plant;
   const history = [...(existing.growth_stage_history ?? [])];
   // Mark the last pin entry as unpinned
   if (history.length > 0) {
@@ -782,16 +822,15 @@ export const unpinGrowthStage = async (plantId: string): Promise<void> => {
     }
   }
 
-  await withTimeoutAndRetry(
-    () =>
-      updateDoc(plantRef, {
-        growth_stage_pinned: null,
-        growth_stage_history: history,
-      } as Record<string, unknown>),
-    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+  const unpinPayload = { growth_stage_pinned: null, growth_stage_history: history };
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: plantId, op: 'update', payload: unpinPayload },
+    () => updateDoc(plantRef, unpinPayload as Record<string, unknown>)
   );
 
   invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  await patchCachedPlant(plantId, unpinPayload);
 };
 
 const bedLayerRank = (l: BedLayer | null | undefined): number => {
@@ -829,24 +868,28 @@ export const archivePlant = async (plantId: string): Promise<void> => {
   await refreshAuthToken();
 
   const plantRef = doc(db, PLANTS_COLLECTION, plantId);
-  const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!snap.exists() || snap.data().user_id !== user.uid) {
-    throw new Error('Not authorized to archive this plant');
+  let plant: Plant | null;
+  try {
+    const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    plant =
+      snap.exists() && snap.data().user_id === user.uid
+        ? ({ id: plantId, ...snap.data() } as Plant)
+        : null;
+  } catch (error) {
+    if (!isOfflineWriteError(error)) throw error;
+    plant = await getCachedPlant(plantId);
   }
+  if (!plant) throw new Error('Not authorized to archive this plant');
 
-  const plant = { id: plantId, ...snap.data() } as Plant;
   const now = new Date();
   const clearedDate = now.toISOString().split('T')[0]!;
 
-  await withTimeoutAndRetry(
-    () =>
-      updateDoc(plantRef, {
-        cleared_date: clearedDate,
-        archived_at: now.toISOString(),
-      } as Record<string, unknown>),
-    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+  const archivePayload = { cleared_date: clearedDate, archived_at: now.toISOString() };
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: plantId, op: 'update', payload: archivePayload },
+    () => updateDoc(plantRef, archivePayload as Record<string, unknown>)
   );
 
   invalidate(CACHE_KEYS.ALL_PLANTS);

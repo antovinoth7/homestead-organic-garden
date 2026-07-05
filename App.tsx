@@ -15,6 +15,8 @@ import Constants from 'expo-constants';
 import * as Sentry from '@sentry/react-native';
 import { migrateImagesToMediaLibrary } from './src/lib/imageStorage';
 import { runPendingMigrations } from './src/migrations';
+import { subscribeToNetworkChanges } from './src/utils/networkState';
+import { flushOfflineQueue } from './src/services/offlineSync';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -22,6 +24,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // Screens & Navigation
 import AuthScreen from './src/screens/AuthScreen';
 import { AuthedNavigator } from './src/navigation/AppNavigator';
+import OfflineBanner from './src/components/OfflineBanner';
 
 const expoExtra = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
 const sentryDsnFromExtra =
@@ -339,6 +342,32 @@ const AppRoot = (): React.JSX.Element | null => {
     };
   }, []);
 
+  // Replay offline-queued writes when connectivity returns (and once after
+  // sign-in — the subscription fires immediately with the current state).
+  useEffect(() => {
+    if (!user) return;
+
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribeNetwork = subscribeToNetworkChanges((online) => {
+      if (!online) return;
+      // Short debounce so connectivity settles before replaying
+      if (flushTimer) clearTimeout(flushTimer);
+      flushTimer = setTimeout(() => {
+        flushOfflineQueue().catch((error) => {
+          logger.warn(
+            'Offline queue flush failed',
+            error instanceof Error ? error : new Error(String(error))
+          );
+        });
+      }, 2000);
+    });
+
+    return () => {
+      if (flushTimer) clearTimeout(flushTimer);
+      unsubscribeNetwork();
+    };
+  }, [user]);
+
   if (loading) return null; // Show splash screen
 
   return (
@@ -348,6 +377,7 @@ const AppRoot = (): React.JSX.Element | null => {
         backgroundColor="transparent"
         translucent={true}
       />
+      {user && <OfflineBanner />}
       <NavigationContainer theme={navigationTheme}>
         <RootStack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (

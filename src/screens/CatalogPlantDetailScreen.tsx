@@ -34,9 +34,11 @@ import {
 } from '@/services/plantProfiles';
 import { getAllPlants, updatePlantVariety } from '@/services/plants';
 import {
+  DiseaseEntry,
   FeedingIntensity,
   FertiliserType,
   GrowthStage,
+  PestEntry,
   PlantLifecycle,
   Plant,
   PlantCareProfile,
@@ -203,6 +205,8 @@ function formatRangeLabel(min: string, max: string, unit: string): string | unde
 function formatCount(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
+
+const pickerKeyExtractor = (item: PestEntry | DiseaseEntry): string => item.id;
 
 export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const navigation = useNavigation<NavProp>();
@@ -666,6 +670,68 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const setForm = useCallback(
     (patch: Partial<CareFormState>) => setCareForm((prev) => (prev ? { ...prev, ...patch } : prev)),
     []
+  );
+
+  const customPests = careForm?.customPests;
+  const customDiseases = careForm?.customDiseases;
+
+  const availablePests = useMemo(() => {
+    const taken = new Set([...pests, ...(customPests ?? [])].map((n) => n.toLowerCase()));
+    const search = pestSearch.trim().toLowerCase();
+    return getAllPests().filter(
+      (p) => !taken.has(p.name.toLowerCase()) && (!search || p.name.toLowerCase().includes(search))
+    );
+  }, [pests, customPests, pestSearch]);
+
+  const availableDiseases = useMemo(() => {
+    const taken = new Set([...diseases, ...(customDiseases ?? [])].map((n) => n.toLowerCase()));
+    const search = diseaseSearch.trim().toLowerCase();
+    return getAllDiseases().filter(
+      (d) => !taken.has(d.name.toLowerCase()) && (!search || d.name.toLowerCase().includes(search))
+    );
+  }, [diseases, customDiseases, diseaseSearch]);
+
+  const handlePickPest = useCallback((pestName: string) => {
+    setCareForm((prev) =>
+      prev ? { ...prev, customPests: [...prev.customPests, pestName] } : prev
+    );
+    setShowPestPicker(false);
+    setPestSearch('');
+  }, []);
+
+  const handlePickDisease = useCallback((diseaseName: string) => {
+    setCareForm((prev) =>
+      prev ? { ...prev, customDiseases: [...prev.customDiseases, diseaseName] } : prev
+    );
+    setShowDiseasePicker(false);
+    setDiseaseSearch('');
+  }, []);
+
+  const renderPickerSeparator = useCallback(
+    () => <View style={styles.pickerSeparator} />,
+    [styles]
+  );
+
+  const renderPestPickerRow = useCallback(
+    ({ item }: { item: PestEntry }) => (
+      <TouchableOpacity style={styles.pickerRow} onPress={() => handlePickPest(item.name)}>
+        <Text style={styles.pickerRowText}>
+          {item.emoji} {item.name}
+        </Text>
+      </TouchableOpacity>
+    ),
+    [styles, handlePickPest]
+  );
+
+  const renderDiseasePickerRow = useCallback(
+    ({ item }: { item: DiseaseEntry }) => (
+      <TouchableOpacity style={styles.pickerRow} onPress={() => handlePickDisease(item.name)}>
+        <Text style={styles.pickerRowText}>
+          {item.emoji} {item.name}
+        </Text>
+      </TouchableOpacity>
+    ),
+    [styles, handlePickDisease]
   );
 
   if (loading) {
@@ -1717,31 +1783,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
             <FlatList
               style={styles.pickerList}
               keyboardShouldPersistTaps="handled"
-              data={getAllPests().filter((p) => {
-                const taken = new Set(
-                  [...pests, ...(careForm?.customPests ?? [])].map((n) => n.toLowerCase())
-                );
-                return (
-                  !taken.has(p.name.toLowerCase()) &&
-                  (!pestSearch || p.name.toLowerCase().includes(pestSearch.toLowerCase()))
-                );
-              })}
-              keyExtractor={(item) => item.id}
-              ItemSeparatorComponent={() => <View style={styles.pickerSeparator} />}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.pickerRow}
-                  onPress={() => {
-                    setForm({ customPests: [...(careForm?.customPests ?? []), item.name] });
-                    setShowPestPicker(false);
-                    setPestSearch('');
-                  }}
-                >
-                  <Text style={styles.pickerRowText}>
-                    {item.emoji} {item.name}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              data={availablePests}
+              keyExtractor={pickerKeyExtractor}
+              ItemSeparatorComponent={renderPickerSeparator}
+              renderItem={renderPestPickerRow}
             />
           </View>
         </View>
@@ -1783,31 +1828,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
             <FlatList
               style={styles.pickerList}
               keyboardShouldPersistTaps="handled"
-              data={getAllDiseases().filter((d) => {
-                const taken = new Set(
-                  [...diseases, ...(careForm?.customDiseases ?? [])].map((n) => n.toLowerCase())
-                );
-                return (
-                  !taken.has(d.name.toLowerCase()) &&
-                  (!diseaseSearch || d.name.toLowerCase().includes(diseaseSearch.toLowerCase()))
-                );
-              })}
-              keyExtractor={(item) => item.id}
-              ItemSeparatorComponent={() => <View style={styles.pickerSeparator} />}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.pickerRow}
-                  onPress={() => {
-                    setForm({ customDiseases: [...(careForm?.customDiseases ?? []), item.name] });
-                    setShowDiseasePicker(false);
-                    setDiseaseSearch('');
-                  }}
-                >
-                  <Text style={styles.pickerRowText}>
-                    {item.emoji} {item.name}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              data={availableDiseases}
+              keyExtractor={pickerKeyExtractor}
+              ItemSeparatorComponent={renderPickerSeparator}
+              renderItem={renderDiseasePickerRow}
             />
           </View>
         </View>

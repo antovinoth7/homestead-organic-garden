@@ -11,14 +11,14 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 interface PlantCardProps {
   plant: Plant;
-  onPress: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onPress: (plantId: string) => void;
+  onEdit: (plantId: string) => void;
+  onDelete: (plantId: string) => void;
   searchQuery?: string;
   onSwipeableOpen?: (ref: Swipeable) => void;
 }
 
-export default function PlantCard({
+function PlantCard({
   plant,
   onPress,
   onEdit,
@@ -116,6 +116,14 @@ export default function PlantCard({
     ];
   };
 
+  const handlePress = useCallback(() => onPress(plant.id), [onPress, plant.id]);
+
+  const handleSwipeableOpen = useCallback(() => {
+    if (onSwipeableOpen && swipeableRef.current) {
+      onSwipeableOpen(swipeableRef.current);
+    }
+  }, [onSwipeableOpen]);
+
   const renderRightActions = useCallback(
     () => (
       <View style={styles.swipeActions}>
@@ -123,7 +131,7 @@ export default function PlantCard({
           style={styles.swipeEditAction}
           onPress={() => {
             swipeableRef.current?.close();
-            setTimeout(onEdit, 150);
+            setTimeout(() => onEdit(plant.id), 150);
           }}
           accessibilityLabel="Edit plant"
           accessibilityRole="button"
@@ -135,7 +143,7 @@ export default function PlantCard({
           style={styles.swipeDeleteAction}
           onPress={() => {
             swipeableRef.current?.close();
-            setTimeout(onDelete, 150);
+            setTimeout(() => onDelete(plant.id), 150);
           }}
           accessibilityLabel="Delete plant"
           accessibilityRole="button"
@@ -145,7 +153,7 @@ export default function PlantCard({
         </TouchableOpacity>
       </View>
     ),
-    [styles, onEdit, onDelete]
+    [styles, onEdit, onDelete, plant.id]
   );
 
   const daysSinceWatered = getDaysSinceWatered();
@@ -164,13 +172,9 @@ export default function PlantCard({
       overshootRight={false}
       friction={2}
       rightThreshold={40}
-      onSwipeableOpen={() => {
-        if (onSwipeableOpen && swipeableRef.current) {
-          onSwipeableOpen(swipeableRef.current);
-        }
-      }}
+      onSwipeableOpen={handleSwipeableOpen}
     >
-      <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.7}>
         {/* Left health stripe */}
         <View style={[styles.healthStripe, { backgroundColor: getHealthColor() }]} />
 
@@ -298,3 +302,5 @@ export default function PlantCard({
     </Swipeable>
   );
 }
+
+export default React.memo(PlantCard);

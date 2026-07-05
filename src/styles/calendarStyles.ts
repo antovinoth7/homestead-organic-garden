@@ -440,6 +440,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingTop: 10,
       paddingBottom: 8,
     },
+    // SectionList equivalents of `section` (header top / row sides / footer bottom)
+    listSectionHeader: {
+      paddingHorizontal: 16,
+      paddingTop: 10,
+    },
+    listRow: {
+      paddingHorizontal: 16,
+    },
+    listSectionFooter: {
+      height: 8,
+    },
     sectionHeaderRow: {
       flexDirection: 'row',
       alignItems: 'center',

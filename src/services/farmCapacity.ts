@@ -1,6 +1,7 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db, auth, refreshAuthToken } from '@/lib/firebase';
 import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
+import { writeOrQueue } from '@/lib/offlineWrite';
 import { logError } from '@/utils/errorLogging';
 import { getData, setData, KEYS } from '@/lib/storage';
 import { getCached, setCached, invalidate } from '@/lib/dataCache';
@@ -205,14 +206,21 @@ export async function saveFarmConfig(config: FarmConfig): Promise<FarmConfig> {
 
   try {
     const docRef = doc(db, SETTINGS_COLLECTION, user.uid);
-    await withTimeoutAndRetry(
+    // Queued payload uses a concrete Timestamp (serverTimestamp() sentinels
+    // can't be serialized for replay); the online path keeps server time.
+    await writeOrQueue(
+      {
+        collection: SETTINGS_COLLECTION,
+        docId: user.uid,
+        op: 'set',
+        payload: { [FARM_CONFIG_FIELD]: withTimestamp, updated_at: Timestamp.now() },
+      },
       () =>
         setDoc(
           docRef,
           { [FARM_CONFIG_FIELD]: withTimestamp, updated_at: serverTimestamp() },
           { merge: true }
-        ),
-      { timeoutMs: FIRESTORE_READ_TIMEOUT_MS, throwOnTimeout: false }
+        )
     );
   } catch (error) {
     logError('network', 'Failed to save farm config', error as Error);

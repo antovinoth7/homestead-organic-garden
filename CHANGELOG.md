@@ -13,6 +13,37 @@ version heading with the release date.
 
 ## [Unreleased]
 
+### Added
+
+- **Offline write queue with auto-sync** — creating, updating, and deleting
+  data now works offline. Failed-due-to-offline writes are saved to an
+  AsyncStorage mutation queue (`src/lib/offlineQueue.ts`, `writeOrQueue()` in
+  `src/lib/offlineWrite.ts`), applied optimistically to the local cache, and
+  replayed to Firestore in order when connectivity returns
+  (`src/services/offlineSync.ts`). Per-document coalescing keeps the queue
+  small (e.g. an offline create followed by delete cancels both). Creates use
+  client-generated document ids so records keep the same id after sync.
+  Covered services: plants, tasks (incl. single/bulk completion and cascade
+  deletes), journal, beds, locations, farm config.
+- **Offline banner** (`OfflineBanner` + `useOfflineStatus`) — a strip above
+  the app shows "Offline — N changes will sync when connected" and
+  "Syncing N changes…" while the queue drains.
+
+### Changed
+
+- **CalendarScreen task list virtualized** — the task area is now a windowed
+  `SectionList` instead of `.map()` inside a `ScrollView`, keeping scrolling
+  smooth as task counts grow (calendar strip collapse, swipe gestures, section
+  checkboxes, and empty states preserved).
+- `PlantCard` is memoized with id-based stable callbacks — typing in the
+  Plants search no longer re-renders every visible card.
+- Catalog pest/disease pickers no longer rebuild a lookup `Set` per item;
+  picker data is memoized.
+- Migration runner caches the schema version locally, skipping the Firestore
+  read and token refresh on every launch once up to date.
+- `deleteJournalEntry` now wraps its Firestore delete with timeout/retry
+  (previously a bare `deleteDoc`).
+
 ### Planned (Phase 1)
 
 - Planting windows + "What to Plant Now" on Today screen

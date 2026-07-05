@@ -5,7 +5,7 @@ import {
   doc,
   getDocs,
   getDoc,
-  addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -31,6 +31,7 @@ import { logError } from '../utils/errorLogging';
 import { logger } from '../utils/logger';
 import { convertTimestamp } from '../utils/dateHelpers';
 import { getCached, setCached, invalidate, CACHE_KEYS } from '../lib/dataCache';
+import { writeOrQueue, isOfflineWriteError } from '../lib/offlineWrite';
 const JOURNAL_COLLECTION = 'journal_entries';
 
 /**
@@ -167,9 +168,11 @@ export const createJournalEntry = async (
   };
   const { photo_urls: _photoUrls, photo_url: _photoUrl, ...firestoreEntry } = baseEntry;
 
-  const docRef = await withTimeoutAndRetry(
-    () => addDoc(collection(db, JOURNAL_COLLECTION), firestoreEntry),
-    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+  // Client-generated id so the optimistic local record matches the synced one
+  const docRef = doc(collection(db, JOURNAL_COLLECTION));
+  await writeOrQueue(
+    { collection: JOURNAL_COLLECTION, docId: docRef.id, op: 'create', payload: firestoreEntry },
+    () => setDoc(docRef, firestoreEntry)
   );
 
   const result = {
@@ -200,16 +203,23 @@ export const updateJournalEntry = async (
 
   await refreshAuthToken();
 
-  // Verify ownership before updating
+  // Verify ownership before updating; offline, fall back to the local copy
+  // (it only ever holds the signed-in user's own entries).
   const docRef = doc(db, JOURNAL_COLLECTION, id);
-  const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-
-  if (!existingSnap.exists()) throw new Error('Journal entry not found');
-
-  const existingData = existingSnap.data();
-  if (existingData.user_id !== user.uid) {
+  let owned: boolean;
+  try {
+    const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    if (!existingSnap.exists()) throw new Error('Journal entry not found');
+    owned = existingSnap.data().user_id === user.uid;
+  } catch (error) {
+    if (!isOfflineWriteError(error)) throw error;
+    const cachedForOwnership = await getData<JournalEntry>(KEYS.JOURNAL);
+    owned = cachedForOwnership.some((e) => e.id === id);
+    if (!owned) throw new Error('Journal entry not found');
+  }
+  if (!owned) {
     throw new Error('Not authorized to update this entry');
   }
 
@@ -230,35 +240,50 @@ export const updateJournalEntry = async (
       .map((uri) => getFilenameFromUri(uri))
       .filter((filename): filename is string => !!filename);
   }
-  await withTimeoutAndRetry(() => updateDoc(docRef, firestoreUpdates as Record<string, unknown>), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  const { queued } = await writeOrQueue(
+    {
+      collection: JOURNAL_COLLECTION,
+      docId: id,
+      op: 'update',
+      payload: firestoreUpdates as Record<string, unknown>,
+    },
+    () => updateDoc(docRef, firestoreUpdates as Record<string, unknown>)
+  );
 
-  // Use direct document read instead of query for better performance
-  const docSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
+  let result: JournalEntry;
+  if (queued) {
+    // Offline: build the optimistic record from the local copy
+    const cachedForUpdate = await getData<JournalEntry>(KEYS.JOURNAL);
+    const existing = cachedForUpdate.find((e) => e.id === id);
+    if (!existing) throw new Error('Journal entry not found');
+    result = { ...existing, ...updates } as JournalEntry;
+  } else {
+    // Use direct document read instead of query for better performance
+    const docSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
 
-  if (!docSnap.exists()) throw new Error('Journal entry not found');
+    if (!docSnap.exists()) throw new Error('Journal entry not found');
 
-  const doc_data = docSnap.data();
-  const legacyUrls = doc_data.photo_urls || (doc_data.photo_url ? [doc_data.photo_url] : []);
-  const photoFilenames: string[] = Array.isArray(doc_data.photo_filenames)
-    ? doc_data.photo_filenames
-    : legacyUrls
-        .map((uri: string) => getFilenameFromUri(uri))
-        .filter((filename: string | null): filename is string => !!filename);
-  const resolvedPhotoUrls =
-    photoFilenames.length > 0
-      ? await resolveLocalImageUris(photoFilenames)
-      : await resolveLocalImageUris(legacyUrls);
-  const result = {
-    id,
-    ...doc_data,
-    photo_filenames: photoFilenames,
-    photo_urls: resolvedPhotoUrls,
-    created_at: convertTimestamp(doc_data.created_at),
-  } as JournalEntry;
+    const doc_data = docSnap.data();
+    const legacyUrls = doc_data.photo_urls || (doc_data.photo_url ? [doc_data.photo_url] : []);
+    const photoFilenames: string[] = Array.isArray(doc_data.photo_filenames)
+      ? doc_data.photo_filenames
+      : legacyUrls
+          .map((uri: string) => getFilenameFromUri(uri))
+          .filter((filename: string | null): filename is string => !!filename);
+    const resolvedPhotoUrls =
+      photoFilenames.length > 0
+        ? await resolveLocalImageUris(photoFilenames)
+        : await resolveLocalImageUris(legacyUrls);
+    result = {
+      id,
+      ...doc_data,
+      photo_filenames: photoFilenames,
+      photo_urls: resolvedPhotoUrls,
+      created_at: convertTimestamp(doc_data.created_at),
+    } as JournalEntry;
+  }
 
   // Update local cache
   const cachedEntries = await getData<JournalEntry>(KEYS.JOURNAL);
@@ -279,28 +304,39 @@ export const deleteJournalEntry = async (id: string): Promise<void> => {
 
   await refreshAuthToken();
 
-  // Verify ownership before deleting
+  // Verify ownership before deleting; offline, fall back to the local copy
+  // (it only ever holds the signed-in user's own entries).
   const docRef = doc(db, JOURNAL_COLLECTION, id);
-  const docSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
+  const cachedEntries = await getData<JournalEntry>(KEYS.JOURNAL);
+  try {
+    const docSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
 
-  if (!docSnap.exists()) {
-    logger.warn('Journal entry not found: ' + id);
-    return;
-  }
+    if (!docSnap.exists()) {
+      logger.warn('Journal entry not found: ' + id);
+      return;
+    }
 
-  const data = docSnap.data();
-  if (data.user_id !== user.uid) {
-    throw new Error('Not authorized to delete this entry');
+    if (docSnap.data().user_id !== user.uid) {
+      throw new Error('Not authorized to delete this entry');
+    }
+  } catch (error) {
+    if (!isOfflineWriteError(error)) throw error;
+    if (!cachedEntries.some((e) => e.id === id)) {
+      logger.warn('Journal entry not found: ' + id);
+      return;
+    }
   }
 
   // Get the entry to find its image URIs
-  const cachedEntries = await getData<JournalEntry>(KEYS.JOURNAL);
   const entry = cachedEntries.find((e) => e.id === id);
 
-  // Delete from Firestore
-  await deleteDoc(docRef);
+  // Delete from Firestore (queued for replay when offline)
+  await writeOrQueue(
+    { collection: JOURNAL_COLLECTION, docId: id, op: 'delete', payload: null },
+    () => deleteDoc(docRef)
+  );
 
   // Delete all local image files
   if (entry?.photo_urls && entry.photo_urls.length > 0) {

@@ -10,17 +10,14 @@ import {
   doc,
   getDocs,
   getDoc,
-  addDoc,
+  setDoc,
   updateDoc,
   query,
   where,
 } from 'firebase/firestore';
 import { getData, setData, KEYS } from '@/lib/storage';
-import {
-  withTimeoutAndRetry,
-  FIRESTORE_WRITE_TIMEOUT_MS,
-  FIRESTORE_READ_TIMEOUT_MS,
-} from '@/utils/firestoreTimeout';
+import { writeOrQueue } from '@/lib/offlineWrite';
+import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
 import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 import { getCached, invalidate, dedup, CACHE_KEYS } from '@/lib/dataCache';
@@ -108,12 +105,20 @@ export async function addBed(
     updated_at: now,
   };
 
-  const docRef = await withTimeoutAndRetry(() => addDoc(collection(db, BEDS_COLLECTION), payload), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  // Client-generated id so the optimistic local record matches the synced one
+  const docRef = doc(collection(db, BEDS_COLLECTION));
+  await writeOrQueue(
+    { collection: BEDS_COLLECTION, docId: docRef.id, op: 'create', payload },
+    () => setDoc(docRef, payload)
+  );
 
   invalidate(CACHE_KEYS.BEDS);
   const newBed: Bed = { id: docRef.id, ...payload };
+
+  // Keep the AsyncStorage copy in sync so the bed is visible offline
+  const cachedBeds = await getData<Bed>(KEYS.BEDS);
+  await setData(KEYS.BEDS, [...cachedBeds, newBed]);
+
   return newBed;
 }
 
@@ -127,11 +132,19 @@ export async function updateBed(
 
   const payload = { ...updates, updated_at: new Date().toISOString() };
 
-  await withTimeoutAndRetry(() => updateDoc(doc(db, BEDS_COLLECTION, id), payload), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  await writeOrQueue({ collection: BEDS_COLLECTION, docId: id, op: 'update', payload }, () =>
+    updateDoc(doc(db, BEDS_COLLECTION, id), payload)
+  );
 
   invalidate(CACHE_KEYS.BEDS);
+
+  // Keep the AsyncStorage copy in sync so the change is visible offline
+  const cachedBeds = await getData<Bed>(KEYS.BEDS);
+  const index = cachedBeds.findIndex((b) => b.id === id);
+  if (index !== -1) {
+    cachedBeds[index] = { ...cachedBeds[index]!, ...payload };
+    await setData(KEYS.BEDS, cachedBeds);
+  }
 }
 
 export async function deleteBed(id: string): Promise<void> {

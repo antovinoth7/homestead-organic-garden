@@ -8,7 +8,8 @@ while keeping image storage off the cloud.
 
 - Firestore stores text data and image filenames only.
 - Plant and journal photos stay on the device.
-- Reads are offline-friendly through AsyncStorage caching.
+- Works offline: reads serve from AsyncStorage caches, and
+  writes queue locally and sync automatically on reconnect.
 - Image backups are user-controlled ZIP exports.
 - The care model is tailored to Kanyakumari / South Tamil Nadu
   growing conditions.
@@ -288,9 +289,13 @@ Stored image fields:
   on failure.
 - Writes target Firestore first and update local cache on
   success.
+- When the device is offline, creates/updates/deletes are
+  saved to a local mutation queue, applied to the local cache
+  immediately (optimistic), and replayed to Firestore
+  automatically when connectivity returns.
+- A banner above the app shows offline state and the number
+  of changes pending sync.
 - Clearing cache from Settings only removes local cached data.
-- If the device is offline, create/update operations may need
-  to be retried later.
 
 ## Runtime Structure
 

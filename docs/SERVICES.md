@@ -43,11 +43,39 @@ Every public service function must:
 2. Refresh auth token before Firestore calls.
 3. Apply 15s timeout + 2 retries for network requests.
 4. Update AsyncStorage and in-memory cache on success.
-5. Fall back to AsyncStorage on network failure.
+5. Fall back to AsyncStorage on network failure (reads) or queue the mutation (writes — see Offline Write Queue below).
 
 Return typed data; never return `any`. Log errors to Sentry with context. Mask PII.
 
 Prefer existing service modules over duplicating Firestore access from screens.
+
+### Write path (offline-capable)
+
+User-data writes go through `writeOrQueue()` from `src/lib/offlineWrite.ts` instead of calling
+`withTimeoutAndRetry(firestoreOp)` directly:
+
+```ts
+const docRef = doc(collection(db, PLANTS_COLLECTION)); // client-generated id, works offline
+const { queued } = await writeOrQueue(
+  { collection: PLANTS_COLLECTION, docId: docRef.id, op: 'create', payload: newPlant },
+  () => setDoc(docRef, newPlant)
+);
+// …then run the cache update (invalidate() + setData) unconditionally — it doubles
+// as the optimistic local write when the mutation was queued.
+```
+
+Rules for new write functions:
+
+- **Creates use client-generated ids** (`doc(collection(db, X))` + `setDoc`), never `addDoc` —
+  the optimistic local record must keep the same id after sync.
+- **Ownership checks fall back to the local cache when offline** (the AsyncStorage copy only ever
+  holds the signed-in user's data); don't let a pre-write `getDoc` kill the whole offline write.
+- **Batch commits** pass one mutation per document to `writeOrQueue` (replay doesn't need atomicity;
+  last-write-wins is the accepted conflict policy).
+- Only offline/`unavailable` errors are queued; permission/validation errors still throw.
+- Payloads containing `Timestamp` are serialized automatically; never put a `serverTimestamp()`
+  sentinel in a queued payload — pass `Timestamp.now()` in the mutation and keep `serverTimestamp()`
+  in the online `firestoreOp` closure (see `locations.ts` / `farmCapacity.ts`).
 
 ---
 
@@ -94,6 +122,37 @@ Prefer existing service modules over duplicating Firestore access from screens.
 
 ---
 
+## Offline Write Queue
+
+Firestore uses `memoryLocalCache()` (the JS SDK has no persistent cache in React Native), so the
+app implements its own durable offline writes:
+
+- **Types** — `OfflineMutation` in `src/types/offline.types.ts`: `{ collection, docId, op, payload, retryCount }`
+  where `op` is `create` (→ `setDoc`), `update` (→ `updateDoc`), `set` (→ `setDoc(..., { merge: true })`),
+  or `delete` (→ `deleteDoc`).
+- **Store** — `src/lib/offlineQueue.ts` persists the queue at `KEYS.OFFLINE_QUEUE`
+  (`@garden_offline_queue`), serialized behind a lock. Mutations are **coalesced per document**:
+  create+update → merged create; update+update → merged update; create+delete → both dropped;
+  update+delete → single delete. `subscribeQueueCount()` feeds the pending badge in `OfflineBanner`.
+- **Pure logic** — coalescing and `Timestamp` encode/decode rules live Firestore-free in
+  `src/utils/offlineQueueLogic.ts` so they're unit-testable.
+- **Entry point** — `writeOrQueue()` in `src/lib/offlineWrite.ts` (see Write path above): tries the
+  write, and enqueues only on offline/`unavailable` errors.
+- **Replay** — `flushOfflineQueue()` in `src/services/offlineSync.ts` replays FIFO on reconnect:
+  `not-found` updates/deletes are dropped; other failures pause the flush (preserving per-document
+  ordering) and are retried on later flushes, dropped after 5 strikes. After a successful flush it
+  calls `invalidateAll()` and stamps `KEYS.LAST_SYNC`. Concurrent calls share one flush.
+- **Trigger** — `App.tsx` subscribes via `subscribeToNetworkChanges()` (`src/utils/networkState.ts`)
+  and runs a debounced flush on offline→online transitions and once after sign-in.
+- **Conflict policy** — last-write-wins. Reference data services (weather, plantCatalog,
+  plantCareProfiles) and `backup.ts` / `BedTaskResolver.ts` stay online-only by design.
+  `restorePlant()` is also online-only (archived plants aren't in the offline cache).
+- **Tests** — `src/__tests__/utils/offlineQueueLogic.test.ts`, `lib/offlineQueue.test.ts`,
+  `services/offlineSync.test.ts` (flush mechanics via an injected executor — the Firestore SDK is
+  never mocked).
+
+---
+
 ## Plant and Settings Data
 
 - Core types live in `src/types/database.types.ts`. Update types first when changing schema.
@@ -120,7 +179,7 @@ Prefer existing service modules over duplicating Firestore access from screens.
 - `src/utils/appLifecycle.ts` — app lifecycle management, used in `App.tsx`.
 - `src/utils/dateHelpers.ts` — date parsing, formatting, Firestore timestamp conversion.
 - `src/utils/errorTracker.ts` — error tracking service.
-- `src/utils/networkState.ts` — network connectivity state, used by `firestoreTimeout.ts`.
+- `src/utils/networkState.ts` — network connectivity state; used by `firestoreTimeout.ts`, and its `subscribeToNetworkChanges()` drives the offline-queue flush and `useOfflineStatus`.
 - `src/utils/textSanitizer.ts` — text sanitization for user input.
 - `src/utils/zipHelper.ts` — ZIP utilities used by backup.
 - `src/utils/firestoreTimeout.ts` — `withTimeoutAndRetry()` wrapper for Firestore operations.

@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, refreshAuthToken } from '@/lib/firebase';
 import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
+import { safeGetItem, safeSetItem } from '@/utils/safeStorage';
 import { logger } from '@/utils/logger';
 import { logError } from '@/utils/errorLogging';
 import { Migration } from './types';
@@ -39,7 +40,30 @@ async function setSchemaVersion(userId: string, version: number): Promise<void> 
   });
 }
 
+/**
+ * Local cache of the remote schema_version, per user. Written only after the
+ * remote version has been confirmed/migrated, so a cached value >= LATEST
+ * means the launch-time Firestore read can be skipped entirely.
+ */
+const schemaVersionCacheKey = (userId: string): string => `@garden_schema_version_${userId}`;
+
+async function getCachedSchemaVersion(userId: string): Promise<number | null> {
+  const raw = await safeGetItem(schemaVersionCacheKey(userId));
+  if (raw === null) return null;
+  const parsed = parseInt(raw, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+async function setCachedSchemaVersion(userId: string, version: number): Promise<void> {
+  await safeSetItem(schemaVersionCacheKey(userId), String(version));
+}
+
 export async function runPendingMigrations(userId: string): Promise<void> {
+  // Skip the auth refresh + Firestore read when this install already
+  // confirmed the account is at the latest schema version.
+  const cachedVersion = await getCachedSchemaVersion(userId);
+  if (cachedVersion !== null && cachedVersion >= LATEST_SCHEMA_VERSION) return;
+
   await refreshAuthToken();
 
   let currentVersion: number;
@@ -50,7 +74,10 @@ export async function runPendingMigrations(userId: string): Promise<void> {
     return;
   }
 
-  if (currentVersion >= LATEST_SCHEMA_VERSION) return;
+  if (currentVersion >= LATEST_SCHEMA_VERSION) {
+    await setCachedSchemaVersion(userId, currentVersion);
+    return;
+  }
 
   const pending = migrations.filter((m) => m.version > currentVersion);
   if (pending.length === 0) return;
@@ -64,6 +91,7 @@ export async function runPendingMigrations(userId: string): Promise<void> {
       logger.info(`Migration ${migration.version}: ${migration.name}`);
       await migration.run(userId);
       await setSchemaVersion(userId, migration.version);
+      await setCachedSchemaVersion(userId, migration.version);
       logger.info(`Migration ${migration.version} complete`);
     } catch (error) {
       logError(
