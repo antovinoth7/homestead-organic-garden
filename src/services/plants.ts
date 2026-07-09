@@ -284,35 +284,59 @@ export const getPlant = async (id: string): Promise<Plant | null> => {
 
   const docRef = doc(db, PLANTS_COLLECTION, id);
 
-  const docSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
+  try {
+    const docSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
 
-  if (!docSnap.exists()) return null;
+    if (!docSnap.exists()) return null;
 
-  const data = docSnap.data();
+    const data = docSnap.data();
 
-  // Security: Verify the plant belongs to the current user
-  if (data.user_id !== user.uid) {
-    logger.warn('Attempted to access plant belonging to another user');
-    return null;
+    // Security: Verify the plant belongs to the current user
+    if (data.user_id !== user.uid) {
+      logger.warn('Attempted to access plant belonging to another user');
+      return null;
+    }
+
+    if (data.is_deleted) return null;
+
+    const photoIdentifier = data.photo_filename ?? data.photo_url ?? null;
+    const resolvedPhotoUrl = await resolveLocalImageUri(photoIdentifier);
+    const photoFilename = resolvePhotoFilename(data.photo_filename, data.photo_url);
+
+    return {
+      id: docSnap.id,
+      ...data,
+      photo_filename: photoFilename ?? null,
+      photo_url: resolvedPhotoUrl ?? null,
+      created_at: convertTimestamp(data.created_at),
+      deleted_at: convertTimestamp(data.deleted_at),
+      is_deleted: data.is_deleted ?? false,
+    } as Plant;
+  } catch (error) {
+    logger.warn('Failed to fetch plant, using cached copy', error as Error);
+    logError('network', 'Failed to fetch plant from Firestore', error as Error, {
+      userId: user.uid,
+      plantId: id,
+    });
+    const cached = await getCachedPlant(id);
+    // Never cached: callers must see the failure, not a false "plant not found".
+    if (!cached) throw error;
+
+    let resolvedPhotoUrl: string | null = null;
+    try {
+      resolvedPhotoUrl = await resolveLocalImageUri(cached.photo_filename ?? cached.photo_url ?? null);
+    } catch (resolveError) {
+      logger.warn('Failed to resolve cached plant image', resolveError as Error);
+    }
+    return {
+      ...cached,
+      photo_filename:
+        cached.photo_filename ?? resolvePhotoFilename(null, cached.photo_url) ?? null,
+      photo_url: resolvedPhotoUrl,
+    };
   }
-
-  if (data.is_deleted) return null;
-
-  const photoIdentifier = data.photo_filename ?? data.photo_url ?? null;
-  const resolvedPhotoUrl = await resolveLocalImageUri(photoIdentifier);
-  const photoFilename = resolvePhotoFilename(data.photo_filename, data.photo_url);
-
-  return {
-    id: docSnap.id,
-    ...data,
-    photo_filename: photoFilename ?? null,
-    photo_url: resolvedPhotoUrl ?? null,
-    created_at: convertTimestamp(data.created_at),
-    deleted_at: convertTimestamp(data.deleted_at),
-    is_deleted: data.is_deleted ?? false,
-  } as Plant;
 };
 
 export const getArchivedPlants = async (): Promise<Plant[]> => {

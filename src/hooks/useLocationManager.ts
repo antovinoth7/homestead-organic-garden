@@ -5,6 +5,7 @@ import { getAllPlants, updatePlantLocation } from '@/services/plants';
 import { LocationProfile, Plant } from '@/types/database.types';
 import { sanitizeLandmarkText } from '@/utils/textSanitizer';
 import { getErrorMessage } from '@/utils/errorLogging';
+import { logger } from '@/utils/logger';
 
 // ─── Pure helpers (exported so modal components can reuse them) ───────────────
 
@@ -101,6 +102,7 @@ export interface LocationManagerState {
   locationProfiles: Record<string, LocationProfile>;
   plants: Plant[];
   loading: boolean;
+  plantsLoading: boolean;
   saving: boolean;
   editModal: EditModalState | null;
   reassignModal: ReassignModalState | null;
@@ -142,6 +144,7 @@ export function useLocationManager(): UseLocationManagerReturn {
   const [locationProfiles, setLocationProfiles] = useState<Record<string, LocationProfile>>({});
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [plantsLoading, setPlantsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
   const [reassignModal, setReassignModal] = useState<ReassignModalState | null>(null);
@@ -149,13 +152,24 @@ export function useLocationManager(): UseLocationManagerReturn {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setPlantsLoading(true);
+
+    // Plants are only needed for per-location counts, and getAllPlants pages
+    // through the whole collection — resolve it in the background so the
+    // screen paints as soon as the (cache-first) config read lands.
+    void getAllPlants()
+      .then(setPlants)
+      .catch((error: unknown) => {
+        logger.warn('Failed to load plants for location counts', error as Error);
+      })
+      .finally(() => setPlantsLoading(false));
+
     try {
-      const [config, allPlants] = await Promise.all([getLocationConfig(), getAllPlants()]);
+      const config = await getLocationConfig();
       setParentLocations(config.parentLocations);
       setChildLocations(config.childLocations);
       setShortNames(config.parentLocationShortNames ?? {});
       setLocationProfiles(config.parentLocationProfiles ?? {});
-      setPlants(allPlants);
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error) || 'Failed to load locations. Please try again.');
     } finally {
@@ -324,6 +338,12 @@ export function useLocationManager(): UseLocationManagerReturn {
     }
 
     // ── Rename existing ──
+    // Counts drive the plant-cascade confirm below; while plants are still
+    // loading they read 0 and the cascade would be silently skipped.
+    if (plantsLoading) {
+      Alert.alert('Still Loading', 'Plant data is still loading — try again in a moment.');
+      return;
+    }
     const name = sanitizeLocationName(editModal.value);
     const list = editModal.type === 'parent' ? parentLocations : childLocations;
     const count =
@@ -403,6 +423,7 @@ export function useLocationManager(): UseLocationManagerReturn {
     }
   }, [
     editModal,
+    plantsLoading,
     parentLocations,
     childLocations,
     shortNames,
@@ -455,6 +476,12 @@ export function useLocationManager(): UseLocationManagerReturn {
 
   const handleDeleteRequest = useCallback(
     (type: 'parent' | 'child', name: string): void => {
+      // Counts decide between plain delete and the reassign flow; while plants
+      // are still loading they read 0 and the reassign flow would be skipped.
+      if (plantsLoading) {
+        Alert.alert('Still Loading', 'Plant data is still loading — try again in a moment.');
+        return;
+      }
       const list = type === 'parent' ? parentLocations : childLocations;
       const count = type === 'parent' ? parentCounts[name] || 0 : childCounts[name] || 0;
 
@@ -472,7 +499,7 @@ export function useLocationManager(): UseLocationManagerReturn {
       }
       setReassignModal({ type, target: name, replacement: options[0]! });
     },
-    [parentLocations, childLocations, parentCounts, childCounts]
+    [plantsLoading, parentLocations, childLocations, parentCounts, childCounts]
   );
 
   const handleReassignConfirm = useCallback((): void => {
@@ -522,6 +549,7 @@ export function useLocationManager(): UseLocationManagerReturn {
       locationProfiles,
       plants,
       loading,
+      plantsLoading,
       saving,
       editModal,
       reassignModal,

@@ -1,5 +1,6 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { auth, db, refreshAuthToken } from '@/lib/firebase';
+import { writeOrQueue } from '@/lib/offlineWrite';
 import { getData, setData, KEYS } from '@/lib/storage';
 import { getCached, setCached } from '@/lib/dataCache';
 import {
@@ -973,14 +974,21 @@ export async function savePlantProfiles(profiles: PlantProfiles): Promise<PlantP
 
   try {
     const docRef = doc(db, SETTINGS_COLLECTION, user.uid);
-    await withTimeoutAndRetry(
+    // Queued payload uses a concrete Timestamp (serverTimestamp() sentinels
+    // can't be serialized for replay); the online path keeps server time.
+    await writeOrQueue(
+      {
+        collection: SETTINGS_COLLECTION,
+        docId: user.uid,
+        op: 'set',
+        payload: { [PLANT_PROFILES_FIELD]: normalized, updated_at: Timestamp.now() },
+      },
       () =>
         setDoc(
           docRef,
           { [PLANT_PROFILES_FIELD]: normalized, updated_at: serverTimestamp() },
           { merge: true }
-        ),
-      { timeoutMs: FIRESTORE_READ_TIMEOUT_MS, throwOnTimeout: false }
+        )
     );
   } catch (err) {
     logError('network', 'plantProfiles: Firestore save failed', err as Error);

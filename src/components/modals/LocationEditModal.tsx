@@ -90,23 +90,35 @@ export function LocationEditModal({
     [landCents, updateProfile]
   );
 
-  const handleLatBlur = useCallback(() => {
-    setLatTouched(true);
-    if (latText === '') {
-      updateProfile({ latitude: null });
-    } else if (isValidLat(latText)) {
-      updateProfile({ latitude: Math.round(parseFloat(latText) * 1e6) / 1e6 });
-    }
-  }, [latText, updateProfile]);
+  // Commit on every keystroke, not on blur: a Save press does not blur the
+  // focused input before the save handler reads state, so a blur-only commit
+  // loses the last-typed field (longitude, typically).
+  const handleLatChange = useCallback(
+    (text: string) => {
+      setLatText(text);
+      if (text === '') {
+        updateProfile({ latitude: null });
+      } else if (isValidLat(text)) {
+        updateProfile({ latitude: Math.round(parseFloat(text) * 1e6) / 1e6 });
+      }
+    },
+    [updateProfile]
+  );
 
-  const handleLngBlur = useCallback(() => {
-    setLngTouched(true);
-    if (lngText === '') {
-      updateProfile({ longitude: null });
-    } else if (isValidLng(lngText)) {
-      updateProfile({ longitude: Math.round(parseFloat(lngText) * 1e6) / 1e6 });
-    }
-  }, [lngText, updateProfile]);
+  const handleLngChange = useCallback(
+    (text: string) => {
+      setLngText(text);
+      if (text === '') {
+        updateProfile({ longitude: null });
+      } else if (isValidLng(text)) {
+        updateProfile({ longitude: Math.round(parseFloat(text) * 1e6) / 1e6 });
+      }
+    },
+    [updateProfile]
+  );
+
+  const handleLatBlur = useCallback(() => setLatTouched(true), []);
+  const handleLngBlur = useCallback(() => setLngTouched(true), []);
 
   const isNew = editModal?.original === '';
   const title =
@@ -234,7 +246,7 @@ export function LocationEditModal({
                       <TextInput
                         style={[styles.coordInput, latInvalid && styles.coordInputError]}
                         value={latText}
-                        onChangeText={setLatText}
+                        onChangeText={handleLatChange}
                         onBlur={handleLatBlur}
                         keyboardType="decimal-pad"
                         placeholder="8.0883"
@@ -246,7 +258,7 @@ export function LocationEditModal({
                       <TextInput
                         style={[styles.coordInput, lngInvalid && styles.coordInputError]}
                         value={lngText}
-                        onChangeText={setLngText}
+                        onChangeText={handleLngChange}
                         onBlur={handleLngBlur}
                         keyboardType="decimal-pad"
                         placeholder="77.5500"

@@ -55,6 +55,7 @@ export default function MyFarmScreen(): React.JSX.Element {
     shortNames,
     locationProfiles,
     loading,
+    plantsLoading,
     saving,
     editModal,
     reassignModal,
@@ -230,8 +231,11 @@ export default function MyFarmScreen(): React.JSX.Element {
                         )}
                       </View>
                       <Text style={styles.locationMeta}>
-                        {parentCounts[location] || 0} plant
-                        {(parentCounts[location] || 0) === 1 ? '' : 's'}
+                        {plantsLoading
+                          ? 'Counting plants…'
+                          : `${parentCounts[location] || 0} plant${
+                              (parentCounts[location] || 0) === 1 ? '' : 's'
+                            }`}
                       </Text>
                       {showSoilStrip && (
                         <View style={styles.profileSummaryStrip}>
@@ -367,8 +371,11 @@ export default function MyFarmScreen(): React.JSX.Element {
                   <View style={styles.locationInfo}>
                     <Text style={styles.locationName}>{location}</Text>
                     <Text style={styles.locationMeta}>
-                      {childCounts[location] || 0} plant
-                      {(childCounts[location] || 0) === 1 ? '' : 's'}
+                      {plantsLoading
+                        ? 'Counting plants…'
+                        : `${childCounts[location] || 0} plant${
+                            (childCounts[location] || 0) === 1 ? '' : 's'
+                          }`}
                     </Text>
                   </View>
                   <View style={styles.locationActions}>
