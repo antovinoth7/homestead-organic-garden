@@ -11,6 +11,7 @@ import type { PlantPhotoItem } from '@/utils/plantPhotos';
 import type { Plant, JournalEntry } from '@/types/database.types';
 
 interface Props {
+  header: React.ReactNode;
   plant: Plant;
   journalEntries: JournalEntry[];
 }
@@ -18,7 +19,7 @@ interface Props {
 const COLUMNS = 3;
 
 /** Photo timeline aggregating the plant, journal and pest/disease photos. */
-export function PlantPicturesTab({ plant, journalEntries }: Props): React.JSX.Element {
+export function PlantPicturesTab({ header, plant, journalEntries }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { photos, loading } = usePlantPhotos({ plant, journalEntries });
@@ -51,15 +52,14 @@ export function PlantPicturesTab({ plant, journalEntries }: Props): React.JSX.El
 
   const keyExtractor = useCallback((item: PlantPhotoItem) => item.id, []);
 
-  if (loading && photos.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={theme.primary} />
-      </View>
-    );
-  }
-
-  if (photos.length === 0) {
+  const renderEmpty = useCallback(() => {
+    if (loading) {
+      return (
+        <View style={styles.centered}>
+          <ActivityIndicator color={theme.primary} />
+        </View>
+      );
+    }
     return (
       <View style={styles.centered}>
         <Ionicons name="images-outline" size={48} color={theme.textTertiary} />
@@ -69,7 +69,7 @@ export function PlantPicturesTab({ plant, journalEntries }: Props): React.JSX.El
         </Text>
       </View>
     );
-  }
+  }, [loading, styles, theme]);
 
   return (
     <>
@@ -78,6 +78,8 @@ export function PlantPicturesTab({ plant, journalEntries }: Props): React.JSX.El
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         numColumns={COLUMNS}
+        ListHeaderComponent={<>{header}</>}
+        ListEmptyComponent={renderEmpty}
         contentContainerStyle={styles.grid}
         removeClippedSubviews
       />

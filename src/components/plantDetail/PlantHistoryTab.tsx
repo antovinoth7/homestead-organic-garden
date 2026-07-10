@@ -14,6 +14,7 @@ import { JournalEntryType } from '@/types/database.types';
 import type { Plant, JournalEntry, TaskType } from '@/types/database.types';
 
 interface Props {
+  header: React.ReactNode;
   plant: Plant;
   journalEntries: JournalEntry[];
   enabled: boolean;
@@ -109,7 +110,12 @@ function describeItem(item: PlantHistoryItem, theme: Theme): RowVisual {
 }
 
 /** Merged, filterable chronological history for a plant. */
-export function PlantHistoryTab({ plant, journalEntries, enabled }: Props): React.JSX.Element {
+export function PlantHistoryTab({
+  header,
+  plant,
+  journalEntries,
+  enabled,
+}: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { items, loading, error } = usePlantHistory({ plant, journalEntries, enabled });
@@ -147,27 +153,42 @@ export function PlantHistoryTab({ plant, journalEntries, enabled }: Props): Reac
 
   const keyExtractor = useCallback((item: PlantHistoryItem) => item.id, []);
 
-  return (
-    <View style={styles.container}>
-      <SegmentedTabs tabs={FILTERS} activeKey={filter} onChange={setFilter} />
-      {loading && items.length === 0 ? (
+  const listHeader = useMemo(
+    () => (
+      <>
+        {header}
+        <SegmentedTabs tabs={FILTERS} activeKey={filter} onChange={setFilter} />
+      </>
+    ),
+    [header, filter]
+  );
+
+  const renderEmpty = useCallback(() => {
+    if (loading && items.length === 0) {
+      return (
         <View style={styles.centered}>
           <ActivityIndicator color={theme.primary} />
         </View>
-      ) : filtered.length === 0 ? (
-        <View style={styles.centered}>
-          <Ionicons name="time-outline" size={44} color={theme.textTertiary} />
-          <Text style={styles.emptyText}>{error ?? EMPTY_COPY[filter]}</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filtered}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={styles.list}
-          removeClippedSubviews
-        />
-      )}
-    </View>
+      );
+    }
+    return (
+      <View style={styles.centered}>
+        <Ionicons name="time-outline" size={44} color={theme.textTertiary} />
+        <Text style={styles.emptyText}>{error ?? EMPTY_COPY[filter]}</Text>
+      </View>
+    );
+  }, [loading, items.length, error, filter, styles, theme]);
+
+  return (
+    <FlatList
+      style={styles.container}
+      data={filtered}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={renderEmpty}
+      contentContainerStyle={styles.list}
+      removeClippedSubviews
+    />
   );
 }

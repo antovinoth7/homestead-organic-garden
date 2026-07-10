@@ -7,13 +7,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
     },
     list: {
-      padding: 16,
+      paddingBottom: 48,
     },
     row: {
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: 12,
       paddingVertical: 12,
+      paddingHorizontal: 16,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: theme.borderLight,
     },
@@ -45,10 +46,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 2,
     },
     centered: {
-      flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 40,
+      paddingVertical: 56,
       gap: 10,
     },
     emptyText: {

@@ -8,6 +8,7 @@ import { DetailCareGuidanceSection } from '@/components/DetailCareGuidanceSectio
 import { CompanionPlantingSection } from '@/components/CompanionPlantingSection';
 
 interface Props {
+  header: React.ReactNode;
   plantType: string;
   plantVariety: string;
   companions: string[];
@@ -16,6 +17,7 @@ interface Props {
 
 /** Species-reference guidance derived from the plant's type and variety. */
 export function PlantDetailInfoTab({
+  header,
   plantType,
   plantVariety,
   companions,
@@ -30,6 +32,7 @@ export function PlantDetailInfoTab({
       style={styles.container}
       contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
     >
+      {header}
       <View style={styles.content}>
         <DetailQuickInfoSection
           theme={theme}

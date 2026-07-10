@@ -1,7 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import type { ImageStyle } from 'react-native';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { pinGrowthStage, unpinGrowthStage, archivePlant } from '@/services/plants';
@@ -10,6 +8,7 @@ import type { GrowthStage } from '@/types/database.types';
 import { useTheme } from '@/theme';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { createStyles } from '@/styles/plantDetailStyles';
+import { PlantDetailHero } from '@/components/plantDetail/PlantDetailHero';
 import {
   getCompanionSuggestions,
   getIncompatiblePlants,
@@ -19,7 +18,6 @@ import {
   getEffectiveGrowthStage,
 } from '@/utils/plantHelpers';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
-import { PlantKeyInfoSection } from '@/components/PlantKeyInfoSection';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
 import { PinGrowthStageModal } from '@/components/PinGrowthStageModal';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
@@ -165,6 +163,8 @@ export default function PlantDetailScreen(): React.JSX.Element {
     );
   };
 
+  const hero = <PlantDetailHero plant={plant} onPhotoPress={() => setZoomVisible(true)} />;
+
   return (
     <View style={styles.container}>
       <ScreenHeader
@@ -182,23 +182,6 @@ export default function PlantDetailScreen(): React.JSX.Element {
         }
       />
 
-      {plant.photo_url ? (
-        <TouchableOpacity activeOpacity={0.9} onPress={() => setZoomVisible(true)}>
-          <Image
-            source={{ uri: plant.photo_url }}
-            style={styles.photo as ImageStyle}
-            contentFit="cover"
-            transition={200}
-            cachePolicy="memory-disk"
-            priority="high"
-          />
-        </TouchableOpacity>
-      ) : (
-        <View style={[styles.photo, styles.photoPlaceholder]}>
-          <Ionicons name="leaf" size={64} color={theme.primary} />
-        </View>
-      )}
-
       {plant.photo_url && (
         <ImageZoomModal
           visible={zoomVisible}
@@ -207,15 +190,12 @@ export default function PlantDetailScreen(): React.JSX.Element {
         />
       )}
 
-      <View style={styles.keyInfoWrapper}>
-        <PlantKeyInfoSection styles={styles} theme={theme} plant={plant} />
-      </View>
-
       <SegmentedTabs tabs={TABS} activeKey={activeTab} onChange={handleTabChange} />
 
       <View style={styles.tabContent}>
         {activeTab === 'care' && (
           <PlantDetailCareTab
+            header={hero}
             plant={plant}
             tasks={tasks}
             harvestEntries={harvestEntries}
@@ -236,6 +216,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
         )}
         {activeTab === 'info' && (
           <PlantDetailInfoTab
+            header={hero}
             plantType={plant.plant_type}
             plantVariety={plant.plant_variety || ''}
             companions={companions}
@@ -243,10 +224,11 @@ export default function PlantDetailScreen(): React.JSX.Element {
           />
         )}
         {activeTab === 'pictures' && (
-          <PlantPicturesTab plant={plant} journalEntries={journalEntries} />
+          <PlantPicturesTab header={hero} plant={plant} journalEntries={journalEntries} />
         )}
         {activeTab === 'history' && (
           <PlantHistoryTab
+            header={hero}
             plant={plant}
             journalEntries={journalEntries}
             enabled={historyEnabled}

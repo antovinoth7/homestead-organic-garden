@@ -21,6 +21,7 @@ import type {
 } from '@/utils/plantHelpers';
 
 interface Props {
+  header: React.ReactNode;
   plant: Plant;
   tasks: TaskTemplate[];
   harvestEntries: JournalEntry[];
@@ -41,6 +42,7 @@ interface Props {
 
 /** Instance-specific care content for a planted specimen. */
 export function PlantDetailCareTab({
+  header,
   plant,
   tasks,
   harvestEntries,
@@ -67,6 +69,7 @@ export function PlantDetailCareTab({
       style={styles.container}
       contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
     >
+      {header}
       <View style={styles.content}>
         <GrowthStageSection
           styles={styles}

@@ -18,10 +18,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.backgroundSecondary,
     },
     centered: {
-      flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 40,
+      paddingVertical: 56,
       gap: 8,
     },
     emptyTitle: {
