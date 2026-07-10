@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { getTaskLogs } from '@/services/tasks';
+import { getTaskLogs, getStoredTaskLogs } from '@/services/tasks';
 import { mergePlantHistory } from '@/utils/plantHistory';
 import type { PlantHistoryItem } from '@/utils/plantHistory';
 import type { Plant, JournalEntry, TaskLog } from '@/types/database.types';
@@ -46,6 +46,17 @@ export function usePlantHistory({
     hasLoadedRef.current = true;
     setLoading(true);
     void (async () => {
+      // Paint locally-stored logs first so History appears instantly, then
+      // refresh from the (cache-backed) network read.
+      try {
+        const stored = await getStoredTaskLogs();
+        if (isMountedRef.current && stored.length > 0) {
+          setTaskLogs(stored.filter((log) => log.plant_id === plant.id));
+          setLoading(false);
+        }
+      } catch {
+        // Ignore — the network read below is the source of truth.
+      }
       try {
         const logs = await getTaskLogs();
         if (!isMountedRef.current) return;
