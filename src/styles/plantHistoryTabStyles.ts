@@ -3,12 +3,8 @@ import type { Theme } from '@/theme/colors';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-    },
-    list: {
-      paddingBottom: 48,
-    },
+    container: {},
+    list: {},
     row: {
       flexDirection: 'row',
       alignItems: 'flex-start',

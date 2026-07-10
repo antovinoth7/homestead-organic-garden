@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import type { ListRenderItem } from 'react-native';
-import { View, Text, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import type { Theme } from '@/theme/colors';
@@ -14,7 +13,6 @@ import { JournalEntryType } from '@/types/database.types';
 import type { Plant, JournalEntry, TaskType } from '@/types/database.types';
 
 interface Props {
-  header: React.ReactNode;
   plant: Plant;
   journalEntries: JournalEntry[];
   enabled: boolean;
@@ -110,12 +108,7 @@ function describeItem(item: PlantHistoryItem, theme: Theme): RowVisual {
 }
 
 /** Merged, filterable chronological history for a plant. */
-export function PlantHistoryTab({
-  header,
-  plant,
-  journalEntries,
-  enabled,
-}: Props): React.JSX.Element {
+export function PlantHistorySection({ plant, journalEntries, enabled }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { items, loading, error } = usePlantHistory({ plant, journalEntries, enabled });
@@ -123,15 +116,15 @@ export function PlantHistoryTab({
 
   const filtered = useMemo(() => filterHistoryItems(items, filter), [items, filter]);
 
-  const renderItem = useCallback<ListRenderItem<PlantHistoryItem>>(
-    ({ item }) => {
+  const renderRow = useCallback(
+    (item: PlantHistoryItem) => {
       const visual = describeItem(item, theme);
       const date = new Date(item.date);
       const dateLabel = Number.isNaN(date.getTime())
         ? ''
         : date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
       return (
-        <View style={styles.row}>
+        <View key={item.id} style={styles.row}>
           <View style={styles.iconWrap}>
             <Ionicons name={visual.icon} size={18} color={visual.color} />
           </View>
@@ -151,44 +144,21 @@ export function PlantHistoryTab({
     [styles, theme]
   );
 
-  const keyExtractor = useCallback((item: PlantHistoryItem) => item.id, []);
-
-  const listHeader = useMemo(
-    () => (
-      <>
-        {header}
-        <SegmentedTabs tabs={FILTERS} activeKey={filter} onChange={setFilter} />
-      </>
-    ),
-    [header, filter]
-  );
-
-  const renderEmpty = useCallback(() => {
-    if (loading && items.length === 0) {
-      return (
+  return (
+    <View style={styles.container}>
+      <SegmentedTabs tabs={FILTERS} activeKey={filter} onChange={setFilter} />
+      {loading && items.length === 0 ? (
         <View style={styles.centered}>
           <ActivityIndicator color={theme.primary} />
         </View>
-      );
-    }
-    return (
-      <View style={styles.centered}>
-        <Ionicons name="time-outline" size={44} color={theme.textTertiary} />
-        <Text style={styles.emptyText}>{error ?? EMPTY_COPY[filter]}</Text>
-      </View>
-    );
-  }, [loading, items.length, error, filter, styles, theme]);
-
-  return (
-    <FlatList
-      style={styles.container}
-      data={filtered}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      ListHeaderComponent={listHeader}
-      ListEmptyComponent={renderEmpty}
-      contentContainerStyle={styles.list}
-      removeClippedSubviews
-    />
+      ) : filtered.length === 0 ? (
+        <View style={styles.centered}>
+          <Ionicons name="time-outline" size={44} color={theme.textTertiary} />
+          <Text style={styles.emptyText}>{error ?? EMPTY_COPY[filter]}</Text>
+        </View>
+      ) : (
+        <View style={styles.list}>{filtered.map(renderRow)}</View>
+      )}
+    </View>
   );
 }

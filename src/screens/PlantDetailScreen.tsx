@@ -1,6 +1,7 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { pinGrowthStage, unpinGrowthStage, archivePlant } from '@/services/plants';
 import { JournalEntryType } from '@/types/database.types';
@@ -22,17 +23,20 @@ import { ImageZoomModal } from '@/components/ImageZoomModal';
 import { PinGrowthStageModal } from '@/components/PinGrowthStageModal';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
 import type { SegmentedTab } from '@/components/SegmentedTabs';
-import { PlantDetailCareTab } from '@/components/plantDetail/PlantDetailCareTab';
-import { PlantDetailInfoTab } from '@/components/plantDetail/PlantDetailInfoTab';
-import { PlantPicturesTab } from '@/components/plantDetail/PlantPicturesTab';
-import { PlantHistoryTab } from '@/components/plantDetail/PlantHistoryTab';
+import { PlantDetailCareSection } from '@/components/plantDetail/PlantDetailCareSection';
+import { PlantDetailInfoSection } from '@/components/plantDetail/PlantDetailInfoSection';
+import { PlantPicturesSection } from '@/components/plantDetail/PlantPicturesSection';
+import { PlantHistorySection } from '@/components/plantDetail/PlantHistorySection';
 import { usePlantDetail } from '@/hooks/usePlantDetail';
+import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
 import {
   PlantDetailScreenNavigationProp,
   PlantDetailScreenRouteProp,
 } from '@/types/navigation.types';
 
 type PlantDetailTabKey = 'care' | 'info' | 'pictures' | 'history';
+
+const TAB_KEYS: readonly PlantDetailTabKey[] = ['care', 'info', 'pictures', 'history'];
 
 const TABS: readonly SegmentedTab<PlantDetailTabKey>[] = [
   { key: 'care', label: 'Care', icon: 'water-outline' },
@@ -47,19 +51,28 @@ export default function PlantDetailScreen(): React.JSX.Element {
   const { plantId } = route.params ?? {};
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
 
   const { plant, tasks, journalEntries, harvestEntries, loading, reload } = usePlantDetail(plantId);
   const [isArchiving, setIsArchiving] = useState(false);
   const [zoomVisible, setZoomVisible] = useState(false);
   const [pinStageVisible, setPinStageVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<PlantDetailTabKey>('care');
-  // Task logs are an uncached read — defer loading until History is first opened.
+  // Task logs are an uncached read — defer loading until the History section is reached.
   const [historyEnabled, setHistoryEnabled] = useState(false);
 
-  const handleTabChange = useCallback((key: PlantDetailTabKey) => {
-    setActiveTab(key);
-    if (key === 'history') setHistoryEnabled(true);
-  }, []);
+  const {
+    activeKey,
+    scrollRef,
+    registerSection,
+    onTabBarLayout,
+    onScroll,
+    onMomentumScrollEnd,
+    scrollToKey,
+  } = useSectionScrollSpy<PlantDetailTabKey>(TAB_KEYS);
+
+  useEffect(() => {
+    if (activeKey === 'history') setHistoryEnabled(true);
+  }, [activeKey]);
 
   const openHarvestForm = useCallback(() => {
     navigation.navigate('Journal', {
@@ -163,8 +176,6 @@ export default function PlantDetailScreen(): React.JSX.Element {
     );
   };
 
-  const hero = <PlantDetailHero plant={plant} onPhotoPress={() => setZoomVisible(true)} />;
-
   return (
     <View style={styles.container}>
       <ScreenHeader
@@ -190,12 +201,22 @@ export default function PlantDetailScreen(): React.JSX.Element {
         />
       )}
 
-      <SegmentedTabs tabs={TABS} activeKey={activeTab} onChange={handleTabChange} />
+      <ScrollView
+        ref={scrollRef}
+        stickyHeaderIndices={[1]}
+        onScroll={onScroll}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
+      >
+        <PlantDetailHero plant={plant} onPhotoPress={() => setZoomVisible(true)} />
 
-      <View style={styles.tabContent}>
-        {activeTab === 'care' && (
-          <PlantDetailCareTab
-            header={hero}
+        <View onLayout={onTabBarLayout}>
+          <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={scrollToKey} />
+        </View>
+
+        <View onLayout={registerSection('care')}>
+          <PlantDetailCareSection
             plant={plant}
             tasks={tasks}
             harvestEntries={harvestEntries}
@@ -213,28 +234,29 @@ export default function PlantDetailScreen(): React.JSX.Element {
             onViewAllHarvests={openJournal}
             onOpenBeejamrutha={openBeejamruthaRecipe}
           />
-        )}
-        {activeTab === 'info' && (
-          <PlantDetailInfoTab
-            header={hero}
+        </View>
+
+        <View onLayout={registerSection('info')}>
+          <PlantDetailInfoSection
             plantType={plant.plant_type}
             plantVariety={plant.plant_variety || ''}
             companions={companions}
             incompatible={incompatible}
           />
-        )}
-        {activeTab === 'pictures' && (
-          <PlantPicturesTab header={hero} plant={plant} journalEntries={journalEntries} />
-        )}
-        {activeTab === 'history' && (
-          <PlantHistoryTab
-            header={hero}
+        </View>
+
+        <View onLayout={registerSection('pictures')}>
+          <PlantPicturesSection plant={plant} journalEntries={journalEntries} />
+        </View>
+
+        <View onLayout={registerSection('history')}>
+          <PlantHistorySection
             plant={plant}
             journalEntries={journalEntries}
             enabled={historyEnabled}
           />
-        )}
-      </View>
+        </View>
+      </ScrollView>
 
       <PinGrowthStageModal
         visible={pinStageVisible}

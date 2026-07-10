@@ -4,11 +4,12 @@ import type { Theme } from '@/theme/colors';
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
       padding: 2,
     },
     cell: {
-      flex: 1,
-      maxWidth: '33.333%',
+      width: '33.333%',
       aspectRatio: 1,
       padding: 2,
     },
