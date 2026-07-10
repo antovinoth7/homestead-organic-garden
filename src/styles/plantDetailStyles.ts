@@ -83,9 +83,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginLeft: 12,
     },
-    notesSection: {
-      marginBottom: 24,
-    },
     sectionTitle: {
       fontSize: 18,
       fontWeight: '600',
@@ -207,9 +204,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 4,
       lineHeight: 18,
     },
-    tasksSection: {
-      marginBottom: 24,
-    },
     taskItem: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -255,12 +249,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.card,
       padding: 16,
       borderRadius: 12,
-      marginBottom: 16,
-    },
-    harvestHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
       marginBottom: 16,
     },
     harvestStats: {
@@ -648,24 +636,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       padding: 12,
       borderColor: theme.warning,
       backgroundColor: theme.warning + '20',
-    },
-    beejamruthaCta: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginHorizontal: 16,
-      marginBottom: 12,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderRadius: 12,
-      backgroundColor: theme.primaryLight,
-      borderWidth: 1,
-      borderColor: theme.primary + '40',
-    },
-    beejamruthaCtaText: {
-      flex: 1,
-      fontSize: 13,
-      fontWeight: '600' as const,
-      color: theme.text,
     },
   });

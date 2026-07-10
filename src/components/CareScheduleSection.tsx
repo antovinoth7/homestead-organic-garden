@@ -6,6 +6,7 @@ import type { Plant } from '@/types/database.types';
 import type { createStyles } from '@/styles/plantDetailStyles';
 import { formatTimestampDisplay } from '@/utils/dateHelpers';
 import { PlantInfoRow } from '@/components/PlantInfoRow';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 
 type DetailStyles = ReturnType<typeof createStyles>;
 
@@ -18,8 +19,7 @@ interface Props {
 /** §3 — Last care summary grid and care frequencies. */
 export function CareScheduleSection({ styles, theme, plant }: Props): React.JSX.Element {
   return (
-    <View style={styles.careSection}>
-      <Text style={styles.sectionTitle}>📋 Care & Schedule</Text>
+    <DetailCard title="Care & Schedule" icon="calendar-outline">
       {(plant.last_watered_date || plant.last_fertilised_date || plant.last_pruned_date) && (
         <View style={styles.lastCareGrid}>
           {plant.last_watered_date && (
@@ -69,6 +69,6 @@ export function CareScheduleSection({ styles, theme, plant }: Props): React.JSX.
           text="Mulching applied"
         />
       )}
-    </View>
+    </DetailCard>
   );
 }

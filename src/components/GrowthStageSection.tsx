@@ -7,6 +7,7 @@ import type { EffectiveGrowthStage } from '@/utils/plantHelpers';
 import type { createStyles } from '@/styles/plantDetailStyles';
 import GrowthStageTimeline from '@/components/GrowthStageTimeline';
 import { PlantInfoRow } from '@/components/PlantInfoRow';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 
 type DetailStyles = ReturnType<typeof createStyles>;
 
@@ -50,8 +51,7 @@ export function GrowthStageSection({
   if (!effectiveStage && !plant.growth_stage) return null;
 
   return (
-    <View style={styles.careSection}>
-      <Text style={styles.sectionTitle}>🌱 Growth Stage</Text>
+    <DetailCard title="Growth Stage" icon="trending-up">
       {effectiveStage && (
         <>
           <PlantInfoRow
@@ -97,6 +97,6 @@ export function GrowthStageSection({
           }`}
         />
       )}
-    </View>
+    </DetailCard>
   );
 }

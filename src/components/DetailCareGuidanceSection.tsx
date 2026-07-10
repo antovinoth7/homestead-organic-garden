@@ -2,8 +2,8 @@ import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { createStyles } from '@/styles/plantDetailStyles';
 import { createEnrichedSectionStyles } from '@/styles/enrichedSectionStyles';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 import { getPlantCareProfile, getPruningTechniques } from '@/utils/plantCareDefaults';
 import { getCommonPests, getCommonDiseases, getPestDiseaseEmoji } from '@/utils/plantHelpers';
 import { getPestByName } from '@/config/pests';
@@ -25,7 +25,6 @@ export function DetailCareGuidanceSection({
   plantVariety,
   plantCareProfiles,
 }: Props): React.JSX.Element | null {
-  const styles = useMemo(() => createStyles(theme), [theme]);
   const enrichedStyles = useMemo(() => createEnrichedSectionStyles(theme), [theme]);
   const navigation = useNavigation<PlantDetailScreenNavigationProp>();
 
@@ -88,9 +87,7 @@ export function DetailCareGuidanceSection({
   if (!hasPruning && !hasPests && !hasDiseases && !hasDescription) return null;
 
   return (
-    <View style={styles.careSection}>
-      <Text style={styles.sectionTitle}>📖 Care Guidance</Text>
-
+    <DetailCard title="Care Guidance" icon="book-outline">
       {hasDescription && (
         <View style={enrichedStyles.narrativeBlock}>
           <Text style={enrichedStyles.narrativeText}>{profile!.description}</Text>
@@ -197,6 +194,6 @@ export function DetailCareGuidanceSection({
           </View>
         </View>
       )}
-    </View>
+    </DetailCard>
   );
 }

@@ -7,6 +7,7 @@ import { useTheme } from '../theme';
 import type { Theme } from '../theme/colors';
 import { summarizeHarvests, groupHarvestsBySeason, groupHarvestsByTree } from '../utils/harvestStats';
 import HarvestYieldChart from './HarvestYieldChart';
+import { DetailCard } from './plantDetail/DetailCard';
 
 interface HarvestHistorySectionProps {
   plantType: PlantType;
@@ -36,15 +37,17 @@ export default function HarvestHistorySection({
   }
 
   return (
-    <View style={styles.harvestSection}>
-      <View style={styles.harvestHeader}>
-        <Text style={styles.sectionTitle}>🧺 Harvest History</Text>
-        {harvestEntries.length > 0 && (
+    <DetailCard
+      title="Harvest History"
+      icon="basket-outline"
+      action={
+        harvestEntries.length > 0 ? (
           <TouchableOpacity onPress={onRecordHarvest}>
             <Ionicons name="add-circle" size={24} color={theme.primary} />
           </TouchableOpacity>
-        )}
-      </View>
+        ) : undefined
+      }
+    >
       {harvestEntries.length > 0 ? (
         <>
           {/* Harvest Statistics */}
@@ -157,6 +160,6 @@ export default function HarvestHistorySection({
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </DetailCard>
   );
 }

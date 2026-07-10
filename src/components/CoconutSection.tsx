@@ -6,6 +6,7 @@ import type { Plant } from '@/types/database.types';
 import type { CoconutAgeInfo, CoconutNutrientDeficiency } from '@/utils/plantHelpers';
 import type { createStyles } from '@/styles/plantDetailStyles';
 import { PlantInfoRow } from '@/components/PlantInfoRow';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 
 type DetailStyles = ReturnType<typeof createStyles>;
 
@@ -47,8 +48,7 @@ export function CoconutSection({
   if (!hasContent) return null;
 
   return (
-    <View style={styles.careSection}>
-      <Text style={styles.sectionTitle}>🥥 Coconut</Text>
+    <DetailCard title="Coconut" icon="leaf-outline">
       {coconutAge && (
         <>
           <PlantInfoRow
@@ -159,6 +159,6 @@ export function CoconutSection({
           ))}
         </>
       )}
-    </View>
+    </DetailCard>
   );
 }

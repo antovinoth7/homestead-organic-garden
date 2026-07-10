@@ -3,7 +3,7 @@ import type { Theme } from '@/theme/colors';
 import type { Plant } from '@/types/database.types';
 import type { createStyles } from '@/styles/plantDetailStyles';
 import { formatDateDisplay } from '@/utils/dateHelpers';
-import { DetailSection } from '@/components/DetailSection';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 import { PlantInfoRow } from '@/components/PlantInfoRow';
 
 type DetailStyles = ReturnType<typeof createStyles>;
@@ -33,7 +33,7 @@ export function HarvestInfoSection({
   }
 
   return (
-    <DetailSection styles={styles} title="🍎 Harvest Info">
+    <DetailCard title="Harvest" icon="nutrition-outline">
       {plant.harvest_season && (
         <PlantInfoRow
           styles={styles}
@@ -62,6 +62,6 @@ export function HarvestInfoSection({
           )}`}
         />
       )}
-    </DetailSection>
+    </DetailCard>
   );
 }

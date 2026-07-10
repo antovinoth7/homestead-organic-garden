@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import type { TaskTemplate } from '@/types/database.types';
 import type { createStyles } from '@/styles/plantDetailStyles';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 
 type DetailStyles = ReturnType<typeof createStyles>;
 
@@ -13,8 +14,7 @@ interface Props {
 /** §11 — Recurring task templates for this plant. */
 export function PlantTasksSection({ styles, tasks }: Props): React.JSX.Element {
   return (
-    <View style={styles.tasksSection}>
-      <Text style={styles.sectionTitle}>Tasks ({tasks.length})</Text>
+    <DetailCard title={`Tasks (${tasks.length})`} icon="repeat-outline">
       {tasks.map((task) => (
         <View key={task.id} style={styles.taskItem}>
           <View style={styles.taskLeft}>
@@ -28,6 +28,6 @@ export function PlantTasksSection({ styles, tasks }: Props): React.JSX.Element {
           </Text>
         </View>
       ))}
-    </View>
+    </DetailCard>
   );
 }

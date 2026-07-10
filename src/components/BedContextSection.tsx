@@ -7,6 +7,7 @@ import { Plant, Bed } from '@/types/database.types';
 import { getBed } from '@/services/beds';
 import { getPlantsByBed } from '@/services/plants';
 import { createEnrichedSectionStyles as createStyles } from '@/styles/enrichedSectionStyles';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 
 interface Props {
   plant: Plant;
@@ -37,8 +38,7 @@ export function BedContextSection({ plant }: Props): React.JSX.Element | null {
   if (!plant.bed_id || !bed) return null;
 
   return (
-    <View style={styles.bedSection}>
-      <Text style={styles.bedSectionTitle}>Bed Context</Text>
+    <DetailCard title="Bed" icon="grid-outline">
       <TouchableOpacity
         style={styles.bedLink}
         onPress={() =>
@@ -65,6 +65,6 @@ export function BedContextSection({ plant }: Props): React.JSX.Element | null {
           <Text style={styles.bedInfoValue}>{bedMates.map((m) => m.name).join(', ')}</Text>
         </View>
       )}
-    </View>
+    </DetailCard>
   );
 }
