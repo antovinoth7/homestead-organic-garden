@@ -1,9 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import type { ImageStyle } from 'react-native';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { pinGrowthStage, unpinGrowthStage, archivePlant } from '@/services/plants';
 import { JournalEntryType } from '@/types/database.types';
@@ -20,27 +19,29 @@ import {
   getEffectiveGrowthStage,
 } from '@/utils/plantHelpers';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
-import PestDiseaseHistorySection from '@/components/PestDiseaseHistorySection';
-import HarvestHistorySection from '@/components/HarvestHistorySection';
-import { DetailQuickInfoSection } from '@/components/DetailQuickInfoSection';
-import { BedContextSection } from '@/components/BedContextSection';
-import { DetailCareGuidanceSection } from '@/components/DetailCareGuidanceSection';
 import { PlantKeyInfoSection } from '@/components/PlantKeyInfoSection';
-import { GrowthStageSection } from '@/components/GrowthStageSection';
-import { ClearBedCta } from '@/components/ClearBedCta';
-import { CareScheduleSection } from '@/components/CareScheduleSection';
-import { CompanionPlantingSection } from '@/components/CompanionPlantingSection';
-import { HarvestInfoSection } from '@/components/HarvestInfoSection';
-import { CoconutSection } from '@/components/CoconutSection';
-import { PlantNotesSection } from '@/components/PlantNotesSection';
-import { PlantTasksSection } from '@/components/PlantTasksSection';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
 import { PinGrowthStageModal } from '@/components/PinGrowthStageModal';
+import { SegmentedTabs } from '@/components/SegmentedTabs';
+import type { SegmentedTab } from '@/components/SegmentedTabs';
+import { PlantDetailCareTab } from '@/components/plantDetail/PlantDetailCareTab';
+import { PlantDetailInfoTab } from '@/components/plantDetail/PlantDetailInfoTab';
+import { PlantPicturesTab } from '@/components/plantDetail/PlantPicturesTab';
+import { PlantHistoryTab } from '@/components/plantDetail/PlantHistoryTab';
 import { usePlantDetail } from '@/hooks/usePlantDetail';
 import {
   PlantDetailScreenNavigationProp,
   PlantDetailScreenRouteProp,
 } from '@/types/navigation.types';
+
+type PlantDetailTabKey = 'care' | 'info' | 'pictures' | 'history';
+
+const TABS: readonly SegmentedTab<PlantDetailTabKey>[] = [
+  { key: 'care', label: 'Care', icon: 'water-outline' },
+  { key: 'info', label: 'Info', icon: 'book-outline' },
+  { key: 'pictures', label: 'Pictures', icon: 'images-outline' },
+  { key: 'history', label: 'History', icon: 'time-outline' },
+];
 
 export default function PlantDetailScreen(): React.JSX.Element {
   const navigation = useNavigation<PlantDetailScreenNavigationProp>();
@@ -48,12 +49,19 @@ export default function PlantDetailScreen(): React.JSX.Element {
   const { plantId } = route.params ?? {};
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const insets = useSafeAreaInsets();
 
-  const { plant, tasks, harvestEntries, loading, reload } = usePlantDetail(plantId);
+  const { plant, tasks, journalEntries, harvestEntries, loading, reload } = usePlantDetail(plantId);
   const [isArchiving, setIsArchiving] = useState(false);
   const [zoomVisible, setZoomVisible] = useState(false);
   const [pinStageVisible, setPinStageVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<PlantDetailTabKey>('care');
+  // Task logs are an uncached read — defer loading until History is first opened.
+  const [historyEnabled, setHistoryEnabled] = useState(false);
+
+  const handleTabChange = useCallback((key: PlantDetailTabKey) => {
+    setActiveTab(key);
+    if (key === 'history') setHistoryEnabled(true);
+  }, []);
 
   const openHarvestForm = useCallback(() => {
     navigation.navigate('Journal', {
@@ -70,6 +78,10 @@ export default function PlantDetailScreen(): React.JSX.Element {
       screen: 'InputRecipes',
       params: { initialTab: 'beejamrutha' },
     });
+  }, [navigation]);
+
+  const openJournal = useCallback(() => {
+    navigation.navigate('Journal');
   }, [navigation]);
 
   if (!plantId) {
@@ -154,7 +166,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
   };
 
   return (
-    <>
+    <View style={styles.container}>
       <ScreenHeader
         title={plant.name}
         onBack={() => navigation.goBack()}
@@ -169,130 +181,78 @@ export default function PlantDetailScreen(): React.JSX.Element {
           </TouchableOpacity>
         }
       />
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
-      >
-        {plant.photo_url ? (
-          <TouchableOpacity activeOpacity={0.9} onPress={() => setZoomVisible(true)}>
-            <Image
-              source={{ uri: plant.photo_url }}
-              style={styles.photo as ImageStyle}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
-              priority="high"
-            />
-          </TouchableOpacity>
-        ) : (
-          <View style={[styles.photo, styles.photoPlaceholder]}>
-            <Ionicons name="leaf" size={64} color={theme.primary} />
-          </View>
-        )}
 
-        {plant.photo_url && (
-          <ImageZoomModal
-            visible={zoomVisible}
-            uri={plant.photo_url}
-            onClose={() => setZoomVisible(false)}
+      {plant.photo_url ? (
+        <TouchableOpacity activeOpacity={0.9} onPress={() => setZoomVisible(true)}>
+          <Image
+            source={{ uri: plant.photo_url }}
+            style={styles.photo as ImageStyle}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+            priority="high"
           />
-        )}
+        </TouchableOpacity>
+      ) : (
+        <View style={[styles.photo, styles.photoPlaceholder]}>
+          <Ionicons name="leaf" size={64} color={theme.primary} />
+        </View>
+      )}
 
-        <View style={styles.content}>
-          <PlantKeyInfoSection styles={styles} theme={theme} plant={plant} />
+      {plant.photo_url && (
+        <ImageZoomModal
+          visible={zoomVisible}
+          uri={plant.photo_url}
+          onClose={() => setZoomVisible(false)}
+        />
+      )}
 
-          <GrowthStageSection
-            styles={styles}
-            theme={theme}
+      <View style={styles.keyInfoWrapper}>
+        <PlantKeyInfoSection styles={styles} theme={theme} plant={plant} />
+      </View>
+
+      <SegmentedTabs tabs={TABS} activeKey={activeTab} onChange={handleTabChange} />
+
+      <View style={styles.tabContent}>
+        {activeTab === 'care' && (
+          <PlantDetailCareTab
             plant={plant}
+            tasks={tasks}
+            harvestEntries={harvestEntries}
             effectiveStage={effectiveStage}
             careProfile={careProfile}
             isPinned={isPinned}
+            isArchiving={isArchiving}
+            computedHarvestDate={computedHarvestDate}
+            coconutAge={coconutAge}
+            coconutDeficiencies={coconutDeficiencies}
             onPin={() => setPinStageVisible(true)}
             onUnpin={handleUnpin}
-          />
-
-          <ClearBedCta
-            styles={styles}
-            theme={theme}
-            plant={plant}
-            effectiveStage={effectiveStage}
-            isArchiving={isArchiving}
             onClearBed={handleClearBed}
+            onRecordHarvest={openHarvestForm}
+            onViewAllHarvests={openJournal}
+            onOpenBeejamrutha={openBeejamruthaRecipe}
           />
-
-          <CareScheduleSection styles={styles} theme={theme} plant={plant} />
-
-          {plant.plant_type !== 'coconut_tree' && (
-            <TouchableOpacity
-              style={styles.beejamruthaCta}
-              onPress={openBeejamruthaRecipe}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="leaf-outline" size={20} color={theme.primary} />
-              <Text style={styles.beejamruthaCtaText}>
-                Treat seeds with Beejamrutha before sowing
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-            </TouchableOpacity>
-          )}
-
-          <BedContextSection plant={plant} />
-
-          <DetailQuickInfoSection
-            theme={theme}
+        )}
+        {activeTab === 'info' && (
+          <PlantDetailInfoTab
             plantType={plant.plant_type}
             plantVariety={plant.plant_variety || ''}
-            plantCareProfiles={{}}
-          />
-
-          <DetailCareGuidanceSection
-            theme={theme}
-            plantType={plant.plant_type}
-            plantVariety={plant.plant_variety || ''}
-            plantCareProfiles={{}}
-          />
-
-          <PestDiseaseHistorySection
-            records={plant.pest_disease_history || []}
-            seasonalAlerts={[]}
-            styles={styles}
-          />
-
-          <CompanionPlantingSection
-            styles={styles}
             companions={companions}
             incompatible={incompatible}
           />
-
-          <HarvestInfoSection
-            styles={styles}
-            theme={theme}
+        )}
+        {activeTab === 'pictures' && (
+          <PlantPicturesTab plant={plant} journalEntries={journalEntries} />
+        )}
+        {activeTab === 'history' && (
+          <PlantHistoryTab
             plant={plant}
-            computedHarvestDate={computedHarvestDate}
+            journalEntries={journalEntries}
+            enabled={historyEnabled}
           />
-
-          <HarvestHistorySection
-            plantType={plant.plant_type}
-            harvestEntries={harvestEntries}
-            styles={styles}
-            onRecordHarvest={openHarvestForm}
-            onViewAll={() => navigation.navigate('Journal')}
-          />
-
-          <CoconutSection
-            styles={styles}
-            theme={theme}
-            plant={plant}
-            coconutAge={coconutAge}
-            coconutDeficiencies={coconutDeficiencies}
-          />
-
-          <PlantNotesSection styles={styles} plant={plant} />
-
-          <PlantTasksSection styles={styles} tasks={tasks} />
-        </View>
-      </ScrollView>
+        )}
+      </View>
 
       <PinGrowthStageModal
         visible={pinStageVisible}
@@ -301,6 +261,6 @@ export default function PlantDetailScreen(): React.JSX.Element {
         onClose={() => setPinStageVisible(false)}
         onSelect={handlePinSelect}
       />
-    </>
+    </View>
   );
 }

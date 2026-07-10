@@ -32,6 +32,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     content: {
       padding: 24,
     },
+    keyInfoWrapper: {
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      paddingBottom: 4,
+    },
+    tabContent: {
+      flex: 1,
+    },
     name: {
       fontSize: 32,
       fontWeight: 'bold',
