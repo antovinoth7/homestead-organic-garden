@@ -32,3 +32,14 @@ export function activeSectionKey<K extends string>(
   }
   return active.key;
 }
+
+/**
+ * Minimum height for the last stacked section so its top (and therefore every
+ * earlier section's top) can always be scrolled up to just under the sticky
+ * bar. Without this, short trailing sections can't reach the top because the
+ * scroll view clamps at `contentHeight - viewportHeight`. Returns 0 until the
+ * viewport is measured or when the bar already fills the viewport.
+ */
+export function lastSectionMinHeight(viewportHeight: number, barHeight: number): number {
+  return Math.max(0, viewportHeight - barHeight);
+}

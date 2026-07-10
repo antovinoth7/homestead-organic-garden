@@ -1,4 +1,4 @@
-import { activeSectionKey } from '@/utils/scrollSpy';
+import { activeSectionKey, lastSectionMinHeight } from '@/utils/scrollSpy';
 import type { SectionOffset } from '@/utils/scrollSpy';
 
 type Key = 'care' | 'info' | 'pictures' | 'history';
@@ -44,5 +44,19 @@ describe('activeSectionKey', () => {
       { key: 'info', y: 400 },
     ];
     expect(activeSectionKey(shuffled, 950, BAR)).toBe('pictures');
+  });
+});
+
+describe('lastSectionMinHeight', () => {
+  it('returns 0 before the viewport is measured', () => {
+    expect(lastSectionMinHeight(0, 0)).toBe(0);
+  });
+
+  it('returns the viewport minus the sticky bar', () => {
+    expect(lastSectionMinHeight(800, 48)).toBe(752);
+  });
+
+  it('never returns negative when the bar is taller than the viewport', () => {
+    expect(lastSectionMinHeight(40, 48)).toBe(0);
   });
 });

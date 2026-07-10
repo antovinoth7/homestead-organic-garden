@@ -65,14 +65,26 @@ export default function PlantDetailScreen(): React.JSX.Element {
     scrollRef,
     registerSection,
     onTabBarLayout,
+    onScrollViewLayout,
     onScroll,
     onMomentumScrollEnd,
     scrollToKey,
+    lastSectionMinHeight,
   } = useSectionScrollSpy<PlantDetailTabKey>(TAB_KEYS);
 
   useEffect(() => {
     if (activeKey === 'history') setHistoryEnabled(true);
   }, [activeKey]);
+
+  const handleTabPress = useCallback(
+    (key: PlantDetailTabKey) => {
+      // Enable the lazy task-log read as soon as History is requested, even if
+      // the section is too short to scroll fully under the sticky bar.
+      if (key === 'history') setHistoryEnabled(true);
+      scrollToKey(key);
+    },
+    [scrollToKey]
+  );
 
   const openHarvestForm = useCallback(() => {
     navigation.navigate('Journal', {
@@ -203,6 +215,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
 
       <ScrollView
         ref={scrollRef}
+        onLayout={onScrollViewLayout}
         stickyHeaderIndices={[1]}
         onScroll={onScroll}
         onMomentumScrollEnd={onMomentumScrollEnd}
@@ -212,7 +225,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
         <PlantDetailHero plant={plant} onPhotoPress={() => setZoomVisible(true)} />
 
         <View onLayout={onTabBarLayout}>
-          <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={scrollToKey} />
+          <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={handleTabPress} />
         </View>
 
         <View onLayout={registerSection('care')}>
@@ -249,7 +262,10 @@ export default function PlantDetailScreen(): React.JSX.Element {
           <PlantPicturesSection plant={plant} journalEntries={journalEntries} />
         </View>
 
-        <View onLayout={registerSection('history')}>
+        <View
+          onLayout={registerSection('history')}
+          style={{ minHeight: lastSectionMinHeight }}
+        >
           <PlantHistorySection
             plant={plant}
             journalEntries={journalEntries}

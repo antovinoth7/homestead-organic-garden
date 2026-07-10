@@ -5,7 +5,7 @@ import type {
   NativeSyntheticEvent,
   ScrollView,
 } from 'react-native';
-import { activeSectionKey } from '@/utils/scrollSpy';
+import { activeSectionKey, lastSectionMinHeight } from '@/utils/scrollSpy';
 import type { SectionOffset } from '@/utils/scrollSpy';
 
 interface SectionScrollSpy<K extends string> {
@@ -13,9 +13,12 @@ interface SectionScrollSpy<K extends string> {
   scrollRef: React.RefObject<ScrollView | null>;
   registerSection: (key: K) => (event: LayoutChangeEvent) => void;
   onTabBarLayout: (event: LayoutChangeEvent) => void;
+  onScrollViewLayout: (event: LayoutChangeEvent) => void;
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onMomentumScrollEnd: () => void;
   scrollToKey: (key: K) => void;
+  /** Min height for the last section so any section can scroll under the bar. */
+  lastSectionMinHeight: number;
 }
 
 /**
@@ -27,10 +30,12 @@ interface SectionScrollSpy<K extends string> {
 export function useSectionScrollSpy<K extends string>(keys: readonly K[]): SectionScrollSpy<K> {
   const scrollRef = useRef<ScrollView | null>(null);
   const offsetsRef = useRef<Map<K, number>>(new Map());
-  const tabBarHeightRef = useRef(0);
   const programmaticRef = useRef(false);
   const programmaticTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeKey, setActiveKey] = useState<K>(keys[0] as K);
+  // State (not refs) so the derived last-section min height re-renders on measure.
+  const [tabBarHeight, setTabBarHeight] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
 
   const registerSection = useCallback(
     (key: K) => (event: LayoutChangeEvent) => {
@@ -40,7 +45,11 @@ export function useSectionScrollSpy<K extends string>(keys: readonly K[]): Secti
   );
 
   const onTabBarLayout = useCallback((event: LayoutChangeEvent) => {
-    tabBarHeightRef.current = event.nativeEvent.layout.height;
+    setTabBarHeight(event.nativeEvent.layout.height);
+  }, []);
+
+  const onScrollViewLayout = useCallback((event: LayoutChangeEvent) => {
+    setViewportHeight(event.nativeEvent.layout.height);
   }, []);
 
   const onScroll = useCallback(
@@ -49,36 +58,41 @@ export function useSectionScrollSpy<K extends string>(keys: readonly K[]): Secti
       const offsets: SectionOffset<K>[] = keys
         .map((key) => ({ key, y: offsetsRef.current.get(key) }))
         .filter((o): o is SectionOffset<K> => o.y !== undefined);
-      const next = activeSectionKey(offsets, event.nativeEvent.contentOffset.y, tabBarHeightRef.current);
+      const next = activeSectionKey(offsets, event.nativeEvent.contentOffset.y, tabBarHeight);
       if (next && next !== activeKey) setActiveKey(next);
     },
-    [keys, activeKey]
+    [keys, activeKey, tabBarHeight]
   );
 
   const onMomentumScrollEnd = useCallback(() => {
     programmaticRef.current = false;
   }, []);
 
-  const scrollToKey = useCallback((key: K) => {
-    const y = offsetsRef.current.get(key);
-    if (y === undefined || !scrollRef.current) return;
-    programmaticRef.current = true;
-    setActiveKey(key);
-    scrollRef.current.scrollTo({ y: Math.max(0, y - tabBarHeightRef.current), animated: true });
-    if (programmaticTimer.current) clearTimeout(programmaticTimer.current);
-    // Fallback in case momentum-end doesn't fire (e.g. very short scrolls).
-    programmaticTimer.current = setTimeout(() => {
-      programmaticRef.current = false;
-    }, 450);
-  }, []);
+  const scrollToKey = useCallback(
+    (key: K) => {
+      const y = offsetsRef.current.get(key);
+      if (y === undefined || !scrollRef.current) return;
+      programmaticRef.current = true;
+      setActiveKey(key);
+      scrollRef.current.scrollTo({ y: Math.max(0, y - tabBarHeight), animated: true });
+      if (programmaticTimer.current) clearTimeout(programmaticTimer.current);
+      // Fallback in case momentum-end doesn't fire (e.g. very short scrolls).
+      programmaticTimer.current = setTimeout(() => {
+        programmaticRef.current = false;
+      }, 450);
+    },
+    [tabBarHeight]
+  );
 
   return {
     activeKey,
     scrollRef,
     registerSection,
     onTabBarLayout,
+    onScrollViewLayout,
     onScroll,
     onMomentumScrollEnd,
     scrollToKey,
+    lastSectionMinHeight: lastSectionMinHeight(viewportHeight, tabBarHeight),
   };
 }
