@@ -10,6 +10,7 @@ import { useTheme } from '@/theme';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { createStyles } from '@/styles/plantDetailStyles';
 import { PlantDetailHero } from '@/components/plantDetail/PlantDetailHero';
+import { PlantSectionHeader } from '@/components/plantDetail/PlantSectionHeader';
 import {
   getCompanionSuggestions,
   getIncompatiblePlants,
@@ -229,6 +230,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
         </View>
 
         <View onLayout={registerSection('care')}>
+          <PlantSectionHeader title="Care" icon="water-outline" />
           <PlantDetailCareSection
             plant={plant}
             tasks={tasks}
@@ -250,6 +252,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
         </View>
 
         <View onLayout={registerSection('info')}>
+          <PlantSectionHeader title="Info" icon="book-outline" />
           <PlantDetailInfoSection
             plantType={plant.plant_type}
             plantVariety={plant.plant_variety || ''}
@@ -259,6 +262,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
         </View>
 
         <View onLayout={registerSection('pictures')}>
+          <PlantSectionHeader title="Pictures" icon="images-outline" />
           <PlantPicturesSection plant={plant} journalEntries={journalEntries} />
         </View>
 
@@ -266,6 +270,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
           onLayout={registerSection('history')}
           style={{ minHeight: lastSectionMinHeight }}
         >
+          <PlantSectionHeader title="History" icon="time-outline" />
           <PlantHistorySection
             plant={plant}
             journalEntries={journalEntries}
