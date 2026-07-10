@@ -19,7 +19,9 @@ export function PlantKeyInfoSection({ styles, theme, plant }: Props): React.JSX.
   return (
     <>
       <Text style={styles.name}>{plant.name}</Text>
-      {plant.variety && <Text style={styles.variety}>{plant.variety}</Text>}
+      {(plant.plant_variety || plant.variety) && (
+        <Text style={styles.variety}>{plant.plant_variety || plant.variety}</Text>
+      )}
       {plant.record_kind === 'row' && plant.plant_count !== undefined && (
         <View style={styles.rowRecordBadge}>
           <Text style={styles.rowRecordBadgeText}>
@@ -29,14 +31,6 @@ export function PlantKeyInfoSection({ styles, theme, plant }: Props): React.JSX.
       )}
 
       <View style={styles.infoSection}>
-        {plant.plant_variety && (
-          <PlantInfoRow
-            styles={styles}
-            icon="leaf"
-            iconColor={theme.textSecondary}
-            text={`Type: ${plant.plant_variety}`}
-          />
-        )}
         <PlantInfoRow
           styles={styles}
           icon="location"

@@ -51,22 +51,6 @@ export function CareScheduleSection({ styles, theme, plant }: Props): React.JSX.
           )}
         </View>
       )}
-      {plant.watering_frequency_days && (
-        <PlantInfoRow
-          styles={styles}
-          icon="water"
-          iconColor={theme.primary}
-          text={`Water every ${plant.watering_frequency_days} days`}
-        />
-      )}
-      {plant.fertilising_frequency_days && (
-        <PlantInfoRow
-          styles={styles}
-          icon="nutrition"
-          iconColor={theme.accent}
-          text={`Fertilise every ${plant.fertilising_frequency_days} days`}
-        />
-      )}
       {plant.preferred_fertiliser && (
         <PlantInfoRow
           styles={styles}
@@ -83,14 +67,6 @@ export function CareScheduleSection({ styles, theme, plant }: Props): React.JSX.
           icon="checkmark-circle"
           iconColor={theme.success}
           text="Mulching applied"
-        />
-      )}
-      {plant.pruning_frequency_days && (
-        <PlantInfoRow
-          styles={styles}
-          icon="cut"
-          iconColor={theme.textSecondary}
-          text={`Prune every ${plant.pruning_frequency_days} days`}
         />
       )}
     </View>

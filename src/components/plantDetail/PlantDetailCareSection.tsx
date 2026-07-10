@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View } from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/plantDetailStyles';
 import { GrowthStageSection } from '@/components/GrowthStageSection';
@@ -35,7 +34,6 @@ interface Props {
   onClearBed: () => void;
   onRecordHarvest: () => void;
   onViewAllHarvests: () => void;
-  onOpenBeejamrutha: () => void;
 }
 
 /** Instance-specific care content for a planted specimen. */
@@ -55,7 +53,6 @@ export function PlantDetailCareSection({
   onClearBed,
   onRecordHarvest,
   onViewAllHarvests,
-  onOpenBeejamrutha,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -83,18 +80,6 @@ export function PlantDetailCareSection({
       />
 
       <CareScheduleSection styles={styles} theme={theme} plant={plant} />
-
-      {plant.plant_type !== 'coconut_tree' && (
-        <TouchableOpacity
-          style={styles.beejamruthaCta}
-          onPress={onOpenBeejamrutha}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="leaf-outline" size={20} color={theme.primary} />
-          <Text style={styles.beejamruthaCtaText}>Treat seeds with Beejamrutha before sowing</Text>
-          <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-        </TouchableOpacity>
-      )}
 
       <BedContextSection plant={plant} />
 

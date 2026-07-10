@@ -97,13 +97,6 @@ export default function PlantDetailScreen(): React.JSX.Element {
     });
   }, [navigation, plantId]);
 
-  const openBeejamruthaRecipe = useCallback(() => {
-    navigation.navigate('More', {
-      screen: 'InputRecipes',
-      params: { initialTab: 'beejamrutha' },
-    });
-  }, [navigation]);
-
   const openJournal = useCallback(() => {
     navigation.navigate('Journal');
   }, [navigation]);
@@ -247,7 +240,6 @@ export default function PlantDetailScreen(): React.JSX.Element {
             onClearBed={handleClearBed}
             onRecordHarvest={openHarvestForm}
             onViewAllHarvests={openJournal}
-            onOpenBeejamrutha={openBeejamruthaRecipe}
           />
         </View>
 
