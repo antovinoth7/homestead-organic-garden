@@ -36,6 +36,9 @@ export function WizardStep1({ formState }: Props): React.JSX.Element {
     setPlantingDate,
     showPlantingDatePicker,
     setShowPlantingDatePicker,
+    harvestSeason,
+    setHarvestSeason,
+    harvestSeasonOptions,
   } = formState;
 
   const formStyles = useMemo(() => createStyles(theme), [theme]);
@@ -70,185 +73,232 @@ export function WizardStep1({ formState }: Props): React.JSX.Element {
         )}
       </TouchableOpacity>
 
-      <View style={formStyles.chipGrid}>
-        {CATEGORY_OPTIONS.map((cat) => (
-          <TouchableOpacity
-            key={cat.value}
-            style={[
-              formStyles.chipGridItem,
-              plantType === cat.value && formStyles.chipGridItemActive,
-            ]}
-            onPress={() => {
-              setPlantType(cat.value as PlantType);
-              setPlantVariety('');
-              setVariety('');
-              setCustomVarietyMode(false);
-            }}
-            activeOpacity={0.7}
-          >
-            <Text
+      <View style={formStyles.sectionCard}>
+        <View style={formStyles.sectionCardTitleRow}>
+          <View style={formStyles.sectionCardIconWrap}>
+            <Ionicons name="leaf-outline" size={15} color={theme.primary} />
+          </View>
+          <Text style={formStyles.sectionCardTitle}>What are you planting?</Text>
+        </View>
+
+        <View style={formStyles.chipGrid}>
+          {CATEGORY_OPTIONS.map((cat) => (
+            <TouchableOpacity
+              key={cat.value}
               style={[
-                formStyles.chipGridItemText,
-                plantType === cat.value && formStyles.chipGridItemTextActive,
+                formStyles.chipGridItem,
+                plantType === cat.value && formStyles.chipGridItemActive,
               ]}
-              numberOfLines={1}
+              onPress={() => {
+                setPlantType(cat.value as PlantType);
+                setPlantVariety('');
+                setVariety('');
+                setCustomVarietyMode(false);
+              }}
+              activeOpacity={0.7}
             >
-              {cat.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  formStyles.chipGridItemText,
+                  plantType === cat.value && formStyles.chipGridItemTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {cat.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <ThemedDropdown
+          items={[
+            { label: 'Select plant', value: '' },
+            ...(specificPlantOptions.length === 0
+              ? [{ label: 'No plants yet — add in More', value: '' }]
+              : specificPlantOptions.map((v) => ({ label: v, value: v }))),
+          ]}
+          selectedValue={plantVariety}
+          onValueChange={setPlantVariety}
+          label="Plant"
+          placeholder="Plant"
+          enabled={!!plantType}
+          searchable
+        />
+
+        {varietySuggestions.length > 0 ? (
+          <>
+            <ThemedDropdown
+              items={[
+                { label: 'Select variety (optional)', value: '' },
+                ...varietySuggestions.map((s) => ({ label: s, value: s })),
+                { label: 'Other (enter manually)', value: '__custom__' },
+              ]}
+              selectedValue={customVarietyMode ? '__custom__' : variety}
+              onValueChange={(value) => {
+                if (value === '__custom__') {
+                  setCustomVarietyMode(true);
+                  setVariety('');
+                  return;
+                }
+                setCustomVarietyMode(false);
+                setVariety(value);
+              }}
+              label="Variety"
+              placeholder="Variety"
+              enabled={varietySuggestions.length > 0}
+              searchable
+            />
+            {customVarietyMode && (
+              <FloatingLabelInput
+                label="Enter custom variety"
+                value={variety}
+                onChangeText={(text) => setVariety(sanitizeAlphaNumericSpaces(text))}
+              />
+            )}
+          </>
+        ) : (
+          <FloatingLabelInput
+            label="Variety"
+            value={variety}
+            onChangeText={(text) => setVariety(sanitizeAlphaNumericSpaces(text))}
+          />
+        )}
       </View>
 
-      <ThemedDropdown
-        items={[
-          { label: 'Select plant', value: '' },
-          ...(specificPlantOptions.length === 0
-            ? [{ label: 'No plants yet — add in More', value: '' }]
-            : specificPlantOptions.map((v) => ({ label: v, value: v }))),
-        ]}
-        selectedValue={plantVariety}
-        onValueChange={setPlantVariety}
-        label="Plant"
-        placeholder="Plant"
-        enabled={!!plantType}
-        searchable
-      />
-
-      {varietySuggestions.length > 0 ? (
-        <>
-          <ThemedDropdown
-            items={[
-              { label: 'Select variety (optional)', value: '' },
-              ...varietySuggestions.map((s) => ({ label: s, value: s })),
-              { label: 'Other (enter manually)', value: '__custom__' },
-            ]}
-            selectedValue={customVarietyMode ? '__custom__' : variety}
-            onValueChange={(value) => {
-              if (value === '__custom__') {
-                setCustomVarietyMode(true);
-                setVariety('');
-                return;
-              }
-              setCustomVarietyMode(false);
-              setVariety(value);
-            }}
-            label="Variety"
-            placeholder="Variety"
-            enabled={varietySuggestions.length > 0}
-            searchable
-          />
-          {customVarietyMode && (
-            <FloatingLabelInput
-              label="Enter custom variety"
-              value={variety}
-              onChangeText={(text) => setVariety(sanitizeAlphaNumericSpaces(text))}
-            />
-          )}
-        </>
-      ) : (
-        <FloatingLabelInput
-          label="Variety"
-          value={variety}
-          onChangeText={(text) => setVariety(sanitizeAlphaNumericSpaces(text))}
-        />
-      )}
-
-      {['fruit_tree', 'timber_tree', 'coconut_tree'].includes(plantType) ? (
-        <>
-          <View style={formStyles.fieldGroupDivider} />
-          <View style={formStyles.dateCard}>
-            <TouchableOpacity
-              style={formStyles.dateCardTouchable}
-              onPress={() => setShowPlantingDatePicker(true)}
-              activeOpacity={0.7}
-            >
-              <View style={formStyles.dateCardIconWrap}>
-                <Ionicons name="calendar" size={20} color={theme.primary} />
-              </View>
-              <View style={formStyles.dateCardContent}>
-                <View style={wizardStyles.dateCardLabelRow}>
-                  <Text style={formStyles.dateCardLabel}>Planting Date</Text>
-                </View>
-                <Text
-                  style={plantingDate ? formStyles.dateCardValue : formStyles.dateCardPlaceholder}
-                >
-                  {plantingDate ? formatDateDisplay(plantingDate) : 'Tap to select date'}
-                </Text>
-              </View>
-              {plantingDate ? (
-                <TouchableOpacity
-                  onPress={() => setPlantingDate('')}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="close-circle" size={20} color={theme.textTertiary} />
-                </TouchableOpacity>
-              ) : (
-                <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
-              )}
-            </TouchableOpacity>
+      <View style={formStyles.sectionCard}>
+        <View style={formStyles.sectionCardTitleRow}>
+          <View style={formStyles.sectionCardIconWrap}>
+            <Ionicons name="calendar-outline" size={15} color={theme.primary} />
           </View>
-          {showPlantingDatePicker && (
-            <DateTimePicker
-              value={plantingDate ? new Date(plantingDate) : new Date()}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(_, selectedDate) => {
-                setShowPlantingDatePicker(Platform.OS === 'ios');
-                if (selectedDate) setPlantingDate(toLocalDateString(selectedDate));
-              }}
-            />
-          )}
-        </>
-      ) : (
-        <>
-          <View style={formStyles.fieldGroupDivider} />
-          <View style={formStyles.dateCard}>
-            <TouchableOpacity
-              style={formStyles.dateCardTouchable}
-              onPress={() => setShowPlantingDatePicker(true)}
-              activeOpacity={0.7}
-            >
-              <View style={formStyles.dateCardIconWrap}>
-                <Ionicons name="calendar" size={20} color={theme.primary} />
-              </View>
-              <View style={formStyles.dateCardContent}>
-                <View style={wizardStyles.dateCardLabelRow}>
-                  <Text style={formStyles.dateCardLabel}>Planting Date</Text>
-                  <View style={formStyles.optionalBadge}>
-                    <Text style={formStyles.optionalBadgeText}>Optional</Text>
+          <Text style={formStyles.sectionCardTitle}>Timing</Text>
+        </View>
+
+        {['fruit_tree', 'timber_tree', 'coconut_tree'].includes(plantType) ? (
+          <>
+            <View style={formStyles.dateCard}>
+              <TouchableOpacity
+                style={formStyles.dateCardTouchable}
+                onPress={() => setShowPlantingDatePicker(true)}
+                activeOpacity={0.7}
+              >
+                <View style={formStyles.dateCardIconWrap}>
+                  <Ionicons name="calendar" size={20} color={theme.primary} />
+                </View>
+                <View style={formStyles.dateCardContent}>
+                  <View style={wizardStyles.dateCardLabelRow}>
+                    <Text style={formStyles.dateCardLabel}>Planting Date</Text>
                   </View>
+                  <Text
+                    style={plantingDate ? formStyles.dateCardValue : formStyles.dateCardPlaceholder}
+                  >
+                    {plantingDate ? formatDateDisplay(plantingDate) : 'Tap to select date'}
+                  </Text>
                 </View>
-                <Text
-                  style={plantingDate ? formStyles.dateCardValue : formStyles.dateCardPlaceholder}
-                >
-                  {plantingDate ? formatDateDisplay(plantingDate) : 'Tap to select date'}
-                </Text>
+                {plantingDate ? (
+                  <TouchableOpacity
+                    onPress={() => setPlantingDate('')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close-circle" size={20} color={theme.textTertiary} />
+                  </TouchableOpacity>
+                ) : (
+                  <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
+                )}
+              </TouchableOpacity>
+            </View>
+            {showPlantingDatePicker && (
+              <DateTimePicker
+                value={plantingDate ? new Date(plantingDate) : new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(_, selectedDate) => {
+                  setShowPlantingDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) setPlantingDate(toLocalDateString(selectedDate));
+                }}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            <View style={formStyles.dateCard}>
+              <TouchableOpacity
+                style={formStyles.dateCardTouchable}
+                onPress={() => setShowPlantingDatePicker(true)}
+                activeOpacity={0.7}
+              >
+                <View style={formStyles.dateCardIconWrap}>
+                  <Ionicons name="calendar" size={20} color={theme.primary} />
+                </View>
+                <View style={formStyles.dateCardContent}>
+                  <View style={wizardStyles.dateCardLabelRow}>
+                    <Text style={formStyles.dateCardLabel}>Planting Date</Text>
+                    <View style={formStyles.optionalBadge}>
+                      <Text style={formStyles.optionalBadgeText}>Optional</Text>
+                    </View>
+                  </View>
+                  <Text
+                    style={plantingDate ? formStyles.dateCardValue : formStyles.dateCardPlaceholder}
+                  >
+                    {plantingDate ? formatDateDisplay(plantingDate) : 'Tap to select date'}
+                  </Text>
+                </View>
+                {plantingDate ? (
+                  <TouchableOpacity
+                    onPress={() => setPlantingDate('')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close-circle" size={20} color={theme.textTertiary} />
+                  </TouchableOpacity>
+                ) : (
+                  <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
+                )}
+              </TouchableOpacity>
+            </View>
+            {showPlantingDatePicker && (
+              <DateTimePicker
+                value={plantingDate ? new Date(plantingDate) : new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(_, selectedDate) => {
+                  setShowPlantingDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) setPlantingDate(toLocalDateString(selectedDate));
+                }}
+              />
+            )}
+          </>
+        )}
+
+        {['vegetable', 'herb'].includes(plantType) && harvestSeasonOptions.length > 0 && (
+          <>
+            <View style={formStyles.directionChipsWrapper}>
+              <Text style={formStyles.directionChipsFloatingLabel}>Harvest Season</Text>
+              <View style={formStyles.directionChipsContainer}>
+                {harvestSeasonOptions.map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[
+                      formStyles.directionChip,
+                      harvestSeason === s && formStyles.directionChipActive,
+                    ]}
+                    onPress={() => setHarvestSeason(harvestSeason === s ? '' : s)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        formStyles.directionChipText,
+                        harvestSeason === s && formStyles.directionChipTextActive,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {s}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-              {plantingDate ? (
-                <TouchableOpacity
-                  onPress={() => setPlantingDate('')}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="close-circle" size={20} color={theme.textTertiary} />
-                </TouchableOpacity>
-              ) : (
-                <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
-              )}
-            </TouchableOpacity>
-          </View>
-          {showPlantingDatePicker && (
-            <DateTimePicker
-              value={plantingDate ? new Date(plantingDate) : new Date()}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(_, selectedDate) => {
-                setShowPlantingDatePicker(Platform.OS === 'ios');
-                if (selectedDate) setPlantingDate(toLocalDateString(selectedDate));
-              }}
-            />
-          )}
-        </>
-      )}
+            </View>
+          </>
+        )}
+      </View>
     </View>
   );
 }

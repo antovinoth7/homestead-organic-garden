@@ -431,6 +431,34 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     categoryChipTextActive: {
       color: theme.primary,
     },
+    // --- Wizard step section cards (icon-headed groups, DetailCard language) ---
+    sectionCard: {
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      padding: 14,
+      marginBottom: 14,
+    },
+    sectionCardTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 12,
+    },
+    sectionCardIconWrap: {
+      width: 26,
+      height: 26,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.primaryLight,
+    },
+    sectionCardTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.text,
+    },
     // --- Field group visual divider ---
     fieldGroupDivider: {
       height: 1,

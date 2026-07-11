@@ -143,4 +143,35 @@ export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.cre
       borderLeftWidth: 3,
       borderLeftColor: theme.error,
     },
+    carePlanCaption: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      marginTop: -8,
+      marginBottom: 12,
+      lineHeight: 16,
+    },
+    // Collapsed-by-default "Adjust schedule" expander inside Care & Schedule.
+    adjustScheduleHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      backgroundColor: theme.backgroundSecondary,
+      marginBottom: 12,
+    },
+    adjustScheduleHeaderText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600' as const,
+      color: theme.text,
+    },
+    adjustScheduleHint: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      marginTop: 1,
+    },
   });

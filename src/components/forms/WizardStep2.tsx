@@ -50,187 +50,211 @@ export function WizardStep2({ formState }: Props): React.JSX.Element {
 
   return (
     <View>
-      <ThemedDropdown
-        items={[
-          { label: 'Select Main Location', value: '' },
-          ...parentLocationOptions.map((loc) => ({ label: loc, value: loc })),
-        ]}
-        selectedValue={parentLocation}
-        onValueChange={(value) => {
-          setParentLocation(value);
-          if (!value) setChildLocation('');
-        }}
-        label="Location"
-        placeholder="Location"
-      />
+      <View style={formStyles.sectionCard}>
+        <View style={formStyles.sectionCardTitleRow}>
+          <View style={formStyles.sectionCardIconWrap}>
+            <Ionicons name="location-outline" size={15} color={theme.primary} />
+          </View>
+          <Text style={formStyles.sectionCardTitle}>Where is it?</Text>
+        </View>
 
-      {locationDefaultsFired && !autoSuggestFired && (
-        <Text style={formStyles.locationDefaultsHint}>
-          Soil defaults applied from location profile
-        </Text>
-      )}
-
-      {parentLocation !== '' && childLocationOptions.length > 0 && (
         <ThemedDropdown
           items={[
-            { label: 'Select Direction / Section', value: '' },
-            ...childLocationOptions.map((loc) => ({ label: loc, value: loc })),
+            { label: 'Select Main Location', value: '' },
+            ...parentLocationOptions.map((loc) => ({ label: loc, value: loc })),
           ]}
-          selectedValue={childLocation}
-          onValueChange={(value) => setChildLocation(value)}
-          label="Direction / Section"
-          placeholder="Direction / Section"
+          selectedValue={parentLocation}
+          onValueChange={(value) => {
+            setParentLocation(value);
+            if (!value) setChildLocation('');
+          }}
+          label="Location"
+          placeholder="Location"
         />
-      )}
 
-      {location ? (
-        <View style={formStyles.locationPreview}>
-          <Ionicons name="location" size={16} color={theme.primary} />
-          <Text style={formStyles.locationPreviewText}>{location}</Text>
-        </View>
-      ) : null}
+        {locationDefaultsFired && !autoSuggestFired && (
+          <Text style={formStyles.locationDefaultsHint}>
+            Soil defaults applied from location profile
+          </Text>
+        )}
 
-      <FloatingLabelInput
-        label="Nearby landmark or reference point"
-        value={landmarks}
-        onChangeText={(text) => setLandmarks(sanitizeLandmarkText(text))}
-      />
-      <View style={formStyles.fieldGroupDivider} />
-
-      {!showCustomNameInput ? (
-        <View style={formStyles.namePreviewRow}>
-          <Text style={formStyles.namePreviewFloatingLabel}>Plant nickname</Text>
-          {generatedPlantName ? (
-            <Text style={formStyles.namePreviewValue} numberOfLines={1}>
-              {generatedPlantName}
-            </Text>
-          ) : (
-            <Text style={formStyles.namePreviewValuePending}>
-              Auto after choosing plant &amp; location above
-            </Text>
-          )}
-          <TouchableOpacity
-            style={formStyles.namePreviewActionCustom}
-            onPress={() => setShowCustomNameInput(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={formStyles.namePreviewActionTextMuted}>Customise</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={formStyles.nameCustomRow}>
-          <Text style={formStyles.namePreviewFloatingLabel}>Plant nickname</Text>
-          <TextInput
-            style={formStyles.nameCustomInput}
-            placeholder={generatedPlantName || 'Enter a custom name'}
-            value={name}
-            onChangeText={(text) => setName(sanitizeAlphaNumericSpaces(text))}
-            placeholderTextColor={theme.inputPlaceholder}
-          />
-          <View style={formStyles.nameCustomActions}>
-            {name.trim().length > 0 && (
-              <TouchableOpacity
-                onPress={() => setName('')}
-                accessibilityLabel="Reset to auto-generated name"
-                style={formStyles.nameCustomClear}
-              >
-                <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={formStyles.namePreviewActionUse}
-              onPress={() => {
-                setName('');
-                setShowCustomNameInput(false);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={formStyles.namePreviewActionText}>Use Auto ✓</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-      <View style={formStyles.fieldGroupDivider} />
-      <Text style={formStyles.fieldGroupLabel}>{'\uD83E\uDEB4'} Growing Space</Text>
-
-      <View style={formStyles.spaceTypeCardsRow}>
-        {[
-          {
-            value: 'ground' as SpaceType,
-            icon: 'earth' as const,
-            label: 'Ground',
-            hint: 'Open soil',
-          },
-          {
-            value: 'bed' as SpaceType,
-            icon: 'apps' as const,
-            label: 'Raised Bed',
-            hint: 'Bed / Border',
-          },
-          {
-            value: 'pot' as SpaceType,
-            icon: 'cube-outline' as const,
-            label: 'Pot',
-            hint: 'Container',
-          },
-        ].map((opt) => (
-          <TouchableOpacity
-            key={opt.value}
-            style={[
-              formStyles.spaceTypeCard,
-              spaceType === opt.value && formStyles.spaceTypeCardActive,
+        {parentLocation !== '' && childLocationOptions.length > 0 && (
+          <ThemedDropdown
+            items={[
+              { label: 'Select Direction / Section', value: '' },
+              ...childLocationOptions.map((loc) => ({ label: loc, value: loc })),
             ]}
-            onPress={() => setSpaceType(opt.value)}
-            activeOpacity={0.75}
-          >
-            <Ionicons
-              name={opt.icon}
-              size={28}
-              color={spaceType === opt.value ? theme.primary : theme.textTertiary}
-              style={formStyles.spaceTypeCardIcon}
-            />
-            <Text
-              style={[
-                formStyles.spaceTypeCardLabel,
-                spaceType === opt.value && formStyles.spaceTypeCardLabelActive,
-              ]}
-            >
-              {opt.label}
-            </Text>
-            <Text style={wizardStyles.spaceTypeCardHint}>{opt.hint}</Text>
-          </TouchableOpacity>
-        ))}
+            selectedValue={childLocation}
+            onValueChange={(value) => setChildLocation(value)}
+            label="Direction / Section"
+            placeholder="Direction / Section"
+          />
+        )}
+
+        {location ? (
+          <View style={formStyles.locationPreview}>
+            <Ionicons name="location" size={16} color={theme.primary} />
+            <Text style={formStyles.locationPreviewText}>{location}</Text>
+          </View>
+        ) : null}
+
+        <FloatingLabelInput
+          label="Nearby landmark or reference point"
+          value={landmarks}
+          onChangeText={(text) => setLandmarks(sanitizeLandmarkText(text))}
+        />
       </View>
 
-      {spaceType === 'pot' && (
-        <FloatingLabelInput
-          label="Pot Size in inches (e.g., 12)"
-          value={potSize}
-          onChangeText={(text) => setPotSize(sanitizeNumberText(text))}
-          keyboardType="numeric"
-        />
-      )}
-      {spaceType === 'bed' && (
-        <>
-          {beds.length > 0 && (
-            <ThemedDropdown
-              items={[
-                { label: 'No bed selected', value: '' },
-                ...beds.map((b) => ({ label: b.name, value: b.id })),
-              ]}
-              selectedValue={bedId}
-              onValueChange={setBedId}
-              label="Assign to Bed"
-              placeholder="Select a bed (optional)"
+      <View style={formStyles.sectionCard}>
+        <View style={formStyles.sectionCardTitleRow}>
+          <View style={formStyles.sectionCardIconWrap}>
+            <Ionicons name="pricetag-outline" size={15} color={theme.primary} />
+          </View>
+          <Text style={formStyles.sectionCardTitle}>Nickname</Text>
+        </View>
+
+        {!showCustomNameInput ? (
+          <View style={formStyles.namePreviewRow}>
+            <Text style={formStyles.namePreviewFloatingLabel}>Plant nickname</Text>
+            {generatedPlantName ? (
+              <Text style={formStyles.namePreviewValue} numberOfLines={1}>
+                {generatedPlantName}
+              </Text>
+            ) : (
+              <Text style={formStyles.namePreviewValuePending}>
+                Auto after choosing plant &amp; location above
+              </Text>
+            )}
+            <TouchableOpacity
+              style={formStyles.namePreviewActionCustom}
+              onPress={() => setShowCustomNameInput(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={formStyles.namePreviewActionTextMuted}>Customise</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={formStyles.nameCustomRow}>
+            <Text style={formStyles.namePreviewFloatingLabel}>Plant nickname</Text>
+            <TextInput
+              style={formStyles.nameCustomInput}
+              placeholder={generatedPlantName || 'Enter a custom name'}
+              value={name}
+              onChangeText={(text) => setName(sanitizeAlphaNumericSpaces(text))}
+              placeholderTextColor={theme.inputPlaceholder}
             />
-          )}
+            <View style={formStyles.nameCustomActions}>
+              {name.trim().length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setName('')}
+                  accessibilityLabel="Reset to auto-generated name"
+                  style={formStyles.nameCustomClear}
+                >
+                  <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={formStyles.namePreviewActionUse}
+                onPress={() => {
+                  setName('');
+                  setShowCustomNameInput(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={formStyles.namePreviewActionText}>Use Auto ✓</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+
+      <View style={formStyles.sectionCard}>
+        <View style={formStyles.sectionCardTitleRow}>
+          <View style={formStyles.sectionCardIconWrap}>
+            <Ionicons name="earth-outline" size={15} color={theme.primary} />
+          </View>
+          <Text style={formStyles.sectionCardTitle}>Growing Space</Text>
+        </View>
+
+        <View style={formStyles.spaceTypeCardsRow}>
+          {[
+            {
+              value: 'ground' as SpaceType,
+              icon: 'earth' as const,
+              label: 'Ground',
+              hint: 'Open soil',
+            },
+            {
+              value: 'bed' as SpaceType,
+              icon: 'apps' as const,
+              label: 'Raised Bed',
+              hint: 'Bed / Border',
+            },
+            {
+              value: 'pot' as SpaceType,
+              icon: 'cube-outline' as const,
+              label: 'Pot',
+              hint: 'Container',
+            },
+          ].map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              style={[
+                formStyles.spaceTypeCard,
+                spaceType === opt.value && formStyles.spaceTypeCardActive,
+              ]}
+              onPress={() => setSpaceType(opt.value)}
+              activeOpacity={0.75}
+            >
+              <Ionicons
+                name={opt.icon}
+                size={28}
+                color={spaceType === opt.value ? theme.primary : theme.textTertiary}
+                style={formStyles.spaceTypeCardIcon}
+              />
+              <Text
+                style={[
+                  formStyles.spaceTypeCardLabel,
+                  spaceType === opt.value && formStyles.spaceTypeCardLabelActive,
+                ]}
+              >
+                {opt.label}
+              </Text>
+              <Text style={wizardStyles.spaceTypeCardHint}>{opt.hint}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {spaceType === 'pot' && (
           <FloatingLabelInput
-            label="Bed Name (e.g., Veggie Bed 1)"
-            value={bedName}
-            onChangeText={(text) => setBedName(sanitizeAlphaNumericSpaces(text))}
+            label="Pot Size in inches (e.g., 12)"
+            value={potSize}
+            onChangeText={(text) => setPotSize(sanitizeNumberText(text))}
+            keyboardType="numeric"
           />
-        </>
-      )}
+        )}
+        {spaceType === 'bed' && (
+          <>
+            {beds.length > 0 && (
+              <ThemedDropdown
+                items={[
+                  { label: 'No bed selected', value: '' },
+                  ...beds.map((b) => ({ label: b.name, value: b.id })),
+                ]}
+                selectedValue={bedId}
+                onValueChange={setBedId}
+                label="Assign to Bed"
+                placeholder="Select a bed (optional)"
+              />
+            )}
+            <FloatingLabelInput
+              label="Bed Name (e.g., Veggie Bed 1)"
+              value={bedName}
+              onChangeText={(text) => setBedName(sanitizeAlphaNumericSpaces(text))}
+            />
+          </>
+        )}
+      </View>
     </View>
   );
 }
