@@ -549,6 +549,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 4,
       marginLeft: 28,
     },
+    growthStageHint: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      fontStyle: 'italic' as const,
+      marginTop: 6,
+      marginLeft: 28,
+    },
     growthStageActionText: {
       fontSize: 13,
       color: theme.primary,

@@ -7,6 +7,7 @@ import type { EffectiveGrowthStage } from '@/utils/plantHelpers';
 import type { createStyles } from '@/styles/plantDetailStyles';
 import GrowthStageTimeline from '@/components/GrowthStageTimeline';
 import { PlantInfoRow } from '@/components/PlantInfoRow';
+import { COCONUT_STAGE_DURATIONS } from '@/utils/plantHelpers';
 import { DetailCard } from '@/components/plantDetail/DetailCard';
 
 type DetailStyles = ReturnType<typeof createStyles>;
@@ -78,24 +79,40 @@ export function GrowthStageSection({
               <Text style={styles.growthStageActionText}>Unpin stage</Text>
             </TouchableOpacity>
           )}
+          {effectiveStage.source === 'manual' && (
+            <Text style={styles.growthStageHint}>
+              {!plant.planting_date
+                ? 'Add a planting date to track stages automatically'
+                : 'No growth profile for this variety — stage is set manually'}
+            </Text>
+          )}
           <GrowthStageTimeline
             effectiveStage={effectiveStage}
             plantingDate={plant.planting_date}
-            durations={careProfile?.growthStageDurations}
+            durations={
+              effectiveStage.source === 'coconut'
+                ? COCONUT_STAGE_DURATIONS
+                : careProfile?.growthStageDurations
+            }
             annualCycleDurations={careProfile?.annualCycleDurations}
             isPinned={isPinned}
           />
         </>
       )}
       {!effectiveStage && plant.growth_stage && (
-        <PlantInfoRow
-          styles={styles}
-          icon="trending-up"
-          iconColor={theme.primary}
-          text={`Stage: ${
-            plant.growth_stage.charAt(0).toUpperCase() + plant.growth_stage.slice(1)
-          }`}
-        />
+        <>
+          <PlantInfoRow
+            styles={styles}
+            icon="trending-up"
+            iconColor={theme.primary}
+            text={`Stage: ${
+              plant.growth_stage.charAt(0).toUpperCase() + plant.growth_stage.slice(1)
+            }`}
+          />
+          <Text style={styles.growthStageHint}>
+            No growth profile for this variety — stage is set manually
+          </Text>
+        </>
       )}
     </DetailCard>
   );
