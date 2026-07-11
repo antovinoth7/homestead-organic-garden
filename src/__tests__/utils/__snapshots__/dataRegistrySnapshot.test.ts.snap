@@ -293,7 +293,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
-        "mature": 60,
+        "flowering": 60,
         "seedling": 30,
         "vegetative": 90,
       },
@@ -355,7 +355,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Cool Dry (Jan-Feb)",
       "growthStageDurations": {
-        "mature": 25,
+        "flowering": 25,
         "seedling": 21,
         "vegetative": 45,
       },
@@ -410,7 +410,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
-        "mature": 60,
+        "flowering": 60,
         "seedling": 30,
         "vegetative": 90,
       },
@@ -473,7 +473,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
-        "mature": 75,
+        "flowering": 75,
         "seedling": 45,
         "vegetative": 120,
       },
@@ -528,7 +528,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
-        "mature": 140,
+        "flowering": 140,
         "seedling": 45,
         "vegetative": 180,
       },
@@ -654,7 +654,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
-        "mature": 125,
+        "flowering": 125,
         "seedling": 60,
         "vegetative": 180,
       },
@@ -708,7 +708,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
-        "mature": 45,
+        "flowering": 45,
         "seedling": 30,
         "vegetative": 60,
       },
@@ -3685,6 +3685,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
+        "flowering": 45,
         "mature": 60,
         "seedling": 30,
         "vegetative": 90,
@@ -3855,6 +3856,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
+        "flowering": 45,
         "mature": 60,
         "seedling": 30,
         "vegetative": 90,
@@ -3909,6 +3911,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Mar–Sep",
       "growthStageDurations": {
+        "flowering": 60,
         "mature": 75,
         "seedling": 45,
         "vegetative": 150,
@@ -3963,6 +3966,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
+        "flowering": 45,
         "mature": 60,
         "seedling": 30,
         "vegetative": 90,
@@ -4025,6 +4029,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
+        "flowering": 60,
         "mature": 75,
         "seedling": 45,
         "vegetative": 120,
@@ -4087,6 +4092,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
+        "flowering": 60,
         "mature": 75,
         "seedling": 45,
         "vegetative": 120,
@@ -4149,6 +4155,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
+        "flowering": 30,
         "mature": 30,
         "seedling": 21,
         "vegetative": 60,
@@ -4203,6 +4210,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "growingSeason": "Year Round",
       "growthStageDurations": {
+        "flowering": 60,
         "mature": 75,
         "seedling": 45,
         "vegetative": 120,

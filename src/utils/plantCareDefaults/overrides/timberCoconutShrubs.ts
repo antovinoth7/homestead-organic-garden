@@ -349,7 +349,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     droughtTolerance: 'medium',
     petToxicity: false,
     feedingIntensity: 'medium',
-    growthStageDurations: { seedling: 30, vegetative: 90, mature: 60 },
+    growthStageDurations: { seedling: 30, vegetative: 90, flowering: 45, mature: 60 },
   },
   [buildProfileKey('shrub', 'Ixora')]: {
     waterRequirement: 'medium',
@@ -378,7 +378,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     droughtTolerance: 'medium',
     petToxicity: false,
     feedingIntensity: 'medium',
-    growthStageDurations: { seedling: 45, vegetative: 120, mature: 75 },
+    growthStageDurations: { seedling: 45, vegetative: 120, flowering: 60, mature: 75 },
   },
   [buildProfileKey('shrub', 'Nandiyavattai')]: {
     waterRequirement: 'medium',
@@ -407,7 +407,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     droughtTolerance: 'medium',
     petToxicity: true,
     feedingIntensity: 'medium',
-    growthStageDurations: { seedling: 45, vegetative: 120, mature: 75 },
+    growthStageDurations: { seedling: 45, vegetative: 120, flowering: 60, mature: 75 },
   },
   [buildProfileKey('shrub', 'Bougainvillea')]: {
     waterRequirement: 'low',
@@ -436,7 +436,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     droughtTolerance: 'high',
     petToxicity: false,
     feedingIntensity: 'light',
-    growthStageDurations: { seedling: 30, vegetative: 90, mature: 60 },
+    growthStageDurations: { seedling: 30, vegetative: 90, flowering: 45, mature: 60 },
   },
   [buildProfileKey('shrub', 'Jasmine')]: {
     waterRequirement: 'medium',
@@ -465,7 +465,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     droughtTolerance: 'medium',
     petToxicity: false,
     feedingIntensity: 'medium',
-    growthStageDurations: { seedling: 45, vegetative: 120, mature: 75 },
+    growthStageDurations: { seedling: 45, vegetative: 120, flowering: 60, mature: 75 },
   },
   [buildProfileKey('shrub', 'Crossandra')]: {
     waterRequirement: 'medium',
@@ -494,7 +494,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     droughtTolerance: 'low',
     petToxicity: false,
     feedingIntensity: 'medium',
-    growthStageDurations: { seedling: 30, vegetative: 90, mature: 60 },
+    growthStageDurations: { seedling: 30, vegetative: 90, flowering: 45, mature: 60 },
   },
   [buildProfileKey('shrub', 'Lantana')]: {
     waterRequirement: 'low',
@@ -523,7 +523,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     droughtTolerance: 'high',
     petToxicity: true,
     feedingIntensity: 'light',
-    growthStageDurations: { seedling: 21, vegetative: 60, mature: 30 },
+    growthStageDurations: { seedling: 21, vegetative: 60, flowering: 30, mature: 30 },
   },
   [buildProfileKey('shrub', 'Gardenia')]: {
     waterRequirement: 'medium',
@@ -552,7 +552,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     droughtTolerance: 'low',
     petToxicity: true,
     feedingIntensity: 'medium',
-    growthStageDurations: { seedling: 45, vegetative: 150, mature: 75 },
+    growthStageDurations: { seedling: 45, vegetative: 150, flowering: 60, mature: 75 },
   },
 
 };
