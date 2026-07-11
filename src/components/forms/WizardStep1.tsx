@@ -36,9 +36,6 @@ export function WizardStep1({ formState }: Props): React.JSX.Element {
     setPlantingDate,
     showPlantingDatePicker,
     setShowPlantingDatePicker,
-    harvestSeason,
-    setHarvestSeason,
-    harvestSeasonOptions,
   } = formState;
 
   const formStyles = useMemo(() => createStyles(theme), [theme]);
@@ -265,37 +262,6 @@ export function WizardStep1({ formState }: Props): React.JSX.Element {
                 }}
               />
             )}
-          </>
-        )}
-
-        {['vegetable', 'herb'].includes(plantType) && harvestSeasonOptions.length > 0 && (
-          <>
-            <View style={formStyles.directionChipsWrapper}>
-              <Text style={formStyles.directionChipsFloatingLabel}>Harvest Season</Text>
-              <View style={formStyles.directionChipsContainer}>
-                {harvestSeasonOptions.map((s) => (
-                  <TouchableOpacity
-                    key={s}
-                    style={[
-                      formStyles.directionChip,
-                      harvestSeason === s && formStyles.directionChipActive,
-                    ]}
-                    onPress={() => setHarvestSeason(harvestSeason === s ? '' : s)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        formStyles.directionChipText,
-                        harvestSeason === s && formStyles.directionChipTextActive,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {s}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
           </>
         )}
       </View>

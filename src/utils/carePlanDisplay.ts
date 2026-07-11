@@ -4,11 +4,14 @@ import type {
   FertiliserType,
   GrowthStage,
   PlantLifecycle,
+  PlantType,
   SoilType,
+  SpaceType,
   SunlightLevel,
   WaterRequirement,
 } from '../types/database.types';
 import {
+  CATEGORY_FULL_LABELS,
   FERTILISER_LABELS,
   GROWTH_STAGE_LABELS,
   LIFECYCLE_LABELS,
@@ -17,6 +20,7 @@ import {
   WATER_REQUIREMENT_LABELS,
 } from './plantLabels';
 import { getFrequencyLabel } from './plantFormConstants';
+import { formatDateDisplay } from './dateHelpers';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -134,6 +138,104 @@ export function buildCarePlanRows(input: CarePlanInput): CarePlanRow[] {
       icon: 'sync-outline',
       label: 'Lifecycle',
       value: LIFECYCLE_LABELS[input.lifecycle] ?? input.lifecycle,
+    });
+  }
+
+  return rows;
+}
+
+const SPACE_TYPE_LABELS: Record<SpaceType, string> = {
+  ground: 'Ground',
+  bed: 'Raised Bed',
+  pot: 'Pot',
+};
+
+export interface PlantSummaryInput {
+  plantVariety: string;
+  plantType: PlantType | string;
+  variety: string;
+  plantingDate: string;
+  harvestSeason: string;
+  /** Combined location preview (falls back to parent/child below). */
+  location: string;
+  parentLocation: string;
+  childLocation: string;
+  landmarks: string;
+  spaceType: SpaceType;
+  potSize: string;
+  bedName: string;
+  name: string;
+}
+
+/** Builds the read-only "Your plant" selection rows shown in the wizard Review step. */
+export function buildPlantSummaryRows(input: PlantSummaryInput): CarePlanRow[] {
+  const rows: CarePlanRow[] = [];
+
+  const categoryLabel = CATEGORY_FULL_LABELS[input.plantType as PlantType];
+  if (input.plantVariety) {
+    rows.push({
+      key: 'plant',
+      icon: 'leaf-outline',
+      label: 'Plant',
+      value: input.plantVariety,
+      detail: categoryLabel,
+    });
+  }
+
+  if (input.variety.trim()) {
+    rows.push({
+      key: 'variety',
+      icon: 'flower-outline',
+      label: 'Variety',
+      value: input.variety.trim(),
+    });
+  }
+
+  if (input.plantingDate) {
+    rows.push({
+      key: 'plantingDate',
+      icon: 'calendar-outline',
+      label: 'Planted',
+      value: formatDateDisplay(input.plantingDate),
+    });
+  }
+
+  if (input.harvestSeason) {
+    rows.push({
+      key: 'harvestSeason',
+      icon: 'basket-outline',
+      label: 'Harvest season',
+      value: input.harvestSeason,
+    });
+  }
+
+  const location =
+    input.location.trim() || [input.parentLocation, input.childLocation].filter(Boolean).join(' · ');
+  if (location) {
+    rows.push({
+      key: 'location',
+      icon: 'location-outline',
+      label: 'Location',
+      value: location,
+      detail: input.landmarks.trim() || undefined,
+    });
+  }
+
+  const spaceLabel = SPACE_TYPE_LABELS[input.spaceType] ?? input.spaceType;
+  rows.push({
+    key: 'space',
+    icon: 'cube-outline',
+    label: 'Growing space',
+    value: input.spaceType === 'pot' && input.potSize.trim() ? `${spaceLabel} · ${input.potSize.trim()}"` : spaceLabel,
+    detail: input.spaceType === 'bed' && input.bedName.trim() ? input.bedName.trim() : undefined,
+  });
+
+  if (input.name.trim()) {
+    rows.push({
+      key: 'nickname',
+      icon: 'pricetag-outline',
+      label: 'Nickname',
+      value: input.name.trim(),
     });
   }
 

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { PlantFormStateReturn } from '../../hooks/usePlantFormState';
 import { createWizardStyles } from '../../styles/plantAddWizardStyles';
 import { CarePlanSummary } from './CarePlanSummary';
-import { buildCarePlanRows } from '../../utils/carePlanDisplay';
+import { buildCarePlanRows, buildPlantSummaryRows } from '../../utils/carePlanDisplay';
 import { getPlantCareProfile } from '../../utils/plantCareDefaults';
 import { CATEGORY_FULL_LABELS } from '../../utils/plantLabels';
 
@@ -14,7 +14,7 @@ interface Props {
 
 const PRUNABLE_TYPES = ['fruit_tree', 'shrub', 'herb'];
 
-/** Step 3 — read-only "Your care plan" review; values were seeded from the care profile. */
+/** Step 3 — read-only review: "Your plant" selections + auto-seeded "Your care plan". */
 export function WizardStep3({ formState }: Props): React.JSX.Element {
   const {
     theme,
@@ -33,6 +33,18 @@ export function WizardStep3({ formState }: Props): React.JSX.Element {
     pruningEnabled,
     pruningFrequency,
     growthStage,
+    variety,
+    plantingDate,
+    harvestSeason,
+    location,
+    parentLocation,
+    childLocation,
+    landmarks,
+    spaceType,
+    potSize,
+    bedName,
+    name,
+    generatedPlantName,
   } = formState;
 
   const wizardStyles = useMemo(() => createWizardStyles(theme), [theme]);
@@ -40,6 +52,41 @@ export function WizardStep3({ formState }: Props): React.JSX.Element {
   const categoryLabel = CATEGORY_FULL_LABELS[plantType] ?? 'plant';
   const profile = getPlantCareProfile(plantVariety, plantType, plantCareProfiles);
   const showPruning = PRUNABLE_TYPES.includes(plantType);
+
+  const plantRows = useMemo(
+    () =>
+      buildPlantSummaryRows({
+        plantVariety,
+        plantType,
+        variety,
+        plantingDate,
+        harvestSeason,
+        location,
+        parentLocation,
+        childLocation,
+        landmarks,
+        spaceType,
+        potSize,
+        bedName,
+        name: name || generatedPlantName,
+      }),
+    [
+      plantVariety,
+      plantType,
+      variety,
+      plantingDate,
+      harvestSeason,
+      location,
+      parentLocation,
+      childLocation,
+      landmarks,
+      spaceType,
+      potSize,
+      bedName,
+      name,
+      generatedPlantName,
+    ]
+  );
 
   const rows = useMemo(
     () =>
@@ -76,15 +123,12 @@ export function WizardStep3({ formState }: Props): React.JSX.Element {
   return (
     <View>
       <View style={wizardStyles.reviewHeader}>
-        <View style={wizardStyles.reviewIconWrap}>
-          <Ionicons name="sparkles" size={24} color={theme.primary} />
-        </View>
-        <Text style={wizardStyles.reviewTitle}>Your care plan</Text>
         <Text style={wizardStyles.reviewSubtitle}>
-          Based on {plantVariety || categoryLabel} growing conditions. We&apos;ll schedule the care
-          tasks for you.
+          Here&apos;s {plantVariety || categoryLabel}. We&apos;ll set up its care tasks for you.
         </Text>
       </View>
+
+      <CarePlanSummary title="Your plant" icon="leaf-outline" rows={plantRows} />
 
       {!autoSuggestFired && (
         <View style={wizardStyles.reviewFallbackBanner}>
@@ -96,7 +140,7 @@ export function WizardStep3({ formState }: Props): React.JSX.Element {
         </View>
       )}
 
-      <CarePlanSummary rows={rows} />
+      <CarePlanSummary title="Your care plan" rows={rows} />
 
       <View style={wizardStyles.reviewFooterHint}>
         <Ionicons name="create-outline" size={14} color={theme.textTertiary} />
