@@ -196,7 +196,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
             accessibilityRole="button"
             accessibilityLabel="Edit plant"
           >
-            <Ionicons name="pencil" size={22} color={theme.primary} />
+            <Ionicons name="pencil" size={22} color={theme.textInverse} />
           </TouchableOpacity>
         }
       />

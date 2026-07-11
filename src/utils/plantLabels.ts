@@ -32,6 +32,18 @@ export const CATEGORY_LABELS: Record<PlantType, string> = {
   shrub: '🌱 Shrub',
 };
 
+/** Clean, emoji-free category names for headings (e.g. the detail hero). */
+export const CATEGORY_FULL_LABELS: Record<PlantType, string> = {
+  vegetable: 'Vegetable',
+  fruit_tree: 'Fruit Tree',
+  spinach: 'Spinach',
+  coconut_tree: 'Coconut Tree',
+  herb: 'Herb',
+  timber_tree: 'Timber Tree',
+  flower: 'Flower',
+  shrub: 'Shrub',
+};
+
 export const CATEGORY_SHORT_LABELS: Record<PlantType, string> = {
   vegetable: 'Veg',
   herb: 'Herb',

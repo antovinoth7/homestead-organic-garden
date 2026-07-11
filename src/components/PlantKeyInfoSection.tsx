@@ -4,6 +4,7 @@ import type { Theme } from '@/theme/colors';
 import type { Plant } from '@/types/database.types';
 import type { createStyles } from '@/styles/plantDetailStyles';
 import { getYearsOld, formatDateDisplay } from '@/utils/dateHelpers';
+import { CATEGORY_FULL_LABELS } from '@/utils/plantLabels';
 import { PlantInfoRow } from '@/components/PlantInfoRow';
 
 type DetailStyles = ReturnType<typeof createStyles>;
@@ -18,7 +19,7 @@ interface Props {
 export function PlantKeyInfoSection({ styles, theme, plant }: Props): React.JSX.Element {
   return (
     <>
-      <Text style={styles.name}>{plant.name}</Text>
+      <Text style={styles.name}>{CATEGORY_FULL_LABELS[plant.plant_type] ?? plant.name}</Text>
       {(plant.plant_variety || plant.variety) && (
         <Text style={styles.variety}>{plant.plant_variety || plant.variety}</Text>
       )}
