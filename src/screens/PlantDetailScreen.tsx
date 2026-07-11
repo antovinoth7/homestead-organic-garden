@@ -18,6 +18,7 @@ import {
   getCoconutAgeInfo,
   getCoconutNutrientDeficiencies,
   getEffectiveGrowthStage,
+  getValidStagesForPlant,
 } from '@/utils/plantHelpers';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
@@ -145,6 +146,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
   const careProfile = getPlantCareProfile(plant.plant_variety || '', plant.plant_type);
   const effectiveStage = careProfile ? getEffectiveGrowthStage(plant, careProfile) : null;
   const isPinned = Boolean(plant.growth_stage_pinned);
+  const pinnableStages = getValidStagesForPlant(plant, careProfile);
 
   const handleUnpin = async (): Promise<void> => {
     await unpinGrowthStage(plant.id);
@@ -275,6 +277,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
         visible={pinStageVisible}
         styles={styles}
         theme={theme}
+        stages={pinnableStages}
         onClose={() => setPinStageVisible(false)}
         onSelect={handlePinSelect}
       />
