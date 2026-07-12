@@ -313,7 +313,12 @@ export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> 
     await setData(KEYS.TASK_LOGS, filteredLogs);
   }
 
-  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS, CACHE_KEYS.TODAY_TASK_LOGS);
+  invalidate(
+    CACHE_KEYS.TASK_TEMPLATES,
+    CACHE_KEYS.TODAY_TASKS,
+    CACHE_KEYS.TODAY_TASK_LOGS,
+    CACHE_KEYS.TASK_LOGS
+  );
 };
 
 /**
@@ -380,7 +385,12 @@ export const deleteTasksForBedIds = async (bedIds: string[]): Promise<void> => {
     await setData(KEYS.TASK_LOGS, filteredLogs);
   }
 
-  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS, CACHE_KEYS.TODAY_TASK_LOGS);
+  invalidate(
+    CACHE_KEYS.TASK_TEMPLATES,
+    CACHE_KEYS.TODAY_TASKS,
+    CACHE_KEYS.TODAY_TASK_LOGS,
+    CACHE_KEYS.TASK_LOGS
+  );
 };
 
 /**
@@ -630,6 +640,7 @@ const applyTaskDoneCacheDeltas = async (opsList: TaskDoneOps[]): Promise<void> =
     CACHE_KEYS.TODAY_TASKS,
     CACHE_KEYS.TASK_TEMPLATES,
     CACHE_KEYS.TODAY_TASK_LOGS,
+    CACHE_KEYS.TASK_LOGS,
     CACHE_KEYS.ALL_PLANTS
   );
 };
@@ -813,9 +824,23 @@ export const markTasksDone = async (
   return { succeeded: committed, failed: templates.length - committed };
 };
 
+/** Reads the locally-stored task logs (AsyncStorage) without any network call. */
+export const getStoredTaskLogs = async (): Promise<TaskLog[]> => {
+  const logs = await getData<TaskLog>(KEYS.TASK_LOGS);
+  logs.sort((a, b) => new Date(b.done_at).getTime() - new Date(a.done_at).getTime());
+  return logs;
+};
+
 export const getTaskLogs = async (templateId?: string): Promise<TaskLog[]> => {
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
+
+  // Serve the full log list from the in-memory cache when warm — the History
+  // view re-reads it on every open and a full-collection fetch is expensive.
+  if (!templateId) {
+    const cached = getCached<TaskLog[]>(CACHE_KEYS.TASK_LOGS);
+    if (cached) return cached;
+  }
 
   try {
     await refreshAuthToken();
@@ -847,7 +872,8 @@ export const getTaskLogs = async (templateId?: string): Promise<TaskLog[]> => {
     // Sort in-memory by done_at descending
     logs.sort((a, b) => new Date(b.done_at).getTime() - new Date(a.done_at).getTime());
 
-    // Cache locally
+    // Cache locally (in-memory for fast re-reads, AsyncStorage for offline)
+    if (!templateId) setCached(CACHE_KEYS.TASK_LOGS, logs);
     await setData(KEYS.TASK_LOGS, logs);
 
     return logs;

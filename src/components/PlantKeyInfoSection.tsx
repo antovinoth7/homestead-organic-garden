@@ -4,6 +4,7 @@ import type { Theme } from '@/theme/colors';
 import type { Plant } from '@/types/database.types';
 import type { createStyles } from '@/styles/plantDetailStyles';
 import { getYearsOld, formatDateDisplay } from '@/utils/dateHelpers';
+import { CATEGORY_FULL_LABELS } from '@/utils/plantLabels';
 import { PlantInfoRow } from '@/components/PlantInfoRow';
 
 type DetailStyles = ReturnType<typeof createStyles>;
@@ -18,8 +19,10 @@ interface Props {
 export function PlantKeyInfoSection({ styles, theme, plant }: Props): React.JSX.Element {
   return (
     <>
-      <Text style={styles.name}>{plant.name}</Text>
-      {plant.variety && <Text style={styles.variety}>{plant.variety}</Text>}
+      {(plant.plant_variety || plant.variety) && (
+        <Text style={styles.name}>{plant.plant_variety || plant.variety}</Text>
+      )}
+      <Text style={styles.variety}>{CATEGORY_FULL_LABELS[plant.plant_type] ?? plant.name}</Text>
       {plant.record_kind === 'row' && plant.plant_count !== undefined && (
         <View style={styles.rowRecordBadge}>
           <Text style={styles.rowRecordBadgeText}>
@@ -29,14 +32,6 @@ export function PlantKeyInfoSection({ styles, theme, plant }: Props): React.JSX.
       )}
 
       <View style={styles.infoSection}>
-        {plant.plant_variety && (
-          <PlantInfoRow
-            styles={styles}
-            icon="leaf"
-            iconColor={theme.textSecondary}
-            text={`Type: ${plant.plant_variety}`}
-          />
-        )}
         <PlantInfoRow
           styles={styles}
           icon="location"
@@ -54,15 +49,19 @@ export function PlantKeyInfoSection({ styles, theme, plant }: Props): React.JSX.
         <PlantInfoRow
           styles={styles}
           icon={
-            plant.space_type === 'pot' ? 'cube-outline' : plant.space_type === 'bed' ? 'apps' : 'earth'
+            plant.space_type === 'pot'
+              ? 'cube-outline'
+              : plant.space_type === 'bed'
+                ? 'apps'
+                : 'earth'
           }
           iconColor={theme.textSecondary}
           text={
             plant.space_type === 'pot'
               ? plant.pot_size || 'Pot'
               : plant.space_type === 'bed'
-              ? plant.bed_name || 'Bed'
-              : 'Ground'
+                ? plant.bed_name || 'Bed'
+                : 'Ground'
           }
         />
         {plant.planting_date && (
@@ -82,22 +81,22 @@ export function PlantKeyInfoSection({ styles, theme, plant }: Props): React.JSX.
               plant.health_status === 'healthy'
                 ? 'checkmark-circle'
                 : plant.health_status === 'sick'
-                ? 'close-circle'
-                : 'alert-circle'
+                  ? 'close-circle'
+                  : 'alert-circle'
             }
             iconColor={
               plant.health_status === 'healthy'
                 ? theme.success
                 : plant.health_status === 'sick'
-                ? theme.error
-                : theme.warning
+                  ? theme.error
+                  : theme.warning
             }
             textStyle={
               plant.health_status === 'healthy'
                 ? styles.healthStatusHealthy
                 : plant.health_status === 'sick'
-                ? styles.healthStatusSick
-                : styles.healthStatusWarning
+                  ? styles.healthStatusSick
+                  : styles.healthStatusWarning
             }
             text={plant.health_status.charAt(0).toUpperCase() + plant.health_status.slice(1)}
           />
@@ -111,10 +110,10 @@ export function PlantKeyInfoSection({ styles, theme, plant }: Props): React.JSX.
               plant.lifecycle_type === 'annual'
                 ? 'Annual (dies after yield)'
                 : plant.lifecycle_type === 'biennial'
-                ? 'Biennial (cleared after 2nd year)'
-                : plant.lifecycle_type === 'perennial'
-                ? 'Perennial (multi-year)'
-                : 'Permanent (never cleared)'
+                  ? 'Biennial (cleared after 2nd year)'
+                  : plant.lifecycle_type === 'perennial'
+                    ? 'Perennial (multi-year)'
+                    : 'Permanent (never cleared)'
             }`}
           />
         )}

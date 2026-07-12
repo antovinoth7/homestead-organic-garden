@@ -12,9 +12,44 @@ import {
 } from '../types/database.types';
 import { TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { HEALTH_STATUS_LABELS, HEALTH_STATUS_TONE } from '../utils/plantLabels';
+import type { StatusTone } from '../utils/plantLabels';
 
 type FilterType = 'all' | PlantType;
 type SortOption = 'name' | 'newest' | 'oldest' | 'health' | 'age';
+
+const HEALTH_STATUSES: HealthStatus[] = ['healthy', 'stressed', 'recovering', 'sick'];
+
+const SORT_OPTIONS: readonly {
+  value: SortOption;
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+}[] = [
+  { value: 'newest', label: 'Newest', icon: 'time-outline' },
+  { value: 'oldest', label: 'Oldest', icon: 'hourglass-outline' },
+  { value: 'name', label: 'A–Z', icon: 'text-outline' },
+  { value: 'health', label: 'Health', icon: 'heart-outline' },
+  { value: 'age', label: 'Age', icon: 'leaf-outline' },
+];
+
+/**
+ * Tone -> the chip/text/dot style keys. Same tone quartet the edit form uses, so
+ * a status is coloured identically whether you're filtering or editing.
+ */
+const TONE_STYLE_KEYS = {
+  success: {
+    chip: 'sheetChipActiveSuccess',
+    text: 'sheetChipTextSuccess',
+    dot: 'statusDotSuccess',
+  },
+  warning: {
+    chip: 'sheetChipActiveWarning',
+    text: 'sheetChipTextWarning',
+    dot: 'statusDotWarning',
+  },
+  info: { chip: 'sheetChipActiveInfo', text: 'sheetChipTextInfo', dot: 'statusDotInfo' },
+  error: { chip: 'sheetChipActiveError', text: 'sheetChipTextError', dot: 'statusDotError' },
+} as const satisfies Record<StatusTone, { chip: string; text: string; dot: string }>;
 
 interface ActiveFilters {
   type: FilterType;
@@ -99,25 +134,27 @@ export function PlantFilterSheet({
             <Ionicons name="swap-vertical" size={14} color={theme.textSecondary} /> Sort By
           </Text>
           <View style={styles.sheetChipWrap}>
-            {(
-              [
-                ['newest', '🕐 Newest'],
-                ['oldest', '⌛ Oldest'],
-                ['name', 'A–Z'],
-                ['health', '❤️ Health'],
-                ['age', '🌱 Age'],
-              ] as const
-            ).map(([val, label]) => (
-              <TouchableOpacity
-                key={val}
-                style={[styles.sheetChip, sortBy === val && styles.sheetChipActive]}
-                onPress={() => setSortBy(val)}
-              >
-                <Text style={[styles.sheetChipText, sortBy === val && styles.sheetChipTextActive]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {SORT_OPTIONS.map(({ value, label, icon }) => {
+              const isActive = sortBy === value;
+              return (
+                <TouchableOpacity
+                  key={value}
+                  style={[styles.sheetChip, isActive && styles.sheetChipActive]}
+                  onPress={() => setSortBy(value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Ionicons
+                    name={icon}
+                    size={14}
+                    color={isActive ? theme.primary : theme.textSecondary}
+                  />
+                  <Text style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Plant Type */}
@@ -157,31 +194,42 @@ export function PlantFilterSheet({
             <Ionicons name="fitness" size={14} color={theme.textSecondary} /> Health
           </Text>
           <View style={styles.sheetChipWrap}>
-            {(
-              [
-                ['all', 'All'],
-                ['healthy', '✅ Healthy'],
-                ['stressed', '⚠️ Stressed'],
-                ['recovering', '🔄 Recovering'],
-                ['sick', '❌ Sick'],
-              ] as const
-            ).map(([val, label]) => (
-              <TouchableOpacity
-                key={val}
-                style={[styles.sheetChip, filters.health === val && styles.sheetChipActive]}
-                onPress={() => updateFilter('health', val as HealthStatus | 'all')}
+            <TouchableOpacity
+              style={[styles.sheetChip, filters.health === 'all' && styles.sheetChipActive]}
+              onPress={() => updateFilter('health', 'all')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: filters.health === 'all' }}
+            >
+              <Text
+                style={[
+                  styles.sheetChipText,
+                  filters.health === 'all' && styles.sheetChipTextActive,
+                ]}
               >
-                <Text
-                  style={[
-                    styles.sheetChipText,
-                    filters.health === val && styles.sheetChipTextActive,
-                  ]}
+                All
+              </Text>
+            </TouchableOpacity>
+
+            {HEALTH_STATUSES.map((status) => {
+              const isActive = filters.health === status;
+              const tone = TONE_STYLE_KEYS[HEALTH_STATUS_TONE[status]];
+              const count = plantCounts.health[status];
+              return (
+                <TouchableOpacity
+                  key={status}
+                  style={[styles.sheetChip, isActive && styles[tone.chip]]}
+                  onPress={() => updateFilter('health', status)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
                 >
-                  {label}
-                  {val !== 'all' && plantCounts.health[val] ? ` (${plantCounts.health[val]})` : ''}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <View style={[styles.statusDot, styles[tone.dot]]} />
+                  <Text style={[styles.sheetChipText, isActive && styles[tone.text]]}>
+                    {HEALTH_STATUS_LABELS[status]}
+                    {count ? ` (${count})` : ''}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Space */}
@@ -222,30 +270,37 @@ export function PlantFilterSheet({
           <View style={styles.sheetChipWrap}>
             {(
               [
-                ['all', 'All'],
-                ['full_sun', '☀️ Full Sun'],
-                ['partial_sun', '⛅ Partial'],
-                ['shade', '🌤️ Shade'],
+                ['all', 'All', null],
+                ['full_sun', 'Full Sun', 'sunny-outline'],
+                ['partial_sun', 'Partial', 'partly-sunny-outline'],
+                ['shade', 'Shade', 'cloudy-outline'],
               ] as const
-            ).map(([val, label]) => (
-              <TouchableOpacity
-                key={val}
-                style={[styles.sheetChip, filters.sunlight === val && styles.sheetChipActive]}
-                onPress={() => updateFilter('sunlight', val as SunlightLevel | 'all')}
-              >
-                <Text
-                  style={[
-                    styles.sheetChipText,
-                    filters.sunlight === val && styles.sheetChipTextActive,
-                  ]}
+            ).map(([val, label, icon]) => {
+              const isActive = filters.sunlight === val;
+              return (
+                <TouchableOpacity
+                  key={val}
+                  style={[styles.sheetChip, isActive && styles.sheetChipActive]}
+                  onPress={() => updateFilter('sunlight', val as SunlightLevel | 'all')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
                 >
-                  {label}
-                  {val !== 'all' && plantCounts.sunlight[val]
-                    ? ` (${plantCounts.sunlight[val]})`
-                    : ''}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  {icon && (
+                    <Ionicons
+                      name={icon}
+                      size={14}
+                      color={isActive ? theme.primary : theme.textSecondary}
+                    />
+                  )}
+                  <Text style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}>
+                    {label}
+                    {val !== 'all' && plantCounts.sunlight[val]
+                      ? ` (${plantCounts.sunlight[val]})`
+                      : ''}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Water */}
@@ -255,28 +310,42 @@ export function PlantFilterSheet({
           <View style={styles.sheetChipWrap}>
             {(
               [
-                ['all', 'All'],
-                ['low', '💧 Low'],
-                ['medium', '💧💧 Medium'],
-                ['high', '💧💧💧 High'],
+                ['all', 'All', 0],
+                ['low', 'Low', 1],
+                ['medium', 'Medium', 2],
+                ['high', 'High', 3],
               ] as const
-            ).map(([val, label]) => (
-              <TouchableOpacity
-                key={val}
-                style={[styles.sheetChip, filters.water === val && styles.sheetChipActive]}
-                onPress={() => updateFilter('water', val as WaterRequirement | 'all')}
-              >
-                <Text
-                  style={[
-                    styles.sheetChipText,
-                    filters.water === val && styles.sheetChipTextActive,
-                  ]}
+            ).map(([val, label, drops]) => {
+              const isActive = filters.water === val;
+              const count = val !== 'all' ? plantCounts.water[val] : 0;
+              return (
+                <TouchableOpacity
+                  key={val}
+                  style={[styles.sheetChip, isActive && styles.sheetChipActive]}
+                  onPress={() => updateFilter('water', val as WaterRequirement | 'all')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                  accessibilityLabel={val === 'all' ? 'All' : `${label} water requirement`}
                 >
-                  {label}
-                  {val !== 'all' && plantCounts.water[val] ? ` (${plantCounts.water[val]})` : ''}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  {drops > 0 && (
+                    <View style={styles.sheetChipIconGroup}>
+                      {Array.from({ length: drops }, (_, i) => (
+                        <Ionicons
+                          key={i}
+                          name="water"
+                          size={14}
+                          color={isActive ? theme.primary : theme.textSecondary}
+                        />
+                      ))}
+                    </View>
+                  )}
+                  <Text style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}>
+                    {label}
+                    {count ? ` (${count})` : ''}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Pest Status */}
@@ -286,32 +355,39 @@ export function PlantFilterSheet({
           <View style={styles.sheetChipWrap}>
             {(
               [
-                ['all', 'All'],
-                ['active_issues', '🐛 Active Issues'],
-                ['no_issues', '✅ No Issues'],
+                ['all', 'All', null],
+                ['active_issues', 'Active Issues', 'bug-outline'],
+                ['no_issues', 'No Issues', 'checkmark-circle-outline'],
               ] as const
-            ).map(([val, label]) => (
-              <TouchableOpacity
-                key={val}
-                style={[styles.sheetChip, filters.pestStatus === val && styles.sheetChipActive]}
-                onPress={() => updateFilter('pestStatus', val)}
-              >
-                <Text
-                  style={[
-                    styles.sheetChipText,
-                    filters.pestStatus === val && styles.sheetChipTextActive,
-                  ]}
+            ).map(([val, label, icon]) => {
+              const isActive = filters.pestStatus === val;
+              return (
+                <TouchableOpacity
+                  key={val}
+                  style={[styles.sheetChip, isActive && styles.sheetChipActive]}
+                  onPress={() => updateFilter('pestStatus', val)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
                 >
-                  {label}
-                  {val === 'active_issues' && plantCounts.pestActive > 0
-                    ? ` (${plantCounts.pestActive})`
-                    : ''}
-                  {val === 'no_issues' && plantCounts.pestNone > 0
-                    ? ` (${plantCounts.pestNone})`
-                    : ''}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  {icon && (
+                    <Ionicons
+                      name={icon}
+                      size={14}
+                      color={isActive ? theme.primary : theme.textSecondary}
+                    />
+                  )}
+                  <Text style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}>
+                    {label}
+                    {val === 'active_issues' && plantCounts.pestActive > 0
+                      ? ` (${plantCounts.pestActive})`
+                      : ''}
+                    {val === 'no_issues' && plantCounts.pestNone > 0
+                      ? ` (${plantCounts.pestNone})`
+                      : ''}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Location */}

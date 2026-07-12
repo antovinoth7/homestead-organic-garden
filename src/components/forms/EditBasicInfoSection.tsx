@@ -2,14 +2,13 @@ import React, { useMemo, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { PlantFormStateReturn, CATEGORY_OPTIONS } from '../../hooks/usePlantFormState';
+import { PlantFormStateReturn } from '../../hooks/usePlantFormState';
 import { createStyles } from '../../styles/plantFormStyles';
 import CollapsibleSection from '../CollapsibleSection';
 import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
 import { sanitizeAlphaNumericSpaces } from '../../utils/textSanitizer';
 import { toLocalDateString, formatDateDisplay } from '../../utils/dateHelpers';
-import type { PlantType } from '../../types/database.types';
 
 interface Props {
   formState: PlantFormStateReturn;
@@ -23,15 +22,10 @@ export function EditBasicInfoSection({ formState }: Props): React.JSX.Element {
     showValidationErrors,
     validationErrors,
     sectionStatuses,
-    plantType,
-    setPlantType,
-    plantVariety,
-    setPlantVariety,
     variety,
     setVariety,
     customVarietyMode,
     setCustomVarietyMode,
-    specificPlantOptions,
     varietySuggestions,
     generatedPlantName,
     name,
@@ -45,16 +39,6 @@ export function EditBasicInfoSection({ formState }: Props): React.JSX.Element {
   } = formState;
 
   const styles = useMemo(() => createStyles(theme), [theme]);
-
-  const handleCategoryPress = useCallback(
-    (value: string) => {
-      setPlantType(value as PlantType);
-      setPlantVariety('');
-      setVariety('');
-      setCustomVarietyMode(false);
-    },
-    [setPlantType, setPlantVariety, setVariety, setCustomVarietyMode]
-  );
 
   const handleVarietyDropdownChange = useCallback(
     (value: string) => {
@@ -84,42 +68,6 @@ export function EditBasicInfoSection({ formState }: Props): React.JSX.Element {
       hasError={showValidationErrors && validationErrors.basic.length > 0}
       sectionStatus={showValidationErrors ? undefined : sectionStatuses.basic}
     >
-      <View style={styles.chipGrid}>
-        {CATEGORY_OPTIONS.map((cat) => (
-          <TouchableOpacity
-            key={cat.value}
-            style={[styles.chipGridItem, plantType === cat.value && styles.chipGridItemActive]}
-            onPress={() => handleCategoryPress(cat.value)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.chipGridItemText,
-                plantType === cat.value && styles.chipGridItemTextActive,
-              ]}
-              numberOfLines={1}
-            >
-              {cat.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <ThemedDropdown
-        items={[
-          { label: 'Select plant', value: '' },
-          ...(specificPlantOptions.length === 0
-            ? [{ label: 'No plants yet — add in More', value: '' }]
-            : specificPlantOptions.map((v) => ({ label: v, value: v }))),
-        ]}
-        selectedValue={plantVariety}
-        onValueChange={setPlantVariety}
-        label="Plant"
-        placeholder="Plant"
-        enabled={!!plantType}
-        searchable
-      />
-
       {varietySuggestions.length > 0 ? (
         <>
           <ThemedDropdown

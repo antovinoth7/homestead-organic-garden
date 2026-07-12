@@ -2,8 +2,10 @@ import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { createStyles } from '@/styles/plantDetailStyles';
 import { createEnrichedSectionStyles } from '@/styles/enrichedSectionStyles';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
+import { ExpandableBlock } from '@/components/plantDetail/ExpandableBlock';
+import { ExpandableText } from '@/components/plantDetail/ExpandableText';
 import { getPlantCareProfile, getPruningTechniques } from '@/utils/plantCareDefaults';
 import { getCommonPests, getCommonDiseases, getPestDiseaseEmoji } from '@/utils/plantHelpers';
 import { getPestByName } from '@/config/pests';
@@ -25,7 +27,6 @@ export function DetailCareGuidanceSection({
   plantVariety,
   plantCareProfiles,
 }: Props): React.JSX.Element | null {
-  const styles = useMemo(() => createStyles(theme), [theme]);
   const enrichedStyles = useMemo(() => createEnrichedSectionStyles(theme), [theme]);
   const navigation = useNavigation<PlantDetailScreenNavigationProp>();
 
@@ -88,21 +89,23 @@ export function DetailCareGuidanceSection({
   if (!hasPruning && !hasPests && !hasDiseases && !hasDescription) return null;
 
   return (
-    <View style={styles.careSection}>
-      <Text style={styles.sectionTitle}>📖 Care Guidance</Text>
-
+    <DetailCard title="Care Guidance" icon="book-outline">
       {hasDescription && (
         <View style={enrichedStyles.narrativeBlock}>
-          <Text style={enrichedStyles.narrativeText}>{profile!.description}</Text>
+          <ExpandableText textStyle={enrichedStyles.narrativeText}>
+            {profile!.description!}
+          </ExpandableText>
         </View>
       )}
 
       {hasPruning && (
-        <View style={enrichedStyles.narrativeBlock}>
-          <View style={enrichedStyles.narrativeHeader}>
-            <Ionicons name="cut-outline" size={16} color={theme.accent} />
-            <Text style={enrichedStyles.narrativeTitle}>Pruning Guide</Text>
-          </View>
+        <ExpandableBlock
+          title="Pruning Guide"
+          icon="cut-outline"
+          summary={`${pruningInfo!.tips.length} tip${pruningInfo!.tips.length === 1 ? '' : 's'}${
+            pruningInfo!.shapePruning ? ' · shape' : ''
+          }${pruningInfo!.flowerPruning ? ' · flower' : ''}`}
+        >
           {pruningInfo!.tips.map((tip, i) => (
             <View key={i} style={enrichedStyles.bulletRow}>
               <Text style={enrichedStyles.bullet}>{'\u2022'}</Text>
@@ -135,7 +138,7 @@ export function DetailCareGuidanceSection({
               </View>
             </View>
           )}
-        </View>
+        </ExpandableBlock>
       )}
 
       {hasPests && (
@@ -197,6 +200,6 @@ export function DetailCareGuidanceSection({
           </View>
         </View>
       )}
-    </View>
+    </DetailCard>
   );
 }

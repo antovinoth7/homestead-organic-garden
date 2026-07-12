@@ -102,6 +102,7 @@ export const CACHE_KEYS = {
   ALL_PLANTS: 'allPlants',
   TODAY_TASKS: 'todayTasks',
   TASK_TEMPLATES: 'taskTemplates',
+  TASK_LOGS: 'taskLogs',
   TODAY_TASK_LOGS: 'todayTaskLogs',
   JOURNAL_ENTRIES: 'journalEntries',
   JOURNAL_METADATA: 'journalMetadata',

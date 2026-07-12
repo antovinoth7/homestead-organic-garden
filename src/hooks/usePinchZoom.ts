@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import type {
@@ -18,6 +18,8 @@ export interface PinchZoom {
   composedScale: ReturnType<typeof Animated.multiply>;
   translateX: Animated.Value;
   translateY: Animated.Value;
+  /** True while the image is scaled past 1x. Drives pan/pager gesture handoff. */
+  isZoomed: boolean;
   pinchHandlerRef: React.MutableRefObject<null>;
   panHandlerRef: React.MutableRefObject<null>;
   onPinchEvent: (...args: unknown[]) => void;
@@ -42,6 +44,7 @@ export function usePinchZoom(active: boolean): PinchZoom {
   const lastOffset = useRef({ x: 0, y: 0 });
   const pinchHandlerRef = useRef(null);
   const panHandlerRef = useRef(null);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   const resetZoomValues = useCallback(() => {
     baseScale.setValue(1);
@@ -52,6 +55,7 @@ export function usePinchZoom(active: boolean): PinchZoom {
     translateY.setValue(0);
     lastScale.current = 1;
     lastOffset.current = { x: 0, y: 0 };
+    setIsZoomed(false);
   }, [baseScale, pinchScale, translateX, translateY]);
 
   useEffect(() => {
@@ -71,6 +75,9 @@ export function usePinchZoom(active: boolean): PinchZoom {
   // Spring the image back to a centred, un-panned state at the given scale.
   const springToCenter = useCallback(
     (scale: number): void => {
+      // Hand the drag back to the pager as soon as the un-zoom starts, rather
+      // than when the spring settles.
+      setIsZoomed(scale > 1);
       // Collapse any pan offset into the value so the spring lands on true 0.
       translateX.setOffset(0);
       translateX.setValue(lastOffset.current.x);
@@ -103,6 +110,7 @@ export function usePinchZoom(active: boolean): PinchZoom {
           springToCenter(1);
         } else {
           lastScale.current = next;
+          setIsZoomed(true);
           baseScale.setValue(next);
           // Pull any existing pan back inside the new (smaller) bounds.
           const bounds = panBounds(next);
@@ -153,6 +161,7 @@ export function usePinchZoom(active: boolean): PinchZoom {
         } else {
           Animated.spring(baseScale, { toValue: 2, useNativeDriver: true }).start();
           lastScale.current = 2;
+          setIsZoomed(true);
         }
       }
     },
@@ -163,6 +172,7 @@ export function usePinchZoom(active: boolean): PinchZoom {
     composedScale,
     translateX,
     translateY,
+    isZoomed,
     pinchHandlerRef,
     panHandlerRef,
     onPinchEvent,

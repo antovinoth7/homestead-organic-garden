@@ -6,6 +6,8 @@ import type { Plant } from '@/types/database.types';
 import type { CoconutAgeInfo, CoconutNutrientDeficiency } from '@/utils/plantHelpers';
 import type { createStyles } from '@/styles/plantDetailStyles';
 import { PlantInfoRow } from '@/components/PlantInfoRow';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
+import { ExpandableBlock } from '@/components/plantDetail/ExpandableBlock';
 
 type DetailStyles = ReturnType<typeof createStyles>;
 
@@ -47,8 +49,7 @@ export function CoconutSection({
   if (!hasContent) return null;
 
   return (
-    <View style={styles.careSection}>
-      <Text style={styles.sectionTitle}>🥥 Coconut</Text>
+    <DetailCard title="Coconut" icon="leaf-outline">
       {coconutAge && (
         <>
           <PlantInfoRow
@@ -63,12 +64,20 @@ export function CoconutSection({
             iconColor={theme.textSecondary}
             text={`Expected Yield: ${coconutAge.expectedNutsPerYear}`}
           />
-          {coconutAge.careTips.map((tip, i) => (
-            <View key={i} style={styles.careTipItem}>
-              <Text style={styles.careTipBullet}>•</Text>
-              <Text style={styles.careTipText}>{tip}</Text>
-            </View>
-          ))}
+          {coconutAge.careTips.length > 0 && (
+            <ExpandableBlock
+              title="Care tips for this age"
+              summary={coconutAge.careTips[0]}
+              icon="bulb-outline"
+            >
+              {coconutAge.careTips.map((tip, i) => (
+                <View key={i} style={styles.careTipItem}>
+                  <Text style={styles.careTipBullet}>•</Text>
+                  <Text style={styles.careTipText}>{tip}</Text>
+                </View>
+              ))}
+            </ExpandableBlock>
+          )}
         </>
       )}
       {hasMetrics && (
@@ -131,18 +140,12 @@ export function CoconutSection({
           <View style={styles.sectionDivider} />
           <Text style={styles.subsectionTitle}>Nutrient Deficiency Guide</Text>
           {coconutDeficiencies.map((def) => (
-            <View
+            <ExpandableBlock
               key={def.nutrient}
-              style={[
-                styles.nutrientCard,
-                def.urgency === 'high'
-                  ? styles.nutrientCardHigh
-                  : def.urgency === 'medium'
-                  ? styles.nutrientCardMedium
-                  : styles.nutrientCardLow,
-              ]}
+              title={def.nutrient}
+              summary={def.symptoms[0]}
+              accent={def.urgency}
             >
-              <Text style={styles.nutrientName}>{def.nutrient}</Text>
               <Text style={styles.nutrientSubTitle}>Symptoms</Text>
               {def.symptoms.slice(0, 3).map((s, i) => (
                 <Text key={i} style={styles.nutrientSymptom}>
@@ -155,10 +158,10 @@ export function CoconutSection({
                   ✓ {c}
                 </Text>
               ))}
-            </View>
+            </ExpandableBlock>
           ))}
         </>
       )}
-    </View>
+    </DetailCard>
   );
 }

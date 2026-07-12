@@ -17,6 +17,8 @@ import {
   createPlant,
   updatePlant,
   savePlantImage,
+  pinGrowthStage,
+  unpinGrowthStage,
 } from '../services/plants';
 import { getFilenameFromUri } from '../lib/imageStorage';
 import { syncCareTasksForPlant } from '../services/tasks';
@@ -55,13 +57,12 @@ import {
   isGeneratedPlantName,
   buildGeneratedPlantName,
 } from '../utils/plantNameGenerator';
+import { careScheduleErrors, wizardStepBlockReason } from './plantFormValidation';
 import {
   NOTES_MAX_LENGTH,
   sanitizeNumberText,
   type FormSectionKey,
   CATEGORY_OPTIONS,
-  HEALTH_OPTIONS,
-  GROWTH_STAGE_OPTIONS,
   getFrequencyLabel,
   adjustFrequency,
 } from '../utils/plantFormConstants';
@@ -72,8 +73,6 @@ export {
   sanitizeNumberText,
   type FormSectionKey,
   CATEGORY_OPTIONS,
-  HEALTH_OPTIONS,
-  GROWTH_STAGE_OPTIONS,
   getFrequencyLabel,
   adjustFrequency,
 };
@@ -142,12 +141,13 @@ export interface PlantFormStateReturn {
   setPhotoUri: (v: string | null) => void;
   photoFilename: string | null;
   setPhotoFilename: (v: string | null) => void;
+  // Sunlight and water needs are read-only in the UI (no exported setters);
+  // they are still set internally by profile seeding and edit-mode hydration.
   sunlight: SunlightLevel;
-  setSunlight: (v: SunlightLevel) => void;
+  waterRequirement: WaterRequirement;
+  // Soil and fertiliser are profile-seeded but remain user-editable.
   soilType: SoilType;
   setSoilType: (v: SoilType) => void;
-  waterRequirement: WaterRequirement;
-  setWaterRequirement: (v: WaterRequirement) => void;
   wateringFrequency: string;
   setWateringFrequency: (v: string) => void;
   fertilisingFrequency: string;
@@ -163,6 +163,9 @@ export interface PlantFormStateReturn {
   setPestDiseaseHistory: (v: PestDiseaseRecord[]) => void;
   growthStage: GrowthStage;
   setGrowthStage: (v: GrowthStage) => void;
+  /** Hard override of the derived growth stage; null = derive automatically. */
+  pinnedStage: GrowthStage | null;
+  setPinnedStage: (v: GrowthStage | null) => void;
   pruningFrequency: string;
   setPruningFrequency: (v: string) => void;
   pruningNotes: string;
@@ -199,12 +202,8 @@ export interface PlantFormStateReturn {
   showValidationErrors: boolean;
   showCustomNameInput: boolean;
   setShowCustomNameInput: (v: boolean) => void;
-  autoApplyCareDefaults: boolean;
-  setAutoApplyCareDefaults: (v: boolean) => void;
   autoSuggestFired: boolean;
   locationDefaultsFired: boolean;
-  careProfileCardDismissed: boolean;
-  setCareProfileCardDismissed: (v: boolean) => void;
   sectionExpanded: Record<FormSectionKey, boolean>;
   currentPestDisease: PestDiseaseRecord;
   setCurrentPestDisease: (v: PestDiseaseRecord) => void;
@@ -298,6 +297,10 @@ export function usePlantFormState(): PlantFormStateReturn {
   const [expectedHarvestDate, setExpectedHarvestDate] = useState('');
   const [pestDiseaseHistory, setPestDiseaseHistory] = useState<PestDiseaseRecord[]>([]);
   const [growthStage, setGrowthStage] = useState<GrowthStage>('seedling');
+  // The user's hard override of the derived stage — mirrors plant.growth_stage_pinned.
+  // null means "let the app compute the stage". Applied on save via pin/unpin.
+  const [pinnedStage, setPinnedStage] = useState<GrowthStage | null>(null);
+  const initialPinnedStage = useRef<GrowthStage | null>(null);
   const [pruningFrequency, setPruningFrequency] = useState('');
   const [pruningNotes, setPruningNotes] = useState('');
   // Care task enable/disable toggles (Phase B)
@@ -321,15 +324,15 @@ export function usePlantFormState(): PlantFormStateReturn {
   const [showPhotoSourceModal, setShowPhotoSourceModal] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [showCustomNameInput, setShowCustomNameInput] = useState(false);
-  const [autoApplyCareDefaults, setAutoApplyCareDefaults] = useState(true);
   const [autoSuggestFired, setAutoSuggestFired] = useState(false);
   const [locationDefaultsFired, setLocationDefaultsFired] = useState(false);
-  const [careProfileCardDismissed, setCareProfileCardDismissed] = useState(false);
   const [sectionExpanded, setSectionExpanded] = useState<Record<FormSectionKey, boolean>>({
     basic: true,
     location: true,
     care: true,
-    health: false,
+    // Expanded so each tab's section is tall enough for the scroll-spy to
+    // resolve it; the niche harvest/coconut blocks stay collapsed.
+    health: true,
     harvest: false,
     coconut: false,
     notesHistory: false,
@@ -442,22 +445,29 @@ export function usePlantFormState(): PlantFormStateReturn {
     if (!plantVariety.trim()) errors.basic.push('Please select a specific plant');
     if (!parentLocation.trim()) errors.location.push('Please select a main location');
     if (!childLocation.trim()) errors.location.push('Please select a direction/section');
-    if (
-      !wateringFrequency.trim() ||
-      isNaN(parseInt(wateringFrequency, 10)) ||
-      parseInt(wateringFrequency, 10) < 1
-    )
-      errors.care.push('Please enter a valid watering frequency (number of days)');
-    if (
-      !fertilisingFrequency.trim() ||
-      isNaN(parseInt(fertilisingFrequency, 10)) ||
-      parseInt(fertilisingFrequency, 10) < 1
-    )
-      errors.care.push('Please enter a valid fertilising frequency (number of days)');
+    errors.care = careScheduleErrors({
+      wateringEnabled,
+      wateringFrequency,
+      fertilisingEnabled,
+      fertilisingFrequency,
+      pruningEnabled,
+      pruningFrequency,
+    });
     if (notes.length > NOTES_MAX_LENGTH)
       errors.notesHistory.push(`Notes must be ${NOTES_MAX_LENGTH} characters or less`);
     return errors;
-  }, [plantVariety, parentLocation, childLocation, wateringFrequency, fertilisingFrequency, notes]);
+  }, [
+    plantVariety,
+    parentLocation,
+    childLocation,
+    wateringEnabled,
+    wateringFrequency,
+    fertilisingEnabled,
+    fertilisingFrequency,
+    pruningEnabled,
+    pruningFrequency,
+    notes,
+  ]);
 
   const totalErrorCount = useMemo(
     () => Object.values(validationErrors).reduce((sum, arr) => sum + arr.length, 0),
@@ -469,7 +479,10 @@ export function usePlantFormState(): PlantFormStateReturn {
       ({
         basic: plantVariety && plantType ? 'complete' : 'required_incomplete',
         location: parentLocation && childLocation ? 'complete' : 'required_incomplete',
-        care: wateringFrequency && fertilisingFrequency ? 'complete' : 'required_incomplete',
+        care:
+          (!wateringEnabled || wateringFrequency) && (!fertilisingEnabled || fertilisingFrequency)
+            ? 'complete'
+            : 'required_incomplete',
         health: 'optional',
         harvest: 'optional',
         coconut: 'optional',
@@ -481,13 +494,18 @@ export function usePlantFormState(): PlantFormStateReturn {
       plantType,
       parentLocation,
       childLocation,
+      wateringEnabled,
       wateringFrequency,
+      fertilisingEnabled,
       fertilisingFrequency,
     ]
   );
 
   const formProgress = useMemo(() => {
-    let total = basicFieldCount + locationFieldCount + 9;
+    // Care section counts only user-adjustable inputs (frequencies + pruning
+    // notes); profile-seeded info fields (sunlight, soil, water needs,
+    // fertiliser, mulching) are display-only and excluded.
+    let total = basicFieldCount + locationFieldCount + 4;
     total += 2;
     total += harvestSectionFieldCount;
     total += notesHistoryFieldCount;
@@ -506,11 +524,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     if (landmarks) filled += 1;
     if (wateringFrequency) filled += 1;
     if (fertilisingFrequency) filled += 1;
-    if (sunlight) filled += 1;
-    if (waterRequirement) filled += 1;
-    if (soilType) filled += 1;
-    if (preferredFertiliser) filled += 1;
-    if (typeof mulchingUsed === 'boolean') filled += 1;
     if (pruningFrequency) filled += 1;
     if (pruningNotes) filled += 1;
     if (healthStatus) filled += 1;
@@ -551,11 +564,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     landmarks,
     wateringFrequency,
     fertilisingFrequency,
-    sunlight,
-    waterRequirement,
-    soilType,
-    preferredFertiliser,
-    mulchingUsed,
     pruningFrequency,
     pruningNotes,
     healthStatus,
@@ -617,6 +625,7 @@ export function usePlantFormState(): PlantFormStateReturn {
       expectedHarvestDate,
       pestDiseaseHistory,
       growthStage,
+      pinnedStage,
       pruningFrequency,
       pruningNotes,
       wateringEnabled,
@@ -663,6 +672,7 @@ export function usePlantFormState(): PlantFormStateReturn {
     expectedHarvestDate,
     pestDiseaseHistory,
     growthStage,
+    pinnedStage,
     pruningFrequency,
     pruningNotes,
     wateringEnabled,
@@ -732,7 +742,6 @@ export function usePlantFormState(): PlantFormStateReturn {
   useEffect(() => {
     autoSuggestApplied.current = false;
     setAutoSuggestFired(false);
-    setCareProfileCardDismissed(false);
     setCustomVarietyMode(false);
   }, [plantVariety]);
 
@@ -741,7 +750,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     if (
       !plantId &&
       plantVariety &&
-      autoApplyCareDefaults &&
       careProfilesLoaded &&
       hasPlantCareProfile(plantVariety, plantType, plantCareProfiles) &&
       !autoSuggestApplied.current
@@ -770,14 +778,7 @@ export function usePlantFormState(): PlantFormStateReturn {
         shouldCaptureSnapshot.current = true;
       }
     }
-  }, [
-    plantVariety,
-    plantId,
-    plantType,
-    autoApplyCareDefaults,
-    careProfilesLoaded,
-    plantCareProfiles,
-  ]);
+  }, [plantVariety, plantId, plantType, careProfilesLoaded, plantCareProfiles]);
 
   // B.4: Auto-compute growth stage from planting_date for new plants
   useEffect(() => {
@@ -883,27 +884,33 @@ export function usePlantFormState(): PlantFormStateReturn {
   );
 
   const getWizardStepErrors = useCallback(
-    (step: 1 | 2 | 3): string | null => {
-      if (step === 1 && !plantVariety.trim()) return 'Please select a plant';
-      if (step === 2 && !parentLocation.trim()) return 'Please select a main location';
-      if (step === 2 && !childLocation.trim()) return 'Please select a direction or section';
-      if (step === 3) {
-        if (
-          !wateringFrequency.trim() ||
-          isNaN(parseInt(wateringFrequency, 10)) ||
-          parseInt(wateringFrequency, 10) < 1
-        )
-          return 'Please enter a valid watering frequency';
-        if (
-          !fertilisingFrequency.trim() ||
-          isNaN(parseInt(fertilisingFrequency, 10)) ||
-          parseInt(fertilisingFrequency, 10) < 1
-        )
-          return 'Please enter a valid fertilising frequency';
-      }
-      return null;
-    },
-    [plantVariety, parentLocation, childLocation, wateringFrequency, fertilisingFrequency]
+    (step: 1 | 2 | 3): string | null =>
+      wizardStepBlockReason(step, {
+        plantVariety,
+        parentLocation,
+        childLocation,
+        careProfilesLoaded,
+        care: {
+          wateringEnabled,
+          wateringFrequency,
+          fertilisingEnabled,
+          fertilisingFrequency,
+          pruningEnabled,
+          pruningFrequency,
+        },
+      }),
+    [
+      plantVariety,
+      parentLocation,
+      childLocation,
+      careProfilesLoaded,
+      wateringEnabled,
+      wateringFrequency,
+      fertilisingEnabled,
+      fertilisingFrequency,
+      pruningEnabled,
+      pruningFrequency,
+    ]
   );
 
   const navigateToPlantsAfterSave = useCallback(() => {
@@ -1044,6 +1051,8 @@ export function usePlantFormState(): PlantFormStateReturn {
         setExpectedHarvestDate(plant.expected_harvest_date || '');
         setPestDiseaseHistory(plant.pest_disease_history || []);
         setGrowthStage(plant.growth_stage || 'seedling');
+        setPinnedStage(plant.growth_stage_pinned ?? null);
+        initialPinnedStage.current = plant.growth_stage_pinned ?? null;
         setPruningFrequency(plant.pruning_frequency_days?.toString() || '');
         setPruningNotes(plant.pruning_notes || '');
         setWateringEnabled(plant.watering_enabled !== false);
@@ -1186,6 +1195,18 @@ export function usePlantFormState(): PlantFormStateReturn {
         ? await updatePlant(plantId, plantData as Omit<Plant, 'id' | 'user_id' | 'created_at'>)
         : await createPlant(plantData as Omit<Plant, 'id' | 'user_id' | 'created_at'>);
 
+      // The stage override lives in growth_stage_pinned, which updatePlant does
+      // not touch — pin/unpin also append to growth_stage_history, so they must
+      // be called rather than folded into the payload above.
+      if (plantId && pinnedStage !== initialPinnedStage.current) {
+        if (pinnedStage) {
+          await pinGrowthStage(plantId, pinnedStage);
+        } else {
+          await unpinGrowthStage(plantId);
+        }
+        initialPinnedStage.current = pinnedStage;
+      }
+
       setLoadedGeneratedName(nickname ? '' : finalPlantName);
       setExistingPlants((prev) => [...prev.filter((p) => p.id !== savedPlant.id), savedPlant]);
 
@@ -1284,11 +1305,9 @@ export function usePlantFormState(): PlantFormStateReturn {
     photoFilename,
     setPhotoFilename,
     sunlight,
-    setSunlight,
+    waterRequirement,
     soilType,
     setSoilType,
-    waterRequirement,
-    setWaterRequirement,
     wateringFrequency,
     setWateringFrequency,
     fertilisingFrequency,
@@ -1304,6 +1323,8 @@ export function usePlantFormState(): PlantFormStateReturn {
     setPestDiseaseHistory,
     growthStage,
     setGrowthStage,
+    pinnedStage,
+    setPinnedStage,
     pruningFrequency,
     setPruningFrequency,
     pruningNotes,
@@ -1339,12 +1360,8 @@ export function usePlantFormState(): PlantFormStateReturn {
     showValidationErrors,
     showCustomNameInput,
     setShowCustomNameInput,
-    autoApplyCareDefaults,
-    setAutoApplyCareDefaults,
     autoSuggestFired,
     locationDefaultsFired,
-    careProfileCardDismissed,
-    setCareProfileCardDismissed,
     sectionExpanded,
     currentPestDisease,
     setCurrentPestDisease,

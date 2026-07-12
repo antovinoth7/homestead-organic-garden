@@ -46,6 +46,9 @@ export const DEFAULT_PROFILES_BY_TYPE: Record<PlantType, PlantCareProfile> = {
     growthStageDurations: { seedling: 150, vegetative: 1310 },
     annualCycleDurations: { flowering: 45, fruiting: 120, dormant: 200 },
     floweringStartMonth: 2,
+    // Required for the annual cycle to activate — without it, non-catalog
+    // varieties would stay "vegetative" forever.
+    yearsToFirstHarvest: 4,
   },
   timber_tree: {
     waterRequirement: 'low',
@@ -78,7 +81,7 @@ export const DEFAULT_PROFILES_BY_TYPE: Record<PlantType, PlantCareProfile> = {
     soilType: 'garden_soil',
     preferredFertiliser: 'compost',
     initialGrowthStage: 'vegetative',
-    growthStageDurations: { seedling: 35, vegetative: 100, mature: 65 },
+    growthStageDurations: { seedling: 35, vegetative: 100, flowering: 45, mature: 65 },
   },
   spinach: {
     waterRequirement: 'medium',

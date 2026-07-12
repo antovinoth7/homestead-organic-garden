@@ -61,8 +61,8 @@ export default function JournalScreen(): React.JSX.Element {
   // Collapsible filter state
   const [showFilters, setShowFilters] = useState(false);
 
-  // Gallery modal state
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  // Gallery modal state — the tapped entry's photos plus the photo to open on.
+  const [gallery, setGallery] = useState<{ uris: string[]; index: number } | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const loadData = async (options?: { silent?: boolean }): Promise<void> => {
@@ -256,8 +256,8 @@ export default function JournalScreen(): React.JSX.Element {
     setDeleteId(entry.id);
   }, []);
 
-  const handlePhotoPress = useCallback((uri: string): void => {
-    setSelectedImage(uri);
+  const handlePhotoPress = useCallback((uris: string[], index: number): void => {
+    setGallery({ uris, index });
   }, []);
 
   const renderItem = useCallback(
@@ -565,12 +565,13 @@ export default function JournalScreen(): React.JSX.Element {
         </View>
       )}
 
-      {/* Fullscreen image viewer with pinch/pan/double-tap zoom */}
-      {selectedImage && (
+      {/* Fullscreen swipeable image viewer with pinch/pan/double-tap zoom */}
+      {gallery && (
         <ImageZoomModal
-          visible={selectedImage !== null}
-          uri={selectedImage}
-          onClose={() => setSelectedImage(null)}
+          visible
+          uris={gallery.uris}
+          initialIndex={gallery.index}
+          onClose={() => setGallery(null)}
         />
       )}
 

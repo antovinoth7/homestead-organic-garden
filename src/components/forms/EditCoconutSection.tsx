@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { PlantFormStateReturn, sanitizeNumberText } from '../../hooks/usePlantFormState';
 import { createStyles } from '../../styles/plantFormStyles';
-import { createEditStyles } from '../../styles/plantEditFormStyles';
 import CollapsibleSection from '../CollapsibleSection';
 import { toLocalDateString, formatDateDisplay } from '../../utils/dateHelpers';
 
@@ -38,7 +37,6 @@ export function EditCoconutSection({ formState }: Props): React.JSX.Element | nu
   } = formState;
 
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const editStyles = useMemo(() => createEditStyles(theme), [theme]);
 
   if (plantType !== 'coconut_tree') return null;
 
@@ -52,39 +50,6 @@ export function EditCoconutSection({ formState }: Props): React.JSX.Element | nu
       hasError={false}
       sectionStatus="optional"
     >
-      {coconutAgeInfo && (
-        <View style={[styles.infoCard, editStyles.coconutInfoCard]}>
-          <View style={styles.infoCardHeader}>
-            <Ionicons name="leaf" size={16} color={theme.coconut} />
-            <Text style={[styles.infoCardTitle, editStyles.coconutInfoCardTitle]}>
-              Age-based Care — {coconutAgeInfo.ageLabel}
-            </Text>
-          </View>
-          <Text style={styles.infoCardText}>Stage: {coconutAgeInfo.stageLabel}</Text>
-          <Text style={styles.infoCardText}>
-            Expected yield: {coconutAgeInfo.expectedNutsPerYear}
-          </Text>
-          <Text style={[styles.infoCardText, editStyles.infoCardTextBold]}>
-            Suggested schedule:
-          </Text>
-          <Text style={styles.infoCardText}>
-            {'\u2022'} Water every {coconutAgeInfo.wateringFrequencyDays} day
-            {coconutAgeInfo.wateringFrequencyDays !== 1 ? 's' : ''}
-          </Text>
-          <Text style={styles.infoCardText}>
-            {'\u2022'} Fertilise every {coconutAgeInfo.fertilisingFrequencyDays} days
-          </Text>
-          <Text style={[styles.infoCardText, editStyles.infoCardTextBold]}>
-            Care tips for this stage:
-          </Text>
-          {coconutAgeInfo.careTips.map((tip, i) => (
-            <Text key={i} style={styles.infoCardText}>
-              {'\u2022'} {tip}
-            </Text>
-          ))}
-        </View>
-      )}
-
       <Text style={styles.fieldGroupLabel}>Tree Metrics</Text>
       <View style={styles.statCardsRow}>
         {[
@@ -124,7 +89,7 @@ export function EditCoconutSection({ formState }: Props): React.JSX.Element | nu
                 value={item.value}
                 onChangeText={(text) => item.setter(sanitizeNumberText(text))}
                 keyboardType="numeric"
-                placeholder="\u2014"
+                placeholder="—"
                 placeholderTextColor={theme.inputPlaceholder}
                 maxLength={3}
               />
@@ -187,7 +152,7 @@ export function EditCoconutSection({ formState }: Props): React.JSX.Element | nu
               value={nutFallCount}
               onChangeText={(text) => setNutFallCount(sanitizeNumberText(text))}
               keyboardType="numeric"
-              placeholder="\u2014"
+              placeholder="—"
               placeholderTextColor={theme.inputPlaceholder}
               maxLength={3}
             />

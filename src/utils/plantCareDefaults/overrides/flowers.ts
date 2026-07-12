@@ -59,7 +59,7 @@ export const FLOWER_OVERRIDES: Record<string, PlantCareProfile> = {
     droughtTolerance: 'medium',
     petToxicity: false,
     feedingIntensity: 'medium',
-    growthStageDurations: { seedling: 45, vegetative: 180, mature: 140 },
+    growthStageDurations: { seedling: 45, vegetative: 180, flowering: 140 },
   },
   [buildProfileKey('flower', 'Hibiscus')]: {
     waterRequirement: 'medium',
@@ -88,7 +88,7 @@ export const FLOWER_OVERRIDES: Record<string, PlantCareProfile> = {
     droughtTolerance: 'medium',
     petToxicity: false,
     feedingIntensity: 'medium',
-    growthStageDurations: { seedling: 30, vegetative: 90, mature: 60 },
+    growthStageDurations: { seedling: 30, vegetative: 90, flowering: 60 },
   },
   [buildProfileKey('flower', 'Rose')]: {
     waterRequirement: 'medium',
@@ -117,7 +117,7 @@ export const FLOWER_OVERRIDES: Record<string, PlantCareProfile> = {
     droughtTolerance: 'low',
     petToxicity: false,
     feedingIntensity: 'heavy',
-    growthStageDurations: { seedling: 30, vegetative: 60, mature: 45 },
+    growthStageDurations: { seedling: 30, vegetative: 60, flowering: 45 },
   },
   [buildProfileKey('flower', 'Chrysanthemum')]: {
     waterRequirement: 'medium',
@@ -175,7 +175,7 @@ export const FLOWER_OVERRIDES: Record<string, PlantCareProfile> = {
     droughtTolerance: 'low',
     petToxicity: false,
     feedingIntensity: 'light',
-    growthStageDurations: { seedling: 30, vegetative: 90, mature: 60 },
+    growthStageDurations: { seedling: 30, vegetative: 90, flowering: 60 },
   },
   [buildProfileKey('flower', 'Ixora')]: {
     waterRequirement: 'medium',
@@ -204,7 +204,7 @@ export const FLOWER_OVERRIDES: Record<string, PlantCareProfile> = {
     droughtTolerance: 'medium',
     petToxicity: false,
     feedingIntensity: 'light',
-    growthStageDurations: { seedling: 45, vegetative: 120, mature: 75 },
+    growthStageDurations: { seedling: 45, vegetative: 120, flowering: 75 },
   },
   [buildProfileKey('flower', 'Sunflower')]: {
     waterRequirement: 'medium',
@@ -261,7 +261,7 @@ export const FLOWER_OVERRIDES: Record<string, PlantCareProfile> = {
     droughtTolerance: 'low',
     petToxicity: true,
     feedingIntensity: 'heavy',
-    growthStageDurations: { seedling: 21, vegetative: 45, mature: 25 },
+    growthStageDurations: { seedling: 21, vegetative: 45, flowering: 25 },
   },
   [buildProfileKey('flower', 'Orchid')]: {
     waterRequirement: 'medium',
@@ -289,6 +289,6 @@ export const FLOWER_OVERRIDES: Record<string, PlantCareProfile> = {
     droughtTolerance: 'low',
     petToxicity: false,
     feedingIntensity: 'light',
-    growthStageDurations: { seedling: 60, vegetative: 180, mature: 125 },
+    growthStageDurations: { seedling: 60, vegetative: 180, flowering: 125 },
   },
 };

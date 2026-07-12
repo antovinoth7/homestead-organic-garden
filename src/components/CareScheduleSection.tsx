@@ -6,6 +6,7 @@ import type { Plant } from '@/types/database.types';
 import type { createStyles } from '@/styles/plantDetailStyles';
 import { formatTimestampDisplay } from '@/utils/dateHelpers';
 import { PlantInfoRow } from '@/components/PlantInfoRow';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 
 type DetailStyles = ReturnType<typeof createStyles>;
 
@@ -18,8 +19,7 @@ interface Props {
 /** §3 — Last care summary grid and care frequencies. */
 export function CareScheduleSection({ styles, theme, plant }: Props): React.JSX.Element {
   return (
-    <View style={styles.careSection}>
-      <Text style={styles.sectionTitle}>📋 Care & Schedule</Text>
+    <DetailCard title="Care & Schedule" icon="calendar-outline">
       {(plant.last_watered_date || plant.last_fertilised_date || plant.last_pruned_date) && (
         <View style={styles.lastCareGrid}>
           {plant.last_watered_date && (
@@ -51,22 +51,6 @@ export function CareScheduleSection({ styles, theme, plant }: Props): React.JSX.
           )}
         </View>
       )}
-      {plant.watering_frequency_days && (
-        <PlantInfoRow
-          styles={styles}
-          icon="water"
-          iconColor={theme.primary}
-          text={`Water every ${plant.watering_frequency_days} days`}
-        />
-      )}
-      {plant.fertilising_frequency_days && (
-        <PlantInfoRow
-          styles={styles}
-          icon="nutrition"
-          iconColor={theme.accent}
-          text={`Fertilise every ${plant.fertilising_frequency_days} days`}
-        />
-      )}
       {plant.preferred_fertiliser && (
         <PlantInfoRow
           styles={styles}
@@ -85,14 +69,6 @@ export function CareScheduleSection({ styles, theme, plant }: Props): React.JSX.
           text="Mulching applied"
         />
       )}
-      {plant.pruning_frequency_days && (
-        <PlantInfoRow
-          styles={styles}
-          icon="cut"
-          iconColor={theme.textSecondary}
-          text={`Prune every ${plant.pruning_frequency_days} days`}
-        />
-      )}
-    </View>
+    </DetailCard>
   );
 }

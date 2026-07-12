@@ -1,4 +1,9 @@
-import { hasRainSoon, isRainPredictedOnDate, resolveWeatherCoords } from '@/services/weatherLogic';
+import {
+  hasRainSoon,
+  isRainPredictedOnDate,
+  resolveWeatherCoords,
+  wateringAdvice,
+} from '@/services/weatherLogic';
 import { DEFAULT_COORDINATES, DISTRICT_COORDINATES } from '@/config/zones/districtCoordinates';
 import { WeatherForecast, DailyWeather } from '@/types/database.types';
 
@@ -61,6 +66,29 @@ describe('hasRainSoon', () => {
 
   it('is false for a null forecast', () => {
     expect(hasRainSoon(null)).toBe(false);
+  });
+});
+
+describe('wateringAdvice', () => {
+  it('tells the user to skip watering when rain is coming', () => {
+    expect(wateringAdvice(true)).toEqual({
+      emoji: '🌧️',
+      text: 'Rain expected soon — skip watering',
+    });
+  });
+
+  it('tells the user to keep watering when no rain is coming', () => {
+    expect(wateringAdvice(false)).toEqual({
+      emoji: '☀️',
+      text: 'No rain expected soon — keep watering',
+    });
+  });
+
+  // The forecast card renders this line in both states so every plot's card is
+  // the same height — a shorter card would break the stacked WeatherDeck.
+  it('returns advice in both states', () => {
+    expect(wateringAdvice(true).text).toBeTruthy();
+    expect(wateringAdvice(false).text).toBeTruthy();
   });
 });
 

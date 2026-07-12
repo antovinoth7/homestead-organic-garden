@@ -219,6 +219,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 8,
     },
     sheetChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 20,
@@ -230,6 +233,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primaryLight,
       borderColor: theme.primary,
     },
+    // Repeated icons (e.g. water droplets) read as one glyph, so they sit tighter
+    // together than the chip's own icon-to-label gap.
+    sheetChipIconGroup: {
+      flexDirection: 'row',
+      gap: 1,
+    },
     sheetChipText: {
       fontSize: 14,
       color: theme.textSecondary,
@@ -239,6 +248,49 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.primary,
       fontWeight: '600',
     },
+    // Health-status tone quartet — mirrors the edit form's chips (plantFormStyles)
+    // so a status reads identically wherever it appears.
+    sheetChipActiveSuccess: {
+      backgroundColor: theme.successLight,
+      borderColor: theme.successBorder,
+    },
+    sheetChipActiveWarning: {
+      backgroundColor: theme.warningLight,
+      borderColor: theme.warningBorder,
+    },
+    sheetChipActiveInfo: {
+      backgroundColor: theme.infoLight,
+      borderColor: theme.infoBorder,
+    },
+    sheetChipActiveError: {
+      backgroundColor: theme.errorLight,
+      borderColor: theme.errorBorder,
+    },
+    sheetChipTextSuccess: {
+      color: theme.successDark,
+      fontWeight: '600',
+    },
+    sheetChipTextWarning: {
+      color: theme.warningDark,
+      fontWeight: '600',
+    },
+    sheetChipTextInfo: {
+      color: theme.infoDark,
+      fontWeight: '600',
+    },
+    sheetChipTextError: {
+      color: theme.errorDark,
+      fontWeight: '600',
+    },
+    statusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    statusDotSuccess: { backgroundColor: theme.success },
+    statusDotWarning: { backgroundColor: theme.warning },
+    statusDotInfo: { backgroundColor: theme.info },
+    statusDotError: { backgroundColor: theme.error },
 
     resultsHeader: {
       flexDirection: 'row',
@@ -251,8 +303,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     segmentRow: {
       flexDirection: 'row',
-      alignSelf: 'flex-start',
-      flexShrink: 1,
+      flex: 1,
       gap: 2,
       padding: 2,
       borderRadius: 14,
@@ -262,8 +313,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       overflow: 'hidden',
     },
     segmentChip: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 5,

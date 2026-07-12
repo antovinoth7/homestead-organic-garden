@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import type { createStyles } from '@/styles/plantDetailStyles';
-import { DetailSection } from '@/components/DetailSection';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 
 type DetailStyles = ReturnType<typeof createStyles>;
 
@@ -20,7 +20,7 @@ export function CompanionPlantingSection({
   if (companions.length === 0 && incompatible.length === 0) return null;
 
   return (
-    <DetailSection styles={styles} title="🤝 Companion Planting">
+    <DetailCard title="Companions" icon="people-outline">
       {companions.length > 0 && (
         <>
           <Text style={styles.subsectionTitle}>Good Companions</Text>
@@ -45,6 +45,6 @@ export function CompanionPlantingSection({
           </View>
         </>
       )}
-    </DetailSection>
+    </DetailCard>
   );
 }

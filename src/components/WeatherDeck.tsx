@@ -2,9 +2,14 @@
  * WeatherDeck — a Tinder-style stacked, swipeable deck of per-plot forecasts.
  *
  * Used when a farm has multiple plots: the top card shows one plot's forecast
- * with the next cards peeking behind it; swiping the top card past a threshold
- * flings it away and cycles to the next plot. Built on RN built-ins
+ * with the next cards fanned out beneath it; swiping the top card past a
+ * threshold flings it away and cycles to the next plot. Built on RN built-ins
  * (`Animated` + `PanResponder`) — no reanimated/gesture-handler needed.
+ *
+ * Every card is sized to the tallest card in the deck (`cardHeight`), not to
+ * whichever card happens to be in front. A plot with rain has a taller natural
+ * card than a dry one, so sizing to the front card made the taller cards behind
+ * spill out below it and made the whole block resize on every swipe.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -26,6 +31,13 @@ const SWIPE_THRESHOLD = 120;
 const SWIPE_VELOCITY = 0.5;
 const MAX_BEHIND = 2;
 
+/** Resting offset of each card behind the front one — the fan-out under the deck. */
+const PEEK_OFFSET = 12;
+const PEEK_SCALE_STEP = 0.04;
+const PEEK_OPACITY_STEP = 0.25;
+/** Room reserved below the front card for the deepest peeking card to show in. */
+const PEEK_RESERVE = PEEK_OFFSET * MAX_BEHIND + 4;
+
 interface Props {
   plots: WeatherPlot[];
 }
@@ -38,9 +50,18 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
   nRef.current = n;
 
   const [topIndex, setTopIndex] = useState(0);
-  const [deckHeight, setDeckHeight] = useState(0);
+  // Tallest card measured so far. Monotonic: once every card is stretched to it,
+  // they all report it back, so it settles after the tallest plot has mounted.
+  const [cardHeight, setCardHeight] = useState(0);
   const pan = useRef(new Animated.ValueXY()).current;
   const screenW = useWindowDimensions().width;
+
+  // A different farm means different cards — re-measure from scratch rather than
+  // inheriting the previous farm's height.
+  useEffect(() => {
+    setCardHeight(0);
+    setTopIndex(0);
+  }, [plots]);
 
   const panResponder = useMemo(
     () =>
@@ -88,13 +109,14 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
   );
 
   // Drag progress 0→1 toward the swipe threshold (either direction): the next
-  // card grows into place *while* the front card is dragged away, so the index
-  // shuffle at release is visually continuous. Native-driven like the pan.
+  // card rises into the front card's place *while* the front card is dragged
+  // away, so the index shuffle at release is visually continuous. The resting
+  // ends of these ranges must match the depth-1 resting transform below.
   const nextCardScale = useMemo(
     () =>
       pan.x.interpolate({
         inputRange: [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD],
-        outputRange: [1, 0.95, 1],
+        outputRange: [1, 1 - PEEK_SCALE_STEP, 1],
         extrapolate: 'clamp',
       }),
     [pan.x]
@@ -103,7 +125,16 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
     () =>
       pan.x.interpolate({
         inputRange: [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD],
-        outputRange: [0, -10, 0],
+        outputRange: [0, PEEK_OFFSET, 0],
+        extrapolate: 'clamp',
+      }),
+    [pan.x]
+  );
+  const nextCardOpacity = useMemo(
+    () =>
+      pan.x.interpolate({
+        inputRange: [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD],
+        outputRange: [1, 1 - PEEK_OPACITY_STEP, 1],
         extrapolate: 'clamp',
       }),
     [pan.x]
@@ -117,13 +148,18 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
     });
   }, [plots]);
 
-  const onFrontLayout = useCallback((e: LayoutChangeEvent) => {
+  // Grow the deck to the tallest card. Every layer reports — a rainy plot sitting
+  // *behind* a dry one is the tall card, and measuring only the front card is what
+  // let it overflow the deck. Layers are sized by their card (no fixed height), so
+  // a card taller than the current max is measured at its natural height and grows
+  // `cardHeight`; once every card is stretched to it, this settles.
+  const onCardLayout = useCallback((e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height;
-    setDeckHeight((prev) => (prev === h ? prev : h));
+    setCardHeight((prev) => (h > prev ? h : prev));
   }, []);
 
   // Behind cards: up to MAX_BEHIND, rendered deepest-first so the front card
-  // (rendered last, in normal flow) sits on top.
+  // (rendered last) sits on top.
   const behind = useMemo(() => {
     const layers: { plot: WeatherPlot; plotIndex: number; depth: number }[] = [];
     for (let d = Math.min(n - 1, MAX_BEHIND); d >= 1; d--) {
@@ -139,7 +175,12 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
         <Text style={styles.swipeHintText}>✦ Swipe for more farms ✦</Text>
       </View>
 
-      <View style={styles.deckContainer}>
+      <View
+        style={[
+          styles.deckContainer,
+          cardHeight > 0 ? { height: cardHeight + PEEK_RESERVE } : null,
+        ]}
+      >
         {/* Layers are keyed by plot index (not stack position) so cycling the
             deck reorders existing elements instead of remounting them — card
             state (fetched forecast, layout) survives every swipe. */}
@@ -147,34 +188,43 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
           <Animated.View
             key={`card-${plotIndex}`}
             pointerEvents="none"
+            onLayout={onCardLayout}
             style={[
               styles.deckCardLayer,
-              deckHeight > 0 ? { height: deckHeight } : null,
               depth === 1
-                ? { transform: [{ translateY: nextCardTranslateY }, { scale: nextCardScale }] }
-                : { transform: [{ translateY: -10 * depth }, { scale: 1 - 0.05 * depth }] },
+                ? {
+                    opacity: nextCardOpacity,
+                    transform: [{ translateY: nextCardTranslateY }, { scale: nextCardScale }],
+                  }
+                : {
+                    opacity: 1 - PEEK_OPACITY_STEP * depth,
+                    transform: [
+                      { translateY: PEEK_OFFSET * depth },
+                      { scale: 1 - PEEK_SCALE_STEP * depth },
+                    ],
+                  },
             ]}
           >
-            <WeatherPlotCard plot={plot} />
+            <WeatherPlotCard plot={plot} minHeight={cardHeight} />
           </Animated.View>
         ))}
 
         <Animated.View
           key={`card-${topIndex}`}
-          onLayout={onFrontLayout}
-          style={{ transform: [{ translateX: pan.x }, { translateY: pan.y }, { rotate }] }}
+          onLayout={onCardLayout}
+          style={[
+            styles.deckCardLayer,
+            { transform: [{ translateX: pan.x }, { translateY: pan.y }, { rotate }] },
+          ]}
           {...panResponder.panHandlers}
         >
-          <WeatherPlotCard plot={plots[topIndex]!} />
+          <WeatherPlotCard plot={plots[topIndex]!} minHeight={cardHeight} />
         </Animated.View>
       </View>
 
       <View style={styles.dotsRow}>
         {plots.map((plot, i) => (
-          <View
-            key={`${plot.name}-${i}`}
-            style={[styles.dot, i === topIndex && styles.dotActive]}
-          />
+          <View key={`${plot.name}-${i}`} style={[styles.dot, i === topIndex && styles.dotActive]} />
         ))}
       </View>
     </View>

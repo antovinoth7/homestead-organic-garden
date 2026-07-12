@@ -29,6 +29,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 17,
       fontWeight: '700' as const,
       color: theme.text,
+      // Ellipsize a long plant name instead of shoving the unsaved dot off-screen.
+      flexShrink: 1,
     },
     headerCenter: {
       flex: 1,
@@ -431,6 +433,34 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     categoryChipTextActive: {
       color: theme.primary,
     },
+    // --- Wizard step section cards (icon-headed groups, DetailCard language) ---
+    sectionCard: {
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      padding: 14,
+      marginBottom: 14,
+    },
+    sectionCardTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 12,
+    },
+    sectionCardIconWrap: {
+      width: 26,
+      height: 26,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.primaryLight,
+    },
+    sectionCardTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.text,
+    },
     // --- Field group visual divider ---
     fieldGroupDivider: {
       height: 1,
@@ -712,12 +742,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.borderLight,
     },
-    notesCardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginBottom: 8,
-    },
     notesCardInput: {
       backgroundColor: theme.inputBackground,
       borderRadius: 10,
@@ -728,23 +752,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.inputText,
       minHeight: 80,
       textAlignVertical: 'top',
-    },
-    // --- Add Pest Button Pill ---
-    addPestButtonPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: theme.primaryLight,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: theme.primary,
-    },
-    addPestButtonText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.primary,
     },
     infoCard: {
       backgroundColor: theme.backgroundSecondary,
@@ -848,91 +855,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.warning,
       fontWeight: '600',
     },
-    sectionHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: 16,
-      marginBottom: 12,
-    },
-    sectionHeaderText: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: theme.text,
-      flex: 1,
-    },
-    addPestButton: {
-      padding: 4,
-    },
-    pestDiseaseList: {
-      marginBottom: 16,
-    },
-    pestDiseaseCard: {
-      backgroundColor: theme.backgroundSecondary,
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: theme.borderDark,
-      position: 'relative',
-    },
-    pestDiseaseHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 8,
-    },
-    pestDiseaseName: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.text,
-      flex: 1,
-    },
-    resolvedBadge: {
-      backgroundColor: theme.primaryLight,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 12,
-    },
-    resolvedText: {
-      fontSize: 11,
-      color: theme.primary,
-      fontWeight: '600',
-    },
-    pestDiseaseDate: {
-      fontSize: 13,
-      color: theme.textSecondary,
-      marginBottom: 4,
-    },
-    pestDiseaseMetaText: {
-      fontSize: 12,
-      color: theme.textTertiary,
-      marginBottom: 4,
-      fontWeight: '500',
-    },
-    pestDiseaseTreatment: {
-      fontSize: 13,
-      color: theme.textSecondary,
-      marginBottom: 4,
-    },
-    pestDiseaseNotes: {
-      fontSize: 13,
-      color: theme.textSecondary,
-      fontStyle: 'italic',
-    },
-    deletePestButton: {
-      position: 'absolute',
-      top: 12,
-      right: 12,
-      padding: 4,
-    },
-    noPestHistory: {
-      fontSize: 14,
-      color: theme.textTertiary,
-      textAlign: 'center',
-      paddingVertical: 20,
-      fontStyle: 'italic',
-    },
     modalOverlay: {
       flex: 1,
       backgroundColor: theme.overlay,
@@ -1035,6 +957,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       marginBottom: 20,
     },
+    // Opt-in rule under a modal header. The negative margin cancels
+    // modalContent's horizontal padding so the rule spans the whole sheet.
+    modalHeaderDivided: {
+      marginHorizontal: -20,
+      paddingHorizontal: 20,
+      paddingBottom: 16,
+      marginBottom: 16,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.borderLight,
+    },
     modalCloseButton: {
       width: 36,
       height: 36,
@@ -1047,36 +979,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 20,
       fontWeight: '700',
       color: theme.text,
-    },
-    typeButtons: {
-      flexDirection: 'row',
-      gap: 12,
-      marginBottom: 16,
-    },
-    typeButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 16,
-      borderRadius: 12,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-      gap: 8,
-    },
-    typeButtonActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    typeButtonText: {
-      fontSize: 15,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
-    typeButtonTextActive: {
-      color: theme.primary,
-      fontWeight: '600',
     },
     suggestionsScroll: {
       marginBottom: 12,
@@ -1571,6 +1473,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
 
     // --- D: Chip Grid (replaces horizontal ScrollView) ---
+    // Read-only plant identity under the hero photo, echoing the detail hero
+    // (PlantKeyInfoSection) scaled for this form's shorter 180px photo.
+    heroCaption: {
+      marginBottom: 12,
+    },
+    heroCaptionName: {
+      fontSize: 24,
+      fontWeight: '700' as const,
+      color: theme.text,
+      marginBottom: 2,
+    },
+    heroCaptionCategory: {
+      fontSize: 14,
+      fontStyle: 'italic' as const,
+      color: theme.textSecondary,
+    },
     chipGrid: {
       flexDirection: 'row' as const,
       flexWrap: 'wrap' as const,
@@ -1578,6 +1496,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 12,
     },
     chipGridItem: {
+      // Row so chips can carry a leading icon; inert for the text-only chips.
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
       paddingHorizontal: 14,
       paddingVertical: 10,
       borderRadius: 20,
@@ -1597,6 +1519,99 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     chipGridItemTextActive: {
       color: theme.primary,
       fontWeight: '700' as const,
+    },
+    // Tone variants so a selected health chip reads at a glance without parsing
+    // the label. Keyed off HEALTH_STATUS_TONE in utils/plantLabels.
+    chipGridItemActiveSuccess: {
+      backgroundColor: theme.successLight,
+      borderColor: theme.successBorder,
+    },
+    chipGridItemActiveWarning: {
+      backgroundColor: theme.warningLight,
+      borderColor: theme.warningBorder,
+    },
+    chipGridItemActiveInfo: {
+      backgroundColor: theme.infoLight,
+      borderColor: theme.infoBorder,
+    },
+    chipGridItemActiveError: {
+      backgroundColor: theme.errorLight,
+      borderColor: theme.errorBorder,
+    },
+    chipGridItemTextSuccess: {
+      color: theme.successDark,
+      fontWeight: '700' as const,
+    },
+    chipGridItemTextWarning: {
+      color: theme.warningDark,
+      fontWeight: '700' as const,
+    },
+    chipGridItemTextInfo: {
+      color: theme.infoDark,
+      fontWeight: '700' as const,
+    },
+    chipGridItemTextError: {
+      color: theme.errorDark,
+      fontWeight: '700' as const,
+    },
+    statusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    statusDotSuccess: { backgroundColor: theme.success },
+    statusDotWarning: { backgroundColor: theme.warning },
+    statusDotInfo: { backgroundColor: theme.info },
+    statusDotError: { backgroundColor: theme.error },
+    // Read-only "effective growth stage" card + its override disclosure.
+    stageCard: {
+      backgroundColor: theme.backgroundSecondary,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      padding: 12,
+      marginBottom: 12,
+    },
+    stageCardRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 8,
+    },
+    stageCardStage: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '700' as const,
+      color: theme.text,
+    },
+    stageCardBadge: {
+      backgroundColor: theme.primaryLight,
+      borderRadius: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+    },
+    stageCardBadgeText: {
+      fontSize: 11,
+      fontWeight: '700' as const,
+      color: theme.primary,
+    },
+    stageCardHint: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      marginTop: 6,
+      lineHeight: 16,
+    },
+    stageResetButton: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: 6,
+      paddingVertical: 10,
+      marginBottom: 12,
+    },
+    stageResetText: {
+      fontSize: 13,
+      fontWeight: '600' as const,
+      color: theme.primary,
     },
 
     // --- E: Frequency Stepper ---

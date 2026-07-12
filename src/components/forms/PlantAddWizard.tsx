@@ -20,7 +20,7 @@ interface Props {
   formState: PlantFormStateReturn;
 }
 
-const STEP_LABELS = ['What', 'Where', 'How'];
+const STEP_LABELS = ['What', 'Where', 'Review'];
 
 export function PlantAddWizard({ formState }: Props): React.JSX.Element {
   const {

@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { createStyles } from '@/styles/plantDetailStyles';
 import { createEnrichedSectionStyles } from '@/styles/enrichedSectionStyles';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 import type { NumericRange, PlantType, PlantCareProfiles } from '@/types/database.types';
 import type { Theme } from '@/theme/colors';
 
@@ -36,7 +36,6 @@ export function DetailQuickInfoSection({
   plantVariety,
   plantCareProfiles,
 }: Props): React.JSX.Element | null {
-  const styles = useMemo(() => createStyles(theme), [theme]);
   const enrichedStyles = useMemo(() => createEnrichedSectionStyles(theme), [theme]);
 
   const profile = useMemo(() => {
@@ -88,8 +87,7 @@ export function DetailQuickInfoSection({
   if (stats.length === 0) return null;
 
   return (
-    <View style={styles.careSection}>
-      <Text style={styles.sectionTitle}>📊 Growing Profile</Text>
+    <DetailCard title="Growing Profile" icon="stats-chart-outline">
       <View style={enrichedStyles.statGrid}>
         {stats.map((stat) => (
           <View key={stat.label} style={enrichedStyles.statGridItem}>
@@ -101,6 +99,6 @@ export function DetailQuickInfoSection({
           </View>
         ))}
       </View>
-    </View>
+    </DetailCard>
   );
 }

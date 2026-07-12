@@ -2,6 +2,7 @@ import {
   FeedingIntensity,
   FertiliserType,
   GrowthStage,
+  HealthStatus,
   PlantLifecycle,
   PlantType,
   SoilType,
@@ -9,6 +10,8 @@ import {
   ToleranceLevel,
   WaterRequirement,
 } from '../types/database.types';
+// Type-only — erased at build time, so this cannot create an import cycle.
+import type { GrowthStageSource } from './plantHelpers';
 
 const CATEGORY_ORDER: PlantType[] = [
   'vegetable',
@@ -30,6 +33,18 @@ export const CATEGORY_LABELS: Record<PlantType, string> = {
   flower: '🌸 Flower',
   timber_tree: '🌲 Timber Tree',
   shrub: '🌱 Shrub',
+};
+
+/** Clean, emoji-free category names for headings (e.g. the detail hero). */
+export const CATEGORY_FULL_LABELS: Record<PlantType, string> = {
+  vegetable: 'Vegetable',
+  fruit_tree: 'Fruit Tree',
+  spinach: 'Spinach',
+  coconut_tree: 'Coconut Tree',
+  herb: 'Herb',
+  timber_tree: 'Timber Tree',
+  flower: 'Flower',
+  shrub: 'Shrub',
 };
 
 export const CATEGORY_SHORT_LABELS: Record<PlantType, string> = {
@@ -92,6 +107,73 @@ export const GROWTH_STAGE_LABELS: Record<GrowthStage, string> = {
   mature: 'Mature',
 };
 
+export const GROWTH_STAGE_DESCRIPTIONS: Record<GrowthStage, string> = {
+  seedling:
+    'Just germinated or transplanted — tender roots and first true leaves. Water lightly but often, and shade from harsh afternoon sun.',
+  vegetative:
+    'Putting on leaves, stems and roots. The main growth push — feed nitrogen-rich compost and keep the soil evenly moist.',
+  flowering:
+    'Buds and blooms have set. Ease off nitrogen, keep watering steady, and avoid disturbing the plant so pollination succeeds.',
+  fruiting:
+    'Fruit or pods are forming and filling out. Needs steady water and potassium-rich feeding; support any heavy branches.',
+  dormant:
+    'Resting between seasons with little visible growth. Cut watering back sharply and hold off on feeding until it wakes.',
+  mature:
+    'Fully grown and cropping steadily. Keep up routine care and harvest regularly to keep the yield coming.',
+};
+
+export const HEALTH_STATUS_DESCRIPTIONS: Record<HealthStatus, string> = {
+  healthy: 'Plant looks good — no visible stress, pests, or disease. Growing normally.',
+  stressed:
+    'Early warning signs like wilting, yellowing tips, or slow growth — usually from environment.',
+  recovering:
+    'Previously stressed or sick, now improving. May still show some damage but new growth looks healthy.',
+  sick: 'Active disease, fungal infection, rot, or heavy pest infestation. Needs treatment.',
+};
+
+export const HEALTH_STATUS_LABELS: Record<HealthStatus, string> = {
+  healthy: 'Healthy',
+  stressed: 'Stressed',
+  recovering: 'Recovering',
+  sick: 'Sick',
+};
+
+/** Semantic tone per health status — maps onto the theme's colour quartets. */
+export type StatusTone = 'success' | 'warning' | 'info' | 'error';
+
+export const HEALTH_STATUS_TONE: Record<HealthStatus, StatusTone> = {
+  healthy: 'success',
+  stressed: 'warning',
+  recovering: 'info',
+  sick: 'error',
+};
+
+/**
+ * Badge text for how a plant's growth stage was determined. Shared by the plant
+ * detail screen and the edit form so both name the same source identically.
+ */
+export const GROWTH_STAGE_SOURCE_LABELS: Record<GrowthStageSource, string> = {
+  pinned: 'Pinned',
+  coconut: 'Age-based',
+  annual_cycle: 'Annual cycle',
+  computed: 'Auto',
+  manual: 'Manual',
+};
+
+/**
+ * Explains how the stage was arrived at. `manual` is absent — it depends on
+ * *why* nothing could be derived, so the caller words that one itself.
+ */
+export const GROWTH_STAGE_SOURCE_HINTS: Record<
+  Exclude<GrowthStageSource, 'manual'>,
+  string
+> = {
+  pinned: 'You set this stage yourself — it overrides the automatic one.',
+  coconut: 'Worked out from the age of the tree.',
+  annual_cycle: "Follows this tree's yearly flowering and fruiting cycle.",
+  computed: "Worked out from the planting date and this plant's care profile.",
+};
+
 export const LIFECYCLE_LABELS: Record<PlantLifecycle, string> = {
   annual: 'Annual',
   biennial: 'Biennial',
@@ -144,7 +226,7 @@ export const LOCATION_SOIL_TYPES: SoilType[] = [
 
 // ─── Form option generators (derive from labels to avoid duplication) ───────
 
-const GROWTH_STAGE_EMOJIS: Record<GrowthStage, string> = {
+export const GROWTH_STAGE_EMOJIS: Record<GrowthStage, string> = {
   seedling: '🌱',
   vegetative: '🌿',
   flowering: '🌸',
@@ -156,9 +238,4 @@ const GROWTH_STAGE_EMOJIS: Record<GrowthStage, string> = {
 export const CATEGORY_OPTIONS = CATEGORY_ORDER.map((value) => ({
   label: CATEGORY_LABELS[value],
   value,
-}));
-
-export const GROWTH_STAGE_OPTIONS = Object.entries(GROWTH_STAGE_LABELS).map(([value, label]) => ({
-  label: `${GROWTH_STAGE_EMOJIS[value as GrowthStage]} ${label}`,
-  value: value as GrowthStage,
 }));

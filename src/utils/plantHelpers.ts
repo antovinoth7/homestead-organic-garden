@@ -1506,14 +1506,20 @@ export function getPlantEmoji(name: string): string {
 
 // ── Growth Stage Auto-Progression (Phase B.4) ─────────────────────────
 
-/** Ordered stage progression for walking durations. */
+/**
+ * Ordered stage progression for walking durations. `dormant` comes AFTER
+ * `mature`: the only linear profiles that use both (turmeric, ginger) mature
+ * first and then die back to dormancy. Annual fruit-tree cycles are unaffected
+ * — they never include `mature`, so their flowering→fruiting→dormant order is
+ * preserved by filtering.
+ */
 export const STAGE_ORDER: GrowthStage[] = [
   'seedling',
   'vegetative',
   'flowering',
   'fruiting',
-  'dormant',
   'mature',
+  'dormant',
 ];
 
 export interface ComputedGrowthStage {
@@ -1522,6 +1528,21 @@ export interface ComputedGrowthStage {
   daysUntilNextStage: number | null;
   percentComplete: number;
 }
+
+/**
+ * Coconut lifecycle expressed as linear stage durations (days), derived from
+ * the same TNAU age thresholds `getCoconutAgeInfo` uses (~30.44-day months):
+ * seedling 0–6 mo, vegetative 6–36 mo, flowering (pre-bearing) 3–6 yr,
+ * fruiting (peak bearing) 6–20 yr, mature 20 yr+. Lets the growth-stage
+ * timeline render coconut trees, whose care profiles carry no durations.
+ */
+export const COCONUT_STAGE_DURATIONS: GrowthStageDurations = {
+  seedling: 183, // 6 months
+  vegetative: 913, // to 36 months
+  flowering: 1096, // 3–6 years
+  fruiting: 5114, // 6–20 years
+  mature: 14610, // 20 years onward (nominal 40-year span)
+};
 
 /**
  * Compute the expected growth stage for a plant based on elapsed days since
@@ -1667,6 +1688,16 @@ export function computeAnnualCycleStage(
 
 export type GrowthStageSource = 'pinned' | 'coconut' | 'annual_cycle' | 'computed' | 'manual';
 
+/**
+ * The only fields needed to resolve a growth stage. Narrower than `Plant` so the
+ * edit form — which holds loose form state, not a saved plant — can resolve the
+ * same stage the detail screen shows. A full `Plant` satisfies this structurally.
+ */
+export type StageResolvable = Pick<
+  Plant,
+  'plant_type' | 'planting_date' | 'growth_stage' | 'growth_stage_pinned'
+>;
+
 export interface EffectiveGrowthStage {
   stage: GrowthStage;
   source: GrowthStageSource;
@@ -1684,7 +1715,7 @@ export interface EffectiveGrowthStage {
  *   5. Manual fallback (plant.growth_stage)
  */
 export function getEffectiveGrowthStage(
-  plant: Plant,
+  plant: StageResolvable,
   careProfile: PlantCareProfile | null | undefined
 ): EffectiveGrowthStage {
   // 1. Pinned override
@@ -1696,6 +1727,19 @@ export function getEffectiveGrowthStage(
   if (plant.plant_type === 'coconut_tree' && plant.planting_date) {
     const ageInfo = getCoconutAgeInfo(plant.planting_date);
     if (ageInfo) {
+      // Timeline metrics from the day-based coconut durations; only attached
+      // when they agree with the authoritative age-based stage (they can
+      // differ by a day right at a threshold).
+      const metrics = computeExpectedGrowthStage(plant.planting_date, COCONUT_STAGE_DURATIONS);
+      if (metrics && metrics.stage === ageInfo.growthStage) {
+        return {
+          stage: ageInfo.growthStage,
+          source: 'coconut',
+          daysSinceStageStart: metrics.daysSinceStageStart,
+          daysUntilNextStage: metrics.daysUntilNextStage,
+          percentComplete: metrics.percentComplete,
+        };
+      }
       return { stage: ageInfo.growthStage, source: 'coconut' };
     }
   }
@@ -1741,6 +1785,37 @@ export function getEffectiveGrowthStage(
     stage: plant.growth_stage ?? 'seedling',
     source: 'manual',
   };
+}
+
+/**
+ * Returns the growth stages that actually apply to a plant, in canonical
+ * order: the union of its linear duration stages, its annual-cycle stages,
+ * and the coconut lifecycle for coconut trees. Falls back to all stages when
+ * no profile data exists. Used to filter the pin-stage picker so users can't
+ * pin a stage the plant can never be in (e.g. "fruiting" on a timber tree).
+ */
+export function getValidStagesForPlant(
+  plant: StageResolvable,
+  careProfile: PlantCareProfile | null | undefined
+): GrowthStage[] {
+  const valid = new Set<GrowthStage>();
+
+  const collect = (durations: GrowthStageDurations | AnnualCycleDurations | undefined): void => {
+    if (!durations) return;
+    for (const stage of STAGE_ORDER) {
+      const d = (durations as GrowthStageDurations)[stage];
+      if (d !== undefined && d > 0) valid.add(stage);
+    }
+  };
+
+  if (plant.plant_type === 'coconut_tree') {
+    collect(COCONUT_STAGE_DURATIONS);
+  }
+  collect(careProfile?.growthStageDurations);
+  collect(careProfile?.annualCycleDurations);
+
+  if (valid.size === 0) return [...STAGE_ORDER];
+  return STAGE_ORDER.filter((stage) => valid.has(stage));
 }
 
 /**

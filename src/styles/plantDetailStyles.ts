@@ -11,14 +11,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: theme.card,
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
     },
     photo: {
       width: '100%',
@@ -31,6 +26,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     content: {
       padding: 24,
+    },
+    keyInfoWrapper: {
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      paddingBottom: 4,
     },
     name: {
       fontSize: 32,
@@ -77,9 +77,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 16,
       color: theme.textSecondary,
       marginLeft: 12,
-    },
-    notesSection: {
-      marginBottom: 24,
     },
     sectionTitle: {
       fontSize: 18,
@@ -202,9 +199,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 4,
       lineHeight: 18,
     },
-    tasksSection: {
-      marginBottom: 24,
-    },
     taskItem: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -250,12 +244,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.card,
       padding: 16,
       borderRadius: 12,
-      marginBottom: 16,
-    },
-    harvestHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
       marginBottom: 16,
     },
     harvestStats: {
@@ -556,6 +544,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 4,
       marginLeft: 28,
     },
+    growthStageHint: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      fontStyle: 'italic' as const,
+      marginTop: 6,
+      marginLeft: 28,
+    },
     growthStageActionText: {
       fontSize: 13,
       color: theme.primary,
@@ -643,24 +638,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       padding: 12,
       borderColor: theme.warning,
       backgroundColor: theme.warning + '20',
-    },
-    beejamruthaCta: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginHorizontal: 16,
-      marginBottom: 12,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderRadius: 12,
-      backgroundColor: theme.primaryLight,
-      borderWidth: 1,
-      borderColor: theme.primary + '40',
-    },
-    beejamruthaCtaText: {
-      flex: 1,
-      fontSize: 13,
-      fontWeight: '600' as const,
-      color: theme.text,
     },
   });
