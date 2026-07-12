@@ -67,11 +67,9 @@ export default function PlantDetailScreen(): React.JSX.Element {
     scrollRef,
     registerSection,
     onTabBarLayout,
-    onScrollViewLayout,
     onScroll,
     onMomentumScrollEnd,
     scrollToKey,
-    lastSectionMinHeight,
   } = useSectionScrollSpy<PlantDetailTabKey>(TAB_KEYS);
 
   useEffect(() => {
@@ -204,14 +202,13 @@ export default function PlantDetailScreen(): React.JSX.Element {
       {plant.photo_url && (
         <ImageZoomModal
           visible={zoomVisible}
-          uri={plant.photo_url}
+          uris={[plant.photo_url]}
           onClose={() => setZoomVisible(false)}
         />
       )}
 
       <ScrollView
         ref={scrollRef}
-        onLayout={onScrollViewLayout}
         stickyHeaderIndices={[1]}
         onScroll={onScroll}
         onMomentumScrollEnd={onMomentumScrollEnd}
@@ -260,10 +257,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
           <PlantPicturesSection plant={plant} journalEntries={journalEntries} />
         </View>
 
-        <View
-          onLayout={registerSection('history')}
-          style={{ minHeight: lastSectionMinHeight }}
-        >
+        <View onLayout={registerSection('history')}>
           <PlantSectionHeader title="History" icon="time-outline" />
           <PlantHistorySection
             plant={plant}

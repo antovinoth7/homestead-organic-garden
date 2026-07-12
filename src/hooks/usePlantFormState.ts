@@ -17,6 +17,8 @@ import {
   createPlant,
   updatePlant,
   savePlantImage,
+  pinGrowthStage,
+  unpinGrowthStage,
 } from '../services/plants';
 import { getFilenameFromUri } from '../lib/imageStorage';
 import { syncCareTasksForPlant } from '../services/tasks';
@@ -61,8 +63,6 @@ import {
   sanitizeNumberText,
   type FormSectionKey,
   CATEGORY_OPTIONS,
-  HEALTH_OPTIONS,
-  GROWTH_STAGE_OPTIONS,
   getFrequencyLabel,
   adjustFrequency,
 } from '../utils/plantFormConstants';
@@ -73,8 +73,6 @@ export {
   sanitizeNumberText,
   type FormSectionKey,
   CATEGORY_OPTIONS,
-  HEALTH_OPTIONS,
-  GROWTH_STAGE_OPTIONS,
   getFrequencyLabel,
   adjustFrequency,
 };
@@ -143,16 +141,19 @@ export interface PlantFormStateReturn {
   setPhotoUri: (v: string | null) => void;
   photoFilename: string | null;
   setPhotoFilename: (v: string | null) => void;
-  // Care-profile-seeded values are read-only in the UI (no exported setters);
+  // Sunlight and water needs are read-only in the UI (no exported setters);
   // they are still set internally by profile seeding and edit-mode hydration.
   sunlight: SunlightLevel;
-  soilType: SoilType;
   waterRequirement: WaterRequirement;
+  // Soil and fertiliser are profile-seeded but remain user-editable.
+  soilType: SoilType;
+  setSoilType: (v: SoilType) => void;
   wateringFrequency: string;
   setWateringFrequency: (v: string) => void;
   fertilisingFrequency: string;
   setFertilisingFrequency: (v: string) => void;
   preferredFertiliser: FertiliserType;
+  setPreferredFertiliser: (v: FertiliserType) => void;
   mulchingUsed: boolean;
   setMulchingUsed: (v: boolean) => void;
   healthStatus: HealthStatus;
@@ -162,6 +163,9 @@ export interface PlantFormStateReturn {
   setPestDiseaseHistory: (v: PestDiseaseRecord[]) => void;
   growthStage: GrowthStage;
   setGrowthStage: (v: GrowthStage) => void;
+  /** Hard override of the derived growth stage; null = derive automatically. */
+  pinnedStage: GrowthStage | null;
+  setPinnedStage: (v: GrowthStage | null) => void;
   pruningFrequency: string;
   setPruningFrequency: (v: string) => void;
   pruningNotes: string;
@@ -293,6 +297,10 @@ export function usePlantFormState(): PlantFormStateReturn {
   const [expectedHarvestDate, setExpectedHarvestDate] = useState('');
   const [pestDiseaseHistory, setPestDiseaseHistory] = useState<PestDiseaseRecord[]>([]);
   const [growthStage, setGrowthStage] = useState<GrowthStage>('seedling');
+  // The user's hard override of the derived stage — mirrors plant.growth_stage_pinned.
+  // null means "let the app compute the stage". Applied on save via pin/unpin.
+  const [pinnedStage, setPinnedStage] = useState<GrowthStage | null>(null);
+  const initialPinnedStage = useRef<GrowthStage | null>(null);
   const [pruningFrequency, setPruningFrequency] = useState('');
   const [pruningNotes, setPruningNotes] = useState('');
   // Care task enable/disable toggles (Phase B)
@@ -322,7 +330,9 @@ export function usePlantFormState(): PlantFormStateReturn {
     basic: true,
     location: true,
     care: true,
-    health: false,
+    // Expanded so each tab's section is tall enough for the scroll-spy to
+    // resolve it; the niche harvest/coconut blocks stay collapsed.
+    health: true,
     harvest: false,
     coconut: false,
     notesHistory: false,
@@ -615,6 +625,7 @@ export function usePlantFormState(): PlantFormStateReturn {
       expectedHarvestDate,
       pestDiseaseHistory,
       growthStage,
+      pinnedStage,
       pruningFrequency,
       pruningNotes,
       wateringEnabled,
@@ -661,6 +672,7 @@ export function usePlantFormState(): PlantFormStateReturn {
     expectedHarvestDate,
     pestDiseaseHistory,
     growthStage,
+    pinnedStage,
     pruningFrequency,
     pruningNotes,
     wateringEnabled,
@@ -766,13 +778,7 @@ export function usePlantFormState(): PlantFormStateReturn {
         shouldCaptureSnapshot.current = true;
       }
     }
-  }, [
-    plantVariety,
-    plantId,
-    plantType,
-    careProfilesLoaded,
-    plantCareProfiles,
-  ]);
+  }, [plantVariety, plantId, plantType, careProfilesLoaded, plantCareProfiles]);
 
   // B.4: Auto-compute growth stage from planting_date for new plants
   useEffect(() => {
@@ -1045,6 +1051,8 @@ export function usePlantFormState(): PlantFormStateReturn {
         setExpectedHarvestDate(plant.expected_harvest_date || '');
         setPestDiseaseHistory(plant.pest_disease_history || []);
         setGrowthStage(plant.growth_stage || 'seedling');
+        setPinnedStage(plant.growth_stage_pinned ?? null);
+        initialPinnedStage.current = plant.growth_stage_pinned ?? null;
         setPruningFrequency(plant.pruning_frequency_days?.toString() || '');
         setPruningNotes(plant.pruning_notes || '');
         setWateringEnabled(plant.watering_enabled !== false);
@@ -1187,6 +1195,18 @@ export function usePlantFormState(): PlantFormStateReturn {
         ? await updatePlant(plantId, plantData as Omit<Plant, 'id' | 'user_id' | 'created_at'>)
         : await createPlant(plantData as Omit<Plant, 'id' | 'user_id' | 'created_at'>);
 
+      // The stage override lives in growth_stage_pinned, which updatePlant does
+      // not touch — pin/unpin also append to growth_stage_history, so they must
+      // be called rather than folded into the payload above.
+      if (plantId && pinnedStage !== initialPinnedStage.current) {
+        if (pinnedStage) {
+          await pinGrowthStage(plantId, pinnedStage);
+        } else {
+          await unpinGrowthStage(plantId);
+        }
+        initialPinnedStage.current = pinnedStage;
+      }
+
       setLoadedGeneratedName(nickname ? '' : finalPlantName);
       setExistingPlants((prev) => [...prev.filter((p) => p.id !== savedPlant.id), savedPlant]);
 
@@ -1285,13 +1305,15 @@ export function usePlantFormState(): PlantFormStateReturn {
     photoFilename,
     setPhotoFilename,
     sunlight,
-    soilType,
     waterRequirement,
+    soilType,
+    setSoilType,
     wateringFrequency,
     setWateringFrequency,
     fertilisingFrequency,
     setFertilisingFrequency,
     preferredFertiliser,
+    setPreferredFertiliser,
     mulchingUsed,
     setMulchingUsed,
     healthStatus,
@@ -1301,6 +1323,8 @@ export function usePlantFormState(): PlantFormStateReturn {
     setPestDiseaseHistory,
     growthStage,
     setGrowthStage,
+    pinnedStage,
+    setPinnedStage,
     pruningFrequency,
     setPruningFrequency,
     pruningNotes,

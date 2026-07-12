@@ -7,6 +7,7 @@ import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/plantPicturesTabStyles';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
 import { usePlantPhotos } from '@/hooks/usePlantPhotos';
+import { resolvedPlantPhotos } from '@/utils/plantPhotos';
 import type { Plant, JournalEntry } from '@/types/database.types';
 
 interface Props {
@@ -19,7 +20,12 @@ export function PlantPicturesSection({ plant, journalEntries }: Props): React.JS
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { photos, loading } = usePlantPhotos({ plant, journalEntries });
-  const [selectedUri, setSelectedUri] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  // Drop unresolved (pest) photos up front so a cell's index matches the
+  // viewer's page index — mapping over `photos` and skipping nulls would not.
+  const visiblePhotos = useMemo(() => resolvedPlantPhotos(photos), [photos]);
+  const uris = useMemo(() => visiblePhotos.map((p) => p.uri), [visiblePhotos]);
 
   if (loading && photos.length === 0) {
     return (
@@ -29,7 +35,7 @@ export function PlantPicturesSection({ plant, journalEntries }: Props): React.JS
     );
   }
 
-  if (photos.length === 0) {
+  if (visiblePhotos.length === 0) {
     return (
       <View style={styles.centered}>
         <Ionicons name="images-outline" size={48} color={theme.textTertiary} />
@@ -42,14 +48,14 @@ export function PlantPicturesSection({ plant, journalEntries }: Props): React.JS
   }
 
   return (
-    <View style={styles.grid}>
-      {photos.map((item) =>
-        item.uri ? (
+    <>
+      <View style={styles.grid}>
+        {visiblePhotos.map((item, index) => (
           <TouchableOpacity
             key={item.id}
             style={styles.cell}
             activeOpacity={0.85}
-            onPress={() => setSelectedUri(item.uri)}
+            onPress={() => setSelectedIndex(index)}
             accessibilityRole="imagebutton"
             accessibilityLabel="View photo"
           >
@@ -61,15 +67,16 @@ export function PlantPicturesSection({ plant, journalEntries }: Props): React.JS
               cachePolicy="memory-disk"
             />
           </TouchableOpacity>
-        ) : null
-      )}
-      {selectedUri && (
+        ))}
+      </View>
+      {selectedIndex !== null && (
         <ImageZoomModal
-          visible={selectedUri !== null}
-          uri={selectedUri}
-          onClose={() => setSelectedUri(null)}
+          visible
+          uris={uris}
+          initialIndex={selectedIndex}
+          onClose={() => setSelectedIndex(null)}
         />
       )}
-    </View>
+    </>
   );
 }

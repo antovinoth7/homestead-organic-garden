@@ -38,6 +38,15 @@ const ISSUE_SEVERITY_OPTIONS: { value: IssueSeverity; label: string }[] = [
   { value: 'severe', label: 'Severe' },
 ];
 
+const TYPE_OPTIONS: {
+  value: PestDiseaseRecord['type'];
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+}[] = [
+  { value: 'pest', label: 'Pest', icon: 'bug' },
+  { value: 'disease', label: 'Disease', icon: 'medical' },
+];
+
 interface PestDiseaseModalProps {
   visible: boolean;
   editingIndex: number | null;
@@ -258,7 +267,7 @@ export default function PestDiseaseModal({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, styles.modalHeaderDivided]}>
               <Text style={styles.modalTitle}>
                 {editingIndex !== null ? 'Edit Pest/Disease Record' : 'Add Pest/Disease Record'}
               </Text>
@@ -276,65 +285,42 @@ export default function PestDiseaseModal({
               keyboardShouldPersistTaps="handled"
             >
               <Text style={styles.label}>Type</Text>
-              <View style={styles.typeButtons}>
-                <TouchableOpacity
-                  style={[
-                    styles.typeButton,
-                    currentRecord.type === 'pest' && styles.typeButtonActive,
-                  ]}
-                  onPress={() => {
-                    setCustomTreatmentMode(false);
-                    setCurrentRecord({
-                      ...currentRecord,
-                      type: 'pest',
-                      name: '',
-                      treatment: undefined,
-                    });
-                  }}
-                >
-                  <Ionicons
-                    name="bug"
-                    size={20}
-                    color={currentRecord.type === 'pest' ? theme.primary : theme.textTertiary}
-                  />
-                  <Text
-                    style={[
-                      styles.typeButtonText,
-                      currentRecord.type === 'pest' && styles.typeButtonTextActive,
-                    ]}
-                  >
-                    Pest
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.typeButton,
-                    currentRecord.type === 'disease' && styles.typeButtonActive,
-                  ]}
-                  onPress={() => {
-                    setCustomTreatmentMode(false);
-                    setCurrentRecord({
-                      ...currentRecord,
-                      type: 'disease',
-                      name: '',
-                      treatment: undefined,
-                    });
-                  }}
-                >
-                  <Ionicons
-                    name="medical"
-                    size={20}
-                    color={currentRecord.type === 'disease' ? theme.primary : theme.textTertiary}
-                  />
-                  <Text
-                    style={[
-                      styles.typeButtonText,
-                      currentRecord.type === 'disease' && styles.typeButtonTextActive,
-                    ]}
-                  >
-                    Disease
-                  </Text>
-                </TouchableOpacity>
+              <View style={styles.chipGrid}>
+                {TYPE_OPTIONS.map((opt) => {
+                  const isActive = currentRecord.type === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[styles.chipGridItem, isActive && styles.chipGridItemActive]}
+                      onPress={() => {
+                        setCustomTreatmentMode(false);
+                        setCurrentRecord({
+                          ...currentRecord,
+                          type: opt.value,
+                          name: '',
+                          treatment: undefined,
+                        });
+                      }}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isActive }}
+                    >
+                      <Ionicons
+                        name={opt.icon}
+                        size={16}
+                        color={isActive ? theme.primary : theme.textTertiary}
+                      />
+                      <Text
+                        style={[
+                          styles.chipGridItemText,
+                          isActive && styles.chipGridItemTextActive,
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               <FloatingLabelInput

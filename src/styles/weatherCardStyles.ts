@@ -29,31 +29,42 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       marginBottom: 10,
     },
-    rainAlert: {
+    /**
+     * Watering advice strip. Rendered in both the rainy and dry state, on one
+     * line, with a fixed height — cards for different plots are stacked in the
+     * deck and must all measure the same regardless of their weather.
+     */
+    weatherLine: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
+      height: 30,
       paddingHorizontal: 10,
-      paddingVertical: 6,
       borderRadius: 8,
-      backgroundColor: theme.infoLight,
       borderWidth: 1,
-      borderColor: theme.info + '40',
       marginBottom: 10,
     },
-    rainAlertText: {
+    weatherLineRain: {
+      backgroundColor: theme.infoLight,
+      borderColor: theme.info + '40',
+    },
+    weatherLineDry: {
+      backgroundColor: theme.backgroundTertiary,
+      borderColor: theme.border,
+    },
+    weatherLineEmoji: {
+      fontSize: 12,
+      lineHeight: 16,
+    },
+    weatherLineText: {
       flex: 1,
       fontSize: 12,
+      lineHeight: 16,
       color: theme.text,
     },
     daysRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-    },
-    /** First-load placeholder sized like the days row so the card keeps its shape. */
-    daysLoading: {
-      minHeight: 64,
-      justifyContent: 'center',
     },
     dayCol: {
       alignItems: 'center',
@@ -62,24 +73,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     dayLabel: {
       fontSize: 11,
+      lineHeight: 14,
       color: theme.textSecondary,
       fontWeight: '600',
     },
     dayEmoji: {
       fontSize: 18,
+      lineHeight: 22,
     },
     dayTemp: {
       fontSize: 11,
+      lineHeight: 14,
       color: theme.text,
       fontWeight: '600',
     },
+    /** Fixed height: the slot is rendered on dry days too, holding the row's shape. */
     dayRain: {
       fontSize: 10,
+      lineHeight: 13,
+      height: 13,
       color: theme.info,
     },
-    muted: {
-      fontSize: 12,
-      color: theme.textSecondary,
+    dayRainEmpty: {
+      color: theme.textTertiary,
     },
     /** Placeholder while plot locations load — roughly one forecast card tall. */
     loadingCard: {
@@ -88,10 +104,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
     },
     // ─── Stacked swipeable deck (multiple plots) ───────────────────────────────
+    /**
+     * Height is set by WeatherDeck to the tallest card plus the peek reserve, so
+     * the block does not resize as you swipe between plots. `minHeight` only holds
+     * the space on the first frame, before the cards have been measured.
+     */
     deckContainer: {
       position: 'relative',
+      minHeight: 170,
     },
-    /** Behind cards: absolutely stacked under the in-flow front card. */
+    /**
+     * All cards — front and behind — are layers, so they share one origin and the
+     * front card can't dictate the deck's geometry. No height here: the layer is
+     * sized by its card, which is how a taller card gets measured and grows the deck.
+     */
     deckCardLayer: {
       position: 'absolute',
       left: 0,
@@ -100,7 +126,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     swipeHint: {
       alignItems: 'center',
-      marginBottom: 13,
+      marginBottom: 8,
     },
     swipeHintText: {
       fontSize: 12,
@@ -111,7 +137,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       justifyContent: 'center',
       gap: 6,
-      marginTop: 10,
+      marginTop: 6,
     },
     dot: {
       width: 6,

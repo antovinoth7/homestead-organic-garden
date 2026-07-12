@@ -1688,6 +1688,16 @@ export function computeAnnualCycleStage(
 
 export type GrowthStageSource = 'pinned' | 'coconut' | 'annual_cycle' | 'computed' | 'manual';
 
+/**
+ * The only fields needed to resolve a growth stage. Narrower than `Plant` so the
+ * edit form — which holds loose form state, not a saved plant — can resolve the
+ * same stage the detail screen shows. A full `Plant` satisfies this structurally.
+ */
+export type StageResolvable = Pick<
+  Plant,
+  'plant_type' | 'planting_date' | 'growth_stage' | 'growth_stage_pinned'
+>;
+
 export interface EffectiveGrowthStage {
   stage: GrowthStage;
   source: GrowthStageSource;
@@ -1705,7 +1715,7 @@ export interface EffectiveGrowthStage {
  *   5. Manual fallback (plant.growth_stage)
  */
 export function getEffectiveGrowthStage(
-  plant: Plant,
+  plant: StageResolvable,
   careProfile: PlantCareProfile | null | undefined
 ): EffectiveGrowthStage {
   // 1. Pinned override
@@ -1785,7 +1795,7 @@ export function getEffectiveGrowthStage(
  * pin a stage the plant can never be in (e.g. "fruiting" on a timber tree).
  */
 export function getValidStagesForPlant(
-  plant: Plant,
+  plant: StageResolvable,
   careProfile: PlantCareProfile | null | undefined
 ): GrowthStage[] {
   const valid = new Set<GrowthStage>();

@@ -8,6 +8,7 @@ import type { createStyles } from '@/styles/plantDetailStyles';
 import GrowthStageTimeline from '@/components/GrowthStageTimeline';
 import { PlantInfoRow } from '@/components/PlantInfoRow';
 import { COCONUT_STAGE_DURATIONS } from '@/utils/plantHelpers';
+import { GROWTH_STAGE_SOURCE_LABELS } from '@/utils/plantLabels';
 import { DetailCard } from '@/components/plantDetail/DetailCard';
 
 type DetailStyles = ReturnType<typeof createStyles>;
@@ -21,21 +22,6 @@ interface Props {
   isPinned: boolean;
   onPin: () => void;
   onUnpin: () => void;
-}
-
-function badgeLabel(source: EffectiveGrowthStage['source']): string {
-  switch (source) {
-    case 'pinned':
-      return 'Pinned';
-    case 'coconut':
-      return 'Age-based';
-    case 'annual_cycle':
-      return 'Annual cycle';
-    case 'computed':
-      return 'Auto';
-    default:
-      return 'Manual';
-  }
 }
 
 /** §2 — Growth stage badge, pin/unpin action, and the stage timeline. */
@@ -64,7 +50,9 @@ export function GrowthStageSection({
             }`}
           >
             <View style={styles.growthStageBadge}>
-              <Text style={styles.growthStageBadgeText}>{badgeLabel(effectiveStage.source)}</Text>
+              <Text style={styles.growthStageBadgeText}>
+                {GROWTH_STAGE_SOURCE_LABELS[effectiveStage.source]}
+              </Text>
             </View>
           </PlantInfoRow>
           {!isPinned && effectiveStage.source !== 'coconut' && (

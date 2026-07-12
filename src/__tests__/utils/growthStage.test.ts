@@ -7,6 +7,7 @@ import {
   COCONUT_STAGE_DURATIONS,
   STAGE_ORDER,
 } from '../../utils/plantHelpers';
+import type { StageResolvable } from '../../utils/plantHelpers';
 import { DEFAULT_PROFILES_BY_TYPE } from '../../utils/plantCareDefaults/typeDefaults';
 import type {
   GrowthStageDurations,
@@ -178,6 +179,41 @@ describe('getEffectiveGrowthStage', () => {
     const result = getEffectiveGrowthStage(basePlant, baseProfile);
     expect(result.source).toBe('computed');
     expect(STAGE_ORDER).toContain(result.stage);
+  });
+
+  // The edit form holds loose form state, not a saved Plant, so it passes only
+  // the four fields the resolver actually reads (StageResolvable).
+  describe('accepts a bare StageResolvable, not just a full Plant', () => {
+    const formState: StageResolvable = {
+      plant_type: basePlant.plant_type,
+      planting_date: basePlant.planting_date,
+      growth_stage: basePlant.growth_stage,
+      growth_stage_pinned: null,
+    };
+
+    it('agrees with the full-Plant result', () => {
+      expect(getEffectiveGrowthStage(formState, baseProfile)).toEqual(
+        getEffectiveGrowthStage(basePlant, baseProfile)
+      );
+      expect(getValidStagesForPlant(formState, baseProfile)).toEqual(
+        getValidStagesForPlant(basePlant, baseProfile)
+      );
+    });
+
+    it('honours a pin set in the form', () => {
+      const pinned: StageResolvable = { ...formState, growth_stage_pinned: 'fruiting' };
+      const result = getEffectiveGrowthStage(pinned, baseProfile);
+      expect(result.stage).toBe('fruiting');
+      expect(result.source).toBe('pinned');
+    });
+
+    it('falls back to computed once the pin is cleared', () => {
+      const result = getEffectiveGrowthStage(
+        { ...formState, growth_stage_pinned: null },
+        baseProfile
+      );
+      expect(result.source).toBe('computed');
+    });
   });
 
   it('returns manual fallback when no durations', () => {

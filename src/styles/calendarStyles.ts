@@ -1484,8 +1484,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // All / Beds / Pots & Ground segmented control (mirrors plantsStyles)
     segmentRow: {
       flexDirection: 'row',
-      alignSelf: 'flex-start',
-      flexShrink: 1,
+      alignSelf: 'stretch',
       gap: 2,
       marginHorizontal: 12,
       marginBottom: 8,
@@ -1497,8 +1496,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       overflow: 'hidden',
     },
     segmentChip: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 5,

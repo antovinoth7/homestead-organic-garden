@@ -15,6 +15,18 @@ export interface PlantPhotoItem {
   source: PlantPhotoSource;
 }
 
+/** A photo whose `uri` has been resolved and is therefore displayable. */
+export type ResolvedPlantPhoto = PlantPhotoItem & { uri: string };
+
+/**
+ * Narrows a photo list to the displayable ones. Callers must render from the
+ * result rather than skipping unresolved photos while mapping, so that a grid
+ * cell's index matches its index in the fullscreen viewer's pager.
+ */
+export function resolvedPlantPhotos(photos: PlantPhotoItem[]): ResolvedPlantPhoto[] {
+  return photos.filter((p): p is ResolvedPlantPhoto => Boolean(p.uri));
+}
+
 function timeOf(date: string): number {
   const t = new Date(date).getTime();
   return Number.isNaN(t) ? -Infinity : t;

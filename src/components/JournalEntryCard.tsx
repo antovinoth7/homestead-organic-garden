@@ -15,7 +15,8 @@ interface Props {
   onPress: (entry: JournalEntry) => void;
   onEdit: (entry: JournalEntry) => void;
   onDelete: (entry: JournalEntry) => void;
-  onPhotoPress: (uri: string) => void;
+  /** Receives the entry's full photo list plus the tapped index, so the viewer can swipe. */
+  onPhotoPress: (uris: string[], index: number) => void;
   onSwipeableOpen?: (ref: Swipeable) => void;
 }
 
@@ -190,7 +191,9 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
                 return (
                   <TouchableOpacity
                     key={`${entry.id}-${idx}`}
-                    onPress={() => onPhotoPress(photoUrl)}
+                    // `photos`, not `visiblePhotos` — the "+N" thumb must open the
+                    // viewer on a gallery containing every photo on the entry.
+                    onPress={() => onPhotoPress(photos, idx)}
                     activeOpacity={0.8}
                     style={showOverlay ? styles.thumbMore : undefined}
                   >

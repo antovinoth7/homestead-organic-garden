@@ -5,20 +5,20 @@ import type {
   NativeSyntheticEvent,
   ScrollView,
 } from 'react-native';
-import { activeSectionKey, lastSectionMinHeight } from '@/utils/scrollSpy';
+import { activeSectionKey } from '@/utils/scrollSpy';
 import type { SectionOffset } from '@/utils/scrollSpy';
+
+/** Slack (px) when comparing scroll position against the content end. */
+const END_EPSILON = 2;
 
 interface SectionScrollSpy<K extends string> {
   activeKey: K;
   scrollRef: React.RefObject<ScrollView | null>;
   registerSection: (key: K) => (event: LayoutChangeEvent) => void;
   onTabBarLayout: (event: LayoutChangeEvent) => void;
-  onScrollViewLayout: (event: LayoutChangeEvent) => void;
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onMomentumScrollEnd: () => void;
   scrollToKey: (key: K) => void;
-  /** Min height for the last section so any section can scroll under the bar. */
-  lastSectionMinHeight: number;
 }
 
 /**
@@ -33,9 +33,7 @@ export function useSectionScrollSpy<K extends string>(keys: readonly K[]): Secti
   const programmaticRef = useRef(false);
   const programmaticTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeKey, setActiveKey] = useState<K>(keys[0] as K);
-  // State (not refs) so the derived last-section min height re-renders on measure.
   const [tabBarHeight, setTabBarHeight] = useState(0);
-  const [viewportHeight, setViewportHeight] = useState(0);
 
   const registerSection = useCallback(
     (key: K) => (event: LayoutChangeEvent) => {
@@ -48,17 +46,16 @@ export function useSectionScrollSpy<K extends string>(keys: readonly K[]): Secti
     setTabBarHeight(event.nativeEvent.layout.height);
   }, []);
 
-  const onScrollViewLayout = useCallback((event: LayoutChangeEvent) => {
-    setViewportHeight(event.nativeEvent.layout.height);
-  }, []);
-
   const onScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (programmaticRef.current) return;
+      const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
       const offsets: SectionOffset<K>[] = keys
         .map((key) => ({ key, y: offsetsRef.current.get(key) }))
         .filter((o): o is SectionOffset<K> => o.y !== undefined);
-      const next = activeSectionKey(offsets, event.nativeEvent.contentOffset.y, tabBarHeight);
+      const atEnd =
+        contentOffset.y + layoutMeasurement.height >= contentSize.height - END_EPSILON;
+      const next = activeSectionKey(offsets, contentOffset.y, tabBarHeight, atEnd);
       if (next && next !== activeKey) setActiveKey(next);
     },
     [keys, activeKey, tabBarHeight]
@@ -89,10 +86,8 @@ export function useSectionScrollSpy<K extends string>(keys: readonly K[]): Secti
     scrollRef,
     registerSection,
     onTabBarLayout,
-    onScrollViewLayout,
     onScroll,
     onMomentumScrollEnd,
     scrollToKey,
-    lastSectionMinHeight: lastSectionMinHeight(viewportHeight, tabBarHeight),
   };
 }

@@ -1,4 +1,5 @@
-import { collectPlantPhotos } from '@/utils/plantPhotos';
+import { collectPlantPhotos, resolvedPlantPhotos } from '@/utils/plantPhotos';
+import type { PlantPhotoItem } from '@/utils/plantPhotos';
 import { makePlant } from '../fixtures/plant.fixtures';
 import { makeJournalEntry } from '../fixtures/journal.fixtures';
 
@@ -86,5 +87,37 @@ describe('collectPlantPhotos', () => {
     const photos = collectPlantPhotos(plant, [entry]);
     expect(photos).toHaveLength(1);
     expect(photos[0]?.uri).toBe('file:///real.jpg');
+  });
+});
+
+describe('resolvedPlantPhotos', () => {
+  const photo = (id: string, uri: string | null): PlantPhotoItem => ({
+    id,
+    uri,
+    date: '2026-01-01T00:00:00.000Z',
+    source: 'journal',
+  });
+
+  it('drops photos whose URI never resolved', () => {
+    const resolved = resolvedPlantPhotos([photo('a', 'file:///a.jpg'), photo('b', null)]);
+    expect(resolved.map((p) => p.id)).toEqual(['a']);
+  });
+
+  it('keeps grid indices aligned with viewer indices when an early photo is unresolved', () => {
+    // The pictures grid renders from this list and passes the tapped index
+    // straight to the pager, so an unresolved photo must not shift the mapping.
+    const resolved = resolvedPlantPhotos([
+      photo('unresolved', null),
+      photo('a', 'file:///a.jpg'),
+      photo('b', 'file:///b.jpg'),
+    ]);
+
+    expect(resolved.map((p) => p.uri)).toEqual(['file:///a.jpg', 'file:///b.jpg']);
+    // Tapping the 2nd rendered cell (index 1) must open 'b', not 'a'.
+    expect(resolved[1]?.id).toBe('b');
+  });
+
+  it('returns an empty list when nothing resolved', () => {
+    expect(resolvedPlantPhotos([photo('a', null)])).toEqual([]);
   });
 });

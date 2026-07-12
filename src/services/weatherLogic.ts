@@ -38,6 +38,22 @@ export function hasRainSoon(forecast: WeatherForecast | null, days = 2): boolean
   return forecast.daily.slice(0, days).some((d) => d.precipitationMm >= 2);
 }
 
+export interface WateringAdvice {
+  emoji: string;
+  text: string;
+}
+
+/**
+ * Watering guidance for the forecast card's status line. Both branches are one
+ * short line so the card keeps the same height whether rain is coming or not —
+ * the deck stacks cards for several plots and they must all measure the same.
+ */
+export function wateringAdvice(rainSoon: boolean): WateringAdvice {
+  return rainSoon
+    ? { emoji: '🌧️', text: 'Rain expected soon — skip watering' }
+    : { emoji: '☀️', text: 'No rain expected soon — keep watering' };
+}
+
 /** Local calendar-day key (YYYY-MM-DD) matching `DailyWeather.date`. */
 function toForecastDateKey(date: Date): string {
   const y = date.getFullYear();

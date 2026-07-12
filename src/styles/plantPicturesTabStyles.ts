@@ -6,7 +6,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      padding: 2,
+      // 22 + the cell's own 2px gutter lands photo edges on the 24px section
+      // gutter used by PlantSectionHeader and the Care/Info sections.
+      paddingHorizontal: 22,
+      paddingVertical: 2,
     },
     cell: {
       width: '33.333%',
