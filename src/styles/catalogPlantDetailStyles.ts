@@ -100,6 +100,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       padding: 16,
       gap: 10,
     },
+    catalogHeroImage: {
+      width: '100%',
+      height: 180,
+      borderRadius: 16,
+      backgroundColor: theme.backgroundSecondary,
+    },
     nameSection: {
       backgroundColor: theme.backgroundSecondary,
       borderRadius: 12,

@@ -12,6 +12,8 @@
     "lint:file": "eslint",
     "typecheck": "tsc --noEmit",
     "codemap": "node scripts/generate-codemap.js",
+    "reference:manifest": "tsx scripts/reference/generate-manifest.ts",
+    "reference:ingest": "node scripts/reference/ingest-images.js",
     "test": "jest",
     "test:coverage": "jest --coverage"
   },
@@ -69,7 +71,9 @@
     "expo-module-scripts": "^5.0.8",
     "jest": "^29.7.0",
     "prettier": "^3.8.2",
+    "sharp": "^0.35.3",
     "ts-jest": "^29.4.9",
+    "tsx": "^4.23.0",
     "typescript": "~5.9.2"
   },
   "private": true

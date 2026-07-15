@@ -8,6 +8,10 @@ import { Ionicons } from '@expo/vector-icons';
 import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
 import VoiceDictation from '@/components/VoiceDictation';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
+import { getPestByName } from '@/config/pests';
+import { getDiseaseByName } from '@/config/diseases';
+import { getPestImage, getDiseaseImage } from '@/config/referenceAssets';
 import PhotoSourceModal from './PhotoSourceModal';
 import {
   PestDiseaseRecord,
@@ -348,25 +352,41 @@ export default function PestDiseaseModal({
                       {group.emoji} {group.category}
                     </Text>
                     <View style={styles.suggestionGroupChips}>
-                      {group.items.map((item) => (
-                        <TouchableOpacity
-                          key={item}
-                          style={[
-                            styles.suggestionChip,
-                            currentRecord.name === item && styles.suggestionChipActive,
-                          ]}
-                          onPress={() => setCurrentRecord({ ...currentRecord, name: item })}
-                        >
-                          <Text
+                      {group.items.map((item) => {
+                        const entry =
+                          currentRecord.type === 'pest'
+                            ? getPestByName(item)
+                            : getDiseaseByName(item);
+                        const chipImage = entry
+                          ? currentRecord.type === 'pest'
+                            ? getPestImage(entry.id, entry.imageAsset)
+                            : getDiseaseImage(entry.id, entry.imageAsset)
+                          : undefined;
+                        return (
+                          <TouchableOpacity
+                            key={item}
                             style={[
-                              styles.suggestionChipText,
-                              currentRecord.name === item && styles.suggestionChipTextActive,
+                              styles.suggestionChip,
+                              currentRecord.name === item && styles.suggestionChipActive,
                             ]}
+                            onPress={() => setCurrentRecord({ ...currentRecord, name: item })}
                           >
-                            {getPestDiseaseEmoji(item, currentRecord.type)} {item}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
+                            <ReferenceThumb
+                              source={chipImage}
+                              emoji={getPestDiseaseEmoji(item, currentRecord.type)}
+                              variant="chip"
+                            />
+                            <Text
+                              style={[
+                                styles.suggestionChipText,
+                                currentRecord.name === item && styles.suggestionChipTextActive,
+                              ]}
+                            >
+                              {item}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
                   </View>
                 ))}

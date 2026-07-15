@@ -6,7 +6,9 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '@/theme';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 import FieldHelp from '@/components/FieldHelp';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getGroupedDiseaseEntries, CATEGORY_DESCRIPTIONS } from '@/config/diseases';
+import { getDiseaseImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/referenceListStyles';
 import type { DiseaseListScreenNavigationProp } from '@/types/navigation.types';
 import type { DiseaseEntry, DiseaseCategory } from '@/types/database.types';
@@ -58,7 +60,12 @@ export default function DiseaseListScreen(): React.JSX.Element {
         onPress={() => handlePress(item.id)}
         activeOpacity={0.7}
       >
-        <Text style={styles.cardEmoji}>{item.emoji}</Text>
+        <ReferenceThumb
+          source={getDiseaseImage(item.id, item.imageAsset)}
+          emoji={item.emoji}
+          variant="row"
+          recyclingKey={item.id}
+        />
         <View style={styles.cardContent}>
           <Text style={styles.cardName} numberOfLines={1}>
             {item.name}

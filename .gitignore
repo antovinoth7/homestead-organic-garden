@@ -37,3 +37,6 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 /coverage
+
+# reference-image staging (inputs + generated manifest; final WebPs live in assets/reference/)
+assets-src/

@@ -1002,6 +1002,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 8,
     },
     suggestionChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 8,
       borderRadius: 16,

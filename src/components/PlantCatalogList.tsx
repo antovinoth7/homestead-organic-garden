@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
+import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
 import { getPlantEmoji } from '@/utils/plantHelpers';
 
@@ -35,7 +37,13 @@ export function PlantCatalogList({
               onPress={() => onPlantPress(plantName)}
               activeOpacity={0.7}
             >
-              <Text style={styles.plantEmoji}>{getPlantEmoji(plantName)}</Text>
+              <View style={styles.plantThumbWrap}>
+                <ReferenceThumb
+                  source={getPlantImage(plantName)}
+                  emoji={getPlantEmoji(plantName)}
+                  variant="row"
+                />
+              </View>
               <View style={styles.plantInfo}>
                 <Text style={styles.plantName} numberOfLines={1}>
                   {plantName}

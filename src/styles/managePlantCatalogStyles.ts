@@ -118,6 +118,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textAlign: 'center',
       marginRight: 10,
     },
+    plantThumbWrap: {
+      marginRight: 10,
+    },
     plantCountChip: {
       paddingHorizontal: 8,
       paddingVertical: 2,

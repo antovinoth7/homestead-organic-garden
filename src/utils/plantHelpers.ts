@@ -1494,6 +1494,11 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Comfrey: '🌿',
 };
 
+/** All plant names known to the catalog emoji map — the canonical name list for reference-image tooling. */
+export function getKnownPlantNames(): string[] {
+  return Object.keys(PLANT_EMOJI_MAP);
+}
+
 export function getPlantEmoji(name: string): string {
   if (PLANT_EMOJI_MAP[name]) return PLANT_EMOJI_MAP[name]!;
   const canonical = getCanonicalPlantKey(name);

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ImageStyle } from 'react-native';
 import {
   View,
   Text,
@@ -13,10 +14,12 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme';
+import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/catalogPlantDetailStyles';
 import FloatingLabelInput from '@/components/FloatingLabelInput';
 import VoiceDictation from '@/components/VoiceDictation';
@@ -655,6 +658,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     }
   };
 
+  const heroImage = useMemo(() => getPlantImage(initialName), [initialName]);
+
   const pests = useMemo(() => getCommonPests(plantType, initialName), [plantType, initialName]);
   const diseases = useMemo(
     () => getCommonDiseases(plantType, initialName),
@@ -876,6 +881,15 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {heroImage && (
+          <Image
+            source={heroImage}
+            style={styles.catalogHeroImage as ImageStyle}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+          />
+        )}
         {/* ── Plant Info ─────────────────────────────────────────────────── */}
         <CollapsibleSection
           title="Plant Info"
