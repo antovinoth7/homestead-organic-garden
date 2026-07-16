@@ -243,7 +243,7 @@ export interface PlantFormStateReturn {
   pickImage: () => void;
   runSlideTransition: (direction: 'forward' | 'back', newStep: 1 | 2 | 3) => void;
   getWizardStepErrors: (step: 1 | 2 | 3) => string | null;
-  navigateToPlantsAfterSave: () => void;
+  navigateToPlantsAfterSave: (savedPlant?: Plant) => void;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -867,6 +867,10 @@ export function usePlantFormState(): PlantFormStateReturn {
       slideOpacity.setValue(0);
       slideX.setValue(startX);
       setWizardStep(newStep);
+      // Reset scroll to the top so the incoming step starts at its heading
+      // rather than inheriting the previous step's scroll offset. The 180ms
+      // fade below hides the jump.
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
       Animated.parallel([
         Animated.timing(slideOpacity, {
           toValue: 1,
@@ -913,13 +917,25 @@ export function usePlantFormState(): PlantFormStateReturn {
     ]
   );
 
-  const navigateToPlantsAfterSave = useCallback(() => {
-    navigation.navigate({
-      name: 'PlantsList',
-      params: { refresh: Date.now() },
-      merge: true,
-    });
-  }, [navigation]);
+  const navigateToPlantsAfterSave = useCallback(
+    (savedPlant?: Plant) => {
+      // popTo (not navigate) removes this PlantForm entry from the stack, so a
+      // hardware back-press from the plant list lands on the previous screen
+      // instead of re-entering the (internally multi-step) wizard.
+      navigation.dispatch(
+        StackActions.popTo(
+          'PlantsList',
+          {
+            refresh: Date.now(),
+            savedPlantId: savedPlant?.id,
+            savedPlantName: savedPlant?.name,
+          },
+          { merge: true }
+        )
+      );
+    },
+    [navigation]
+  );
 
   const openImageLibrary = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -1091,7 +1107,7 @@ export function usePlantFormState(): PlantFormStateReturn {
     }
   };
 
-  const handleSave = async (onSuccessOverride?: () => void): Promise<void> => {
+  const handleSave = async (): Promise<void> => {
     setShowValidationErrors(true);
     const sectionOrder: FormSectionKey[] = [
       'basic',
@@ -1118,8 +1134,10 @@ export function usePlantFormState(): PlantFormStateReturn {
       const nickname = name.trim();
       let resolvedPhotoFilename = photoFilename;
       const combinedLocation = `${parentLocation.trim()} - ${childLocation.trim()}`;
-      const shouldUseLoadedPlants = Boolean(nickname) || existingPlants.length > 0;
-      const plantsForNaming = shouldUseLoadedPlants ? existingPlants : await getAllPlants();
+      // When auto-generating a name, always number against a fresh plant list
+      // (cache-backed, 30s TTL, invalidated after each create) so back-to-back
+      // creates don't collide on a stale in-memory list and produce duplicate #N.
+      const plantsForNaming = nickname ? existingPlants : await getAllPlants();
       const finalPlantName =
         nickname ||
         buildGeneratedPlantName(
@@ -1210,17 +1228,35 @@ export function usePlantFormState(): PlantFormStateReturn {
       setLoadedGeneratedName(nickname ? '' : finalPlantName);
       setExistingPlants((prev) => [...prev.filter((p) => p.id !== savedPlant.id), savedPlant]);
 
+      // Care tasks are what drive the Today/Calendar reminders — a silent
+      // failure here leaves a saved plant with no schedule and no feedback.
+      // Surface it with a retry instead of only logging.
       try {
         await syncCareTasksForPlant(savedPlant);
       } catch (error) {
         logger.warn('Failed to sync care tasks', error as Error);
+        Alert.alert(
+          'Care tasks not created',
+          'Your plant was saved, but its care schedule could not be set up. Watering and other reminders may be missing.',
+          [
+            {
+              text: 'Retry',
+              onPress: () => {
+                void syncCareTasksForPlant(savedPlant).catch((retryError) => {
+                  logger.warn('Retry: failed to sync care tasks', retryError as Error);
+                  Alert.alert(
+                    'Still could not create tasks',
+                    'You can set up the care schedule later by editing the plant.'
+                  );
+                });
+              },
+            },
+            { text: 'Later', style: 'cancel' },
+          ]
+        );
       }
 
       savedSuccessfully.current = true;
-      if (onSuccessOverride) {
-        onSuccessOverride();
-        return;
-      }
       if (returnTo) {
         // The bed wizard is still mounted below this form in the same stack.
         // popTo returns to that existing instance (preserving its Step 5 state)
@@ -1233,7 +1269,7 @@ export function usePlantFormState(): PlantFormStateReturn {
         );
         return;
       }
-      navigateToPlantsAfterSave();
+      navigateToPlantsAfterSave(savedPlant);
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error));
       setHasUnsavedChanges(true);

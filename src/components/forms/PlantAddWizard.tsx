@@ -1,10 +1,9 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
-  Platform,
   KeyboardAvoidingView,
   Animated,
 } from 'react-native';
@@ -29,38 +28,17 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
     wizardStep,
     slideX,
     slideOpacity,
+    scrollViewRef,
     runSlideTransition,
     getWizardStepErrors,
     handleSave,
-    navigateToPlantsAfterSave,
     loading,
     hasUnsavedChanges,
     handleBackPress,
-    returnTo,
   } = formState;
-
-  const [saveBannerVisible, setSaveBannerVisible] = useState(false);
-  const bannerOpacity = useRef(new Animated.Value(0)).current;
-  const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const wizardStyles = useMemo(() => createWizardStyles(theme), [theme]);
   const formStyles = useMemo(() => createStyles(theme), [theme]);
-
-  const showBanner = useCallback(() => {
-    setSaveBannerVisible(true);
-    bannerOpacity.setValue(1);
-    if (bannerTimer.current) clearTimeout(bannerTimer.current);
-    bannerTimer.current = setTimeout(() => {
-      Animated.timing(bannerOpacity, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }).start(() => {
-        setSaveBannerVisible(false);
-        navigateToPlantsAfterSave();
-      });
-    }, 3100);
-  }, [bannerOpacity, navigateToPlantsAfterSave]);
 
   // Reactive blocking reason for the current step — surfaced proactively in the
   // banner below, mirroring the bed creation wizard.
@@ -83,15 +61,10 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
 
   const handleWizardSave = useCallback(() => {
     if (getWizardStepErrors(3)) return;
-    // When opened from the bed wizard (returnTo set), skip the "going to your
-    // plants" banner and let handleSave's built-in returnTo branch navigate back
-    // to BedCreationWizard. Otherwise show the banner → PlantsList as usual.
-    if (returnTo) {
-      handleSave();
-    } else {
-      handleSave(showBanner);
-    }
-  }, [getWizardStepErrors, handleSave, showBanner, returnTo]);
+    // handleSave navigates on success (returnTo → bed wizard, otherwise the
+    // plant list, which shows the "saved" toast). No artificial delay.
+    handleSave();
+  }, [getWizardStepErrors, handleSave]);
 
   return (
     <View style={wizardStyles.root}>
@@ -161,11 +134,10 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
         })}
       </View>
 
-      <KeyboardAvoidingView
-        style={wizardStyles.stepContent}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <KeyboardAvoidingView style={wizardStyles.stepContent} behavior="padding">
         <ScrollView
+          ref={scrollViewRef}
+          style={wizardStyles.stepScroll}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={wizardStyles.stepScrollContent}
         >
@@ -184,17 +156,7 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
             )}
           </Animated.View>
         </ScrollView>
-      </KeyboardAvoidingView>
 
-      <View>
-        {saveBannerVisible && (
-          <Animated.View style={[wizardStyles.saveBanner, { opacity: bannerOpacity }]}>
-            <Ionicons name="checkmark-circle" size={22} color={theme.success} />
-            <Text style={wizardStyles.saveBannerText}>
-              Plant saved! Going to your plants in a moment...
-            </Text>
-          </Animated.View>
-        )}
         {blockReason && !loading ? (
           <View style={wizardStyles.blockedBanner}>
             <Ionicons name="alert-circle" size={18} color={theme.error} />
@@ -208,7 +170,6 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
               onPress={handleBack}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={18} color={theme.textInverse} />
               <Text style={wizardStyles.wizardBackText}>Back</Text>
             </TouchableOpacity>
           ) : (
@@ -232,11 +193,10 @@ export function PlantAddWizard({ formState }: Props): React.JSX.Element {
               activeOpacity={0.85}
             >
               <Text style={wizardStyles.wizardNextText}>Next</Text>
-              <Ionicons name="arrow-forward" size={18} color={theme.textInverse} />
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }

@@ -1050,11 +1050,17 @@ const _generateRecurringTasksFromPlants = async (plants: Plant[]): Promise<void>
   }
 };
 
-export const syncCareTasksForPlant = async (plant: Plant): Promise<void> => {
-  if (!plant?.id) return;
+export interface SyncCareTasksResult {
+  created: TaskType[];
+  updated: TaskType[];
+}
+
+export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasksResult> => {
+  const result: SyncCareTasksResult = { created: [], updated: [] };
+  if (!plant?.id) return result;
 
   // Archived plants have their tasks disabled in archivePlant() — skip sync.
-  if (isPlantArchived(plant)) return;
+  if (isPlantArchived(plant)) return result;
 
   const desiredFrequencies = [
     {
@@ -1102,7 +1108,7 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<void> => {
     });
   }
 
-  if (desiredFrequencies.length === 0) return;
+  if (desiredFrequencies.length === 0) return result;
 
   const existingTasks = await getTaskTemplates();
   const plantTasks = existingTasks.filter((task) => task.plant_id === plant.id);
@@ -1145,6 +1151,7 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<void> => {
       }
       if (Object.keys(updates).length > 0) {
         await updateTaskTemplate(existing.id, updates);
+        result.updated.push(taskType);
       }
       continue;
     }
@@ -1157,7 +1164,10 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<void> => {
       enabled: true,
       preferred_time: null,
     });
+    result.created.push(taskType);
   }
+
+  return result;
 };
 
 /**

@@ -37,6 +37,7 @@ import { logger } from '../utils/logger';
 import { getErrorMessage } from '../utils/errorLogging';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { PlantFilterSheet } from '../components/PlantFilterSheet';
+import { UndoToast } from '../components/UndoToast';
 import { useBedOptions } from '@/hooks/useBedOptions';
 import { isPlantArchived } from '../utils/plantHelpers';
 
@@ -89,6 +90,10 @@ export default function PlantsScreen(): React.JSX.Element {
   const undoProgress = useRef(new Animated.Value(1)).current;
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openSwipeableRef = useRef<Swipeable | null>(null);
+  // Lightweight "Plant saved" confirmation shown after returning from the form.
+  const [savedToast, setSavedToast] = useState<{ id: string; name: string } | null>(null);
+  const savedToastProgress = useRef(new Animated.Value(1)).current;
+  const savedToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // searchInput: raw controlled value; searchQuery: debounced, drives filtering
   const [searchInput, setSearchInput] = useState('');
@@ -181,6 +186,7 @@ export default function PlantsScreen(): React.JSX.Element {
       if (loadMoreTimeoutRef.current) clearTimeout(loadMoreTimeoutRef.current);
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
     };
   }, [navigation, loadPlants, loadLocations, resetTabBar]);
 
@@ -192,6 +198,22 @@ export default function PlantsScreen(): React.JSX.Element {
       navigation.setParams({ refresh: undefined });
     }
   }, [route.params, navigation, loadPlants, resetTabBar]);
+
+  // Show a brief "saved" confirmation when the plant form returns a savedPlantId.
+  useEffect(() => {
+    const savedPlantId = route.params?.savedPlantId;
+    if (!savedPlantId) return;
+    setSavedToast({ id: savedPlantId, name: route.params?.savedPlantName || 'Plant' });
+    savedToastProgress.setValue(1);
+    Animated.timing(savedToastProgress, {
+      toValue: 0,
+      duration: 2500,
+      useNativeDriver: false,
+    }).start();
+    if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
+    savedToastTimerRef.current = setTimeout(() => setSavedToast(null), 2500);
+    navigation.setParams({ savedPlantId: undefined, savedPlantName: undefined });
+  }, [route.params, navigation, savedToastProgress]);
 
   useEffect(() => {
     const healthFilter = route.params?.healthFilter;
@@ -546,6 +568,15 @@ export default function PlantsScreen(): React.JSX.Element {
     [navigation]
   );
 
+  const handleViewSaved = useCallback(() => {
+    if (!savedToast) return;
+    if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
+    savedToastProgress.stopAnimation();
+    const id = savedToast.id;
+    setSavedToast(null);
+    navigation.navigate('PlantDetail', { plantId: id });
+  }, [savedToast, navigation, savedToastProgress]);
+
   const handleCardEdit = useCallback(
     (plantId: string) => navigation.navigate('PlantForm', { plantId }),
     [navigation]
@@ -854,6 +885,15 @@ export default function PlantsScreen(): React.JSX.Element {
 
       <AnimatedFAB onPress={() => navigation.navigate('PlantForm')} />
       {renderUndoToast()}
+      <UndoToast
+        visible={savedToast !== null}
+        message={`${savedToast?.name ?? 'Plant'} saved`}
+        onUndo={handleViewSaved}
+        progress={savedToastProgress}
+        bottomOffset={TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8}
+        icon="checkmark-circle"
+        actionLabel="View"
+      />
     </View>
   );
 }

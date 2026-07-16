@@ -61,7 +61,9 @@ export interface PlantFormPrefill {
 }
 
 export type PlantsStackParamList = {
-  PlantsList: { healthFilter?: string; refresh?: number } | undefined;
+  PlantsList:
+    | { healthFilter?: string; refresh?: number; savedPlantId?: string; savedPlantName?: string }
+    | undefined;
   ArchivedPlants: undefined;
   PlantDetail: { plantId: string };
   PlantForm:

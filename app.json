@@ -26,6 +26,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
       "permissions": ["READ_MEDIA_IMAGES", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
     },
     "web": {

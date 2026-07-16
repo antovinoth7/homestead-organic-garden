@@ -172,10 +172,7 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
       )}
-      <KeyboardAvoidingView
-        style={editStyles.flexOne}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <KeyboardAvoidingView style={editStyles.flexOne} behavior="padding">
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity
             onPress={handleClose}
@@ -548,6 +545,26 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
             </View>
           </View>
         </ScrollView>
+
+        <View style={[styles.stickySaveContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+          <TouchableOpacity
+            style={[styles.stickySaveButton, loading && styles.stickySaveButtonDisabled]}
+            onPress={() => handleSave()}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.stickySaveButtonText}>
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Text>
+            {showValidationErrors && totalErrorCount > 0 && (
+              <View style={styles.stickySaveErrorBadge}>
+                <Text style={styles.stickySaveErrorBadgeText}>
+                  {totalErrorCount} issue{totalErrorCount > 1 ? 's' : ''}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
 
       <PestDiseaseModal
@@ -574,24 +591,6 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
         }}
         onHealthStatusChange={(status) => setHealthStatus(status)}
       />
-
-      <View style={[styles.stickySaveContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-        <TouchableOpacity
-          style={[styles.stickySaveButton, loading && styles.stickySaveButtonDisabled]}
-          onPress={() => handleSave()}
-          disabled={loading}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.stickySaveButtonText}>{loading ? 'Saving...' : 'Save Changes'}</Text>
-          {showValidationErrors && totalErrorCount > 0 && (
-            <View style={styles.stickySaveErrorBadge}>
-              <Text style={styles.stickySaveErrorBadgeText}>
-                {totalErrorCount} issue{totalErrorCount > 1 ? 's' : ''}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }

@@ -7,7 +7,6 @@ import {
   ScrollView,
   Alert,
   KeyboardAvoidingView,
-  Platform,
   ImageStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -311,10 +310,7 @@ export default function JournalFormScreen(): React.JSX.Element {
         <Text style={styles.title}>{isEditing ? 'Edit Entry' : 'New Entry'}</Text>
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.scrollWrapper}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <KeyboardAvoidingView style={styles.scrollWrapper} behavior="padding">
       <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
         {/* Entry Type Selector */}
         <View style={styles.typeSelector}>
@@ -606,10 +602,7 @@ export default function JournalFormScreen(): React.JSX.Element {
           <Text style={styles.charCounter}>{content.length}/5000</Text>
         </View>
 
-        {/* Extra spacing for keyboard */}
-        <View style={styles.keyboardSpacer} />
       </ScrollView>
-      </KeyboardAvoidingView>
 
       <View style={[styles.stickySaveContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         <TouchableOpacity
@@ -623,6 +616,7 @@ export default function JournalFormScreen(): React.JSX.Element {
           </Text>
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
 
       <PhotoSourceModal
         visible={showPhotoSourceModal}
