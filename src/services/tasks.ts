@@ -43,6 +43,8 @@ const TASK_LOGS_COLLECTION = 'task_logs';
 const PLANTS_COLLECTION = 'plants';
 type MarkTaskDoneOptions = {
   skipAlreadyDoneCheck?: boolean;
+  /** Called after each batch chunk commits, with the running completed count. */
+  onProgress?: (done: number, total: number) => void;
 };
 
 /**
@@ -808,6 +810,7 @@ export const markTasksDone = async (
       // and the mutations replay on reconnect.
       await writeOrQueue(taskDoneMutations(chunk), () => batch.commit());
       committed += chunk.length;
+      options?.onProgress?.(committed, owned.length);
     } catch (err) {
       logger.error('markTasksDone: batch commit failed', err as Error);
       // Persist whatever committed before the failure, then report the rest as failed.

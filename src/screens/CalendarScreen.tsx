@@ -142,6 +142,7 @@ export default function CalendarScreen(): React.JSX.Element {
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [detailTask, setDetailTask] = useState<TaskTemplate | null>(null);
   const calendarHeight = useRef(new Animated.Value(1)).current; // 1 = expanded, 0 = collapsed
+  const completeProgress = useRef(new Animated.Value(0)).current; // 0→1 bulk-completion bar
   const calendarCollapsed = useRef(false);
   const lastScrollY = useRef(0);
   const searchInputRef = React.useRef<TextInput>(null);
@@ -402,24 +403,57 @@ export default function CalendarScreen(): React.JSX.Element {
     setCompletedCount(0);
     setCompletingTotal(selected.length);
 
-    // One batched commit + single cache write — no per-task re-render storm.
-    const { succeeded, failed } = await markTasksDone(selected, {
-      skipAlreadyDoneCheck: true,
-    });
+    // The commit is a single batch (no per-task boundary for ≤166 tasks), so the
+    // bar creeps to 90% while awaiting, then snaps to 100% on resolve.
+    completeProgress.setValue(0);
+    Animated.timing(completeProgress, {
+      toValue: 0.9,
+      duration: 1200,
+      useNativeDriver: false,
+    }).start();
 
-    setCompletedCount(succeeded);
-    setIsCompletingAll(false);
-    setCompletedCount(0);
-    setSelectedTaskIds(new Set());
-    setSessionCompletedCount((prev) => prev + succeeded);
-    loadData({ force: true });
-    if (failed > 0) {
-      Alert.alert(
-        'Partial Completion',
-        `${failed} task(s) failed. You can retry them individually.`
-      );
+    try {
+      // One batched commit + single cache write — no per-task re-render storm.
+      const { succeeded, failed } = await markTasksDone(selected, {
+        skipAlreadyDoneCheck: true,
+        onProgress: (done) => {
+          if (isMountedRef.current) setCompletedCount(done);
+        },
+      });
+
+      if (!isMountedRef.current) return;
+      setCompletedCount(succeeded);
+      completeProgress.stopAnimation();
+      Animated.timing(completeProgress, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: false,
+      }).start();
+      // Hold the full "N/N" bar briefly so the user sees it complete.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (!isMountedRef.current) return;
+
+      setSelectedTaskIds(new Set());
+      setSessionCompletedCount((prev) => prev + succeeded);
+      loadData({ force: true });
+      if (failed > 0) {
+        Alert.alert(
+          'Partial Completion',
+          `${failed} task(s) failed. You can retry them individually.`
+        );
+      }
+    } catch (error) {
+      if (isMountedRef.current) Alert.alert('Error', getErrorMessage(error));
+    } finally {
+      // Always close the modal — even on throw — so it can't get stuck open.
+      if (isMountedRef.current) {
+        setIsCompletingAll(false);
+        setCompletedCount(0);
+        setCompletingTotal(0);
+      }
+      completeProgress.setValue(0);
     }
-  }, [tasks, selectedTaskIds, isCompletingAll, loadData]);
+  }, [tasks, selectedTaskIds, isCompletingAll, loadData, completeProgress, isMountedRef]);
 
   const handleBulkSnooze = useCallback(async () => {
     const selected = tasks.filter((t) => selectedTaskIds.has(t.id));
@@ -1359,7 +1393,7 @@ export default function CalendarScreen(): React.JSX.Element {
             >
               {isCompletingAll ? (
                 <Text style={styles.selectionBarBtnText}>
-                  {completedCount}/{selectedTaskIds.size}
+                  {completedCount}/{completingTotal}
                 </Text>
               ) : (
                 <>
@@ -1526,13 +1560,14 @@ export default function CalendarScreen(): React.JSX.Element {
                 {`Completing... ${completedCount}/${completingTotal}`}
               </Text>
               <View style={styles.progressBarOuter}>
-                <View
+                <Animated.View
                   style={[
                     styles.progressBarInner,
                     {
-                      width: `${
-                        completingTotal > 0 ? (completedCount / completingTotal) * 100 : 0
-                      }%`,
+                      width: completeProgress.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0%', '100%'],
+                      }),
                     },
                   ]}
                 />
