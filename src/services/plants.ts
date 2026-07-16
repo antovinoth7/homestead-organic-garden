@@ -16,6 +16,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -28,6 +29,7 @@ import {
 import {
   saveImageLocallyWithFilename,
   resolveLocalImageUri,
+  deleteImageLocally,
   SavedImage,
 } from '../lib/imageStorage';
 import { getData, setData, KEYS } from '../lib/storage';
@@ -640,6 +642,55 @@ export const deletePlant = async (id: string): Promise<void> => {
     await deleteTasksForPlantIds([id]);
   } catch (error) {
     logger.warn('Failed to cascade-delete tasks for plant', error as Error);
+  }
+};
+
+/**
+ * Permanently remove a plant (hard delete) — from the Archived Plants screen.
+ * Unlike deletePlant (which soft-deletes and keeps the record restorable), this
+ * removes the Firestore document, cascades its tasks/logs, and purges the local
+ * photo file. Not reversible. Journal entries are intentionally kept.
+ */
+export const permanentlyDeletePlant = async (id: string): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const docRef = doc(db, PLANTS_COLLECTION, id);
+  await verifyPlantOwnership(id, user.uid, 'delete');
+
+  // Resolve the local photo before removing the record so we can purge it.
+  const cached = await getCachedPlant(id);
+  const photoIdentifier = cached?.photo_filename ?? cached?.photo_url ?? null;
+
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: id, op: 'delete', payload: null },
+    () => deleteDoc(docRef)
+  );
+
+  invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(
+    KEYS.PLANTS,
+    cachedPlants.filter((p) => p.id !== id)
+  );
+
+  // Cascade: delete orphaned tasks and logs for this plant
+  try {
+    const { deleteTasksForPlantIds } = await import('./tasks');
+    await deleteTasksForPlantIds([id]);
+  } catch (error) {
+    logger.warn('Failed to cascade-delete tasks for plant', error as Error);
+  }
+
+  // Best-effort: remove the plant's local photo file
+  if (photoIdentifier) {
+    try {
+      const uri = await resolveLocalImageUri(photoIdentifier);
+      await deleteImageLocally(uri);
+    } catch (error) {
+      logger.warn('Failed to delete local plant image', error as Error);
+    }
   }
 };
 

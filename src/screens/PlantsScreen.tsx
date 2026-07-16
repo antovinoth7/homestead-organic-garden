@@ -16,7 +16,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import { getAllPlants, deletePlant, getCachedPlants } from '../services/plants';
+import { getAllPlants, deletePlant, archivePlant, getCachedPlants } from '../services/plants';
 import { getLocationConfig } from '../services/locations';
 import {
   Plant,
@@ -234,9 +234,14 @@ export default function PlantsScreen(): React.JSX.Element {
   }, [route.params, navigation]);
 
   const commitDelete = useCallback(
-    async (id: string) => {
+    async (plant: Plant) => {
       try {
-        await deletePlant(id);
+        // Active plants are archived first (preserving rotation history and
+        // disabling their tasks) before the soft delete.
+        if (!isPlantArchived(plant)) {
+          await archivePlant(plant.id);
+        }
+        await deletePlant(plant.id);
       } catch (error: unknown) {
         Alert.alert('Error', getErrorMessage(error));
         void loadPlants();
@@ -251,40 +256,49 @@ export default function PlantsScreen(): React.JSX.Element {
       if (index === -1) return;
       const plant = plants[index]!;
 
-      // Block deleting an active plant — it must be archived first.
+      const startPendingDelete = (): void => {
+        // Cancel any in-flight undo for the previous pending delete
+        if (undoTimerRef.current) {
+          clearTimeout(undoTimerRef.current);
+          if (pendingDelete) {
+            void commitDelete(pendingDelete.plant);
+          }
+        }
+
+        // Optimistic remove
+        setPlants((prev) => prev.filter((p) => p.id !== id));
+        setPendingDelete({ id, plant, index });
+
+        // Animate progress bar from full → empty over 4 seconds
+        undoProgress.setValue(1);
+        Animated.timing(undoProgress, {
+          toValue: 0,
+          duration: 4000,
+          useNativeDriver: false,
+        }).start();
+
+        undoTimerRef.current = setTimeout(() => {
+          setPendingDelete(null);
+          undoTimerRef.current = null;
+          void commitDelete(plant);
+        }, 4000);
+      };
+
+      // Active plants are still deletable, but confirm first since deleting one
+      // also archives it (ends its place in the bed's rotation).
       if (!isPlantArchived(plant)) {
         Alert.alert(
-          'Can’t delete active plant',
-          'This plant is still active. Archive it (after harvest or clearing the bed) before deleting.'
+          'Delete plant?',
+          `This archives and deletes “${plant.name}”. You’ll have a few seconds to undo.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: startPendingDelete },
+          ]
         );
         return;
       }
 
-      // Cancel any in-flight undo for the previous pending delete
-      if (undoTimerRef.current) {
-        clearTimeout(undoTimerRef.current);
-        if (pendingDelete) {
-          void commitDelete(pendingDelete.id);
-        }
-      }
-
-      // Optimistic remove
-      setPlants((prev) => prev.filter((p) => p.id !== id));
-      setPendingDelete({ id, plant, index });
-
-      // Animate progress bar from full → empty over 4 seconds
-      undoProgress.setValue(1);
-      Animated.timing(undoProgress, {
-        toValue: 0,
-        duration: 4000,
-        useNativeDriver: false,
-      }).start();
-
-      undoTimerRef.current = setTimeout(() => {
-        setPendingDelete(null);
-        undoTimerRef.current = null;
-        void commitDelete(id);
-      }, 4000);
+      startPendingDelete();
     },
     [plants, pendingDelete, commitDelete, undoProgress]
   );

@@ -9,11 +9,12 @@ import {
 } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
-import { getArchivedPlants, restorePlant } from '../services/plants';
+import { getArchivedPlants, restorePlant, permanentlyDeletePlant } from '../services/plants';
 import { getBeds, getDeletedBeds, restoreBed } from '../services/beds';
 import { Plant } from '../types/database.types';
 import { createStyles } from '../styles/archivedPlantsStyles';
 import { getErrorMessage } from '../utils/errorLogging';
+import { ConfirmDeleteModal } from '../components/modals/ConfirmDeleteModal';
 
 const NO_BED_KEY = '__no_bed__';
 
@@ -35,6 +36,8 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [restoringBedId, setRestoringBedId] = useState<string | null>(null);
+  const [pendingPermanentDelete, setPendingPermanentDelete] = useState<Plant | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -145,6 +148,21 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
     [restoringId, restoringBedId, load]
   );
 
+  const confirmPermanentDelete = useCallback(async (): Promise<void> => {
+    const plant = pendingPermanentDelete;
+    if (!plant) return;
+    setPendingPermanentDelete(null);
+    setDeletingId(plant.id);
+    try {
+      await permanentlyDeletePlant(plant.id);
+      setPlants((prev) => prev.filter((p) => p.id !== plant.id));
+    } catch (error: unknown) {
+      Alert.alert('Error', getErrorMessage(error));
+    } finally {
+      setDeletingId(null);
+    }
+  }, [pendingPermanentDelete]);
+
   const keyExtractor = useCallback((item: Plant) => item.id, []);
 
   const renderSectionHeader = useCallback(
@@ -199,20 +217,32 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
             {!!item.location && <Text style={styles.location}>{item.location}</Text>}
             {deletedAt && <Text style={styles.deletedAt}>Deleted {deletedAt}</Text>}
           </View>
-          <TouchableOpacity
-            style={styles.restoreButton}
-            onPress={() => handleRestore(item)}
-            disabled={restoringId === item.id || restoringBedId !== null}
-          >
-            <Ionicons name="arrow-undo" size={18} color={theme.primary} />
-            <Text style={styles.restoreText}>
-              {restoringId === item.id ? 'Restoring...' : 'Restore'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.cardActions}>
+            <TouchableOpacity
+              style={styles.restoreButton}
+              onPress={() => handleRestore(item)}
+              disabled={restoringId === item.id || restoringBedId !== null || deletingId === item.id}
+            >
+              <Ionicons name="arrow-undo" size={18} color={theme.primary} />
+              <Text style={styles.restoreText}>
+                {restoringId === item.id ? 'Restoring...' : 'Restore'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => setPendingPermanentDelete(item)}
+              disabled={deletingId === item.id || restoringId === item.id}
+            >
+              <Ionicons name="trash-outline" size={16} color={theme.error} />
+              <Text style={styles.deleteText}>
+                {deletingId === item.id ? 'Deleting...' : 'Delete'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     },
-    [styles, handleRestore, restoringId, restoringBedId, theme.primary]
+    [styles, handleRestore, restoringId, restoringBedId, deletingId, theme.primary, theme.error]
   );
 
   return (
@@ -249,6 +279,15 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
           ]}
         />
       )}
+
+      <ConfirmDeleteModal
+        visible={pendingPermanentDelete !== null}
+        title="Delete permanently?"
+        message={`This permanently removes “${pendingPermanentDelete?.name ?? 'this plant'}”, its tasks and its photo. This cannot be undone.`}
+        confirmLabel="Delete forever"
+        onCancel={() => setPendingPermanentDelete(null)}
+        onConfirm={confirmPermanentDelete}
+      />
     </View>
   );
 }

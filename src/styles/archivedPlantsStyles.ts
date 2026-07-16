@@ -128,6 +128,26 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       color: theme.primary,
     },
+    cardActions: {
+      alignItems: 'flex-end',
+      gap: 8,
+    },
+    deleteButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+      backgroundColor: theme.errorLight,
+      borderWidth: 1,
+      borderColor: theme.error,
+    },
+    deleteText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.error,
+    },
     loadingContainer: {
       flex: 1,
       alignItems: 'center',
