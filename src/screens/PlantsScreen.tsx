@@ -516,7 +516,9 @@ export default function PlantsScreen(): React.JSX.Element {
       return displayedPlants.map((p): ListItem => ({ kind: 'plant', data: p }));
     }
     const buckets = new Map<string, Plant[]>();
-    for (const p of filteredPlants) {
+    // Bucket the paged slice (not the full filtered set) so the Bed segment
+    // respects Load More instead of rendering every bed plant at once.
+    for (const p of displayedPlants) {
       const key = p.bed_id ?? '';
       if (!buckets.has(key)) buckets.set(key, []);
       buckets.get(key)!.push(p);
@@ -534,7 +536,7 @@ export default function PlantsScreen(): React.JSX.Element {
       for (const p of bPlants) items.push({ kind: 'plant', data: p });
     }
     return items;
-  }, [autoGroup, displayedPlants, filteredPlants, bedNameMap]);
+  }, [autoGroup, displayedPlants, bedNameMap]);
 
   const loadMore = (): void => {
     if (loadingMore || !hasMore) return;
@@ -879,7 +881,9 @@ export default function PlantsScreen(): React.JSX.Element {
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
-        removeClippedSubviews={true}
+        // removeClippedSubviews is intentionally OFF: combined with a legacy
+        // gesture-handler Swipeable per row under the New Architecture it caused
+        // blank/stuck cells while scrolling. Pagination (20/page) bounds cost.
         updateCellsBatchingPeriod={50}
       />
 
