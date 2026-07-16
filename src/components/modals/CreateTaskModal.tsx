@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, Alert, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
+  Alert,
+  Platform,
+  KeyboardAvoidingView,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import ThemedDropdown from '../ThemedDropdown';
@@ -8,6 +17,7 @@ import type { DropdownItem } from '../ThemedDropdown';
 import { createTaskTemplate } from '../../services/tasks';
 import { Plant, TaskType, Bed } from '../../types/database.types';
 import { getErrorMessage } from '../../utils/errorLogging';
+import { sanitizeNumberText } from '../../utils/plantFormConstants';
 import { createStyles } from '../../styles/calendarStyles';
 import { useTheme } from '../../theme';
 
@@ -129,7 +139,10 @@ export default function CreateTaskModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={handleClose}>
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Create Task</Text>
@@ -139,11 +152,9 @@ export default function CreateTaskModal({
           </View>
 
           <ScrollView
+            style={styles.modalScroll}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{
-              paddingBottom: Math.max(bottomInset, 12),
-            }}
           >
             <View style={styles.modalBody}>
               <ThemedDropdown
@@ -364,7 +375,7 @@ export default function CreateTaskModal({
                   <FloatingLabelInput
                     label="Frequency (days)"
                     value={frequencyDays}
-                    onChangeText={setFrequencyDays}
+                    onChangeText={(t) => setFrequencyDays(sanitizeNumberText(t))}
                     keyboardType="numeric"
                   />
 
@@ -411,20 +422,22 @@ export default function CreateTaskModal({
                   <Text style={styles.previewText}>• Will not repeat after completion</Text>
                 </View>
               )}
-
-              <TouchableOpacity
-                style={[styles.createButton, loading && styles.createButtonDisabled]}
-                onPress={handleCreateTask}
-                disabled={loading}
-              >
-                <Text style={styles.createButtonText}>
-                  {loading ? 'Creating...' : 'Create Task'}
-                </Text>
-              </TouchableOpacity>
             </View>
           </ScrollView>
+
+          <View style={[styles.modalFooter, { paddingBottom: Math.max(bottomInset, 12) }]}>
+            <TouchableOpacity
+              style={[styles.createButton, loading && styles.createButtonDisabled]}
+              onPress={handleCreateTask}
+              disabled={loading}
+            >
+              <Text style={styles.createButtonText}>
+                {loading ? 'Creating...' : 'Create Task'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -873,7 +873,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     modalBody: {
       padding: 24,
-      paddingBottom: 40,
+      paddingBottom: 24,
+    },
+    // ScrollView shrinks (rather than pushing the footer off) when the sheet is
+    // clamped to maxHeight or the keyboard reduces the available space.
+    modalScroll: {
+      flexShrink: 1,
+    },
+    // Pinned footer holding the primary action so it never scrolls out of reach.
+    modalFooter: {
+      paddingHorizontal: 24,
+      paddingTop: 12,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.borderLight,
+      backgroundColor: theme.backgroundSecondary,
     },
     label: {
       fontSize: 14,
