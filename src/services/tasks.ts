@@ -25,7 +25,14 @@ import {
 import { logError } from '../utils/errorLogging';
 import { logger } from '../utils/logger';
 import { convertTimestamp } from '../utils/dateHelpers';
-import { getCached, setCached, invalidate, dedup, CACHE_KEYS } from '../lib/dataCache';
+import {
+  getCached,
+  peekCached,
+  setCached,
+  invalidate,
+  dedup,
+  CACHE_KEYS,
+} from '../lib/dataCache';
 import { TASK_DUE_TIME_HOUR, MS_PER_DAY } from '../utils/taskConstants';
 import { getCurrentSeason, getWateringFrequencyMultiplier } from '../utils/seasonHelpers';
 import { getCoconutAgeInfo, getEffectiveGrowthStage, isPlantArchived } from '../utils/plantHelpers';
@@ -600,51 +607,70 @@ const taskDoneMutations = (opsList: TaskDoneOps[]): OfflineMutationInput[] =>
 const applyTaskDoneCacheDeltas = async (opsList: TaskDoneOps[]): Promise<void> => {
   if (opsList.length === 0) return;
 
-  // Logs — prepend all new logs (preserve input order: newest-first overall).
-  const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
-  for (let i = opsList.length - 1; i >= 0; i--) {
-    cachedLogs.unshift(opsList[i]!.cache.newTaskLog);
-  }
-  await setData(KEYS.TASK_LOGS, cachedLogs);
-
-  // Task templates — apply next_due_at / enabled patches.
-  const taskPatches = opsList.filter((o) => o.cache.taskPatch);
-  if (taskPatches.length > 0) {
-    const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
-    let changed = false;
-    for (const o of taskPatches) {
-      const idx = cachedTasks.findIndex((t) => t.id === o.cache.taskId);
-      if (idx !== -1) {
-        cachedTasks[idx] = { ...cachedTasks[idx]!, ...o.cache.taskPatch! };
-        changed = true;
-      }
+  // Prepends the new logs (input order preserved: newest-first overall).
+  const prependNewLogs = (logs: TaskLog[]): TaskLog[] => {
+    const next = logs.slice();
+    for (let i = opsList.length - 1; i >= 0; i--) {
+      next.unshift(opsList[i]!.cache.newTaskLog);
     }
-    if (changed) await setData(KEYS.TASKS, cachedTasks);
-  }
+    return next;
+  };
 
-  // Plants — apply last-care-date patches.
+  // Applies next_due_at / enabled patches to a task-template list (in place copy).
+  const taskPatches = opsList.filter((o) => o.cache.taskPatch);
+  const patchTasks = (list: TaskTemplate[]): TaskTemplate[] => {
+    const next = list.slice();
+    for (const o of taskPatches) {
+      const idx = next.findIndex((t) => t.id === o.cache.taskId);
+      if (idx !== -1) next[idx] = { ...next[idx]!, ...o.cache.taskPatch! };
+    }
+    return next;
+  };
+
+  // Applies last-care-date patches to a plant list (in place copy).
   const plantPatches = opsList.filter((o) => o.cache.plantPatch);
-  if (plantPatches.length > 0) {
-    const cachedPlants = await getData<Plant>(KEYS.PLANTS);
-    let changed = false;
+  const patchPlants = (list: Plant[]): Plant[] => {
+    const next = list.slice();
     for (const o of plantPatches) {
       const p = o.cache.plantPatch!;
-      const idx = cachedPlants.findIndex((pl) => pl.id === p.plantId);
-      if (idx !== -1) {
-        cachedPlants[idx] = { ...cachedPlants[idx]!, [p.field]: p.value };
-        changed = true;
-      }
+      const idx = next.findIndex((pl) => pl.id === p.plantId);
+      if (idx !== -1) next[idx] = { ...next[idx]!, [p.field]: p.value };
     }
-    if (changed) await setData(KEYS.PLANTS, cachedPlants);
+    return next;
+  };
+
+  // AsyncStorage (offline fallback) — always patched.
+  await setData(KEYS.TASK_LOGS, prependNewLogs(await getData<TaskLog>(KEYS.TASK_LOGS)));
+  if (taskPatches.length > 0) {
+    await setData(KEYS.TASKS, patchTasks(await getData<TaskTemplate>(KEYS.TASKS)));
+  }
+  if (plantPatches.length > 0) {
+    await setData(KEYS.PLANTS, patchPlants(await getData<Plant>(KEYS.PLANTS)));
   }
 
-  invalidate(
-    CACHE_KEYS.TODAY_TASKS,
-    CACHE_KEYS.TASK_TEMPLATES,
-    CACHE_KEYS.TODAY_TASK_LOGS,
-    CACHE_KEYS.TASK_LOGS,
-    CACHE_KEYS.ALL_PLANTS
-  );
+  // Warm in-memory cache — patch it in place so the post-completion reload is
+  // served synchronously instead of re-fetching from Firestore. Fall back to
+  // invalidate when a key is cold (nothing to patch). The dedup fetchedAt guard
+  // protects a patched entry from being clobbered by an in-flight fetch.
+  const warmTasks = peekCached<TaskTemplate[]>(CACHE_KEYS.TASK_TEMPLATES);
+  if (warmTasks) setCached(CACHE_KEYS.TASK_TEMPLATES, patchTasks(warmTasks));
+  else invalidate(CACHE_KEYS.TASK_TEMPLATES);
+
+  const warmPlants = peekCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
+  if (warmPlants) setCached(CACHE_KEYS.ALL_PLANTS, patchPlants(warmPlants));
+  else invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  const warmTodayLogs = peekCached<TaskLog[]>(CACHE_KEYS.TODAY_TASK_LOGS);
+  if (warmTodayLogs) setCached(CACHE_KEYS.TODAY_TASK_LOGS, prependNewLogs(warmTodayLogs));
+  else invalidate(CACHE_KEYS.TODAY_TASK_LOGS);
+
+  const warmLogs = peekCached<TaskLog[]>(CACHE_KEYS.TASK_LOGS);
+  if (warmLogs) setCached(CACHE_KEYS.TASK_LOGS, prependNewLogs(warmLogs));
+  else invalidate(CACHE_KEYS.TASK_LOGS);
+
+  // TODAY_TASKS is a differently-filtered list used by other screens; leave it
+  // to a plain invalidate rather than reconstructing the filter here.
+  invalidate(CACHE_KEYS.TODAY_TASKS);
 };
 
 /**
