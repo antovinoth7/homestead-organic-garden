@@ -29,6 +29,7 @@ function getEntryTypeIcon(
   const iconMap: Record<JournalEntryType, React.ComponentProps<typeof Ionicons>['name']> = {
     [JournalEntryType.Observation]: 'eye',
     [JournalEntryType.Harvest]: 'basket',
+    [JournalEntryType.PestDisease]: 'bug',
     [JournalEntryType.Issue]: 'alert-circle',
     [JournalEntryType.Milestone]: 'flag',
     [JournalEntryType.Other]: 'document-text',
@@ -36,6 +37,7 @@ function getEntryTypeIcon(
   const colorMap: Record<JournalEntryType, string> = {
     [JournalEntryType.Observation]: theme.primary,
     [JournalEntryType.Harvest]: theme.warning,
+    [JournalEntryType.PestDisease]: theme.error,
     [JournalEntryType.Issue]: theme.error,
     [JournalEntryType.Milestone]: theme.success,
     [JournalEntryType.Other]: theme.textSecondary,

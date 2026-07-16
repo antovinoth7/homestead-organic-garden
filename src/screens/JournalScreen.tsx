@@ -507,6 +507,7 @@ export default function JournalScreen(): React.JSX.Element {
                     [null, 'All'],
                     [JournalEntryType.Observation, '👁️ Observation'],
                     [JournalEntryType.Harvest, '🧺 Harvest'],
+                    [JournalEntryType.PestDisease, '🐛 Pest/Disease'],
                     [JournalEntryType.Issue, '⚠️ Issue'],
                     [JournalEntryType.Milestone, '🏁 Milestone'],
                   ] as const

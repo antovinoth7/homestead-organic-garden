@@ -110,6 +110,15 @@ export default function JournalFormScreen(): React.JSX.Element {
     editEntry?.harvest_tree_number?.toString() || ''
   );
 
+  // Pest/Disease-specific fields
+  const [pestName, setPestName] = useState(editEntry?.pest_name || '');
+  const [pestSeverity, setPestSeverity] = useState<'low' | 'medium' | 'high'>(
+    editEntry?.pest_severity || 'medium'
+  );
+  const [pestStatus, setPestStatus] = useState<'active' | 'treated' | 'resolved'>(
+    editEntry?.pest_status || 'active'
+  );
+
   useEffect(() => {
     loadPlants();
   }, []);
@@ -278,6 +287,10 @@ export default function JournalFormScreen(): React.JSX.Element {
           entryType === JournalEntryType.Harvest && harvestTreeNumber.trim() !== ''
             ? parseInt(harvestTreeNumber, 10)
             : null,
+        pest_name:
+          entryType === JournalEntryType.PestDisease ? pestName.trim() || null : null,
+        pest_severity: entryType === JournalEntryType.PestDisease ? pestSeverity : null,
+        pest_status: entryType === JournalEntryType.PestDisease ? pestStatus : null,
       };
 
       if (isEditing && editEntry) {
@@ -354,6 +367,29 @@ export default function JournalFormScreen(): React.JSX.Element {
               ]}
             >
               Harvest
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.typeButton,
+              entryType === JournalEntryType.PestDisease && styles.typeButtonActive,
+            ]}
+            onPress={() => setEntryType(JournalEntryType.PestDisease)}
+          >
+            <Ionicons
+              name="bug"
+              size={18}
+              color={
+                entryType === JournalEntryType.PestDisease ? theme.textInverse : theme.primary
+              }
+            />
+            <Text
+              style={[
+                styles.typeButtonText,
+                entryType === JournalEntryType.PestDisease && styles.typeButtonTextActive,
+              ]}
+            >
+              Pest/Disease
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -582,6 +618,80 @@ export default function JournalFormScreen(): React.JSX.Element {
                 onChangeText={(text) => setHarvestTreeNumber(text.replace(/[^0-9]/g, ''))}
                 keyboardType="number-pad"
               />
+            </View>
+          </View>
+        )}
+
+        {/* Pest/Disease-specific fields */}
+        {entryType === JournalEntryType.PestDisease && (
+          <View style={styles.harvestSection}>
+            <Text style={styles.sectionTitle}>Pest / Disease Details</Text>
+
+            <Text style={styles.label}>Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Aphids, Leaf spot"
+              placeholderTextColor={theme.inputPlaceholder}
+              value={pestName}
+              onChangeText={(text) => setPestName(sanitizeAlphaNumericSpaces(text))}
+            />
+
+            <Text style={[styles.label, styles.notesWrapperMarginTop]}>Severity</Text>
+            <View style={styles.qualityButtons}>
+              {(
+                [
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                ] as const
+              ).map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.qualityButton,
+                    pestSeverity === opt.value && styles.qualityButtonActive,
+                  ]}
+                  onPress={() => setPestSeverity(opt.value)}
+                >
+                  <Text
+                    style={[
+                      styles.qualityButtonText,
+                      pestSeverity === opt.value && styles.qualityButtonTextActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.label, styles.notesWrapperMarginTop]}>Status</Text>
+            <View style={styles.qualityButtons}>
+              {(
+                [
+                  { value: 'active', label: 'Active' },
+                  { value: 'treated', label: 'Treated' },
+                  { value: 'resolved', label: 'Resolved' },
+                ] as const
+              ).map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.qualityButton,
+                    pestStatus === opt.value && styles.qualityButtonActive,
+                  ]}
+                  onPress={() => setPestStatus(opt.value)}
+                >
+                  <Text
+                    style={[
+                      styles.qualityButtonText,
+                      pestStatus === opt.value && styles.qualityButtonTextActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         )}

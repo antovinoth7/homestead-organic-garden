@@ -17,6 +17,53 @@ export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.cre
       width: 40,
       height: 40,
     },
+    editHeaderTitleBlock: {
+      flex: 1,
+      marginLeft: 12,
+      marginRight: 8,
+    },
+    editHeaderTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    editHeaderTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+      flexShrink: 1,
+    },
+    editHeaderSubtitle: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 1,
+    },
+    journalLinkButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginHorizontal: 16,
+      marginTop: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.backgroundSecondary,
+    },
+    journalLinkTextBlock: {
+      flex: 1,
+    },
+    journalLinkTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    journalLinkSubtitle: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 1,
+    },
     dataLoadingOverlay: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: theme.background,

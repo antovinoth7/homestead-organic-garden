@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { PlantFormStateReturn, sanitizeNumberText } from '../../hooks/usePlantFormState';
 import { useBedOptions } from '@/hooks/useBedOptions';
 import { createStyles } from '../../styles/plantFormStyles';
-import { createWizardStyles } from '../../styles/plantAddWizardStyles';
 import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
 import { sanitizeAlphaNumericSpaces, sanitizeLandmarkText } from '../../utils/textSanitizer';
@@ -46,7 +45,6 @@ export function WizardStep2({ formState }: Props): React.JSX.Element {
   const { beds } = useBedOptions();
 
   const formStyles = useMemo(() => createStyles(theme), [theme]);
-  const wizardStyles = useMemo(() => createWizardStyles(theme), [theme]);
 
   return (
     <View>
@@ -176,52 +174,41 @@ export function WizardStep2({ formState }: Props): React.JSX.Element {
           <Text style={formStyles.sectionCardTitle}>Growing Space</Text>
         </View>
 
-        <View style={formStyles.spaceTypeCardsRow}>
-          {[
-            {
-              value: 'ground' as SpaceType,
-              icon: 'earth' as const,
-              label: 'Ground',
-              hint: 'Open soil',
-            },
-            {
-              value: 'bed' as SpaceType,
-              icon: 'apps' as const,
-              label: 'Raised Bed',
-              hint: 'Bed / Border',
-            },
-            {
-              value: 'pot' as SpaceType,
-              icon: 'cube-outline' as const,
-              label: 'Pot',
-              hint: 'Container',
-            },
-          ].map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[
-                formStyles.spaceTypeCard,
-                spaceType === opt.value && formStyles.spaceTypeCardActive,
-              ]}
-              onPress={() => setSpaceType(opt.value)}
-              activeOpacity={0.75}
-            >
-              <Ionicons
-                name={opt.icon}
-                size={28}
-                color={spaceType === opt.value ? theme.primary : theme.textTertiary}
-                style={formStyles.spaceTypeCardIcon}
-              />
-              <Text
+        <View style={formStyles.spaceSegmentRow}>
+          {(
+            [
+              { value: 'ground' as SpaceType, icon: 'earth' as const, label: 'Ground' },
+              { value: 'bed' as SpaceType, icon: 'apps' as const, label: 'Raised Bed' },
+              { value: 'pot' as SpaceType, icon: 'cube-outline' as const, label: 'Pot' },
+            ]
+          ).map((opt, i) => (
+            <React.Fragment key={opt.value}>
+              {i > 0 && <View style={formStyles.spaceSegmentDivider} />}
+              <TouchableOpacity
                 style={[
-                  formStyles.spaceTypeCardLabel,
-                  spaceType === opt.value && formStyles.spaceTypeCardLabelActive,
+                  formStyles.spaceSegmentItem,
+                  spaceType === opt.value && formStyles.spaceSegmentItemActive,
                 ]}
+                onPress={() => setSpaceType(opt.value)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ selected: spaceType === opt.value }}
               >
-                {opt.label}
-              </Text>
-              <Text style={wizardStyles.spaceTypeCardHint}>{opt.hint}</Text>
-            </TouchableOpacity>
+                <Ionicons
+                  name={opt.icon}
+                  size={18}
+                  color={spaceType === opt.value ? theme.textInverse : theme.textTertiary}
+                />
+                <Text
+                  style={[
+                    formStyles.spaceSegmentLabel,
+                    spaceType === opt.value && formStyles.spaceSegmentLabelActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            </React.Fragment>
           ))}
         </View>
 

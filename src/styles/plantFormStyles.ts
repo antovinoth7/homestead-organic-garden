@@ -1416,6 +1416,40 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     spaceTypeCardLabelActive: {
       color: theme.primary,
     },
+    // Compact single-row segmented control for the growing-space picker.
+    spaceSegmentRow: {
+      flexDirection: 'row' as const,
+      borderWidth: 1,
+      borderColor: theme.pickerBorder,
+      borderRadius: 12,
+      overflow: 'hidden' as const,
+      backgroundColor: theme.pickerBackground,
+      marginBottom: 12,
+    },
+    spaceSegmentItem: {
+      flex: 1,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: 6,
+      paddingVertical: 12,
+      paddingHorizontal: 4,
+    },
+    spaceSegmentItemActive: {
+      backgroundColor: theme.primary,
+    },
+    spaceSegmentDivider: {
+      width: 1,
+      backgroundColor: theme.pickerBorder,
+    },
+    spaceSegmentLabel: {
+      fontSize: 13,
+      fontWeight: '600' as const,
+      color: theme.textSecondary,
+    },
+    spaceSegmentLabelActive: {
+      color: theme.textInverse,
+    },
 
     // --- #1 Phase Gates ---
     phaseLockedBanner: {

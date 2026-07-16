@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
 import { PlantFormStateReturn, NOTES_MAX_LENGTH } from '../../hooks/usePlantFormState';
@@ -22,47 +23,34 @@ import { SegmentedTabs } from '@/components/SegmentedTabs';
 import type { SegmentedTab } from '@/components/SegmentedTabs';
 import { PlantSectionHeader } from '@/components/plantDetail/PlantSectionHeader';
 import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
-import PestDiseaseModal from '../modals/PestDiseaseModal';
 import { EditBasicInfoSection } from './EditBasicInfoSection';
 import { EditLocationSection } from './EditLocationSection';
 import { EditCareScheduleSection } from './EditCareScheduleSection';
 import { EditPlantHealthSection } from './EditPlantHealthSection';
 import { EditCoconutSection } from './EditCoconutSection';
 import { EditSafetySection } from './EditSafetySection';
-import { EditRelationshipsSection } from './EditRelationshipsSection';
 import { sanitizeAlphaNumericSpaces } from '../../utils/textSanitizer';
 import { CATEGORY_FULL_LABELS } from '../../utils/plantLabels';
 import { toLocalDateString, formatDateDisplay } from '../../utils/dateHelpers';
-import { PestDiseaseRecord } from '../../types/database.types';
+import { JournalEntryType } from '../../types/database.types';
+import type { PlantFormScreenNavigationProp } from '../../types/navigation.types';
 
 interface Props {
   formState: PlantFormStateReturn;
 }
 
-// Notes has no tab — it is a single free-text field, so it lives at the bottom
-// of the page rather than taking a pill in the bar.
-type PlantEditTabKey = 'basics' | 'care' | 'health' | 'pests';
+// Pest observations and harvests are logged in the Journal now, so the edit
+// tabs cover configuration only. Notes gets its own tab.
+type PlantEditTabKey = 'basics' | 'care' | 'health' | 'notes';
 
-const TAB_KEYS: readonly PlantEditTabKey[] = ['basics', 'care', 'health', 'pests'];
+const TAB_KEYS: readonly PlantEditTabKey[] = ['basics', 'care', 'health', 'notes'];
 
 const TABS: readonly SegmentedTab<PlantEditTabKey>[] = [
   { key: 'basics', label: 'Basics', icon: 'leaf-outline' },
   { key: 'care', label: 'Care', icon: 'water-outline' },
   { key: 'health', label: 'Health', icon: 'fitness-outline' },
-  { key: 'pests', label: 'Pests', icon: 'bug-outline' },
+  { key: 'notes', label: 'Notes', icon: 'document-text-outline' },
 ];
-
-/** One-line summary of a record: date · severity · affected part · resolved. */
-function pestMetaLine(record: PestDiseaseRecord): string {
-  return [
-    formatDateDisplay(record.occurredAt),
-    record.severity ? record.severity.charAt(0).toUpperCase() + record.severity.slice(1) : '',
-    record.affectedPart,
-    record.resolved ? 'Resolved' : '',
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
 
 export function PlantEditForm({ formState }: Props): React.JSX.Element {
   const {
@@ -87,8 +75,6 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
     variety,
     name,
     generatedPlantName,
-    healthStatus,
-    setHealthStatus,
     harvestSeason,
     setHarvestSeason,
     harvestSeasonOptions,
@@ -103,25 +89,28 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
     expectedHarvestDate,
     notes,
     setNotes,
-    pestDiseaseHistory,
-    setPestDiseaseHistory,
-    showPestDiseaseModal,
-    setShowPestDiseaseModal,
-    currentPestDisease,
-    setCurrentPestDisease,
-    editingPestIndex,
-    setEditingPestIndex,
-    pestPhotoUri,
-    setPestPhotoUri,
   } = formState;
 
+  const navigation = useNavigation<PlantFormScreenNavigationProp>();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const editStyles = useMemo(() => createEditStyles(theme), [theme]);
 
+  // Pest observations and harvests are recorded in the Journal (linked to this
+  // plant); the edit form links out rather than duplicating that data entry.
+  const openJournalForm = useCallback(
+    (entryType: JournalEntryType) => {
+      if (!plantId) return;
+      navigation.navigate('Journal', {
+        screen: 'JournalForm',
+        params: { initialEntryType: entryType, initialPlantId: plantId },
+      });
+    },
+    [navigation, plantId]
+  );
+
   // Same precedence handleSave uses: the nickname wins, else the generated name.
   const headerTitle = useMemo(() => {
-    const displayName = name.trim() || generatedPlantName;
-    return displayName ? `Edit — ${displayName}` : 'Edit Plant';
+    return name.trim() || generatedPlantName || 'Edit Plant';
   }, [name, generatedPlantName]);
 
   const {
@@ -152,19 +141,6 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
     }
   }, [hasUnsavedChanges, handleBackPress, formState]);
 
-  const openNewPestRecord = useCallback(() => {
-    setEditingPestIndex(null);
-    setPestPhotoUri(null);
-    setCurrentPestDisease({
-      type: 'pest',
-      name: '',
-      occurredAt: toLocalDateString(new Date()),
-      severity: 'medium',
-      resolved: false,
-    });
-    setShowPestDiseaseModal(true);
-  }, [setEditingPestIndex, setPestPhotoUri, setCurrentPestDisease, setShowPestDiseaseModal]);
-
   return (
     <View style={editStyles.flexOne}>
       {dataLoading && (
@@ -182,13 +158,15 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
           >
             <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
           </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.title} numberOfLines={1}>
-              {headerTitle}
-            </Text>
-            {hasUnsavedChanges && <View style={styles.unsavedDot} />}
+          <View style={editStyles.editHeaderTitleBlock}>
+            <View style={editStyles.editHeaderTitleRow}>
+              <Text style={editStyles.editHeaderTitle} numberOfLines={1}>
+                {headerTitle}
+              </Text>
+              {hasUnsavedChanges && <View style={styles.unsavedDot} />}
+            </View>
+            <Text style={editStyles.editHeaderSubtitle}>Editing plant</Text>
           </View>
-          <View style={editStyles.editHeaderSpacer} />
         </View>
 
         <View style={editStyles.progressBarTrack}>
@@ -279,9 +257,6 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
 
             {/* Safety — pet toxicity warning (read-only) */}
             <EditSafetySection formState={formState} />
-
-            {/* Companion Plants (read-only) */}
-            <EditRelationshipsSection formState={formState} />
           </View>
 
           <View onLayout={registerSection('health')}>
@@ -419,102 +394,46 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
                     </Text>
                   </View>
                 ) : null}
+
+                <TouchableOpacity
+                  style={editStyles.journalLinkButton}
+                  onPress={() => openJournalForm(JournalEntryType.Harvest)}
+                  activeOpacity={0.7}
+                  disabled={!plantId}
+                >
+                  <Ionicons name="basket-outline" size={20} color={theme.primary} />
+                  <View style={editStyles.journalLinkTextBlock}>
+                    <Text style={editStyles.journalLinkTitle}>Log a harvest</Text>
+                    <Text style={editStyles.journalLinkSubtitle}>
+                      Record actual harvests (weight, quality) in the Journal
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
+                </TouchableOpacity>
               </CollapsibleSection>
             )}
 
             <EditCoconutSection formState={formState} />
-          </View>
 
-          <View onLayout={registerSection('pests')}>
-            <View style={editStyles.sectionHeaderBleed}>
-              <PlantSectionHeader
-                title="Pest & Disease"
-                icon="bug-outline"
-                hasError={showValidationErrors && validationErrors.pestDisease.length > 0}
-                action={
-                  <TouchableOpacity
-                    style={editStyles.sectionHeaderAction}
-                    onPress={openNewPestRecord}
-                    activeOpacity={0.7}
-                    accessibilityRole="button"
-                    accessibilityLabel="Add pest or disease record"
-                  >
-                    <Ionicons name="add" size={16} color={theme.primary} />
-                  </TouchableOpacity>
-                }
-              />
-            </View>
-
-            {pestDiseaseHistory.length > 0 ? (
-              <View style={editStyles.pestListCard}>
-                {pestDiseaseHistory
-                  .map((record, index) => ({ record, index }))
-                  .sort((a, b) =>
-                    a.record.resolved === b.record.resolved ? 0 : a.record.resolved ? 1 : -1
-                  )
-                  .map(({ record, index }, position, rows) => (
-                    <TouchableOpacity
-                      key={record.id || index}
-                      style={[
-                        editStyles.pestRow,
-                        position === rows.length - 1 && editStyles.pestRowLast,
-                      ]}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        setEditingPestIndex(index);
-                        setCurrentPestDisease({ ...record });
-                        setPestPhotoUri(record.photo_filename || null);
-                        setShowPestDiseaseModal(true);
-                      }}
-                    >
-                      <View
-                        style={[
-                          editStyles.pestRowIconWrap,
-                          record.resolved
-                            ? editStyles.pestRowIconWrapResolved
-                            : editStyles.pestRowIconWrapActive,
-                        ]}
-                      >
-                        <Ionicons
-                          name={record.type === 'pest' ? 'bug' : 'medical'}
-                          size={16}
-                          color={record.resolved ? theme.success : theme.error}
-                        />
-                      </View>
-                      <View style={editStyles.pestRowTextBlock}>
-                        <Text
-                          style={[
-                            editStyles.pestRowName,
-                            record.resolved && editStyles.pestRowNameResolved,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {record.name}
-                        </Text>
-                        <Text style={editStyles.pestRowMeta} numberOfLines={1}>
-                          {pestMetaLine(record)}
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        style={editStyles.pestRowDelete}
-                        onPress={() =>
-                          setPestDiseaseHistory(pestDiseaseHistory.filter((_, i) => i !== index))
-                        }
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        accessibilityLabel={`Delete ${record.name}`}
-                      >
-                        <Ionicons name="trash-outline" size={16} color={theme.error} />
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  ))}
+            <TouchableOpacity
+              style={editStyles.journalLinkButton}
+              onPress={() => openJournalForm(JournalEntryType.PestDisease)}
+              activeOpacity={0.7}
+              disabled={!plantId}
+            >
+              <Ionicons name="bug-outline" size={20} color={theme.primary} />
+              <View style={editStyles.journalLinkTextBlock}>
+                <Text style={editStyles.journalLinkTitle}>Log a pest or disease</Text>
+                <Text style={editStyles.journalLinkSubtitle}>
+                  Track pest and disease observations in the Journal
+                </Text>
               </View>
-            ) : (
-              <Text style={editStyles.pestEmpty}>No pest or disease records yet</Text>
-            )}
+              <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
+            </TouchableOpacity>
           </View>
 
-          {/* Notes trails the tabbed sections — no tab, so no registerSection. */}
-          <View>
+          {/* Notes tab. Pest/disease observations now live in the Journal. */}
+          <View onLayout={registerSection('notes')}>
             <View style={editStyles.sectionHeaderBleed}>
               <PlantSectionHeader
                 title="Notes"
@@ -566,31 +485,6 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-
-      <PestDiseaseModal
-        visible={showPestDiseaseModal}
-        editingIndex={editingPestIndex}
-        editingRecord={editingPestIndex !== null ? currentPestDisease : null}
-        initialPhotoUri={pestPhotoUri}
-        pestDiseaseHistory={pestDiseaseHistory}
-        plantType={plantType}
-        plantVariety={plantVariety}
-        plantId={plantId}
-        healthStatus={healthStatus}
-        styles={styles}
-        theme={theme}
-        bottomInset={insets.bottom}
-        onClose={() => {
-          setEditingPestIndex(null);
-          setShowPestDiseaseModal(false);
-        }}
-        onSave={(updatedHistory) => {
-          setPestDiseaseHistory(updatedHistory);
-          setEditingPestIndex(null);
-          setShowPestDiseaseModal(false);
-        }}
-        onHealthStatusChange={(status) => setHealthStatus(status)}
-      />
     </View>
   );
 }

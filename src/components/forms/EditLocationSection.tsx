@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PlantFormStateReturn, sanitizeNumberText } from '../../hooks/usePlantFormState';
 import { createStyles } from '../../styles/plantFormStyles';
-import { createEditStyles } from '../../styles/plantEditFormStyles';
 import CollapsibleSection from '../CollapsibleSection';
 import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
@@ -43,7 +42,6 @@ export function EditLocationSection({ formState }: Props): React.JSX.Element {
   } = formState;
 
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const editStyles = useMemo(() => createEditStyles(theme), [theme]);
   const { beds } = useBedOptions();
 
   return (
@@ -99,49 +97,41 @@ export function EditLocationSection({ formState }: Props): React.JSX.Element {
       <View style={styles.fieldGroupDivider} />
       <Text style={styles.fieldGroupLabel}>{'\uD83E\uDEB4'} Growing Space</Text>
 
-      <View style={styles.spaceTypeCardsRow}>
-        {[
-          {
-            value: 'ground' as SpaceType,
-            icon: 'earth' as const,
-            label: 'Ground',
-            hint: 'Open soil',
-          },
-          {
-            value: 'bed' as SpaceType,
-            icon: 'apps' as const,
-            label: 'Raised Bed',
-            hint: 'Bed / Border',
-          },
-          {
-            value: 'pot' as SpaceType,
-            icon: 'cube-outline' as const,
-            label: 'Pot',
-            hint: 'Container',
-          },
-        ].map((opt) => (
-          <TouchableOpacity
-            key={opt.value}
-            style={[styles.spaceTypeCard, spaceType === opt.value && styles.spaceTypeCardActive]}
-            onPress={() => setSpaceType(opt.value)}
-            activeOpacity={0.75}
-          >
-            <Ionicons
-              name={opt.icon}
-              size={28}
-              color={spaceType === opt.value ? theme.primary : theme.textTertiary}
-              style={styles.spaceTypeCardIcon}
-            />
-            <Text
+      <View style={styles.spaceSegmentRow}>
+        {(
+          [
+            { value: 'ground' as SpaceType, icon: 'earth' as const, label: 'Ground' },
+            { value: 'bed' as SpaceType, icon: 'apps' as const, label: 'Raised Bed' },
+            { value: 'pot' as SpaceType, icon: 'cube-outline' as const, label: 'Pot' },
+          ]
+        ).map((opt, i) => (
+          <React.Fragment key={opt.value}>
+            {i > 0 && <View style={styles.spaceSegmentDivider} />}
+            <TouchableOpacity
               style={[
-                styles.spaceTypeCardLabel,
-                spaceType === opt.value && styles.spaceTypeCardLabelActive,
+                styles.spaceSegmentItem,
+                spaceType === opt.value && styles.spaceSegmentItemActive,
               ]}
+              onPress={() => setSpaceType(opt.value)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityState={{ selected: spaceType === opt.value }}
             >
-              {opt.label}
-            </Text>
-            <Text style={editStyles.spaceTypeCardHint}>{opt.hint}</Text>
-          </TouchableOpacity>
+              <Ionicons
+                name={opt.icon}
+                size={18}
+                color={spaceType === opt.value ? theme.textInverse : theme.textTertiary}
+              />
+              <Text
+                style={[
+                  styles.spaceSegmentLabel,
+                  spaceType === opt.value && styles.spaceSegmentLabelActive,
+                ]}
+              >
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          </React.Fragment>
         ))}
       </View>
 
