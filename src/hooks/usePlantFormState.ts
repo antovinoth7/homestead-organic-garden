@@ -48,7 +48,6 @@ import type { Theme } from '../theme/colors';
 import { getLocationConfig } from '../services/locations';
 import { usePlantFormData } from './usePlantFormData';
 import { plantTypeFromName } from '../utils/plantTypeFromName';
-import { toLocalDateString } from '../utils/dateHelpers';
 import { logger } from '../utils/logger';
 import { getErrorMessage } from '../utils/errorLogging';
 import type { EdgeInsets } from 'react-native-safe-area-context';
@@ -159,8 +158,6 @@ export interface PlantFormStateReturn {
   healthStatus: HealthStatus;
   setHealthStatus: (v: HealthStatus) => void;
   expectedHarvestDate: string;
-  pestDiseaseHistory: PestDiseaseRecord[];
-  setPestDiseaseHistory: (v: PestDiseaseRecord[]) => void;
   growthStage: GrowthStage;
   setGrowthStage: (v: GrowthStage) => void;
   /** Hard override of the derived growth stage; null = derive automatically. */
@@ -195,8 +192,6 @@ export interface PlantFormStateReturn {
   hasUnsavedChanges: boolean;
   showDiscardModal: boolean;
   setShowDiscardModal: (v: boolean) => void;
-  showPestDiseaseModal: boolean;
-  setShowPestDiseaseModal: (v: boolean) => void;
   showPhotoSourceModal: boolean;
   setShowPhotoSourceModal: (v: boolean) => void;
   showValidationErrors: boolean;
@@ -205,12 +200,6 @@ export interface PlantFormStateReturn {
   autoSuggestFired: boolean;
   locationDefaultsFired: boolean;
   sectionExpanded: Record<FormSectionKey, boolean>;
-  currentPestDisease: PestDiseaseRecord;
-  setCurrentPestDisease: (v: PestDiseaseRecord) => void;
-  editingPestIndex: number | null;
-  setEditingPestIndex: (v: number | null) => void;
-  pestPhotoUri: string | null;
-  setPestPhotoUri: (v: string | null) => void;
   showPlantingDatePicker: boolean;
   setShowPlantingDatePicker: (v: boolean) => void;
   showStartDatePicker: boolean;
@@ -320,7 +309,6 @@ export function usePlantFormState(): PlantFormStateReturn {
   const [dataLoading, setDataLoading] = useState(!!plantId);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
-  const [showPestDiseaseModal, setShowPestDiseaseModal] = useState(false);
   const [showPhotoSourceModal, setShowPhotoSourceModal] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [showCustomNameInput, setShowCustomNameInput] = useState(false);
@@ -338,15 +326,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     notesHistory: false,
     pestDisease: false,
   });
-  const [currentPestDisease, setCurrentPestDisease] = useState<PestDiseaseRecord>({
-    type: 'pest',
-    name: '',
-    occurredAt: toLocalDateString(new Date()),
-    severity: 'medium',
-    resolved: false,
-  });
-  const [editingPestIndex, setEditingPestIndex] = useState<number | null>(null);
-  const [pestPhotoUri, setPestPhotoUri] = useState<string | null>(null);
   const [showPlantingDatePicker, setShowPlantingDatePicker] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
@@ -1355,8 +1334,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     healthStatus,
     setHealthStatus,
     expectedHarvestDate,
-    pestDiseaseHistory,
-    setPestDiseaseHistory,
     growthStage,
     setGrowthStage,
     pinnedStage,
@@ -1389,8 +1366,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     hasUnsavedChanges,
     showDiscardModal,
     setShowDiscardModal,
-    showPestDiseaseModal,
-    setShowPestDiseaseModal,
     showPhotoSourceModal,
     setShowPhotoSourceModal,
     showValidationErrors,
@@ -1399,12 +1374,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     autoSuggestFired,
     locationDefaultsFired,
     sectionExpanded,
-    currentPestDisease,
-    setCurrentPestDisease,
-    editingPestIndex,
-    setEditingPestIndex,
-    pestPhotoUri,
-    setPestPhotoUri,
     showPlantingDatePicker,
     setShowPlantingDatePicker,
     showStartDatePicker,
