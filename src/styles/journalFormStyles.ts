@@ -153,16 +153,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       marginBottom: 12,
     },
-    harvestRow: {
-      flexDirection: 'row',
-      gap: 12,
+    quantityInput: {
       marginBottom: 16,
     },
-    quantityInput: {
-      flex: 1,
-    },
     unitInput: {
-      flex: 1,
+      marginBottom: 16,
     },
     label: {
       fontSize: 14,
@@ -197,7 +192,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.primary,
     },
     unitButtonText: {
-      fontSize: 12,
+      fontSize: 13,
       color: theme.textSecondary,
       fontWeight: '600',
     },
@@ -312,5 +307,244 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontStyle: 'italic',
       color: theme.textSecondary,
       marginBottom: 8,
+    },
+    // ─── Header save button ──────────────────────────────────────────────────
+    headerCenter: {
+      flex: 1,
+    },
+    saveButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 18,
+      backgroundColor: theme.primary,
+    },
+    saveButtonDisabled: {
+      backgroundColor: theme.borderDark,
+    },
+    saveText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: theme.textInverse,
+    },
+    saveTextDisabled: {
+      color: theme.textInverse,
+      opacity: 0.7,
+    },
+    // ─── Location (bed → plant) ──────────────────────────────────────────────
+    locationSection: {
+      marginBottom: 16,
+    },
+    locationHint: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      marginTop: -4,
+      marginBottom: 8,
+    },
+    // ─── Pest/Disease kind toggle ────────────────────────────────────────────
+    pdKindRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 12,
+    },
+    pdKindChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    pdKindChipActive: {
+      backgroundColor: theme.primaryLight,
+      borderColor: theme.primary,
+    },
+    pdKindChipText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    pdKindChipTextActive: {
+      color: theme.primary,
+    },
+    // ─── Preset suggestion groups ────────────────────────────────────────────
+    suggestionGroupContainer: {
+      marginBottom: 12,
+    },
+    suggestionGroup: {
+      marginBottom: 8,
+    },
+    suggestionGroupLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginBottom: 6,
+      letterSpacing: 0.3,
+    },
+    suggestionGroupChips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    suggestionChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+      backgroundColor: theme.accentLight,
+    },
+    suggestionChipActive: {
+      backgroundColor: theme.primaryLight,
+    },
+    suggestionChipText: {
+      fontSize: 13,
+      color: theme.accent,
+    },
+    suggestionChipTextActive: {
+      color: theme.primary,
+      fontWeight: '600',
+    },
+    // ─── Occurred date button ────────────────────────────────────────────────
+    dateButton: {
+      backgroundColor: theme.inputBackground,
+      padding: 14,
+      borderRadius: 8,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    dateButtonText: {
+      fontSize: 15,
+      color: theme.text,
+      fontWeight: '500',
+    },
+    datePlaceholder: {
+      fontSize: 15,
+      color: theme.inputPlaceholder,
+    },
+    // ─── Affected parts / effectiveness chips ────────────────────────────────
+    affectedPartChips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 12,
+    },
+    affectedPartChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    affectedPartChipActive: {
+      backgroundColor: theme.primaryLight,
+      borderColor: theme.primary,
+    },
+    affectedPartChipText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+    },
+    affectedPartChipTextActive: {
+      color: theme.primary,
+      fontWeight: '600',
+    },
+    effChipEffectiveActive: {
+      backgroundColor: theme.success,
+      borderColor: theme.success,
+    },
+    effChipPartialActive: {
+      backgroundColor: theme.warning,
+      borderColor: theme.warning,
+    },
+    effChipIneffectiveActive: {
+      backgroundColor: theme.error,
+      borderColor: theme.error,
+    },
+    effChipTextActive: {
+      color: theme.textInverse,
+      fontWeight: '600',
+    },
+    // ─── Treatment groups ────────────────────────────────────────────────────
+    helperText: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      marginTop: -2,
+      marginBottom: 12,
+    },
+    treatmentGroupContainer: {
+      marginBottom: 8,
+    },
+    treatmentGroup: {
+      marginBottom: 8,
+    },
+    treatmentGroupLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginBottom: 6,
+      letterSpacing: 0.3,
+    },
+    treatmentGroupChips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    treatmentChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginBottom: 4,
+    },
+    treatmentChipActive: {
+      backgroundColor: theme.primaryLight,
+      borderColor: theme.primary,
+    },
+    treatmentChipText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+    },
+    treatmentChipTextActive: {
+      color: theme.primary,
+      fontWeight: '600',
+    },
+    // ─── Milestone kind grid ─────────────────────────────────────────────────
+    milestoneGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    milestoneChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 20,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    milestoneChipActive: {
+      backgroundColor: theme.primaryLight,
+      borderColor: theme.primary,
+    },
+    milestoneChipText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    milestoneChipTextActive: {
+      color: theme.primary,
     },
   });

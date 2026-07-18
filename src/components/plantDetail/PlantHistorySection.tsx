@@ -62,6 +62,22 @@ function capitalize(value: string): string {
 function describeItem(item: PlantHistoryItem, theme: Theme): RowVisual {
   switch (item.kind) {
     case 'journal': {
+      const entry = item.entry;
+      // Pest/disease journal entries carry structured fields — render them like
+      // the legacy plant-doc pest records rather than a generic journal row.
+      if (entry.entry_type === JournalEntryType.PestDisease) {
+        const parts = [
+          entry.pest_severity ? `${capitalize(entry.pest_severity)} severity` : null,
+          entry.pest_treatment ? `Treatment: ${entry.pest_treatment}` : null,
+          entry.pest_status ? capitalize(entry.pest_status) : null,
+        ].filter(Boolean);
+        return {
+          icon: entry.pest_kind === 'disease' ? 'medical' : 'bug',
+          color: entry.pest_status === 'resolved' ? theme.success : theme.error,
+          title: entry.pest_name || 'Pest/Disease',
+          detail: parts.length > 0 ? parts.join(' · ') : entry.content || undefined,
+        };
+      }
       const iconByType: Record<JournalEntryType, React.ComponentProps<typeof Ionicons>['name']> = {
         [JournalEntryType.Observation]: 'eye',
         [JournalEntryType.Harvest]: 'basket',
@@ -71,10 +87,10 @@ function describeItem(item: PlantHistoryItem, theme: Theme): RowVisual {
         [JournalEntryType.Other]: 'document-text',
       };
       return {
-        icon: iconByType[item.entry.entry_type] ?? 'document-text',
+        icon: iconByType[entry.entry_type] ?? 'document-text',
         color: theme.primary,
-        title: capitalize(item.entry.entry_type),
-        detail: item.entry.content || undefined,
+        title: capitalize(entry.entry_type),
+        detail: entry.content || undefined,
       };
     }
     case 'pest_disease': {

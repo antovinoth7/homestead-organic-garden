@@ -4,6 +4,7 @@ import type {
   GrowthStageHistoryEntry,
   TaskLog,
 } from '@/types/database.types';
+import { JournalEntryType } from '@/types/database.types';
 
 export type PlantHistoryKind = 'journal' | 'pest_disease' | 'growth_stage' | 'task_log';
 
@@ -63,11 +64,23 @@ export function mergePlantHistory(
   return items.sort((a, b) => timeOf(b.date) - timeOf(a.date));
 }
 
-/** Filters merged history items by kind; `'all'` returns the list unchanged. */
+/**
+ * Filters merged history items by kind; `'all'` returns the list unchanged.
+ * The `'pest_disease'` filter also surfaces journal entries of type
+ * pest_disease (the new home for pest logging) alongside legacy plant-doc
+ * records, so both appear under the plant's "Pests & Disease" view.
+ */
 export function filterHistoryItems(
   items: PlantHistoryItem[],
   filter: HistoryFilter
 ): PlantHistoryItem[] {
   if (filter === 'all') return items;
+  if (filter === 'pest_disease') {
+    return items.filter(
+      (item) =>
+        item.kind === 'pest_disease' ||
+        (item.kind === 'journal' && item.entry.entry_type === JournalEntryType.PestDisease)
+    );
+  }
   return items.filter((item) => item.kind === filter);
 }

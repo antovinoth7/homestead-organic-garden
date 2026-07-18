@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -55,6 +55,9 @@ export default function CreateTaskModal({
   onCreated,
 }: CreateTaskModalProps): React.JSX.Element {
   const theme = useTheme();
+  // Plants assigned to a bed are tasked via the Bed dropdown, so keep the plant
+  // dropdown to standalone (pot / unassigned) plants only.
+  const standalonePlants = useMemo(() => plants.filter((p) => !p.bed_id), [plants]);
   const [taskType, setTaskType] = useState<TaskType>('water');
   const [selectedPlant, setSelectedPlant] = useState('');
   const [selectedBed, setSelectedBed] = useState('');
@@ -188,7 +191,7 @@ export default function CreateTaskModal({
               <ThemedDropdown
                 items={[
                   { label: 'General Task', value: '' },
-                  ...plants.map((p) => ({ label: p.name, value: p.id })),
+                  ...standalonePlants.map((p) => ({ label: p.name, value: p.id })),
                 ]}
                 selectedValue={selectedPlant}
                 onValueChange={setSelectedPlant}
