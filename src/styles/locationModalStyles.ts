@@ -30,10 +30,24 @@ export const createStyles = (theme: Theme) =>
       alignItems: 'center',
       marginBottom: 12,
     },
+    modalHeaderBordered: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingBottom: 12,
+      marginBottom: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.borderLight,
+    },
     modalTitle: {
       fontSize: 18,
       fontWeight: '700',
       color: theme.text,
+    },
+    modalTitleWrapCenter: {
+      flex: 1,
+      alignItems: 'center',
+      paddingHorizontal: 8,
     },
     closeButton: {
       width: 32,
@@ -44,6 +58,31 @@ export const createStyles = (theme: Theme) =>
       borderColor: theme.border,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    modalCloseButtonLeft: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: theme.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalHeaderSaveButton: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+    },
+    modalHeaderSaveButtonDisabled: {
+      backgroundColor: theme.borderDark,
+    },
+    modalHeaderSaveText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.textInverse,
+    },
+    modalHeaderSaveTextDisabled: {
+      color: theme.textTertiary,
     },
     modalHint: {
       fontSize: 13,
@@ -87,6 +126,8 @@ export const createStyles = (theme: Theme) =>
       flexDirection: 'row',
       borderRadius: 999,
       backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
       padding: 3,
       marginBottom: 16,
     },
@@ -120,26 +161,6 @@ export const createStyles = (theme: Theme) =>
     },
     shortNameWrap: {
       marginTop: 8,
-    },
-    modalFooter: {
-      paddingTop: 10,
-      borderTopWidth: 1,
-      borderTopColor: theme.border,
-      marginTop: 8,
-    },
-    modalFooterButton: {
-      alignItems: 'center',
-      paddingVertical: 11,
-      borderRadius: 10,
-      marginHorizontal: 0,
-    },
-    modalFooterButtonPrimary: {
-      backgroundColor: theme.primary,
-    },
-    modalFooterButtonTextPrimary: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: theme.textInverse,
     },
     // ── Plot tab ─────────────────────────────────────────────────────────────
     plotSection: {

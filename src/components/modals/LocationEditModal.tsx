@@ -147,10 +147,31 @@ export function LocationEditModal({
         style={styles.modalOverlay}
       >
         <View style={[styles.modalContent, styles.modalContentTall]}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={18} color={theme.text} />
+          <View style={styles.modalHeaderBordered}>
+            <TouchableOpacity
+              style={styles.modalCloseButtonLeft}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
+              <Ionicons name="close" size={20} color={theme.textInverse} />
+            </TouchableOpacity>
+            <View style={styles.modalTitleWrapCenter}>
+              <Text style={styles.modalTitle} numberOfLines={1}>
+                {title}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.modalHeaderSaveButton, saving && styles.modalHeaderSaveButtonDisabled]}
+              onPress={onSave}
+              disabled={saving}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={[styles.modalHeaderSaveText, saving && styles.modalHeaderSaveTextDisabled]}
+              >
+                Save
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -281,16 +302,6 @@ export function LocationEditModal({
               />
             ) : null}
           </ScrollView>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.modalFooterButton, styles.modalFooterButtonPrimary]}
-              onPress={onSave}
-              disabled={saving}
-            >
-              <Text style={styles.modalFooterButtonTextPrimary}>Save</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
