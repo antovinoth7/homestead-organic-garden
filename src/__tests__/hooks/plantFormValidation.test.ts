@@ -1,5 +1,5 @@
-import { careScheduleErrors, wizardStepBlockReason } from '@/hooks/plantFormValidation';
-import type { CareScheduleInput, WizardGateInput } from '@/hooks/plantFormValidation';
+import { careScheduleErrors, plantFormBlockReason } from '@/hooks/plantFormValidation';
+import type { CareScheduleInput, PlantFormGateInput } from '@/hooks/plantFormValidation';
 
 const validCare: CareScheduleInput = {
   wateringEnabled: true,
@@ -10,7 +10,7 @@ const validCare: CareScheduleInput = {
   pruningFrequency: '',
 };
 
-const validGate: WizardGateInput = {
+const validGate: PlantFormGateInput = {
   plantVariety: 'Guava',
   parentLocation: 'Home Garden',
   childLocation: 'North',
@@ -49,46 +49,46 @@ describe('careScheduleErrors', () => {
   });
 });
 
-describe('wizardStepBlockReason', () => {
-  it('step 1 requires a plant', () => {
-    expect(wizardStepBlockReason(1, { ...validGate, plantVariety: '  ' })).toMatch(
-      /select a plant/i
-    );
-    expect(wizardStepBlockReason(1, validGate)).toBeNull();
+describe('plantFormBlockReason', () => {
+  it('passes a fully valid form', () => {
+    expect(plantFormBlockReason(validGate)).toBeNull();
   });
 
-  it('step 2 requires main location and direction', () => {
-    expect(wizardStepBlockReason(2, { ...validGate, parentLocation: '' })).toMatch(
-      /main location/i
-    );
-    expect(wizardStepBlockReason(2, { ...validGate, childLocation: '' })).toMatch(
+  it('requires a plant first', () => {
+    expect(plantFormBlockReason({ ...validGate, plantVariety: '  ' })).toMatch(/select a plant/i);
+  });
+
+  it('requires main location and direction', () => {
+    expect(plantFormBlockReason({ ...validGate, parentLocation: '' })).toMatch(/main location/i);
+    expect(plantFormBlockReason({ ...validGate, childLocation: '' })).toMatch(
       /direction or section/i
     );
-    expect(wizardStepBlockReason(2, validGate)).toBeNull();
   });
 
-  it('step 3 passes with seeded defaults', () => {
-    expect(wizardStepBlockReason(3, validGate)).toBeNull();
+  it('reports the plant before the location when both are missing', () => {
+    expect(
+      plantFormBlockReason({ ...validGate, plantVariety: '', parentLocation: '' })
+    ).toMatch(/select a plant/i);
   });
 
-  it('step 3 waits for care profiles to load', () => {
-    expect(wizardStepBlockReason(3, { ...validGate, careProfilesLoaded: false })).toMatch(
+  it('waits for care profiles to load', () => {
+    expect(plantFormBlockReason({ ...validGate, careProfilesLoaded: false })).toMatch(
       /loading care plan/i
     );
   });
 
-  it('step 3 blocks an enabled schedule missing its frequency', () => {
+  it('blocks an enabled schedule missing its frequency', () => {
     expect(
-      wizardStepBlockReason(3, {
+      plantFormBlockReason({
         ...validGate,
         care: { ...validCare, wateringFrequency: '' },
       })
     ).toMatch(/watering frequency/i);
   });
 
-  it('step 3 skips frequencies for disabled schedules (profile with no watering task)', () => {
+  it('skips frequencies for disabled schedules (profile with no watering task)', () => {
     expect(
-      wizardStepBlockReason(3, {
+      plantFormBlockReason({
         ...validGate,
         care: {
           ...validCare,

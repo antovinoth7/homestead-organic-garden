@@ -100,6 +100,10 @@ export function useCalendarData({
 
   const isMountedRef = useRef(true);
   const lastLoadTimeRef = useRef(0);
+  // Orphan self-heal (per-plant plantExists() round-trips + hard deletes) only
+  // needs to run once per session — re-running it on every reload (e.g. after
+  // each task completion) burns reads and delays the refresh with no benefit.
+  const orphanHealDoneRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -141,7 +145,7 @@ export function useCalendarData({
       setTodayLogs(todayLogsData);
       setHarvestEntries(journalData.filter((e) => e.entry_type === JournalEntryType.Harvest));
 
-      if (orphanPlantIds.length > 0 && isNetworkAvailable()) {
+      if (orphanPlantIds.length > 0 && isNetworkAvailable() && !orphanHealDoneRef.current) {
         const confirmedOrphans = (
           await Promise.all(
             orphanPlantIds.map(async (plantId) => {
@@ -175,7 +179,7 @@ export function useCalendarData({
         );
         setOrphanBedTaskIds(new Set(orphanBedTasks.map((task) => task.id)));
 
-        if (orphanBedTasks.length > 0 && isNetworkAvailable()) {
+        if (orphanBedTasks.length > 0 && isNetworkAvailable() && !orphanHealDoneRef.current) {
           const orphanBedIds = Array.from(
             new Set(orphanBedTasks.map((task) => task.bed_id as string))
           );
@@ -184,6 +188,9 @@ export function useCalendarData({
       } catch (error) {
         logger.warn('Failed to resolve orphaned bed tasks', error as Error);
       }
+
+      // First online pass done — skip the orphan round-trips on later reloads.
+      if (isNetworkAvailable()) orphanHealDoneRef.current = true;
     } catch (error) {
       if (!isMountedRef.current) return;
       logger.error('Failed to load calendar data', error as Error);

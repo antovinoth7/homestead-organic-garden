@@ -142,11 +142,13 @@ export function DetailCareGuidanceSection({
       )}
 
       {hasPests && (
-        <View style={enrichedStyles.chipSection}>
-          <View style={enrichedStyles.chipSectionHeader}>
-            <Ionicons name="bug-outline" size={16} color="#f44336" />
-            <Text style={enrichedStyles.chipSectionLabel}>Common Pests</Text>
-          </View>
+        <ExpandableBlock
+          title="Common Pests"
+          icon="bug-outline"
+          summary={`${pests.length} to watch · ${pests.slice(0, 2).join(', ')}${
+            pests.length > 2 ? '…' : ''
+          }`}
+        >
           <View style={enrichedStyles.chipRow}>
             {pests.map((name) => {
               const entry = getPestByName(name);
@@ -167,15 +169,17 @@ export function DetailCareGuidanceSection({
               );
             })}
           </View>
-        </View>
+        </ExpandableBlock>
       )}
 
       {hasDiseases && (
-        <View style={enrichedStyles.chipSection}>
-          <View style={enrichedStyles.chipSectionHeader}>
-            <Ionicons name="medical-outline" size={16} color="#FF9800" />
-            <Text style={enrichedStyles.chipSectionLabel}>Common Diseases</Text>
-          </View>
+        <ExpandableBlock
+          title="Common Diseases"
+          icon="medical-outline"
+          summary={`${diseases.length} to watch · ${diseases.slice(0, 2).join(', ')}${
+            diseases.length > 2 ? '…' : ''
+          }`}
+        >
           <View style={enrichedStyles.chipRow}>
             {diseases.map((name) => {
               const entry = getDiseaseByName(name);
@@ -198,7 +202,7 @@ export function DetailCareGuidanceSection({
               );
             })}
           </View>
-        </View>
+        </ExpandableBlock>
       )}
     </DetailCard>
   );

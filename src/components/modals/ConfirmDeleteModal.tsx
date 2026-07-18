@@ -44,7 +44,9 @@ export function ConfirmDeleteModal({
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText} numberOfLines={1}>
+                Cancel
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.deleteButton]}
@@ -53,8 +55,9 @@ export function ConfirmDeleteModal({
               accessibilityRole="button"
               accessibilityLabel={confirmLabel}
             >
-              <Ionicons name="trash-outline" size={18} color={theme.textInverse} />
-              <Text style={styles.deleteButtonText}>{confirmLabel}</Text>
+              <Text style={styles.deleteButtonText} numberOfLines={1}>
+                {confirmLabel}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

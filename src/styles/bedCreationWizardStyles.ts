@@ -47,6 +47,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     progressLabel: { fontSize: 9, color: theme.textTertiary, textAlign: 'center' as const },
     progressLabelActive: { color: theme.primary, fontWeight: '600' as const },
     progressLabelComplete: { color: theme.textSecondary },
+    keyboardAvoiding: { flex: 1 },
     stepContent: { flex: 1 },
     stepContainer: { padding: 16, paddingBottom: 40 },
     stepTitle: { fontSize: 20, fontWeight: '700', color: theme.text, marginBottom: 6 },

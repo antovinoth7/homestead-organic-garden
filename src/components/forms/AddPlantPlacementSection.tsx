@@ -1,20 +1,21 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PlantFormStateReturn, sanitizeNumberText } from '../../hooks/usePlantFormState';
+import { PlantFormStateReturn, sanitizeNumberText } from '@/hooks/usePlantFormState';
 import { useBedOptions } from '@/hooks/useBedOptions';
-import { createStyles } from '../../styles/plantFormStyles';
-import { createWizardStyles } from '../../styles/plantAddWizardStyles';
+import { createStyles } from '@/styles/plantFormStyles';
 import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
-import { sanitizeAlphaNumericSpaces, sanitizeLandmarkText } from '../../utils/textSanitizer';
-import type { SpaceType } from '../../types/database.types';
+import { PickerField } from '../PickerField';
+import { LocationPickerSheet } from '../LocationPickerSheet';
+import { sanitizeAlphaNumericSpaces, sanitizeLandmarkText } from '@/utils/textSanitizer';
+import type { SpaceType } from '@/types/database.types';
 
 interface Props {
   formState: PlantFormStateReturn;
 }
 
-export function WizardStep2({ formState }: Props): React.JSX.Element {
+export function AddPlantPlacementSection({ formState }: Props): React.JSX.Element {
   const {
     theme,
     parentLocationOptions,
@@ -24,6 +25,7 @@ export function WizardStep2({ formState }: Props): React.JSX.Element {
     setChildLocation,
     childLocationOptions,
     location,
+    locationShortNames,
     landmarks,
     setLandmarks,
     spaceType,
@@ -41,12 +43,22 @@ export function WizardStep2({ formState }: Props): React.JSX.Element {
     setShowCustomNameInput,
     name,
     setName,
+    showValidationErrors,
+    validationErrors,
   } = formState;
 
   const { beds } = useBedOptions();
 
   const formStyles = useMemo(() => createStyles(theme), [theme]);
-  const wizardStyles = useMemo(() => createWizardStyles(theme), [theme]);
+  const [locationSheetVisible, setLocationSheetVisible] = useState(false);
+
+  const handleLocationSelect = useCallback(
+    (parent: string, child: string): void => {
+      setParentLocation(parent);
+      setChildLocation(child);
+    },
+    [setParentLocation, setChildLocation]
+  );
 
   return (
     <View>
@@ -58,18 +70,17 @@ export function WizardStep2({ formState }: Props): React.JSX.Element {
           <Text style={formStyles.sectionCardTitle}>Where is it?</Text>
         </View>
 
-        <ThemedDropdown
-          items={[
-            { label: 'Select Main Location', value: '' },
-            ...parentLocationOptions.map((loc) => ({ label: loc, value: loc })),
-          ]}
-          selectedValue={parentLocation}
-          onValueChange={(value) => {
-            setParentLocation(value);
-            if (!value) setChildLocation('');
-          }}
+        <PickerField
           label="Location"
-          placeholder="Location"
+          value={location || parentLocation}
+          placeholder="Choose a location"
+          icon="location-outline"
+          onPress={() => setLocationSheetVisible(true)}
+          errorText={
+            showValidationErrors && validationErrors.location.length > 0
+              ? validationErrors.location[0]
+              : undefined
+          }
         />
 
         {locationDefaultsFired && !autoSuggestFired && (
@@ -77,26 +88,6 @@ export function WizardStep2({ formState }: Props): React.JSX.Element {
             Soil defaults applied from location profile
           </Text>
         )}
-
-        {parentLocation !== '' && childLocationOptions.length > 0 && (
-          <ThemedDropdown
-            items={[
-              { label: 'Select Direction / Section', value: '' },
-              ...childLocationOptions.map((loc) => ({ label: loc, value: loc })),
-            ]}
-            selectedValue={childLocation}
-            onValueChange={(value) => setChildLocation(value)}
-            label="Direction / Section"
-            placeholder="Direction / Section"
-          />
-        )}
-
-        {location ? (
-          <View style={formStyles.locationPreview}>
-            <Ionicons name="location" size={16} color={theme.primary} />
-            <Text style={formStyles.locationPreviewText}>{location}</Text>
-          </View>
-        ) : null}
 
         <FloatingLabelInput
           label="Nearby landmark or reference point"
@@ -176,52 +167,41 @@ export function WizardStep2({ formState }: Props): React.JSX.Element {
           <Text style={formStyles.sectionCardTitle}>Growing Space</Text>
         </View>
 
-        <View style={formStyles.spaceTypeCardsRow}>
-          {[
-            {
-              value: 'ground' as SpaceType,
-              icon: 'earth' as const,
-              label: 'Ground',
-              hint: 'Open soil',
-            },
-            {
-              value: 'bed' as SpaceType,
-              icon: 'apps' as const,
-              label: 'Raised Bed',
-              hint: 'Bed / Border',
-            },
-            {
-              value: 'pot' as SpaceType,
-              icon: 'cube-outline' as const,
-              label: 'Pot',
-              hint: 'Container',
-            },
-          ].map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[
-                formStyles.spaceTypeCard,
-                spaceType === opt.value && formStyles.spaceTypeCardActive,
-              ]}
-              onPress={() => setSpaceType(opt.value)}
-              activeOpacity={0.75}
-            >
-              <Ionicons
-                name={opt.icon}
-                size={28}
-                color={spaceType === opt.value ? theme.primary : theme.textTertiary}
-                style={formStyles.spaceTypeCardIcon}
-              />
-              <Text
+        <View style={formStyles.spaceSegmentRow}>
+          {(
+            [
+              { value: 'ground' as SpaceType, icon: 'earth' as const, label: 'Ground' },
+              { value: 'bed' as SpaceType, icon: 'apps' as const, label: 'Raised Bed' },
+              { value: 'pot' as SpaceType, icon: 'cube-outline' as const, label: 'Pot' },
+            ]
+          ).map((opt, i) => (
+            <React.Fragment key={opt.value}>
+              {i > 0 && <View style={formStyles.spaceSegmentDivider} />}
+              <TouchableOpacity
                 style={[
-                  formStyles.spaceTypeCardLabel,
-                  spaceType === opt.value && formStyles.spaceTypeCardLabelActive,
+                  formStyles.spaceSegmentItem,
+                  spaceType === opt.value && formStyles.spaceSegmentItemActive,
                 ]}
+                onPress={() => setSpaceType(opt.value)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ selected: spaceType === opt.value }}
               >
-                {opt.label}
-              </Text>
-              <Text style={wizardStyles.spaceTypeCardHint}>{opt.hint}</Text>
-            </TouchableOpacity>
+                <Ionicons
+                  name={opt.icon}
+                  size={18}
+                  color={spaceType === opt.value ? theme.textInverse : theme.textTertiary}
+                />
+                <Text
+                  style={[
+                    formStyles.spaceSegmentLabel,
+                    spaceType === opt.value && formStyles.spaceSegmentLabelActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            </React.Fragment>
           ))}
         </View>
 
@@ -255,6 +235,17 @@ export function WizardStep2({ formState }: Props): React.JSX.Element {
           </>
         )}
       </View>
+
+      <LocationPickerSheet
+        visible={locationSheetVisible}
+        onClose={() => setLocationSheetVisible(false)}
+        parentLocations={parentLocationOptions}
+        childLocations={childLocationOptions}
+        parentShortNames={locationShortNames}
+        selectedParent={parentLocation}
+        selectedChild={childLocation}
+        onSelect={handleLocationSelect}
+      />
     </View>
   );
 }

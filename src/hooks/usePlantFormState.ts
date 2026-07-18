@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   BackHandler,
-  Animated,
   Alert,
   Platform,
   ScrollView,
@@ -48,7 +47,6 @@ import type { Theme } from '../theme/colors';
 import { getLocationConfig } from '../services/locations';
 import { usePlantFormData } from './usePlantFormData';
 import { plantTypeFromName } from '../utils/plantTypeFromName';
-import { toLocalDateString } from '../utils/dateHelpers';
 import { logger } from '../utils/logger';
 import { getErrorMessage } from '../utils/errorLogging';
 import type { EdgeInsets } from 'react-native-safe-area-context';
@@ -57,7 +55,8 @@ import {
   isGeneratedPlantName,
   buildGeneratedPlantName,
 } from '../utils/plantNameGenerator';
-import { careScheduleErrors, wizardStepBlockReason } from './plantFormValidation';
+import { careScheduleErrors } from './plantFormValidation';
+import type { PlantPickerItem } from '@/utils/plantPickerItems';
 import {
   NOTES_MAX_LENGTH,
   sanitizeNumberText,
@@ -97,6 +96,7 @@ export interface PlantFormStateReturn {
   parentLocationOptions: string[];
   childLocationOptions: string[];
   specificPlantOptions: string[];
+  plantPickerItems: PlantPickerItem[];
   varietySuggestions: string[];
   harvestSeasonOptions: string[];
 
@@ -131,10 +131,6 @@ export interface PlantFormStateReturn {
   setPlantingDate: (v: string) => void;
   harvestSeason: string;
   setHarvestSeason: (v: string) => void;
-  harvestStartDate: string;
-  setHarvestStartDate: (v: string) => void;
-  harvestEndDate: string;
-  setHarvestEndDate: (v: string) => void;
   notes: string;
   setNotes: (v: string) => void;
   photoUri: string | null;
@@ -159,8 +155,6 @@ export interface PlantFormStateReturn {
   healthStatus: HealthStatus;
   setHealthStatus: (v: HealthStatus) => void;
   expectedHarvestDate: string;
-  pestDiseaseHistory: PestDiseaseRecord[];
-  setPestDiseaseHistory: (v: PestDiseaseRecord[]) => void;
   growthStage: GrowthStage;
   setGrowthStage: (v: GrowthStage) => void;
   /** Hard override of the derived growth stage; null = derive automatically. */
@@ -195,8 +189,6 @@ export interface PlantFormStateReturn {
   hasUnsavedChanges: boolean;
   showDiscardModal: boolean;
   setShowDiscardModal: (v: boolean) => void;
-  showPestDiseaseModal: boolean;
-  setShowPestDiseaseModal: (v: boolean) => void;
   showPhotoSourceModal: boolean;
   setShowPhotoSourceModal: (v: boolean) => void;
   showValidationErrors: boolean;
@@ -205,29 +197,14 @@ export interface PlantFormStateReturn {
   autoSuggestFired: boolean;
   locationDefaultsFired: boolean;
   sectionExpanded: Record<FormSectionKey, boolean>;
-  currentPestDisease: PestDiseaseRecord;
-  setCurrentPestDisease: (v: PestDiseaseRecord) => void;
-  editingPestIndex: number | null;
-  setEditingPestIndex: (v: number | null) => void;
-  pestPhotoUri: string | null;
-  setPestPhotoUri: (v: string | null) => void;
   showPlantingDatePicker: boolean;
   setShowPlantingDatePicker: (v: boolean) => void;
-  showStartDatePicker: boolean;
-  setShowStartDatePicker: (v: boolean) => void;
-  showEndDatePicker: boolean;
-  setShowEndDatePicker: (v: boolean) => void;
   showClimbingDatePicker: boolean;
   setShowClimbingDatePicker: (v: boolean) => void;
   showNutFallDatePicker: boolean;
   setShowNutFallDatePicker: (v: boolean) => void;
 
-  wizardStep: 1 | 2 | 3;
-  slideX: Animated.Value;
-  slideOpacity: Animated.Value;
-
   generatedPlantName: string;
-  formProgress: { filled: number; total: number; percent: number };
   validationErrors: Record<FormSectionKey, string[]>;
   totalErrorCount: number;
   sectionStatuses: Record<FormSectionKey, 'required_incomplete' | 'complete' | 'optional'>;
@@ -241,9 +218,7 @@ export interface PlantFormStateReturn {
   openCamera: () => Promise<void>;
   openImageLibrary: () => Promise<void>;
   pickImage: () => void;
-  runSlideTransition: (direction: 'forward' | 'back', newStep: 1 | 2 | 3) => void;
-  getWizardStepErrors: (step: 1 | 2 | 3) => string | null;
-  navigateToPlantsAfterSave: () => void;
+  navigateToPlantsAfterSave: (savedPlant?: Plant) => void;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -281,8 +256,6 @@ export function usePlantFormState(): PlantFormStateReturn {
   const [customVarietyMode, setCustomVarietyMode] = useState(false);
   const [plantingDate, setPlantingDate] = useState('');
   const [harvestSeason, setHarvestSeason] = useState('');
-  const [harvestStartDate, setHarvestStartDate] = useState('');
-  const [harvestEndDate, setHarvestEndDate] = useState('');
   const [notes, setNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoFilename, setPhotoFilename] = useState<string | null>(null);
@@ -320,7 +293,6 @@ export function usePlantFormState(): PlantFormStateReturn {
   const [dataLoading, setDataLoading] = useState(!!plantId);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
-  const [showPestDiseaseModal, setShowPestDiseaseModal] = useState(false);
   const [showPhotoSourceModal, setShowPhotoSourceModal] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [showCustomNameInput, setShowCustomNameInput] = useState(false);
@@ -338,25 +310,9 @@ export function usePlantFormState(): PlantFormStateReturn {
     notesHistory: false,
     pestDisease: false,
   });
-  const [currentPestDisease, setCurrentPestDisease] = useState<PestDiseaseRecord>({
-    type: 'pest',
-    name: '',
-    occurredAt: toLocalDateString(new Date()),
-    severity: 'medium',
-    resolved: false,
-  });
-  const [editingPestIndex, setEditingPestIndex] = useState<number | null>(null);
-  const [pestPhotoUri, setPestPhotoUri] = useState<string | null>(null);
   const [showPlantingDatePicker, setShowPlantingDatePicker] = useState(false);
-  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showClimbingDatePicker, setShowClimbingDatePicker] = useState(false);
   const [showNutFallDatePicker, setShowNutFallDatePicker] = useState(false);
-
-  // ── Wizard state ───────────────────────────────────────────────────────────
-  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
-  const slideX = useRef(new Animated.Value(0)).current;
-  const slideOpacity = useRef(new Animated.Value(1)).current;
 
   // ── Refs ───────────────────────────────────────────────────────────────────
   const initialDataLoaded = useRef(false);
@@ -380,20 +336,15 @@ export function usePlantFormState(): PlantFormStateReturn {
     parentLocationOptions,
     childLocationOptions,
     specificPlantOptions,
+    plantPickerItems,
     varietySuggestions,
     harvestSeasonOptions,
-    basicFieldCount,
-    locationFieldCount,
-    harvestSectionFieldCount,
-    notesHistoryFieldCount,
   } = usePlantFormData({
     plantType,
     plantVariety,
     parentLocation,
     childLocation,
     harvestSeason,
-    formMode: 'advanced',
-    customVarietyMode,
   });
 
   // ── Derived values ─────────────────────────────────────────────────────────
@@ -424,11 +375,6 @@ export function usePlantFormState(): PlantFormStateReturn {
   const phase3Unlocked = useMemo(
     () => !!plantId || (phase2Unlocked && !!parentLocation),
     [plantId, phase2Unlocked, parentLocation]
-  );
-
-  const pestDiseaseFieldCount = useMemo(
-    () => Math.max(1, pestDiseaseHistory.length),
-    [pestDiseaseHistory.length]
   );
 
   const validationErrors = useMemo(() => {
@@ -501,84 +447,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     ]
   );
 
-  const formProgress = useMemo(() => {
-    // Care section counts only user-adjustable inputs (frequencies + pruning
-    // notes); profile-seeded info fields (sunlight, soil, water needs,
-    // fertiliser, mulching) are display-only and excluded.
-    let total = basicFieldCount + locationFieldCount + 4;
-    total += 2;
-    total += harvestSectionFieldCount;
-    total += notesHistoryFieldCount;
-    total += pestDiseaseFieldCount;
-    if (plantType === 'coconut_tree') total += 3;
-
-    let filled = 0;
-    if (photoUri) filled += 1;
-    if (name || plantVariety) filled += 1;
-    if (plantType) filled += 1;
-    if (plantVariety) filled += 1;
-    if (customVarietyMode || variety) filled += 1;
-    if (plantingDate) filled += 1;
-    if (parentLocation) filled += 1;
-    if (parentLocation && childLocation) filled += 1;
-    if (landmarks) filled += 1;
-    if (wateringFrequency) filled += 1;
-    if (fertilisingFrequency) filled += 1;
-    if (pruningFrequency) filled += 1;
-    if (pruningNotes) filled += 1;
-    if (healthStatus) filled += 1;
-    if (growthStage) filled += 1;
-    if (harvestSeason) filled += 1;
-    if (expectedHarvestDate) filled += 1;
-    if (plantType === 'fruit_tree') {
-      if (harvestStartDate) filled += 1;
-      if (harvestEndDate) filled += 1;
-    }
-    if (notes) filled += 1;
-    filled += pestDiseaseHistory.length;
-    if (plantType === 'coconut_tree') {
-      if (coconutFrondsCount) filled += 1;
-      if (nutsPerMonth) filled += 1;
-      if (lastClimbingDate) filled += 1;
-    }
-    return {
-      filled,
-      total,
-      percent: total > 0 ? Math.round((filled / total) * 100) : 0,
-    };
-  }, [
-    basicFieldCount,
-    locationFieldCount,
-    harvestSectionFieldCount,
-    notesHistoryFieldCount,
-    pestDiseaseFieldCount,
-    plantType,
-    photoUri,
-    name,
-    plantVariety,
-    variety,
-    customVarietyMode,
-    plantingDate,
-    parentLocation,
-    childLocation,
-    landmarks,
-    wateringFrequency,
-    fertilisingFrequency,
-    pruningFrequency,
-    pruningNotes,
-    healthStatus,
-    growthStage,
-    harvestSeason,
-    expectedHarvestDate,
-    harvestStartDate,
-    harvestEndDate,
-    notes,
-    pestDiseaseHistory.length,
-    coconutFrondsCount,
-    nutsPerMonth,
-    lastClimbingDate,
-  ]);
-
   // ── Effects ────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -610,8 +478,6 @@ export function usePlantFormState(): PlantFormStateReturn {
       variety,
       plantingDate,
       harvestSeason,
-      harvestStartDate,
-      harvestEndDate,
       notes,
       photoUri,
       sunlight,
@@ -657,8 +523,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     variety,
     plantingDate,
     harvestSeason,
-    harvestStartDate,
-    harvestEndDate,
     notes,
     photoUri,
     sunlight,
@@ -802,14 +666,10 @@ export function usePlantFormState(): PlantFormStateReturn {
     }
   }, [parentLocation, childLocation]);
 
-  // Back navigation — shared handler for both wizard and edit
+  // Back navigation — shared handler for both add and edit
   useEffect(() => {
     const backAction = (): boolean => {
       if (savedSuccessfully.current) return false;
-      if (!plantId && wizardStep > 1) {
-        runSlideTransition('back', (wizardStep - 1) as 1 | 2 | 3);
-        return true;
-      }
       if (hasUnsavedChanges && !isSaving.current) {
         handleBackPress();
         return true;
@@ -821,11 +681,6 @@ export function usePlantFormState(): PlantFormStateReturn {
 
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (savedSuccessfully.current || isDiscarding.current) return;
-      if (!plantId && wizardStep > 1) {
-        e.preventDefault();
-        runSlideTransition('back', (wizardStep - 1) as 1 | 2 | 3);
-        return;
-      }
       if (!hasUnsavedChanges || isSaving.current) return;
       e.preventDefault();
       handleBackPress();
@@ -836,7 +691,7 @@ export function usePlantFormState(): PlantFormStateReturn {
       unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasUnsavedChanges, navigation, plantId, wizardStep]);
+  }, [hasUnsavedChanges, navigation]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -861,65 +716,25 @@ export function usePlantFormState(): PlantFormStateReturn {
     navigation.goBack();
   }, [navigation]);
 
-  const runSlideTransition = useCallback(
-    (direction: 'forward' | 'back', newStep: 1 | 2 | 3) => {
-      const startX = direction === 'forward' ? 30 : -30;
-      slideOpacity.setValue(0);
-      slideX.setValue(startX);
-      setWizardStep(newStep);
-      Animated.parallel([
-        Animated.timing(slideOpacity, {
-          toValue: 1,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideX, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ]).start();
+  const navigateToPlantsAfterSave = useCallback(
+    (savedPlant?: Plant) => {
+      // popTo (not navigate) removes this PlantForm entry from the stack, so a
+      // hardware back-press from the plant list lands on the previous screen
+      // instead of re-entering the (internally multi-step) wizard.
+      navigation.dispatch(
+        StackActions.popTo(
+          'PlantsList',
+          {
+            refresh: Date.now(),
+            savedPlantId: savedPlant?.id,
+            savedPlantName: savedPlant?.name,
+          },
+          { merge: true }
+        )
+      );
     },
-    [slideOpacity, slideX]
+    [navigation]
   );
-
-  const getWizardStepErrors = useCallback(
-    (step: 1 | 2 | 3): string | null =>
-      wizardStepBlockReason(step, {
-        plantVariety,
-        parentLocation,
-        childLocation,
-        careProfilesLoaded,
-        care: {
-          wateringEnabled,
-          wateringFrequency,
-          fertilisingEnabled,
-          fertilisingFrequency,
-          pruningEnabled,
-          pruningFrequency,
-        },
-      }),
-    [
-      plantVariety,
-      parentLocation,
-      childLocation,
-      careProfilesLoaded,
-      wateringEnabled,
-      wateringFrequency,
-      fertilisingEnabled,
-      fertilisingFrequency,
-      pruningEnabled,
-      pruningFrequency,
-    ]
-  );
-
-  const navigateToPlantsAfterSave = useCallback(() => {
-    navigation.navigate({
-      name: 'PlantsList',
-      params: { refresh: Date.now() },
-      merge: true,
-    });
-  }, [navigation]);
 
   const openImageLibrary = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -1035,8 +850,6 @@ export function usePlantFormState(): PlantFormStateReturn {
         setLandmarks(plant.landmarks || '');
         setPlantingDate(plant.planting_date || '');
         setHarvestSeason(plant.harvest_season || '');
-        setHarvestStartDate(plant.harvest_start_date || '');
-        setHarvestEndDate(plant.harvest_end_date || '');
         setNotes(plant.notes || '');
         setPhotoUri(plant.photo_url);
         setPhotoFilename(plant.photo_filename ?? getFilenameFromUri(plant.photo_url ?? ''));
@@ -1069,11 +882,6 @@ export function usePlantFormState(): PlantFormStateReturn {
           ...prev,
           health:
             prev.health || (plant.health_status !== undefined && plant.health_status !== 'healthy'),
-          harvest:
-            prev.harvest ||
-            !!plant.harvest_season ||
-            !!plant.harvest_start_date ||
-            !!plant.harvest_end_date,
           coconut: plant.plant_type === 'coconut_tree',
           notesHistory:
             prev.notesHistory || !!plant.notes || (plant.pest_disease_history?.length ?? 0) > 0,
@@ -1091,7 +899,7 @@ export function usePlantFormState(): PlantFormStateReturn {
     }
   };
 
-  const handleSave = async (onSuccessOverride?: () => void): Promise<void> => {
+  const handleSave = async (): Promise<void> => {
     setShowValidationErrors(true);
     const sectionOrder: FormSectionKey[] = [
       'basic',
@@ -1104,8 +912,9 @@ export function usePlantFormState(): PlantFormStateReturn {
     ];
     const firstErrorSection = sectionOrder.find((s) => validationErrors[s].length > 0);
     if (firstErrorSection) {
+      // Both flows surface errors inline under each field (PickerField errorText);
+      // expanding the errored section is all that's needed here.
       setSectionExpandedState(firstErrorSection, true);
-      Alert.alert('Validation Error', validationErrors[firstErrorSection][0]);
       return;
     }
 
@@ -1118,8 +927,10 @@ export function usePlantFormState(): PlantFormStateReturn {
       const nickname = name.trim();
       let resolvedPhotoFilename = photoFilename;
       const combinedLocation = `${parentLocation.trim()} - ${childLocation.trim()}`;
-      const shouldUseLoadedPlants = Boolean(nickname) || existingPlants.length > 0;
-      const plantsForNaming = shouldUseLoadedPlants ? existingPlants : await getAllPlants();
+      // When auto-generating a name, always number against a fresh plant list
+      // (cache-backed, 30s TTL, invalidated after each create) so back-to-back
+      // creates don't collide on a stale in-memory list and produce duplicate #N.
+      const plantsForNaming = nickname ? existingPlants : await getAllPlants();
       const finalPlantName =
         nickname ||
         buildGeneratedPlantName(
@@ -1175,11 +986,6 @@ export function usePlantFormState(): PlantFormStateReturn {
       if (!fertilisingEnabled) plantData.fertilising_frequency_days = null;
       if (!pruningEnabled) plantData.pruning_frequency_days = null;
 
-      if (plantType === 'fruit_tree') {
-        plantData.harvest_start_date = harvestStartDate.trim() || null;
-        plantData.harvest_end_date = harvestEndDate.trim() || null;
-      }
-
       if (plantType === 'coconut_tree') {
         plantData.coconut_fronds_count = coconutFrondsCount
           ? parseInt(coconutFrondsCount, 10)
@@ -1210,17 +1016,35 @@ export function usePlantFormState(): PlantFormStateReturn {
       setLoadedGeneratedName(nickname ? '' : finalPlantName);
       setExistingPlants((prev) => [...prev.filter((p) => p.id !== savedPlant.id), savedPlant]);
 
+      // Care tasks are what drive the Today/Calendar reminders — a silent
+      // failure here leaves a saved plant with no schedule and no feedback.
+      // Surface it with a retry instead of only logging.
       try {
         await syncCareTasksForPlant(savedPlant);
       } catch (error) {
         logger.warn('Failed to sync care tasks', error as Error);
+        Alert.alert(
+          'Care tasks not created',
+          'Your plant was saved, but its care schedule could not be set up. Watering and other reminders may be missing.',
+          [
+            {
+              text: 'Retry',
+              onPress: () => {
+                void syncCareTasksForPlant(savedPlant).catch((retryError) => {
+                  logger.warn('Retry: failed to sync care tasks', retryError as Error);
+                  Alert.alert(
+                    'Still could not create tasks',
+                    'You can set up the care schedule later by editing the plant.'
+                  );
+                });
+              },
+            },
+            { text: 'Later', style: 'cancel' },
+          ]
+        );
       }
 
       savedSuccessfully.current = true;
-      if (onSuccessOverride) {
-        onSuccessOverride();
-        return;
-      }
       if (returnTo) {
         // The bed wizard is still mounted below this form in the same stack.
         // popTo returns to that existing instance (preserving its Step 5 state)
@@ -1233,7 +1057,7 @@ export function usePlantFormState(): PlantFormStateReturn {
         );
         return;
       }
-      navigateToPlantsAfterSave();
+      navigateToPlantsAfterSave(savedPlant);
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error));
       setHasUnsavedChanges(true);
@@ -1261,6 +1085,7 @@ export function usePlantFormState(): PlantFormStateReturn {
     parentLocationOptions,
     childLocationOptions,
     specificPlantOptions,
+    plantPickerItems,
     varietySuggestions,
     harvestSeasonOptions,
     name,
@@ -1294,10 +1119,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     setPlantingDate,
     harvestSeason,
     setHarvestSeason,
-    harvestStartDate,
-    setHarvestStartDate,
-    harvestEndDate,
-    setHarvestEndDate,
     notes,
     setNotes,
     photoUri,
@@ -1319,8 +1140,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     healthStatus,
     setHealthStatus,
     expectedHarvestDate,
-    pestDiseaseHistory,
-    setPestDiseaseHistory,
     growthStage,
     setGrowthStage,
     pinnedStage,
@@ -1353,8 +1172,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     hasUnsavedChanges,
     showDiscardModal,
     setShowDiscardModal,
-    showPestDiseaseModal,
-    setShowPestDiseaseModal,
     showPhotoSourceModal,
     setShowPhotoSourceModal,
     showValidationErrors,
@@ -1363,27 +1180,13 @@ export function usePlantFormState(): PlantFormStateReturn {
     autoSuggestFired,
     locationDefaultsFired,
     sectionExpanded,
-    currentPestDisease,
-    setCurrentPestDisease,
-    editingPestIndex,
-    setEditingPestIndex,
-    pestPhotoUri,
-    setPestPhotoUri,
     showPlantingDatePicker,
     setShowPlantingDatePicker,
-    showStartDatePicker,
-    setShowStartDatePicker,
-    showEndDatePicker,
-    setShowEndDatePicker,
     showClimbingDatePicker,
     setShowClimbingDatePicker,
     showNutFallDatePicker,
     setShowNutFallDatePicker,
-    wizardStep,
-    slideX,
-    slideOpacity,
     generatedPlantName,
-    formProgress,
     validationErrors,
     totalErrorCount,
     sectionStatuses,
@@ -1397,8 +1200,6 @@ export function usePlantFormState(): PlantFormStateReturn {
     openCamera,
     openImageLibrary,
     pickImage,
-    runSlideTransition,
-    getWizardStepErrors,
     navigateToPlantsAfterSave,
   };
 }

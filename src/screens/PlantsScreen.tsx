@@ -16,7 +16,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import { getAllPlants, deletePlant, getCachedPlants } from '../services/plants';
+import { getAllPlants, deletePlant, archivePlant, getCachedPlants } from '../services/plants';
 import { getLocationConfig } from '../services/locations';
 import {
   Plant,
@@ -37,6 +37,8 @@ import { logger } from '../utils/logger';
 import { getErrorMessage } from '../utils/errorLogging';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { PlantFilterSheet } from '../components/PlantFilterSheet';
+import { UndoToast } from '../components/UndoToast';
+import { ConfirmDeleteModal } from '../components/modals/ConfirmDeleteModal';
 import { useBedOptions } from '@/hooks/useBedOptions';
 import { isPlantArchived } from '../utils/plantHelpers';
 
@@ -86,9 +88,15 @@ export default function PlantsScreen(): React.JSX.Element {
     plant: Plant;
     index: number;
   } | null>(null);
+  // Active plant awaiting the themed delete-confirmation modal.
+  const [confirmDelete, setConfirmDelete] = useState<Plant | null>(null);
   const undoProgress = useRef(new Animated.Value(1)).current;
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openSwipeableRef = useRef<Swipeable | null>(null);
+  // Lightweight "Plant saved" confirmation shown after returning from the form.
+  const [savedToast, setSavedToast] = useState<{ id: string; name: string } | null>(null);
+  const savedToastProgress = useRef(new Animated.Value(1)).current;
+  const savedToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // searchInput: raw controlled value; searchQuery: debounced, drives filtering
   const [searchInput, setSearchInput] = useState('');
@@ -181,6 +189,7 @@ export default function PlantsScreen(): React.JSX.Element {
       if (loadMoreTimeoutRef.current) clearTimeout(loadMoreTimeoutRef.current);
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
     };
   }, [navigation, loadPlants, loadLocations, resetTabBar]);
 
@@ -192,6 +201,22 @@ export default function PlantsScreen(): React.JSX.Element {
       navigation.setParams({ refresh: undefined });
     }
   }, [route.params, navigation, loadPlants, resetTabBar]);
+
+  // Show a brief "saved" confirmation when the plant form returns a savedPlantId.
+  useEffect(() => {
+    const savedPlantId = route.params?.savedPlantId;
+    if (!savedPlantId) return;
+    setSavedToast({ id: savedPlantId, name: route.params?.savedPlantName || 'Plant' });
+    savedToastProgress.setValue(1);
+    Animated.timing(savedToastProgress, {
+      toValue: 0,
+      duration: 2500,
+      useNativeDriver: false,
+    }).start();
+    if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
+    savedToastTimerRef.current = setTimeout(() => setSavedToast(null), 2500);
+    navigation.setParams({ savedPlantId: undefined, savedPlantName: undefined });
+  }, [route.params, navigation, savedToastProgress]);
 
   useEffect(() => {
     const healthFilter = route.params?.healthFilter;
@@ -212,9 +237,14 @@ export default function PlantsScreen(): React.JSX.Element {
   }, [route.params, navigation]);
 
   const commitDelete = useCallback(
-    async (id: string) => {
+    async (plant: Plant) => {
       try {
-        await deletePlant(id);
+        // Active plants are archived first (preserving rotation history and
+        // disabling their tasks) before the soft delete.
+        if (!isPlantArchived(plant)) {
+          await archivePlant(plant.id);
+        }
+        await deletePlant(plant.id);
       } catch (error: unknown) {
         Alert.alert('Error', getErrorMessage(error));
         void loadPlants();
@@ -223,32 +253,19 @@ export default function PlantsScreen(): React.JSX.Element {
     [loadPlants]
   );
 
-  const handleDelete = useCallback(
-    (id: string) => {
-      const index = plants.findIndex((p) => p.id === id);
-      if (index === -1) return;
-      const plant = plants[index]!;
-
-      // Block deleting an active plant — it must be archived first.
-      if (!isPlantArchived(plant)) {
-        Alert.alert(
-          'Can’t delete active plant',
-          'This plant is still active. Archive it (after harvest or clearing the bed) before deleting.'
-        );
-        return;
-      }
-
+  const startPendingDelete = useCallback(
+    (plant: Plant, index: number) => {
       // Cancel any in-flight undo for the previous pending delete
       if (undoTimerRef.current) {
         clearTimeout(undoTimerRef.current);
         if (pendingDelete) {
-          void commitDelete(pendingDelete.id);
+          void commitDelete(pendingDelete.plant);
         }
       }
 
       // Optimistic remove
-      setPlants((prev) => prev.filter((p) => p.id !== id));
-      setPendingDelete({ id, plant, index });
+      setPlants((prev) => prev.filter((p) => p.id !== plant.id));
+      setPendingDelete({ id: plant.id, plant, index });
 
       // Animate progress bar from full → empty over 4 seconds
       undoProgress.setValue(1);
@@ -261,11 +278,38 @@ export default function PlantsScreen(): React.JSX.Element {
       undoTimerRef.current = setTimeout(() => {
         setPendingDelete(null);
         undoTimerRef.current = null;
-        void commitDelete(id);
+        void commitDelete(plant);
       }, 4000);
     },
-    [plants, pendingDelete, commitDelete, undoProgress]
+    [pendingDelete, commitDelete, undoProgress]
   );
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      const index = plants.findIndex((p) => p.id === id);
+      if (index === -1) return;
+      const plant = plants[index]!;
+
+      // Active plants are still deletable, but confirm first since deleting one
+      // also archives it (ends its place in the bed's rotation).
+      if (!isPlantArchived(plant)) {
+        setConfirmDelete(plant);
+        return;
+      }
+
+      startPendingDelete(plant, index);
+    },
+    [plants, startPendingDelete]
+  );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!confirmDelete) return;
+    const plant = confirmDelete;
+    setConfirmDelete(null);
+    const index = plants.findIndex((p) => p.id === plant.id);
+    if (index === -1) return;
+    startPendingDelete(plant, index);
+  }, [confirmDelete, plants, startPendingDelete]);
 
   const handleUndo = useCallback(() => {
     if (!pendingDelete) return;
@@ -494,7 +538,9 @@ export default function PlantsScreen(): React.JSX.Element {
       return displayedPlants.map((p): ListItem => ({ kind: 'plant', data: p }));
     }
     const buckets = new Map<string, Plant[]>();
-    for (const p of filteredPlants) {
+    // Bucket the paged slice (not the full filtered set) so the Bed segment
+    // respects Load More instead of rendering every bed plant at once.
+    for (const p of displayedPlants) {
       const key = p.bed_id ?? '';
       if (!buckets.has(key)) buckets.set(key, []);
       buckets.get(key)!.push(p);
@@ -512,7 +558,7 @@ export default function PlantsScreen(): React.JSX.Element {
       for (const p of bPlants) items.push({ kind: 'plant', data: p });
     }
     return items;
-  }, [autoGroup, displayedPlants, filteredPlants, bedNameMap]);
+  }, [autoGroup, displayedPlants, bedNameMap]);
 
   const loadMore = (): void => {
     if (loadingMore || !hasMore) return;
@@ -545,6 +591,15 @@ export default function PlantsScreen(): React.JSX.Element {
     (plantId: string) => navigation.navigate('PlantDetail', { plantId }),
     [navigation]
   );
+
+  const handleViewSaved = useCallback(() => {
+    if (!savedToast) return;
+    if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
+    savedToastProgress.stopAnimation();
+    const id = savedToast.id;
+    setSavedToast(null);
+    navigation.navigate('PlantDetail', { plantId: id });
+  }, [savedToast, navigation, savedToastProgress]);
 
   const handleCardEdit = useCallback(
     (plantId: string) => navigation.navigate('PlantForm', { plantId }),
@@ -848,12 +903,30 @@ export default function PlantsScreen(): React.JSX.Element {
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
-        removeClippedSubviews={true}
+        // removeClippedSubviews is intentionally OFF: combined with a legacy
+        // gesture-handler Swipeable per row under the New Architecture it caused
+        // blank/stuck cells while scrolling. Pagination (20/page) bounds cost.
         updateCellsBatchingPeriod={50}
       />
 
       <AnimatedFAB onPress={() => navigation.navigate('PlantForm')} />
+      <ConfirmDeleteModal
+        visible={confirmDelete !== null}
+        title="Delete plant?"
+        message={`This archives and deletes “${confirmDelete?.name ?? ''}”. You’ll have a few seconds to undo.`}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
       {renderUndoToast()}
+      <UndoToast
+        visible={savedToast !== null}
+        message={`${savedToast?.name ?? 'Plant'} saved`}
+        onUndo={handleViewSaved}
+        progress={savedToastProgress}
+        bottomOffset={TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8}
+        icon="checkmark-circle"
+        actionLabel="View"
+      />
     </View>
   );
 }

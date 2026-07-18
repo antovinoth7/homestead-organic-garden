@@ -65,6 +65,7 @@ function describeItem(item: PlantHistoryItem, theme: Theme): RowVisual {
       const iconByType: Record<JournalEntryType, React.ComponentProps<typeof Ionicons>['name']> = {
         [JournalEntryType.Observation]: 'eye',
         [JournalEntryType.Harvest]: 'basket',
+        [JournalEntryType.PestDisease]: 'bug',
         [JournalEntryType.Issue]: 'alert-circle',
         [JournalEntryType.Milestone]: 'flag',
         [JournalEntryType.Other]: 'document-text',

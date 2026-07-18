@@ -21,7 +21,7 @@ function OfflineBanner(): React.JSX.Element | null {
   if (isOnline && pendingCount === 0) return null;
 
   // The status bar is translucent, so the banner absorbs the top inset itself
-  const insetPadding = { paddingTop: insets.top + 6 };
+  const insetPadding = { paddingTop: insets.top + 4 };
 
   if (!isOnline) {
     const message =

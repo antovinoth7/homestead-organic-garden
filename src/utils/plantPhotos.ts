@@ -57,16 +57,24 @@ export function collectPlantPhotos(
   }
 
   for (const entry of journalEntries) {
-    entry.photo_urls.forEach((uri, index) => {
-      if (!uri) return;
+    // Prefer already-resolved URLs, but fall back to filenames so the lightweight
+    // metadata fetch (photo_urls empty) still surfaces journal photos — the hook
+    // resolves filename-only items lazily.
+    const urls = entry.photo_urls ?? [];
+    const filenames = entry.photo_filenames ?? [];
+    const count = Math.max(urls.length, filenames.length);
+    for (let index = 0; index < count; index++) {
+      const uri = urls[index] || null;
+      const filename = filenames[index];
+      if (!uri && !filename) continue;
       items.push({
         id: `journal-${entry.id}-${index}`,
         uri,
-        filename: entry.photo_filenames?.[index],
+        filename,
         date: entry.created_at,
         source: 'journal',
       });
-    });
+    }
   }
 
   (plant.pest_disease_history ?? []).forEach((record, index) => {

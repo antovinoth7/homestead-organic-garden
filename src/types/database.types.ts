@@ -75,6 +75,7 @@ export type PlantType =
 export enum JournalEntryType {
   Observation = 'observation',
   Harvest = 'harvest',
+  PestDisease = 'pest_disease',
   Issue = 'issue',
   Milestone = 'milestone',
   Other = 'other',
@@ -660,6 +661,10 @@ export interface JournalEntry {
   harvest_notes?: string | null; // Storage method, taste notes, etc.
   // For coconut groves (record_kind 'row'): which tree this harvest came from (B.6)
   harvest_tree_number?: number | null;
+  // Pest/Disease tracking fields (entry_type 'pest_disease')
+  pest_name?: string | null;
+  pest_severity?: 'low' | 'medium' | 'high' | null;
+  pest_status?: 'active' | 'treated' | 'resolved' | null;
   // Bed association (Phase B2)
   bed_id?: string | null;
   created_at: string;

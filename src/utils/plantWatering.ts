@@ -56,3 +56,12 @@ export function getPlantWaterStatus(plant: Plant, now: number = Date.now()): Pla
 export function isPlantWaterOverdue(plant: Plant, now: number = Date.now()): boolean {
   return getPlantWaterStatus(plant, now).reason !== 'none';
 }
+
+/**
+ * Whole calendar days since the plant was last watered (midnight-floored), or
+ * null when there is no watering history. Same day counting as the overdue
+ * logic above, so informational labels and the overdue state never disagree.
+ */
+export function daysSinceLastWatered(plant: Plant, now: number = Date.now()): number | null {
+  return calendarDaysSince(plant.last_watered_date, now);
+}

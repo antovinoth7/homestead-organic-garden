@@ -3,7 +3,7 @@ import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getPlant, updatePlant } from '@/services/plants';
 import { getTaskTemplates } from '@/services/tasks';
-import { getJournalEntries } from '@/services/journal';
+import { getJournalMetadata } from '@/services/journal';
 import { Plant, TaskTemplate, JournalEntry, JournalEntryType } from '@/types/database.types';
 import { checkAndAdvanceStage, isPlantArchived } from '@/utils/plantHelpers';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
@@ -38,10 +38,12 @@ export function usePlantDetail(plantId: string | undefined): PlantDetailData {
         setLoading(true);
       }
       try {
+        // Metadata fetch skips O(entries × photos) image resolution on mount and
+        // on every focus; the Pictures tab resolves journal photos lazily.
         const [plantData, allTasks, allJournalEntries] = await Promise.all([
           getPlant(plantId ?? ''),
           getTaskTemplates(),
-          getJournalEntries(),
+          getJournalMetadata(),
         ]);
 
         if (!isMountedRef.current) return;

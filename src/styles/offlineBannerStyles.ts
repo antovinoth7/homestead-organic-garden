@@ -8,7 +8,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      paddingVertical: 6,
+      paddingVertical: 4,
       paddingHorizontal: 16,
       backgroundColor: theme.warningLight,
       borderBottomWidth: 1,

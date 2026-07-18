@@ -1,9 +1,5 @@
-import { Dimensions, Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
-
-function getScreenHeight(): number {
-  return Dimensions.get('window').height;
-}
 
 export const createStyles = (
   theme: Theme,
@@ -96,7 +92,8 @@ export const createStyles = (
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       paddingHorizontal: 8,
-      maxHeight: getScreenHeight() * 0.7,
+      // maxHeight is computed at runtime (window height minus insets) and passed
+      // in via the style array so the sheet never extends behind the nav bar.
       // Shadow for the sheet
       ...Platform.select({
         ios: {

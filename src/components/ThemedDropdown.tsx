@@ -8,13 +8,15 @@ import {
   Modal,
   Platform,
   Dimensions,
+  useWindowDimensions,
   Animated,
   Keyboard,
 } from 'react-native';
 import { FlatList, GestureHandlerRootView, RectButton } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
+import type { Theme } from '../theme/colors';
 import { createStyles } from '../styles/themedDropdownStyles';
 import FieldHelp from './FieldHelp';
 
@@ -47,6 +49,118 @@ function getScreenHeight(): number {
   return Dimensions.get('window').height;
 }
 
+interface DropdownSheetProps {
+  styles: ReturnType<typeof createStyles>;
+  theme: Theme;
+  placeholder: string;
+  searchable: boolean;
+  searchQuery: string;
+  setSearchQuery: (value: string) => void;
+  searchInputRef: React.RefObject<TextInput | null>;
+  filteredItems: DropdownItem[];
+  renderItem: ({ item }: { item: DropdownItem }) => React.JSX.Element;
+  keyExtractor: (item: DropdownItem, index: number) => string;
+  keyboardHeight: number;
+  slideAnim: Animated.Value;
+  sheetTouchEnabled: boolean;
+  close: () => void;
+}
+
+/**
+ * Bottom-sheet body. Rendered inside a fresh SafeAreaProvider within the Modal
+ * so insets are measured against the modal window — on edge-to-edge Android the
+ * outer provider under-reports the nav-bar inset, which used to push the last
+ * rows behind the system navigation bar and make them untappable.
+ */
+function DropdownSheet({
+  styles,
+  theme,
+  placeholder,
+  searchable,
+  searchQuery,
+  setSearchQuery,
+  searchInputRef,
+  filteredItems,
+  renderItem,
+  keyExtractor,
+  keyboardHeight,
+  slideAnim,
+  sheetTouchEnabled,
+  close,
+}: DropdownSheetProps): React.JSX.Element {
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'ios' ? 34 : 24);
+  const sheetHeaderHeight = searchable ? 130 : 80; // handle + title + optional search bar
+  const availableHeight = windowHeight - keyboardHeight - sheetHeaderHeight - bottomInset;
+  const maxVisibleItems = Math.min(filteredItems.length, 8);
+  const listMaxHeight = Math.min(maxVisibleItems * 52, Math.max(availableHeight, 52));
+  const sheetMaxHeight = windowHeight - insets.top - keyboardHeight;
+
+  return (
+    <Animated.View
+      style={[
+        styles.sheet,
+        {
+          maxHeight: sheetMaxHeight,
+          paddingBottom: bottomInset,
+          transform: [{ translateY: slideAnim }],
+          marginBottom: keyboardHeight,
+        },
+      ]}
+      collapsable={false}
+    >
+      <View pointerEvents={sheetTouchEnabled ? 'box-none' : 'none'}>
+        <Pressable
+          style={({ pressed }) => [styles.sheetCloseRow, pressed && styles.sheetCloseRowPressed]}
+          onPress={close}
+        >
+          <View style={styles.sheetHandle} />
+          <Text style={styles.sheetTitle}>{placeholder}</Text>
+        </Pressable>
+        {searchable && (
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={18} color={theme.textTertiary} style={styles.searchIcon} />
+            <TextInput
+              ref={searchInputRef}
+              style={styles.searchInput}
+              placeholder={`Search ${placeholder.toLowerCase()}...`}
+              placeholderTextColor={theme.inputPlaceholder}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+        {searchable && filteredItems.length === 0 && (
+          <Text style={styles.emptyText}>No matches found</Text>
+        )}
+        <FlatList
+          data={filteredItems}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          style={{ maxHeight: listMaxHeight }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="always"
+          getItemLayout={(_, index) => ({
+            length: 52,
+            offset: 52 * index,
+            index,
+          })}
+        />
+      </View>
+    </Animated.View>
+  );
+}
+
 export default function ThemedDropdown({
   items,
   selectedValue,
@@ -60,7 +174,6 @@ export default function ThemedDropdown({
   helpLabel,
 }: ThemedDropdownProps): React.JSX.Element {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
   const [visible, setVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -154,17 +267,6 @@ export default function ThemedDropdown({
     const q = searchQuery.trim().toLowerCase();
     return items.filter((item) => item.label.toLowerCase().includes(q));
   }, [items, searchQuery, searchable]);
-
-  // Limit visible list height accounting for keyboard
-  const screenHeight = getScreenHeight();
-  const sheetHeaderHeight = searchable ? 130 : 80; // handle + title + optional search bar
-  const availableHeight =
-    screenHeight -
-    keyboardHeight -
-    sheetHeaderHeight -
-    Math.max(insets.bottom, Platform.OS === 'ios' ? 34 : 16);
-  const maxVisibleItems = Math.min(filteredItems.length, 8);
-  const listMaxHeight = Math.min(maxVisibleItems * 52, availableHeight, screenHeight * 0.55);
 
   const renderItem = useCallback(
     ({ item }: { item: DropdownItem }) => {
@@ -260,85 +362,39 @@ export default function ThemedDropdown({
         animationType="none"
         onRequestClose={close}
         statusBarTranslucent
+        navigationBarTranslucent
         hardwareAccelerated
         onShow={() => {
           setTimeout(() => setSheetTouchEnabled(true), Platform.OS === 'android' ? 50 : 0);
         }}
       >
-        <GestureHandlerRootView style={styles.gestureRoot}>
-          {/* Single flex root — backdrop and sheet are parent-child, not siblings */}
-          <Pressable style={styles.backdropPressable} onPress={close}>
-            <Animated.View style={[styles.overlay, { opacity: fadeAnim }]} pointerEvents="none" />
-          </Pressable>
-          <View style={styles.sheetContainer} pointerEvents="box-none">
-            <Animated.View
-              style={[
-                styles.sheet,
-                {
-                  paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 34 : 16),
-                  transform: [{ translateY: slideAnim }],
-                  marginBottom: keyboardHeight,
-                },
-              ]}
-              collapsable={false}
-            >
-              <View pointerEvents={sheetTouchEnabled ? 'box-none' : 'none'}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.sheetCloseRow,
-                    pressed && styles.sheetCloseRowPressed,
-                  ]}
-                  onPress={close}
-                >
-                  <View style={styles.sheetHandle} />
-                  <Text style={styles.sheetTitle}>{placeholder}</Text>
-                </Pressable>
-                {searchable && (
-                  <View style={styles.searchContainer}>
-                    <Ionicons
-                      name="search"
-                      size={18}
-                      color={theme.textTertiary}
-                      style={styles.searchIcon}
-                    />
-                    <TextInput
-                      ref={searchInputRef}
-                      style={styles.searchInput}
-                      placeholder={`Search ${placeholder.toLowerCase()}...`}
-                      placeholderTextColor={theme.inputPlaceholder}
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                      autoCorrect={false}
-                      autoCapitalize="none"
-                      returnKeyType="search"
-                    />
-                    {searchQuery.length > 0 && (
-                      <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
-                        <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-                {searchable && filteredItems.length === 0 && (
-                  <Text style={styles.emptyText}>No matches found</Text>
-                )}
-                <FlatList
-                  data={filteredItems}
-                  renderItem={renderItem}
-                  keyExtractor={keyExtractor}
-                  style={{ maxHeight: listMaxHeight }}
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="always"
-                  getItemLayout={(_, index) => ({
-                    length: 52,
-                    offset: 52 * index,
-                    index,
-                  })}
-                />
-              </View>
-            </Animated.View>
-          </View>
-        </GestureHandlerRootView>
+        {/* Fresh SafeAreaProvider so insets are measured inside the modal window. */}
+        <SafeAreaProvider>
+          <GestureHandlerRootView style={styles.gestureRoot}>
+            {/* Single flex root — backdrop and sheet are parent-child, not siblings */}
+            <Pressable style={styles.backdropPressable} onPress={close}>
+              <Animated.View style={[styles.overlay, { opacity: fadeAnim }]} pointerEvents="none" />
+            </Pressable>
+            <View style={styles.sheetContainer} pointerEvents="box-none">
+              <DropdownSheet
+                styles={styles}
+                theme={theme}
+                placeholder={placeholder}
+                searchable={searchable}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                searchInputRef={searchInputRef}
+                filteredItems={filteredItems}
+                renderItem={renderItem}
+                keyExtractor={keyExtractor}
+                keyboardHeight={keyboardHeight}
+                slideAnim={slideAnim}
+                sheetTouchEnabled={sheetTouchEnabled}
+                close={close}
+              />
+            </View>
+          </GestureHandlerRootView>
+        </SafeAreaProvider>
       </Modal>
     </>
   );

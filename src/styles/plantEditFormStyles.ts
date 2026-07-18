@@ -3,19 +3,26 @@ import type { Theme } from '../theme/colors';
 
 export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
-    progressBarTrack: {
-      height: 3,
-      backgroundColor: theme.borderLight,
-      width: '100%',
+    editHeaderTitleBlock: {
+      flex: 1,
+      marginLeft: 12,
+      marginRight: 8,
     },
-    progressBarFill: {
-      height: 3,
-      backgroundColor: theme.primary,
-      borderRadius: 1.5,
+    editHeaderTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
     },
-    editHeaderSpacer: {
-      width: 40,
-      height: 40,
+    editHeaderTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+      flexShrink: 1,
+    },
+    editHeaderSubtitle: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 1,
     },
     dataLoadingOverlay: {
       ...StyleSheet.absoluteFillObject,
@@ -36,7 +43,6 @@ export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.cre
     scrollContentPadding: {
       paddingHorizontal: 16,
       paddingTop: 10,
-      paddingBottom: 160,
     },
     stickyTabBarWrap: {
       marginHorizontal: -16,

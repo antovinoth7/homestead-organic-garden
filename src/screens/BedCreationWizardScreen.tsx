@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   BackHandler,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { logger } from '@/utils/logger';
 import { useBedCreationWizard } from '@/hooks/useBedCreationWizard';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import DiscardChangesModal from '@/components/modals/DiscardChangesModal';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -39,6 +41,9 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
+  const keyboardVisible = useKeyboardVisible();
+  // Keyboard covers the nav-bar area, so its inset would become a dead gap.
+  const footerPaddingBottom = keyboardVisible ? 12 : Math.max(insets.bottom, 12);
   const navigation = useNavigation<BedCreationWizardNavigationProp>();
   const route = useRoute<BedCreationWizardRouteProp>();
   const prefillType = route.params?.prefillType;
@@ -281,72 +286,71 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
         </View>
       </View>
 
-      {/* Step content */}
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.stepContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        {renderStep()}
-      </ScrollView>
+      {/* Step content + footer share a KeyboardAvoidingView so the Save/Next
+          buttons stay visible above the keyboard while typing. */}
+      <KeyboardAvoidingView style={styles.keyboardAvoiding} behavior="padding">
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.stepContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {renderStep()}
+        </ScrollView>
 
-      {/* Inline reason the Next button is disabled — sits above the footer so the
-          user knows what to fix instead of tapping a greyed-out button. */}
-      {wizard.blockReason && !wizard.submitting && (
-        <View style={styles.blockedBanner}>
-          <Ionicons name="alert-circle" size={18} color={theme.error} />
-          <Text style={styles.blockedBannerText}>{wizard.blockReason}</Text>
-        </View>
-      )}
-
-      {/* Navigation buttons */}
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        {wizard.currentStep > 1 ? (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={wizard.goBack}
-            accessibilityLabel="Back to previous step"
-          >
-            <Ionicons name="arrow-back" size={18} color="#fff" />
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
-        ) : (
-          <View />
+        {/* Inline reason the Next button is disabled — sits above the footer so the
+            user knows what to fix instead of tapping a greyed-out button. */}
+        {wizard.blockReason && !wizard.submitting && (
+          <View style={styles.blockedBanner}>
+            <Ionicons name="alert-circle" size={18} color={theme.error} />
+            <Text style={styles.blockedBannerText}>{wizard.blockReason}</Text>
+          </View>
         )}
 
-        {isLastInputStep ? (
-          <TouchableOpacity
-            style={[
-              styles.nextButton,
-              (!wizard.canProceed || wizard.submitting) && styles.nextButtonDisabled,
-            ]}
-            onPress={handleSubmit}
-            disabled={!wizard.canProceed || wizard.submitting}
-            accessibilityLabel="Save bed"
-          >
-            {wizard.submitting ? (
-              <>
-                <ActivityIndicator size="small" color="#fff" />
-                <Text style={styles.nextText}>Saving…</Text>
-              </>
-            ) : (
-              <>
+        {/* Navigation buttons */}
+        <View style={[styles.footer, { paddingBottom: footerPaddingBottom }]}>
+          {wizard.currentStep > 1 ? (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={wizard.goBack}
+              accessibilityLabel="Back to previous step"
+            >
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
+          ) : (
+            <View />
+          )}
+
+          {isLastInputStep ? (
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                (!wizard.canProceed || wizard.submitting) && styles.nextButtonDisabled,
+              ]}
+              onPress={handleSubmit}
+              disabled={!wizard.canProceed || wizard.submitting}
+              accessibilityLabel="Save bed"
+            >
+              {wizard.submitting ? (
+                <>
+                  <ActivityIndicator size="small" color={theme.textInverse} />
+                  <Text style={styles.nextText}>Saving…</Text>
+                </>
+              ) : (
                 <Text style={styles.nextText}>{isEditMode ? 'Save Changes' : 'Save Bed'}</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.nextButton, !wizard.canProceed && styles.nextButtonDisabled]}
-            onPress={wizard.goNext}
-            disabled={!wizard.canProceed}
-            accessibilityLabel="Next step"
-          >
-            <Text style={styles.nextText}>Next</Text>
-            <Ionicons name="arrow-forward" size={18} color="#fff" />
-          </TouchableOpacity>
-        )}
-      </View>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.nextButton, !wizard.canProceed && styles.nextButtonDisabled]}
+              onPress={wizard.goNext}
+              disabled={!wizard.canProceed}
+              accessibilityLabel="Next step"
+            >
+              <Text style={styles.nextText}>Next</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </KeyboardAvoidingView>
 
       <DiscardChangesModal
         visible={discardVisible}

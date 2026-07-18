@@ -461,6 +461,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.text,
     },
+    sectionCardIconWrapError: {
+      backgroundColor: theme.errorLight,
+    },
+    sectionCardErrorDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.error,
+      marginLeft: 'auto',
+    },
     // --- Field group visual divider ---
     fieldGroupDivider: {
       height: 1,
@@ -734,14 +744,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       minWidth: 40,
     },
     // --- Notes Card ---
-    notesCard: {
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 14,
-      padding: 14,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
     notesCardInput: {
       backgroundColor: theme.inputBackground,
       borderRadius: 10,
@@ -1211,43 +1213,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.primary,
     },
 
-    // --- #7 Sticky Save Button ---
-    stickySaveContainer: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      backgroundColor: theme.background,
-      borderTopWidth: 1,
-      borderTopColor: theme.borderLight,
-    },
-    stickySaveButton: {
-      backgroundColor: theme.primary,
-      borderRadius: 14,
-      paddingVertical: 14,
-      alignItems: 'center' as const,
-      flexDirection: 'row' as const,
-      justifyContent: 'center' as const,
-      gap: 8,
-    },
-    stickySaveButtonDisabled: {
-      backgroundColor: theme.borderDark,
-    },
-    stickySaveButtonText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.textInverse,
-    },
-    stickySaveErrorBadge: {
-      backgroundColor: theme.error,
-      borderRadius: 10,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-    },
-    stickySaveErrorBadgeText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: theme.textInverse,
-    },
-
     // --- #9 Auto-Name Preview Inline ---
     namePreviewRow: {
       flexDirection: 'row' as const,
@@ -1416,6 +1381,40 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     spaceTypeCardLabelActive: {
       color: theme.primary,
     },
+    // Compact single-row segmented control for the growing-space picker.
+    spaceSegmentRow: {
+      flexDirection: 'row' as const,
+      borderWidth: 1,
+      borderColor: theme.pickerBorder,
+      borderRadius: 12,
+      overflow: 'hidden' as const,
+      backgroundColor: theme.pickerBackground,
+      marginBottom: 12,
+    },
+    spaceSegmentItem: {
+      flex: 1,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: 6,
+      paddingVertical: 12,
+      paddingHorizontal: 4,
+    },
+    spaceSegmentItemActive: {
+      backgroundColor: theme.primary,
+    },
+    spaceSegmentDivider: {
+      width: 1,
+      backgroundColor: theme.pickerBorder,
+    },
+    spaceSegmentLabel: {
+      fontSize: 13,
+      fontWeight: '600' as const,
+      color: theme.textSecondary,
+    },
+    spaceSegmentLabelActive: {
+      color: theme.textInverse,
+    },
 
     // --- #1 Phase Gates ---
     phaseLockedBanner: {
@@ -1492,68 +1491,63 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontStyle: 'italic' as const,
       color: theme.textSecondary,
     },
-    chipGrid: {
+    // Equal-width 2x2 grid for the health-status chips so both rows align
+    // cleanly on narrow screens (unlike a wrapping row of variable-width chips).
+    healthGrid: {
       flexDirection: 'row' as const,
       flexWrap: 'wrap' as const,
       gap: 8,
-      marginBottom: 12,
+      marginBottom: 10,
     },
-    chipGridItem: {
-      // Row so chips can carry a leading icon; inert for the text-only chips.
+    healthGridItem: {
+      flexBasis: '47%' as const,
+      flexGrow: 1,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
+      justifyContent: 'center' as const,
       gap: 6,
-      paddingHorizontal: 14,
       paddingVertical: 10,
-      borderRadius: 20,
+      borderRadius: 12,
       backgroundColor: theme.backgroundSecondary,
       borderWidth: 1.5,
       borderColor: theme.border,
     },
-    chipGridItemActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    chipGridItemText: {
+    healthGridItemText: {
       fontSize: 13,
       fontWeight: '600' as const,
       color: theme.textTertiary,
     },
-    chipGridItemTextActive: {
-      color: theme.primary,
-      fontWeight: '700' as const,
-    },
     // Tone variants so a selected health chip reads at a glance without parsing
     // the label. Keyed off HEALTH_STATUS_TONE in utils/plantLabels.
-    chipGridItemActiveSuccess: {
+    healthGridItemActiveSuccess: {
       backgroundColor: theme.successLight,
       borderColor: theme.successBorder,
     },
-    chipGridItemActiveWarning: {
+    healthGridItemActiveWarning: {
       backgroundColor: theme.warningLight,
       borderColor: theme.warningBorder,
     },
-    chipGridItemActiveInfo: {
+    healthGridItemActiveInfo: {
       backgroundColor: theme.infoLight,
       borderColor: theme.infoBorder,
     },
-    chipGridItemActiveError: {
+    healthGridItemActiveError: {
       backgroundColor: theme.errorLight,
       borderColor: theme.errorBorder,
     },
-    chipGridItemTextSuccess: {
+    healthGridItemTextSuccess: {
       color: theme.successDark,
       fontWeight: '700' as const,
     },
-    chipGridItemTextWarning: {
+    healthGridItemTextWarning: {
       color: theme.warningDark,
       fontWeight: '700' as const,
     },
-    chipGridItemTextInfo: {
+    healthGridItemTextInfo: {
       color: theme.infoDark,
       fontWeight: '700' as const,
     },
-    chipGridItemTextError: {
+    healthGridItemTextError: {
       color: theme.errorDark,
       fontWeight: '700' as const,
     },
@@ -1566,56 +1560,25 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     statusDotWarning: { backgroundColor: theme.warning },
     statusDotInfo: { backgroundColor: theme.info },
     statusDotError: { backgroundColor: theme.error },
-    // Read-only "effective growth stage" card + its override disclosure.
-    stageCard: {
-      backgroundColor: theme.backgroundSecondary,
+    // Tone-tinted callout for the health-status description, so it visually
+    // binds to the selected chip's color instead of reading as generic gray text.
+    healthCallout: {
       borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-      padding: 12,
-      marginBottom: 12,
+      padding: 10,
+      marginBottom: 14,
     },
-    stageCardRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: 8,
-    },
-    stageCardStage: {
-      flex: 1,
-      fontSize: 15,
-      fontWeight: '700' as const,
-      color: theme.text,
-    },
-    stageCardBadge: {
-      backgroundColor: theme.primaryLight,
-      borderRadius: 10,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-    },
-    stageCardBadgeText: {
-      fontSize: 11,
-      fontWeight: '700' as const,
-      color: theme.primary,
-    },
-    stageCardHint: {
+    healthCalloutSuccess: { backgroundColor: theme.successLight },
+    healthCalloutWarning: { backgroundColor: theme.warningLight },
+    healthCalloutInfo: { backgroundColor: theme.infoLight },
+    healthCalloutError: { backgroundColor: theme.errorLight },
+    healthCalloutText: {
       fontSize: 12,
-      color: theme.textTertiary,
-      marginTop: 6,
-      lineHeight: 16,
+      lineHeight: 17,
     },
-    stageResetButton: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      gap: 6,
-      paddingVertical: 10,
-      marginBottom: 12,
-    },
-    stageResetText: {
-      fontSize: 13,
-      fontWeight: '600' as const,
-      color: theme.primary,
-    },
+    healthCalloutTextSuccess: { color: theme.successDark },
+    healthCalloutTextWarning: { color: theme.warningDark },
+    healthCalloutTextInfo: { color: theme.infoDark },
+    healthCalloutTextError: { color: theme.errorDark },
 
     // --- E: Frequency Stepper ---
     stepperCard: {

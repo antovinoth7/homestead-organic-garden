@@ -7,7 +7,6 @@ import {
   ScrollView,
   Alert,
   KeyboardAvoidingView,
-  Platform,
   ImageStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -20,6 +19,7 @@ import { createJournalEntry, updateJournalEntry, saveJournalImage } from '../ser
 import { getAllPlants } from '../services/plants';
 import { Plant, JournalEntryType } from '../types/database.types';
 import { useBedOptions } from '@/hooks/useBedOptions';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -51,6 +51,9 @@ export default function JournalFormScreen(): React.JSX.Element {
   const initialPlantId = route.params?.initialPlantId;
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const keyboardVisible = useKeyboardVisible();
+  // Keyboard covers the nav-bar area, so its inset would become a dead gap.
+  const footerPaddingBottom = keyboardVisible ? 8 : Math.max(insets.bottom, 8);
   const isEditing = !!editEntry;
 
   const [entryType, setEntryType] = useState<JournalEntryType>(
@@ -109,6 +112,15 @@ export default function JournalFormScreen(): React.JSX.Element {
   const [harvestNotes, setHarvestNotes] = useState(editEntry?.harvest_notes || '');
   const [harvestTreeNumber, setHarvestTreeNumber] = useState(
     editEntry?.harvest_tree_number?.toString() || ''
+  );
+
+  // Pest/Disease-specific fields
+  const [pestName, setPestName] = useState(editEntry?.pest_name || '');
+  const [pestSeverity, setPestSeverity] = useState<'low' | 'medium' | 'high'>(
+    editEntry?.pest_severity || 'medium'
+  );
+  const [pestStatus, setPestStatus] = useState<'active' | 'treated' | 'resolved'>(
+    editEntry?.pest_status || 'active'
   );
 
   useEffect(() => {
@@ -279,6 +291,10 @@ export default function JournalFormScreen(): React.JSX.Element {
           entryType === JournalEntryType.Harvest && harvestTreeNumber.trim() !== ''
             ? parseInt(harvestTreeNumber, 10)
             : null,
+        pest_name:
+          entryType === JournalEntryType.PestDisease ? pestName.trim() || null : null,
+        pest_severity: entryType === JournalEntryType.PestDisease ? pestSeverity : null,
+        pest_status: entryType === JournalEntryType.PestDisease ? pestStatus : null,
       };
 
       if (isEditing && editEntry) {
@@ -311,10 +327,9 @@ export default function JournalFormScreen(): React.JSX.Element {
         <Text style={styles.title}>{isEditing ? 'Edit Entry' : 'New Entry'}</Text>
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.scrollWrapper}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      {/* KAV padding keeps the footer above the keyboard; the footer drops its
+          nav-bar inset while the keyboard is open (see footerPaddingBottom). */}
+      <KeyboardAvoidingView style={styles.scrollWrapper} behavior="padding">
       <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
         {/* Entry Type Selector */}
         <View style={styles.typeSelector}>
@@ -358,6 +373,29 @@ export default function JournalFormScreen(): React.JSX.Element {
               ]}
             >
               Harvest
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.typeButton,
+              entryType === JournalEntryType.PestDisease && styles.typeButtonActive,
+            ]}
+            onPress={() => setEntryType(JournalEntryType.PestDisease)}
+          >
+            <Ionicons
+              name="bug"
+              size={18}
+              color={
+                entryType === JournalEntryType.PestDisease ? theme.textInverse : theme.primary
+              }
+            />
+            <Text
+              style={[
+                styles.typeButtonText,
+                entryType === JournalEntryType.PestDisease && styles.typeButtonTextActive,
+              ]}
+            >
+              Pest/Disease
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -590,6 +628,80 @@ export default function JournalFormScreen(): React.JSX.Element {
           </View>
         )}
 
+        {/* Pest/Disease-specific fields */}
+        {entryType === JournalEntryType.PestDisease && (
+          <View style={styles.harvestSection}>
+            <Text style={styles.sectionTitle}>Pest / Disease Details</Text>
+
+            <Text style={styles.label}>Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Aphids, Leaf spot"
+              placeholderTextColor={theme.inputPlaceholder}
+              value={pestName}
+              onChangeText={(text) => setPestName(sanitizeAlphaNumericSpaces(text))}
+            />
+
+            <Text style={[styles.label, styles.notesWrapperMarginTop]}>Severity</Text>
+            <View style={styles.qualityButtons}>
+              {(
+                [
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                ] as const
+              ).map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.qualityButton,
+                    pestSeverity === opt.value && styles.qualityButtonActive,
+                  ]}
+                  onPress={() => setPestSeverity(opt.value)}
+                >
+                  <Text
+                    style={[
+                      styles.qualityButtonText,
+                      pestSeverity === opt.value && styles.qualityButtonTextActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.label, styles.notesWrapperMarginTop]}>Status</Text>
+            <View style={styles.qualityButtons}>
+              {(
+                [
+                  { value: 'active', label: 'Active' },
+                  { value: 'treated', label: 'Treated' },
+                  { value: 'resolved', label: 'Resolved' },
+                ] as const
+              ).map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.qualityButton,
+                    pestStatus === opt.value && styles.qualityButtonActive,
+                  ]}
+                  onPress={() => setPestStatus(opt.value)}
+                >
+                  <Text
+                    style={[
+                      styles.qualityButtonText,
+                      pestStatus === opt.value && styles.qualityButtonTextActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
         <View style={styles.notesWrapper}>
           <VoiceDictation
             value={content}
@@ -606,12 +718,9 @@ export default function JournalFormScreen(): React.JSX.Element {
           <Text style={styles.charCounter}>{content.length}/5000</Text>
         </View>
 
-        {/* Extra spacing for keyboard */}
-        <View style={styles.keyboardSpacer} />
       </ScrollView>
-      </KeyboardAvoidingView>
 
-      <View style={[styles.stickySaveContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      <View style={[styles.stickySaveContainer, { paddingBottom: footerPaddingBottom }]}>
         <TouchableOpacity
           onPress={handleSave}
           disabled={loading}
@@ -623,6 +732,7 @@ export default function JournalFormScreen(): React.JSX.Element {
           </Text>
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
 
       <PhotoSourceModal
         visible={showPhotoSourceModal}

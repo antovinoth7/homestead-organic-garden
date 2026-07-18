@@ -16,6 +16,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -28,6 +29,7 @@ import {
 import {
   saveImageLocallyWithFilename,
   resolveLocalImageUri,
+  deleteImageLocally,
   SavedImage,
 } from '../lib/imageStorage';
 import { getData, setData, KEYS } from '../lib/storage';
@@ -644,6 +646,55 @@ export const deletePlant = async (id: string): Promise<void> => {
 };
 
 /**
+ * Permanently remove a plant (hard delete) — from the Archived Plants screen.
+ * Unlike deletePlant (which soft-deletes and keeps the record restorable), this
+ * removes the Firestore document, cascades its tasks/logs, and purges the local
+ * photo file. Not reversible. Journal entries are intentionally kept.
+ */
+export const permanentlyDeletePlant = async (id: string): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const docRef = doc(db, PLANTS_COLLECTION, id);
+  await verifyPlantOwnership(id, user.uid, 'delete');
+
+  // Resolve the local photo before removing the record so we can purge it.
+  const cached = await getCachedPlant(id);
+  const photoIdentifier = cached?.photo_filename ?? cached?.photo_url ?? null;
+
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: id, op: 'delete', payload: null },
+    () => deleteDoc(docRef)
+  );
+
+  invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(
+    KEYS.PLANTS,
+    cachedPlants.filter((p) => p.id !== id)
+  );
+
+  // Cascade: delete orphaned tasks and logs for this plant
+  try {
+    const { deleteTasksForPlantIds } = await import('./tasks');
+    await deleteTasksForPlantIds([id]);
+  } catch (error) {
+    logger.warn('Failed to cascade-delete tasks for plant', error as Error);
+  }
+
+  // Best-effort: remove the plant's local photo file
+  if (photoIdentifier) {
+    try {
+      const uri = await resolveLocalImageUri(photoIdentifier);
+      await deleteImageLocally(uri);
+    } catch (error) {
+      logger.warn('Failed to delete local plant image', error as Error);
+    }
+  }
+};
+
+/**
  * Soft-delete every plant in a bed in one shot — used when a bed is deleted.
  *
  * Collapses what would be N×(ownership getDoc + updateDoc + AsyncStorage rewrite +
@@ -760,6 +811,123 @@ export const restorePlant = async (id: string): Promise<Plant> => {
   await setData(KEYS.PLANTS, cachedPlants);
 
   return restored;
+};
+
+/**
+ * Restore every plant in a group in one shot — the "Restore all" action on the
+ * Archived Plants screen.
+ *
+ * Collapses what used to be a sequential loop of N×(ownership getDoc + updateDoc +
+ * getDoc re-read + image resolve + AsyncStorage rewrite) into a single writeBatch,
+ * one cache invalidate, and one AsyncStorage rewrite. Callers pass plants already
+ * fetched for the user, so per-plant ownership re-verification is skipped. The
+ * caller re-fetches fresh state afterward, so this does not need to return the
+ * hydrated plants.
+ */
+export const restorePlantsForBed = async (plants: Plant[]): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  if (plants.length === 0) return;
+
+  await refreshAuthToken();
+
+  const ids = plants.map((p) => p.id);
+
+  const batch = writeBatch(db);
+  for (const id of ids) {
+    batch.update(doc(db, PLANTS_COLLECTION, id), {
+      is_deleted: false,
+      deleted_at: null,
+    });
+  }
+  await writeOrQueue(
+    ids.map((id) => ({
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'update' as const,
+      payload: { is_deleted: false, deleted_at: null },
+    })),
+    () => batch.commit()
+  );
+
+  // The restored plants become active again — invalidate so the Plants tab
+  // re-fetches them instead of serving a stale (deleted-out) warm cache.
+  invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  // Update local AsyncStorage cache once: clear the deletion flags on matching rows.
+  const idSet = new Set(ids);
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(
+    KEYS.PLANTS,
+    cachedPlants.map((p) =>
+      idSet.has(p.id) ? { ...p, is_deleted: false, deleted_at: null } : p
+    )
+  );
+};
+
+/**
+ * Permanently remove every plant in a group (hard delete) — the "Delete all"
+ * action on the Archived Plants screen.
+ *
+ * Bulk counterpart to permanentlyDeletePlant: collapses N×(ownership getDoc +
+ * deleteDoc + AsyncStorage rewrite + task cascade) into a single writeBatch, one
+ * cache invalidate, one AsyncStorage rewrite, and one task cascade. Callers pass
+ * plants already fetched for the user, so per-plant ownership re-verification is
+ * skipped. Not reversible. Journal entries are intentionally kept.
+ */
+export const permanentlyDeletePlantsForBed = async (plants: Plant[]): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  if (plants.length === 0) return;
+
+  await refreshAuthToken();
+
+  const ids = plants.map((p) => p.id);
+
+  const batch = writeBatch(db);
+  for (const id of ids) {
+    batch.delete(doc(db, PLANTS_COLLECTION, id));
+  }
+  await writeOrQueue(
+    ids.map((id) => ({
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'delete' as const,
+      payload: null,
+    })),
+    () => batch.commit()
+  );
+
+  invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  // Update local AsyncStorage cache once.
+  const idSet = new Set(ids);
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(
+    KEYS.PLANTS,
+    cachedPlants.filter((p) => !idSet.has(p.id))
+  );
+
+  // Cascade: delete orphaned tasks and logs for all plants at once.
+  try {
+    const { deleteTasksForPlantIds } = await import('./tasks');
+    await deleteTasksForPlantIds(ids);
+  } catch (error) {
+    logger.warn('Failed to cascade-delete tasks for deleted plants', error as Error);
+  }
+
+  // Best-effort: purge each plant's local photo file. We already hold full Plant
+  // objects, so no getCachedPlant lookup is needed.
+  for (const plant of plants) {
+    const photoIdentifier = plant.photo_filename ?? plant.photo_url ?? null;
+    if (!photoIdentifier) continue;
+    try {
+      const uri = await resolveLocalImageUri(photoIdentifier);
+      await deleteImageLocally(uri);
+    } catch (error) {
+      logger.warn('Failed to delete local plant image', error as Error);
+    }
+  }
 };
 
 /**
