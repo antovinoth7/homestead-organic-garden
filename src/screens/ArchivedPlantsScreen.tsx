@@ -158,20 +158,22 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
 
   const confirmPermanentDelete = useCallback(async (): Promise<void> => {
     const plant = pendingPermanentDelete;
-    if (!plant) return;
-    setPendingPermanentDelete(null);
+    if (!plant || deletingId !== null) return;
+    // Keep the dialog open with a busy spinner until the delete resolves, then
+    // remove the row and close — so the button can't be re-tapped mid-flight.
     setDeletingId(plant.id);
-    // Remove the row optimistically so the UI reacts instantly; re-sync on error.
-    setPlants((prev) => prev.filter((p) => p.id !== plant.id));
     try {
       await permanentlyDeletePlant(plant.id);
+      setPlants((prev) => prev.filter((p) => p.id !== plant.id));
+      setPendingPermanentDelete(null);
     } catch (error: unknown) {
+      setPendingPermanentDelete(null);
       Alert.alert('Error', getErrorMessage(error));
       load();
     } finally {
       setDeletingId(null);
     }
-  }, [pendingPermanentDelete, load]);
+  }, [pendingPermanentDelete, deletingId, load]);
 
   const handleDeleteGroup = useCallback((group: BedGroup): void => {
     setPendingGroupDelete(group);
@@ -179,21 +181,24 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
 
   const confirmGroupDelete = useCallback(async (): Promise<void> => {
     const group = pendingGroupDelete;
-    if (!group) return;
-    setPendingGroupDelete(null);
+    if (!group || deletingBedId !== null) return;
+    // Keep the dialog open with a busy spinner until the delete resolves, then
+    // remove the whole group and close. The optimistic removal used to hide the
+    // section immediately, defeating any progress indicator.
     setDeletingBedId(group.bedId);
     const idSet = new Set(group.data.map((p) => p.id));
-    // Remove the whole group optimistically; re-sync on error.
-    setPlants((prev) => prev.filter((p) => !idSet.has(p.id)));
     try {
       await permanentlyDeletePlantsForBed(group.data);
+      setPlants((prev) => prev.filter((p) => !idSet.has(p.id)));
+      setPendingGroupDelete(null);
     } catch (error: unknown) {
+      setPendingGroupDelete(null);
       Alert.alert('Error', getErrorMessage(error));
       load();
     } finally {
       setDeletingBedId(null);
     }
-  }, [pendingGroupDelete, load]);
+  }, [pendingGroupDelete, deletingBedId, load]);
 
   const keyExtractor = useCallback((item: Plant) => item.id, []);
 
@@ -359,6 +364,7 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
         title="Delete permanently?"
         message={`This permanently removes “${pendingPermanentDelete?.name ?? 'this plant'}”, its tasks and its photo. This cannot be undone.`}
         confirmLabel="Delete forever"
+        busy={deletingId !== null && deletingId === pendingPermanentDelete?.id}
         onCancel={() => setPendingPermanentDelete(null)}
         onConfirm={confirmPermanentDelete}
       />
@@ -374,6 +380,7 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
             : ''
         }
         confirmLabel="Delete all forever"
+        busy={deletingBedId !== null && deletingBedId === pendingGroupDelete?.bedId}
         onCancel={() => setPendingGroupDelete(null)}
         onConfirm={confirmGroupDelete}
       />

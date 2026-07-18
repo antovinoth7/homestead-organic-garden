@@ -74,6 +74,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     deleteButton: {
       backgroundColor: theme.error,
     },
+    disabledButton: {
+      opacity: 0.6,
+    },
     deleteButtonText: {
       fontSize: 15,
       fontWeight: '700' as const,

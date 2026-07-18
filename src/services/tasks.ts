@@ -36,6 +36,7 @@ import {
 import { TASK_DUE_TIME_HOUR, MS_PER_DAY } from '../utils/taskConstants';
 import { getCurrentSeason, getWateringFrequencyMultiplier } from '../utils/seasonHelpers';
 import { getCoconutAgeInfo, getEffectiveGrowthStage, isPlantArchived } from '../utils/plantHelpers';
+import { getEffectiveWateringIntervalDays } from '../utils/plantWatering';
 import { getPlantCareProfile } from '../utils/plantCareDefaults';
 import {
   TASK_TYPE_TO_PLANT_LAST_CARE_FIELD,
@@ -260,6 +261,15 @@ export const updateTaskTemplate = async (
       created_at: convertTimestamp(doc_data.created_at),
       next_due_at: convertTimestamp(doc_data.next_due_at),
     } as TaskTemplate;
+
+    // Keep the AsyncStorage copy in sync so a later offline/fallback read never
+    // resurrects the pre-update state (e.g. a stale enabled: true).
+    const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+    const index = cachedTasks.findIndex((t) => t.id === id);
+    if (index !== -1) {
+      cachedTasks[index] = result;
+      await setData(KEYS.TASKS, cachedTasks);
+    }
   }
 
   invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
@@ -1091,29 +1101,31 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
   // Archived plants have their tasks disabled in archivePlant() — skip sync.
   if (isPlantArchived(plant)) return result;
 
-  const desiredFrequencies = [
+  // Every care type the plant could have a template for, with its on/off intent.
+  // Disabled types are kept (not filtered out) so an existing template can be
+  // flipped to enabled: false below — otherwise turning a care type off would
+  // leave a stale "Active" task on the Care Plan and detail screen.
+  const desiredFrequencies: {
+    taskType: TaskType;
+    frequency: number | null | undefined;
+    enabled: boolean;
+  }[] = [
     {
-      taskType: 'water' as TaskType,
+      taskType: 'water',
       frequency: plant.watering_frequency_days,
       enabled: plant.watering_enabled !== false,
     },
     {
-      taskType: 'fertilise' as TaskType,
+      taskType: 'fertilise',
       frequency: plant.fertilising_frequency_days,
       enabled: plant.fertilising_enabled !== false,
     },
     {
-      taskType: 'prune' as TaskType,
+      taskType: 'prune',
       frequency: plant.pruning_frequency_days,
       enabled: plant.pruning_enabled !== false,
     },
-  ].filter(
-    (item) =>
-      item.enabled &&
-      typeof item.frequency === 'number' &&
-      Number.isFinite(item.frequency) &&
-      item.frequency > 0
-  ) as { taskType: TaskType; frequency: number }[];
+  ];
 
   // For coconut trees, auto-derive a Harvest task from the tree's age.
   // harvestFrequencyDays === 0 means the tree is not yet bearing.
@@ -1123,6 +1135,7 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
       desiredFrequencies.push({
         taskType: 'harvest',
         frequency: ageInfo.harvestFrequencyDays,
+        enabled: true,
       });
     }
   }
@@ -1132,27 +1145,65 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
   // Default 14-day cycle; permanent plants use their own harvest cadence (coconut above).
   if (plant.lifecycle_type === 'perennial') {
     desiredFrequencies.push({
-      taskType: 'harvest_leaves' as TaskType,
+      taskType: 'harvest_leaves',
       frequency: 14,
+      enabled: true,
     });
   }
-
-  if (desiredFrequencies.length === 0) return result;
 
   const existingTasks = await getTaskTemplates();
   const plantTasks = existingTasks.filter((task) => task.plant_id === plant.id);
   const plantCreatedAt = parseDateValue(plant.created_at);
 
-  for (const { taskType, frequency } of desiredFrequencies) {
+  for (const item of desiredFrequencies) {
+    const { taskType, enabled } = item;
+    const frequency =
+      typeof item.frequency === 'number' && Number.isFinite(item.frequency) && item.frequency > 0
+        ? item.frequency
+        : null;
+    // Collect every template of this type for the plant. Using filter (not a
+    // single find) is deliberate: if duplicate templates ever got created for
+    // the same plant + task type, all of them must be reconciled — otherwise a
+    // stale duplicate keeps reading "Active" (and firing reminders) after the
+    // care type is turned off.
+    const matching = plantTasks.filter((task) => task.task_type === taskType);
+
+    // Care type off (or no valid interval): disable every existing template so
+    // none linger on the Care Plan / detail screen and no reminders fire.
+    if (!enabled || frequency === null) {
+      let changed = false;
+      for (const task of matching) {
+        if (task.enabled) {
+          await updateTaskTemplate(task.id, { enabled: false });
+          changed = true;
+        }
+      }
+      if (changed) result.updated.push(taskType);
+      continue;
+    }
+
     // Apply Kanyakumari season-aware multiplier for water tasks.
     // frequencyDays stored remains the user-configured base so the user's
-    // intent is preserved across seasons; only next_due_at is adjusted.
+    // intent is preserved across seasons; only next_due_at is adjusted. The
+    // shared helper keeps this in step with the listing/alerts overdue math.
     const effectiveFrequency =
       taskType === 'water'
-        ? Math.max(1, Math.round(frequency * getWateringFrequencyMultiplier(plant.space_type)))
+        ? getEffectiveWateringIntervalDays(plant) ?? frequency
         : frequency;
     const nextDueAt = computeNextDueAt(plant, taskType, effectiveFrequency);
-    const existing = plantTasks.find((task) => task.task_type === taskType);
+
+    // Keep the first template as canonical and disable any duplicates so only
+    // one enabled template of this type survives.
+    const [existing, ...duplicates] = matching;
+    let disabledDuplicate = false;
+    for (const dup of duplicates) {
+      if (dup.enabled) {
+        await updateTaskTemplate(dup.id, { enabled: false });
+        disabledDuplicate = true;
+      }
+    }
+    if (disabledDuplicate) result.updated.push(taskType);
+
     if (existing) {
       const updates: Partial<TaskTemplate> = {};
       if (existing.frequency_days !== frequency) {

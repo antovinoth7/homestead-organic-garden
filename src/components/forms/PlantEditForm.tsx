@@ -102,7 +102,6 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
     activeKey,
     scrollRef,
     registerSection,
-    onTabBarLayout,
     onScroll,
     onMomentumScrollEnd,
     scrollToKey,
@@ -174,6 +173,11 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
+        {/* Pinned below the header, outside the ScrollView: a sticky tab bar
+            drops taps on Android (translated sticky header), so keeping it here
+            makes every tap register while the scroll-spy still tracks sections. */}
+        <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={scrollToKey} />
+
         <ScrollView
           ref={setScrollRef}
           style={[styles.content, editStyles.scrollBody]}
@@ -183,16 +187,11 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
             { paddingBottom: 24 + insets.bottom },
           ]}
           keyboardShouldPersistTaps="handled"
-          stickyHeaderIndices={[1]}
           onScroll={onScroll}
           onMomentumScrollEnd={onMomentumScrollEnd}
           scrollEventThrottle={16}
         >
-          {/*
-            Photo + identity caption. These MUST stay wrapped in one view: the
-            ScrollView pins its child at index 1 (the tab bar), so splitting
-            them would make the caption sticky and let the tabs scroll away.
-          */}
+          {/* Photo + identity caption. */}
           <View>
             <TouchableOpacity
               style={styles.photoHeroContainer}
@@ -229,10 +228,6 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
               )}
               <Text style={styles.heroCaptionCategory}>{CATEGORY_FULL_LABELS[plantType]}</Text>
             </View>
-          </View>
-
-          <View onLayout={onTabBarLayout} style={editStyles.stickyTabBarWrap}>
-            <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={scrollToKey} />
           </View>
 
           <View onLayout={registerSection('basics')}>
@@ -297,6 +292,8 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
               </Text>
             </View>
           </View>
+
+          <View style={editStyles.bottomSpacer} />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

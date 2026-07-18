@@ -4,12 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/plantDetailStyles';
 import { createEnrichedSectionStyles } from '@/styles/enrichedSectionStyles';
-import { DetailQuickInfoSection } from '@/components/DetailQuickInfoSection';
-import { DetailCareGuidanceSection } from '@/components/DetailCareGuidanceSection';
 import { CompanionPlantingSection } from '@/components/CompanionPlantingSection';
 
 interface Props {
-  plantType: string;
   plantVariety: string;
   companions: string[];
   incompatible: string[];
@@ -17,9 +14,11 @@ interface Props {
   petToxic: boolean;
 }
 
-/** Species-reference guidance derived from the plant's type and variety. */
+/**
+ * Companion/compatibility reference and safety for the specimen. Growing-guide
+ * content (profile, pruning, pests, diseases) lives in the Guide tab.
+ */
 export function PlantDetailInfoSection({
-  plantType,
   plantVariety,
   companions,
   incompatible,
@@ -45,20 +44,6 @@ export function PlantDetailInfoSection({
           </View>
         </View>
       )}
-
-      <DetailQuickInfoSection
-        theme={theme}
-        plantType={plantType}
-        plantVariety={plantVariety}
-        plantCareProfiles={{}}
-      />
-
-      <DetailCareGuidanceSection
-        theme={theme}
-        plantType={plantType}
-        plantVariety={plantVariety}
-        plantCareProfiles={{}}
-      />
 
       <CompanionPlantingSection
         styles={styles}

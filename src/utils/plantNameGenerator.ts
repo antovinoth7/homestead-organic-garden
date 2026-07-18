@@ -25,11 +25,14 @@ export const buildGeneratedPlantNameBase = (
     base = `${pv} - ${v}`;
   }
 
+  // Trees get a "'YY" tag = the last two digits of the PLANTING year (not the
+  // created date), so "Mango '26" reads as a mango planted in 2026. Only added
+  // when a valid planting date is present; slice(-2) is length-safe.
   const isTree = ['fruit_tree', 'timber_tree', 'coconut_tree'].includes(plantType as string);
   if (isTree && plantingDate) {
     const d = new Date(plantingDate);
     if (!isNaN(d.getTime())) {
-      base = `${base} '${String(d.getFullYear()).slice(2)}`;
+      base = `${base} '${String(d.getFullYear()).slice(-2)}`;
     }
   }
 

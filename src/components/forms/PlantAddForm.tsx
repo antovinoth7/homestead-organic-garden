@@ -30,7 +30,8 @@ export function PlantAddForm({ formState }: Props): React.JSX.Element {
   const addFormStyles = useMemo(() => createAddFormStyles(theme), [theme]);
   const formStyles = useMemo(() => createStyles(theme), [theme]);
 
-  const [careExpanded, setCareExpanded] = useState(false);
+  // Expanded by default so the auto-filled care plan is visible without a tap.
+  const [careExpanded, setCareExpanded] = useState(true);
   const sectionYs = useRef<Record<AddSectionKey, number>>({ basic: 0, location: 0, care: 0 });
 
   const registerSectionY = useCallback((section: AddSectionKey, y: number): void => {

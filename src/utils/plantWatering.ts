@@ -1,4 +1,5 @@
 import type { Plant } from '@/types/database.types';
+import { getWateringFrequencyMultiplier } from '@/utils/seasonHelpers';
 
 /**
  * Whether a plant is due/overdue for watering, and why. Single source of truth
@@ -27,11 +28,25 @@ function calendarDaysSince(dateValue: string | null | undefined, now: number): n
   return Math.floor((today.getTime() - start.getTime()) / MS_PER_DAY);
 }
 
+/**
+ * Effective days between waterings: the user-configured base interval scaled by
+ * the Kanyakumari season multiplier for the plant's space type. This is the same
+ * expression `syncCareTasksForPlant` applies to a water task's `next_due_at`, so
+ * the listing/alerts overdue math and the Care Plan due date stay in agreement.
+ * Returns null when watering is disabled or no valid base interval is set.
+ */
+export function getEffectiveWateringIntervalDays(plant: Plant): number | null {
+  if (plant.watering_enabled === false) return null;
+  const base = Number(plant.watering_frequency_days);
+  if (!Number.isFinite(base) || base <= 0) return null;
+  return Math.max(1, Math.round(base * getWateringFrequencyMultiplier(plant.space_type)));
+}
+
 export function getPlantWaterStatus(plant: Plant, now: number = Date.now()): PlantWaterStatus {
   const none: PlantWaterStatus = { overdue: false, daysOverdue: 0, reason: 'none' };
 
-  const frequency = Number(plant.watering_frequency_days);
-  if (!Number.isFinite(frequency) || frequency <= 0) return none;
+  const frequency = getEffectiveWateringIntervalDays(plant);
+  if (frequency === null) return none;
 
   const daysSinceLastWatered = calendarDaysSince(plant.last_watered_date, now);
   if (daysSinceLastWatered !== null && daysSinceLastWatered >= frequency) {

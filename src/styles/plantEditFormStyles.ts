@@ -1,8 +1,15 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 import type { Theme } from '../theme/colors';
+
+const WINDOW_HEIGHT = Dimensions.get('window').height;
 
 export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
+    // Lets the last tab's section scroll up under the pinned bar so every tab
+    // tap produces visible movement.
+    bottomSpacer: {
+      minHeight: WINDOW_HEIGHT * 0.6,
+    },
     editHeaderTitleBlock: {
       flex: 1,
       marginLeft: 12,
@@ -43,10 +50,6 @@ export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.cre
     scrollContentPadding: {
       paddingHorizontal: 16,
       paddingTop: 10,
-    },
-    stickyTabBarWrap: {
-      marginHorizontal: -16,
-      backgroundColor: theme.background,
     },
     // PlantSectionHeader carries its own 24px inset, so cancel the content
     // container's 16px padding to keep it aligned with the detail screen.

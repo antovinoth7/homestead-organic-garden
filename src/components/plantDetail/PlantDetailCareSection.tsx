@@ -10,7 +10,6 @@ import { HarvestInfoSection } from '@/components/HarvestInfoSection';
 import HarvestHistorySection from '@/components/HarvestHistorySection';
 import { CoconutSection } from '@/components/CoconutSection';
 import { PlantNotesSection } from '@/components/PlantNotesSection';
-import { PlantTasksSection } from '@/components/PlantTasksSection';
 import type { Plant, TaskTemplate, JournalEntry, PlantCareProfile } from '@/types/database.types';
 import type {
   EffectiveGrowthStage,
@@ -79,7 +78,7 @@ export function PlantDetailCareSection({
         onClearBed={onClearBed}
       />
 
-      <CareScheduleSection styles={styles} theme={theme} plant={plant} />
+      <CareScheduleSection styles={styles} theme={theme} plant={plant} tasks={tasks} />
 
       <BedContextSection plant={plant} />
 
@@ -107,8 +106,6 @@ export function PlantDetailCareSection({
       />
 
       <PlantNotesSection styles={styles} plant={plant} />
-
-      <PlantTasksSection styles={styles} tasks={tasks} />
     </View>
   );
 }

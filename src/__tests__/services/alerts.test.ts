@@ -2,6 +2,15 @@ import { getFarmAlerts, sortAlerts, isActionable, getTopAlert } from '@/services
 import type { FarmAlert } from '@/types/database.types';
 import { makePlant } from '../fixtures/plant.fixtures';
 
+// Water alerts derive from getPlantWaterStatus, which scales the interval by the
+// live season multiplier. Pin it to 1.0 so these date-based assertions are
+// deterministic regardless of when the suite runs. (jest hoists this above the
+// imports above.)
+jest.mock('@/utils/seasonHelpers', () => ({
+  ...jest.requireActual('@/utils/seasonHelpers'),
+  getWateringFrequencyMultiplier: jest.fn(() => 1),
+}));
+
 const NOW = new Date('2026-03-15T12:00:00.000Z').getTime();
 
 // Pest alerts depend on the live season config; ignore them for deterministic

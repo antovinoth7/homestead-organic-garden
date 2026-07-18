@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Modal, View, Text, TouchableOpacity } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/confirmDeleteModalStyles';
@@ -9,6 +9,8 @@ interface Props {
   title: string;
   message: string;
   confirmLabel?: string;
+  /** While true the delete is in flight: buttons disable and the confirm shows a spinner. */
+  busy?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -19,14 +21,20 @@ export function ConfirmDeleteModal({
   title,
   message,
   confirmLabel = 'Delete',
+  busy = false,
   onCancel,
   onConfirm,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
+  // Block backdrop dismiss while a delete is running so it can't be cancelled mid-flight.
+  const handleRequestClose = (): void => {
+    if (!busy) onCancel();
+  };
+
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onCancel}>
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={handleRequestClose}>
       <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.iconWrap}>
@@ -38,9 +46,10 @@ export function ConfirmDeleteModal({
 
           <View style={styles.buttonRow}>
             <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
+              style={[styles.button, styles.cancelButton, busy && styles.disabledButton]}
               onPress={onCancel}
               activeOpacity={0.8}
+              disabled={busy}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
@@ -49,14 +58,17 @@ export function ConfirmDeleteModal({
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.button, styles.deleteButton]}
+              style={[styles.button, styles.deleteButton, busy && styles.disabledButton]}
               onPress={onConfirm}
               activeOpacity={0.8}
+              disabled={busy}
               accessibilityRole="button"
+              accessibilityState={{ disabled: busy, busy }}
               accessibilityLabel={confirmLabel}
             >
+              {busy && <ActivityIndicator size="small" color={theme.textInverse} />}
               <Text style={styles.deleteButtonText} numberOfLines={1}>
-                {confirmLabel}
+                {busy ? 'Deleting…' : confirmLabel}
               </Text>
             </TouchableOpacity>
           </View>

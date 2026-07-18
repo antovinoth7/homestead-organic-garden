@@ -1,5 +1,7 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 import type { Theme } from '../theme/colors';
+
+const WINDOW_HEIGHT = Dimensions.get('window').height;
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -8,20 +10,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.background,
     },
     // --- Immersive hero header: floating buttons over the full-bleed photo,
-    // --- swapped for a solid compact row once the tab bar pins.
+    // --- swapped for a solid compact row once the tab bar pins. The pinned tab
+    // --- bar lives here (outside the ScrollView) so Android doesn't drop taps
+    // --- on a translated sticky header.
     headerOverlay: {
       position: 'absolute',
       top: 0,
       left: 0,
       right: 0,
+      paddingBottom: 6,
+    },
+    headerOverlayRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
       paddingHorizontal: 16,
-      paddingBottom: 6,
     },
     headerOverlayStuck: {
       backgroundColor: theme.background,
+    },
+    // Fills the final section so any tab can scroll under the pinned bar,
+    // giving every tap visible movement instead of feeling dead.
+    bottomSpacer: {
+      minHeight: WINDOW_HEIGHT * 0.6,
     },
     headerOverlaySpacer: {
       flex: 1,
@@ -33,9 +44,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    stickyTabWrapStuck: {
-      backgroundColor: theme.background,
     },
     stuckHeaderTitle: {
       flex: 1,
@@ -258,6 +266,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     taskDisabled: {
       color: theme.textTertiary,
+    },
+    careTasksLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: 10,
     },
     centered: {
       flex: 1,
