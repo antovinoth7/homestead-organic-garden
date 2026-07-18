@@ -567,6 +567,32 @@ export function getGroupedDiseases(
   return groupByCategory(diseases, DISEASE_CATEGORY_MAP, 'Other', '💊');
 }
 
+// Generic garden defaults, used when an entry has no linked plant (e.g. a
+// journal pest/disease log created without linking a plant). Mirrors the `herb`
+// baseline in TAMIL_NADU_COMMON_PESTS_DISEASES.
+export const DEFAULT_COMMON_PESTS = ['Aphids', 'Whiteflies', 'Thrips', 'Leaf Miner', 'Mites'];
+export const DEFAULT_COMMON_DISEASES = [
+  'Leaf Spot',
+  'Powdery Mildew',
+  'Damping Off',
+  'Root Rot',
+  'Mosaic Virus',
+];
+
+/**
+ * Grouped generic pest suggestions for when no plant type is available.
+ */
+export function getDefaultGroupedPests(): PestDiseaseGroup[] {
+  return groupByCategory(DEFAULT_COMMON_PESTS, PEST_CATEGORY_MAP, 'Other Pests', '🐛');
+}
+
+/**
+ * Grouped generic disease suggestions for when no plant type is available.
+ */
+export function getDefaultGroupedDiseases(): PestDiseaseGroup[] {
+  return groupByCategory(DEFAULT_COMMON_DISEASES, DISEASE_CATEGORY_MAP, 'Other', '💊');
+}
+
 /**
  * Get the emoji for a specific pest or disease name.
  */

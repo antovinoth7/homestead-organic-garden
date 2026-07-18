@@ -7,6 +7,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/journalStyles';
 import { JournalEntry, JournalEntryType } from '@/types/database.types';
+import { getMilestoneMeta, normalizeHarvestUnit } from '@/utils/journalEntryOptions';
 
 interface Props {
   entry: JournalEntry;
@@ -61,9 +62,16 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const swipeableRef = useRef<Swipeable>(null);
 
-  const { iconName, color: typeColor } = getEntryTypeIcon(entry.entry_type, theme);
+  const { iconName: baseIcon, color: typeColor } = getEntryTypeIcon(entry.entry_type, theme);
+  const isMilestone = entry.entry_type === JournalEntryType.Milestone;
+  const milestoneMeta = isMilestone ? getMilestoneMeta(entry.milestone_kind) : null;
+  const iconName = milestoneMeta ? milestoneMeta.icon : baseIcon;
   const entryTypeLabel =
-    entry.entry_type.charAt(0).toUpperCase() + entry.entry_type.slice(1);
+    entry.entry_type === JournalEntryType.PestDisease
+      ? 'Pest/Disease'
+      : milestoneMeta
+      ? milestoneMeta.label
+      : entry.entry_type.charAt(0).toUpperCase() + entry.entry_type.slice(1);
 
   const entryDate = new Date(entry.created_at);
   const date = entryDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -142,9 +150,10 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
             </View>
           </View>
 
-          {/* Plant tag + harvest details */}
+          {/* Plant tag + per-type detail badges */}
           {(plantName ||
-            (entry.entry_type === JournalEntryType.Harvest && entry.harvest_quantity)) && (
+            (entry.entry_type === JournalEntryType.Harvest && entry.harvest_quantity) ||
+            entry.entry_type === JournalEntryType.PestDisease) && (
             <View style={styles.tagsRow}>
               {plantName && (
                 <View style={styles.plantTag}>
@@ -156,13 +165,33 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
                 <View style={styles.harvestBadge}>
                   <Ionicons name="scale-outline" size={11} color={theme.warning} />
                   <Text style={styles.harvestText}>
-                    {entry.harvest_quantity} {entry.harvest_unit || 'units'}
+                    {entry.harvest_quantity} {normalizeHarvestUnit(entry.harvest_unit)}
                   </Text>
                 </View>
               )}
               {entry.entry_type === JournalEntryType.Harvest && entry.harvest_quality && (
                 <View style={[styles.qualityBadge, styles[`quality${entry.harvest_quality}`]]}>
                   <Text style={styles.qualityText}>{entry.harvest_quality.toUpperCase()}</Text>
+                </View>
+              )}
+              {entry.entry_type === JournalEntryType.PestDisease && entry.pest_name && (
+                <View style={styles.pestNameBadge}>
+                  <Ionicons
+                    name={entry.pest_kind === 'disease' ? 'medical' : 'bug'}
+                    size={11}
+                    color={theme.error}
+                  />
+                  <Text style={styles.pestNameText}>{entry.pest_name}</Text>
+                </View>
+              )}
+              {entry.entry_type === JournalEntryType.PestDisease && entry.pest_severity && (
+                <View style={[styles.pillBadge, styles[`severity_${entry.pest_severity}`]]}>
+                  <Text style={styles.pillText}>{entry.pest_severity.toUpperCase()}</Text>
+                </View>
+              )}
+              {entry.entry_type === JournalEntryType.PestDisease && entry.pest_status && (
+                <View style={[styles.pillBadge, styles[`status_${entry.pest_status}`]]}>
+                  <Text style={styles.pillText}>{entry.pest_status.toUpperCase()}</Text>
                 </View>
               )}
             </View>

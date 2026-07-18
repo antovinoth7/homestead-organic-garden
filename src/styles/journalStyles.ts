@@ -108,11 +108,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       lineHeight: 14,
     },
-    statsRow: {
-      flexDirection: 'row',
+    statsHeader: {
       marginTop: 4,
       marginBottom: 6,
+    },
+    statsRow: {
+      flexDirection: 'row',
       gap: 8,
+    },
+    statsPeriodLabel: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      marginTop: 6,
+      marginLeft: 2,
     },
     statCard: {
       flex: 1,
@@ -391,6 +399,66 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 9,
       fontWeight: 'bold',
       color: theme.textSecondary,
+    },
+    // Pest/disease + milestone card badges
+    pestNameBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: theme.errorLight,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+    },
+    pestNameText: {
+      fontSize: 11,
+      color: theme.error,
+      fontWeight: '600',
+    },
+    pillBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+    },
+    pillText: {
+      fontSize: 9,
+      fontWeight: 'bold',
+      color: theme.textSecondary,
+    },
+    severity_low: {
+      backgroundColor: theme.infoLight,
+    },
+    severity_medium: {
+      backgroundColor: theme.warningLight,
+    },
+    severity_high: {
+      backgroundColor: theme.errorLight,
+    },
+    severity_severe: {
+      backgroundColor: theme.errorLight,
+    },
+    status_active: {
+      backgroundColor: theme.errorLight,
+    },
+    status_treated: {
+      backgroundColor: theme.warningLight,
+    },
+    status_resolved: {
+      backgroundColor: theme.successLight,
+    },
+    milestoneBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: theme.successLight,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+    },
+    milestoneText: {
+      fontSize: 11,
+      color: theme.success,
+      fontWeight: '600',
     },
     contentText: {
       fontSize: 13,

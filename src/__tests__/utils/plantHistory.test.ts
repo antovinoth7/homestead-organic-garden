@@ -1,5 +1,9 @@
 import { mergePlantHistory, filterHistoryItems } from '@/utils/plantHistory';
-import type { PestDiseaseRecord, GrowthStageHistoryEntry } from '@/types/database.types';
+import {
+  JournalEntryType,
+  type PestDiseaseRecord,
+  type GrowthStageHistoryEntry,
+} from '@/types/database.types';
 import { makeJournalEntry } from '../fixtures/journal.fixtures';
 import { makeTaskLog } from '../fixtures/task.fixtures';
 
@@ -92,6 +96,32 @@ describe('filterHistoryItems', () => {
     const pests = filterHistoryItems(items, 'pest_disease');
     expect(pests).toHaveLength(1);
     expect(pests[0]?.kind).toBe('pest_disease');
+  });
+
+  it('includes journal pest_disease entries under the pest_disease filter', () => {
+    const withJournalPest = mergePlantHistory(
+      [
+        makeJournalEntry({ id: 'obs', entry_type: JournalEntryType.Observation }),
+        makeJournalEntry({ id: 'jpest', entry_type: JournalEntryType.PestDisease }),
+      ],
+      [pest({ id: 'p1' })],
+      [],
+      []
+    );
+    const pests = filterHistoryItems(withJournalPest, 'pest_disease');
+    expect(pests).toHaveLength(2);
+    expect(pests.map((i) => i.id).sort()).toEqual(['journal-jpest', 'pest-p1']);
+  });
+
+  it('still shows journal pest entries under the plain journal filter', () => {
+    const withJournalPest = mergePlantHistory(
+      [makeJournalEntry({ id: 'jpest', entry_type: JournalEntryType.PestDisease })],
+      [],
+      [],
+      []
+    );
+    // The journal filter still shows all journal entries, pest ones included.
+    expect(filterHistoryItems(withJournalPest, 'journal')).toHaveLength(1);
   });
 
   it('returns an empty list when nothing matches', () => {

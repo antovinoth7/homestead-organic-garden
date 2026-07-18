@@ -97,6 +97,23 @@ export type SoilType =
 export type WaterRequirement = 'low' | 'medium' | 'high';
 export type HealthStatus = 'healthy' | 'stressed' | 'recovering' | 'sick';
 export type IssueSeverity = 'low' | 'medium' | 'high' | 'severe';
+// ─── Journal pest/disease + milestone + harvest vocab ────────────────────────
+export type PestDiseaseKind = 'pest' | 'disease';
+export type PestStatus = 'active' | 'treated' | 'resolved';
+export type TreatmentEffectiveness =
+  | 'effective'
+  | 'partially_effective'
+  | 'ineffective';
+export type MilestoneKind =
+  | 'germinated'
+  | 'first_flower'
+  | 'first_fruit'
+  | 'first_harvest'
+  | 'transplanted'
+  | 'pruned'
+  | 'season_end'
+  | 'custom';
+export type HarvestUnit = 'kg' | 'g' | 'pcs' | 'bunches';
 export type FertiliserType =
   | 'compost'
   | 'vermicompost'
@@ -656,15 +673,23 @@ export interface JournalEntry {
   tags?: string[];
   // Enhanced Harvest tracking fields
   harvest_quantity?: number | null;
-  harvest_unit?: string | null; // 'kg', 'g', 'lbs', 'pieces', 'bunches'
+  harvest_unit?: string | null; // HarvestUnit for new entries; legacy: 'lbs'/'pieces'
   harvest_quality?: 'excellent' | 'good' | 'fair' | 'poor' | null;
   harvest_notes?: string | null; // Storage method, taste notes, etc.
   // For coconut groves (record_kind 'row'): which tree this harvest came from (B.6)
   harvest_tree_number?: number | null;
   // Pest/Disease tracking fields (entry_type 'pest_disease')
+  pest_kind?: PestDiseaseKind | null;
   pest_name?: string | null;
-  pest_severity?: 'low' | 'medium' | 'high' | null;
-  pest_status?: 'active' | 'treated' | 'resolved' | null;
+  pest_severity?: IssueSeverity | null;
+  pest_status?: PestStatus | null;
+  pest_occurred_at?: string | null; // Local YYYY-MM-DD the issue was observed
+  pest_affected_parts?: string[] | null;
+  pest_treatment?: string | null;
+  pest_treatment_effectiveness?: TreatmentEffectiveness | null;
+  pest_resolved_at?: string | null; // Set when pest_status becomes 'resolved'
+  // Milestone tracking (entry_type 'milestone')
+  milestone_kind?: MilestoneKind | null;
   // Bed association (Phase B2)
   bed_id?: string | null;
   created_at: string;

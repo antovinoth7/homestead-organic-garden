@@ -26,6 +26,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { JournalScreenNavigationProp, JournalScreenRouteProp } from '../types/navigation.types';
 import { getErrorMessage } from '../utils/errorLogging';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
+import { computeJournalStats, getDateFilterStart } from '../utils/journalStats';
+import { collectUsedTags } from '../utils/journalEntryOptions';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
 import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
@@ -122,40 +124,27 @@ export default function JournalScreen(): React.JSX.Element {
     [plants]
   );
 
-  // Calculate statistics
-  const stats = useMemo(() => {
-    const totalHarvests = entries.filter((e) => e.entry_type === JournalEntryType.Harvest).length;
-    const totalIssues = entries.filter((e) => e.entry_type === JournalEntryType.Issue).length;
+  // Summary tiles. Entries/harvests/weight follow the date filter; active
+  // problems is a current-state count over all entries (see computeJournalStats).
+  const stats = useMemo(
+    () => computeJournalStats(entries, getDateFilterStart(dateFilter)),
+    [entries, dateFilter]
+  );
 
-    const harvestsByPlant: Record<string, number> = {};
-    let totalWeight = 0;
+  const periodLabel = useMemo(() => {
+    const scope =
+      dateFilter === 'week'
+        ? 'This week'
+        : dateFilter === 'month'
+        ? 'This month'
+        : dateFilter === 'year'
+        ? 'This year'
+        : 'All time';
+    return `${scope} · issues all-time`;
+  }, [dateFilter]);
 
-    entries.forEach((entry) => {
-      if (entry.entry_type === JournalEntryType.Harvest) {
-        const plantName = getPlantName(entry.plant_id) || 'Unknown';
-        harvestsByPlant[plantName] = (harvestsByPlant[plantName] || 0) + 1;
-
-        if (entry.harvest_quantity) {
-          // Convert to kg for totals
-          let weight = entry.harvest_quantity;
-          if (entry.harvest_unit === 'g') weight = weight / 1000;
-          else if (entry.harvest_unit === 'lbs') weight = weight * 0.453592;
-          totalWeight += weight;
-        }
-      }
-    });
-
-    const topPlant = Object.entries(harvestsByPlant).sort((a, b) => b[1] - a[1])[0];
-
-    return {
-      totalEntries: entries.length,
-      totalHarvests,
-      totalIssues,
-      totalWeight: Math.round(totalWeight * 10) / 10,
-      topPlant: topPlant ? topPlant[0] : null,
-      topPlantCount: topPlant ? topPlant[1] : 0,
-    };
-  }, [entries, getPlantName]);
+  // Tags actually present on entries, for the filter sheet.
+  const usedTags = useMemo(() => collectUsedTags(entries), [entries]);
 
   // Filter and search entries
   const filteredEntries = useMemo(() => {
@@ -167,7 +156,8 @@ export default function JournalScreen(): React.JSX.Element {
       filtered = filtered.filter((entry) => {
         const plantName = getPlantName(entry.plant_id)?.toLowerCase() || '';
         const content = entry.content.toLowerCase();
-        return plantName.includes(query) || content.includes(query);
+        const pestName = entry.pest_name?.toLowerCase() || '';
+        return plantName.includes(query) || content.includes(query) || pestName.includes(query);
       });
     }
 
@@ -182,20 +172,8 @@ export default function JournalScreen(): React.JSX.Element {
     }
 
     // Date filter
-    if (dateFilter !== 'all') {
-      const now = new Date();
-      let filterStart: Date;
-
-      if (dateFilter === 'week') {
-        filterStart = new Date(now);
-        filterStart.setDate(now.getDate() - 7);
-      } else if (dateFilter === 'month') {
-        filterStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      } else {
-        // year
-        filterStart = new Date(now.getFullYear(), 0, 1);
-      }
-
+    const filterStart = getDateFilterStart(dateFilter);
+    if (filterStart) {
       filtered = filtered.filter((e) => new Date(e.created_at) >= filterStart);
     }
 
@@ -277,35 +255,38 @@ export default function JournalScreen(): React.JSX.Element {
 
   // Statistics dashboard — rendered as the list header.
   const listHeader = (
-    <View style={styles.statsRow}>
-      <View style={styles.statCard}>
-        <Ionicons name="document-text" size={18} color={theme.primary} />
-        <Text style={styles.statNumber}>{stats.totalEntries}</Text>
-        <Text style={styles.statLabel} numberOfLines={1}>
-          Entries
-        </Text>
+    <View style={styles.statsHeader}>
+      <View style={styles.statsRow}>
+        <View style={styles.statCard}>
+          <Ionicons name="document-text" size={18} color={theme.primary} />
+          <Text style={styles.statNumber}>{stats.entries}</Text>
+          <Text style={styles.statLabel} numberOfLines={1}>
+            Entries
+          </Text>
+        </View>
+        <View style={styles.statCard}>
+          <Ionicons name="basket" size={18} color={theme.warning} />
+          <Text style={styles.statNumber}>{stats.harvests}</Text>
+          <Text style={styles.statLabel} numberOfLines={1}>
+            Harvests
+          </Text>
+        </View>
+        <View style={styles.statCard}>
+          <Ionicons name="scale" size={18} color={theme.success} />
+          <Text style={styles.statNumber}>{stats.weightKg}</Text>
+          <Text style={styles.statLabel} numberOfLines={1}>
+            kg
+          </Text>
+        </View>
+        <View style={styles.statCard}>
+          <Ionicons name="bug" size={18} color={theme.error} />
+          <Text style={styles.statNumber}>{stats.activeProblems}</Text>
+          <Text style={styles.statLabel} numberOfLines={1}>
+            Active
+          </Text>
+        </View>
       </View>
-      <View style={styles.statCard}>
-        <Ionicons name="basket" size={18} color={theme.warning} />
-        <Text style={styles.statNumber}>{stats.totalHarvests}</Text>
-        <Text style={styles.statLabel} numberOfLines={1}>
-          Harvests
-        </Text>
-      </View>
-      <View style={styles.statCard}>
-        <Ionicons name="scale" size={18} color={theme.success} />
-        <Text style={styles.statNumber}>{stats.totalWeight}</Text>
-        <Text style={styles.statLabel} numberOfLines={1}>
-          kg Total
-        </Text>
-      </View>
-      <View style={styles.statCard}>
-        <Ionicons name="alert-circle" size={18} color={theme.error} />
-        <Text style={styles.statNumber}>{stats.totalIssues}</Text>
-        <Text style={styles.statLabel} numberOfLines={1}>
-          Issues
-        </Text>
-      </View>
+      <Text style={styles.statsPeriodLabel}>{periodLabel}</Text>
     </View>
   );
 
@@ -508,7 +489,6 @@ export default function JournalScreen(): React.JSX.Element {
                     [JournalEntryType.Observation, '👁️ Observation'],
                     [JournalEntryType.Harvest, '🧺 Harvest'],
                     [JournalEntryType.PestDisease, '🐛 Pest/Disease'],
-                    [JournalEntryType.Issue, '⚠️ Issue'],
                     [JournalEntryType.Milestone, '🏁 Milestone'],
                   ] as const
                 ).map(([val, label]) => (
@@ -529,38 +509,45 @@ export default function JournalScreen(): React.JSX.Element {
                 ))}
               </View>
 
-              {/* Tags */}
-              <Text style={styles.sheetSectionTitle}>
-                <Ionicons name="pricetag" size={14} color={theme.textSecondary} /> Tag
-              </Text>
-              <View style={styles.sheetChipWrap}>
-                {(
-                  [
-                    [null, 'All'],
-                    ['pest', 'Pest'],
-                    ['weather_damage', 'Weather'],
-                    ['harvest', 'Harvest'],
-                    ['soil_prep', 'Soil Prep'],
-                    ['growth_update', 'Growth'],
-                    ['experiment', 'Experiment'],
-                  ] as const
-                ).map(([val, label]) => (
-                  <TouchableOpacity
-                    key={val ?? 'all'}
-                    style={[styles.sheetChip, selectedTag === val && styles.sheetChipActive]}
-                    onPress={() => setSelectedTag(val)}
-                  >
-                    <Text
-                      style={[
-                        styles.sheetChipText,
-                        selectedTag === val && styles.sheetChipTextActive,
-                      ]}
+              {/* Tags — only those actually in use */}
+              {usedTags.length > 0 && (
+                <>
+                  <Text style={styles.sheetSectionTitle}>
+                    <Ionicons name="pricetag" size={14} color={theme.textSecondary} /> Tag
+                  </Text>
+                  <View style={styles.sheetChipWrap}>
+                    <TouchableOpacity
+                      style={[styles.sheetChip, selectedTag === null && styles.sheetChipActive]}
+                      onPress={() => setSelectedTag(null)}
                     >
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+                      <Text
+                        style={[
+                          styles.sheetChipText,
+                          selectedTag === null && styles.sheetChipTextActive,
+                        ]}
+                      >
+                        All
+                      </Text>
+                    </TouchableOpacity>
+                    {usedTags.map((tag) => (
+                      <TouchableOpacity
+                        key={tag}
+                        style={[styles.sheetChip, selectedTag === tag && styles.sheetChipActive]}
+                        onPress={() => setSelectedTag(tag)}
+                      >
+                        <Text
+                          style={[
+                            styles.sheetChipText,
+                            selectedTag === tag && styles.sheetChipTextActive,
+                          ]}
+                        >
+                          {tag.replace(/_/g, ' ')}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
             </ScrollView>
           </View>
         </View>
