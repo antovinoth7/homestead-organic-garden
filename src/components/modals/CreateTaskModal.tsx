@@ -168,7 +168,7 @@ export default function CreateTaskModal({
               activeOpacity={0.85}
             >
               <Text style={[styles.modalSaveText, loading && styles.modalSaveTextDisabled]}>
-                {loading ? 'Creating...' : 'Create Task'}
+                {loading ? 'Saving...' : 'Save'}
               </Text>
             </TouchableOpacity>
           </View>
