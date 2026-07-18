@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -7,7 +8,6 @@ import { pinGrowthStage, unpinGrowthStage, archivePlant } from '@/services/plant
 import { JournalEntryType } from '@/types/database.types';
 import type { GrowthStage } from '@/types/database.types';
 import { useTheme } from '@/theme';
-import { ScreenHeader } from '@/components/ScreenHeader';
 import { createStyles } from '@/styles/plantDetailStyles';
 import { PlantDetailHero } from '@/components/plantDetail/PlantDetailHero';
 import { PlantSectionHeader } from '@/components/plantDetail/PlantSectionHeader';
@@ -40,6 +40,9 @@ type PlantDetailTabKey = 'care' | 'info' | 'pictures' | 'history';
 
 const TAB_KEYS: readonly PlantDetailTabKey[] = ['care', 'info', 'pictures', 'history'];
 
+/** Height of the header overlay below the top inset: 4 top gap + 40 button + 6 bottom pad. */
+const HEADER_OVERLAY_CLEARANCE = 50;
+
 const TABS: readonly SegmentedTab<PlantDetailTabKey>[] = [
   { key: 'care', label: 'Care', icon: 'water-outline' },
   { key: 'info', label: 'Info', icon: 'book-outline' },
@@ -61,6 +64,10 @@ export default function PlantDetailScreen(): React.JSX.Element {
   const [pinStageVisible, setPinStageVisible] = useState(false);
   // Task logs are an uncached read — defer loading until the History section is reached.
   const [historyEnabled, setHistoryEnabled] = useState(false);
+  // The hero is full-bleed with floating buttons; once the tab bar pins we swap
+  // to a solid compact header so back/edit stay reachable over content.
+  const [tabsStuck, setTabsStuck] = useState(false);
+  const tabBarYRef = useRef(0);
 
   const {
     activeKey,
@@ -71,6 +78,23 @@ export default function PlantDetailScreen(): React.JSX.Element {
     onMomentumScrollEnd,
     scrollToKey,
   } = useSectionScrollSpy<PlantDetailTabKey>(TAB_KEYS);
+
+  const handleTabBarLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      tabBarYRef.current = event.nativeEvent.layout.y;
+      onTabBarLayout(event);
+    },
+    [onTabBarLayout]
+  );
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const stuck = event.nativeEvent.contentOffset.y >= tabBarYRef.current - 1;
+      setTabsStuck((prev) => (prev === stuck ? prev : stuck));
+      onScroll(event);
+    },
+    [onScroll]
+  );
 
   useEffect(() => {
     if (activeKey === 'history') setHistoryEnabled(true);
@@ -184,21 +208,6 @@ export default function PlantDetailScreen(): React.JSX.Element {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader
-        title={plant.name}
-        onBack={() => navigation.goBack()}
-        right={
-          <TouchableOpacity
-            onPress={() => navigation.navigate('PlantForm', { plantId })}
-            style={styles.editButton}
-            accessibilityRole="button"
-            accessibilityLabel="Edit plant"
-          >
-            <Ionicons name="pencil" size={22} color={theme.textInverse} />
-          </TouchableOpacity>
-        }
-      />
-
       {plant.photo_url && (
         <ImageZoomModal
           visible={zoomVisible}
@@ -210,14 +219,26 @@ export default function PlantDetailScreen(): React.JSX.Element {
       <ScrollView
         ref={scrollRef}
         stickyHeaderIndices={[1]}
-        onScroll={onScroll}
+        onScroll={handleScroll}
         onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
       >
         <PlantDetailHero plant={plant} onPhotoPress={() => setZoomVisible(true)} />
 
-        <View onLayout={onTabBarLayout}>
+        {/* Only the tabs live in the sticky element: Android drops touches on
+            interactive children of a translated sticky header, so the back and
+            edit buttons stay in the overlay outside the ScrollView. When stuck,
+            top padding clears the overlay header sitting above the tabs. */}
+        <View
+          onLayout={handleTabBarLayout}
+          style={
+            tabsStuck && [
+              styles.stickyTabWrapStuck,
+              { paddingTop: insets.top + HEADER_OVERLAY_CLEARANCE },
+            ]
+          }
+        >
           <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={handleTabPress} />
         </View>
 
@@ -249,6 +270,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
             plantVariety={plant.plant_variety || ''}
             companions={companions}
             incompatible={incompatible}
+            petToxic={careProfile?.petToxicity ?? false}
           />
         </View>
 
@@ -266,6 +288,45 @@ export default function PlantDetailScreen(): React.JSX.Element {
           />
         </View>
       </ScrollView>
+
+      {/* Always-mounted header overlay: transparent floating buttons over the
+          full-bleed hero, gaining a solid background and title once the tab
+          bar pins beneath it. Living outside the ScrollView keeps the buttons
+          tappable in both states. */}
+      <View
+        style={[
+          styles.headerOverlay,
+          { paddingTop: insets.top + 4 },
+          tabsStuck && styles.headerOverlayStuck,
+        ]}
+        pointerEvents="box-none"
+      >
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.floatingCircleButton}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
+        </TouchableOpacity>
+        {tabsStuck ? (
+          <Text style={styles.stuckHeaderTitle} numberOfLines={1}>
+            {plant.name}
+          </Text>
+        ) : (
+          <View style={styles.headerOverlaySpacer} pointerEvents="none" />
+        )}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('PlantForm', { plantId })}
+          style={styles.floatingCircleButton}
+          accessibilityRole="button"
+          accessibilityLabel="Edit plant"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="pencil" size={20} color={theme.textInverse} />
+        </TouchableOpacity>
+      </View>
 
       <PinGrowthStageModal
         visible={pinStageVisible}

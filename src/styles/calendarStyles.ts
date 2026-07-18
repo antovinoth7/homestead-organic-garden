@@ -871,6 +871,28 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: 'bold',
       color: theme.text,
     },
+    modalTitleWrap: {
+      flex: 1,
+      alignItems: 'center',
+      paddingHorizontal: 8,
+    },
+    modalSaveButton: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+    },
+    modalSaveButtonDisabled: {
+      backgroundColor: theme.borderDark,
+    },
+    modalSaveText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.buttonText,
+    },
+    modalSaveTextDisabled: {
+      color: theme.textTertiary,
+    },
     modalBody: {
       padding: 24,
       paddingBottom: 24,
@@ -879,14 +901,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // clamped to maxHeight or the keyboard reduces the available space.
     modalScroll: {
       flexShrink: 1,
-    },
-    // Pinned footer holding the primary action so it never scrolls out of reach.
-    modalFooter: {
-      paddingHorizontal: 24,
-      paddingTop: 12,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: theme.borderLight,
-      backgroundColor: theme.backgroundSecondary,
     },
     label: {
       fontSize: 14,
@@ -1028,20 +1042,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       color: theme.textTertiary,
       marginBottom: 24,
-    },
-    createButton: {
-      backgroundColor: theme.primary,
-      padding: 16,
-      borderRadius: 12,
-      alignItems: 'center',
-    },
-    createButtonDisabled: {
-      opacity: 0.6,
-    },
-    createButtonText: {
-      color: theme.backgroundSecondary,
-      fontSize: 16,
-      fontWeight: '600',
     },
     selectedTaskInfo: {
       backgroundColor: theme.background,

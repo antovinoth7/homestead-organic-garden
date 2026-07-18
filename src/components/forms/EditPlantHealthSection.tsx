@@ -1,11 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { PlantFormStateReturn } from '../../hooks/usePlantFormState';
 import { createStyles } from '../../styles/plantFormStyles';
-import { createEditStyles } from '../../styles/plantEditFormStyles';
-import CollapsibleSection from '../CollapsibleSection';
+import { FormSectionCard } from './FormSectionCard';
+import { PickerField } from '../PickerField';
+import { StagePickerSheet } from '../StagePickerSheet';
 import { getEffectiveGrowthStage, getValidStagesForPlant } from '../../utils/plantHelpers';
 import type { StageResolvable } from '../../utils/plantHelpers';
 import { getPlantCareProfile } from '../../utils/plantCareDefaults';
@@ -34,34 +34,44 @@ interface ToneStyles {
   chip: StyleProp<ViewStyle>;
   text: StyleProp<TextStyle>;
   dot: StyleProp<ViewStyle>;
+  calloutBg: StyleProp<ViewStyle>;
+  calloutText: StyleProp<TextStyle>;
 }
 
-/** Tone -> the chip/dot/text style trio, so the lookup stays in one place. */
+/** Tone -> the chip/dot/callout style set, so the lookup stays in one place. */
 function toneStyles(styles: Styles, tone: StatusTone): ToneStyles {
   switch (tone) {
     case 'success':
       return {
-        chip: styles.chipGridItemActiveSuccess,
-        text: styles.chipGridItemTextSuccess,
+        chip: styles.healthGridItemActiveSuccess,
+        text: styles.healthGridItemTextSuccess,
         dot: styles.statusDotSuccess,
+        calloutBg: styles.healthCalloutSuccess,
+        calloutText: styles.healthCalloutTextSuccess,
       };
     case 'warning':
       return {
-        chip: styles.chipGridItemActiveWarning,
-        text: styles.chipGridItemTextWarning,
+        chip: styles.healthGridItemActiveWarning,
+        text: styles.healthGridItemTextWarning,
         dot: styles.statusDotWarning,
+        calloutBg: styles.healthCalloutWarning,
+        calloutText: styles.healthCalloutTextWarning,
       };
     case 'info':
       return {
-        chip: styles.chipGridItemActiveInfo,
-        text: styles.chipGridItemTextInfo,
+        chip: styles.healthGridItemActiveInfo,
+        text: styles.healthGridItemTextInfo,
         dot: styles.statusDotInfo,
+        calloutBg: styles.healthCalloutInfo,
+        calloutText: styles.healthCalloutTextInfo,
       };
     case 'error':
       return {
-        chip: styles.chipGridItemActiveError,
-        text: styles.chipGridItemTextError,
+        chip: styles.healthGridItemActiveError,
+        text: styles.healthGridItemTextError,
         dot: styles.statusDotError,
+        calloutBg: styles.healthCalloutError,
+        calloutText: styles.healthCalloutTextError,
       };
   }
 }
@@ -77,8 +87,6 @@ function toneStyles(styles: Styles, tone: StatusTone): ToneStyles {
 export function EditPlantHealthSection({ formState }: Props): React.JSX.Element {
   const {
     theme,
-    sectionExpanded,
-    setSectionExpandedState,
     plantType,
     plantVariety,
     plantingDate,
@@ -91,9 +99,8 @@ export function EditPlantHealthSection({ formState }: Props): React.JSX.Element 
   } = formState;
 
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const editStyles = useMemo(() => createEditStyles(theme), [theme]);
 
-  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [stageSheetVisible, setStageSheetVisible] = useState(false);
 
   const careProfile = useMemo(
     () => getPlantCareProfile(plantVariety, plantType),
@@ -144,124 +151,58 @@ export function EditPlantHealthSection({ formState }: Props): React.JSX.Element 
   // detail screen hides its Pin action for the same reason.
   const canOverride = effectiveStage.source !== 'coconut';
 
+  const activeTone = toneStyles(styles, HEALTH_STATUS_TONE[healthStatus]);
+
   return (
-    <CollapsibleSection
-      title="Plant Health"
-      icon="fitness"
-      defaultExpanded={false}
-      expanded={sectionExpanded.health}
-      onExpandedChange={(expanded) => setSectionExpandedState('health', expanded)}
-      hasError={false}
-      sectionStatus="optional"
-    >
-      <Text style={styles.fieldGroupLabel}>Health Status</Text>
-      <View style={styles.chipGrid}>
+    <FormSectionCard title="Plant Health" icon="fitness-outline">
+      <View style={styles.healthGrid}>
         {HEALTH_STATUSES.map((status) => {
           const isActive = healthStatus === status;
           const tone = toneStyles(styles, HEALTH_STATUS_TONE[status]);
           return (
             <TouchableOpacity
               key={status}
-              style={[styles.chipGridItem, isActive && tone.chip]}
+              style={[styles.healthGridItem, isActive && tone.chip]}
               onPress={() => setHealthStatus(status)}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityState={{ selected: isActive }}
             >
               <View style={[styles.statusDot, tone.dot]} />
-              <Text style={[styles.chipGridItemText, isActive && tone.text]}>
+              <Text style={[styles.healthGridItemText, isActive && tone.text]}>
                 {HEALTH_STATUS_LABELS[status]}
               </Text>
             </TouchableOpacity>
           );
         })}
       </View>
-      <Text style={styles.helperText}>{HEALTH_STATUS_DESCRIPTIONS[healthStatus]}</Text>
-
-      <Text style={styles.fieldGroupLabel}>Growth Stage</Text>
-
-      <View style={styles.stageCard}>
-        <View style={styles.stageCardRow}>
-          <Text style={styles.stageCardStage}>
-            {GROWTH_STAGE_EMOJIS[effectiveStage.stage]} {GROWTH_STAGE_LABELS[effectiveStage.stage]}
-          </Text>
-          <View style={styles.stageCardBadge}>
-            <Text style={styles.stageCardBadgeText}>
-              {GROWTH_STAGE_SOURCE_LABELS[effectiveStage.source]}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.stageCardHint}>{sourceHint}</Text>
+      <View style={[styles.healthCallout, activeTone.calloutBg]}>
+        <Text style={[styles.healthCalloutText, activeTone.calloutText]}>
+          {HEALTH_STATUS_DESCRIPTIONS[healthStatus]}
+        </Text>
       </View>
 
-      <Text style={styles.helperText}>{GROWTH_STAGE_DESCRIPTIONS[effectiveStage.stage]}</Text>
+      <PickerField
+        label="Growth Stage"
+        value={GROWTH_STAGE_LABELS[effectiveStage.stage]}
+        emoji={GROWTH_STAGE_EMOJIS[effectiveStage.stage]}
+        badge={GROWTH_STAGE_SOURCE_LABELS[effectiveStage.source]}
+        subtitle={GROWTH_STAGE_DESCRIPTIONS[effectiveStage.stage]}
+        placeholder="Choose a stage"
+        disabled={!canOverride}
+        onPress={() => setStageSheetVisible(true)}
+      />
 
-      {canOverride && (
-        <>
-          <TouchableOpacity
-            style={editStyles.adjustScheduleHeader}
-            onPress={() => setOverrideOpen(!overrideOpen)}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: overrideOpen }}
-            accessibilityLabel="Override growth stage"
-          >
-            <Ionicons name="options-outline" size={18} color={theme.primary} />
-            <View style={editStyles.flexOne}>
-              <Text style={editStyles.adjustScheduleHeaderText}>Override stage</Text>
-              <Text style={editStyles.adjustScheduleHint}>
-                Set the stage yourself instead of letting the app work it out
-              </Text>
-            </View>
-            <Ionicons
-              name={overrideOpen ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color={theme.textSecondary}
-            />
-          </TouchableOpacity>
-
-          {overrideOpen && (
-            <>
-              <View style={styles.chipGrid}>
-                {validStages.map((stage) => {
-                  const isActive = pinnedStage === stage;
-                  return (
-                    <TouchableOpacity
-                      key={stage}
-                      style={[styles.chipGridItem, isActive && styles.chipGridItemActive]}
-                      onPress={() => handleOverride(stage)}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: isActive }}
-                    >
-                      <Text
-                        style={[
-                          styles.chipGridItemText,
-                          isActive && styles.chipGridItemTextActive,
-                        ]}
-                      >
-                        {GROWTH_STAGE_EMOJIS[stage]} {GROWTH_STAGE_LABELS[stage]}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {pinnedStage && (
-                <TouchableOpacity
-                  style={styles.stageResetButton}
-                  onPress={handleUseAutomatic}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                >
-                  <Ionicons name="refresh" size={16} color={theme.primary} />
-                  <Text style={styles.stageResetText}>Use automatic instead</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </>
-      )}
-    </CollapsibleSection>
+      <StagePickerSheet
+        visible={stageSheetVisible}
+        onClose={() => setStageSheetVisible(false)}
+        stages={validStages}
+        effectiveStage={effectiveStage.stage}
+        pinnedStage={pinnedStage}
+        automaticHint={sourceHint}
+        onSelectStage={handleOverride}
+        onSelectAutomatic={handleUseAutomatic}
+      />
+    </FormSectionCard>
   );
 }

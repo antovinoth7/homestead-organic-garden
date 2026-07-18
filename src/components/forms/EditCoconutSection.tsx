@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { PlantFormStateReturn, sanitizeNumberText } from '../../hooks/usePlantFormState';
 import { createStyles } from '../../styles/plantFormStyles';
-import CollapsibleSection from '../CollapsibleSection';
+import { FormSectionCard } from './FormSectionCard';
 import { toLocalDateString, formatDateDisplay } from '../../utils/dateHelpers';
 
 interface Props {
@@ -15,8 +15,6 @@ export function EditCoconutSection({ formState }: Props): React.JSX.Element | nu
   const {
     theme,
     plantType,
-    sectionExpanded,
-    setSectionExpandedState,
     coconutAgeInfo,
     coconutFrondsCount,
     setCoconutFrondsCount,
@@ -41,15 +39,7 @@ export function EditCoconutSection({ formState }: Props): React.JSX.Element | nu
   if (plantType !== 'coconut_tree') return null;
 
   return (
-    <CollapsibleSection
-      title="Coconut Tracking"
-      icon="analytics"
-      defaultExpanded={false}
-      expanded={sectionExpanded.coconut}
-      onExpandedChange={(expanded) => setSectionExpandedState('coconut', expanded)}
-      hasError={false}
-      sectionStatus="optional"
-    >
+    <FormSectionCard title="Coconut Tracking" icon="analytics-outline" optional>
       <Text style={styles.fieldGroupLabel}>Tree Metrics</Text>
       <View style={styles.statCardsRow}>
         {[
@@ -192,6 +182,6 @@ export function EditCoconutSection({ formState }: Props): React.JSX.Element | nu
           }}
         />
       )}
-    </CollapsibleSection>
+    </FormSectionCard>
   );
 }

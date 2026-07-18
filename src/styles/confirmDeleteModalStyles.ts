@@ -69,6 +69,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 15,
       fontWeight: '700' as const,
       color: theme.text,
+      flexShrink: 1,
     },
     deleteButton: {
       backgroundColor: theme.error,
@@ -77,5 +78,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 15,
       fontWeight: '700' as const,
       color: theme.textInverse,
+      flexShrink: 1,
     },
   });

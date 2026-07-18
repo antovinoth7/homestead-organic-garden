@@ -9,7 +9,13 @@ import {
 } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
-import { getArchivedPlants, restorePlant, permanentlyDeletePlant } from '../services/plants';
+import {
+  getArchivedPlants,
+  restorePlant,
+  permanentlyDeletePlant,
+  restorePlantsForBed,
+  permanentlyDeletePlantsForBed,
+} from '../services/plants';
 import { getBeds, getDeletedBeds, restoreBed } from '../services/beds';
 import { Plant } from '../types/database.types';
 import { createStyles } from '../styles/archivedPlantsStyles';
@@ -38,6 +44,8 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
   const [restoringBedId, setRestoringBedId] = useState<string | null>(null);
   const [pendingPermanentDelete, setPendingPermanentDelete] = useState<Plant | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingGroupDelete, setPendingGroupDelete] = useState<BedGroup | null>(null);
+  const [deletingBedId, setDeletingBedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -133,7 +141,7 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
               setRestoringBedId(group.bedId);
               try {
                 if (group.bedDeleted) await restoreBed(group.bedId);
-                for (const plant of group.data) await restorePlant(plant.id);
+                await restorePlantsForBed(group.data);
                 load();
               } catch (error: unknown) {
                 Alert.alert('Error', getErrorMessage(error));
@@ -153,15 +161,39 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
     if (!plant) return;
     setPendingPermanentDelete(null);
     setDeletingId(plant.id);
+    // Remove the row optimistically so the UI reacts instantly; re-sync on error.
+    setPlants((prev) => prev.filter((p) => p.id !== plant.id));
     try {
       await permanentlyDeletePlant(plant.id);
-      setPlants((prev) => prev.filter((p) => p.id !== plant.id));
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error));
+      load();
     } finally {
       setDeletingId(null);
     }
-  }, [pendingPermanentDelete]);
+  }, [pendingPermanentDelete, load]);
+
+  const handleDeleteGroup = useCallback((group: BedGroup): void => {
+    setPendingGroupDelete(group);
+  }, []);
+
+  const confirmGroupDelete = useCallback(async (): Promise<void> => {
+    const group = pendingGroupDelete;
+    if (!group) return;
+    setPendingGroupDelete(null);
+    setDeletingBedId(group.bedId);
+    const idSet = new Set(group.data.map((p) => p.id));
+    // Remove the whole group optimistically; re-sync on error.
+    setPlants((prev) => prev.filter((p) => !idSet.has(p.id)));
+    try {
+      await permanentlyDeletePlantsForBed(group.data);
+    } catch (error: unknown) {
+      Alert.alert('Error', getErrorMessage(error));
+      load();
+    } finally {
+      setDeletingBedId(null);
+    }
+  }, [pendingGroupDelete, load]);
 
   const keyExtractor = useCallback((item: Plant) => item.id, []);
 
@@ -169,7 +201,9 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
     ({ section }: { section: BedGroup }) => {
       const count = section.data.length;
       const isRestoring = restoringBedId === section.bedId;
+      const isDeleting = deletingBedId === section.bedId;
       const canRestoreGroup = section.bedId !== NO_BED_KEY;
+      const groupBusy = restoringBedId !== null || deletingBedId !== null || restoringId !== null;
       return (
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderLeft}>
@@ -181,22 +215,43 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
               {section.bedDeleted ? ' · bed deleted' : ''}
             </Text>
           </View>
-          {canRestoreGroup && (
+          <View style={styles.sectionHeaderActions}>
+            {canRestoreGroup && (
+              <TouchableOpacity
+                style={styles.sectionRestoreButton}
+                onPress={() => handleRestoreGroup(section)}
+                disabled={groupBusy}
+              >
+                <Ionicons name="arrow-undo" size={16} color={theme.textInverse} />
+                <Text style={styles.sectionRestoreText}>
+                  {isRestoring ? 'Restoring...' : 'Restore all'}
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              style={styles.sectionRestoreButton}
-              onPress={() => handleRestoreGroup(section)}
-              disabled={isRestoring || restoringId !== null}
+              style={styles.sectionDeleteButton}
+              onPress={() => handleDeleteGroup(section)}
+              disabled={groupBusy}
             >
-              <Ionicons name="arrow-undo" size={16} color={theme.textInverse} />
-              <Text style={styles.sectionRestoreText}>
-                {isRestoring ? 'Restoring...' : 'Restore all'}
+              <Ionicons name="trash-outline" size={16} color={theme.error} />
+              <Text style={styles.sectionDeleteText}>
+                {isDeleting ? 'Deleting...' : 'Delete all'}
               </Text>
             </TouchableOpacity>
-          )}
+          </View>
         </View>
       );
     },
-    [styles, theme.textInverse, handleRestoreGroup, restoringBedId, restoringId]
+    [
+      styles,
+      theme.textInverse,
+      theme.error,
+      handleRestoreGroup,
+      handleDeleteGroup,
+      restoringBedId,
+      deletingBedId,
+      restoringId,
+    ]
   );
 
   const renderItem = useCallback(
@@ -221,7 +276,12 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
             <TouchableOpacity
               style={styles.restoreButton}
               onPress={() => handleRestore(item)}
-              disabled={restoringId === item.id || restoringBedId !== null || deletingId === item.id}
+              disabled={
+                restoringId === item.id ||
+                restoringBedId !== null ||
+                deletingBedId !== null ||
+                deletingId === item.id
+              }
             >
               <Ionicons name="arrow-undo" size={18} color={theme.primary} />
               <Text style={styles.restoreText}>
@@ -231,7 +291,12 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={() => setPendingPermanentDelete(item)}
-              disabled={deletingId === item.id || restoringId === item.id}
+              disabled={
+                deletingId === item.id ||
+                restoringId === item.id ||
+                restoringBedId !== null ||
+                deletingBedId !== null
+              }
             >
               <Ionicons name="trash-outline" size={16} color={theme.error} />
               <Text style={styles.deleteText}>
@@ -242,7 +307,16 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
         </View>
       );
     },
-    [styles, handleRestore, restoringId, restoringBedId, deletingId, theme.primary, theme.error]
+    [
+      styles,
+      handleRestore,
+      restoringId,
+      restoringBedId,
+      deletingId,
+      deletingBedId,
+      theme.primary,
+      theme.error,
+    ]
   );
 
   return (
@@ -287,6 +361,21 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
         confirmLabel="Delete forever"
         onCancel={() => setPendingPermanentDelete(null)}
         onConfirm={confirmPermanentDelete}
+      />
+
+      <ConfirmDeleteModal
+        visible={pendingGroupDelete !== null}
+        title="Delete all permanently?"
+        message={
+          pendingGroupDelete
+            ? `This permanently removes all ${pendingGroupDelete.data.length} plant${
+                pendingGroupDelete.data.length === 1 ? '' : 's'
+              } in “${pendingGroupDelete.title}”, their tasks and photos. This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete all forever"
+        onCancel={() => setPendingGroupDelete(null)}
+        onConfirm={confirmGroupDelete}
       />
     </View>
   );

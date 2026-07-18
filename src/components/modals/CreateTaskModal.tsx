@@ -145,9 +145,28 @@ export default function CreateTaskModal({
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Create Task</Text>
-            <TouchableOpacity style={styles.modalCloseButton} onPress={handleClose}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={handleClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
               <Ionicons name="close" size={20} color={theme.textInverse} />
+            </TouchableOpacity>
+            <View style={styles.modalTitleWrap}>
+              <Text style={styles.modalTitle} numberOfLines={1}>
+                Create Task
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.modalSaveButton, loading && styles.modalSaveButtonDisabled]}
+              onPress={handleCreateTask}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.modalSaveText, loading && styles.modalSaveTextDisabled]}>
+                {loading ? 'Creating...' : 'Create Task'}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -155,6 +174,7 @@ export default function CreateTaskModal({
             style={styles.modalScroll}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: Math.max(bottomInset, 12) }}
           >
             <View style={styles.modalBody}>
               <ThemedDropdown
@@ -424,18 +444,6 @@ export default function CreateTaskModal({
               )}
             </View>
           </ScrollView>
-
-          <View style={[styles.modalFooter, { paddingBottom: Math.max(bottomInset, 12) }]}>
-            <TouchableOpacity
-              style={[styles.createButton, loading && styles.createButtonDisabled]}
-              onPress={handleCreateTask}
-              disabled={loading}
-            >
-              <Text style={styles.createButtonText}>
-                {loading ? 'Creating...' : 'Create Task'}
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>

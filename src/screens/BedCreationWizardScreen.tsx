@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { logger } from '@/utils/logger';
 import { useBedCreationWizard } from '@/hooks/useBedCreationWizard';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import DiscardChangesModal from '@/components/modals/DiscardChangesModal';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -40,6 +41,9 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
+  const keyboardVisible = useKeyboardVisible();
+  // Keyboard covers the nav-bar area, so its inset would become a dead gap.
+  const footerPaddingBottom = keyboardVisible ? 12 : Math.max(insets.bottom, 12);
   const navigation = useNavigation<BedCreationWizardNavigationProp>();
   const route = useRoute<BedCreationWizardRouteProp>();
   const prefillType = route.params?.prefillType;
@@ -303,7 +307,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
         )}
 
         {/* Navigation buttons */}
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={[styles.footer, { paddingBottom: footerPaddingBottom }]}>
           {wizard.currentStep > 1 ? (
             <TouchableOpacity
               style={styles.backButton}

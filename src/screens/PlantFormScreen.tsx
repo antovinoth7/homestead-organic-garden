@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import { usePlantFormState } from '../hooks/usePlantFormState';
-import { PlantAddWizard } from '../components/forms/PlantAddWizard';
+import { PlantAddForm } from '../components/forms/PlantAddForm';
 import { PlantEditForm } from '../components/forms/PlantEditForm';
 import DiscardChangesModal from '../components/modals/DiscardChangesModal';
 import PhotoSourceModal from '../components/modals/PhotoSourceModal';
@@ -16,7 +16,7 @@ export default function PlantFormScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       {!formState.plantId ? (
-        <PlantAddWizard formState={formState} />
+        <PlantAddForm formState={formState} />
       ) : (
         <PlantEditForm formState={formState} />
       )}

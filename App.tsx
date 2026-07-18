@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
@@ -18,7 +18,12 @@ import { runPendingMigrations } from './src/migrations';
 import { subscribeToNetworkChanges } from './src/utils/networkState';
 import { flushOfflineQueue } from './src/services/offlineSync';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  SafeAreaInsetsContext,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import { useOfflineStatus } from './src/hooks/useOfflineStatus';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Screens & Navigation
@@ -184,6 +189,16 @@ const AppRoot = (): React.JSX.Element | null => {
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
   const { resolvedMode } = useThemeMode();
+  const insets = useSafeAreaInsets();
+  const { isOnline, pendingCount } = useOfflineStatus();
+
+  // The offline banner absorbs the status-bar inset itself, so while it is
+  // visible the screens below must not pad for that inset a second time.
+  const offlineBannerVisible = !!user && (!isOnline || pendingCount > 0);
+  const contentInsets = useMemo(
+    () => (offlineBannerVisible ? { ...insets, top: 0 } : insets),
+    [offlineBannerVisible, insets]
+  );
 
   // Update Android navigation bar button style to match theme
   useEffect(() => {
@@ -378,15 +393,17 @@ const AppRoot = (): React.JSX.Element | null => {
         translucent={true}
       />
       {user && <OfflineBanner />}
-      <NavigationContainer theme={navigationTheme}>
-        <RootStack.Navigator screenOptions={{ headerShown: false }}>
-          {user ? (
-            <RootStack.Screen name="Main" component={AuthedNavigator} />
-          ) : (
-            <RootStack.Screen name="Auth" component={AuthScreen} />
-          )}
-        </RootStack.Navigator>
-      </NavigationContainer>
+      <SafeAreaInsetsContext.Provider value={contentInsets}>
+        <NavigationContainer theme={navigationTheme}>
+          <RootStack.Navigator screenOptions={{ headerShown: false }}>
+            {user ? (
+              <RootStack.Screen name="Main" component={AuthedNavigator} />
+            ) : (
+              <RootStack.Screen name="Auth" component={AuthScreen} />
+            )}
+          </RootStack.Navigator>
+        </NavigationContainer>
+      </SafeAreaInsetsContext.Provider>
     </>
   );
 };

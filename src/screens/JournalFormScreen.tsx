@@ -19,6 +19,7 @@ import { createJournalEntry, updateJournalEntry, saveJournalImage } from '../ser
 import { getAllPlants } from '../services/plants';
 import { Plant, JournalEntryType } from '../types/database.types';
 import { useBedOptions } from '@/hooks/useBedOptions';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -50,6 +51,9 @@ export default function JournalFormScreen(): React.JSX.Element {
   const initialPlantId = route.params?.initialPlantId;
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const keyboardVisible = useKeyboardVisible();
+  // Keyboard covers the nav-bar area, so its inset would become a dead gap.
+  const footerPaddingBottom = keyboardVisible ? 8 : Math.max(insets.bottom, 8);
   const isEditing = !!editEntry;
 
   const [entryType, setEntryType] = useState<JournalEntryType>(
@@ -323,6 +327,8 @@ export default function JournalFormScreen(): React.JSX.Element {
         <Text style={styles.title}>{isEditing ? 'Edit Entry' : 'New Entry'}</Text>
       </View>
 
+      {/* KAV padding keeps the footer above the keyboard; the footer drops its
+          nav-bar inset while the keyboard is open (see footerPaddingBottom). */}
       <KeyboardAvoidingView style={styles.scrollWrapper} behavior="padding">
       <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
         {/* Entry Type Selector */}
@@ -714,7 +720,7 @@ export default function JournalFormScreen(): React.JSX.Element {
 
       </ScrollView>
 
-      <View style={[styles.stickySaveContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      <View style={[styles.stickySaveContainer, { paddingBottom: footerPaddingBottom }]}>
         <TouchableOpacity
           onPress={handleSave}
           disabled={loading}

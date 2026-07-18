@@ -38,6 +38,7 @@ import { getErrorMessage } from '../utils/errorLogging';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { PlantFilterSheet } from '../components/PlantFilterSheet';
 import { UndoToast } from '../components/UndoToast';
+import { ConfirmDeleteModal } from '../components/modals/ConfirmDeleteModal';
 import { useBedOptions } from '@/hooks/useBedOptions';
 import { isPlantArchived } from '../utils/plantHelpers';
 
@@ -87,6 +88,8 @@ export default function PlantsScreen(): React.JSX.Element {
     plant: Plant;
     index: number;
   } | null>(null);
+  // Active plant awaiting the themed delete-confirmation modal.
+  const [confirmDelete, setConfirmDelete] = useState<Plant | null>(null);
   const undoProgress = useRef(new Animated.Value(1)).current;
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openSwipeableRef = useRef<Swipeable | null>(null);
@@ -250,58 +253,63 @@ export default function PlantsScreen(): React.JSX.Element {
     [loadPlants]
   );
 
+  const startPendingDelete = useCallback(
+    (plant: Plant, index: number) => {
+      // Cancel any in-flight undo for the previous pending delete
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current);
+        if (pendingDelete) {
+          void commitDelete(pendingDelete.plant);
+        }
+      }
+
+      // Optimistic remove
+      setPlants((prev) => prev.filter((p) => p.id !== plant.id));
+      setPendingDelete({ id: plant.id, plant, index });
+
+      // Animate progress bar from full → empty over 4 seconds
+      undoProgress.setValue(1);
+      Animated.timing(undoProgress, {
+        toValue: 0,
+        duration: 4000,
+        useNativeDriver: false,
+      }).start();
+
+      undoTimerRef.current = setTimeout(() => {
+        setPendingDelete(null);
+        undoTimerRef.current = null;
+        void commitDelete(plant);
+      }, 4000);
+    },
+    [pendingDelete, commitDelete, undoProgress]
+  );
+
   const handleDelete = useCallback(
     (id: string) => {
       const index = plants.findIndex((p) => p.id === id);
       if (index === -1) return;
       const plant = plants[index]!;
 
-      const startPendingDelete = (): void => {
-        // Cancel any in-flight undo for the previous pending delete
-        if (undoTimerRef.current) {
-          clearTimeout(undoTimerRef.current);
-          if (pendingDelete) {
-            void commitDelete(pendingDelete.plant);
-          }
-        }
-
-        // Optimistic remove
-        setPlants((prev) => prev.filter((p) => p.id !== id));
-        setPendingDelete({ id, plant, index });
-
-        // Animate progress bar from full → empty over 4 seconds
-        undoProgress.setValue(1);
-        Animated.timing(undoProgress, {
-          toValue: 0,
-          duration: 4000,
-          useNativeDriver: false,
-        }).start();
-
-        undoTimerRef.current = setTimeout(() => {
-          setPendingDelete(null);
-          undoTimerRef.current = null;
-          void commitDelete(plant);
-        }, 4000);
-      };
-
       // Active plants are still deletable, but confirm first since deleting one
       // also archives it (ends its place in the bed's rotation).
       if (!isPlantArchived(plant)) {
-        Alert.alert(
-          'Delete plant?',
-          `This archives and deletes “${plant.name}”. You’ll have a few seconds to undo.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete', style: 'destructive', onPress: startPendingDelete },
-          ]
-        );
+        setConfirmDelete(plant);
         return;
       }
 
-      startPendingDelete();
+      startPendingDelete(plant, index);
     },
-    [plants, pendingDelete, commitDelete, undoProgress]
+    [plants, startPendingDelete]
   );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!confirmDelete) return;
+    const plant = confirmDelete;
+    setConfirmDelete(null);
+    const index = plants.findIndex((p) => p.id === plant.id);
+    if (index === -1) return;
+    startPendingDelete(plant, index);
+  }, [confirmDelete, plants, startPendingDelete]);
 
   const handleUndo = useCallback(() => {
     if (!pendingDelete) return;
@@ -902,6 +910,13 @@ export default function PlantsScreen(): React.JSX.Element {
       />
 
       <AnimatedFAB onPress={() => navigation.navigate('PlantForm')} />
+      <ConfirmDeleteModal
+        visible={confirmDelete !== null}
+        title="Delete plant?"
+        message={`This archives and deletes “${confirmDelete?.name ?? ''}”. You’ll have a few seconds to undo.`}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
       {renderUndoToast()}
       <UndoToast
         visible={savedToast !== null}

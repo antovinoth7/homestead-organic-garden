@@ -814,6 +814,123 @@ export const restorePlant = async (id: string): Promise<Plant> => {
 };
 
 /**
+ * Restore every plant in a group in one shot — the "Restore all" action on the
+ * Archived Plants screen.
+ *
+ * Collapses what used to be a sequential loop of N×(ownership getDoc + updateDoc +
+ * getDoc re-read + image resolve + AsyncStorage rewrite) into a single writeBatch,
+ * one cache invalidate, and one AsyncStorage rewrite. Callers pass plants already
+ * fetched for the user, so per-plant ownership re-verification is skipped. The
+ * caller re-fetches fresh state afterward, so this does not need to return the
+ * hydrated plants.
+ */
+export const restorePlantsForBed = async (plants: Plant[]): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  if (plants.length === 0) return;
+
+  await refreshAuthToken();
+
+  const ids = plants.map((p) => p.id);
+
+  const batch = writeBatch(db);
+  for (const id of ids) {
+    batch.update(doc(db, PLANTS_COLLECTION, id), {
+      is_deleted: false,
+      deleted_at: null,
+    });
+  }
+  await writeOrQueue(
+    ids.map((id) => ({
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'update' as const,
+      payload: { is_deleted: false, deleted_at: null },
+    })),
+    () => batch.commit()
+  );
+
+  // The restored plants become active again — invalidate so the Plants tab
+  // re-fetches them instead of serving a stale (deleted-out) warm cache.
+  invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  // Update local AsyncStorage cache once: clear the deletion flags on matching rows.
+  const idSet = new Set(ids);
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(
+    KEYS.PLANTS,
+    cachedPlants.map((p) =>
+      idSet.has(p.id) ? { ...p, is_deleted: false, deleted_at: null } : p
+    )
+  );
+};
+
+/**
+ * Permanently remove every plant in a group (hard delete) — the "Delete all"
+ * action on the Archived Plants screen.
+ *
+ * Bulk counterpart to permanentlyDeletePlant: collapses N×(ownership getDoc +
+ * deleteDoc + AsyncStorage rewrite + task cascade) into a single writeBatch, one
+ * cache invalidate, one AsyncStorage rewrite, and one task cascade. Callers pass
+ * plants already fetched for the user, so per-plant ownership re-verification is
+ * skipped. Not reversible. Journal entries are intentionally kept.
+ */
+export const permanentlyDeletePlantsForBed = async (plants: Plant[]): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  if (plants.length === 0) return;
+
+  await refreshAuthToken();
+
+  const ids = plants.map((p) => p.id);
+
+  const batch = writeBatch(db);
+  for (const id of ids) {
+    batch.delete(doc(db, PLANTS_COLLECTION, id));
+  }
+  await writeOrQueue(
+    ids.map((id) => ({
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'delete' as const,
+      payload: null,
+    })),
+    () => batch.commit()
+  );
+
+  invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  // Update local AsyncStorage cache once.
+  const idSet = new Set(ids);
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(
+    KEYS.PLANTS,
+    cachedPlants.filter((p) => !idSet.has(p.id))
+  );
+
+  // Cascade: delete orphaned tasks and logs for all plants at once.
+  try {
+    const { deleteTasksForPlantIds } = await import('./tasks');
+    await deleteTasksForPlantIds(ids);
+  } catch (error) {
+    logger.warn('Failed to cascade-delete tasks for deleted plants', error as Error);
+  }
+
+  // Best-effort: purge each plant's local photo file. We already hold full Plant
+  // objects, so no getCachedPlant lookup is needed.
+  for (const plant of plants) {
+    const photoIdentifier = plant.photo_filename ?? plant.photo_url ?? null;
+    if (!photoIdentifier) continue;
+    try {
+      const uri = await resolveLocalImageUri(photoIdentifier);
+      await deleteImageLocally(uri);
+    } catch (error) {
+      logger.warn('Failed to delete local plant image', error as Error);
+    }
+  }
+};
+
+/**
  * Save an image to local storage and return local URI + filename
  * This should be called BEFORE creating/updating a plant
  * @param sourceUri - Source image URI (from picker or camera)

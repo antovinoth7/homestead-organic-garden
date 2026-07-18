@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/photoSourceModalStyles';
 
@@ -9,20 +10,19 @@ type PhotoSourceModalProps = {
   onClose: () => void;
   onCamera: () => void;
   onLibrary: () => void;
-  title?: string;
-  subtitle?: string;
 };
 
+/** Bottom action sheet for picking a photo source (camera / album). */
 export default function PhotoSourceModal({
   visible,
   onClose,
   onCamera,
   onLibrary,
-  title = 'Add photo',
-  subtitle = 'Choose a source',
 }: PhotoSourceModalProps): React.JSX.Element {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const sheetPaddingBottom = Math.max(insets.bottom, 12);
 
   const handleAction = (action: () => void): void => {
     onClose();
@@ -30,40 +30,39 @@ export default function PhotoSourceModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.subtitle}>{subtitle}</Text>
-            </View>
+        <View style={[styles.sheet, { paddingBottom: sheetPaddingBottom }]}>
+          <View style={styles.optionGroup}>
             <TouchableOpacity
-              onPress={onClose}
-              style={styles.closeButton}
-              accessibilityLabel="Close"
+              style={styles.optionRow}
+              onPress={() => handleAction(onCamera)}
+              accessibilityRole="button"
+              accessibilityLabel="Take photo"
             >
-              <Ionicons name="close" size={18} color={theme.textSecondary} />
+              <Ionicons name="camera-outline" size={20} color={theme.primary} />
+              <Text style={styles.optionText}>Take Photo</Text>
             </TouchableOpacity>
-          </View>
-          <View style={styles.actions}>
+            <View style={styles.optionDivider} />
             <TouchableOpacity
-              style={[styles.actionButton, styles.actionPrimary]}
+              style={styles.optionRow}
               onPress={() => handleAction(onLibrary)}
+              accessibilityRole="button"
+              accessibilityLabel="Choose from album"
             >
-              <View style={styles.iconWrap}>
-                <Ionicons name="images-outline" size={18} color={theme.primary} />
-              </View>
-              <Text style={styles.actionText}>Library</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={() => handleAction(onCamera)}>
-              <View style={styles.iconWrap}>
-                <Ionicons name="camera-outline" size={18} color={theme.primary} />
-              </View>
-              <Text style={styles.actionText}>Camera</Text>
+              <Ionicons name="images-outline" size={20} color={theme.primary} />
+              <Text style={styles.optionText}>Choose from album</Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>

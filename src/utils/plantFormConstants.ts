@@ -1,5 +1,5 @@
 /**
- * Constants and pure helpers shared between PlantAddWizard, PlantEditForm,
+ * Constants and pure helpers shared between PlantAddForm, PlantEditForm,
  * and usePlantFormState.
  *
  * Note: CATEGORY_OPTIONS is generated from CATEGORY_LABELS in plantLabels.ts to

@@ -7,13 +7,42 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       backgroundColor: theme.background,
     },
-    editButton: {
+    // --- Immersive hero header: floating buttons over the full-bleed photo,
+    // --- swapped for a solid compact row once the tab bar pins.
+    headerOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingBottom: 6,
+    },
+    headerOverlayStuck: {
+      backgroundColor: theme.background,
+    },
+    headerOverlaySpacer: {
+      flex: 1,
+    },
+    floatingCircleButton: {
       width: 40,
       height: 40,
       borderRadius: 20,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    stickyTabWrapStuck: {
+      backgroundColor: theme.background,
+    },
+    stuckHeaderTitle: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.text,
+      textAlign: 'center',
     },
     photo: {
       width: '100%',
@@ -25,7 +54,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
     },
     content: {
-      padding: 24,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
     },
     keyInfoWrapper: {
       paddingHorizontal: 24,

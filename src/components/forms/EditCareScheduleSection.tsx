@@ -10,7 +10,7 @@ import {
 import { createStyles } from '../../styles/plantFormStyles';
 import { createEditStyles } from '../../styles/plantEditFormStyles';
 import { createEnrichedSectionStyles } from '../../styles/enrichedSectionStyles';
-import CollapsibleSection from '../CollapsibleSection';
+import { FormSectionCard } from './FormSectionCard';
 import ThemedDropdown from '../ThemedDropdown';
 import { CarePlanSummary } from './CarePlanSummary';
 import { buildCarePlanRows } from '../../utils/carePlanDisplay';
@@ -21,6 +21,9 @@ interface Props {
 
 /** Row keys of the profile-seeded, display-only care fields. */
 const INFO_ROW_KEYS = ['sunlight', 'waterNeeds'];
+
+/** Only these types get a harvest season; ornamentals and coconut trees don't. */
+const HARVEST_SEASON_PLANT_TYPES = ['vegetable', 'fruit_tree', 'herb'];
 
 const SOIL_TYPE_ITEMS = [
   { label: 'Garden Soil', value: 'garden_soil' },
@@ -49,11 +52,8 @@ const FERTILISER_ITEMS = [
 export function EditCareScheduleSection({ formState }: Props): React.JSX.Element {
   const {
     theme,
-    sectionExpanded,
-    setSectionExpandedState,
     showValidationErrors,
     validationErrors,
-    sectionStatuses,
     plantType,
     sunlight,
     waterRequirement,
@@ -65,6 +65,10 @@ export function EditCareScheduleSection({ formState }: Props): React.JSX.Element
     setFertilisingFrequency,
     preferredFertiliser,
     setPreferredFertiliser,
+    harvestSeason,
+    setHarvestSeason,
+    harvestSeasonOptions,
+    expectedHarvestDate,
     mulchingUsed,
     setMulchingUsed,
     pruningFrequency,
@@ -114,308 +118,140 @@ export function EditCareScheduleSection({ formState }: Props): React.JSX.Element
   );
 
   return (
-    <CollapsibleSection
-      title="Care & Schedule"
-      icon="leaf"
-      defaultExpanded={false}
-      expanded={sectionExpanded.care}
-      onExpandedChange={(expanded) => setSectionExpandedState('care', expanded)}
-      hasError={hasCareErrors}
-      sectionStatus={showValidationErrors ? undefined : sectionStatuses.care}
-    >
-      <CarePlanSummary compact rows={infoRows} />
+    <View>
+      <FormSectionCard title="Care & Schedule" icon="water-outline" hasError={hasCareErrors}>
+        <CarePlanSummary compact rows={infoRows} />
 
-      <ThemedDropdown
-        items={SOIL_TYPE_ITEMS}
-        selectedValue={soilType}
-        onValueChange={setSoilType}
-        placeholder="Select soil type"
-        label="Soil Type"
-      />
-      <View style={editStyles.spacerMedium} />
+        <ThemedDropdown
+          items={SOIL_TYPE_ITEMS}
+          selectedValue={soilType}
+          onValueChange={setSoilType}
+          placeholder="Select soil type"
+          label="Soil Type"
+        />
+        <View style={editStyles.spacerMedium} />
 
-      <ThemedDropdown
-        items={FERTILISER_ITEMS}
-        selectedValue={preferredFertiliser}
-        onValueChange={setPreferredFertiliser}
-        label="Preferred Fertiliser"
-        placeholder="Preferred Fertiliser"
-      />
-      <View style={editStyles.spacerMedium} />
+        <ThemedDropdown
+          items={FERTILISER_ITEMS}
+          selectedValue={preferredFertiliser}
+          onValueChange={setPreferredFertiliser}
+          label="Preferred Fertiliser"
+          placeholder="Preferred Fertiliser"
+        />
+        <View style={editStyles.spacerMedium} />
 
-      <TouchableOpacity
-        style={[styles.settingToggle, mulchingUsed && styles.settingToggleActive]}
-        onPress={() => setMulchingUsed(!mulchingUsed)}
-        activeOpacity={0.85}
-        accessibilityRole="switch"
-        accessibilityState={{ checked: mulchingUsed }}
-      >
-        <View style={styles.settingToggleLeft}>
+        <TouchableOpacity
+          style={[styles.settingToggle, mulchingUsed && styles.settingToggleActive]}
+          onPress={() => setMulchingUsed(!mulchingUsed)}
+          activeOpacity={0.85}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: mulchingUsed }}
+        >
+          <View style={styles.settingToggleLeft}>
+            <View
+              style={[
+                styles.settingToggleIconWrap,
+                mulchingUsed && styles.settingToggleIconWrapActive,
+              ]}
+            >
+              <Ionicons
+                name={mulchingUsed ? 'layers' : 'layers-outline'}
+                size={18}
+                color={mulchingUsed ? theme.primary : theme.textSecondary}
+              />
+            </View>
+            <Text
+              style={[styles.settingToggleLabel, mulchingUsed && styles.settingToggleLabelActive]}
+            >
+              Mulching Used
+            </Text>
+          </View>
           <View
-            style={[
-              styles.settingToggleIconWrap,
-              mulchingUsed && styles.settingToggleIconWrapActive,
-            ]}
+            style={[styles.settingSwitchTrack, mulchingUsed && styles.settingSwitchTrackActive]}
           >
-            <Ionicons
-              name={mulchingUsed ? 'layers' : 'layers-outline'}
-              size={18}
-              color={mulchingUsed ? theme.primary : theme.textSecondary}
+            <View
+              style={[styles.settingSwitchThumb, mulchingUsed && styles.settingSwitchThumbActive]}
             />
           </View>
-          <Text
-            style={[styles.settingToggleLabel, mulchingUsed && styles.settingToggleLabelActive]}
-          >
-            Mulching Used
-          </Text>
-        </View>
-        <View style={[styles.settingSwitchTrack, mulchingUsed && styles.settingSwitchTrackActive]}>
-          <View
-            style={[styles.settingSwitchThumb, mulchingUsed && styles.settingSwitchThumbActive]}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={editStyles.adjustScheduleHeader}
+          onPress={() => setAdjustExpanded(!adjustExpanded)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: adjustExpanded }}
+          accessibilityLabel="Adjust schedule"
+        >
+          <Ionicons name="options-outline" size={18} color={theme.primary} />
+          <View style={editStyles.flexOne}>
+            <Text style={editStyles.adjustScheduleHeaderText}>Adjust schedule</Text>
+            <Text style={editStyles.adjustScheduleHint}>
+              {['fruit_tree', 'shrub', 'herb'].includes(plantType)
+                ? 'Watering, feeding & pruning'
+                : 'Watering & feeding'}
+            </Text>
+          </View>
+          <Ionicons
+            name={adjustExpanded ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color={theme.textSecondary}
           />
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={editStyles.adjustScheduleHeader}
-        onPress={() => setAdjustExpanded(!adjustExpanded)}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: adjustExpanded }}
-        accessibilityLabel="Adjust schedule"
-      >
-        <Ionicons name="options-outline" size={18} color={theme.primary} />
-        <View style={editStyles.flexOne}>
-          <Text style={editStyles.adjustScheduleHeaderText}>Adjust schedule</Text>
-          <Text style={editStyles.adjustScheduleHint}>
-            {['fruit_tree', 'shrub', 'herb'].includes(plantType)
-              ? 'Watering, feeding & pruning'
-              : 'Watering & feeding'}
-          </Text>
-        </View>
-        <Ionicons
-          name={adjustExpanded ? 'chevron-up' : 'chevron-down'}
-          size={18}
-          color={theme.textSecondary}
-        />
-      </TouchableOpacity>
-
-      {adjustExpanded && (
-        <>
-          <View
-            style={[styles.stepperCard, !wateringEnabled && enrichedStyles.stepperCardDisabled]}
-          >
-            <View style={enrichedStyles.toggleHeader}>
-              <View style={enrichedStyles.toggleHeaderLeft}>
-                <View style={styles.stepperIconWrap}>
-                  <Ionicons
-                    name="water"
-                    size={18}
-                    color={wateringEnabled ? theme.primary : theme.textTertiary}
-                  />
-                </View>
-                <Text style={styles.stepperLabel}>Water every</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setWateringEnabled(!wateringEnabled)}
-                activeOpacity={0.85}
-                accessibilityRole="switch"
-                accessibilityState={{ checked: wateringEnabled }}
-              >
-                <View
-                  style={[
-                    styles.settingSwitchTrack,
-                    wateringEnabled && styles.settingSwitchTrackActive,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.settingSwitchThumb,
-                      wateringEnabled && styles.settingSwitchThumbActive,
-                    ]}
-                  />
-                </View>
-              </TouchableOpacity>
-            </View>
-            {wateringEnabled ? (
-              <>
-                <View style={styles.stepperRow}>
-                  <TouchableOpacity
-                    style={styles.stepperButton}
-                    onPress={() => adjustFrequency(wateringFrequency, -1, setWateringFrequency)}
-                    activeOpacity={0.6}
-                    accessibilityLabel="Decrease watering frequency"
-                  >
-                    <Ionicons name="remove" size={20} color={theme.primary} />
-                  </TouchableOpacity>
-                  <View style={styles.stepperValueWrap}>
-                    <TextInput
-                      style={styles.stepperValueInput}
-                      value={wateringFrequency}
-                      onChangeText={(text) => setWateringFrequency(sanitizeNumberText(text))}
-                      keyboardType="numeric"
-                      placeholder="—"
-                      placeholderTextColor={theme.inputPlaceholder}
-                      maxLength={3}
-                      textAlign="center"
-                    />
-                    <Text style={styles.stepperUnit}>days</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.stepperButton}
-                    onPress={() => adjustFrequency(wateringFrequency, 1, setWateringFrequency)}
-                    activeOpacity={0.6}
-                    accessibilityLabel="Increase watering frequency"
-                  >
-                    <Ionicons name="add" size={20} color={theme.primary} />
-                  </TouchableOpacity>
-                </View>
-                {wateringFrequency ? (
-                  <Text style={[styles.stepperHint, { color: theme.primary }]}>
-                    {getFrequencyLabel(wateringFrequency)}
-                  </Text>
-                ) : null}
-              </>
-            ) : (
-              <Text style={enrichedStyles.toggleDisabledText}>No task · rain-fed or manual</Text>
-            )}
-          </View>
-
-          <View
-            style={[styles.stepperCard, !fertilisingEnabled && enrichedStyles.stepperCardDisabled]}
-          >
-            <View style={enrichedStyles.toggleHeader}>
-              <View style={enrichedStyles.toggleHeaderLeft}>
-                <View style={[styles.stepperIconWrap, { backgroundColor: theme.accentLight }]}>
-                  <Ionicons
-                    name="nutrition"
-                    size={18}
-                    color={fertilisingEnabled ? theme.accent : theme.textTertiary}
-                  />
-                </View>
-                <Text style={styles.stepperLabel}>Feed every</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setFertilisingEnabled(!fertilisingEnabled)}
-                activeOpacity={0.85}
-                accessibilityRole="switch"
-                accessibilityState={{ checked: fertilisingEnabled }}
-              >
-                <View
-                  style={[
-                    styles.settingSwitchTrack,
-                    fertilisingEnabled && styles.settingSwitchTrackActive,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.settingSwitchThumb,
-                      fertilisingEnabled && styles.settingSwitchThumbActive,
-                    ]}
-                  />
-                </View>
-              </TouchableOpacity>
-            </View>
-            {fertilisingEnabled ? (
-              <>
-                <View style={styles.stepperRow}>
-                  <TouchableOpacity
-                    style={[styles.stepperButton, { borderColor: theme.accent }]}
-                    onPress={() =>
-                      adjustFrequency(fertilisingFrequency, -1, setFertilisingFrequency)
-                    }
-                    activeOpacity={0.6}
-                    accessibilityLabel="Decrease feeding frequency"
-                  >
-                    <Ionicons name="remove" size={20} color={theme.accent} />
-                  </TouchableOpacity>
-                  <View style={styles.stepperValueWrap}>
-                    <TextInput
-                      style={styles.stepperValueInput}
-                      value={fertilisingFrequency}
-                      onChangeText={(text) => setFertilisingFrequency(sanitizeNumberText(text))}
-                      keyboardType="numeric"
-                      placeholder="—"
-                      placeholderTextColor={theme.inputPlaceholder}
-                      maxLength={3}
-                      textAlign="center"
-                    />
-                    <Text style={styles.stepperUnit}>days</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.stepperButton, { borderColor: theme.accent }]}
-                    onPress={() =>
-                      adjustFrequency(fertilisingFrequency, 1, setFertilisingFrequency)
-                    }
-                    activeOpacity={0.6}
-                    accessibilityLabel="Increase feeding frequency"
-                  >
-                    <Ionicons name="add" size={20} color={theme.accent} />
-                  </TouchableOpacity>
-                </View>
-                {fertilisingFrequency ? (
-                  <Text style={[styles.stepperHint, { color: theme.accent }]}>
-                    {getFrequencyLabel(fertilisingFrequency)}
-                  </Text>
-                ) : null}
-              </>
-            ) : (
-              <Text style={enrichedStyles.toggleDisabledText}>No task · manual feeding only</Text>
-            )}
-          </View>
-
-          {['fruit_tree', 'shrub', 'herb'].includes(plantType) && (
+        {adjustExpanded && (
+          <>
             <View
-              style={[styles.stepperCard, !pruningEnabled && enrichedStyles.stepperCardDisabled]}
+              style={[styles.stepperCard, !wateringEnabled && enrichedStyles.stepperCardDisabled]}
             >
               <View style={enrichedStyles.toggleHeader}>
                 <View style={enrichedStyles.toggleHeaderLeft}>
-                  <View style={[styles.stepperIconWrap, { backgroundColor: theme.warningLight }]}>
+                  <View style={styles.stepperIconWrap}>
                     <Ionicons
-                      name="cut"
+                      name="water"
                       size={18}
-                      color={pruningEnabled ? theme.warning : theme.textTertiary}
+                      color={wateringEnabled ? theme.primary : theme.textTertiary}
                     />
                   </View>
-                  <Text style={styles.stepperLabel}>Prune every</Text>
+                  <Text style={styles.stepperLabel}>Water every</Text>
                 </View>
                 <TouchableOpacity
-                  onPress={() => setPruningEnabled(!pruningEnabled)}
+                  onPress={() => setWateringEnabled(!wateringEnabled)}
                   activeOpacity={0.85}
                   accessibilityRole="switch"
-                  accessibilityState={{ checked: pruningEnabled }}
+                  accessibilityState={{ checked: wateringEnabled }}
                 >
                   <View
                     style={[
                       styles.settingSwitchTrack,
-                      pruningEnabled && styles.settingSwitchTrackActive,
+                      wateringEnabled && styles.settingSwitchTrackActive,
                     ]}
                   >
                     <View
                       style={[
                         styles.settingSwitchThumb,
-                        pruningEnabled && styles.settingSwitchThumbActive,
+                        wateringEnabled && styles.settingSwitchThumbActive,
                       ]}
                     />
                   </View>
                 </TouchableOpacity>
               </View>
-              {pruningEnabled ? (
+              {wateringEnabled ? (
                 <>
                   <View style={styles.stepperRow}>
                     <TouchableOpacity
-                      style={[styles.stepperButton, { borderColor: theme.warning }]}
-                      onPress={() => adjustFrequency(pruningFrequency, -1, setPruningFrequency)}
+                      style={styles.stepperButton}
+                      onPress={() => adjustFrequency(wateringFrequency, -1, setWateringFrequency)}
                       activeOpacity={0.6}
-                      accessibilityLabel="Decrease pruning frequency"
+                      accessibilityLabel="Decrease watering frequency"
                     >
-                      <Ionicons name="remove" size={20} color={theme.warning} />
+                      <Ionicons name="remove" size={20} color={theme.primary} />
                     </TouchableOpacity>
                     <View style={styles.stepperValueWrap}>
                       <TextInput
                         style={styles.stepperValueInput}
-                        value={pruningFrequency}
-                        onChangeText={(text) => setPruningFrequency(sanitizeNumberText(text))}
+                        value={wateringFrequency}
+                        onChangeText={(text) => setWateringFrequency(sanitizeNumberText(text))}
                         keyboardType="numeric"
                         placeholder="—"
                         placeholderTextColor={theme.inputPlaceholder}
@@ -425,27 +261,224 @@ export function EditCareScheduleSection({ formState }: Props): React.JSX.Element
                       <Text style={styles.stepperUnit}>days</Text>
                     </View>
                     <TouchableOpacity
-                      style={[styles.stepperButton, { borderColor: theme.warning }]}
-                      onPress={() => adjustFrequency(pruningFrequency, 1, setPruningFrequency)}
+                      style={styles.stepperButton}
+                      onPress={() => adjustFrequency(wateringFrequency, 1, setWateringFrequency)}
                       activeOpacity={0.6}
-                      accessibilityLabel="Increase pruning frequency"
+                      accessibilityLabel="Increase watering frequency"
                     >
-                      <Ionicons name="add" size={20} color={theme.warning} />
+                      <Ionicons name="add" size={20} color={theme.primary} />
                     </TouchableOpacity>
                   </View>
-                  {pruningFrequency ? (
-                    <Text style={[styles.stepperHint, { color: theme.warning }]}>
-                      {getFrequencyLabel(pruningFrequency)}
+                  {wateringFrequency ? (
+                    <Text style={[styles.stepperHint, { color: theme.primary }]}>
+                      {getFrequencyLabel(wateringFrequency)}
                     </Text>
                   ) : null}
                 </>
               ) : (
-                <Text style={enrichedStyles.toggleDisabledText}>No pruning task scheduled</Text>
+                <Text style={enrichedStyles.toggleDisabledText}>No task · rain-fed or manual</Text>
               )}
             </View>
-          )}
-        </>
+
+            <View
+              style={[
+                styles.stepperCard,
+                !fertilisingEnabled && enrichedStyles.stepperCardDisabled,
+              ]}
+            >
+              <View style={enrichedStyles.toggleHeader}>
+                <View style={enrichedStyles.toggleHeaderLeft}>
+                  <View style={[styles.stepperIconWrap, { backgroundColor: theme.accentLight }]}>
+                    <Ionicons
+                      name="nutrition"
+                      size={18}
+                      color={fertilisingEnabled ? theme.accent : theme.textTertiary}
+                    />
+                  </View>
+                  <Text style={styles.stepperLabel}>Feed every</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setFertilisingEnabled(!fertilisingEnabled)}
+                  activeOpacity={0.85}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: fertilisingEnabled }}
+                >
+                  <View
+                    style={[
+                      styles.settingSwitchTrack,
+                      fertilisingEnabled && styles.settingSwitchTrackActive,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.settingSwitchThumb,
+                        fertilisingEnabled && styles.settingSwitchThumbActive,
+                      ]}
+                    />
+                  </View>
+                </TouchableOpacity>
+              </View>
+              {fertilisingEnabled ? (
+                <>
+                  <View style={styles.stepperRow}>
+                    <TouchableOpacity
+                      style={[styles.stepperButton, { borderColor: theme.accent }]}
+                      onPress={() =>
+                        adjustFrequency(fertilisingFrequency, -1, setFertilisingFrequency)
+                      }
+                      activeOpacity={0.6}
+                      accessibilityLabel="Decrease feeding frequency"
+                    >
+                      <Ionicons name="remove" size={20} color={theme.accent} />
+                    </TouchableOpacity>
+                    <View style={styles.stepperValueWrap}>
+                      <TextInput
+                        style={styles.stepperValueInput}
+                        value={fertilisingFrequency}
+                        onChangeText={(text) => setFertilisingFrequency(sanitizeNumberText(text))}
+                        keyboardType="numeric"
+                        placeholder="—"
+                        placeholderTextColor={theme.inputPlaceholder}
+                        maxLength={3}
+                        textAlign="center"
+                      />
+                      <Text style={styles.stepperUnit}>days</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.stepperButton, { borderColor: theme.accent }]}
+                      onPress={() =>
+                        adjustFrequency(fertilisingFrequency, 1, setFertilisingFrequency)
+                      }
+                      activeOpacity={0.6}
+                      accessibilityLabel="Increase feeding frequency"
+                    >
+                      <Ionicons name="add" size={20} color={theme.accent} />
+                    </TouchableOpacity>
+                  </View>
+                  {fertilisingFrequency ? (
+                    <Text style={[styles.stepperHint, { color: theme.accent }]}>
+                      {getFrequencyLabel(fertilisingFrequency)}
+                    </Text>
+                  ) : null}
+                </>
+              ) : (
+                <Text style={enrichedStyles.toggleDisabledText}>No task · manual feeding only</Text>
+              )}
+            </View>
+
+            {['fruit_tree', 'shrub', 'herb'].includes(plantType) && (
+              <View
+                style={[styles.stepperCard, !pruningEnabled && enrichedStyles.stepperCardDisabled]}
+              >
+                <View style={enrichedStyles.toggleHeader}>
+                  <View style={enrichedStyles.toggleHeaderLeft}>
+                    <View style={[styles.stepperIconWrap, { backgroundColor: theme.warningLight }]}>
+                      <Ionicons
+                        name="cut"
+                        size={18}
+                        color={pruningEnabled ? theme.warning : theme.textTertiary}
+                      />
+                    </View>
+                    <Text style={styles.stepperLabel}>Prune every</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setPruningEnabled(!pruningEnabled)}
+                    activeOpacity={0.85}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: pruningEnabled }}
+                  >
+                    <View
+                      style={[
+                        styles.settingSwitchTrack,
+                        pruningEnabled && styles.settingSwitchTrackActive,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.settingSwitchThumb,
+                          pruningEnabled && styles.settingSwitchThumbActive,
+                        ]}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                {pruningEnabled ? (
+                  <>
+                    <View style={styles.stepperRow}>
+                      <TouchableOpacity
+                        style={[styles.stepperButton, { borderColor: theme.warning }]}
+                        onPress={() => adjustFrequency(pruningFrequency, -1, setPruningFrequency)}
+                        activeOpacity={0.6}
+                        accessibilityLabel="Decrease pruning frequency"
+                      >
+                        <Ionicons name="remove" size={20} color={theme.warning} />
+                      </TouchableOpacity>
+                      <View style={styles.stepperValueWrap}>
+                        <TextInput
+                          style={styles.stepperValueInput}
+                          value={pruningFrequency}
+                          onChangeText={(text) => setPruningFrequency(sanitizeNumberText(text))}
+                          keyboardType="numeric"
+                          placeholder="—"
+                          placeholderTextColor={theme.inputPlaceholder}
+                          maxLength={3}
+                          textAlign="center"
+                        />
+                        <Text style={styles.stepperUnit}>days</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.stepperButton, { borderColor: theme.warning }]}
+                        onPress={() => adjustFrequency(pruningFrequency, 1, setPruningFrequency)}
+                        activeOpacity={0.6}
+                        accessibilityLabel="Increase pruning frequency"
+                      >
+                        <Ionicons name="add" size={20} color={theme.warning} />
+                      </TouchableOpacity>
+                    </View>
+                    {pruningFrequency ? (
+                      <Text style={[styles.stepperHint, { color: theme.warning }]}>
+                        {getFrequencyLabel(pruningFrequency)}
+                      </Text>
+                    ) : null}
+                  </>
+                ) : (
+                  <Text style={enrichedStyles.toggleDisabledText}>No pruning task scheduled</Text>
+                )}
+              </View>
+            )}
+          </>
+        )}
+      </FormSectionCard>
+
+      {HARVEST_SEASON_PLANT_TYPES.includes(plantType) && (
+        <FormSectionCard title="Harvest" icon="nutrition-outline">
+          <ThemedDropdown
+            items={[
+              { label: 'Select harvest season', value: '' },
+              ...harvestSeasonOptions.map((s) => ({ label: s, value: s })),
+            ]}
+            selectedValue={harvestSeason}
+            onValueChange={setHarvestSeason}
+            label="Harvest Season"
+            placeholder="Harvest Season"
+          />
+
+          {expectedHarvestDate ? (
+            <View style={styles.infoCard}>
+              <View style={styles.infoCardHeader}>
+                <Ionicons name="calendar" size={20} color={theme.warning} />
+                <Text style={styles.infoCardTitle}>Expected Harvest Date</Text>
+              </View>
+              <Text style={styles.infoCardText}>
+                {new Date(expectedHarvestDate).toLocaleDateString()}
+              </Text>
+              <Text style={styles.infoCardSubtext}>
+                Auto-calculated based on plant variety and planting date
+              </Text>
+            </View>
+          ) : null}
+        </FormSectionCard>
       )}
-    </CollapsibleSection>
+    </View>
   );
 }
