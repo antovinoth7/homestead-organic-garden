@@ -10,6 +10,7 @@ import { HarvestInfoSection } from '@/components/HarvestInfoSection';
 import HarvestHistorySection from '@/components/HarvestHistorySection';
 import { CoconutSection } from '@/components/CoconutSection';
 import { PlantNotesSection } from '@/components/PlantNotesSection';
+import { PlantQuickActions } from '@/components/plantDetail/PlantQuickActions';
 import type { Plant, TaskTemplate, JournalEntry, PlantCareProfile } from '@/types/database.types';
 import type {
   EffectiveGrowthStage,
@@ -33,6 +34,9 @@ interface Props {
   onClearBed: () => void;
   onRecordHarvest: () => void;
   onViewAllHarvests: () => void;
+  onLogPest: () => void;
+  onAddNote: () => void;
+  onAddCareTask: () => void;
 }
 
 /** Instance-specific care content for a planted specimen. */
@@ -52,12 +56,22 @@ export function PlantDetailCareSection({
   onClearBed,
   onRecordHarvest,
   onViewAllHarvests,
+  onLogPest,
+  onAddNote,
+  onAddCareTask,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <View style={styles.content}>
+      <PlantQuickActions
+        onLogHarvest={onRecordHarvest}
+        onLogPest={onLogPest}
+        onAddNote={onAddNote}
+        onAddCareTask={onAddCareTask}
+      />
+
       <GrowthStageSection
         styles={styles}
         theme={theme}

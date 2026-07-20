@@ -22,6 +22,7 @@ const FILTERS: readonly SegmentedTab<HistoryFilter>[] = [
   { key: 'all', label: 'All' },
   { key: 'journal', label: 'Journal' },
   { key: 'task_log', label: 'Care' },
+  { key: 'harvest', label: 'Harvest' },
   { key: 'pest_disease', label: 'Pests & Disease' },
   { key: 'growth_stage', label: 'Growth' },
 ];
@@ -44,6 +45,7 @@ const EMPTY_COPY: Record<HistoryFilter, string> = {
   all: 'Journal entries, completed tasks, pest records and growth changes will appear here.',
   journal: 'No journal entries for this plant yet.',
   task_log: 'No completed care tasks yet.',
+  harvest: 'No harvests logged for this plant yet.',
   pest_disease: 'No pest or disease records yet.',
   growth_stage: 'No growth-stage changes recorded yet.',
 };

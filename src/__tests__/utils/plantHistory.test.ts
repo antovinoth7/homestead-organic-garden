@@ -124,6 +124,28 @@ describe('filterHistoryItems', () => {
     expect(filterHistoryItems(withJournalPest, 'journal')).toHaveLength(1);
   });
 
+  it('includes both harvest journal entries and harvest task logs under the harvest filter', () => {
+    const withHarvests = mergePlantHistory(
+      [
+        makeJournalEntry({ id: 'obs', entry_type: JournalEntryType.Observation }),
+        makeJournalEntry({ id: 'jharvest', entry_type: JournalEntryType.Harvest }),
+      ],
+      [],
+      [],
+      [
+        makeTaskLog({ id: 'tharvest', task_type: 'harvest' }),
+        makeTaskLog({ id: 'tleaves', task_type: 'harvest_leaves' }),
+        makeTaskLog({ id: 'twater', task_type: 'water' }),
+      ]
+    );
+    const harvests = filterHistoryItems(withHarvests, 'harvest');
+    expect(harvests.map((i) => i.id).sort()).toEqual([
+      'journal-jharvest',
+      'task-tharvest',
+      'task-tleaves',
+    ]);
+  });
+
   it('returns an empty list when nothing matches', () => {
     expect(filterHistoryItems([], 'journal')).toEqual([]);
   });

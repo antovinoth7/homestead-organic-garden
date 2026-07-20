@@ -43,7 +43,9 @@ export type RootTabParamList = {
   Home: { refresh?: number } | undefined;
   Plants: NavigatorScreenParams<PlantsStackParamList>;
   Beds: NavigatorScreenParams<BedsStackParamList>;
-  'Care Plan': { resetFilters?: boolean; filterOverdue?: boolean } | undefined;
+  'Care Plan':
+    | { resetFilters?: boolean; filterOverdue?: boolean; openCreateTask?: boolean; prefillPlantId?: string }
+    | undefined;
   Journal: NavigatorScreenParams<JournalStackParamList> | undefined;
   More: NavigatorScreenParams<MoreStackParamList>;
 };
@@ -148,6 +150,7 @@ export type PlantFormScreenRouteProp = RouteProp<PlantsStackParamList, 'PlantFor
 
 // CalendarScreen (Care Plan tab) — receives tab-level params
 export type CalendarScreenRouteProp = RouteProp<RootTabParamList, 'Care Plan'>;
+export type CalendarScreenNavigationProp = BottomTabNavigationProp<RootTabParamList, 'Care Plan'>;
 
 // JournalScreen — navigates within JournalStack only
 export type JournalScreenNavigationProp = NativeStackNavigationProp<

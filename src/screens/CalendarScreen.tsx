@@ -28,8 +28,8 @@ import {
 import { TaskTemplate, TaskType } from '../types/database.types';
 import { Ionicons } from '@expo/vector-icons';
 import { TASK_EMOJIS, TASK_COLORS, TASK_LABELS } from '../utils/taskConstants';
-import { useFocusEffect, useRoute } from '@react-navigation/native';
-import { CalendarScreenRouteProp } from '../types/navigation.types';
+import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
+import { CalendarScreenRouteProp, CalendarScreenNavigationProp } from '../types/navigation.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import { createStyles, getStartOfWeek } from '../styles/calendarStyles';
@@ -99,6 +99,7 @@ const GROUP_OPTIONS: {
 
 export default function CalendarScreen(): React.JSX.Element {
   const route = useRoute<CalendarScreenRouteProp>();
+  const navigation = useNavigation<CalendarScreenNavigationProp>();
   const theme = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
@@ -110,6 +111,10 @@ export default function CalendarScreen(): React.JSX.Element {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showModal, setShowModal] = useState(false);
   const [createTaskInitialDate, setCreateTaskInitialDate] = useState<Date | undefined>(undefined);
+  // Set when a plant deep-links here to create a task (from Plant Detail Quick Actions).
+  const [createTaskPrefillPlantId, setCreateTaskPrefillPlantId] = useState<string | undefined>(
+    undefined
+  );
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskTemplate | null>(null);
   const [taskNotes, setTaskNotes] = useState('');
@@ -336,8 +341,14 @@ export default function CalendarScreen(): React.JSX.Element {
       } else if (route.params?.filterOverdue) {
         setFilterOverdueOnly(true);
       }
+      if (route.params?.openCreateTask) {
+        setCreateTaskPrefillPlantId(route.params.prefillPlantId);
+        setShowModal(true);
+        // Consume the one-shot params so returning to this tab doesn't re-open the modal.
+        navigation.setParams({ openCreateTask: undefined, prefillPlantId: undefined });
+      }
       void loadData(); // debounced — skips if loaded recently
-    }, [loadData, resetTabBar, route, calendarHeight, scrollToTop])
+    }, [loadData, resetTabBar, route, navigation, calendarHeight, scrollToTop])
   );
 
   const handleTaskComplete = useCallback(async (task: TaskTemplate) => {
@@ -1535,9 +1546,14 @@ export default function CalendarScreen(): React.JSX.Element {
           styles={styles}
           bottomInset={insets.bottom}
           initialStartDate={createTaskInitialDate}
-          onClose={() => setShowModal(false)}
+          initialPlantId={createTaskPrefillPlantId}
+          onClose={() => {
+            setShowModal(false);
+            setCreateTaskPrefillPlantId(undefined);
+          }}
           onCreated={() => {
             setShowModal(false);
+            setCreateTaskPrefillPlantId(undefined);
             loadData({ force: true });
           }}
         />

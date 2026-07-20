@@ -19,7 +19,7 @@ export type PlantHistoryItem =
   | { kind: 'growth_stage'; id: string; date: string; entry: GrowthStageHistoryEntry }
   | { kind: 'task_log'; id: string; date: string; log: TaskLog };
 
-export type HistoryFilter = PlantHistoryKind | 'all';
+export type HistoryFilter = PlantHistoryKind | 'all' | 'harvest';
 
 function timeOf(date: string): number {
   const t = new Date(date).getTime();
@@ -68,7 +68,9 @@ export function mergePlantHistory(
  * Filters merged history items by kind; `'all'` returns the list unchanged.
  * The `'pest_disease'` filter also surfaces journal entries of type
  * pest_disease (the new home for pest logging) alongside legacy plant-doc
- * records, so both appear under the plant's "Pests & Disease" view.
+ * records, so both appear under the plant's "Pests & Disease" view. The
+ * `'harvest'` filter likewise merges Harvest journal entries with completed
+ * harvest/harvest_leaves task logs.
  */
 export function filterHistoryItems(
   items: PlantHistoryItem[],
@@ -80,6 +82,16 @@ export function filterHistoryItems(
       (item) =>
         item.kind === 'pest_disease' ||
         (item.kind === 'journal' && item.entry.entry_type === JournalEntryType.PestDisease)
+    );
+  }
+  if (filter === 'harvest') {
+    // Harvests are logged two ways: as Harvest journal entries and as completed
+    // harvest/harvest_leaves care tasks. Surface both under one filter.
+    return items.filter(
+      (item) =>
+        (item.kind === 'journal' && item.entry.entry_type === JournalEntryType.Harvest) ||
+        (item.kind === 'task_log' &&
+          (item.log.task_type === 'harvest' || item.log.task_type === 'harvest_leaves'))
     );
   }
   return items.filter((item) => item.kind === filter);

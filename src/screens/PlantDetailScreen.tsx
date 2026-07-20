@@ -129,6 +129,30 @@ export default function PlantDetailScreen(): React.JSX.Element {
     navigation.navigate('Journal');
   }, [navigation]);
 
+  const openPestForm = useCallback(() => {
+    navigation.navigate('Journal', {
+      screen: 'JournalForm',
+      params: {
+        initialEntryType: JournalEntryType.PestDisease,
+        initialPlantId: plantId,
+      },
+    });
+  }, [navigation, plantId]);
+
+  const openNoteForm = useCallback(() => {
+    navigation.navigate('Journal', {
+      screen: 'JournalForm',
+      params: {
+        initialEntryType: JournalEntryType.Observation,
+        initialPlantId: plantId,
+      },
+    });
+  }, [navigation, plantId]);
+
+  const openCreateTask = useCallback(() => {
+    navigation.navigate('Care Plan', { openCreateTask: true, prefillPlantId: plantId });
+  }, [navigation, plantId]);
+
   if (!plantId) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -255,6 +279,9 @@ export default function PlantDetailScreen(): React.JSX.Element {
             onClearBed={handleClearBed}
             onRecordHarvest={openHarvestForm}
             onViewAllHarvests={openJournal}
+            onLogPest={openPestForm}
+            onAddNote={openNoteForm}
+            onAddCareTask={openCreateTask}
           />
         </View>
 
