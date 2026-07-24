@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Pressable, StyleSheet } from 
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
+import { SheetHandle } from '@/components/SheetHandle';
 import { createStyles } from '@/styles/bedListStyles';
 import { BedType, SunlightLevel } from '@/types/database.types';
 import { BedActiveFilters, BedSortOption } from '@/utils/filterAndSortBeds';
@@ -78,9 +79,7 @@ export function BedFilterSheet({
       <View
         style={[styles.sheetContainer, { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) }]}
       >
-        <TouchableOpacity activeOpacity={0.6} onPress={onClose} style={styles.sheetHandleArea}>
-          <View style={styles.sheetHandle} />
-        </TouchableOpacity>
+        <SheetHandle onClose={onClose} />
 
         <View style={styles.sheetHeader}>
           <Text style={styles.sheetTitle}>Sort & Filter</Text>

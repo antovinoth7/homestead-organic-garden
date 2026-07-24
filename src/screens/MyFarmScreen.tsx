@@ -436,7 +436,14 @@ export default function MyFarmScreen(): React.JSX.Element {
         onConfirm={handleDeleteConfirm}
       />
 
-      <Modal visible={saving} transparent animationType="fade" hardwareAccelerated>
+      <Modal
+        visible={saving}
+        transparent
+        animationType="fade"
+        hardwareAccelerated
+        statusBarTranslucent
+        navigationBarTranslucent
+      >
         <View style={styles.savingOverlay}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.savingText}>Updating farm data...</Text>

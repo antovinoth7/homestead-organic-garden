@@ -3,25 +3,11 @@ import type { Theme } from '@/theme/colors';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
-    overlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'flex-end' as const,
-    },
     sheet: {
       backgroundColor: theme.background,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      maxHeight: '85%' as const,
-    },
-    handle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.border,
-      alignSelf: 'center' as const,
-      marginTop: 10,
-      marginBottom: 4,
+      // maxHeight is computed at runtime (window height minus the top inset).
     },
     title: {
       fontSize: 16,

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
+import { SheetHandle } from './SheetHandle';
 import { createStyles } from '../styles/plantsStyles';
 import {
   PlantType,
@@ -110,9 +111,7 @@ export function PlantFilterSheet({
           { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) },
         ]}
       >
-        <TouchableOpacity activeOpacity={0.6} onPress={onClose} style={styles.sheetHandleArea}>
-          <View style={styles.sheetHandle} />
-        </TouchableOpacity>
+        <SheetHandle onClose={onClose} />
 
         <View style={styles.sheetHeader}>
           <Text style={styles.sheetTitle}>Sort & Filter</Text>

@@ -33,6 +33,8 @@ export function LocationReassignModal({
       animationType="fade"
       hardwareAccelerated
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>

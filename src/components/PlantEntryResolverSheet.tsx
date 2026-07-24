@@ -1,8 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
+import { BottomSheetModal } from '@/components/BottomSheetModal';
+import { SheetHandle } from '@/components/SheetHandle';
 import { getAllPlants } from '@/services/plants';
 import { DEFAULT_PLANT_CATALOG, PLANT_CATEGORIES } from '@/services/plantCatalog';
 import { createStyles } from '@/styles/plantEntryResolverStyles';
@@ -38,6 +47,11 @@ export function PlantEntryResolverSheet({
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+
+  // The modal is edge-to-edge, so cap the sheet below the status bar instead of
+  // relying on a percentage of the (now full-screen) window.
+  const sheetMaxHeight = windowHeight - insets.top - 24;
 
   const [activeTab, setActiveTab] = useState<Tab>('create');
   const [selectedVariety, setSelectedVariety] = useState<string | null>(null);
@@ -101,144 +115,138 @@ export function PlantEntryResolverSheet({
   const canConfirm = activeTab === 'create' || !!selectedPlantId;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity activeOpacity={1} style={styles.sheet}>
-          <View style={styles.handle} />
-          <Text style={styles.title}>{entry.name}</Text>
-          <Text style={styles.subtitle}>Resolve this placeholder into a real plant</Text>
+    <BottomSheetModal
+      visible={visible}
+      onClose={onClose}
+      sheetStyle={[styles.sheet, { maxHeight: sheetMaxHeight }]}
+    >
+      <SheetHandle onClose={onClose}>
+        <Text style={styles.title}>{entry.name}</Text>
+      </SheetHandle>
+      <Text style={styles.subtitle}>Resolve this placeholder into a real plant</Text>
 
-          <View style={styles.tabBar}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'create' && styles.tabActive]}
-              onPress={() => setActiveTab('create')}
-            >
-              <Text style={[styles.tabText, activeTab === 'create' && styles.tabTextActive]}>
-                Create new
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'link' && styles.tabActive]}
-              onPress={() => setActiveTab('link')}
-            >
-              <Text style={[styles.tabText, activeTab === 'link' && styles.tabTextActive]}>
-                Link existing
-              </Text>
-            </TouchableOpacity>
-          </View>
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'create' && styles.tabActive]}
+          onPress={() => setActiveTab('create')}
+        >
+          <Text style={[styles.tabText, activeTab === 'create' && styles.tabTextActive]}>
+            Create new
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'link' && styles.tabActive]}
+          onPress={() => setActiveTab('link')}
+        >
+          <Text style={[styles.tabText, activeTab === 'link' && styles.tabTextActive]}>
+            Link existing
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-          <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scroll}>
-            {activeTab === 'create' ? (
-              <>
-                <Text style={styles.sectionLabel}>VARIETY (OPTIONAL)</Text>
-                {varieties.length > 0 ? (
-                  <View style={styles.varietyGrid}>
-                    <TouchableOpacity
-                      style={[styles.varietyChip, !selectedVariety && styles.varietyChipActive]}
-                      onPress={() => setSelectedVariety(null)}
-                    >
-                      <Text
-                        style={[
-                          styles.varietyChipText,
-                          !selectedVariety && styles.varietyChipTextActive,
-                        ]}
-                      >
-                        No specific variety
-                      </Text>
-                    </TouchableOpacity>
-                    {varieties.map((v) => (
-                      <TouchableOpacity
-                        key={v}
-                        style={[
-                          styles.varietyChip,
-                          selectedVariety === v && styles.varietyChipActive,
-                        ]}
-                        onPress={() => setSelectedVariety(v)}
-                      >
-                        <Text
-                          style={[
-                            styles.varietyChipText,
-                            selectedVariety === v && styles.varietyChipTextActive,
-                          ]}
-                        >
-                          {v}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : (
-                  <View style={styles.emptyState}>
-                    <Ionicons name="leaf-outline" size={24} color={theme.textTertiary} />
-                    <Text style={styles.emptyStateText}>
-                      No varieties listed for {entry.name}.{'\n'}Continue to add full details in the
-                      plant form.
-                    </Text>
-                  </View>
-                )}
-              </>
-            ) : loadingLinkable ? (
-              <ActivityIndicator color={theme.primary} style={styles.loader} />
-            ) : linkablePlants.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="search-outline" size={24} color={theme.textTertiary} />
-                <Text style={styles.emptyStateText}>
-                  No un-assigned {entry.name} plants in your garden.{'\n'}
-                  Switch to “Create new” or keep as placeholder.
-                </Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.sectionLabel}>SELECT A PLANT TO MOVE INTO THIS BED</Text>
-                {linkablePlants.map((p) => (
-                  <TouchableOpacity
-                    key={p.id}
-                    style={[styles.plantRow, selectedPlantId === p.id && styles.plantRowSelected]}
-                    onPress={() => setSelectedPlantId(p.id)}
+      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scroll}>
+        {activeTab === 'create' ? (
+          <>
+            <Text style={styles.sectionLabel}>VARIETY (OPTIONAL)</Text>
+            {varieties.length > 0 ? (
+              <View style={styles.varietyGrid}>
+                <TouchableOpacity
+                  style={[styles.varietyChip, !selectedVariety && styles.varietyChipActive]}
+                  onPress={() => setSelectedVariety(null)}
+                >
+                  <Text
+                    style={[
+                      styles.varietyChipText,
+                      !selectedVariety && styles.varietyChipTextActive,
+                    ]}
                   >
-                    <View style={styles.plantInfo}>
-                      <Text style={styles.plantName}>{p.name}</Text>
-                      {p.plant_variety ? (
-                        <Text style={styles.plantSub}>{p.plant_variety}</Text>
-                      ) : null}
-                      {p.location ? (
-                        <Text style={styles.plantSub}>Currently: {p.location}</Text>
-                      ) : null}
-                    </View>
-                    {selectedPlantId === p.id && (
-                      <Ionicons name="checkmark-circle" size={22} color={theme.primary} />
-                    )}
+                    No specific variety
+                  </Text>
+                </TouchableOpacity>
+                {varieties.map((v) => (
+                  <TouchableOpacity
+                    key={v}
+                    style={[styles.varietyChip, selectedVariety === v && styles.varietyChipActive]}
+                    onPress={() => setSelectedVariety(v)}
+                  >
+                    <Text
+                      style={[
+                        styles.varietyChipText,
+                        selectedVariety === v && styles.varietyChipTextActive,
+                      ]}
+                    >
+                      {v}
+                    </Text>
                   </TouchableOpacity>
                 ))}
-              </>
-            )}
-
-            {entry.resolution && entry.resolution.kind !== 'placeholder' && (
-              <TouchableOpacity style={styles.revertBtn} onPress={handleRevertToPlaceholder}>
-                <Text style={styles.revertBtnText}>Revert to placeholder</Text>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
-
-          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-            <TouchableOpacity style={styles.secondaryBtn} onPress={onClose}>
-              <Text style={styles.secondaryBtnText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.primaryBtn, (!canConfirm || submitting) && styles.primaryBtnDisabled]}
-              onPress={handleConfirm}
-              disabled={!canConfirm || submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator color={theme.textInverse} size="small" />
-              ) : (
-                <Text style={styles.primaryBtnText}>
-                  {activeTab === 'create' ? 'Open Plant Form' : 'Save'}
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="leaf-outline" size={24} color={theme.textTertiary} />
+                <Text style={styles.emptyStateText}>
+                  No varieties listed for {entry.name}.{'\n'}Continue to add full details in the
+                  plant form.
                 </Text>
-              )}
-            </TouchableOpacity>
+              </View>
+            )}
+          </>
+        ) : loadingLinkable ? (
+          <ActivityIndicator color={theme.primary} style={styles.loader} />
+        ) : linkablePlants.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="search-outline" size={24} color={theme.textTertiary} />
+            <Text style={styles.emptyStateText}>
+              No un-assigned {entry.name} plants in your garden.{'\n'}
+              Switch to “Create new” or keep as placeholder.
+            </Text>
           </View>
+        ) : (
+          <>
+            <Text style={styles.sectionLabel}>SELECT A PLANT TO MOVE INTO THIS BED</Text>
+            {linkablePlants.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                style={[styles.plantRow, selectedPlantId === p.id && styles.plantRowSelected]}
+                onPress={() => setSelectedPlantId(p.id)}
+              >
+                <View style={styles.plantInfo}>
+                  <Text style={styles.plantName}>{p.name}</Text>
+                  {p.plant_variety ? <Text style={styles.plantSub}>{p.plant_variety}</Text> : null}
+                  {p.location ? <Text style={styles.plantSub}>Currently: {p.location}</Text> : null}
+                </View>
+                {selectedPlantId === p.id && (
+                  <Ionicons name="checkmark-circle" size={22} color={theme.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+
+        {entry.resolution && entry.resolution.kind !== 'placeholder' && (
+          <TouchableOpacity style={styles.revertBtn} onPress={handleRevertToPlaceholder}>
+            <Text style={styles.revertBtnText}>Revert to placeholder</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <TouchableOpacity style={styles.secondaryBtn} onPress={onClose}>
+          <Text style={styles.secondaryBtnText}>Cancel</Text>
         </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
+        <TouchableOpacity
+          style={[styles.primaryBtn, (!canConfirm || submitting) && styles.primaryBtnDisabled]}
+          onPress={handleConfirm}
+          disabled={!canConfirm || submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator color={theme.textInverse} size="small" />
+          ) : (
+            <Text style={styles.primaryBtnText}>
+              {activeTab === 'create' ? 'Open Plant Form' : 'Save'}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </BottomSheetModal>
   );
 }

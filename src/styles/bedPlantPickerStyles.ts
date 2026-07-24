@@ -59,26 +59,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     loader: { flex: 1 },
 
     // ── Bottom sheet ─────────────────────────────────────────────────────────
-    sheetOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'flex-end' as const,
-    },
     sheet: {
       backgroundColor: theme.background,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      maxHeight: '85%' as const,
-      paddingBottom: 24,
-    },
-    handle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.border,
-      alignSelf: 'center' as const,
-      marginTop: 10,
-      marginBottom: 4,
+      // maxHeight and paddingBottom are computed at runtime from the safe-area insets.
     },
     sheetTitle: {
       fontSize: 16,

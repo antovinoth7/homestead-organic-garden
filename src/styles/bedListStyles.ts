@@ -285,8 +285,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
     },
-    sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: theme.border },
-    sheetHandleArea: { alignItems: 'center', paddingTop: 10, paddingBottom: 8 },
     sheetHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',

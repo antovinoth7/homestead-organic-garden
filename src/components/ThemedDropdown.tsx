@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   Pressable,
-  Modal,
   FlatList,
   useWindowDimensions,
 } from 'react-native';
@@ -14,6 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import { createStyles } from '../styles/themedDropdownStyles';
 import FieldHelp from './FieldHelp';
+import { BottomSheetModal } from './BottomSheetModal';
+import { SheetHandle } from './SheetHandle';
 
 export interface DropdownItem {
   label: string;
@@ -180,76 +181,56 @@ export default function ThemedDropdown({
         />
       </Pressable>
 
-      {/* Native slide bottom-sheet, matching the app's other picker sheets
-          (StagePickerSheet/PlantPickerSheet): the full-screen overlay closes on
-          tap; the inner sheet swallows taps so only the handle bar / rows act. */}
-      <Modal
+      <BottomSheetModal
         visible={visible}
-        transparent
-        animationType="slide"
-        onRequestClose={close}
-        statusBarTranslucent
-        navigationBarTranslucent
+        onClose={close}
+        sheetStyle={[styles.sheet, { maxHeight: sheetMaxHeight, paddingBottom: bottomInset }]}
       >
-        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={close}>
-          <TouchableOpacity
-            activeOpacity={1}
-            style={[styles.sheet, { maxHeight: sheetMaxHeight, paddingBottom: bottomInset }]}
-          >
-            <TouchableOpacity
-              style={styles.sheetCloseRow}
-              activeOpacity={0.7}
-              onPress={close}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-            >
-              <View style={styles.sheetHandle} />
-              <Text style={styles.sheetTitle}>{placeholder}</Text>
-            </TouchableOpacity>
-            {searchable && (
-              <View style={styles.searchContainer}>
-                <Ionicons
-                  name="search"
-                  size={18}
-                  color={theme.textTertiary}
-                  style={styles.searchIcon}
-                />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder={`Search ${placeholder.toLowerCase()}...`}
-                  placeholderTextColor={theme.inputPlaceholder}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                  returnKeyType="search"
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
-                    <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-            {searchable && filteredItems.length === 0 && (
-              <Text style={styles.emptyText}>No matches found</Text>
-            )}
-            <FlatList
-              data={filteredItems}
-              renderItem={renderItem}
-              keyExtractor={keyExtractor}
-              style={{ maxHeight: listMaxHeight }}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              getItemLayout={(_, index) => ({
-                length: ROW_HEIGHT,
-                offset: ROW_HEIGHT * index,
-                index,
-              })}
+        <SheetHandle onClose={close}>
+          <Text style={styles.sheetTitle}>{placeholder}</Text>
+        </SheetHandle>
+        {searchable && (
+          <View style={styles.searchContainer}>
+            <Ionicons
+              name="search"
+              size={18}
+              color={theme.textTertiary}
+              style={styles.searchIcon}
             />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={`Search ${placeholder.toLowerCase()}...`}
+              placeholderTextColor={theme.inputPlaceholder}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+        {searchable && filteredItems.length === 0 && (
+          <Text style={styles.emptyText}>No matches found</Text>
+        )}
+        <FlatList
+          data={filteredItems}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          style={{ maxHeight: listMaxHeight }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          getItemLayout={(_, index) => ({
+            length: ROW_HEIGHT,
+            offset: ROW_HEIGHT * index,
+            index,
+          })}
+        />
+      </BottomSheetModal>
     </>
   );
 }

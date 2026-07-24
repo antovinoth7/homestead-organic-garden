@@ -1,16 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Modal,
-  Alert,
-  Platform,
-  KeyboardAvoidingView,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { BottomSheetModal } from '../BottomSheetModal';
 import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
 import type { DropdownItem } from '../ThemedDropdown';
@@ -157,314 +149,270 @@ export default function CreateTaskModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalOverlay}
+    <BottomSheetModal
+      visible={visible}
+      onClose={handleClose}
+      sheetStyle={styles.modalContent}
+      keyboardAvoiding
+    >
+      <View style={styles.modalHeader}>
+        <TouchableOpacity
+          style={styles.modalCloseButton}
+          onPress={handleClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
+          <Ionicons name="close" size={20} color={theme.textInverse} />
+        </TouchableOpacity>
+        <View style={styles.modalTitleWrap}>
+          <Text style={styles.modalTitle} numberOfLines={1}>
+            Create Task
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.modalSaveButton, loading && styles.modalSaveButtonDisabled]}
+          onPress={handleCreateTask}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.modalSaveText, loading && styles.modalSaveTextDisabled]}>
+            {loading ? 'Saving...' : 'Save'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.modalScroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: Math.max(bottomInset, 12) }}
       >
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
+        <View style={styles.modalBody}>
+          <ThemedDropdown
+            items={TASK_TYPE_ITEMS}
+            selectedValue={taskType}
+            onValueChange={(v) => setTaskType(v as TaskType)}
+            label="Task Type *"
+            placeholder="Task Type"
+          />
+
+          <ThemedDropdown
+            items={[
+              { label: 'General Task', value: '' },
+              ...standalonePlants.map((p) => ({ label: p.name, value: p.id })),
+            ]}
+            selectedValue={selectedPlant}
+            onValueChange={setSelectedPlant}
+            label="Plant (Optional)"
+            placeholder="Plant"
+            searchable
+          />
+
+          <ThemedDropdown
+            items={[
+              { label: 'No Bed', value: '' },
+              ...beds.map((b) => ({ label: b.name, value: b.id })),
+            ]}
+            selectedValue={selectedBed}
+            onValueChange={setSelectedBed}
+            label="Bed (Optional)"
+            placeholder="Bed"
+            searchable
+          />
+
+          <Text style={styles.label}>Start Date</Text>
+          <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+            <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
+            <Text style={styles.dateButtonText}>
+              {startDate.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </Text>
+          </TouchableOpacity>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={startDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (selectedDate) setStartDate(selectedDate);
+              }}
+            />
+          )}
+
+          <Text style={styles.label}>Preferred Time (Optional)</Text>
+          <View style={styles.timeButtons}>
             <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={handleClose}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
+              style={[styles.timeButton, preferredTime === 'morning' && styles.timeButtonActive]}
+              onPress={() => setPreferredTime(preferredTime === 'morning' ? null : 'morning')}
             >
-              <Ionicons name="close" size={20} color={theme.textInverse} />
-            </TouchableOpacity>
-            <View style={styles.modalTitleWrap}>
-              <Text style={styles.modalTitle} numberOfLines={1}>
-                Create Task
+              <Text
+                style={[
+                  styles.timeButtonText,
+                  preferredTime === 'morning' && styles.timeButtonTextActive,
+                ]}
+              >
+                🌅 Morning
               </Text>
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalSaveButton, loading && styles.modalSaveButtonDisabled]}
-              onPress={handleCreateTask}
-              disabled={loading}
-              activeOpacity={0.85}
+              style={[styles.timeButton, preferredTime === 'afternoon' && styles.timeButtonActive]}
+              onPress={() => setPreferredTime(preferredTime === 'afternoon' ? null : 'afternoon')}
             >
-              <Text style={[styles.modalSaveText, loading && styles.modalSaveTextDisabled]}>
-                {loading ? 'Saving...' : 'Save'}
+              <Text
+                style={[
+                  styles.timeButtonText,
+                  preferredTime === 'afternoon' && styles.timeButtonTextActive,
+                ]}
+              >
+                ☀️ Afternoon
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.timeButton, preferredTime === 'evening' && styles.timeButtonActive]}
+              onPress={() => setPreferredTime(preferredTime === 'evening' ? null : 'evening')}
+            >
+              <Text
+                style={[
+                  styles.timeButtonText,
+                  preferredTime === 'evening' && styles.timeButtonTextActive,
+                ]}
+              >
+                🌙 Evening
               </Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            style={styles.modalScroll}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: Math.max(bottomInset, 12) }}
-          >
-            <View style={styles.modalBody}>
-              <ThemedDropdown
-                items={TASK_TYPE_ITEMS}
-                selectedValue={taskType}
-                onValueChange={(v) => setTaskType(v as TaskType)}
-                label="Task Type *"
-                placeholder="Task Type"
-              />
+          <Text style={styles.label}>Schedule</Text>
+          <View style={styles.taskTypeToggle}>
+            <TouchableOpacity
+              style={[styles.toggleButton, !isOneTimeTask && styles.toggleButtonActive]}
+              onPress={() => setIsOneTimeTask(false)}
+            >
+              <Text
+                style={[styles.toggleButtonText, !isOneTimeTask && styles.toggleButtonTextActive]}
+              >
+                🔄 Repeating
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleButton, isOneTimeTask && styles.toggleButtonActive]}
+              onPress={() => setIsOneTimeTask(true)}
+            >
+              <Text
+                style={[styles.toggleButtonText, isOneTimeTask && styles.toggleButtonTextActive]}
+              >
+                ✓ One-Time
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-              <ThemedDropdown
-                items={[
-                  { label: 'General Task', value: '' },
-                  ...standalonePlants.map((p) => ({ label: p.name, value: p.id })),
-                ]}
-                selectedValue={selectedPlant}
-                onValueChange={setSelectedPlant}
-                label="Plant (Optional)"
-                placeholder="Plant"
-                searchable
-              />
+          {!isOneTimeTask && (
+            <>
+              <Text style={styles.label}>Repeat Every (days) *</Text>
 
-              <ThemedDropdown
-                items={[
-                  { label: 'No Bed', value: '' },
-                  ...beds.map((b) => ({ label: b.name, value: b.id })),
-                ]}
-                selectedValue={selectedBed}
-                onValueChange={setSelectedBed}
-                label="Bed (Optional)"
-                placeholder="Bed"
-                searchable
-              />
-
-              <Text style={styles.label}>Start Date</Text>
-              <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
-                <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
-                <Text style={styles.dateButtonText}>
-                  {startDate.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </Text>
-              </TouchableOpacity>
-
-              {showDatePicker && (
-                <DateTimePicker
-                  value={startDate}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(Platform.OS === 'ios');
-                    if (selectedDate) setStartDate(selectedDate);
-                  }}
-                />
-              )}
-
-              <Text style={styles.label}>Preferred Time (Optional)</Text>
-              <View style={styles.timeButtons}>
+              <View style={styles.presets}>
                 <TouchableOpacity
-                  style={[
-                    styles.timeButton,
-                    preferredTime === 'morning' && styles.timeButtonActive,
-                  ]}
-                  onPress={() => setPreferredTime(preferredTime === 'morning' ? null : 'morning')}
+                  style={[styles.presetButton, frequencyDays === '1' && styles.presetButtonActive]}
+                  onPress={() => applyFrequencyPreset(1)}
+                  activeOpacity={0.7}
                 >
                   <Text
-                    style={[
-                      styles.timeButtonText,
-                      preferredTime === 'morning' && styles.timeButtonTextActive,
-                    ]}
+                    style={[styles.presetText, frequencyDays === '1' && styles.presetTextActive]}
                   >
-                    🌅 Morning
+                    Daily
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[
-                    styles.timeButton,
-                    preferredTime === 'afternoon' && styles.timeButtonActive,
-                  ]}
-                  onPress={() =>
-                    setPreferredTime(preferredTime === 'afternoon' ? null : 'afternoon')
-                  }
+                  style={[styles.presetButton, frequencyDays === '7' && styles.presetButtonActive]}
+                  onPress={() => applyFrequencyPreset(7)}
+                  activeOpacity={0.7}
                 >
                   <Text
-                    style={[
-                      styles.timeButtonText,
-                      preferredTime === 'afternoon' && styles.timeButtonTextActive,
-                    ]}
+                    style={[styles.presetText, frequencyDays === '7' && styles.presetTextActive]}
                   >
-                    ☀️ Afternoon
+                    Weekly
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[
-                    styles.timeButton,
-                    preferredTime === 'evening' && styles.timeButtonActive,
-                  ]}
-                  onPress={() => setPreferredTime(preferredTime === 'evening' ? null : 'evening')}
+                  style={[styles.presetButton, frequencyDays === '14' && styles.presetButtonActive]}
+                  onPress={() => applyFrequencyPreset(14)}
+                  activeOpacity={0.7}
                 >
                   <Text
-                    style={[
-                      styles.timeButtonText,
-                      preferredTime === 'evening' && styles.timeButtonTextActive,
-                    ]}
+                    style={[styles.presetText, frequencyDays === '14' && styles.presetTextActive]}
                   >
-                    🌙 Evening
+                    Bi-weekly
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.presetButton, frequencyDays === '30' && styles.presetButtonActive]}
+                  onPress={() => applyFrequencyPreset(30)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[styles.presetText, frequencyDays === '30' && styles.presetTextActive]}
+                  >
+                    Monthly
                   </Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.label}>Schedule</Text>
-              <View style={styles.taskTypeToggle}>
-                <TouchableOpacity
-                  style={[styles.toggleButton, !isOneTimeTask && styles.toggleButtonActive]}
-                  onPress={() => setIsOneTimeTask(false)}
-                >
-                  <Text
-                    style={[
-                      styles.toggleButtonText,
-                      !isOneTimeTask && styles.toggleButtonTextActive,
-                    ]}
-                  >
-                    🔄 Repeating
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toggleButton, isOneTimeTask && styles.toggleButtonActive]}
-                  onPress={() => setIsOneTimeTask(true)}
-                >
-                  <Text
-                    style={[
-                      styles.toggleButtonText,
-                      isOneTimeTask && styles.toggleButtonTextActive,
-                    ]}
-                  >
-                    ✓ One-Time
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              <FloatingLabelInput
+                label="Frequency (days)"
+                value={frequencyDays}
+                onChangeText={(t) => setFrequencyDays(sanitizeNumberText(t))}
+                keyboardType="numeric"
+              />
 
-              {!isOneTimeTask && (
-                <>
-                  <Text style={styles.label}>Repeat Every (days) *</Text>
-
-                  <View style={styles.presets}>
-                    <TouchableOpacity
-                      style={[
-                        styles.presetButton,
-                        frequencyDays === '1' && styles.presetButtonActive,
-                      ]}
-                      onPress={() => applyFrequencyPreset(1)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.presetText,
-                          frequencyDays === '1' && styles.presetTextActive,
-                        ]}
-                      >
-                        Daily
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.presetButton,
-                        frequencyDays === '7' && styles.presetButtonActive,
-                      ]}
-                      onPress={() => applyFrequencyPreset(7)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.presetText,
-                          frequencyDays === '7' && styles.presetTextActive,
-                        ]}
-                      >
-                        Weekly
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.presetButton,
-                        frequencyDays === '14' && styles.presetButtonActive,
-                      ]}
-                      onPress={() => applyFrequencyPreset(14)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.presetText,
-                          frequencyDays === '14' && styles.presetTextActive,
-                        ]}
-                      >
-                        Bi-weekly
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.presetButton,
-                        frequencyDays === '30' && styles.presetButtonActive,
-                      ]}
-                      onPress={() => applyFrequencyPreset(30)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.presetText,
-                          frequencyDays === '30' && styles.presetTextActive,
-                        ]}
-                      >
-                        Monthly
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <FloatingLabelInput
-                    label="Frequency (days)"
-                    value={frequencyDays}
-                    onChangeText={(t) => setFrequencyDays(sanitizeNumberText(t))}
-                    keyboardType="numeric"
-                  />
-
-                  {frequencyDays && parseInt(frequencyDays) > 0 && (
-                    <View style={styles.preview}>
-                      <Text style={styles.previewTitle}>📅 Schedule Preview</Text>
-                      <Text style={styles.previewText}>
-                        • First task:{' '}
-                        {startDate.toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                        {preferredTime && ` (${preferredTime})`}
-                      </Text>
-                      <Text style={styles.previewText}>
-                        • Next task:{' '}
-                        {new Date(
-                          startDate.getTime() + parseInt(frequencyDays) * 24 * 60 * 60 * 1000
-                        ).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </Text>
-                      <Text style={styles.previewText}>
-                        • Repeats every {frequencyDays}{' '}
-                        {parseInt(frequencyDays) === 1 ? 'day' : 'days'}
-                      </Text>
-                    </View>
-                  )}
-                </>
-              )}
-
-              {isOneTimeTask && (
+              {frequencyDays && parseInt(frequencyDays) > 0 && (
                 <View style={styles.preview}>
-                  <Text style={styles.previewTitle}>📅 One-Time Task</Text>
+                  <Text style={styles.previewTitle}>📅 Schedule Preview</Text>
                   <Text style={styles.previewText}>
-                    • Due:{' '}
+                    • First task:{' '}
                     {startDate.toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                     })}
                     {preferredTime && ` (${preferredTime})`}
                   </Text>
-                  <Text style={styles.previewText}>• Will not repeat after completion</Text>
+                  <Text style={styles.previewText}>
+                    • Next task:{' '}
+                    {new Date(
+                      startDate.getTime() + parseInt(frequencyDays) * 24 * 60 * 60 * 1000
+                    ).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </Text>
+                  <Text style={styles.previewText}>
+                    • Repeats every {frequencyDays} {parseInt(frequencyDays) === 1 ? 'day' : 'days'}
+                  </Text>
                 </View>
               )}
+            </>
+          )}
+
+          {isOneTimeTask && (
+            <View style={styles.preview}>
+              <Text style={styles.previewTitle}>📅 One-Time Task</Text>
+              <Text style={styles.previewText}>
+                • Due:{' '}
+                {startDate.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+                {preferredTime && ` (${preferredTime})`}
+              </Text>
+              <Text style={styles.previewText}>• Will not repeat after completion</Text>
             </View>
-          </ScrollView>
+          )}
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      </ScrollView>
+    </BottomSheetModal>
   );
 }

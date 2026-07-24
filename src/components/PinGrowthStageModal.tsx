@@ -36,7 +36,14 @@ export function PinGrowthStageModal({
   onSelect,
 }: Props): React.JSX.Element {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={styles.pinModalOverlay}>
         <TouchableOpacity style={styles.pinModalBackdrop} activeOpacity={1} onPress={onClose} />
         <View style={styles.pinModalSheet}>
