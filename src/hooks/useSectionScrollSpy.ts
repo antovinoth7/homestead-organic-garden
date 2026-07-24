@@ -19,6 +19,8 @@ interface SectionScrollSpy<K extends string> {
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onMomentumScrollEnd: () => void;
   scrollToKey: (key: K) => void;
+  /** Measured height of the tab bar (via onTabBarLayout); 0 until measured. */
+  tabBarHeight: number;
 }
 
 /**
@@ -26,8 +28,16 @@ interface SectionScrollSpy<K extends string> {
  * offset, scrolling highlights the section currently under the sticky bar
  * (scroll-spy), and selecting a key scrolls that section just under the bar.
  * A short guard stops the spy from fighting a programmatic scroll.
+ *
+ * `stickyTopInset` is the distance from the top of the scroll viewport to where
+ * the pinned bar's own top sits (e.g. header height + top inset). The tab bar's
+ * measured height is added to it so section activation and scroll-to targets
+ * line up with the *bottom* edge of the pinned bar, not just the bar height.
  */
-export function useSectionScrollSpy<K extends string>(keys: readonly K[]): SectionScrollSpy<K> {
+export function useSectionScrollSpy<K extends string>(
+  keys: readonly K[],
+  stickyTopInset = 0
+): SectionScrollSpy<K> {
   const scrollRef = useRef<ScrollView | null>(null);
   const offsetsRef = useRef<Map<K, number>>(new Map());
   const programmaticRef = useRef(false);
@@ -55,10 +65,15 @@ export function useSectionScrollSpy<K extends string>(keys: readonly K[]): Secti
         .filter((o): o is SectionOffset<K> => o.y !== undefined);
       const atEnd =
         contentOffset.y + layoutMeasurement.height >= contentSize.height - END_EPSILON;
-      const next = activeSectionKey(offsets, contentOffset.y, tabBarHeight, atEnd);
+      const next = activeSectionKey(
+        offsets,
+        contentOffset.y,
+        tabBarHeight + stickyTopInset,
+        atEnd
+      );
       if (next && next !== activeKey) setActiveKey(next);
     },
-    [keys, activeKey, tabBarHeight]
+    [keys, activeKey, tabBarHeight, stickyTopInset]
   );
 
   const onMomentumScrollEnd = useCallback(() => {
@@ -71,14 +86,17 @@ export function useSectionScrollSpy<K extends string>(keys: readonly K[]): Secti
       if (y === undefined || !scrollRef.current) return;
       programmaticRef.current = true;
       setActiveKey(key);
-      scrollRef.current.scrollTo({ y: Math.max(0, y - tabBarHeight), animated: true });
+      scrollRef.current.scrollTo({
+        y: Math.max(0, y - tabBarHeight - stickyTopInset),
+        animated: true,
+      });
       if (programmaticTimer.current) clearTimeout(programmaticTimer.current);
       // Fallback in case momentum-end doesn't fire (e.g. very short scrolls).
       programmaticTimer.current = setTimeout(() => {
         programmaticRef.current = false;
       }, 450);
     },
-    [tabBarHeight]
+    [tabBarHeight, stickyTopInset]
   );
 
   return {
@@ -89,5 +107,6 @@ export function useSectionScrollSpy<K extends string>(keys: readonly K[]): Secti
     onScroll,
     onMomentumScrollEnd,
     scrollToKey,
+    tabBarHeight,
   };
 }

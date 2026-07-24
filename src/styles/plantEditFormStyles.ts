@@ -1,14 +1,37 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
-
-const WINDOW_HEIGHT = Dimensions.get('window').height;
 
 export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
-    // Lets the last tab's section scroll up under the pinned bar so every tab
-    // tap produces visible movement.
-    bottomSpacer: {
-      minHeight: WINDOW_HEIGHT * 0.6,
+    // Height is set dynamically (see PlantEditForm): just enough for the last
+    // tab's section to scroll under the pinned bar, without leaving dead space.
+    bottomSpacer: {},
+    // Full-bleed editable hero photo at the top of the scroll, mirroring the
+    // detail screen. Negative margins cancel the content container's padding so
+    // it spans edge-to-edge and sits flush under the header.
+    editHero: {
+      marginHorizontal: -16,
+      marginTop: -10,
+      height: 240,
+      backgroundColor: theme.primaryLight,
+      overflow: 'hidden' as const,
+    },
+    editHeroCaption: {
+      marginTop: 12,
+      marginBottom: 4,
+    },
+    // In-flow tab bar sits below the hero; spans full-bleed like the header.
+    inFlowTabBar: {
+      marginHorizontal: -16,
+    },
+    // Pinned copy of the tab bar, shown below the header once the in-flow bar
+    // scrolls away. Absolute so its appearance doesn't shift the scroll content.
+    pinnedTabBar: {
+      position: 'absolute' as const,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.background,
+      zIndex: 5,
     },
     editHeaderTitleBlock: {
       flex: 1,

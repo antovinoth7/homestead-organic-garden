@@ -19,13 +19,13 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Cabbage: ['Dill', 'Mint', 'Rosemary', 'Sage', 'Thyme', 'Beans'],
   Broccoli: ['Onion', 'Garlic', 'Rosemary', 'Sage', 'Thyme'],
   Cucumber: ['Beans', 'Peas', 'Radish', 'Sunflower', 'Lettuce'],
-  Pepper: ['Basil', 'Onion', 'Spinach', 'Tomato'],
-  Chilli: ['Basil', 'Onion', 'Spinach', 'Tomato'],
-  Eggplant: ['Beans', 'Peas', 'Spinach', 'Thyme'],
-  Brinjal: ['Beans', 'Peas', 'Spinach', 'Thyme'],
-  'Long Brinjal': ['Beans', 'Peas', 'Spinach', 'Thyme'],
+  Pepper: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold'],
+  Chilli: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold', 'Turmeric'],
+  Eggplant: ['Beans', 'Peas', 'Spinach', 'Thyme', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
+  Brinjal: ['Beans', 'Peas', 'Spinach', 'Thyme', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
+  'Long Brinjal': ['Beans', 'Peas', 'Spinach', 'Thyme', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
   Tapioca: ['Cowpea', 'Beans', 'Marigold'],
-  Drumstick: ['Brinjal', 'Chilli', 'Coriander'],
+  Drumstick: ['Brinjal', 'Chilli', 'Coriander', 'Turmeric', 'Marigold'],
   Amaranthus: ['Onion', 'Radish', 'Beans'],
   Methi: ['Radish', 'Onion', 'Coriander'],
   Cowpea: ['Cucumber', 'Corn', 'Brinjal', 'Radish'],
@@ -78,7 +78,7 @@ const COMPANION_PLANTS: Record<string, string[]> = {
 
   // Bed-type plants — new additions
   Fenugreek: ['Spinach', 'Radish', 'Onion', 'Coriander'],
-  'Ladies Finger': ['Basil', 'Pepper', 'Eggplant', 'Cucumber'],
+  'Ladies Finger': ['Basil', 'Pepper', 'Eggplant', 'Cucumber', 'Marigold', 'Cowpea'],
   Moringa: ['Tulsi', 'Aloe Vera', 'Lemongrass'],
   'Pasalai Keerai': ['Radish', 'Turmeric', 'Basil'],
   'French Beans': ['Carrot', 'Beetroot', 'Cucumber', 'Radish'],
@@ -102,6 +102,32 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Cardamom: ['Banana', 'Ginger', 'Turmeric'],
   Ajwain: ['Coriander', 'Basil', 'Fennel'],
   Fennel: [],
+
+  // Tamil Nadu tree & plantation crops — based on TNAU coconut/banana
+  // intercropping practice (agritech.tnau.ac.in).
+  Coconut: [
+    'Banana',
+    'Turmeric',
+    'Ginger',
+    'Black Pepper',
+    'Cocoa',
+    'Pineapple',
+    'Groundnut',
+    'Elephant Foot Yam',
+    'Curry Leaf',
+    'Tapioca',
+  ],
+  Banana: ['Turmeric', 'Ginger', 'Elephant Foot Yam', 'Cowpea', 'Coriander', 'Coconut'],
+  Turmeric: ['Coconut', 'Banana', 'Chilli', 'Coriander', 'Ginger'],
+  Ginger: ['Coconut', 'Banana', 'Chilli', 'Coriander', 'Turmeric'],
+  'Elephant Foot Yam': ['Banana', 'Coconut', 'Cowpea'],
+  'Sweet Potato': ['Beans', 'Cowpea', 'Marigold'],
+  Papaya: ['Banana', 'Marigold', 'Coriander', 'Cowpea'],
+  Guava: ['Banana', 'Marigold', 'Turmeric'],
+  Pineapple: ['Coconut', 'Banana', 'Turmeric'],
+  Pomegranate: ['Marigold', 'Basil', 'Cowpea'],
+  Lemon: ['Curry Leaf', 'Marigold', 'Basil'],
+  Mango: ['Turmeric', 'Marigold', 'Cowpea', 'Curry Leaf'],
 };
 
 // Plants to avoid together (incompatible companions)
@@ -125,6 +151,14 @@ const INCOMPATIBLE_PLANTS: Record<string, string[]> = {
   'Black Gram': ['Onion', 'Garlic'],
   Groundnut: ['Onion', 'Garlic'],
   'Pigeon Pea': ['Fennel'],
+  Brinjal: ['Fennel', 'Potato'],
+  Eggplant: ['Fennel', 'Potato'],
+  'Long Brinjal': ['Fennel', 'Potato'],
+  Chilli: ['Fennel'],
+  Pepper: ['Fennel'],
+  'Ladies Finger': ['Potato', 'Squash', 'Sweet Potato'],
+  Radish: ['Hyssop'],
+  Drumstick: ['Fennel'],
 };
 
 const DEFAULT_HARVEST_SEASON_BY_TYPE: Record<PlantType, string> = {
@@ -189,22 +223,6 @@ export function calculateExpectedHarvestDate(
   }
 }
 
-/**
- * Get companion plant suggestions for a given plant variety
- */
-export function getCompanionSuggestions(plantVariety: string | null | undefined): string[] {
-  if (!plantVariety) return [];
-  return COMPANION_PLANTS[plantVariety] || [];
-}
-
-/**
- * Get incompatible plants for a given plant variety
- */
-export function getIncompatiblePlants(plantVariety: string | null | undefined): string[] {
-  if (!plantVariety) return [];
-  return INCOMPATIBLE_PLANTS[plantVariety] || [];
-}
-
 const toLookupKey = (value: string): string => value.toLowerCase().replace(/\s+/g, ' ').trim();
 
 const PLANT_VARIETY_ALIASES: Record<string, string> = {
@@ -232,6 +250,42 @@ const getCanonicalPlantKey = (plantVariety: string | null | undefined): string |
   const key = toLookupKey(plantVariety);
   return PLANT_VARIETY_ALIASES[key] ?? key;
 };
+
+/**
+ * Re-key a display-cased companion record by its normalized lookup key so that
+ * lookups tolerate case, whitespace and aliases (e.g. "Okra" → "ladies finger").
+ */
+const buildNormalizedCompanionMap = (
+  source: Record<string, string[]>
+): Record<string, string[]> => {
+  const map: Record<string, string[]> = {};
+  Object.entries(source).forEach(([name, list]) => {
+    map[toLookupKey(name)] = list;
+  });
+  return map;
+};
+
+const COMPANION_PLANTS_NORMALIZED = buildNormalizedCompanionMap(COMPANION_PLANTS);
+const INCOMPATIBLE_PLANTS_NORMALIZED = buildNormalizedCompanionMap(INCOMPATIBLE_PLANTS);
+
+/**
+ * Get companion plant suggestions for a given plant variety. Resolves aliases
+ * and normalizes casing/whitespace so companions surface for every plant whose
+ * canonical name has data (not only exact-cased matches).
+ */
+export function getCompanionSuggestions(plantVariety: string | null | undefined): string[] {
+  const key = getCanonicalPlantKey(plantVariety);
+  return key ? COMPANION_PLANTS_NORMALIZED[key] ?? [] : [];
+}
+
+/**
+ * Get incompatible ("bad companion") plants for a given plant variety. Uses the
+ * same alias/normalization resolution as {@link getCompanionSuggestions}.
+ */
+export function getIncompatiblePlants(plantVariety: string | null | undefined): string[] {
+  const key = getCanonicalPlantKey(plantVariety);
+  return key ? INCOMPATIBLE_PLANTS_NORMALIZED[key] ?? [] : [];
+}
 
 const mergeUnique = (items: string[]): string[] => {
   const seen = new Set<string>();

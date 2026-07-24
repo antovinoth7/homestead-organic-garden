@@ -35,7 +35,7 @@ export function CompanionPlantingSection({
       )}
       {incompatible.length > 0 && (
         <>
-          <Text style={styles.subsectionTitle}>Avoid Planting With</Text>
+          <Text style={styles.subsectionTitle}>Bad Companion</Text>
           <View style={styles.companionRow}>
             {incompatible.map((c) => (
               <View key={c} style={styles.incompatibleChip}>

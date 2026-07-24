@@ -1,7 +1,5 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
-
-const WINDOW_HEIGHT = Dimensions.get('window').height;
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -29,11 +27,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     headerOverlayStuck: {
       backgroundColor: theme.background,
     },
-    // Fills the final section so any tab can scroll under the pinned bar,
-    // giving every tap visible movement instead of feeling dead.
-    bottomSpacer: {
-      minHeight: WINDOW_HEIGHT * 0.6,
-    },
+    // Height is set dynamically (see PlantDetailScreen): just enough for the
+    // last section to scroll under the pinned bar, without leaving dead space.
+    bottomSpacer: {},
     headerOverlaySpacer: {
       flex: 1,
     },

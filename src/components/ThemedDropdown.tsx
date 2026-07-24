@@ -10,6 +10,7 @@ import {
   Dimensions,
   useWindowDimensions,
   Animated,
+  Easing,
   Keyboard,
 } from 'react-native';
 import { FlatList, GestureHandlerRootView, RectButton } from 'react-native-gesture-handler';
@@ -62,7 +63,6 @@ interface DropdownSheetProps {
   keyExtractor: (item: DropdownItem, index: number) => string;
   keyboardHeight: number;
   slideAnim: Animated.Value;
-  sheetTouchEnabled: boolean;
   close: () => void;
 }
 
@@ -85,7 +85,6 @@ function DropdownSheet({
   keyExtractor,
   keyboardHeight,
   slideAnim,
-  sheetTouchEnabled,
   close,
 }: DropdownSheetProps): React.JSX.Element {
   const insets = useSafeAreaInsets();
@@ -111,7 +110,7 @@ function DropdownSheet({
       ]}
       collapsable={false}
     >
-      <View pointerEvents={sheetTouchEnabled ? 'box-none' : 'none'}>
+      <View pointerEvents="box-none">
         <Pressable
           style={({ pressed }) => [styles.sheetCloseRow, pressed && styles.sheetCloseRowPressed]}
           onPress={close}
@@ -182,7 +181,6 @@ export default function ThemedDropdown({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(getScreenHeight())).current;
   const isClosing = useRef(false);
-  const [sheetTouchEnabled, setSheetTouchEnabled] = useState(false);
 
   // Track keyboard height so the list shrinks to always stay above the keyboard
   useEffect(() => {
@@ -203,6 +201,9 @@ export default function ThemedDropdown({
     [items, selectedValue]
   );
 
+  // Reset values off-screen/transparent, then start the entrance animation once
+  // the modal is actually presented (onShow). Starting after present avoids the
+  // first-frame flash the old animationType="none" + start-in-open() path had.
   const open = useCallback(() => {
     if (!enabled) return;
     // Cancel any in-flight close animation and its pending callback
@@ -212,38 +213,41 @@ export default function ThemedDropdown({
     slideAnim.setValue(getScreenHeight());
     fadeAnim.setValue(0);
     setSearchQuery('');
-    setSheetTouchEnabled(false);
     setVisible(true);
+  }, [enabled, fadeAnim, slideAnim]);
+
+  // Backdrop fade and sheet slide share one duration/easing so they move in
+  // lockstep — no backdrop flicker or mismatched finish.
+  const runOpenAnimation = useCallback(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 220,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver,
       }),
-      Animated.spring(slideAnim, {
+      Animated.timing(slideAnim, {
         toValue: 0,
-        damping: 20,
-        stiffness: 200,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver,
       }),
-    ]).start(() => {
-      if (!isClosing.current) {
-        setSheetTouchEnabled(true);
-      }
-    });
-  }, [enabled, fadeAnim, slideAnim]);
+    ]).start();
+  }, [fadeAnim, slideAnim]);
 
   const close = useCallback(() => {
     isClosing.current = true;
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 180,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
         useNativeDriver,
       }),
       Animated.timing(slideAnim, {
         toValue: getScreenHeight(),
         duration: 200,
+        easing: Easing.in(Easing.cubic),
         useNativeDriver,
       }),
     ]).start(() => {
@@ -364,9 +368,7 @@ export default function ThemedDropdown({
         statusBarTranslucent
         navigationBarTranslucent
         hardwareAccelerated
-        onShow={() => {
-          setTimeout(() => setSheetTouchEnabled(true), Platform.OS === 'android' ? 50 : 0);
-        }}
+        onShow={runOpenAnimation}
       >
         {/* Fresh SafeAreaProvider so insets are measured inside the modal window. */}
         <SafeAreaProvider>
@@ -389,7 +391,6 @@ export default function ThemedDropdown({
                 keyExtractor={keyExtractor}
                 keyboardHeight={keyboardHeight}
                 slideAnim={slideAnim}
-                sheetTouchEnabled={sheetTouchEnabled}
                 close={close}
               />
             </View>

@@ -352,14 +352,13 @@ export function usePlantFormState(): PlantFormStateReturn {
   const generatedPlantNameBase = useMemo(
     () =>
       buildGeneratedPlantNameBase(
-        plantType,
         plantVariety,
         variety,
         plantingDate,
         parentLocation,
         locationShortNames[parentLocation]
       ),
-    [plantType, plantVariety, variety, plantingDate, parentLocation, locationShortNames]
+    [plantVariety, variety, plantingDate, parentLocation, locationShortNames]
   );
 
   const generatedPlantName = useMemo(
@@ -798,7 +797,6 @@ export function usePlantFormState(): PlantFormStateReturn {
         const existingParentLoc = locationParts.length >= 1 ? locationParts[0] ?? '' : '';
 
         const richBase = buildGeneratedPlantNameBase(
-          plant.plant_type,
           plant.plant_variety || '',
           plant.variety || '',
           plant.planting_date || undefined,
@@ -806,7 +804,6 @@ export function usePlantFormState(): PlantFormStateReturn {
           loadedShortNames[existingParentLoc] || undefined
         );
         const richBaseOld = buildGeneratedPlantNameBase(
-          plant.plant_type,
           plant.plant_variety || '',
           plant.variety || '',
           plant.planting_date || undefined,
@@ -814,7 +811,6 @@ export function usePlantFormState(): PlantFormStateReturn {
           undefined
         );
         const simpleBase = buildGeneratedPlantNameBase(
-          plant.plant_type,
           plant.plant_variety || '',
           plant.variety || ''
         );
