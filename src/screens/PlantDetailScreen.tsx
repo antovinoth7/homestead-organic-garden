@@ -80,27 +80,9 @@ export default function PlantDetailScreen(): React.JSX.Element {
     onScroll,
     onMomentumScrollEnd,
     scrollToKey,
-    tabBarHeight,
   } = useSectionScrollSpy<PlantDetailTabKey>(TAB_KEYS, insets.top + HEADER_OVERLAY_CLEARANCE);
 
-  // Dynamic bottom spacer: only as tall as needed for the last (History)
-  // section to scroll under the pinned bar, avoiding a large empty gap.
-  const [viewportHeight, setViewportHeight] = useState(0);
-  const [lastSectionHeight, setLastSectionHeight] = useState(0);
   const contentBottomPadding = Math.max(insets.bottom, 48) + 16;
-  const stickyBarBottom = insets.top + HEADER_OVERLAY_CLEARANCE + tabBarHeight;
-  const bottomSpacerHeight = Math.max(
-    0,
-    viewportHeight - stickyBarBottom - lastSectionHeight - contentBottomPadding
-  );
-
-  const registerHistorySection = useCallback(
-    (event: LayoutChangeEvent) => {
-      registerSection('history')(event);
-      setLastSectionHeight(event.nativeEvent.layout.height);
-    },
-    [registerSection]
-  );
 
   const handleTabBarLayout = useCallback(
     (event: LayoutChangeEvent) => {
@@ -266,7 +248,6 @@ export default function PlantDetailScreen(): React.JSX.Element {
         ref={scrollRef}
         onScroll={handleScroll}
         onMomentumScrollEnd={onMomentumScrollEnd}
-        onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: contentBottomPadding }}
       >
@@ -330,7 +311,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
           <PlantPicturesSection plant={plant} journalEntries={journalEntries} />
         </View>
 
-        <View onLayout={registerHistorySection}>
+        <View onLayout={registerSection('history')}>
           <PlantSectionHeader title="History" icon="time-outline" />
           <PlantHistorySection
             plant={plant}
@@ -338,10 +319,6 @@ export default function PlantDetailScreen(): React.JSX.Element {
             enabled={historyEnabled}
           />
         </View>
-
-        {/* Sized just enough for the last section to scroll under the pinned
-            bar so every tab tap produces visible movement, without dead space. */}
-        <View style={[styles.bottomSpacer, { height: bottomSpacerHeight }]} />
       </ScrollView>
 
       {/* Always-mounted header overlay: transparent floating buttons over the

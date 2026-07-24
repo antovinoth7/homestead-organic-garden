@@ -106,15 +106,12 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
     onScroll,
     onMomentumScrollEnd,
     scrollToKey,
-    tabBarHeight,
   } = useSectionScrollSpy<PlantEditTabKey>(TAB_KEYS);
 
   // Mirror the detail screen: full-bleed hero → in-flow tabs → pinned overlay
   // tabs once the in-flow bar scrolls under the header.
   const [tabsStuck, setTabsStuck] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
-  const [viewportHeight, setViewportHeight] = useState(0);
-  const [lastSectionHeight, setLastSectionHeight] = useState(0);
   const tabBarYRef = useRef(0);
 
   const handleTabBarLayout = useCallback(
@@ -137,19 +134,7 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
     [onScroll]
   );
 
-  const registerNotesSection = useCallback(
-    (event: LayoutChangeEvent) => {
-      registerSection('notes')(event);
-      setLastSectionHeight(event.nativeEvent.layout.height);
-    },
-    [registerSection]
-  );
-
   const contentBottomPadding = 24 + insets.bottom;
-  const bottomSpacerHeight = Math.max(
-    0,
-    viewportHeight - tabBarHeight - lastSectionHeight - contentBottomPadding
-  );
 
   const { scrollViewRef } = formState;
   // The form state hook and the scroll spy each need the ScrollView node.
@@ -231,7 +216,6 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
           keyboardShouldPersistTaps="handled"
           onScroll={handleScroll}
           onMomentumScrollEnd={onMomentumScrollEnd}
-          onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
           scrollEventThrottle={16}
         >
           {/* Full-bleed editable hero photo — tap to change; mirrors the detail
@@ -306,7 +290,7 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
           </View>
 
           {/* Notes tab. Pest/disease observations now live in the Journal. */}
-          <View onLayout={registerNotesSection}>
+          <View onLayout={registerSection('notes')}>
             <View style={editStyles.sectionHeaderBleed}>
               <PlantSectionHeader
                 title="Notes"
@@ -337,7 +321,6 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
             </View>
           </View>
 
-          <View style={[editStyles.bottomSpacer, { height: bottomSpacerHeight }]} />
         </ScrollView>
 
         {/* Pinned overlay tab bar: appears just below the header once the

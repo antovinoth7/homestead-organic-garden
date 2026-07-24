@@ -19,8 +19,6 @@ interface SectionScrollSpy<K extends string> {
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onMomentumScrollEnd: () => void;
   scrollToKey: (key: K) => void;
-  /** Measured height of the tab bar (via onTabBarLayout); 0 until measured. */
-  tabBarHeight: number;
 }
 
 /**
@@ -107,6 +105,5 @@ export function useSectionScrollSpy<K extends string>(
     onScroll,
     onMomentumScrollEnd,
     scrollToKey,
-    tabBarHeight,
   };
 }

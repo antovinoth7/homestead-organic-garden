@@ -3,9 +3,6 @@ import type { Theme } from '../theme/colors';
 
 export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
-    // Height is set dynamically (see PlantEditForm): just enough for the last
-    // tab's section to scroll under the pinned bar, without leaving dead space.
-    bottomSpacer: {},
     // Full-bleed editable hero photo at the top of the scroll, mirroring the
     // detail screen. Negative margins cancel the content container's padding so
     // it spans edge-to-edge and sits flush under the header.

@@ -73,18 +73,11 @@ export const createStyles = (
       color: theme.textSecondary,
       backgroundColor: theme.backgroundSecondary,
     },
-    gestureRoot: {
+    // Full-screen dim backdrop; the sheet is anchored to the bottom. Tapping
+    // the overlay (anywhere outside the sheet) closes the dropdown.
+    sheetOverlay: {
       flex: 1,
-    },
-    overlay: {
-      ...StyleSheet.absoluteFillObject,
       backgroundColor: theme.overlay,
-    },
-    backdropPressable: {
-      ...StyleSheet.absoluteFillObject,
-    },
-    sheetContainer: {
-      ...StyleSheet.absoluteFillObject,
       justifyContent: 'flex-end' as const,
     },
     sheet: {

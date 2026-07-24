@@ -27,9 +27,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     headerOverlayStuck: {
       backgroundColor: theme.background,
     },
-    // Height is set dynamically (see PlantDetailScreen): just enough for the
-    // last section to scroll under the pinned bar, without leaving dead space.
-    bottomSpacer: {},
     headerOverlaySpacer: {
       flex: 1,
     },
