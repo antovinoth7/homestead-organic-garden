@@ -2,14 +2,17 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
+import { BottomSheetModal } from '@/components/BottomSheetModal';
+import { SheetHandle } from '@/components/SheetHandle';
 import { getAllPlants } from '@/services/plants';
 import { getGuildTemplate } from '@/config/beds';
 import { getPlantEmoji } from '@/utils/plantHelpers';
@@ -373,9 +376,15 @@ export function BedPlantPickerSheet({
   onAdd,
 }: Props): React.JSX.Element {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [activeTab, setActiveTab] = useState<Tab>('guild');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // The modal is edge-to-edge, so cap the sheet below the status bar and keep
+  // the last row clear of the navigation bar.
+  const sheetMaxHeight = windowHeight - insets.top - 24;
 
   useEffect(() => {
     if (visible) {
@@ -392,82 +401,82 @@ export function BedPlantPickerSheet({
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.sheetOverlay} onPress={onClose} activeOpacity={1}>
-        <TouchableOpacity activeOpacity={1} style={styles.sheet}>
-          <View style={styles.handle} />
-          <Text style={styles.sheetTitle}>Add Plant to Bed</Text>
+    <BottomSheetModal
+      visible={visible}
+      onClose={onClose}
+      sheetStyle={[
+        styles.sheet,
+        { maxHeight: sheetMaxHeight, paddingBottom: Math.max(insets.bottom, 24) },
+      ]}
+    >
+      <SheetHandle onClose={onClose}>
+        <Text style={styles.sheetTitle}>Add Plant to Bed</Text>
+      </SheetHandle>
 
-          {/* Tab bar */}
-          <View style={styles.tabBar}>
-            {(['guild', 'myplants'] as Tab[]).map((tab) => (
-              <TouchableOpacity
-                key={tab}
-                style={[styles.tab, activeTab === tab && styles.tabActive]}
-                onPress={() => setActiveTab(tab)}
-              >
-                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                  {tab === 'guild' ? 'Guild' : 'My Plants'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      {/* Tab bar */}
+      <View style={styles.tabBar}>
+        {(['guild', 'myplants'] as Tab[]).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tab, activeTab === tab && styles.tabActive]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+              {tab === 'guild' ? 'Guild' : 'My Plants'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-          {/* Search bar */}
-          <View style={styles.searchBarContainer}>
-            <Ionicons name="search-outline" size={16} color={theme.textTertiary} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search plants…"
-              placeholderTextColor={theme.textTertiary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCorrect={false}
-              autoCapitalize="none"
-              clearButtonMode="while-editing"
-            />
-          </View>
+      {/* Search bar */}
+      <View style={styles.searchBarContainer}>
+        <Ionicons name="search-outline" size={16} color={theme.textTertiary} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search plants…"
+          placeholderTextColor={theme.textTertiary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="while-editing"
+        />
+      </View>
 
-          {/* Tab content (scrollable) */}
-          <FlatList
-            data={[]}
-            renderItem={null}
-            keyExtractor={() => ''}
-            ListHeaderComponent={
-              <>
-                {activeTab === 'guild' ? (
-                  <GuildTab
-                    bedType={bedType}
-                    currentEntries={currentEntries}
-                    preselectedLayer={preselectedLayer}
-                    searchQuery={searchQuery}
-                    onAdd={handleAdd}
-                  />
-                ) : (
-                  <MyPlantsTab
-                    currentEntries={currentEntries}
-                    preselectedLayer={preselectedLayer}
-                    searchQuery={searchQuery}
-                    onAdd={handleAdd}
-                  />
-                )}
+      {/* Tab content (scrollable) */}
+      <FlatList
+        data={[]}
+        renderItem={null}
+        keyExtractor={() => ''}
+        ListHeaderComponent={
+          <>
+            {activeTab === 'guild' ? (
+              <GuildTab
+                bedType={bedType}
+                currentEntries={currentEntries}
+                preselectedLayer={preselectedLayer}
+                searchQuery={searchQuery}
+                onAdd={handleAdd}
+              />
+            ) : (
+              <MyPlantsTab
+                currentEntries={currentEntries}
+                preselectedLayer={preselectedLayer}
+                searchQuery={searchQuery}
+                onAdd={handleAdd}
+              />
+            )}
 
-                {/* Info note */}
-                <View style={styles.infoNote}>
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={16}
-                    color={theme.textSecondary}
-                  />
-                  <Text style={styles.infoNoteText}>
-                    {`Don't see a plant? Go to the Plants tab to create it first, then return here.`}
-                  </Text>
-                </View>
-              </>
-            }
-          />
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
+            {/* Info note */}
+            <View style={styles.infoNote}>
+              <Ionicons name="information-circle-outline" size={16} color={theme.textSecondary} />
+              <Text style={styles.infoNoteText}>
+                {`Don't see a plant? Go to the Plants tab to create it first, then return here.`}
+              </Text>
+            </View>
+          </>
+        }
+      />
+    </BottomSheetModal>
   );
 }

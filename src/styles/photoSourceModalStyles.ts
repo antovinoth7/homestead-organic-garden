@@ -3,14 +3,6 @@ import type { Theme } from '../theme/colors';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
-    overlay: {
-      flex: 1,
-      justifyContent: 'flex-end',
-    },
-    backdrop: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: theme.overlay,
-    },
     sheet: {
       paddingHorizontal: 12,
     },

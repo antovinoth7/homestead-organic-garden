@@ -1568,8 +1568,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       <Modal
         visible={editingVariety !== null}
         transparent
-        animationType="slide"
+        animationType="fade"
         hardwareAccelerated
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={() => setEditingVariety(null)}
       >
         <KeyboardAvoidingView
@@ -1703,6 +1705,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         transparent
         animationType="fade"
         hardwareAccelerated
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={() => setShowReassign(false)}
       >
         <View style={styles.modalOverlay}>
@@ -1767,6 +1771,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         transparent
         animationType="fade"
         hardwareAccelerated
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={() => {
           setShowPestPicker(false);
           setPestSearch('');
@@ -1812,6 +1818,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         transparent
         animationType="fade"
         hardwareAccelerated
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={() => {
           setShowDiseasePicker(false);
           setDiseaseSearch('');
@@ -1852,7 +1860,14 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       </Modal>
 
       {/* Saving overlay */}
-      <Modal visible={saving} transparent animationType="fade" hardwareAccelerated>
+      <Modal
+        visible={saving}
+        transparent
+        animationType="fade"
+        hardwareAccelerated
+        statusBarTranslucent
+        navigationBarTranslucent
+      >
         <View style={styles.savingOverlay}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.savingText}>Saving...</Text>

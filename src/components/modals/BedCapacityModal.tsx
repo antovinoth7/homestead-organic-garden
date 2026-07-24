@@ -23,7 +23,14 @@ export function BedCapacityModal({
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.iconWrap}>

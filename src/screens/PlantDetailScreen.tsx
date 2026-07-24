@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ import { PlantDetailGuideSection } from '@/components/plantDetail/PlantDetailGui
 import { PlantDetailInfoSection } from '@/components/plantDetail/PlantDetailInfoSection';
 import { PlantPicturesSection } from '@/components/plantDetail/PlantPicturesSection';
 import { PlantHistorySection } from '@/components/plantDetail/PlantHistorySection';
+import { CoconutSection } from '@/components/CoconutSection';
 import { usePlantDetail } from '@/hooks/usePlantDetail';
 import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
 import {
@@ -60,7 +61,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
-  const { plant, tasks, journalEntries, harvestEntries, loading, reload } = usePlantDetail(plantId);
+  const { plant, tasks, journalEntries, loading, reload } = usePlantDetail(plantId);
   const [isArchiving, setIsArchiving] = useState(false);
   const [zoomVisible, setZoomVisible] = useState(false);
   const [pinStageVisible, setPinStageVisible] = useState(false);
@@ -79,7 +80,9 @@ export default function PlantDetailScreen(): React.JSX.Element {
     onScroll,
     onMomentumScrollEnd,
     scrollToKey,
-  } = useSectionScrollSpy<PlantDetailTabKey>(TAB_KEYS);
+  } = useSectionScrollSpy<PlantDetailTabKey>(TAB_KEYS, insets.top + HEADER_OVERLAY_CLEARANCE);
+
+  const contentBottomPadding = Math.max(insets.bottom, 48) + 16;
 
   const handleTabBarLayout = useCallback(
     (event: LayoutChangeEvent) => {
@@ -125,10 +128,6 @@ export default function PlantDetailScreen(): React.JSX.Element {
     });
   }, [navigation, plantId]);
 
-  const openJournal = useCallback(() => {
-    navigation.navigate('Journal');
-  }, [navigation]);
-
   const openPestForm = useCallback(() => {
     navigation.navigate('Journal', {
       screen: 'JournalForm',
@@ -167,7 +166,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <Text>Loading...</Text>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -250,7 +249,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
         onScroll={handleScroll}
         onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
+        contentContainerStyle={{ paddingBottom: contentBottomPadding }}
       >
         <PlantDetailHero plant={plant} onPhotoPress={() => setZoomVisible(true)} />
 
@@ -266,19 +265,15 @@ export default function PlantDetailScreen(): React.JSX.Element {
           <PlantDetailCareSection
             plant={plant}
             tasks={tasks}
-            harvestEntries={harvestEntries}
             effectiveStage={effectiveStage}
             careProfile={careProfile}
             isPinned={isPinned}
             isArchiving={isArchiving}
             computedHarvestDate={computedHarvestDate}
-            coconutAge={coconutAge}
-            coconutDeficiencies={coconutDeficiencies}
             onPin={() => setPinStageVisible(true)}
             onUnpin={handleUnpin}
             onClearBed={handleClearBed}
             onRecordHarvest={openHarvestForm}
-            onViewAllHarvests={openJournal}
             onLogPest={openPestForm}
             onAddNote={openNoteForm}
             onAddCareTask={openCreateTask}
@@ -290,6 +285,14 @@ export default function PlantDetailScreen(): React.JSX.Element {
           <PlantDetailGuideSection
             plantType={plant.plant_type}
             plantVariety={plant.plant_variety || ''}
+          />
+          {/* Coconut-specific guidance lives under the general Guide section. */}
+          <CoconutSection
+            styles={styles}
+            theme={theme}
+            plant={plant}
+            coconutAge={coconutAge}
+            coconutDeficiencies={coconutDeficiencies}
           />
         </View>
 
@@ -316,10 +319,6 @@ export default function PlantDetailScreen(): React.JSX.Element {
             enabled={historyEnabled}
           />
         </View>
-
-        {/* Lets the last section scroll under the pinned bar so every tab tap
-            produces visible movement. */}
-        <View style={styles.bottomSpacer} />
       </ScrollView>
 
       {/* Always-mounted header overlay: transparent floating buttons over the

@@ -1,5 +1,5 @@
-import React, { useMemo, useCallback } from 'react';
-import type { ImageStyle } from 'react-native';
+import React, { useMemo, useCallback, useState, useRef } from 'react';
+import type { ImageStyle, LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import {
   View,
   Text,
@@ -102,10 +102,39 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
     activeKey,
     scrollRef,
     registerSection,
+    onTabBarLayout,
     onScroll,
     onMomentumScrollEnd,
     scrollToKey,
   } = useSectionScrollSpy<PlantEditTabKey>(TAB_KEYS);
+
+  // Mirror the detail screen: full-bleed hero → in-flow tabs → pinned overlay
+  // tabs once the in-flow bar scrolls under the header.
+  const [tabsStuck, setTabsStuck] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const tabBarYRef = useRef(0);
+
+  const handleTabBarLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      tabBarYRef.current = event.nativeEvent.layout.y;
+      onTabBarLayout(event);
+    },
+    [onTabBarLayout]
+  );
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // The in-flow tab bar sits at tabBarYRef within the scroll content; once
+      // it reaches the top of the viewport (just under the header) the pinned
+      // overlay copy takes over so the handoff is seamless.
+      const stuck = event.nativeEvent.contentOffset.y >= tabBarYRef.current;
+      setTabsStuck((prev) => (prev === stuck ? prev : stuck));
+      onScroll(event);
+    },
+    [onScroll]
+  );
+
+  const contentBottomPadding = 24 + insets.bottom;
 
   const { scrollViewRef } = formState;
   // The form state hook and the scroll spy each need the ScrollView node.
@@ -143,7 +172,10 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
       {/* KAV padding lifts the notes/text inputs above the keyboard;
           edge-to-edge Android ignores "resize". */}
       <KeyboardAvoidingView style={editStyles.flexOne} behavior="padding">
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <View
+          style={[styles.header, { paddingTop: insets.top + 12 }]}
+          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+        >
           <TouchableOpacity
             onPress={handleClose}
             style={styles.headerIconButton}
@@ -173,61 +205,57 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
-        {/* Pinned below the header, outside the ScrollView: a sticky tab bar
-            drops taps on Android (translated sticky header), so keeping it here
-            makes every tap register while the scroll-spy still tracks sections. */}
-        <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={scrollToKey} />
-
         <ScrollView
           ref={setScrollRef}
           style={[styles.content, editStyles.scrollBody]}
           contentContainerStyle={[
             styles.scrollContent,
             editStyles.scrollContentPadding,
-            { paddingBottom: 24 + insets.bottom },
+            { paddingBottom: contentBottomPadding },
           ]}
           keyboardShouldPersistTaps="handled"
-          onScroll={onScroll}
+          onScroll={handleScroll}
           onMomentumScrollEnd={onMomentumScrollEnd}
           scrollEventThrottle={16}
         >
-          {/* Photo + identity caption. */}
-          <View>
-            <TouchableOpacity
-              style={styles.photoHeroContainer}
-              onPress={pickImage}
-              activeOpacity={0.85}
-            >
-              {photoUri ? (
-                <>
-                  <Image
-                    source={{ uri: photoUri }}
-                    style={styles.photoHeroImage as ImageStyle}
-                    contentFit="cover"
-                    transition={200}
-                    cachePolicy="memory-disk"
-                  />
-                  <View style={styles.photoHeroEditBadge}>
-                    <Ionicons name="camera" size={14} color={theme.textInverse} />
-                    <Text style={styles.photoHeroEditBadgeText}>Change Photo</Text>
-                  </View>
-                </>
-              ) : (
-                <View style={styles.photoHeroPlaceholder}>
-                  <Ionicons name="camera-outline" size={40} color={theme.primary} />
-                  <Text style={styles.photoHeroPlaceholderText}>Tap to add a photo</Text>
+          {/* Full-bleed editable hero photo — tap to change; mirrors the detail
+              screen's hero but stays interactive. */}
+          <TouchableOpacity style={editStyles.editHero} onPress={pickImage} activeOpacity={0.85}>
+            {photoUri ? (
+              <>
+                <Image
+                  source={{ uri: photoUri }}
+                  style={styles.photoHeroImage as ImageStyle}
+                  contentFit="cover"
+                  transition={200}
+                  cachePolicy="memory-disk"
+                />
+                <View style={styles.photoHeroEditBadge}>
+                  <Ionicons name="camera" size={14} color={theme.textInverse} />
+                  <Text style={styles.photoHeroEditBadgeText}>Change Photo</Text>
                 </View>
-              )}
-            </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.photoHeroPlaceholder}>
+                <Ionicons name="camera-outline" size={40} color={theme.primary} />
+                <Text style={styles.photoHeroPlaceholderText}>Tap to add a photo</Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
-            <View style={styles.heroCaption}>
-              {(plantVariety || variety) && (
-                <Text style={styles.heroCaptionName} numberOfLines={1}>
-                  {plantVariety || variety}
-                </Text>
-              )}
-              <Text style={styles.heroCaptionCategory}>{CATEGORY_FULL_LABELS[plantType]}</Text>
-            </View>
+          <View style={editStyles.editHeroCaption}>
+            {(plantVariety || variety) && (
+              <Text style={styles.heroCaptionName} numberOfLines={1}>
+                {plantVariety || variety}
+              </Text>
+            )}
+            <Text style={styles.heroCaptionCategory}>{CATEGORY_FULL_LABELS[plantType]}</Text>
+          </View>
+
+          {/* In-flow tab bar sits under the image; a pinned copy (below) takes
+              over once this scrolls under the header. */}
+          <View style={editStyles.inFlowTabBar} onLayout={handleTabBarLayout}>
+            <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={scrollToKey} />
           </View>
 
           <View onLayout={registerSection('basics')}>
@@ -293,8 +321,16 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
             </View>
           </View>
 
-          <View style={editStyles.bottomSpacer} />
         </ScrollView>
+
+        {/* Pinned overlay tab bar: appears just below the header once the
+            in-flow bar scrolls away, so the tabs stay reachable. Outside the
+            ScrollView (Android drops taps on translated sticky headers). */}
+        {tabsStuck && (
+          <View style={[editStyles.pinnedTabBar, { top: headerHeight }]}>
+            <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={scrollToKey} />
+          </View>
+        )}
       </KeyboardAvoidingView>
     </View>
   );

@@ -350,7 +350,6 @@ function buildPlantBatchFromEntries(
   const seed: Partial<Pick<Plant, 'id' | 'name'>>[] = [...existingPlants];
   for (const p of newPlants) {
     const base = buildGeneratedPlantNameBase(
-      p.plant_type,
       p.plant_variety ?? '',
       p.variety ?? '',
       p.planting_date ?? undefined,

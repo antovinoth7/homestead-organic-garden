@@ -1,8 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  FlatList,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
+import { BottomSheetModal } from '@/components/BottomSheetModal';
+import { SheetHandle } from '@/components/SheetHandle';
 import { getPlantEmoji } from '@/utils/plantHelpers';
 import { CATEGORY_FULL_LABELS } from '@/utils/plantLabels';
 import { createStyles } from '@/styles/plantPickerSheetStyles';
@@ -77,8 +86,13 @@ export function PlantPickerSheet({
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // The modal is edge-to-edge, so cap the sheet below the status bar instead of
+  // relying on a percentage of the (now full-screen) window.
+  const sheetHeight = Math.min(windowHeight * 0.85, windowHeight - insets.top - 24);
 
   useEffect(() => {
     if (visible) setSearchQuery('');
@@ -117,9 +131,7 @@ export function PlantPickerSheet({
             <Text style={styles.rowName}>{item.name}</Text>
             <View style={styles.badgeRow}>
               <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>
-                  {CATEGORY_FULL_LABELS[item.plantType]}
-                </Text>
+                <Text style={styles.categoryBadgeText}>{CATEGORY_FULL_LABELS[item.plantType]}</Text>
               </View>
               {item.seasonLabel ? (
                 <View style={styles.seasonBadge}>
@@ -136,42 +148,43 @@ export function PlantPickerSheet({
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.sheetOverlay} onPress={onClose} activeOpacity={1}>
-        <TouchableOpacity
-          activeOpacity={1}
-          style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 24) }]}
-        >
-          <View style={styles.handle} />
-          <Text style={styles.sheetTitle}>Choose a Plant</Text>
-          <View style={styles.searchBarContainer}>
-            <Ionicons name="search-outline" size={16} color={theme.textTertiary} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search plants…"
-              placeholderTextColor={theme.textTertiary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCorrect={false}
-              autoCapitalize="none"
-              clearButtonMode="while-editing"
-            />
+    <BottomSheetModal
+      visible={visible}
+      onClose={onClose}
+      sheetStyle={[
+        styles.sheet,
+        { height: sheetHeight, paddingBottom: Math.max(insets.bottom, 24) },
+      ]}
+    >
+      <SheetHandle onClose={onClose}>
+        <Text style={styles.sheetTitle}>Choose a Plant</Text>
+      </SheetHandle>
+      <View style={styles.searchBarContainer}>
+        <Ionicons name="search-outline" size={16} color={theme.textTertiary} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search plants…"
+          placeholderTextColor={theme.textTertiary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="while-editing"
+        />
+      </View>
+      <FlatList
+        data={rows}
+        keyExtractor={(row) => row.key}
+        renderItem={renderRow}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="search-outline" size={28} color={theme.textTertiary} />
+            <Text style={styles.emptyStateText}>No plants match your search.</Text>
           </View>
-          <FlatList
-            data={rows}
-            keyExtractor={(row) => row.key}
-            renderItem={renderRow}
-            contentContainerStyle={styles.listContent}
-            keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Ionicons name="search-outline" size={28} color={theme.textTertiary} />
-                <Text style={styles.emptyStateText}>No plants match your search.</Text>
-              </View>
-            }
-          />
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
+        }
+      />
+    </BottomSheetModal>
   );
 }

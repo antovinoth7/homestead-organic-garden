@@ -3,26 +3,12 @@ import type { Theme } from '@/theme/colors';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
-    sheetOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'flex-end' as const,
-    },
     sheet: {
       backgroundColor: theme.background,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      height: '85%' as const,
+      // height is computed at runtime (85% of the window, capped below the top inset).
       paddingBottom: 24,
-    },
-    handle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.border,
-      alignSelf: 'center' as const,
-      marginTop: 10,
-      marginBottom: 4,
     },
     sheetTitle: {
       fontSize: 16,

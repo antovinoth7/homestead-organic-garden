@@ -7,33 +7,23 @@ import { ClearBedCta } from '@/components/ClearBedCta';
 import { CareScheduleSection } from '@/components/CareScheduleSection';
 import { BedContextSection } from '@/components/BedContextSection';
 import { HarvestInfoSection } from '@/components/HarvestInfoSection';
-import HarvestHistorySection from '@/components/HarvestHistorySection';
-import { CoconutSection } from '@/components/CoconutSection';
 import { PlantNotesSection } from '@/components/PlantNotesSection';
 import { PlantQuickActions } from '@/components/plantDetail/PlantQuickActions';
-import type { Plant, TaskTemplate, JournalEntry, PlantCareProfile } from '@/types/database.types';
-import type {
-  EffectiveGrowthStage,
-  CoconutAgeInfo,
-  CoconutNutrientDeficiency,
-} from '@/utils/plantHelpers';
+import type { Plant, TaskTemplate, PlantCareProfile } from '@/types/database.types';
+import type { EffectiveGrowthStage } from '@/utils/plantHelpers';
 
 interface Props {
   plant: Plant;
   tasks: TaskTemplate[];
-  harvestEntries: JournalEntry[];
   effectiveStage: EffectiveGrowthStage | null;
   careProfile: PlantCareProfile | null;
   isPinned: boolean;
   isArchiving: boolean;
   computedHarvestDate: string | null;
-  coconutAge: CoconutAgeInfo | null;
-  coconutDeficiencies: CoconutNutrientDeficiency[];
   onPin: () => void;
   onUnpin: () => void;
   onClearBed: () => void;
   onRecordHarvest: () => void;
-  onViewAllHarvests: () => void;
   onLogPest: () => void;
   onAddNote: () => void;
   onAddCareTask: () => void;
@@ -43,19 +33,15 @@ interface Props {
 export function PlantDetailCareSection({
   plant,
   tasks,
-  harvestEntries,
   effectiveStage,
   careProfile,
   isPinned,
   isArchiving,
   computedHarvestDate,
-  coconutAge,
-  coconutDeficiencies,
   onPin,
   onUnpin,
   onClearBed,
   onRecordHarvest,
-  onViewAllHarvests,
   onLogPest,
   onAddNote,
   onAddCareTask,
@@ -101,22 +87,6 @@ export function PlantDetailCareSection({
         theme={theme}
         plant={plant}
         computedHarvestDate={computedHarvestDate}
-      />
-
-      <HarvestHistorySection
-        plantType={plant.plant_type}
-        harvestEntries={harvestEntries}
-        styles={styles}
-        onRecordHarvest={onRecordHarvest}
-        onViewAll={onViewAllHarvests}
-      />
-
-      <CoconutSection
-        styles={styles}
-        theme={theme}
-        plant={plant}
-        coconutAge={coconutAge}
-        coconutDeficiencies={coconutDeficiencies}
       />
 
       <PlantNotesSection styles={styles} plant={plant} />

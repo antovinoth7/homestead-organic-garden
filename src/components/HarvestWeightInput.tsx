@@ -72,7 +72,13 @@ export function HarvestWeightInput({ onConfirm, onDismiss }: Props): React.JSX.E
   };
 
   return (
-    <Modal transparent animationType="fade" onRequestClose={onDismiss}>
+    <Modal
+      transparent
+      animationType="fade"
+      onRequestClose={onDismiss}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onDismiss}>
         <TouchableOpacity activeOpacity={1} style={styles.card}>
           <Text style={styles.title}>Log Harvest Weight</Text>

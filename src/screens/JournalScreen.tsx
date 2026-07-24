@@ -30,6 +30,7 @@ import { computeJournalStats, getDateFilterStart } from '../utils/journalStats';
 import { collectUsedTags } from '../utils/journalEntryOptions';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
+import { SheetHandle } from '@/components/SheetHandle';
 import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import { JournalEntryCard } from '@/components/JournalEntryCard';
 
@@ -424,13 +425,7 @@ export default function JournalScreen(): React.JSX.Element {
               { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) },
             ]}
           >
-            <TouchableOpacity
-              activeOpacity={0.6}
-              onPress={toggleFilters}
-              style={styles.sheetHandleArea}
-            >
-              <View style={styles.sheetHandle} />
-            </TouchableOpacity>
+            <SheetHandle onClose={toggleFilters} />
 
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Filter Journal</Text>

@@ -1,11 +1,13 @@
-import type { Plant, PlantType } from '../types/database.types';
+import type { Plant } from '../types/database.types';
 
 /**
  * Build the base for an auto-generated plant name from its metadata.
- * E.g. "Tomato - Cherry '26 (BG)" for a Cherry Tomato planted in 2026 in Backyard Garden.
+ * Format: `Variety-ShortPlace-YYYYMM`, e.g. "Mango-MNG-202601" for a Mango
+ * planted Jan 2026 at a location whose short name is "MNG". The place and month
+ * segments are omitted when their source data is missing, keeping the base
+ * deterministic from stored plant data (so edit-load can still recognise it).
  */
 export const buildGeneratedPlantNameBase = (
-  plantType: PlantType | string,
   plantVariety: string,
   variety: string,
   plantingDate?: string,
@@ -16,33 +18,34 @@ export const buildGeneratedPlantNameBase = (
   const v = variety.trim();
   if (!pv) return '';
 
-  let base: string;
+  let namePart: string;
   if (!v) {
-    base = pv;
+    namePart = pv;
   } else if (v.toLowerCase().includes(pv.toLowerCase())) {
-    base = v;
+    namePart = v;
   } else {
-    base = `${pv} - ${v}`;
+    namePart = `${pv} - ${v}`;
   }
 
-  // Trees get a "'YY" tag = the last two digits of the PLANTING year (not the
-  // created date), so "Mango '26" reads as a mango planted in 2026. Only added
-  // when a valid planting date is present; slice(-2) is length-safe.
-  const isTree = ['fruit_tree', 'timber_tree', 'coconut_tree'].includes(plantType as string);
-  if (isTree && plantingDate) {
+  // Short place code (e.g. "MNG"): the configured short name, else the first
+  // word of the location. Omitted when there is no location.
+  let shortPlace = '';
+  const loc = parentLocation?.trim();
+  if (loc) {
+    shortPlace = locationShortName?.trim() || (loc.split(/\s+/)[0] ?? '').slice(0, 10);
+  }
+
+  // YYYYMM from the planting date. Omitted (not defaulted) when absent so the
+  // base is stable across renders and reconstructable on edit-load.
+  let yyyymm = '';
+  if (plantingDate) {
     const d = new Date(plantingDate);
     if (!isNaN(d.getTime())) {
-      base = `${base} '${String(d.getFullYear()).slice(-2)}`;
+      yyyymm = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
     }
   }
 
-  const loc = parentLocation?.trim();
-  if (loc) {
-    const token = locationShortName?.trim() || (loc.split(/\s+/)[0] ?? '').slice(0, 10);
-    if (token) base = `${base} (${token})`;
-  }
-
-  return base;
+  return [namePart, shortPlace, yyyymm].filter(Boolean).join('-');
 };
 
 export const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -54,13 +57,14 @@ export const isGeneratedPlantName = (value: string, baseName: string): boolean =
   const nv = value.trim();
   const nb = baseName.trim();
   if (!nv || !nb) return false;
-  const pattern = new RegExp(`^${escapeRegExp(nb)}(?: #(\\d+))?$`, 'i');
+  const pattern = new RegExp(`^${escapeRegExp(nb)}(?:-#(\\d+))?$`, 'i');
   return pattern.test(nv);
 };
 
 /**
- * Build a unique auto-generated plant name, appending " #N" when the base is
- * already taken by another plant.
+ * Build a unique auto-generated plant name, appending "-#0N" (zero-padded,
+ * starting at #02) when the base is already taken by another plant. The first
+ * plant of a given base has no numeric suffix.
  */
 export const buildGeneratedPlantName = (
   baseName: string,
@@ -79,7 +83,7 @@ export const buildGeneratedPlantName = (
     return currentGeneratedName;
   }
 
-  const pattern = new RegExp(`^${escapeRegExp(normalizedBase)}(?: #(\\d+))?$`, 'i');
+  const pattern = new RegExp(`^${escapeRegExp(normalizedBase)}(?:-#(\\d+))?$`, 'i');
   let baseTaken = false;
   const usedSuffixes = new Set<number>();
 
@@ -98,5 +102,5 @@ export const buildGeneratedPlantName = (
   if (!baseTaken) return normalizedBase;
   let next = 2;
   while (usedSuffixes.has(next)) next++;
-  return `${normalizedBase} #${next}`;
+  return `${normalizedBase}-#${String(next).padStart(2, '0')}`;
 };

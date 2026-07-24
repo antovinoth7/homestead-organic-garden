@@ -1,5 +1,13 @@
 import React, { useMemo } from 'react';
-import { Modal, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/confirmDeleteModalStyles';
@@ -34,8 +42,21 @@ export function ConfirmDeleteModal({
   };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={handleRequestClose}>
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent
+      onRequestClose={handleRequestClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={styles.overlay}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={handleRequestClose}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
+        />
         <View style={styles.card}>
           <View style={styles.iconWrap}>
             <Ionicons name="trash-outline" size={30} color={theme.error} />

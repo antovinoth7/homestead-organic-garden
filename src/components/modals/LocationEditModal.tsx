@@ -141,6 +141,8 @@ export function LocationEditModal({
       animationType="fade"
       hardwareAccelerated
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

@@ -44,6 +44,7 @@ import { calculateExpectedHarvestDate } from '../utils/plantHelpers';
 import CreateTaskModal from '../components/modals/CreateTaskModal';
 import TaskCompletionModal from '../components/modals/TaskCompletionModal';
 import VoiceDictation from '@/components/VoiceDictation';
+import { SheetHandle } from '@/components/SheetHandle';
 import WeekCalendarView from '../components/calendar/WeekCalendarView';
 import MonthCalendarView from '../components/calendar/MonthCalendarView';
 import { SwipeableTaskCard } from '../components/calendar/SwipeableTaskCard';
@@ -1429,13 +1430,7 @@ export default function CalendarScreen(): React.JSX.Element {
                 { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) },
               ]}
             >
-              <TouchableOpacity
-                activeOpacity={0.6}
-                onPress={() => setShowGroupMenu(false)}
-                style={styles.sheetHandleArea}
-              >
-                <View style={styles.sheetHandle} />
-              </TouchableOpacity>
+              <SheetHandle onClose={() => setShowGroupMenu(false)} />
 
               <View style={styles.sheetHeader}>
                 <Text style={styles.sheetTitle}>View Options</Text>
@@ -1564,6 +1559,8 @@ export default function CalendarScreen(): React.JSX.Element {
           animationType="fade"
           transparent={true}
           onRequestClose={() => {}}
+          statusBarTranslucent
+          navigationBarTranslucent
         >
           <View style={styles.completeAllOverlay}>
             <View style={styles.completeAllCard}>
@@ -1648,13 +1645,7 @@ export default function CalendarScreen(): React.JSX.Element {
                     { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) },
                   ]}
                 >
-                  <TouchableOpacity
-                    style={styles.sheetHandleArea}
-                    onPress={closeDetail}
-                    activeOpacity={0.6}
-                  >
-                    <View style={styles.sheetHandle} />
-                  </TouchableOpacity>
+                  <SheetHandle onClose={closeDetail} />
                   <View style={styles.taskDetailHeader}>
                     <Text
                       style={[
@@ -1750,9 +1741,11 @@ export default function CalendarScreen(): React.JSX.Element {
         {/* Skip Task Modal */}
         <Modal
           visible={showSkipModal}
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           onRequestClose={() => setShowSkipModal(false)}
+          statusBarTranslucent
+          navigationBarTranslucent
         >
           <View style={styles.skipModalOverlay}>
             <View style={styles.skipModalContent}>

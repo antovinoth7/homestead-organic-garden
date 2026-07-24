@@ -73,20 +73,7 @@ export const createStyles = (
       color: theme.textSecondary,
       backgroundColor: theme.backgroundSecondary,
     },
-    gestureRoot: {
-      flex: 1,
-    },
-    overlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: theme.overlay,
-    },
-    backdropPressable: {
-      ...StyleSheet.absoluteFillObject,
-    },
-    sheetContainer: {
-      ...StyleSheet.absoluteFillObject,
-      justifyContent: 'flex-end' as const,
-    },
+    // The dim backdrop and tap-outside-to-close live in BottomSheetModal.
     sheet: {
       backgroundColor: theme.card,
       borderTopLeftRadius: 20,
@@ -107,32 +94,11 @@ export const createStyles = (
         },
       }),
     },
-    sheetCloseRow: {
-      width: '100%',
-      alignItems: 'center' as const,
-      paddingTop: 10,
-      paddingBottom: 4,
-    },
-    sheetCloseRowPressed: {
-      backgroundColor: theme.borderLight,
-    },
-    sheetHandleArea: {
-      alignSelf: 'center',
-      paddingTop: 12,
-      paddingBottom: 8,
-      paddingHorizontal: 40,
-    },
-    sheetHandle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.border,
-      marginBottom: 4,
-    },
     sheetTitle: {
       fontSize: 14,
       fontWeight: '600',
       color: theme.textTertiary,
+      textAlign: 'center' as const,
       textTransform: 'uppercase',
       letterSpacing: 0.8,
       paddingHorizontal: 16,

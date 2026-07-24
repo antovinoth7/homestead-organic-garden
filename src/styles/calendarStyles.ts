@@ -155,17 +155,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
     },
-    sheetHandle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.border,
-    },
-    sheetHandleArea: {
-      alignItems: 'center',
-      paddingTop: 10,
-      paddingBottom: 8,
-    },
     sheetHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -838,11 +827,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     harvestDate: {
       fontSize: 14,
       color: theme.textSecondary,
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'flex-end',
     },
     modalContent: {
       backgroundColor: theme.backgroundSecondary,
