@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { getTaskLogs, getStoredTaskLogs } from '@/services/tasks';
+import { getPlantTaskLogs, getStoredTaskLogs } from '@/services/tasks';
 import { mergePlantHistory } from '@/utils/plantHistory';
 import type { PlantHistoryItem } from '@/utils/plantHistory';
 import type { Plant, JournalEntry, TaskLog } from '@/types/database.types';
@@ -20,8 +20,8 @@ interface PlantHistoryData {
 /**
  * Builds the merged plant-history list. Journal entries, pest/disease records
  * and growth-stage changes come from data already loaded by usePlantDetail;
- * task logs are fetched lazily the first time `enabled` becomes true, since
- * getTaskLogs is an uncached full-collection read.
+ * task logs are fetched lazily the first time `enabled` becomes true, via the
+ * plant-scoped read so History never pulls the user's whole log collection.
  */
 export function usePlantHistory({
   plant,
@@ -58,9 +58,9 @@ export function usePlantHistory({
         // Ignore — the network read below is the source of truth.
       }
       try {
-        const logs = await getTaskLogs();
+        const logs = await getPlantTaskLogs(plant.id);
         if (!isMountedRef.current) return;
-        setTaskLogs(logs.filter((log) => log.plant_id === plant.id));
+        setTaskLogs(logs);
       } catch {
         if (!isMountedRef.current) return;
         setError('Could not load completed tasks.');

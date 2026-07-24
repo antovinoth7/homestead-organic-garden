@@ -30,6 +30,7 @@ import {
   peekCached,
   setCached,
   invalidate,
+  invalidatePrefix,
   dedup,
   CACHE_KEYS,
 } from '../lib/dataCache';
@@ -49,6 +50,8 @@ import {
 const TASKS_COLLECTION = 'task_templates';
 const TASK_LOGS_COLLECTION = 'task_logs';
 const PLANTS_COLLECTION = 'plants';
+/** Cache-key namespace for per-plant task logs; cleared via `invalidatePrefix`. */
+const PLANT_TASK_LOGS_CACHE_PREFIX = 'taskLogs:plant:';
 type MarkTaskDoneOptions = {
   skipAlreadyDoneCheck?: boolean;
   /** Called after each batch chunk commits, with the running completed count. */
@@ -338,6 +341,7 @@ export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> 
     CACHE_KEYS.TODAY_TASK_LOGS,
     CACHE_KEYS.TASK_LOGS
   );
+  invalidatePrefix(PLANT_TASK_LOGS_CACHE_PREFIX);
 };
 
 /**
@@ -410,6 +414,7 @@ export const deleteTasksForBedIds = async (bedIds: string[]): Promise<void> => {
     CACHE_KEYS.TODAY_TASK_LOGS,
     CACHE_KEYS.TASK_LOGS
   );
+  invalidatePrefix(PLANT_TASK_LOGS_CACHE_PREFIX);
 };
 
 /**
@@ -678,6 +683,11 @@ const applyTaskDoneCacheDeltas = async (opsList: TaskDoneOps[]): Promise<void> =
   if (warmLogs) setCached(CACHE_KEYS.TASK_LOGS, prependNewLogs(warmLogs));
   else invalidate(CACHE_KEYS.TASK_LOGS);
 
+  // Per-plant log caches are dropped rather than patched — splicing each one
+  // would mean re-deriving which plant every new log belongs to, and the next
+  // History open refetches a single plant's logs cheaply.
+  invalidatePrefix(PLANT_TASK_LOGS_CACHE_PREFIX);
+
   // TODAY_TASKS is a differently-filtered list used by other screens; leave it
   // to a plain invalidate rather than reconstructing the filter here.
   invalidate(CACHE_KEYS.TODAY_TASKS);
@@ -922,6 +932,57 @@ export const getTaskLogs = async (templateId?: string): Promise<TaskLog[]> => {
     const filtered = templateId
       ? cachedLogs.filter((log) => log.template_id === templateId)
       : cachedLogs;
+    filtered.sort((a, b) => new Date(b.done_at).getTime() - new Date(a.done_at).getTime());
+    return filtered;
+  }
+};
+
+/**
+ * Get one plant's task logs — much cheaper than getTaskLogs(), which fetches
+ * every log the user owns just to filter it down to a single plant.
+ *
+ * Two equality filters with no orderBy (sorted in memory instead), matching the
+ * template-filtered branch of getTaskLogs, so no composite index is required.
+ *
+ * This deliberately never writes KEYS.TASK_LOGS or CACHE_KEYS.TASK_LOGS —
+ * those hold the *full* log list that getStoredTaskLogs, the delete cascades
+ * and backup.ts read, and a plant-scoped subset would corrupt them.
+ */
+export const getPlantTaskLogs = async (plantId: string): Promise<TaskLog[]> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const cacheKey = `${PLANT_TASK_LOGS_CACHE_PREFIX}${plantId}`;
+  const cached = getCached<TaskLog[]>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    await refreshAuthToken();
+
+    const q = query(
+      collection(db, TASK_LOGS_COLLECTION),
+      where('user_id', '==', user.uid),
+      where('plant_id', '==', plantId)
+    );
+
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    const logs = snapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+      done_at: convertTimestamp(d.data().done_at),
+      created_at: convertTimestamp(d.data().created_at),
+    })) as TaskLog[];
+
+    logs.sort((a, b) => new Date(b.done_at).getTime() - new Date(a.done_at).getTime());
+
+    setCached(cacheKey, logs);
+    return logs;
+  } catch (error) {
+    logger.warn('Failed to fetch plant task logs, using cached data', error as Error);
+    const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
+    const filtered = cachedLogs.filter((log) => log.plant_id === plantId);
     filtered.sort((a, b) => new Date(b.done_at).getTime() - new Date(a.done_at).getTime());
     return filtered;
   }

@@ -1,4 +1,10 @@
-import { getCached, peekCached, setCached, invalidate } from '@/lib/dataCache';
+import {
+  getCached,
+  peekCached,
+  setCached,
+  invalidate,
+  invalidatePrefix,
+} from '@/lib/dataCache';
 
 describe('dataCache peekCached', () => {
   afterEach(() => {
@@ -20,5 +26,42 @@ describe('dataCache peekCached', () => {
     setCached('k', { v: 2 });
     invalidate('k');
     expect(peekCached('k')).toBeNull();
+  });
+});
+
+describe('dataCache invalidatePrefix', () => {
+  afterEach(() => {
+    invalidatePrefix('taskLogs:plant:');
+    invalidate('taskLogs', 'k');
+  });
+
+  it('clears every key in a dynamic key family', () => {
+    setCached('taskLogs:plant:a', [1]);
+    setCached('taskLogs:plant:b', [2]);
+
+    invalidatePrefix('taskLogs:plant:');
+
+    expect(peekCached('taskLogs:plant:a')).toBeNull();
+    expect(peekCached('taskLogs:plant:b')).toBeNull();
+  });
+
+  it('leaves non-matching keys intact', () => {
+    // The full-list cache must survive — it is shared with backup and the
+    // delete cascades, which do not want it dropped on a History open.
+    setCached('taskLogs', [1, 2, 3]);
+    setCached('taskLogs:plant:a', [1]);
+    setCached('k', { v: 1 });
+
+    invalidatePrefix('taskLogs:plant:');
+
+    expect(peekCached('taskLogs')).toEqual([1, 2, 3]);
+    expect(peekCached('k')).toEqual({ v: 1 });
+    expect(peekCached('taskLogs:plant:a')).toBeNull();
+  });
+
+  it('is a no-op when nothing matches', () => {
+    setCached('k', { v: 1 });
+    expect(() => invalidatePrefix('nothing:')).not.toThrow();
+    expect(peekCached('k')).toEqual({ v: 1 });
   });
 });

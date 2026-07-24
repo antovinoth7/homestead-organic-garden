@@ -6,8 +6,10 @@ import type { Theme } from '@/theme/colors';
 import { createStyles } from '@/styles/plantHistoryTabStyles';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
 import type { SegmentedTab } from '@/components/SegmentedTabs';
+import { ShowMoreFooter } from '@/components/ShowMoreFooter';
 import { usePlantHistory } from '@/hooks/usePlantHistory';
 import { filterHistoryItems } from '@/utils/plantHistory';
+import { paginateList } from '@/utils/progressiveList';
 import type { PlantHistoryItem, HistoryFilter } from '@/utils/plantHistory';
 import { JournalEntryType } from '@/types/database.types';
 import type { Plant, JournalEntry, TaskType } from '@/types/database.types';
@@ -26,6 +28,10 @@ const FILTERS: readonly SegmentedTab<HistoryFilter>[] = [
   { key: 'pest_disease', label: 'Pests & Disease' },
   { key: 'growth_stage', label: 'Growth' },
 ];
+
+/** Rows shown before the reader asks for more, and the size of each extra page. */
+const INITIAL_VISIBLE_COUNT = 8;
+const PAGE_SIZE = 10;
 
 const TASK_LABELS: Record<TaskType, string> = {
   water: 'Watered',
@@ -132,8 +138,23 @@ export function PlantHistorySection({ plant, journalEntries, enabled }: Props): 
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { items, loading, error } = usePlantHistory({ plant, journalEntries, enabled });
   const [filter, setFilter] = useState<HistoryFilter>('all');
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
 
   const filtered = useMemo(() => filterHistoryItems(items, filter), [items, filter]);
+  const page = useMemo(
+    () => paginateList(filtered, visibleCount, INITIAL_VISIBLE_COUNT),
+    [filtered, visibleCount]
+  );
+
+  // Each filter is its own list, so an expanded window must not carry over —
+  // switching from a long "Care" list to "Harvest" starts collapsed again.
+  const handleFilterChange = useCallback((next: HistoryFilter) => {
+    setFilter(next);
+    setVisibleCount(INITIAL_VISIBLE_COUNT);
+  }, []);
+
+  const showMore = useCallback(() => setVisibleCount((count) => count + PAGE_SIZE), []);
+  const showLess = useCallback(() => setVisibleCount(INITIAL_VISIBLE_COUNT), []);
 
   const renderRow = useCallback(
     (item: PlantHistoryItem) => {
@@ -165,7 +186,7 @@ export function PlantHistorySection({ plant, journalEntries, enabled }: Props): 
 
   return (
     <View style={styles.container}>
-      <SegmentedTabs tabs={FILTERS} activeKey={filter} onChange={setFilter} />
+      <SegmentedTabs tabs={FILTERS} activeKey={filter} onChange={handleFilterChange} />
       {loading && items.length === 0 ? (
         <View style={styles.centered}>
           <ActivityIndicator color={theme.primary} />
@@ -176,7 +197,18 @@ export function PlantHistorySection({ plant, journalEntries, enabled }: Props): 
           <Text style={styles.emptyText}>{error ?? EMPTY_COPY[filter]}</Text>
         </View>
       ) : (
-        <View style={styles.list}>{filtered.map(renderRow)}</View>
+        <>
+          <View style={styles.list}>{page.visible.map(renderRow)}</View>
+          <ShowMoreFooter
+            visibleCount={page.visible.length}
+            totalCount={filtered.length}
+            remaining={page.remaining}
+            canCollapse={page.canCollapse}
+            onShowMore={showMore}
+            onShowLess={showLess}
+            itemNoun="entries"
+          />
+        </>
       )}
     </View>
   );

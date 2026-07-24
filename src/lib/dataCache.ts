@@ -56,6 +56,20 @@ export function invalidate(...keys: string[]): void {
   }
 }
 
+/**
+ * Mark every key starting with `prefix` as stale. For families of dynamic,
+ * per-entity keys (e.g. `taskLogs:plant:<id>`) that `invalidate` cannot
+ * enumerate.
+ */
+export function invalidatePrefix(prefix: string): void {
+  for (const key of Array.from(store.keys())) {
+    if (key.startsWith(prefix)) store.delete(key);
+  }
+  for (const key of Array.from(pendingRequests.keys())) {
+    if (key.startsWith(prefix)) pendingRequests.delete(key);
+  }
+}
+
 /** Mark everything stale (e.g. on sign-out). */
 export function invalidateAll(): void {
   store.clear();

@@ -17,6 +17,12 @@ interface HarvestHistorySectionProps {
   onViewAll: () => void;
 }
 
+/**
+ * NOTE: not currently mounted by any screen — parked for the harvest
+ * yield-analysis work in docs/IMPLEMENTATION_ROADMAP.md, which names this
+ * component (and HarvestYieldChart) as the intended starting point. Keep it
+ * and its `harvestStats` helpers rather than pruning as dead code.
+ */
 export default function HarvestHistorySection({
   plantType,
   harvestEntries,
