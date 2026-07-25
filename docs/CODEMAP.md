@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-07-25 — src/: 481 files, 92,100 lines.
+> Snapshot: 2026-07-25 — src/: 485 files, 92,620 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -55,8 +55,9 @@
 - journal.fixtures.ts (16)
 - plant.fixtures.ts (16)
 
-### src/__tests__/hooks/ — 2 files, 181 lines
+### src/__tests__/hooks/ — 3 files, 377 lines
 
+- journalFormValidation.test.ts (196)
 - plantFormValidation.test.ts (104)
 - blockReasonForStep.test.ts (77)
 
@@ -127,7 +128,7 @@
 - plantHealth.test.ts (24)
 - plantCapacity.test.ts (21)
 
-### src/components/ — 72 files, 11,513 lines
+### src/components/ — 73 files, 11,563 lines
 
 - BedRowLayout.tsx (982) ⚠️ large — Grep/search inside, do not read whole
 - BedTopDownMap.tsx (773)
@@ -152,9 +153,9 @@
 - HarvestHistorySection.tsx (172)
 - BedRotationView.tsx (168)
 - CoconutSection.tsx (168)
+- FloatingLabelInput.tsx (165)
 - LocationPickerSheet.tsx (152)
 - NeedsAttentionScroll.tsx (148)
-- FloatingLabelInput.tsx (140)
 - CollapsibleSection.tsx (137)
 - PlantKeyInfoSection.tsx (133)
 - DraggablePlantRow.tsx (131)
@@ -172,8 +173,8 @@
 - ErrorBoundary.tsx (100)
 - BottomSheetModal.tsx (97)
 - BedZoneIllustration.tsx (96)
-- PickerField.tsx (95)
 - DetailNutritionSection.tsx (93)
+- PickerField.tsx (91)
 - ShowMoreFooter.tsx (91)
 - RotationStatusCard.tsx (87)
 - PrepCard.tsx (85)
@@ -201,6 +202,7 @@
 - SheetHandle.tsx (40)
 - FieldLabelWithHelp.tsx (39)
 - PlantNotesSection.tsx (33)
+- FieldErrorText.tsx (29)
 
 ### src/components/calendar/ — 3 files, 540 lines
 
@@ -208,10 +210,10 @@
 - MonthCalendarView.tsx (126)
 - WeekCalendarView.tsx (110)
 
-### src/components/forms/ — 19 files, 3,387 lines
+### src/components/forms/ — 19 files, 3,431 lines
 
 - EditCareScheduleSection.tsx (485)
-- JournalPestDiseaseSection.tsx (372)
+- JournalPestDiseaseSection.tsx (376)
 - PlantEditForm.tsx (338)
 - AddPlantPlacementSection.tsx (252)
 - AddPlantBasicsSection.tsx (217)
@@ -220,14 +222,14 @@
 - EditCoconutSection.tsx (188)
 - EditBasicInfoSection.tsx (180)
 - EditLocationSection.tsx (162)
+- JournalHarvestSection.tsx (160)
 - AddPlantCarePlanSection.tsx (142)
-- JournalHarvestSection.tsx (128)
 - PlantAddForm.tsx (114)
 - EditQuickInfoSection.tsx (110)
 - EditNutritionSection.tsx (96)
 - CarePlanSummary.tsx (57)
+- JournalMilestoneSection.tsx (56)
 - FormSectionCard.tsx (49)
-- JournalMilestoneSection.tsx (48)
 - EditBeneficialsSection.tsx (35)
 
 ### src/components/modals/ — 10 files, 1,551 lines
@@ -322,7 +324,7 @@
 - index.ts (40)
 - types.ts (30)
 
-### src/hooks/ — 26 files, 5,183 lines
+### src/hooks/ — 27 files, 5,277 lines
 
 - usePlantFormState.ts (1202) ⚠️ large — Grep/search inside, do not read whole
 - useBedCreationWizard.ts (937) ⚠️ large — Grep/search inside, do not read whole
@@ -335,6 +337,7 @@
 - useSectionScrollSpy.ts (110)
 - usePlantCatalogManager.ts (105)
 - useFarmCapacity.ts (96)
+- journalFormValidation.ts (94)
 - useBedData.ts (91)
 - usePlantHistory.ts (86)
 - useTodayTasks.ts (80)
@@ -373,21 +376,21 @@
 
 - AppNavigator.tsx (198)
 
-### src/screens/ — 29 files, 12,103 lines
+### src/screens/ — 29 files, 12,148 lines
 
 - CalendarScreen.tsx (2067) ⚠️ large — Grep/search inside, do not read whole
 - CatalogPlantDetailScreen.tsx (1879) ⚠️ large — Grep/search inside, do not read whole
 - PlantsScreen.tsx (933) ⚠️ large — Grep/search inside, do not read whole
-- JournalFormScreen.tsx (690)
-- JournalScreen.tsx (572)
-- TodayScreen.tsx (529)
+- JournalFormScreen.tsx (710)
+- JournalScreen.tsx (559)
 - BedListScreen.tsx (516)
+- TodayScreen.tsx (513)
 - MyFarmScreen.tsx (455)
+- SettingsScreen.tsx (400)
 - ArchivedPlantsScreen.tsx (390)
 - PlantDetailScreen.tsx (380)
 - BedCreationWizardScreen.tsx (369)
 - BedDetailScreen.tsx (365)
-- SettingsScreen.tsx (344)
 - OnboardingScreen.tsx (317)
 - DiseaseDetailScreen.tsx (310)
 - PestDetailScreen.tsx (310)
@@ -399,7 +402,7 @@
 - PestListScreen.tsx (147)
 - AuthScreen.tsx (146)
 - ProfileScreen.tsx (120)
-- MoreScreen.tsx (119)
+- MoreScreen.tsx (117)
 - ManagePlantCatalogScreen.tsx (92)
 - BedRotationScreen.tsx (56)
 - SeasonalAlmanacScreen.tsx (56)
@@ -435,7 +438,7 @@
 - weatherLogic.ts (78)
 - alerts.ts (17)
 
-### src/styles/ — 82 files, 17,447 lines
+### src/styles/ — 83 files, 17,538 lines
 
 - bedCreationWizardStyles.ts (1886) ⚠️ large — Grep/search inside, do not read whole
 - plantFormStyles.ts (1719) ⚠️ large — Grep/search inside, do not read whole
@@ -443,11 +446,11 @@
 - plantDetailStyles.ts (682)
 - bedRowLayoutStyles.ts (633)
 - catalogPlantDetailStyles.ts (620)
-- journalFormStyles.ts (551)
+- journalFormStyles.ts (609)
 - managePlantCatalogStyles.ts (538)
-- journalStyles.ts (527)
+- journalStyles.ts (521)
 - plantsStyles.ts (499)
-- todayStyles.ts (455)
+- todayStyles.ts (447)
 - locationModalStyles.ts (399)
 - enrichedSectionStyles.ts (393)
 - bedListStyles.ts (336)
@@ -460,6 +463,7 @@
 - archivedPlantsStyles.ts (202)
 - plantEditFormStyles.ts (197)
 - myFarmStyles.ts (192)
+- settingsStyles.ts (178)
 - plantEntryResolverStyles.ts (176)
 - onboardingStyles.ts (174)
 - themedDropdownStyles.ts (164)
@@ -467,7 +471,6 @@
 - collapsibleSectionStyles.ts (152)
 - referenceListStyles.ts (143)
 - inputRecipesStyles.ts (139)
-- settingsStyles.ts (136)
 - plantPickerSheetStyles.ts (133)
 - bedRotationStyles.ts (124)
 - todayProgressCardStyles.ts (114)
@@ -476,22 +479,22 @@
 - plantAddFormStyles.ts (104)
 - taskCardStyles.ts (97)
 - profileStyles.ts (95)
-- pickerFieldStyles.ts (94)
 - stagePickerSheetStyles.ts (94)
-- moreStyles.ts (92)
 - bedsQuickScrollStyles.ts (89)
 - needsAttentionScrollStyles.ts (88)
 - confirmDeleteModalStyles.ts (87)
 - alertDialogStyles.ts (86)
 - bedCapacityModalStyles.ts (86)
 - carePlanSummaryStyles.ts (86)
+- moreStyles.ts (83)
+- pickerFieldStyles.ts (82)
 - errorBoundaryStyles.ts (76)
 - floatingTabBarStyles.ts (76)
 - plantSectionHeaderStyles.ts (75)
 - seasonalAlmanacStyles.ts (74)
 - imageZoomModalStyles.ts (70)
 - expandableBlockStyles.ts (69)
-- floatingLabelInputStyles.ts (60)
+- floatingLabelInputStyles.ts (67)
 - authStyles.ts (58)
 - plantHistoryTabStyles.ts (58)
 - almanacHighlightStyles.ts (56)
@@ -517,6 +520,7 @@
 - voiceInputButtonStyles.ts (25)
 - sheetHandleStyles.ts (22)
 - harvestHistorySectionStyles.ts (20)
+- fieldErrorTextStyles.ts (19)
 - bottomSheetModalStyles.ts (17)
 - fieldLabelWithHelpStyles.ts (17)
 
@@ -617,11 +621,12 @@
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
 - CODEMAP.md (628)
-- COMPONENTS.md (63)
+- COMPONENTS.md (64)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (44)
-- IMAGE_STORAGE.md (34)
+- IMAGE_STORAGE.md (38)
 - IMPLEMENTATION_ROADMAP.md (349)
+- REFERENCE_IMAGES.md (111)
 - SCHEMA_MIGRATIONS.md (25)
 - SERVICES.md (186)
 - TESTING.md (33)

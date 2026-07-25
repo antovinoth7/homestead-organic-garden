@@ -34,14 +34,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginTop: 4,
     },
-    heroThemeToggle: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: theme.primary,
-    },
     // Task Donut Card
     donutCard: {
       backgroundColor: theme.backgroundSecondary,

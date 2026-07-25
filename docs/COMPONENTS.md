@@ -23,6 +23,7 @@
 - `FloatingLabelInput` — animated label text input
 - `ThemedDropdown` — themed dropdown picker
 - `FloatingTabBar` (includes `AnimatedFAB` and `FloatingTabBarProvider`) — tab bar with scroll-hide
+- `SegmentedTabs` — generic horizontally-scrollable pill tab bar; use for overflowing tab sets. For a small fixed set inside a card (e.g. the Appearance picker in `SettingsScreen`), match the pill visuals with local styles instead — the component's scroller and bottom hairline are meant for full-width tab bars.
 - `FieldHelp` / `FieldLabelWithHelp` — inline help affordances
 - `UndoToast` — post-action undo snackbar
 - `OfflineBanner` (+ `useOfflineStatus`) — connectivity strip above the navigator; shows offline state and pending-sync count from the offline write queue
@@ -54,7 +55,7 @@ When adding complex data logic to a screen, extract it into a custom hook in `sr
 ## UI Conventions
 
 - Use `useTheme()` for colors and shared tokens.
-- Use `useThemeMode()` for theme mode changes.
+- Use `useThemeMode()` for theme mode changes. The only place the user picks a mode is the **Appearance** section at the top of `SettingsScreen` (More → Settings) — a Light / Dark / Auto segmented pill row. Do not add theme controls to other screens.
 - Prefer existing themed styles over new hardcoded colors.
 - Most screens use safe area insets and refresh on focus; preserve those patterns.
 - Main tabs: `Home`, `Plants`, `Care Plan`, `Journal`, `More`.

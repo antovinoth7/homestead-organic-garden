@@ -8,7 +8,7 @@ import {
   exportFullBackup,
   importFullBackup,
 } from '@/services/backup';
-import { useTheme } from '@/theme';
+import { useTheme, useThemeMode } from '@/theme';
 import {
   useFocusEffect,
   useNavigation,
@@ -21,9 +21,27 @@ import { auth } from '@/lib/firebase';
 import { createStyles } from '@/styles/settingsStyles';
 import { logger } from '@/utils/logger';
 import { getErrorMessage } from '@/utils/errorLogging';
+
+const THEME_OPTIONS: {
+  mode: 'light' | 'dark' | 'system';
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  subtitle: string;
+}[] = [
+  { mode: 'light', icon: 'sunny', label: 'Light', subtitle: 'Always use the light theme' },
+  { mode: 'dark', icon: 'moon', label: 'Dark', subtitle: 'Always use the dark theme' },
+  {
+    mode: 'system',
+    icon: 'phone-portrait-outline',
+    label: 'Auto',
+    subtitle: 'Follow device setting',
+  },
+];
+
 export default function SettingsScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
+  const { mode, setMode } = useThemeMode();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -218,6 +236,44 @@ export default function SettingsScreen(): React.JSX.Element {
         style={styles.content}
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
       >
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <Text style={styles.sectionDescription}>Choose how the app looks on this device.</Text>
+
+          <View style={styles.card}>
+            <Text style={styles.themeLabel}>Theme</Text>
+            <View style={styles.themePills} accessibilityRole="radiogroup">
+              {THEME_OPTIONS.map((option) => {
+                const isActive = mode === option.mode;
+                return (
+                  <TouchableOpacity
+                    key={option.mode}
+                    style={[styles.themePill, isActive && styles.themePillActive]}
+                    onPress={() => setMode(option.mode)}
+                    activeOpacity={0.7}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isActive }}
+                    accessibilityLabel={`${option.label} theme`}
+                    accessibilityHint={option.subtitle}
+                  >
+                    <Ionicons
+                      name={option.icon}
+                      size={15}
+                      color={isActive ? theme.primary : theme.textSecondary}
+                    />
+                    <Text style={[styles.themePillText, isActive && styles.themePillTextActive]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={styles.themeHint}>
+              {THEME_OPTIONS.find((option) => option.mode === mode)?.subtitle}
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Complete Backup</Text>
           <Text style={styles.sectionDescription}>

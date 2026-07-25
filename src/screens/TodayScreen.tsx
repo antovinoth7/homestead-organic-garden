@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { TodayScreenNavigationProp, TodayScreenRouteProp } from '../types/navigation.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, useThemeMode } from '../theme';
+import { useTheme } from '../theme';
 import { createStyles } from '../styles/todayStyles';
 import {
   summarizeTodayTasks,
@@ -58,17 +58,10 @@ const getGreeting = (): string => {
   return 'Good Evening';
 };
 
-const THEME_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; label: string }> = {
-  light: { icon: 'sunny', label: 'Light' },
-  dark: { icon: 'moon', label: 'Dark' },
-  system: { icon: 'phone-portrait-outline', label: 'Auto' },
-};
-
 export default function TodayScreen(): React.JSX.Element {
   const navigation = useNavigation<TodayScreenNavigationProp>();
   const route = useRoute<TodayScreenRouteProp>();
   const theme = useTheme();
-  const { mode, setMode } = useThemeMode();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -324,12 +317,6 @@ export default function TodayScreen(): React.JSX.Element {
     navigation.navigate('Beds', { screen: 'BedCreationWizard' });
   }, [navigation]);
 
-  const cycleTheme = useCallback(() => {
-    const order: ('light' | 'dark' | 'system')[] = ['light', 'dark', 'system'];
-    const idx = order.indexOf(mode);
-    setMode(order[(idx + 1) % order.length]!);
-  }, [mode, setMode]);
-
   const goToCarePlan = useCallback(
     () => navigation.navigate('Care Plan', { resetFilters: true }),
     [navigation]
@@ -380,9 +367,6 @@ export default function TodayScreen(): React.JSX.Element {
             <Text style={styles.heroGreeting}>{getGreeting()}</Text>
             <Text style={styles.heroDate}>{todayLabel}</Text>
           </View>
-          <TouchableOpacity style={styles.heroThemeToggle} onPress={cycleTheme}>
-            <Ionicons name={THEME_ICONS[mode]!.icon} size={20} color={theme.textInverse} />
-          </TouchableOpacity>
         </View>
       </View>
 
