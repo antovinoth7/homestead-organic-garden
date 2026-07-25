@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import FloatingLabelInput from '../FloatingLabelInput';
+import FieldErrorText from '../FieldErrorText';
 import VoiceDictation from '@/components/VoiceDictation';
 import { HARVEST_UNITS } from '../../utils/journalEntryOptions';
 import { PlantType } from '../../types/database.types';
@@ -22,6 +23,15 @@ interface Props {
   value: HarvestFields;
   onChange: (patch: Partial<HarvestFields>) => void;
   plantType: PlantType | null;
+  /** Inline validation message for the amount field. */
+  errorText?: string;
+}
+
+/** Keeps the amount numeric with at most one decimal point. */
+function sanitizeAmount(text: string): string {
+  const cleaned = text.replace(/[^0-9.]/g, '');
+  const [whole = '', ...rest] = cleaned.split('.');
+  return rest.length > 0 ? `${whole}.${rest.join('')}` : whole;
 }
 
 const QUALITY_OPTIONS: { value: HarvestQuality; label: string; emoji: string }[] = [
@@ -31,29 +41,47 @@ const QUALITY_OPTIONS: { value: HarvestQuality; label: string; emoji: string }[]
   { value: 'poor', label: 'Poor', emoji: '👎' },
 ];
 
-export function JournalHarvestSection({ value, onChange, plantType }: Props): React.JSX.Element {
+export function JournalHarvestSection({
+  value,
+  onChange,
+  plantType,
+  errorText,
+}: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  const handleAmountChange = useCallback(
+    (text: string) => onChange({ quantity: sanitizeAmount(text) }),
+    [onChange]
+  );
 
   return (
     <View style={styles.harvestSection}>
       <Text style={styles.sectionTitle}>Harvest Details</Text>
 
-      <View style={styles.quantityInput}>
-        <Text style={styles.label}>Quantity *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="0"
-          placeholderTextColor={theme.inputPlaceholder}
-          value={value.quantity}
-          onChangeText={(text) => onChange({ quantity: text })}
-          keyboardType="decimal-pad"
-        />
-      </View>
+      {/* Amount is the one thing every harvest entry needs, so it leads the
+          section as a large centered field with the unit echoed beside it. */}
+      <View style={styles.amountBlock}>
+        <Text style={styles.label}>Quantity</Text>
+        <View style={styles.amountRow}>
+          <TextInput
+            style={[styles.amountInput, !!errorText && styles.amountInputError]}
+            placeholder="0"
+            placeholderTextColor={theme.inputPlaceholder}
+            value={value.quantity}
+            onChangeText={handleAmountChange}
+            keyboardType="decimal-pad"
+            selectTextOnFocus
+            maxLength={9}
+            accessibilityLabel="Harvest quantity"
+          />
+          <Text style={styles.amountUnitSuffix} numberOfLines={1}>
+            {value.unit}
+          </Text>
+        </View>
+        <FieldErrorText message={errorText} />
 
-      <View style={styles.unitInput}>
-        <Text style={styles.label}>Unit</Text>
-        <View style={styles.unitButtons}>
+        <View style={styles.unitSegments}>
           {HARVEST_UNITS.map((unit) => {
             const active = value.unit === unit;
             return (
@@ -61,6 +89,8 @@ export function JournalHarvestSection({ value, onChange, plantType }: Props): Re
                 key={unit}
                 style={[styles.unitButton, active && styles.unitButtonActive]}
                 onPress={() => onChange({ unit })}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
               >
                 <Text
                   style={[styles.unitButtonText, active && styles.unitButtonTextActive]}
@@ -75,17 +105,19 @@ export function JournalHarvestSection({ value, onChange, plantType }: Props): Re
       </View>
 
       <Text style={styles.label}>Quality</Text>
-      <View style={styles.qualityButtons}>
+      <View style={styles.qualityGrid}>
         {QUALITY_OPTIONS.map((quality) => {
           const active = value.quality === quality.value;
           return (
             <TouchableOpacity
               key={quality.value}
-              style={[styles.qualityButton, active && styles.qualityButtonActive]}
+              style={[styles.qualityChip, active && styles.qualityButtonActive]}
               onPress={() => onChange({ quality: quality.value })}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
             >
               <Text style={styles.qualityEmoji}>{quality.emoji}</Text>
-              <Text style={[styles.qualityButtonText, active && styles.qualityButtonTextActive]}>
+              <Text style={[styles.qualityChipText, active && styles.qualityButtonTextActive]}>
                 {quality.label}
               </Text>
             </TouchableOpacity>

@@ -7,6 +7,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   ImageStyle,
+  LayoutChangeEvent,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -34,6 +35,11 @@ import {
 } from '../types/database.types';
 import { useBedOptions } from '@/hooks/useBedOptions';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
+import {
+  firstJournalErrorField,
+  journalFormErrors,
+  type JournalFieldKey,
+} from '@/hooks/journalFormValidation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -157,6 +163,40 @@ export default function JournalFormScreen(): React.JSX.Element {
     editEntry?.milestone_kind ?? null
   );
 
+  // Inline validation — errors stay hidden until the first Save attempt, then
+  // the screen scrolls to the offending field (mirrors the plant forms).
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const fieldYs = useRef<Partial<Record<JournalFieldKey, number>>>({});
+  const validationErrors = useMemo(
+    () =>
+      journalFormErrors({
+        entryType,
+        content,
+        harvestQuantity: harvestFields.quantity,
+        pestName: pestFields.name,
+        milestoneKind,
+      }),
+    [entryType, content, harvestFields.quantity, pestFields.name, milestoneKind]
+  );
+  const errorFor = useCallback(
+    (key: JournalFieldKey): string | undefined =>
+      showValidationErrors ? validationErrors[key][0] : undefined,
+    [showValidationErrors, validationErrors]
+  );
+  const handleHarvestLayout = useCallback((e: LayoutChangeEvent): void => {
+    fieldYs.current.quantity = e.nativeEvent.layout.y;
+  }, []);
+  const handlePestLayout = useCallback((e: LayoutChangeEvent): void => {
+    fieldYs.current.pestName = e.nativeEvent.layout.y;
+  }, []);
+  const handleMilestoneLayout = useCallback((e: LayoutChangeEvent): void => {
+    fieldYs.current.milestone = e.nativeEvent.layout.y;
+  }, []);
+  const handleNotesLayout = useCallback((e: LayoutChangeEvent): void => {
+    fieldYs.current.content = e.nativeEvent.layout.y;
+  }, []);
+
   useEffect(() => {
     loadPlants();
   }, []);
@@ -219,6 +259,10 @@ export default function JournalFormScreen(): React.JSX.Element {
   const handleTypeChange = useCallback(
     (type: JournalEntryType): void => {
       setEntryType(type);
+      // Errors are armed per Save attempt. Switching type swaps in a different
+      // set of fields the user hasn't submitted yet, so re-hide them instead of
+      // greeting the new tab with a red error.
+      setShowValidationErrors(false);
       const allowed = tagsForEntry(type, editEntry?.tags);
       setSelectedTags((prev) => prev.filter((t) => allowed.includes(t)));
     },
@@ -347,51 +391,11 @@ export default function JournalFormScreen(): React.JSX.Element {
     const isHarvest = entryType === JournalEntryType.Harvest;
     const isPest = entryType === JournalEntryType.PestDisease;
     const isMilestone = entryType === JournalEntryType.Milestone;
-    // Structured types capture their data in dedicated fields, so their notes
-    // (the content box) stay optional; free-form types still require a body.
-    const contentRequired = !isHarvest && !isPest && !isMilestone;
 
-    if (contentRequired) {
-      if (!content.trim()) {
-        Alert.alert('Validation Error', 'Please write something in your journal');
-        return;
-      }
-      if (content.trim().length < 3) {
-        Alert.alert('Validation Error', 'Journal entry must be at least 3 characters long');
-        return;
-      }
-    }
-    if (content.trim().length > 5000) {
-      Alert.alert('Validation Error', 'Journal entry must be less than 5000 characters');
-      return;
-    }
-
-    if (isHarvest) {
-      if (!harvestFields.quantity || harvestFields.quantity.trim() === '') {
-        Alert.alert('Validation Error', 'Please enter harvest quantity');
-        return;
-      }
-      const quantity = parseFloat(harvestFields.quantity);
-      if (isNaN(quantity) || quantity <= 0) {
-        Alert.alert('Validation Error', 'Harvest quantity must be a positive number');
-        return;
-      }
-      if (quantity > 100000) {
-        Alert.alert(
-          'Validation Error',
-          'Harvest quantity seems too large. Please check your input.'
-        );
-        return;
-      }
-    }
-
-    if (isPest && !pestFields.name.trim()) {
-      Alert.alert('Validation Error', 'Please enter a pest or disease name');
-      return;
-    }
-
-    if (isMilestone && !milestoneKind) {
-      Alert.alert('Validation Error', 'Please choose a milestone');
+    const firstError = firstJournalErrorField(validationErrors);
+    if (firstError) {
+      setShowValidationErrors(true);
+      scrollViewRef.current?.scrollTo({ y: fieldYs.current[firstError] ?? 0, animated: true });
       return;
     }
 
@@ -434,7 +438,9 @@ export default function JournalFormScreen(): React.JSX.Element {
         photo_urls: photoUrls,
         plant_id: selectedPlantId,
         bed_id: selectedBedId || null,
-        tags: selectedTags.length > 0 ? selectedTags : undefined,
+        // Always an array: Firestore rejects `undefined`, and on edit an empty
+        // array is what actually clears previously-saved tags.
+        tags: selectedTags,
         harvest_quantity: isHarvest ? parseFloat(harvestFields.quantity) : null,
         harvest_unit: isHarvest ? harvestFields.unit : null,
         harvest_quality: isHarvest ? harvestFields.quality : null,
@@ -525,6 +531,7 @@ export default function JournalFormScreen(): React.JSX.Element {
           outside it so Save is always reachable. */}
       <KeyboardAvoidingView style={styles.scrollWrapper} behavior="padding">
         <ScrollView
+          ref={scrollViewRef}
           style={styles.content}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: footerPaddingBottom + 24 }}
@@ -640,27 +647,39 @@ export default function JournalFormScreen(): React.JSX.Element {
           )}
 
           {entryType === JournalEntryType.Harvest && (
-            <JournalHarvestSection
-              value={harvestFields}
-              onChange={handleHarvestChange}
-              plantType={selectedPlant?.plant_type ?? null}
-            />
+            <View onLayout={handleHarvestLayout}>
+              <JournalHarvestSection
+                value={harvestFields}
+                onChange={handleHarvestChange}
+                plantType={selectedPlant?.plant_type ?? null}
+                errorText={errorFor('quantity')}
+              />
+            </View>
           )}
 
           {entryType === JournalEntryType.PestDisease && (
-            <JournalPestDiseaseSection
-              value={pestFields}
-              onChange={handlePestChange}
-              plantType={selectedPlant?.plant_type ?? null}
-              plantVariety={selectedPlant?.plant_variety ?? null}
-            />
+            <View onLayout={handlePestLayout}>
+              <JournalPestDiseaseSection
+                value={pestFields}
+                onChange={handlePestChange}
+                plantType={selectedPlant?.plant_type ?? null}
+                plantVariety={selectedPlant?.plant_variety ?? null}
+                errorText={errorFor('pestName')}
+              />
+            </View>
           )}
 
           {entryType === JournalEntryType.Milestone && (
-            <JournalMilestoneSection value={milestoneKind} onChange={setMilestoneKind} />
+            <View onLayout={handleMilestoneLayout}>
+              <JournalMilestoneSection
+                value={milestoneKind}
+                onChange={setMilestoneKind}
+                errorText={errorFor('milestone')}
+              />
+            </View>
           )}
 
-          <View style={styles.notesWrapper}>
+          <View style={styles.notesWrapper} onLayout={handleNotesLayout}>
             <VoiceDictation
               value={content}
               onChangeText={(text) => setContent(sanitizeAlphaNumericSpaces(text))}
@@ -672,6 +691,7 @@ export default function JournalFormScreen(): React.JSX.Element {
               multiline
               numberOfLines={6}
               maxLength={5000}
+              errorText={errorFor('content')}
             />
             <Text style={styles.charCounter}>{content.length}/5000</Text>
           </View>

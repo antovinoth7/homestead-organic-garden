@@ -24,6 +24,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     containerFocused: {
       borderWidth: 2,
     },
+    /** Applied to the field when an error row takes over the bottom spacing. */
+    containerFlush: {
+      marginBottom: 0,
+    },
+    errorWrapper: {
+      marginBottom: 12,
+    },
     label: {
       position: 'absolute',
       left: 12,

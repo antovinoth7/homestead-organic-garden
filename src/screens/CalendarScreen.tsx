@@ -10,29 +10,39 @@ import {
   TextInput,
   Alert,
   Animated,
+  Easing,
   Platform,
   RefreshControl,
   LayoutAnimation,
   UIManager,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
+  LayoutChangeEvent,
   Modal,
 } from 'react-native';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import {
   markTaskDone,
   markTasksDone,
-  updateTaskTemplate,
+  skipTaskTemplate,
   calculateTaskPriority,
 } from '../services/tasks';
+import {
+  isEarlyCompletionBlocked,
+  isFutureTask,
+  isSkipBlocked,
+} from '../services/taskSchedulingLogic';
 import { TaskTemplate, TaskType } from '../types/database.types';
 import { Ionicons } from '@expo/vector-icons';
-import { TASK_EMOJIS, TASK_COLORS, TASK_LABELS } from '../utils/taskConstants';
+import {
+  TASK_EMOJIS,
+  TASK_COLORS,
+  TASK_LABELS,
+  EARLY_COMPLETION_BLOCK_REASON,
+} from '../utils/taskConstants';
 import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
 import { CalendarScreenRouteProp, CalendarScreenNavigationProp } from '../types/navigation.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
-import { createStyles, getStartOfWeek } from '../styles/calendarStyles';
+import { createStyles, getStartOfWeek, COLLAPSED_STRIP_HEIGHT } from '../styles/calendarStyles';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { useCalendarData, HarvestReadyItem } from '../hooks/useCalendarData';
@@ -43,12 +53,14 @@ import { isRainPredictedOnDate } from '../services/weather';
 import { calculateExpectedHarvestDate } from '../utils/plantHelpers';
 import CreateTaskModal from '../components/modals/CreateTaskModal';
 import TaskCompletionModal from '../components/modals/TaskCompletionModal';
-import VoiceDictation from '@/components/VoiceDictation';
+import SkipTaskModal from '../components/modals/SkipTaskModal';
+import { AlertDialog, type AlertDialogAction } from '../components/modals/AlertDialog';
 import { SheetHandle } from '@/components/SheetHandle';
 import WeekCalendarView from '../components/calendar/WeekCalendarView';
 import MonthCalendarView from '../components/calendar/MonthCalendarView';
 import { SwipeableTaskCard } from '../components/calendar/SwipeableTaskCard';
 import { getErrorMessage } from '../utils/errorLogging';
+import { tapFeedback } from '../utils/haptics';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -87,6 +99,23 @@ interface CalendarListSection {
   data: CalendarRow[];
 }
 
+/**
+ * The "Not due yet" dialog covers three situations, all sharing one surface:
+ * `blocked` (water / fertilise / spray, where early completion is refused
+ * outright), `confirmEarly` (every other type, where it is allowed but
+ * reschedules the cycle from today), and `skipBlocked` (any not-yet-due task —
+ * there is nothing to defer until it comes due).
+ */
+type NotDueDialog = {
+  kind: 'blocked' | 'confirmEarly' | 'skipBlocked';
+  /** Subjects. For `confirmEarly` in bulk, only the not-yet-due tasks. */
+  tasks: TaskTemplate[];
+  /** Bulk only: how many of the batch were selected in total. */
+  selectedTotal?: number;
+  /** Bulk `confirmEarly` only: what Mark done should complete. */
+  completeTargets?: TaskTemplate[];
+} | null;
+
 const GROUP_OPTIONS: {
   value: 'none' | 'location' | 'type' | 'plant';
   label: string;
@@ -106,6 +135,7 @@ export default function CalendarScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
   const scrollViewRef = useRef<SectionList<CalendarRow, CalendarListSection>>(null);
+  const [skipBulkTasks, setSkipBulkTasks] = useState<TaskTemplate[] | null>(null);
   const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
   const [selectedView, setSelectedView] = useState<'week' | 'month'>('week');
   const [currentWeekStart, setCurrentWeekStart] = useState(getStartOfWeek(new Date()));
@@ -147,10 +177,19 @@ export default function CalendarScreen(): React.JSX.Element {
   const [skipDays, setSkipDays] = useState(1);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [detailTask, setDetailTask] = useState<TaskTemplate | null>(null);
-  const calendarHeight = useRef(new Animated.Value(1)).current; // 1 = expanded, 0 = collapsed
+  const [notDueDialog, setNotDueDialog] = useState<NotDueDialog>(null);
+  /** Not-yet-due tasks dropped from the current skip batch, reported in the sheet. */
+  const [skipExcludedCount, setSkipExcludedCount] = useState(0);
   const completeProgress = useRef(new Animated.Value(0)).current; // 0→1 bulk-completion bar
-  const calendarCollapsed = useRef(false);
-  const lastScrollY = useRef(0);
+  // Selection pill entrance/exit. `selectionBarMounted` outlives an empty
+  // selection just long enough for the exit animation to finish — unmounting on
+  // the state change alone would make the pill vanish rather than slide away.
+  const [selectionBarMounted, setSelectionBarMounted] = useState(false);
+  const selectionBarAnim = useRef(new Animated.Value(0)).current;
+  // Collapsible-header state. `scrollY` is fed straight from the list's native
+  // scroll event, so the collapse runs entirely on the UI thread.
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [headerHeight, setHeaderHeight] = useState(0);
   const searchInputRef = React.useRef<TextInput>(null);
   const normalizeSearchText = (value: string): string =>
     sanitizeAlphaNumericSpaces(value).trim().toLowerCase();
@@ -279,57 +318,97 @@ export default function CalendarScreen(): React.JSX.Element {
     safeSetItem('swipeHintViewCount', '3'); // permanently dismiss
   }, []);
 
-  const handleContentScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      onTabBarScroll(event);
-      const y = event.nativeEvent.contentOffset.y;
-      const delta = y - lastScrollY.current;
-      lastScrollY.current = y;
+  // Slide the selection pill in on first selection and out on the last
+  // deselection. Unmount happens in the exit callback, not on the state change,
+  // so the pill animates away instead of disappearing.
+  const hasSelection = selectedTaskIds.size > 0;
+  useEffect(() => {
+    if (hasSelection) setSelectionBarMounted(true);
+    const animation = Animated.timing(selectionBarAnim, {
+      toValue: hasSelection ? 1 : 0,
+      duration: 200,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: Platform.OS !== 'web',
+    });
+    animation.start(({ finished }) => {
+      if (finished && !hasSelection) setSelectionBarMounted(false);
+    });
+    return () => animation.stop();
+  }, [hasSelection, selectionBarAnim]);
 
-      // Collapse when scrolling down past 30px, expand when scrolling back to top
-      if (delta > 4 && y > 30 && !calendarCollapsed.current) {
-        calendarCollapsed.current = true;
-        Animated.timing(calendarHeight, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: false,
-        }).start();
-      } else if (y <= 10 && calendarCollapsed.current) {
-        calendarCollapsed.current = false;
-        Animated.timing(calendarHeight, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: false,
-        }).start();
-      }
-    },
-    [onTabBarScroll, calendarHeight]
+  // How far the header travels before it is fully collapsed: everything above
+  // the strip. Guarded to ≥1 so the interpolations stay valid before measurement.
+  const collapseRange = Math.max(1, headerHeight - COLLAPSED_STRIP_HEIGHT);
+
+  // diffClamp accumulates the scroll delta and clamps it to [0, collapseRange]:
+  // scrolling down grows it (header slides away), scrolling up shrinks it
+  // immediately at any offset — so a small upward flick brings the calendar
+  // back rather than requiring a scroll all the way to the top.
+  const collapse = useMemo(
+    () => Animated.diffClamp(scrollY, 0, collapseRange),
+    [scrollY, collapseRange]
+  );
+
+  const headerTranslateY = collapse.interpolate({
+    inputRange: [0, collapseRange],
+    outputRange: [0, -collapseRange],
+    extrapolate: 'clamp',
+  });
+  const calendarOpacity = collapse.interpolate({
+    inputRange: [0, collapseRange * 0.6],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  // Slides the strip up from its clipped parking spot below the header, so it
+  // arrives exactly as the calendar finishes fading out.
+  const stripTranslateY = collapse.interpolate({
+    inputRange: [0, collapseRange],
+    outputRange: [COLLAPSED_STRIP_HEIGHT, 0],
+    extrapolate: 'clamp',
+  });
+
+  const handleContentScroll = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+        useNativeDriver: true,
+        // The tab bar hide/show still needs a JS callback; it drives its own
+        // native-driver translate, so no layout work happens here either.
+        listener: onTabBarScroll,
+      }),
+    [scrollY, onTabBarScroll]
+  );
+
+  const handleHeaderLayout = useCallback((event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    // Ignore sub-pixel jitter so a re-measure can't loop through setState.
+    setHeaderHeight((prev) => (Math.abs(prev - height) > 1 ? height : prev));
+  }, []);
+
+  // The header floats above the list, so the list reserves room for it via
+  // padding rather than by being pushed down in layout.
+  const listContentStyle = useMemo(
+    () => ({
+      paddingTop: headerHeight,
+      paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16,
+    }),
+    [headerHeight, insets.bottom]
   );
 
   const scrollToTop = useCallback((animated: boolean) => {
     scrollViewRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated });
   }, []);
 
+  // Tapping the collapsed strip just returns to the top — `collapse` unwinds to
+  // 0 on its own as the offset drops, so there is no separate animation to run.
   const expandCalendar = useCallback(() => {
-    if (calendarCollapsed.current) {
-      calendarCollapsed.current = false;
-      scrollToTop(true);
-      Animated.timing(calendarHeight, {
-        toValue: 1,
-        duration: 250,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [calendarHeight, scrollToTop]);
+    scrollToTop(true);
+  }, [scrollToTop]);
 
   // Reset view and refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       scrollToTop(false);
       resetTabBar();
-      calendarCollapsed.current = false;
-      calendarHeight.setValue(1);
-      lastScrollY.current = 0;
       const today = new Date();
       setSelectedDate(today);
       setCurrentWeekStart(getStartOfWeek(today));
@@ -349,18 +428,65 @@ export default function CalendarScreen(): React.JSX.Element {
         navigation.setParams({ openCreateTask: undefined, prefillPlantId: undefined });
       }
       void loadData(); // debounced — skips if loaded recently
-    }, [loadData, resetTabBar, route, navigation, calendarHeight, scrollToTop])
+    }, [loadData, resetTabBar, route, navigation, scrollToTop])
   );
 
-  const handleTaskComplete = useCallback(async (task: TaskTemplate) => {
-    // Close the swipeable drawer before opening the modal
-    const swipeable = swipeableRefs.current.get(task.id);
-    swipeable?.close();
+  const openCompletionSheet = useCallback((task: TaskTemplate) => {
     setSelectedTask(task);
     setTaskNotes('');
     setProductUsed('');
     setShowNotesModal(true);
   }, []);
+
+  const formatDueDate = useCallback(
+    (task: TaskTemplate): string =>
+      new Date(task.next_due_at).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      }),
+    []
+  );
+
+  // Water / fertilise / spray can't be completed ahead of schedule at all —
+  // doing the work early is harmful, not merely off-schedule. Explain, and point
+  // at skip, which is the right tool if the date itself looks wrong.
+  // Bed-level tasks have no plant, so fall back to the bed name — same label the
+  // card shows, rather than a bare "General".
+  const taskSubjectLabel = useCallback(
+    (task: TaskTemplate): string => {
+      const bedLabel = task.bed_id != null ? bedMap.get(task.bed_id) : undefined;
+      return task.plant_id ? getPlantDetails(task.plant_id).name : bedLabel ?? 'General';
+    },
+    [bedMap, getPlantDetails]
+  );
+
+  const handleBlockedComplete = useCallback((task: TaskTemplate) => {
+    swipeableRefs.current.get(task.id)?.close();
+    setNotDueDialog({ kind: 'blocked', tasks: [task] });
+  }, []);
+
+  const handleTaskComplete = useCallback(
+    (task: TaskTemplate) => {
+      // Close the swipeable drawer before opening the modal
+      swipeableRefs.current.get(task.id)?.close();
+
+      if (isEarlyCompletionBlocked(task)) {
+        handleBlockedComplete(task);
+        return;
+      }
+
+      // For every other type, completing early is allowed — the farmer may
+      // genuinely have done the work — but it reschedules the whole cycle from
+      // today, so confirm first.
+      if (isFutureTask(task)) {
+        setNotDueDialog({ kind: 'confirmEarly', tasks: [task] });
+        return;
+      }
+      openCompletionSheet(task);
+    },
+    [handleBlockedComplete, openCompletionSheet]
+  );
 
   const confirmTaskComplete = async (): Promise<void> => {
     if (!selectedTask || isCompletingTask) return;
@@ -397,6 +523,7 @@ export default function CalendarScreen(): React.JSX.Element {
   const toggleTaskSelection = useCallback((taskId: string) => {
     // Close any open swipeable to prevent gesture state conflicts
     swipeableRefs.current.get(taskId)?.close();
+    tapFeedback();
     setSelectedTaskIds((prev) => {
       const next = new Set(prev);
       if (next.has(taskId)) {
@@ -408,98 +535,203 @@ export default function CalendarScreen(): React.JSX.Element {
     });
   }, []);
 
-  const handleCompleteSelected = useCallback(async () => {
-    const selected = tasks.filter((t) => selectedTaskIds.has(t.id));
-    if (selected.length === 0 || isCompletingAll) return;
-    setIsCompletingAll(true);
-    setCompletedCount(0);
-    setCompletingTotal(selected.length);
+  const completeSelected = useCallback(
+    async (selected: TaskTemplate[]) => {
+      setIsCompletingAll(true);
+      setCompletedCount(0);
+      setCompletingTotal(selected.length);
 
-    // The commit is a single batch (no per-task boundary for ≤166 tasks), so the
-    // bar creeps to 90% while awaiting, then snaps to 100% on resolve.
-    completeProgress.setValue(0);
-    Animated.timing(completeProgress, {
-      toValue: 0.9,
-      duration: 1200,
-      useNativeDriver: false,
-    }).start();
-
-    try {
-      // One batched commit + single cache write — no per-task re-render storm.
-      const { succeeded, failed } = await markTasksDone(selected, {
-        skipAlreadyDoneCheck: true,
-        onProgress: (done) => {
-          if (isMountedRef.current) setCompletedCount(done);
-        },
-      });
-
-      if (!isMountedRef.current) return;
-      setCompletedCount(succeeded);
-      completeProgress.stopAnimation();
+      // The commit is a single batch (no per-task boundary for ≤166 tasks), so the
+      // bar creeps to 90% while awaiting, then snaps to 100% on resolve.
+      completeProgress.setValue(0);
       Animated.timing(completeProgress, {
-        toValue: 1,
-        duration: 180,
+        toValue: 0.9,
+        duration: 1200,
         useNativeDriver: false,
       }).start();
-      // Hold the full "N/N" bar briefly so the user sees it complete.
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      if (!isMountedRef.current) return;
 
-      setSelectedTaskIds(new Set());
-      setSessionCompletedCount((prev) => prev + succeeded);
-      loadData({ force: true });
-      if (failed > 0) {
-        Alert.alert(
-          'Partial Completion',
-          `${failed} task(s) failed. You can retry them individually.`
-        );
+      try {
+        // One batched commit + single cache write — no per-task re-render storm.
+        const { succeeded, failed } = await markTasksDone(selected, {
+          skipAlreadyDoneCheck: true,
+          onProgress: (done) => {
+            if (isMountedRef.current) setCompletedCount(done);
+          },
+        });
+
+        if (!isMountedRef.current) return;
+        setCompletedCount(succeeded);
+        completeProgress.stopAnimation();
+        Animated.timing(completeProgress, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: false,
+        }).start();
+        // Hold the full "N/N" bar briefly so the user sees it complete.
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (!isMountedRef.current) return;
+
+        setSelectedTaskIds(new Set());
+        setSessionCompletedCount((prev) => prev + succeeded);
+        loadData({ force: true });
+        if (failed > 0) {
+          Alert.alert(
+            'Partial Completion',
+            `${failed} task(s) failed. You can retry them individually.`
+          );
+        }
+      } catch (error) {
+        if (isMountedRef.current) Alert.alert('Error', getErrorMessage(error));
+      } finally {
+        // Always close the modal — even on throw — so it can't get stuck open.
+        if (isMountedRef.current) {
+          setIsCompletingAll(false);
+          setCompletedCount(0);
+          setCompletingTotal(0);
+        }
+        completeProgress.setValue(0);
       }
-    } catch (error) {
-      if (isMountedRef.current) Alert.alert('Error', getErrorMessage(error));
-    } finally {
-      // Always close the modal — even on throw — so it can't get stuck open.
-      if (isMountedRef.current) {
-        setIsCompletingAll(false);
-        setCompletedCount(0);
-        setCompletingTotal(0);
-      }
-      completeProgress.setValue(0);
-    }
-  }, [tasks, selectedTaskIds, isCompletingAll, loadData, completeProgress, isMountedRef]);
+    },
+    [loadData, completeProgress, isMountedRef]
+  );
 
-  const handleBulkSnooze = useCallback(async () => {
-    const selected = tasks.filter((t) => selectedTaskIds.has(t.id));
-    if (selected.length === 0) return;
-    const snoozeTime = new Date();
-    snoozeTime.setHours(snoozeTime.getHours() + 4);
-    try {
-      await Promise.allSettled(
-        selected.map((task) =>
-          updateTaskTemplate(task.id, { next_due_at: snoozeTime.toISOString() })
-        )
-      );
-      setSelectedTaskIds(new Set());
-      loadData({ force: true });
-    } catch (error: unknown) {
-      Alert.alert('Error', getErrorMessage(error));
-    }
-  }, [tasks, selectedTaskIds, loadData]);
+  const handleCompleteSelected = useCallback(() => {
+    const raw = tasks.filter((t) => selectedTaskIds.has(t.id));
+    if (raw.length === 0 || isCompletingAll) return;
 
-  const handleBulkSkip = useCallback(async () => {
-    const selected = tasks.filter((t) => selectedTaskIds.has(t.id));
-    if (selected.length === 0) return;
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    try {
-      await Promise.allSettled(
-        selected.map((task) => updateTaskTemplate(task.id, { next_due_at: tomorrow.toISOString() }))
-      );
-      setSelectedTaskIds(new Set());
-      loadData({ force: true });
-    } catch (error: unknown) {
-      Alert.alert('Error', getErrorMessage(error));
+    // Backstop against stale selection state — the card and the section
+    // checkbox both refuse to select these in the first place.
+    const selected = raw.filter((t) => !isEarlyCompletionBlocked(t));
+    if (selected.length === 0) {
+      setNotDueDialog({ kind: 'blocked', tasks: raw, selectedTotal: raw.length });
+      return;
     }
-  }, [tasks, selectedTaskIds, loadData]);
+
+    // Same early-completion caveat as the single-task path, asked once for the
+    // whole batch rather than per card.
+    const future = selected.filter((t) => isFutureTask(t));
+    if (future.length > 0) {
+      // `tasks` is the not-yet-due subset so Skip touches only those, while
+      // Mark done still applies to the whole completable selection.
+      setNotDueDialog({
+        kind: 'confirmEarly',
+        tasks: future,
+        selectedTotal: selected.length,
+        completeTargets: selected,
+      });
+      return;
+    }
+    void completeSelected(selected);
+  }, [tasks, selectedTaskIds, isCompletingAll, completeSelected]);
+
+  // Single entry point to the skip sheet — the card swipe, the bulk bar, the
+  // detail sheet and the "Not due yet" dialog all land here, so a batch gets the
+  // same day options and reason as a single skip rather than a hardcoded +1 day.
+  // A lone task takes the single path so the sheet can still show its preview.
+  // It is also the gate: a not-yet-due task has nothing to defer, so it never
+  // reaches the sheet. A mixed batch skips what it can and reports the rest.
+  const openSkipForTasks = useCallback((targets: TaskTemplate[]) => {
+    if (targets.length === 0) return;
+    const eligible = targets.filter((t) => !isSkipBlocked(t));
+    if (eligible.length === 0) {
+      setNotDueDialog({
+        kind: 'skipBlocked',
+        tasks: targets,
+        ...(targets.length > 1 ? { selectedTotal: targets.length } : {}),
+      });
+      return;
+    }
+    const single = eligible.length === 1 ? eligible[0] ?? null : null;
+    setSkipTask(single);
+    setSkipBulkTasks(single ? null : eligible);
+    setSkipExcludedCount(targets.length - eligible.length);
+    setSkipReason('');
+    setSkipDays(1);
+    setShowSkipModal(true);
+  }, []);
+
+  const handleBulkSkip = useCallback(() => {
+    openSkipForTasks(tasks.filter((t) => selectedTaskIds.has(t.id)));
+  }, [tasks, selectedTaskIds, openSkipForTasks]);
+
+  // Both dialogs hand off to another RN Modal (the skip sheet or the completion
+  // sheet). Stacking one straight onto another is unreliable on Android, so let
+  // this one unmount first and open the next on the following frame.
+  const closeNotDueThen = useCallback((next: () => void) => {
+    setNotDueDialog(null);
+    requestAnimationFrame(next);
+  }, []);
+
+  const notDueDialogProps = useMemo(() => {
+    if (!notDueDialog) return null;
+    const { kind, tasks: subjects, selectedTotal, completeTargets } = notDueDialog;
+    const bulk = selectedTotal != null;
+    const first = subjects[0];
+    if (!first) return null;
+
+    const detail =
+      bulk && kind === 'confirmEarly'
+        ? `${subjects.length} of ${selectedTotal} selected task${
+            selectedTotal === 1 ? '' : 's'
+          } aren't due yet`
+        : bulk
+        ? `${selectedTotal} task${selectedTotal === 1 ? '' : 's'} selected`
+        : `${TASK_LABELS[first.task_type]} · ${taskSubjectLabel(first)} · due ${formatDueDate(
+            first
+          )}`;
+
+    // `blocked` reuses EARLY_COMPLETION_BLOCK_REASON, which only covers water /
+    // fertilise / spray. `skipBlocked` applies to every type, so it carries its
+    // own wording rather than borrowing a table that would come back undefined.
+    const message =
+      kind === 'blocked'
+        ? bulk
+          ? 'None of the selected tasks can be completed early.'
+          : EARLY_COMPLETION_BLOCK_REASON[first.task_type] ?? ''
+        : kind === 'skipBlocked'
+        ? bulk
+          ? "None of the selected tasks are due yet, so there's nothing to skip."
+          : 'Only tasks that are due can be skipped.'
+        : bulk
+        ? 'Marking them done today will reschedule them from today.'
+        : 'Marking it done today will reschedule the next one from today.';
+
+    const dismiss = { label: 'Got it', onPress: () => setNotDueDialog(null) };
+
+    const actions: AlertDialogAction[] =
+      kind === 'confirmEarly'
+        ? [
+            {
+              label: 'Mark done',
+              icon: 'checkmark-circle-outline',
+              variant: 'primary',
+              onPress: () =>
+                closeNotDueThen(() => {
+                  if (completeTargets) void completeSelected(completeTargets);
+                  else openCompletionSheet(first);
+                }),
+            },
+            { label: 'Cancel', onPress: () => setNotDueDialog(null) },
+          ]
+        : [dismiss];
+
+    return {
+      title: 'Not due yet',
+      detail,
+      message,
+      icon: (kind === 'confirmEarly'
+        ? 'time-outline'
+        : 'ban-outline') as keyof typeof Ionicons.glyphMap,
+      actions,
+    };
+  }, [
+    notDueDialog,
+    taskSubjectLabel,
+    formatDueDate,
+    closeNotDueThen,
+    openCompletionSheet,
+    completeSelected,
+  ]);
 
   const getSectionState = useCallback(
     (sectionTasks: TaskTemplate[]): 'none' | 'partial' | 'all' => {
@@ -514,6 +746,7 @@ export default function CalendarScreen(): React.JSX.Element {
 
   const toggleSectionSelection = useCallback((sectionTasks: TaskTemplate[]) => {
     const ids = sectionTasks.map((t) => t.id);
+    tapFeedback();
     setSelectedTaskIds((prev) => {
       const next = new Set(prev);
       const allSelected = ids.every((id) => next.has(id));
@@ -528,10 +761,15 @@ export default function CalendarScreen(): React.JSX.Element {
 
   const renderSectionCheckbox = useCallback(
     (sectionTasks: TaskTemplate[]) => {
-      const state = getSectionState(sectionTasks);
+      // Blocked tasks can't be completed, so they must not count towards the
+      // header's select-all state or be swept into it. Filtering here covers
+      // every section that supplies `checkboxTasks`.
+      const selectable = sectionTasks.filter((t) => !isEarlyCompletionBlocked(t));
+      if (selectable.length === 0) return null;
+      const state = getSectionState(selectable);
       return (
         <TouchableOpacity
-          onPress={() => toggleSectionSelection(sectionTasks)}
+          onPress={() => toggleSectionSelection(selectable)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           activeOpacity={0.7}
         >
@@ -552,58 +790,52 @@ export default function CalendarScreen(): React.JSX.Element {
     [getSectionState, toggleSectionSelection, theme]
   );
 
-  const handleSnooze = useCallback(
-    async (task: TaskTemplate, hours: number) => {
-      const swipeable = swipeableRefs.current.get(task.id);
-      swipeable?.close();
-      try {
-        const snoozeTime = new Date();
-        snoozeTime.setHours(snoozeTime.getHours() + hours);
-        await updateTaskTemplate(task.id, {
-          next_due_at: snoozeTime.toISOString(),
-        });
-        Alert.alert('Task Snoozed', `Task snoozed for ${hours} hour${hours > 1 ? 's' : ''}`);
-        loadData({ force: true });
-      } catch (error: unknown) {
-        Alert.alert('Error', getErrorMessage(error));
-      }
+  const handleOpenSkipModal = useCallback(
+    (task: TaskTemplate) => {
+      swipeableRefs.current.get(task.id)?.close();
+      openSkipForTasks([task]);
     },
-    [loadData]
+    [openSkipForTasks]
   );
 
-  const handleOpenSkipModal = useCallback((task: TaskTemplate) => {
-    const swipeable = swipeableRefs.current.get(task.id);
-    swipeable?.close();
-    setSkipTask(task);
-    setSkipReason('');
-    setShowSkipModal(true);
+  const handleBlockedSkip = useCallback((task: TaskTemplate) => {
+    swipeableRefs.current.get(task.id)?.close();
+    setNotDueDialog({ kind: 'skipBlocked', tasks: [task] });
   }, []);
 
-  const handleConfirmSkip = async (): Promise<void> => {
-    if (!skipTask || skippingTask) return;
+  const closeSkipModal = useCallback(() => {
+    setShowSkipModal(false);
+    setSkipReason('');
+    setSkipDays(1);
+    setSkipTask(null);
+    setSkipBulkTasks(null);
+    setSkipExcludedCount(0);
+  }, []);
+
+  const handleConfirmSkip = useCallback(async (): Promise<void> => {
+    const targets = skipBulkTasks ?? (skipTask ? [skipTask] : []);
+    if (targets.length === 0 || skippingTask) return;
     setSkippingTask(true);
     try {
-      const rescheduleDate = new Date();
-      rescheduleDate.setDate(rescheduleDate.getDate() + skipDays);
-      await updateTaskTemplate(skipTask.id, {
-        next_due_at: rescheduleDate.toISOString(),
+      // Persists the reason on each template so the "why" outlives this sheet
+      // and can be shown on the task detail view.
+      await Promise.all(targets.map((task) => skipTaskTemplate(task, skipDays, skipReason)));
+      // Drop just the skipped ids rather than the whole selection: a skip can
+      // now target a subset (the not-yet-due ones), and the rest stay selected.
+      setSelectedTaskIds((prev) => {
+        if (prev.size === 0) return prev;
+        const next = new Set(prev);
+        targets.forEach((task) => next.delete(task.id));
+        return next.size === prev.size ? prev : next;
       });
-      const dayLabel = skipDays === 1 ? 'tomorrow' : `in ${skipDays} days`;
-      Alert.alert(
-        'Task Skipped',
-        `Task postponed ${dayLabel}${skipReason ? `: ${skipReason}` : ''}`
-      );
-      setShowSkipModal(false);
-      setSkipReason('');
-      setSkipDays(1);
-      setSkipTask(null);
+      closeSkipModal();
       loadData({ force: true });
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error));
     } finally {
       setSkippingTask(false);
     }
-  };
+  }, [skipBulkTasks, skipTask, skippingTask, skipDays, skipReason, closeSkipModal, loadData]);
 
   const handleDetailComplete = useCallback(() => {
     if (!detailTask) return;
@@ -611,13 +843,6 @@ export default function CalendarScreen(): React.JSX.Element {
     setDetailTask(null);
     handleTaskComplete(detailTask);
   }, [detailTask, handleTaskComplete]);
-
-  const handleDetailSnooze = useCallback(() => {
-    if (!detailTask) return;
-    setShowTaskDetail(false);
-    setDetailTask(null);
-    handleSnooze(detailTask, 4);
-  }, [detailTask, handleSnooze]);
 
   const handleDetailSkip = useCallback(() => {
     if (!detailTask) return;
@@ -661,8 +886,9 @@ export default function CalendarScreen(): React.JSX.Element {
         swipeableRefs={swipeableRefs}
         getPlantDetails={getPlantDetails}
         onComplete={handleTaskComplete}
-        onSnooze={handleSnooze}
+        onBlockedComplete={handleBlockedComplete}
         onSkipOpen={handleOpenSkipModal}
+        onBlockedSkip={handleBlockedSkip}
         onSelectToggle={toggleTaskSelection}
         onDetail={handleShowDetail}
         styles={styles}
@@ -682,8 +908,9 @@ export default function CalendarScreen(): React.JSX.Element {
       styles,
       getPlantDetails,
       handleTaskComplete,
-      handleSnooze,
+      handleBlockedComplete,
       handleOpenSkipModal,
+      handleBlockedSkip,
       toggleTaskSelection,
       handleShowDetail,
       forecast,
@@ -880,6 +1107,19 @@ export default function CalendarScreen(): React.JSX.Element {
       upcomingEmpty();
     }
 
+    // Both empty cards fire on the same condition — nothing due today — so an
+    // empty garden showed "All caught up" stacked on top of "No upcoming tasks".
+    // The full card says the same thing and carries the Create Task action, so
+    // the compact one is the one to drop. `selectedDateFiltered` is left alone:
+    // its "hidden by filters / Clear" affordance is not duplicated anywhere.
+    const hasVariant = (section: CalendarListSection, variant: CalendarEmptyVariant): boolean => {
+      const row = section.data[0];
+      return row?.kind === 'empty' && row.variant === variant;
+    };
+    if (sections.some((s) => hasVariant(s, 'noUpcoming'))) {
+      return sections.filter((s) => !hasVariant(s, 'selectedDateNone'));
+    }
+
     return sections;
   }, [
     isSearching,
@@ -904,39 +1144,44 @@ export default function CalendarScreen(): React.JSX.Element {
   const renderEmptyRow = useCallback(
     (row: Extract<CalendarRow, { kind: 'empty' }>): React.JSX.Element => {
       switch (row.variant) {
+        // The two per-day variants use the compact row: they sit inside an
+        // otherwise populated list, so a full-height empty card crowds it out.
         case 'selectedDateFiltered':
           return (
-            <View style={styles.emptyState}>
-              <Ionicons name="options-outline" size={48} color={theme.border} />
-              <Text style={styles.emptyStateText}>No matching tasks for this date</Text>
-              <Text style={styles.emptyStateSubtext}>
-                {row.rawCount ?? 0} task{(row.rawCount ?? 0) !== 1 ? 's' : ''} exist but are hidden
-                by your filters
-              </Text>
-              <TouchableOpacity style={styles.clearSearchButton} onPress={clearFilters}>
-                <Text style={styles.clearSearchText}>Clear Filters</Text>
+            <View style={styles.emptyStateCompact}>
+              <Ionicons name="options-outline" size={28} color={theme.border} />
+              <View style={styles.emptyStateCompactBody}>
+                <Text style={styles.emptyStateCompactText}>No matching tasks</Text>
+                <Text style={styles.emptyStateCompactSubtext}>
+                  {row.rawCount ?? 0} task{(row.rawCount ?? 0) !== 1 ? 's' : ''} hidden by filters
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.emptyStateCompactAction} onPress={clearFilters}>
+                <Text style={styles.emptyStateCompactActionText}>Clear</Text>
               </TouchableOpacity>
             </View>
           );
         case 'selectedDateNone':
           return (
-            <View style={styles.emptyState}>
-              <Ionicons name="calendar-outline" size={48} color={theme.border} />
-              <Text style={styles.emptyStateText}>No tasks scheduled</Text>
-              <Text style={styles.emptyStateSubtext}>
-                {row.isToday
-                  ? "You're all caught up for today!"
-                  : 'No tasks planned for this date'}
-              </Text>
+            <View style={styles.emptyStateCompact}>
+              <Ionicons name="calendar-outline" size={28} color={theme.border} />
+              <View style={styles.emptyStateCompactBody}>
+                <Text style={styles.emptyStateCompactText}>
+                  {row.isToday ? 'All caught up' : 'No tasks scheduled'}
+                </Text>
+                <Text style={styles.emptyStateCompactSubtext}>
+                  {row.isToday ? 'Nothing left for today' : 'Nothing planned for this date'}
+                </Text>
+              </View>
               <TouchableOpacity
-                style={styles.addTaskButton}
+                style={styles.emptyStateCompactAction}
                 onPress={() => {
                   setCreateTaskInitialDate(selectedDate ?? undefined);
                   setShowModal(true);
                 }}
               >
-                <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
-                <Text style={styles.addTaskButtonText}>Add Task</Text>
+                <Ionicons name="add" size={16} color={theme.primary} />
+                <Text style={styles.emptyStateCompactActionText}>Add</Text>
               </TouchableOpacity>
             </View>
           );
@@ -977,9 +1222,13 @@ export default function CalendarScreen(): React.JSX.Element {
           return (
             <View style={styles.emptyState}>
               <Ionicons name="checkbox-outline" size={48} color={theme.border} />
-              <Text style={styles.emptyStateText}>No upcoming tasks</Text>
+              {/* Covers today *and* the rest of the window — this card replaces
+                  the compact "All caught up" one when both would show. */}
+              <Text style={styles.emptyStateText}>All caught up</Text>
               <Text style={styles.emptyStateSubtext}>
-                Create a care plan to stay on top of your garden
+                {selectedView === 'month'
+                  ? 'Nothing due today or the rest of this month'
+                  : 'Nothing due today or the rest of this week'}
               </Text>
               <TouchableOpacity style={styles.addTaskButton} onPress={() => setShowModal(true)}>
                 <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
@@ -989,7 +1238,7 @@ export default function CalendarScreen(): React.JSX.Element {
           );
       }
     },
-    [styles, theme, clearFilters, selectedDate, tasks.length, searchQuery]
+    [styles, theme, clearFilters, selectedDate, selectedView, tasks.length, searchQuery]
   );
 
   const renderListItem = useCallback(
@@ -1183,121 +1432,38 @@ export default function CalendarScreen(): React.JSX.Element {
           </View>
         </View>
 
-        {/* Week or Month View — collapses on scroll */}
-        <Animated.View
-          style={[
-            styles.animatedCalendarWrap,
-            {
-              maxHeight: calendarHeight.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 500],
-              }),
-              opacity: calendarHeight.interpolate({
-                inputRange: [0, 0.3, 1],
-                outputRange: [0, 0.5, 1],
-              }),
-            },
-          ]}
-        >
-          {selectedView === 'week' ? (
-            <WeekCalendarView
-              currentWeekStart={currentWeekStart}
-              selectedDate={selectedDate}
-              taskColors={TASK_COLORS}
-              getTasksForDate={getTasksForDate}
-              onSelectDate={setSelectedDate}
-              onNavigateWeek={(newStart) => {
-                setSelectedDate(null);
-                setCurrentWeekStart(newStart);
-              }}
-            />
-          ) : (
-            <MonthCalendarView
-              currentMonth={currentMonth}
-              selectedDate={selectedDate}
-              taskColors={TASK_COLORS}
-              getTasksForDate={getTasksForDate}
-              onSelectDate={setSelectedDate}
-              onNavigateMonth={(newMonth) => {
-                setSelectedDate(null);
-                setCurrentMonth(newMonth);
-              }}
-            />
-          )}
-        </Animated.View>
-
-        {/* Collapsed date strip — visible when calendar is collapsed */}
-        <Animated.View
-          style={[
-            styles.animatedCalendarWrap,
-            {
-              maxHeight: calendarHeight.interpolate({
-                inputRange: [0, 0.3, 1],
-                outputRange: [44, 20, 0],
-              }),
-              opacity: calendarHeight.interpolate({
-                inputRange: [0, 0.3, 1],
-                outputRange: [1, 0.5, 0],
-              }),
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.collapsedStrip}
-            onPress={expandCalendar}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
-            <Text style={styles.collapsedStripText}>
-              {selectedDate
-                ? selectedDate.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                  })
-                : selectedView === 'week'
-                ? `${currentWeekStart.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  })} – ${new Date(currentWeekStart.getTime() + 6 * 86400000).toLocaleDateString(
-                    'en-US',
-                    { month: 'short', day: 'numeric' }
-                  )}`
-                : currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </Text>
-            {selectedDate && (
-              <Text style={styles.collapsedStripCount}>{getTasksForDate(selectedDate).length}</Text>
-            )}
-            <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
-          </TouchableOpacity>
-        </Animated.View>
-
-        <SectionList
-          ref={scrollViewRef}
-          style={styles.content}
-          sections={listSections}
-          keyExtractor={listKeyExtractor}
-          renderItem={renderListItem}
-          renderSectionHeader={renderListSectionHeader}
-          renderSectionFooter={renderListSectionFooter}
-          stickySectionHeadersEnabled={false}
-          contentContainerStyle={{
-            paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16,
-          }}
-          onScroll={handleContentScroll}
-          scrollEventThrottle={16}
-          nestedScrollEnabled
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={initialLoading || refreshing} onRefresh={handleRefresh} />
-          }
-          initialNumToRender={12}
-          maxToRenderPerBatch={10}
-          windowSize={7}
-          removeClippedSubviews={true}
-          updateCellsBatchingPeriod={50}
-          ListHeaderComponent={
+        {/* The list fills this area; the calendar header floats above it and
+            slides away on a pure GPU transform, so scrolling never triggers a
+            layout pass on the list below. */}
+        <View style={styles.listArea}>
+          <Animated.SectionList
+            ref={scrollViewRef}
+            style={styles.content}
+            sections={listSections}
+            keyExtractor={listKeyExtractor}
+            renderItem={renderListItem}
+            renderSectionHeader={renderListSectionHeader}
+            renderSectionFooter={renderListSectionFooter}
+            stickySectionHeadersEnabled={false}
+            contentContainerStyle={listContentStyle}
+            onScroll={handleContentScroll}
+            scrollEventThrottle={16}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={initialLoading || refreshing}
+                onRefresh={handleRefresh}
+                progressViewOffset={headerHeight}
+              />
+            }
+            initialNumToRender={12}
+            maxToRenderPerBatch={10}
+            windowSize={7}
+            removeClippedSubviews={true}
+            updateCellsBatchingPeriod={50}
+            ListHeaderComponent={
             <>
           {/* Swipe Hint Banner */}
           {showSwipeHint && (
@@ -1305,7 +1471,7 @@ export default function CalendarScreen(): React.JSX.Element {
               <View style={styles.swipeHintBannerContent}>
                 <Ionicons name="swap-horizontal-outline" size={18} color={theme.primary} />
                 <Text style={styles.swipeHintBannerText}>
-                  Swipe cards left to complete, right to skip or snooze
+                  Swipe cards left to skip, right to complete
                 </Text>
               </View>
               <TouchableOpacity
@@ -1353,68 +1519,144 @@ export default function CalendarScreen(): React.JSX.Element {
             })}
           </View>
             </>
-          }
-        />
+            }
+          />
 
-        {/* Floating Selection Bar */}
-        {selectedTaskIds.size > 0 && (
-          <View
+          {/* Collapsible calendar header. The strip is anchored to this block's
+              bottom edge, so once the block has slid up by (height − strip
+              height) the strip lands flush under the app bar. */}
+          <Animated.View
+            style={[styles.collapsibleHeader, { transform: [{ translateY: headerTranslateY }] }]}
+            onLayout={handleHeaderLayout}
+          >
+            <Animated.View style={{ opacity: calendarOpacity }}>
+              {selectedView === 'week' ? (
+                <WeekCalendarView
+                  currentWeekStart={currentWeekStart}
+                  selectedDate={selectedDate}
+                  taskColors={TASK_COLORS}
+                  getTasksForDate={getTasksForDate}
+                  onSelectDate={setSelectedDate}
+                  onNavigateWeek={(newStart) => {
+                    setSelectedDate(null);
+                    setCurrentWeekStart(newStart);
+                  }}
+                />
+              ) : (
+                <MonthCalendarView
+                  currentMonth={currentMonth}
+                  selectedDate={selectedDate}
+                  taskColors={TASK_COLORS}
+                  getTasksForDate={getTasksForDate}
+                  onSelectDate={setSelectedDate}
+                  onNavigateMonth={(newMonth) => {
+                    setSelectedDate(null);
+                    setCurrentMonth(newMonth);
+                  }}
+                />
+              )}
+            </Animated.View>
+
+            <Animated.View
+              style={[
+                styles.collapsedStripOverlay,
+                { transform: [{ translateY: stripTranslateY }] },
+              ]}
+            >
+              <TouchableOpacity
+                style={styles.collapsedStrip}
+                onPress={expandCalendar}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Show calendar"
+              >
+                <Text style={styles.collapsedStripText}>
+                  {selectedDate
+                    ? selectedDate.toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      })
+                    : selectedView === 'week'
+                    ? `${currentWeekStart.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      })} – ${new Date(
+                        currentWeekStart.getTime() + 6 * 86400000
+                      ).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                    : currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </Text>
+                {selectedDate && (
+                  <Text style={styles.collapsedStripCount}>
+                    {getTasksForDate(selectedDate).length}
+                  </Text>
+                )}
+                <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </Animated.View>
+          </Animated.View>
+        </View>
+
+        {/* Floating selection pill — sits at the same height as the FAB */}
+        {selectionBarMounted && (
+          <Animated.View
+            pointerEvents="box-none"
             style={[
-              styles.selectionBar,
-              { bottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8 },
+              styles.selectionBarWrap,
+              {
+                bottom: Math.max(insets.bottom, 8) + TAB_BAR_HEIGHT + 16,
+                opacity: selectionBarAnim,
+                transform: [
+                  {
+                    translateY: selectionBarAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [24, 0],
+                    }),
+                  },
+                ],
+              },
             ]}
           >
-            <TouchableOpacity
-              style={styles.selectionBarCancel}
-              onPress={() => setSelectedTaskIds(new Set())}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close" size={18} color={theme.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.selectionBarSecondaryBtn,
-                { backgroundColor: `${theme.info}20`, borderColor: theme.info },
-              ]}
-              onPress={handleBulkSnooze}
-              disabled={isCompletingAll}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="time-outline" size={15} color={theme.info} />
-              <Text style={[styles.selectionBarSecondaryBtnText, { color: theme.info }]}>+4h</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.selectionBarSecondaryBtn,
-                { backgroundColor: `${theme.warning}20`, borderColor: theme.warning },
-              ]}
-              onPress={handleBulkSkip}
-              disabled={isCompletingAll}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="play-skip-forward" size={15} color={theme.warning} />
-              <Text style={[styles.selectionBarSecondaryBtnText, { color: theme.warning }]}>
-                Skip
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.selectionBarBtn, isCompletingAll && styles.selectionBarBtnDisabled]}
-              onPress={handleCompleteSelected}
-              disabled={isCompletingAll}
-              activeOpacity={0.7}
-            >
-              {isCompletingAll ? (
-                <Text style={styles.selectionBarBtnText}>
-                  {completedCount}/{completingTotal}
+            <View style={styles.selectionBar}>
+              <TouchableOpacity
+                style={styles.selectionBarCancel}
+                onPress={() => setSelectedTaskIds(new Set())}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Clear selection"
+              >
+                <Ionicons name="close" size={18} color={theme.textSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.selectionBarSecondaryBtn, { backgroundColor: `${theme.warning}20` }]}
+                onPress={handleBulkSkip}
+                disabled={isCompletingAll}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="play-skip-forward" size={15} color={theme.warning} />
+                <Text style={[styles.selectionBarSecondaryBtnText, { color: theme.warning }]}>
+                  Skip
                 </Text>
-              ) : (
-                <>
-                  <Ionicons name="checkmark-done" size={18} color={theme.textInverse} />
-                  <Text style={styles.selectionBarBtnText}>Done ({selectedTaskIds.size})</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.selectionBarBtn, isCompletingAll && styles.selectionBarBtnDisabled]}
+                onPress={handleCompleteSelected}
+                disabled={isCompletingAll}
+                activeOpacity={0.7}
+              >
+                {isCompletingAll ? (
+                  <Text style={styles.selectionBarBtnText}>
+                    {completedCount}/{completingTotal}
+                  </Text>
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-done" size={18} color={theme.textInverse} />
+                    <Text style={styles.selectionBarBtnText}>Done ({selectedTaskIds.size})</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
         )}
 
         {/* Floating Action Button */}
@@ -1632,6 +1874,8 @@ export default function CalendarScreen(): React.JSX.Element {
               medium: theme.info,
               low: theme.border,
             };
+            const detailBlocked = isEarlyCompletionBlocked(detailTask);
+            const detailSkipBlocked = isSkipBlocked(detailTask);
             const closeDetail = (): void => {
               setShowTaskDetail(false);
               setDetailTask(null);
@@ -1709,28 +1953,78 @@ export default function CalendarScreen(): React.JSX.Element {
                         {priorityLabels[effPriority]}
                       </Text>
                     </View>
+                    {detailTask.last_skipped_at && (
+                      <View style={styles.taskDetailRow}>
+                        <Text style={styles.taskDetailLabel}>
+                          Skipped
+                          {(detailTask.skip_count ?? 0) > 1 ? ` ×${detailTask.skip_count}` : ''}
+                        </Text>
+                        <Text style={[styles.taskDetailValue, styles.taskDetailValueSkip]}>
+                          {new Date(detailTask.last_skipped_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                          {detailTask.last_skip_reason ? ` · ${detailTask.last_skip_reason}` : ''}
+                        </Text>
+                      </View>
+                    )}
+                    {detailBlocked && (
+                      <View style={styles.taskDetailRow}>
+                        <Text style={styles.taskDetailLabel}>Not due yet</Text>
+                        <Text style={[styles.taskDetailValue, styles.taskDetailValueSkip]}>
+                          {EARLY_COMPLETION_BLOCK_REASON[detailTask.task_type]}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.taskDetailActions}>
                     <TouchableOpacity
-                      style={[styles.taskDetailActionBtn, { backgroundColor: theme.success }]}
+                      style={[
+                        styles.taskDetailActionBtn,
+                        detailBlocked
+                          ? styles.taskDetailActionBtnDisabled
+                          : { backgroundColor: theme.success },
+                      ]}
                       onPress={handleDetailComplete}
+                      disabled={detailBlocked}
                     >
-                      <Ionicons name="checkmark" size={16} color={theme.textInverse} />
-                      <Text style={styles.taskDetailActionBtnText}>Done</Text>
+                      <Ionicons
+                        name={detailBlocked ? 'ban-outline' : 'checkmark'}
+                        size={16}
+                        color={detailBlocked ? theme.textTertiary : theme.textInverse}
+                      />
+                      <Text
+                        style={[
+                          styles.taskDetailActionBtnText,
+                          detailBlocked && styles.taskDetailActionBtnTextDisabled,
+                        ]}
+                      >
+                        Done
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.taskDetailActionBtn, { backgroundColor: theme.info }]}
-                      onPress={handleDetailSnooze}
-                    >
-                      <Ionicons name="time-outline" size={16} color={theme.textInverse} />
-                      <Text style={styles.taskDetailActionBtnText}>Snooze</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.taskDetailActionBtn, { backgroundColor: theme.warning }]}
+                      style={[
+                        styles.taskDetailActionBtn,
+                        detailSkipBlocked
+                          ? styles.taskDetailActionBtnDisabled
+                          : { backgroundColor: theme.warning },
+                      ]}
                       onPress={handleDetailSkip}
+                      disabled={detailSkipBlocked}
                     >
-                      <Ionicons name="play-skip-forward" size={16} color={theme.textInverse} />
-                      <Text style={styles.taskDetailActionBtnText}>Skip</Text>
+                      <Ionicons
+                        name={detailSkipBlocked ? 'ban-outline' : 'play-skip-forward'}
+                        size={16}
+                        color={detailSkipBlocked ? theme.textTertiary : theme.textInverse}
+                      />
+                      <Text
+                        style={[
+                          styles.taskDetailActionBtnText,
+                          detailSkipBlocked && styles.taskDetailActionBtnTextDisabled,
+                        ]}
+                      >
+                        Skip
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1738,96 +2032,34 @@ export default function CalendarScreen(): React.JSX.Element {
             );
           })()}
 
-        {/* Skip Task Modal */}
-        <Modal
+        <SkipTaskModal
           visible={showSkipModal}
-          animationType="fade"
-          transparent={true}
-          onRequestClose={() => setShowSkipModal(false)}
-          statusBarTranslucent
-          navigationBarTranslucent
-        >
-          <View style={styles.skipModalOverlay}>
-            <View style={styles.skipModalContent}>
-              <Text style={styles.skipModalTitle}>Skip Task</Text>
-              <Text style={styles.skipModalSubtext}>Reschedule to:</Text>
-              <View style={styles.skipDaysRow}>
-                {[
-                  { days: 1, label: 'Tomorrow' },
-                  { days: 3, label: '3 Days' },
-                  { days: 7, label: '7 Days' },
-                ].map(({ days, label }) => (
-                  <TouchableOpacity
-                    key={days}
-                    style={[styles.skipDayChip, skipDays === days && styles.skipDayChipActive]}
-                    onPress={() => setSkipDays(days)}
-                  >
-                    <Text
-                      style={[
-                        styles.skipDayChipText,
-                        skipDays === days && styles.skipDayChipTextActive,
-                      ]}
-                    >
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+          task={skipTask}
+          taskCount={skipBulkTasks?.length ?? 1}
+          excludedCount={skipExcludedCount}
+          skipDays={skipDays}
+          skipReason={skipReason}
+          isSkipping={skippingTask}
+          styles={styles}
+          bottomInset={insets.bottom}
+          onChangeDays={setSkipDays}
+          onChangeReason={(text) => setSkipReason(sanitizeAlphaNumericSpaces(text))}
+          onClose={closeSkipModal}
+          onConfirm={handleConfirmSkip}
+        />
 
-              <VoiceDictation
-                value={skipReason}
-                onChangeText={(text) => setSkipReason(sanitizeAlphaNumericSpaces(text))}
-              />
-              <TextInput
-                style={styles.skipModalInput}
-                placeholder="Reason (optional)"
-                value={skipReason}
-                onChangeText={(text) => setSkipReason(sanitizeAlphaNumericSpaces(text))}
-                placeholderTextColor={theme.textTertiary}
-                multiline
-              />
-
-              <View style={styles.skipReasonChips}>
-                {['Weather', 'Already done', 'Not needed', 'Too busy'].map((reason) => (
-                  <TouchableOpacity
-                    key={reason}
-                    style={styles.skipReasonChip}
-                    onPress={() => setSkipReason(reason)}
-                  >
-                    <Text style={styles.skipReasonChipText}>{reason}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View style={styles.skipModalButtons}>
-                <TouchableOpacity
-                  style={[styles.skipModalBtn, styles.skipModalBtnCancel]}
-                  onPress={() => {
-                    setShowSkipModal(false);
-                    setSkipReason('');
-                    setSkipDays(1);
-                    setSkipTask(null);
-                  }}
-                >
-                  <Text style={styles.skipModalBtnCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.skipModalBtn, styles.skipModalBtnConfirm]}
-                  onPress={handleConfirmSkip}
-                  disabled={skippingTask}
-                >
-                  <Text style={styles.skipModalBtnText}>
-                    {skippingTask
-                      ? 'Skipping...'
-                      : skipDays === 1
-                      ? 'Skip to Tomorrow'
-                      : `Skip (+${skipDays} days)`}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        {notDueDialogProps && (
+          <AlertDialog
+            visible
+            title={notDueDialogProps.title}
+            detail={notDueDialogProps.detail}
+            message={notDueDialogProps.message}
+            icon={notDueDialogProps.icon}
+            tone="warning"
+            actions={notDueDialogProps.actions}
+            onDismiss={() => setNotDueDialog(null)}
+          />
+        )}
       </View>
     </GestureHandlerRootView>
   );

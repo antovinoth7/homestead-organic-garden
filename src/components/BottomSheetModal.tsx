@@ -1,16 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import {
-  Animated,
-  Easing,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from '@/theme';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { createStyles } from '@/styles/bottomSheetModalStyles';
 
 interface Props {
@@ -19,7 +11,7 @@ interface Props {
   children: React.ReactNode;
   /** The sheet's own card style — rounded corners, runtime maxHeight, paddingBottom. */
   sheetStyle?: StyleProp<ViewStyle>;
-  /** Wrap the sheet in a KeyboardAvoidingView (forms with text inputs). */
+  /** Lift the sheet above the software keyboard (forms with text inputs). */
   keyboardAvoiding?: boolean;
   /** false blocks backdrop dismissal (e.g. while a save is in flight). */
   dismissOnBackdropPress?: boolean;
@@ -52,6 +44,7 @@ export function BottomSheetModal({
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const translateY = useRef(new Animated.Value(RISE_DISTANCE)).current;
+  const keyboardHeight = useKeyboardHeight();
 
   // Park the sheet back down once closed so the next open rises again.
   useEffect(() => {
@@ -69,12 +62,6 @@ export function BottomSheetModal({
     }).start();
   }, [translateY]);
 
-  const sheet = (
-    <Animated.View style={[styles.sheet, sheetStyle, { transform: [{ translateY }] }]}>
-      {children}
-    </Animated.View>
-  );
-
   return (
     <Modal
       visible={visible}
@@ -86,7 +73,10 @@ export function BottomSheetModal({
       navigationBarTranslucent
       hardwareAccelerated
     >
-      <View style={styles.root}>
+      {/* Padding the flex root — rather than wrapping the sheet in a
+          KeyboardAvoidingView — keeps the sheet bottom-anchored and shrinks the
+          content box the sheet's percentage maxHeight resolves against. */}
+      <View style={[styles.root, keyboardAvoiding && { paddingBottom: keyboardHeight }]}>
         {/* Sibling, not a wrapper: taps on the sheet never reach it, so the
             sheet needs no tap-swallowing layer of its own. */}
         {dismissOnBackdropPress && (
@@ -97,13 +87,9 @@ export function BottomSheetModal({
             accessibilityLabel="Close"
           />
         )}
-        {keyboardAvoiding ? (
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            {sheet}
-          </KeyboardAvoidingView>
-        ) : (
-          sheet
-        )}
+        <Animated.View style={[styles.sheet, sheetStyle, { transform: [{ translateY }] }]}>
+          {children}
+        </Animated.View>
       </View>
     </Modal>
   );

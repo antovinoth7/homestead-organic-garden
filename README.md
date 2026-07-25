@@ -21,7 +21,7 @@ while keeping image storage off the cloud.
   and archive/restore support.
 - Recurring care plan with watering, fertilising, pruning,
   repotting, spraying, mulching, and harvest tasks.
-- Today dashboard with task completion, snooze/skip flows,
+- Today dashboard with task completion, skip flows,
   and garden health alerts.
 - Calendar screen with week/month views, search, grouping,
   and manual task creation.

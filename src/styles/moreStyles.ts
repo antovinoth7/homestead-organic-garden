@@ -29,19 +29,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     accountText: {
       flex: 1,
-    },
-    accountLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 1,
-      marginBottom: 2,
+      alignItems: 'flex-start',
     },
     accountEmail: {
       fontSize: 18,
       fontWeight: '700',
       color: theme.text,
+      marginBottom: 8,
+    },
+    signOutPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.error,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      borderRadius: 20,
+    },
+    signOutPillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textInverse,
+      marginLeft: 6,
     },
     content: {
       padding: 16,
@@ -70,22 +78,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 16,
       fontWeight: '600',
       color: theme.text,
-    },
-    signOutButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.backgroundSecondary,
-      padding: 16,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      marginTop: 16,
-    },
-    signOutText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.error,
-      marginLeft: 8,
     },
   });

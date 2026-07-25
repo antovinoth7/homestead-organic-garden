@@ -39,19 +39,45 @@ export default function TaskCompletionModal({
 }: TaskCompletionModalProps): React.JSX.Element {
   const theme = useTheme();
   return (
-    <BottomSheetModal visible={visible} onClose={onClose} sheetStyle={styles.modalContent}>
+    <BottomSheetModal
+      visible={visible}
+      onClose={onClose}
+      sheetStyle={styles.modalContent}
+      keyboardAvoiding
+      dismissOnBackdropPress={!isCompleting}
+    >
       <View style={styles.modalHeader}>
-        <Text style={styles.modalTitle}>Complete Task</Text>
-        <TouchableOpacity onPress={onClose} disabled={isCompleting}>
-          <Ionicons name="close" size={24} color={theme.text} />
+        <TouchableOpacity
+          style={styles.modalCloseButton}
+          onPress={onClose}
+          disabled={isCompleting}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
+          <Ionicons name="close" size={20} color={theme.textInverse} />
+        </TouchableOpacity>
+        <View style={styles.modalTitleWrap}>
+          <Text style={styles.modalTitle} numberOfLines={1}>
+            Complete Task
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.modalSaveButton, isCompleting && styles.modalSaveButtonDisabled]}
+          onPress={onConfirm}
+          disabled={isCompleting}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.modalSaveText, isCompleting && styles.modalSaveTextDisabled]}>
+            {isCompleting ? 'Saving...' : 'Done'}
+          </Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView
+        style={styles.modalScroll}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingBottom: Math.max(bottomInset, 12),
-        }}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: Math.max(bottomInset, 12) }}
       >
         <View style={styles.modalBody}>
           {task && (
@@ -77,23 +103,6 @@ export default function TaskCompletionModal({
             value={productUsed}
             onChangeText={onChangeProduct}
           />
-
-          <View style={styles.modalActions}>
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.skipButton,
-                isCompleting && styles.actionButtonDisabled,
-              ]}
-              onPress={onConfirm}
-              disabled={isCompleting}
-              activeOpacity={isCompleting ? 1 : 0.7}
-            >
-              <Text style={styles.skipButtonText}>
-                {isCompleting ? 'Completing...' : 'Complete'}
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
     </BottomSheetModal>

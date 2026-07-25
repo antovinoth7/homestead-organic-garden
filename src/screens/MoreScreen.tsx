@@ -31,11 +31,14 @@ export default function MoreScreen(): React.JSX.Element {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.accountHeader}>
           <View style={styles.accountIcon}>
-            <Ionicons name="person-circle" size={26} color="#fff" />
+            <Ionicons name="person-circle" size={26} color={theme.textInverse} />
           </View>
           <View style={styles.accountText}>
-            <Text style={styles.accountLabel}>Account</Text>
             <Text style={styles.accountEmail}>{auth.currentUser?.email || 'Not signed in'}</Text>
+            <TouchableOpacity style={styles.signOutPill} onPress={handleSignOut}>
+              <Ionicons name="log-out-outline" size={14} color={theme.textInverse} />
+              <Text style={styles.signOutPillText}>Sign Out</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -106,11 +109,6 @@ export default function MoreScreen(): React.JSX.Element {
           </View>
           <Text style={styles.menuText}>Settings</Text>
           <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={18} color={theme.error} />
-          <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

@@ -49,6 +49,8 @@ interface Props {
   onChange: (patch: Partial<PestDiseaseFields>) => void;
   plantType: PlantType | null;
   plantVariety: string | null;
+  /** Inline validation message for the pest/disease name field. */
+  errorText?: string;
 }
 
 const KIND_OPTIONS: {
@@ -75,6 +77,7 @@ export function JournalPestDiseaseSection({
   onChange,
   plantType,
   plantVariety,
+  errorText,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -141,9 +144,10 @@ export function JournalPestDiseaseSection({
       </View>
 
       <FloatingLabelInput
-        label={`${value.kind === 'pest' ? 'Pest' : 'Disease'} Name *`}
+        label={`${value.kind === 'pest' ? 'Pest' : 'Disease'} Name`}
         value={value.name}
         onChangeText={(text) => onChange({ name: sanitizeAlphaNumericSpaces(text) })}
+        errorText={errorText}
       />
 
       {/* Preset suggestions */}

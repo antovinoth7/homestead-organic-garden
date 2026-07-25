@@ -641,6 +641,11 @@ export interface TaskTemplate {
   // Bed association (Phase B2)
   bed_id?: string | null;
   task_subtype?: BedTaskSubtype | null;
+  // Skip tracking — set by the Care Plan's skip action so the "why" survives
+  // past the confirmation alert and can be surfaced on the task detail sheet.
+  last_skipped_at?: string | null;
+  last_skip_reason?: string | null;
+  skip_count?: number | null;
   created_at: string;
 }
 

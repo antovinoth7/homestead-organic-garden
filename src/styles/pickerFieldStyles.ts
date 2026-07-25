@@ -20,18 +20,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     fieldError: {
       borderColor: theme.error,
     },
-    errorRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: 5,
-      marginTop: 5,
-      marginLeft: 4,
-    },
-    errorText: {
-      flex: 1,
-      fontSize: 12,
-      color: theme.error,
-    },
     emojiCircle: {
       width: 38,
       height: 38,

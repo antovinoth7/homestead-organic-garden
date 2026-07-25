@@ -1,6 +1,13 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 
+/**
+ * Height of the collapsed date strip. The Care Plan's collapse animation
+ * derives its translate distance from this, so it must stay a fixed number
+ * rather than being implied by padding.
+ */
+export const COLLAPSED_STRIP_HEIGHT = 44;
+
 export function getStartOfWeek(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
@@ -395,14 +402,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.textInverse,
     },
     content: {
+      // Bottom clearance lives on contentContainerStyle so the list scrolls
+      // *under* the floating tab bar instead of ending 120px short of it.
       flex: 1,
-      paddingBottom: 120,
     },
     collapsedStrip: {
+      // Fixed height — the collapse translate distance is derived from it.
+      height: COLLAPSED_STRIP_HEIGHT,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 10,
+      paddingHorizontal: 16,
       gap: 8,
       backgroundColor: theme.card,
       borderBottomWidth: 1,
@@ -647,6 +657,47 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 16,
       textAlign: 'center',
     },
+    // Compact variant for a single empty *day* inside an otherwise populated
+    // list — the full-size emptyState above is for whole-screen empties only.
+    emptyStateCompact: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: theme.background,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderStyle: 'dashed',
+    },
+    emptyStateCompactBody: {
+      flex: 1,
+    },
+    emptyStateCompactText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    emptyStateCompactSubtext: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
+    emptyStateCompactAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      backgroundColor: theme.primaryLight,
+      borderRadius: 16,
+    },
+    emptyStateCompactActionText: {
+      fontSize: 13,
+      color: theme.primary,
+      fontWeight: '600',
+    },
     clearSearchButton: {
       marginTop: 8,
       paddingVertical: 10,
@@ -749,6 +800,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     swipeAction: {
       backgroundColor: theme.success,
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: 100,
+      borderRadius: 16,
+      marginBottom: 12,
+    },
+    // Same box as swipeAction, but neutral — it explains rather than commits.
+    swipeBlockedAction: {
+      backgroundColor: theme.borderDark,
       justifyContent: 'center',
       alignItems: 'center',
       width: 100,
@@ -1046,73 +1106,30 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     notesInput: {
       minHeight: 80,
     },
-    modalActions: {
-      flexDirection: 'row',
-      gap: 12,
-      marginTop: 8,
-    },
-    actionButton: {
-      flex: 1,
-      padding: 16,
-      borderRadius: 12,
-      alignItems: 'center',
-    },
-    actionButtonDisabled: {
-      opacity: 0.6,
-    },
-    skipButton: {
-      backgroundColor: theme.primary,
-    },
-    skipButtonText: {
-      color: theme.backgroundSecondary,
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    // Swipe left actions (Snooze + Skip)
+    // Swipe left action (Skip) — a single action, so it owns the full reveal.
     swipeLeftActions: {
       flexDirection: 'row',
       marginBottom: 12,
-    },
-    swipeSnoozeAction: {
-      backgroundColor: theme.info,
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: 80,
-      borderTopLeftRadius: 16,
-      borderBottomLeftRadius: 16,
     },
     swipeSkipAction: {
       backgroundColor: theme.warning,
       justifyContent: 'center',
       alignItems: 'center',
       width: 80,
-      borderTopRightRadius: 16,
-      borderBottomRightRadius: 16,
+      borderRadius: 16,
     },
     // Skip Modal (Calendar)
-    skipModalOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 20,
-    },
-    skipModalContent: {
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 20,
-      padding: 24,
-      width: '100%',
-      maxWidth: 400,
-    },
-    skipModalTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.text,
-      marginBottom: 8,
-    },
     skipModalSubtext: {
       fontSize: 14,
       color: theme.textSecondary,
+      marginBottom: 16,
+    },
+    // Shows the exact date a skip will land on, so the 6 PM convention and the
+    // "never earlier than the current due date" clamp are both visible up front.
+    skipPreviewText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.warning,
       marginBottom: 16,
     },
     skipModalInput: {
@@ -1133,46 +1150,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 8,
       marginBottom: 20,
     },
+    // Unselected chips stay neutral so the selected reason is actually legible
+    // as a selection rather than every chip reading as "on".
     skipReasonChip: {
       paddingHorizontal: 12,
       paddingVertical: 6,
-      backgroundColor: theme.primaryLight,
+      backgroundColor: theme.background,
       borderRadius: 16,
       borderWidth: 1,
+      borderColor: theme.border,
+    },
+    skipReasonChipActive: {
+      backgroundColor: theme.primaryLight,
       borderColor: theme.primary,
     },
     skipReasonChipText: {
       fontSize: 13,
-      color: theme.primary,
+      color: theme.textSecondary,
       fontWeight: '500',
     },
-    skipModalButtons: {
-      flexDirection: 'row',
-      gap: 12,
-    },
-    skipModalBtn: {
-      flex: 1,
-      paddingVertical: 14,
-      borderRadius: 12,
-      alignItems: 'center',
-    },
-    skipModalBtnCancel: {
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    skipModalBtnConfirm: {
-      backgroundColor: theme.warning,
-    },
-    skipModalBtnText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.textInverse,
-    },
-    skipModalBtnCancelText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.textSecondary,
+    skipReasonChipTextActive: {
+      color: theme.primary,
     },
     selectedDateTaskBadge: {
       flexDirection: 'row',
@@ -1200,23 +1198,35 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       height: 28,
     },
     taskCheckboxSelected: {},
-    selectionBar: {
+    // Not selectable — the task can't be completed early. Still tappable, so it
+    // can explain why instead of swallowing the press.
+    taskCheckboxBlocked: {
+      opacity: 0.4,
+    },
+    // Full-width, `pointerEvents="box-none"` layer whose only job is to centre
+    // the pill — taps either side of it fall through to the list.
+    selectionBarWrap: {
       position: 'absolute',
-      left: 16,
-      right: 16,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+      zIndex: 100,
+    },
+    // Self-sizing pill: usually one task is selected, so stretching edge to edge
+    // overstated it. Width follows the actions instead.
+    selectionBar: {
       flexDirection: 'row',
       alignItems: 'center',
+      alignSelf: 'center',
       backgroundColor: theme.card,
-      borderRadius: 16,
-      paddingVertical: 10,
-      paddingHorizontal: 14,
-      gap: 10,
+      borderRadius: 999,
+      padding: 8,
+      gap: 8,
       shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 8,
-      zIndex: 100,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.18,
+      shadowRadius: 16,
+      elevation: 10,
       borderWidth: 1,
       borderColor: theme.border,
     },
@@ -1228,20 +1238,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    selectionBarText: {
-      flex: 1,
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.text,
-    },
     selectionBarBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
       backgroundColor: theme.primary,
       paddingVertical: 10,
-      paddingHorizontal: 16,
-      borderRadius: 12,
+      paddingHorizontal: 18,
+      borderRadius: 999,
     },
     selectionBarBtnDisabled: {
       opacity: 0.6,
@@ -1401,16 +1405,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       color: theme.textInverse,
     },
+    taskDetailActionBtnDisabled: {
+      backgroundColor: theme.borderDark,
+    },
+    taskDetailActionBtnTextDisabled: {
+      color: theme.textTertiary,
+    },
+    // Tinted fill only — a border on top of the tint read as a second, competing
+    // outline next to the solid primary action.
     selectionBarSecondaryBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
+      gap: 6,
       paddingVertical: 8,
-      paddingHorizontal: 10,
-      borderRadius: 10,
+      paddingHorizontal: 14,
+      borderRadius: 999,
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
     },
     selectionBarSecondaryBtnText: {
       fontSize: 12,
@@ -1462,8 +1472,38 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 8,
     },
-    animatedCalendarWrap: {
+    // Clips the collapsible header as it slides up out of view. The list fills
+    // this area and is padded down by the header's measured height.
+    listArea: {
+      flex: 1,
       overflow: 'hidden',
+    },
+    // Absolutely positioned over the list so collapsing it is a GPU transform
+    // rather than a per-frame layout pass on the SectionList below.
+    collapsibleHeader: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 2,
+      backgroundColor: theme.card,
+      // Clips the strip out of bounds while the calendar is expanded. Both
+      // platforms stop hit-testing subviews outside a parent's bounds, so this
+      // is also what keeps the strip from stealing taps from the date cells.
+      overflow: 'hidden',
+    },
+    // Parked one strip-height below the header's bottom edge (i.e. clipped) and
+    // slid up into place as the header collapses. Opaque, so it covers the
+    // calendar it replaces instead of ghosting over it.
+    collapsedStripOverlay: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: theme.card,
+    },
+    taskDetailValueSkip: {
+      color: theme.warning,
     },
     chipWrapMarginTop: {
       marginTop: 8,

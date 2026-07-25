@@ -132,18 +132,6 @@ export default function JournalScreen(): React.JSX.Element {
     [entries, dateFilter]
   );
 
-  const periodLabel = useMemo(() => {
-    const scope =
-      dateFilter === 'week'
-        ? 'This week'
-        : dateFilter === 'month'
-        ? 'This month'
-        : dateFilter === 'year'
-        ? 'This year'
-        : 'All time';
-    return `${scope} · issues all-time`;
-  }, [dateFilter]);
-
   // Tags actually present on entries, for the filter sheet.
   const usedTags = useMemo(() => collectUsedTags(entries), [entries]);
 
@@ -287,7 +275,6 @@ export default function JournalScreen(): React.JSX.Element {
           </Text>
         </View>
       </View>
-      <Text style={styles.statsPeriodLabel}>{periodLabel}</Text>
     </View>
   );
 

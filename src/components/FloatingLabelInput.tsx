@@ -10,6 +10,7 @@ import {
 import { useTheme } from '../theme';
 import { createStyles } from '../styles/floatingLabelInputStyles';
 import FieldHelp from './FieldHelp';
+import FieldErrorText from './FieldErrorText';
 
 interface FloatingLabelInputProps extends TextInputProps {
   label: string;
@@ -17,6 +18,8 @@ interface FloatingLabelInputProps extends TextInputProps {
   accentBorder?: boolean;
   helpText?: string;
   helpLabel?: string;
+  /** Inline validation message shown below the field; also reddens the border. */
+  errorText?: string;
 }
 
 export default function FloatingLabelInput({
@@ -25,6 +28,7 @@ export default function FloatingLabelInput({
   accentBorder = true,
   helpText,
   helpLabel,
+  errorText,
   style,
   onFocus,
   onBlur,
@@ -79,11 +83,22 @@ export default function FloatingLabelInput({
     outputRange: [16, 12],
   });
 
-  const borderColor = isFocused && accentBorder ? theme.primary : theme.inputBorder;
+  const hasError = !!errorText;
 
-  const labelColor = isFloated ? theme.textSecondary : theme.inputPlaceholder;
+  // An error outranks focus/accent so the field stays visibly invalid.
+  const borderColor = hasError
+    ? theme.error
+    : isFocused && accentBorder
+    ? theme.primary
+    : theme.inputBorder;
 
-  return (
+  const labelColor = hasError
+    ? theme.error
+    : isFloated
+    ? theme.textSecondary
+    : theme.inputPlaceholder;
+
+  const field = (
     <View
       style={[
         s.container,
@@ -91,6 +106,7 @@ export default function FloatingLabelInput({
         hasHelp && s.containerWithHelp,
         { borderColor },
         isFocused && accentBorder && s.containerFocused,
+        hasError && s.containerFlush,
       ]}
     >
       <Animated.Text
@@ -134,6 +150,15 @@ export default function FloatingLabelInput({
           />
         </View>
       ) : null}
+    </View>
+  );
+
+  if (!hasError) return field;
+
+  return (
+    <View style={s.errorWrapper}>
+      {field}
+      <FieldErrorText message={errorText} />
     </View>
   );
 }

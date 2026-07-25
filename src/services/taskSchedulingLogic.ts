@@ -1,5 +1,5 @@
-import type { Plant, TaskType } from '@/types/database.types';
-import { TASK_DUE_TIME_HOUR } from '@/utils/taskConstants';
+import type { Plant, TaskTemplate, TaskType } from '@/types/database.types';
+import { EARLY_COMPLETION_BLOCK_REASON, TASK_DUE_TIME_HOUR } from '@/utils/taskConstants';
 
 /**
  * Pure care-task scheduling logic (no Firestore) — extracted from `tasks.ts`
@@ -57,3 +57,50 @@ export const computeNextDueAt = (
 
   return nextDueAt.toISOString();
 };
+
+/**
+ * Base date for a skip: whichever is later, now or the task's own due date.
+ * Skipping means "not yet" — so it may only ever push a task later, never pull
+ * a future task back towards today.
+ */
+export const skipBaseDate = (task: TaskTemplate, now: Date = new Date()): Date => {
+  const due = parseDateValue(task.next_due_at);
+  return new Date(Math.max(now.getTime(), due ? due.getTime() : now.getTime()));
+};
+
+/**
+ * Skipping by N days lands on the app's 6 PM due-time convention, matching what
+ * completing a task produces (see `buildTaskDoneOps`), so repeated skips don't
+ * drift the schedule to whatever time of day the user happened to tap.
+ */
+export const computeSkipDate = (task: TaskTemplate, days: number, now: Date = new Date()): Date => {
+  const next = skipBaseDate(task, now);
+  next.setDate(next.getDate() + days);
+  next.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0);
+  return next;
+};
+
+/** True when the task is due after today — i.e. the work isn't expected yet. */
+export const isFutureTask = (task: TaskTemplate, now: Date = new Date()): boolean => {
+  const due = parseDateValue(task.next_due_at);
+  if (!due) return false;
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+  return due > endOfToday;
+};
+
+/**
+ * True when completing this task now would do real harm — watering, fertilising
+ * and spraying ahead of schedule. Due-today and overdue tasks are never blocked.
+ */
+export const isEarlyCompletionBlocked = (task: TaskTemplate, now: Date = new Date()): boolean =>
+  EARLY_COMPLETION_BLOCK_REASON[task.task_type] != null && isFutureTask(task, now);
+
+/**
+ * Skipping means "this was due and I'm not doing it". A task that isn't due yet
+ * has nothing to defer, so it is refused outright rather than silently pushed to
+ * a date the farmer never had to act on. Unlike early completion this applies to
+ * every task type, not just the harmful-if-early ones.
+ */
+export const isSkipBlocked = (task: TaskTemplate, now: Date = new Date()): boolean =>
+  isFutureTask(task, now);

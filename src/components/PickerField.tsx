@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/pickerFieldStyles';
+import FieldErrorText from '@/components/FieldErrorText';
 
 interface Props {
   label: string;
@@ -83,12 +84,7 @@ export function PickerField({
         </View>
         {!disabled && <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />}
       </TouchableOpacity>
-      {errorText ? (
-        <View style={styles.errorRow}>
-          <Ionicons name="alert-circle" size={13} color={theme.error} />
-          <Text style={styles.errorText}>{errorText}</Text>
-        </View>
-      ) : null}
+      <FieldErrorText message={errorText} />
     </View>
   );
 }

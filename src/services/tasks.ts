@@ -34,7 +34,12 @@ import {
   dedup,
   CACHE_KEYS,
 } from '../lib/dataCache';
-import { TASK_DUE_TIME_HOUR, MS_PER_DAY } from '../utils/taskConstants';
+import {
+  TASK_DUE_TIME_HOUR,
+  MS_PER_DAY,
+  TASK_LABELS,
+  EARLY_COMPLETION_BLOCK_REASON,
+} from '../utils/taskConstants';
 import { getCurrentSeason, getWateringFrequencyMultiplier } from '../utils/seasonHelpers';
 import { getCoconutAgeInfo, getEffectiveGrowthStage, isPlantArchived } from '../utils/plantHelpers';
 import { getEffectiveWateringIntervalDays } from '../utils/plantWatering';
@@ -44,6 +49,9 @@ import {
   parseDateValue,
   getLastCareDate,
   computeNextDueAt,
+  computeSkipDate,
+  isEarlyCompletionBlocked,
+  isSkipBlocked,
   type PlantLastCareField,
 } from './taskSchedulingLogic';
 
@@ -278,6 +286,43 @@ export const updateTaskTemplate = async (
   invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
 
   return result;
+};
+
+const formatDueLabel = (template: TaskTemplate): string =>
+  new Date(template.next_due_at).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+
+const skipBlockedMessage = (template: TaskTemplate): string =>
+  `${TASK_LABELS[template.task_type]} isn't due until ${formatDueLabel(template)}. ` +
+  'Only tasks that are due can be skipped.';
+
+/**
+ * Postpone a task by whole days and record *why*. The new due date is derived
+ * from `computeSkipDate`, so a skip can only ever push a task later — skipping
+ * a task that is already scheduled for next week never drags it back to today.
+ */
+export const skipTaskTemplate = async (
+  template: TaskTemplate,
+  days: number,
+  reason?: string
+): Promise<TaskTemplate> => {
+  // A task that isn't due yet has nothing to defer. The Care Plan blocks this in
+  // the UI; this makes it impossible to bypass — including via a queued offline
+  // write replayed later.
+  if (isSkipBlocked(template)) {
+    throw new Error(skipBlockedMessage(template));
+  }
+
+  const trimmedReason = reason?.trim();
+  return updateTaskTemplate(template.id, {
+    next_due_at: computeSkipDate(template, days).toISOString(),
+    last_skipped_at: new Date().toISOString(),
+    last_skip_reason: trimmedReason ? trimmedReason : null,
+    skip_count: (template.skip_count ?? 0) + 1,
+  });
 };
 
 export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> => {
@@ -739,6 +784,10 @@ const runTaskDoneSideEffects = async (opsList: TaskDoneOps[]): Promise<void> => 
   }
 };
 
+const earlyCompletionBlockedMessage = (template: TaskTemplate): string =>
+  `${TASK_LABELS[template.task_type]} isn't due until ${formatDueLabel(template)}. ` +
+  `${EARLY_COMPLETION_BLOCK_REASON[template.task_type]}`;
+
 export const markTaskDone = async (
   template: TaskTemplate,
   notes?: string,
@@ -751,6 +800,13 @@ export const markTaskDone = async (
   // Verify the task belongs to the current user
   if (template.user_id !== user.uid) {
     throw new Error('Not authorized to complete this task');
+  }
+
+  // Water / fertilise / spray can't be logged before they are due — doing the
+  // work early is harmful and would re-base the season-adjusted cycle on today.
+  // The Care Plan blocks this in the UI; this makes it impossible to bypass.
+  if (isEarlyCompletionBlocked(template)) {
+    throw new Error(earlyCompletionBlockedMessage(template));
   }
 
   const frequencyDays = Number.isFinite(template.frequency_days) ? template.frequency_days : 0;
@@ -819,7 +875,12 @@ export const markTasksDone = async (
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
 
-  const owned = templates.filter((t) => t.user_id === user.uid);
+  // Same early-completion rule as markTaskDone. Blocked tasks are dropped here
+  // rather than aborting the batch, so one bad selection can't sink the rest;
+  // they surface in the returned `failed` count.
+  const owned = templates.filter(
+    (t) => t.user_id === user.uid && !isEarlyCompletionBlocked(t)
+  );
   if (owned.length === 0) return { succeeded: 0, failed: templates.length };
 
   if (!options?.skipAlreadyDoneCheck) {

@@ -3,20 +3,27 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MilestoneKind } from '../../types/database.types';
 import { MILESTONE_KINDS } from '../../utils/journalEntryOptions';
+import FieldErrorText from '../FieldErrorText';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/journalFormStyles';
 
 interface Props {
   value: MilestoneKind | null;
   onChange: (kind: MilestoneKind) => void;
+  /** Inline validation message shown under the milestone chips. */
+  errorText?: string;
 }
 
-export function JournalMilestoneSection({ value, onChange }: Props): React.JSX.Element {
+export function JournalMilestoneSection({
+  value,
+  onChange,
+  errorText,
+}: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <View style={styles.harvestSection}>
+    <View style={[styles.harvestSection, !!errorText && styles.harvestSectionError]}>
       <Text style={styles.sectionTitle}>Milestone</Text>
       <View style={styles.milestoneGrid}>
         {MILESTONE_KINDS.map((opt) => {
@@ -42,6 +49,7 @@ export function JournalMilestoneSection({ value, onChange }: Props): React.JSX.E
           );
         })}
       </View>
+      <FieldErrorText message={errorText} />
     </View>
   );
 }

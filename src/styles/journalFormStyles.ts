@@ -147,17 +147,70 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.border,
     },
+    harvestSectionError: {
+      borderColor: theme.error,
+    },
     sectionTitle: {
       fontSize: 16,
       fontWeight: '600',
       color: theme.text,
       marginBottom: 12,
     },
-    quantityInput: {
+    /* Harvest capture — hero amount + unit segments + wrapping quality chips. */
+    amountBlock: {
       marginBottom: 16,
     },
-    unitInput: {
-      marginBottom: 16,
+    amountRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      marginTop: 4,
+    },
+    amountInput: {
+      minWidth: 140,
+      backgroundColor: theme.inputBackground,
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      fontSize: 32,
+      fontWeight: '700',
+      textAlign: 'center',
+      color: theme.inputText,
+    },
+    amountInputError: {
+      borderColor: theme.error,
+    },
+    amountUnitSuffix: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      minWidth: 56,
+    },
+    unitSegments: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 14,
+    },
+    qualityGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    qualityChip: {
+      width: '48%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      backgroundColor: theme.background,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.border,
     },
     label: {
       fontSize: 14,
@@ -180,7 +233,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     unitButton: {
       flex: 1,
-      padding: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 6,
       backgroundColor: theme.background,
       borderRadius: 8,
       alignItems: 'center',
@@ -218,7 +272,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     qualityEmoji: {
       fontSize: 18,
-      marginBottom: 2,
+    },
+    qualityChipText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      fontWeight: '600',
     },
     qualityButtonText: {
       fontSize: 11,

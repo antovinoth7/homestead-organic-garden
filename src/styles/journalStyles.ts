@@ -116,12 +116,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       gap: 8,
     },
-    statsPeriodLabel: {
-      fontSize: 11,
-      color: theme.textTertiary,
-      marginTop: 6,
-      marginLeft: 2,
-    },
     statCard: {
       flex: 1,
       backgroundColor: theme.backgroundSecondary,
