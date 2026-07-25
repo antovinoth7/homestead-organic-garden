@@ -94,6 +94,7 @@ Read these on demand when working in specific areas:
 - **`docs/SCHEMA_MIGRATIONS.md`** — migration runner, schema change workflow
 - **`docs/DOMAIN_LOGIC.md`** — agro-climatic zones, seasons, plant/care helpers
 - **`docs/TESTING.md`** — test standards, fixture factories, coverage targets
-- **`docs/IMAGE_STORAGE.md`** — image storage rules, platform behavior, migration flow
+- **`docs/IMAGE_STORAGE.md`** — user photo storage rules, platform behavior, migration flow
+- **`docs/REFERENCE_IMAGES.md`** — bundled pest/disease/plant reference photos: prompt generation, staging, ingest pipeline, size budget
 - **`docs/IMPLEMENTATION_ROADMAP.md`** — active roadmap: progress tracker, gap analysis, planned phases only (completed-phase detail lives in `docs/archive/ROADMAP_ARCHIVE.md` — rarely needed)
 - **`docs/BEST_PRACTICES.md`** — prioritized performance, product, and architecture recommendations

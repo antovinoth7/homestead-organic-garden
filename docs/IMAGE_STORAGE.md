@@ -1,6 +1,10 @@
 # Image Storage
 
-Images never go to Firestore or cloud storage. They are stored on-device only.
+Covers **user-captured photos** (plant and journal images). These never go to Firestore or cloud
+storage — they are stored on-device only.
+
+For the bundled pest/disease/plant reference photos that ship with the app, see
+`docs/REFERENCE_IMAGES.md`.
 
 ## Filename Convention
 
