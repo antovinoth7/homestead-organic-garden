@@ -1,4 +1,10 @@
-import { getFarmAlerts, sortAlerts, isActionable, getTopAlert } from '@/services/alerts';
+import {
+  getFarmAlerts,
+  sortAlerts,
+  isActionable,
+  getTopAlert,
+  ALERT_COMPLETE_FIELD,
+} from '@/services/alerts';
 import type { FarmAlert } from '@/types/database.types';
 import { makePlant } from '../fixtures/plant.fixtures';
 
@@ -53,6 +59,126 @@ describe('getFarmAlerts', () => {
     });
     const alerts = getFarmAlerts({ plants: [plant], now: NOW });
     expect(alerts.some((a) => a.type === 'harvest_due' && a.plantId === 'p3')).toBe(true);
+  });
+
+  it('stops flagging harvest once the plant was harvested on/after the expected date', () => {
+    const plant = makePlant({
+      id: 'p3a',
+      name: 'Tomato',
+      expected_harvest_date: '2026-03-10T00:00:00.000Z',
+      last_harvest_date: '2026-03-12T09:00:00.000Z',
+    });
+    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+    expect(alerts.some((a) => a.type === 'harvest_due')).toBe(false);
+  });
+
+  it('stops flagging harvest when harvested exactly on the expected date', () => {
+    const plant = makePlant({
+      id: 'p3b',
+      expected_harvest_date: '2026-03-10T00:00:00.000Z',
+      last_harvest_date: '2026-03-10T18:00:00.000Z',
+    });
+    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+    expect(alerts.some((a) => a.type === 'harvest_due')).toBe(false);
+  });
+
+  it('still flags harvest when the last harvest predates the expected date', () => {
+    const plant = makePlant({
+      id: 'p3c',
+      expected_harvest_date: '2026-03-10T00:00:00.000Z',
+      last_harvest_date: '2026-02-01T09:00:00.000Z',
+    });
+    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+    expect(alerts.some((a) => a.type === 'harvest_due' && a.plantId === 'p3c')).toBe(true);
+  });
+
+  // Cut-and-come-again crops get no harvest care task of their own, so the
+  // alert is the only thing that re-prompts the next picking.
+  describe('cut-and-come-again re-arming', () => {
+    const expected = '2026-01-10T00:00:00.000Z';
+
+    it('re-alerts once a full picking cycle has passed since the last harvest', () => {
+      const plant = makePlant({
+        id: 'cc1',
+        harvest_mode: 'cut_and_come_again',
+        expected_harvest_date: expected,
+        last_harvest_date: '2026-02-23T09:00:00.000Z', // 20 days before NOW
+      });
+      const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+      expect(alerts.some((a) => a.type === 'harvest_due' && a.plantId === 'cc1')).toBe(true);
+    });
+
+    it('re-alerts on the boundary day (interval is inclusive)', () => {
+      const plant = makePlant({
+        id: 'cc2',
+        harvest_mode: 'cut_and_come_again',
+        expected_harvest_date: expected,
+        last_harvest_date: '2026-03-01T09:00:00.000Z', // exactly 14 days before NOW
+      });
+      const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+      expect(alerts.some((a) => a.type === 'harvest_due' && a.plantId === 'cc2')).toBe(true);
+    });
+
+    it('stays silent inside the picking cycle', () => {
+      const plant = makePlant({
+        id: 'cc3',
+        harvest_mode: 'cut_and_come_again',
+        expected_harvest_date: expected,
+        last_harvest_date: '2026-03-12T09:00:00.000Z', // 3 days before NOW
+      });
+      const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+      expect(alerts.some((a) => a.type === 'harvest_due')).toBe(false);
+    });
+
+    it('measures daysOverdue from the expected date, not the last harvest', () => {
+      const plant = makePlant({
+        id: 'cc4',
+        harvest_mode: 'cut_and_come_again',
+        expected_harvest_date: expected, // 64 days before NOW
+        last_harvest_date: '2026-02-23T09:00:00.000Z', // 20 days before NOW
+      });
+      const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+      const harvest = alerts.find((a) => a.type === 'harvest_due');
+      expect(harvest?.daysOverdue).toBe(64);
+    });
+
+    it.each([
+      ['one_shot' as const, 'os1'],
+      [null, 'nm1'],
+    ])('never re-alerts for harvest_mode %s', (mode, id) => {
+      const plant = makePlant({
+        id,
+        harvest_mode: mode,
+        expected_harvest_date: expected,
+        last_harvest_date: '2026-01-14T09:00:00.000Z', // 60 days before NOW
+      });
+      const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+      expect(alerts.some((a) => a.type === 'harvest_due')).toBe(false);
+    });
+  });
+
+  it('ignores archived plants entirely', () => {
+    const alerts = withoutPest(
+      getFarmAlerts({
+        plants: [
+          makePlant({
+            id: 'p3d',
+            name: 'Cleared Okra',
+            health_status: 'sick',
+            expected_harvest_date: '2026-01-10T00:00:00.000Z',
+            watering_frequency_days: 2,
+            last_watered_date: '2026-01-05T08:00:00.000Z',
+            fertilising_frequency_days: 30,
+            last_fertilised_date: null,
+            planting_date: '2025-10-01T00:00:00.000Z',
+            archived_at: '2026-02-01T00:00:00.000Z',
+          }),
+        ],
+        emptyOrRestingBedCount: 0,
+        now: NOW,
+      })
+    );
+    expect(alerts).toHaveLength(0);
   });
 
   it('ignores soft-deleted plants', () => {
@@ -183,6 +309,22 @@ describe('isActionable', () => {
     expect(isActionable({ ...base, type: 'harvest_due', severity: 'warning' })).toBe(true);
     expect(isActionable({ ...base, type: 'pest_spotted', severity: 'info' })).toBe(false);
     expect(isActionable({ ...base, type: 'health_stressed', severity: 'warning' })).toBe(false);
+  });
+});
+
+describe('ALERT_COMPLETE_FIELD', () => {
+  it('maps exactly the one-tap-completable alert types to their plant date field', () => {
+    expect(ALERT_COMPLETE_FIELD).toEqual({
+      fertilise_due: 'last_fertilised_date',
+      harvest_due: 'last_harvest_date',
+    });
+  });
+
+  it('covers only actionable alert types', () => {
+    const base = { id: 'x', icon: '', title: '', message: '', created_at: '', daysOverdue: 0 };
+    for (const type of Object.keys(ALERT_COMPLETE_FIELD) as FarmAlert['type'][]) {
+      expect(isActionable({ ...base, type, severity: 'warning' })).toBe(true);
+    }
   });
 });
 

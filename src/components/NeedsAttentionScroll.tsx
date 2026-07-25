@@ -5,14 +5,16 @@
  * Fed by `alerts.ts` (`getFarmAlerts(...).filter(isActionable)`) — no inline
  * alert logic. By default every actionable alert is shown so the header count
  * matches what's reachable; pass `maxItems` to cap. Tapping a card bubbles the
- * alert up so the screen can navigate. Fertilise cards can carry a quick ✓
- * complete action, and the seasonal green-manure card an ✕ month-dismiss.
+ * alert up so the screen can navigate. Alerts in `ALERT_COMPLETE_FIELD`
+ * (fertilise, harvest) carry a quick ✓ complete action, and the seasonal
+ * green-manure card an ✕ month-dismiss.
  */
 
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FarmAlert } from '@/types/database.types';
+import { ALERT_COMPLETE_FIELD } from '@/services/alerts';
 import { useTheme } from '@/theme';
 import type { Theme } from '@/theme/colors';
 import { createStyles } from '@/styles/needsAttentionScrollStyles';
@@ -20,7 +22,7 @@ import { createStyles } from '@/styles/needsAttentionScrollStyles';
 interface Props {
   alerts: FarmAlert[];
   onPressAlert: (alert: FarmAlert) => void;
-  /** Quick-complete for fertilise alerts (logs manure applied today). */
+  /** Quick-complete for fertilise/harvest alerts (stamps the care date as today). */
   onCompleteAlert?: (alert: FarmAlert) => void;
   /** Dismiss for the seasonal green-manure card (hides it for the month). */
   onDismissAlert?: (alert: FarmAlert) => void;
@@ -29,6 +31,12 @@ interface Props {
 }
 
 const keyExtractor = (item: FarmAlert): string => item.id;
+
+/** Past-tense verb for the ✓ chip's accessibility label, per completable type. */
+const COMPLETE_VERB: Partial<Record<FarmAlert['type'], string>> = {
+  fertilise_due: 'fertilised',
+  harvest_due: 'harvested',
+};
 
 export const NeedsAttentionScroll = React.memo(function NeedsAttentionScroll({
   alerts,
@@ -108,7 +116,7 @@ function AttentionCard({
       ? styles.iconBubbleWarning
       : styles.iconBubbleInfo;
 
-  const showComplete = alert.type === 'fertilise_due' && !!onComplete;
+  const showComplete = !!ALERT_COMPLETE_FIELD[alert.type] && !!onComplete;
   const showDismiss = alert.type === 'bed_resting_end' && !!onDismiss;
 
   return (
@@ -127,7 +135,9 @@ function AttentionCard({
           style={styles.actionChip}
           onPress={handleComplete}
           hitSlop={8}
-          accessibilityLabel={`Mark ${alert.title} fertilised today`}
+          accessibilityLabel={`Mark ${alert.title} ${
+            COMPLETE_VERB[alert.type] ?? 'done'
+          } today`}
         >
           <Ionicons name="checkmark" size={14} color={theme.success} />
         </TouchableOpacity>

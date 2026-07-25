@@ -36,7 +36,7 @@ import { getDaysToSWMonsoon, getPreMonsoonTasks } from '../utils/preMonsoonTasks
 import { getSeasonalCareRhythm } from '../config/organicInputs/seasonalAdaptations';
 import { getSeasonLabel } from '../utils/seasonHelpers';
 import { getPlantHealthSummary } from '../utils/plantHealth';
-import { getFarmAlerts, isActionable } from '../services/alerts';
+import { getFarmAlerts, isActionable, ALERT_COMPLETE_FIELD } from '../services/alerts';
 import { getHarvestGapWarnings } from '../services/beds';
 import { useCrossBedStatus } from '../hooks/useCrossBedStatus';
 import { useFarmCapacity } from '../hooks/useFarmCapacity';
@@ -267,18 +267,20 @@ export default function TodayScreen(): React.JSX.Element {
     [navigation]
   );
 
-  // Quick ✓ on a fertilise card: log manure applied today. Optimistic — the
-  // alert derives from plant fields, so patching local state clears it at once.
+  // Quick ✓ on a card: stamp the alert's care date as today (manure applied,
+  // crop harvested). Optimistic — the alert derives from plant fields, so
+  // patching local state clears the card at once.
   const handleCompleteAlert = useCallback(
     async (alert: FarmAlert) => {
-      if (alert.type !== 'fertilise_due' || !alert.plantId) return;
+      const field = ALERT_COMPLETE_FIELD[alert.type];
+      if (!field || !alert.plantId) return;
       const plantId = alert.plantId;
       const todayIso = new Date().toISOString();
       setPlants((prev) =>
-        prev.map((p) => (p.id === plantId ? { ...p, last_fertilised_date: todayIso } : p))
+        prev.map((p) => (p.id === plantId ? { ...p, [field]: todayIso } : p))
       );
       try {
-        await updatePlant(plantId, { last_fertilised_date: todayIso });
+        await updatePlant(plantId, { [field]: todayIso });
       } catch (error: unknown) {
         if (!isMountedRef.current) return;
         Alert.alert('Error', getErrorMessage(error));

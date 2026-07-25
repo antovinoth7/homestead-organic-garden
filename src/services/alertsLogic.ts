@@ -16,11 +16,23 @@ import {
   RotationStatus,
   HarvestGapWarning,
 } from '@/types/database.types';
+// Type-only: erased at compile time, so this adds no runtime edge into
+// taskSchedulingLogic → taskConstants → @expo/vector-icons.
+import type { PlantLastCareField } from '@/services/taskSchedulingLogic';
+import { isPlantArchived } from '@/utils/plantHelpers';
 import { getPlantWaterStatus } from '@/utils/plantWatering';
 import { getSeasonalPestAlerts } from '@/utils/seasonHelpers';
 import { getGreenManureForMonth } from '@/config/beds';
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+/**
+ * Days before a cut-and-come-again crop is prompted for its next picking.
+ * Mirrors the `harvest_leaves` template cadence in `tasks.ts` (currently 14) —
+ * kept as a local literal rather than imported because `taskConstants.ts` pulls
+ * in `@expo/vector-icons`, and this module is contractually RN-free.
+ */
+const CUT_AND_COME_AGAIN_INTERVAL_DAYS = 14;
 
 const SEVERITY_RANK: Record<FarmAlertSeverity, number> = {
   critical: 3,
@@ -39,6 +51,20 @@ const ACTIONABLE_TYPES = new Set<FarmAlert['type']>([
   'bed_resting_end',
   'health_sick',
 ]);
+
+/**
+ * Alert types resolvable by a one-tap ✓ on their card, and the plant date field
+ * that tap stamps with today. Writing the field makes `getFarmAlerts` stop
+ * emitting the alert on the next recompute — no persisted dismissal state.
+ *
+ * Values are typed as `PlantLastCareField` so this map cannot drift from
+ * `TASK_TYPE_TO_PLANT_LAST_CARE_FIELD`, which the task layer writes on
+ * completion — Home and Care Plan must agree on what "harvested" means.
+ */
+export const ALERT_COMPLETE_FIELD: Partial<Record<FarmAlert['type'], PlantLastCareField>> = {
+  fertilise_due: 'last_fertilised_date',
+  harvest_due: 'last_harvest_date',
+};
 
 export interface FarmAlertInputs {
   plants: Plant[];
@@ -91,7 +117,10 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
   const nowIso = new Date(now).toISOString();
   const alerts: FarmAlert[] = [];
 
-  const activePlants = plants.filter((p) => !p.is_deleted);
+  // Archived plants (bed cleared after final harvest) are done — they must not
+  // keep emitting care/harvest alerts. Mirrors the filter every other surface
+  // applies (useBedData, usePlantDetail, PlantsScreen, tasks.ts).
+  const activePlants = plants.filter((p) => !p.is_deleted && !isPlantArchived(p));
 
   for (const plant of activePlants) {
     // Health
@@ -182,9 +211,28 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
       }
     }
 
-    // Harvest-ready
+    // Harvest-ready. One-shot readiness nudge: once the plant has actually been
+    // harvested on or after its expected date the prompt is done, otherwise the
+    // card would sit here forever with an ever-growing overdue count. Recurring
+    // harvests (cut-and-come-again, perennials, coconut) are driven by harvest
+    // care tasks in `tasks.ts`, not by this alert.
     const toHarvest = daysSince(plant.expected_harvest_date, now);
-    if (toHarvest !== null && toHarvest >= 0) {
+    // `daysSince` counts back from today, so a *later* date yields a *smaller*
+    // number — `sinceHarvest <= toHarvest` means harvested on/after expected.
+    const sinceHarvest = daysSince(plant.last_harvest_date, now);
+    const harvestedOnOrAfterExpected =
+      sinceHarvest !== null && toHarvest !== null && sinceHarvest <= toHarvest;
+    // Cut-and-come-again crops keep producing and — unlike perennials
+    // (`harvest_leaves`) and coconuts (`harvest`) — get no care task of their
+    // own, so the prompt re-arms one picking cycle after the last harvest.
+    // Every other mode, `null` included, stays suppressed: those either finish
+    // for the season or are re-prompted by their care task.
+    const readyAgain =
+      plant.harvest_mode === 'cut_and_come_again' &&
+      sinceHarvest !== null &&
+      sinceHarvest >= CUT_AND_COME_AGAIN_INTERVAL_DAYS;
+    const alreadyHarvested = harvestedOnOrAfterExpected && !readyAgain;
+    if (toHarvest !== null && toHarvest >= 0 && !alreadyHarvested) {
       alerts.push({
         id: `harvest_${plant.id}`,
         type: 'harvest_due',

@@ -12,5 +12,6 @@ export {
   sortAlerts,
   isActionable,
   getTopAlert,
+  ALERT_COMPLETE_FIELD,
 } from '@/services/alertsLogic';
 export type { FarmAlertInputs } from '@/services/alertsLogic';
