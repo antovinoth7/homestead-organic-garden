@@ -13,21 +13,38 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.border,
     },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
     title: {
+      flexShrink: 1,
       fontSize: 14,
       fontWeight: '700',
       color: theme.text,
-      marginBottom: 4,
     },
-    subtitle: {
+    link: {
+      paddingVertical: 2,
+      paddingLeft: 8,
+    },
+    linkText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.primary,
+    },
+    summary: {
+      marginTop: 4,
       fontSize: 12,
-      color: theme.textSecondary,
-      marginBottom: 10,
+      lineHeight: 17,
+      color: theme.accent,
     },
     chipsWrap: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
+      marginTop: 10,
     },
     chip: {
       flexDirection: 'row',

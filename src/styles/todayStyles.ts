@@ -7,32 +7,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       backgroundColor: theme.background,
     },
-    // Scroll body under the fixed hero header
+    // Scroll body — the DashboardHero scrolls with it, so nothing is fixed
+    // except the status-bar backdrop below.
     scrollArea: {
       flex: 1,
     },
-    heroHeader: {
-      paddingHorizontal: 20,
-      paddingTop: 14,
-      paddingBottom: 16,
-      backgroundColor: theme.tabBarBackground,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    heroGreeting: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: theme.text,
-    },
-    heroDate: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      marginTop: 4,
+    // Keeps the status-bar strip green once the hero has scrolled under it.
+    statusBackdrop: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.heroGradientStart,
+      zIndex: 1,
     },
     // Task Donut Card
     donutCard: {
@@ -277,9 +264,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center' as const,
       alignItems: 'center' as const,
     },
-    flexOne: {
-      flex: 1,
-    },
     sectionTitleMarginBottom: {
       marginBottom: 10,
     },
@@ -431,6 +415,37 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       fontWeight: '700',
       color: theme.text,
+    },
+    // Green-manure suggestion — a seasonal prompt, not an alert, so it sits
+    // inside the seasonal block rather than the "Falling behind" rail.
+    greenManureCard: {
+      marginHorizontal: 16,
+      marginBottom: 12,
+      backgroundColor: theme.backgroundSecondary,
+      borderRadius: 12,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    greenManureHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 6,
+    },
+    greenManureTitle: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    greenManureClose: {
+      padding: 2,
+    },
+    greenManureMessage: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      lineHeight: 18,
     },
     // First-paint loading spinner (matches the rest of the app)
     loadingState: {

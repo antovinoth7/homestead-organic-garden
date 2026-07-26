@@ -2,9 +2,8 @@
  * Today-task summarization — pure logic (Phase C, C.11/C.15).
  *
  * Turns raw today task templates + today's completion logs into the per-type
- * counts and donut segments the dashboard needs. Extracted from the inline
- * memos in `TodayScreen` so `TodayProgressCard` / `useTodayTasks` can share it
- * and it can be unit-tested.
+ * counts the dashboard needs. Extracted from the inline memos in `TodayScreen`
+ * so `DashboardHero` can share it and it can be unit-tested.
  */
 
 import { TaskTemplate, TaskLog, TaskType } from '@/types/database.types';
@@ -15,13 +14,6 @@ export interface TaskTypeStat {
   total: number;
   remaining: number;
   overdueCount: number;
-}
-
-export interface DonutSegment {
-  key: TaskType;
-  startAngle: number;
-  sweep: number;
-  doneSweep: number;
 }
 
 export interface TodayTaskSummary {
@@ -131,20 +123,4 @@ export function summarizeTodayTasks(
     todayTasks,
     typeStats,
   };
-}
-
-/**
- * Compute donut segments (one arc per task type, full 360° = totalTasks).
- * `doneSweep` is the filled fraction of each type's arc.
- */
-export function computeDonutSegments(summary: TodayTaskSummary): DonutSegment[] {
-  if (summary.totalTasks === 0) return [];
-  let angle = 0;
-  return summary.typeStats.map((ts) => {
-    const sweep = (ts.total / summary.totalTasks) * 360;
-    const startAngle = angle;
-    angle += sweep;
-    const doneSweep = ts.total > 0 ? (ts.done / ts.total) * sweep : 0;
-    return { key: ts.type, startAngle, sweep, doneSweep };
-  });
 }

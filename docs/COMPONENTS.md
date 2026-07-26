@@ -38,7 +38,7 @@
 - **Catalog detail sections** (`CatalogPlantDetailScreen`): `DetailQuickInfoSection`, `DetailNutritionSection`, `DetailCareGuidanceSection`, `PlantCatalogList`, `PlantCategoryTabs`
 - **Plant forms** (`src/components/forms/`): `PlantAddWizard` + `WizardStep1/2/3`; `PlantEditForm` + `Edit*Section` (BasicInfo, Location, CareSchedule, Coconut, QuickInfo, Nutrition, Relationships, CareGuidance, Safety, Beneficials)
 - **Beds**: `BedCard`, `BedTopDownMap`, `BedLayerStack`, `BedRowLayout`, `BedSuccessionTimeline`, `BedZoneIllustration`, `BedRotationView`, `RotationStatusCard`, `BedContextSection`, `BedFilterSheet`, `BedPlantPickerSheet`, `DraggablePlantRow`, `ClearBedCta`, `PlantEntryResolverSheet`
-- **Today dashboard**: `TodayProgressCard`, `FarmHealthCard`, `NeedsAttentionScroll`, `WeatherDeck` + `WeatherPlotCard` (+ legacy `WeatherCard`), `PlantNowSection`, `AlmanacHighlight`, `TipStrip`, `InputReminderStrip`, `BedsQuickScroll`, `PrepCard`
+- **Today dashboard**: `DashboardHero` (greeting + progress ring + per-type activity rows + health tiles), `NeedsAttentionScroll` (the "Falling behind" rail), `WeatherDeck` + `WeatherPlotCard` (+ legacy `WeatherCard`), `PlantNowSection`, `AlmanacHighlight`, `TipStrip`, `InputReminderStrip`, `BedsQuickScroll`, `PrepCard`
 - **Calendar** (`src/components/calendar/`): `MonthCalendarView`, `WeekCalendarView`, `SwipeableTaskCard` (rendered through `CalendarScreen`'s virtualized `SectionList` — add new task rows as section data, not `.map()` in a ScrollView)
 - **Lists/cards**: `PlantCard`, `TaskCard`, `JournalEntryCard`, `PlantFilterSheet`
 - **Locations**: `LocationProfileEditor`
@@ -47,7 +47,7 @@
 
 - Plant form: `usePlantFormState` (large — 120+ returned properties), `usePlantFormData`, `usePlantDetail`, `usePlantCatalogManager`
 - Beds: `useBedCreationWizard` (+ `bedWizardValidation` helpers), `useBedData`, `useBedDetail`, `useBedOptions`, `useCrossBedStatus`
-- Dashboard/calendar: `useTodayTasks`, `useCalendarData`, `useWeather`, `useWeatherLocations`, `useFarmCapacity`
+- Dashboard/calendar: `useCalendarData`, `useWeather`, `useWeatherLocations`, `useFarmCapacity` (the Today screen loads its own tasks/plants so the hero and the alert rail share one array)
 - Misc: `useLocationManager`, `useOnboardingStatus`, `useVoiceInput`, `usePinchZoom`, `useOfflineStatus` (connectivity + pending offline-write count)
 
 When adding complex data logic to a screen, extract it into a custom hook in `src/hooks/`.

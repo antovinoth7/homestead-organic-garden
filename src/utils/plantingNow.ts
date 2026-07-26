@@ -95,3 +95,18 @@ export function getWhatToPlantNow(
   }
   return suggestions.sort((a, b) => a.variety.localeCompare(b.variety));
 }
+
+/**
+ * Collapsed-card summary line, e.g. "Agathi, Aloe Vera, Amaranthus + 5 more".
+ * Names the first `previewCount` varieties and counts the rest.
+ */
+export function formatSuggestionSummary(
+  suggestions: PlantingSuggestion[],
+  previewCount = 3
+): string {
+  if (suggestions.length === 0) return '';
+  const names = suggestions.slice(0, previewCount).map((s) => s.variety);
+  const remaining = suggestions.length - names.length;
+  const list = names.join(', ');
+  return remaining > 0 ? `${list} + ${remaining} more` : list;
+}

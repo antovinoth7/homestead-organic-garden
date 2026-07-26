@@ -44,6 +44,26 @@ export const TASK_COLORS: Record<TaskType, string> = {
   cultivating: '#8D6E63',
 };
 
+/**
+ * Lightened variants of TASK_COLORS for use on the dark-green dashboard hero.
+ * The base palette is tuned for white cards — `mulch` (#795548) and
+ * `cultivating` (#8D6E63) in particular disappear against deep green — so the
+ * hero uses these instead. Hues are kept, only lightness is raised.
+ */
+export const TASK_COLORS_ON_DARK: Record<TaskType, string> = {
+  water: '#90CAF9',
+  fertilise: '#FFCC80',
+  prune: '#CE93D8',
+  repot: '#81C784',
+  spray: '#80DEEA',
+  mulch: '#BCAAA4',
+  harvest: '#DCE775',
+  harvest_leaves: '#A5D6A7',
+  weeding: '#C5E1A5',
+  transplanting: '#80CBC4',
+  cultivating: '#D7CCC8',
+};
+
 export const TASK_ICONS: Record<TaskType, keyof typeof Ionicons.glyphMap> = {
   water: 'water',
   fertilise: 'nutrition',

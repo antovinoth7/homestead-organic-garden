@@ -2,6 +2,7 @@ import {
   mapSeasonTextToIds,
   candidateSeasonIds,
   getWhatToPlantNow,
+  formatSuggestionSummary,
 } from '@/utils/plantingNow';
 
 describe('mapSeasonTextToIds', () => {
@@ -73,5 +74,39 @@ describe('getWhatToPlantNow', () => {
       { plantType: 'vegetable' as const, variety: 'Okra', growingSeason: 'Summer (Feb–May)' },
     ];
     expect(getWhatToPlantNow(dupes, 'summer')).toHaveLength(1);
+  });
+});
+
+describe('formatSuggestionSummary', () => {
+  const make = (...varieties: string[]): { plantType: 'vegetable'; variety: string }[] =>
+    varieties.map((variety) => ({ plantType: 'vegetable' as const, variety }));
+
+  it('returns an empty string for no suggestions', () => {
+    expect(formatSuggestionSummary([])).toBe('');
+  });
+
+  it('lists every name when at or under the preview count', () => {
+    expect(formatSuggestionSummary(make('Agathi', 'Aloe Vera'))).toBe('Agathi, Aloe Vera');
+    expect(formatSuggestionSummary(make('Agathi', 'Aloe Vera', 'Amaranthus'))).toBe(
+      'Agathi, Aloe Vera, Amaranthus'
+    );
+  });
+
+  it('appends the remaining count past the preview', () => {
+    const eight = make(
+      'Agathi',
+      'Aloe Vera',
+      'Amaranthus',
+      'Arecanut',
+      'Ash Gourd',
+      'Ash Plantain',
+      'Avocado',
+      'Bamboo'
+    );
+    expect(formatSuggestionSummary(eight)).toBe('Agathi, Aloe Vera, Amaranthus + 5 more');
+  });
+
+  it('honours a custom preview count', () => {
+    expect(formatSuggestionSummary(make('A', 'B', 'C', 'D'), 1)).toBe('A + 3 more');
   });
 });

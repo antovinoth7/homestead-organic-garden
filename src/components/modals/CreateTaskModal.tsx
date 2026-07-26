@@ -124,8 +124,11 @@ export default function CreateTaskModal({
         dueDate.setHours(18, 0, 0, 0);
       }
 
-      const now = new Date();
-      if (dueDate < now) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDay = new Date(dueDate);
+      dueDay.setHours(0, 0, 0, 0);
+      if (dueDay < today) {
         dueDate.setDate(dueDate.getDate() + 1);
       }
 

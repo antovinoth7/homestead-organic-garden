@@ -1,8 +1,4 @@
-import {
-  summarizeTodayTasks,
-  computeDonutSegments,
-  filterToKnownPlants,
-} from '@/utils/taskSummary';
+import { summarizeTodayTasks, filterToKnownPlants } from '@/utils/taskSummary';
 import { makeTaskTemplate, makeTaskLog } from '../fixtures/task.fixtures';
 
 // Anchor "now" so date comparisons are deterministic.
@@ -50,23 +46,6 @@ describe('summarizeTodayTasks', () => {
     const water = summary.typeStats.find((s) => s.type === 'water');
 
     expect(water).toMatchObject({ type: 'water', done: 1, total: 3, remaining: 2 });
-  });
-});
-
-describe('computeDonutSegments', () => {
-  it('returns no segments when there are no tasks', () => {
-    const summary = summarizeTodayTasks([], [], NOW);
-    expect(computeDonutSegments(summary)).toEqual([]);
-  });
-
-  it('sweeps sum to 360° across all task types', () => {
-    const tasks = [
-      makeTaskTemplate({ id: 'a', task_type: 'water', next_due_at: todayIso }),
-      makeTaskTemplate({ id: 'b', task_type: 'fertilise', next_due_at: todayIso }),
-    ];
-    const summary = summarizeTodayTasks(tasks, [], NOW);
-    const total = computeDonutSegments(summary).reduce((sum, s) => sum + s.sweep, 0);
-    expect(Math.round(total)).toBe(360);
   });
 });
 

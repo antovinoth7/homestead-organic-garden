@@ -4,20 +4,22 @@ import {
   isActionable,
   getTopAlert,
   ALERT_COMPLETE_FIELD,
+  ATTENTION_MIN_DAYS_OVERDUE,
 } from '@/services/alerts';
 import type { FarmAlert } from '@/types/database.types';
+import { summarizeTodayTasks } from '@/utils/taskSummary';
 import { makePlant } from '../fixtures/plant.fixtures';
-
-// Water alerts derive from getPlantWaterStatus, which scales the interval by the
-// live season multiplier. Pin it to 1.0 so these date-based assertions are
-// deterministic regardless of when the suite runs. (jest hoists this above the
-// imports above.)
-jest.mock('@/utils/seasonHelpers', () => ({
-  ...jest.requireActual('@/utils/seasonHelpers'),
-  getWateringFrequencyMultiplier: jest.fn(() => 1),
-}));
+import { makeTaskTemplate } from '../fixtures/task.fixtures';
 
 const NOW = new Date('2026-03-15T12:00:00.000Z').getTime();
+
+/** ISO timestamp `days` before NOW, at the app's 6 PM due-time convention. */
+function dueDaysAgo(days: number): string {
+  const d = new Date(NOW);
+  d.setDate(d.getDate() - days);
+  d.setHours(18, 0, 0, 0);
+  return d.toISOString();
+}
 
 // Pest alerts depend on the live season config; ignore them for deterministic
 // assertions about plant-condition / bed alerts.
@@ -37,59 +39,245 @@ describe('getFarmAlerts', () => {
     expect(sick).toMatchObject({ severity: 'critical', plantId: 'p1' });
   });
 
-  it('flags overdue watering with severity scaled by lateness', () => {
-    const plant = makePlant({
-      id: 'p2',
-      name: 'Okra',
-      watering_frequency_days: 2,
-      last_watered_date: '2026-03-05T08:00:00.000Z', // ~10 days ago
+  // Care alerts are a presentation of the task schedule, not a second one.
+  describe('care alerts come from task templates', () => {
+    it('emits nothing for care when no tasks are passed', () => {
+      const plant = makePlant({
+        id: 'p2',
+        watering_frequency_days: 2,
+        last_watered_date: '2026-03-01T08:00:00.000Z',
+        fertilising_frequency_days: 30,
+        last_fertilised_date: null,
+        planting_date: '2025-01-01T00:00:00.000Z',
+      });
+      const alerts = withoutPest(getFarmAlerts({ plants: [plant], now: NOW }));
+      expect(alerts.some((a) => a.type === 'water_needed')).toBe(false);
+      expect(alerts.some((a) => a.type === 'fertilise_due')).toBe(false);
     });
-    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
-    const water = alerts.find((a) => a.type === 'water_needed');
-    expect(water).toBeDefined();
-    expect(water?.severity).toBe('critical');
-    expect(water?.daysOverdue).toBeGreaterThan(0);
+
+    it('maps each care task type to its alert type, carrying the template id', () => {
+      const plant = makePlant({ id: 'p2', name: 'Okra' });
+      const alerts = getFarmAlerts({
+        plants: [plant],
+        todayTasks: [
+          makeTaskTemplate({ id: 't-w', plant_id: 'p2', task_type: 'water', next_due_at: dueDaysAgo(3) }),
+          makeTaskTemplate({ id: 't-f', plant_id: 'p2', task_type: 'fertilise', next_due_at: dueDaysAgo(3) }),
+          makeTaskTemplate({ id: 't-p', plant_id: 'p2', task_type: 'prune', next_due_at: dueDaysAgo(3) }),
+        ],
+        now: NOW,
+      });
+
+      expect(alerts.find((a) => a.type === 'water_needed')).toMatchObject({
+        templateId: 't-w',
+        plantId: 'p2',
+        title: 'Okra',
+      });
+      expect(alerts.find((a) => a.type === 'fertilise_due')?.templateId).toBe('t-f');
+      // Pruning had no alert at all before the schedule became the source.
+      expect(alerts.find((a) => a.type === 'prune_due')?.templateId).toBe('t-p');
+    });
+
+    it('counts daysOverdue in whole calendar days and scales severity by lateness', () => {
+      const plant = makePlant({ id: 'p2' });
+      const build = (daysLate: number): FarmAlert | undefined =>
+        getFarmAlerts({
+          plants: [plant],
+          todayTasks: [
+            makeTaskTemplate({
+              id: 't',
+              plant_id: 'p2',
+              task_type: 'water',
+              frequency_days: 6,
+              next_due_at: dueDaysAgo(daysLate),
+            }),
+          ],
+          now: NOW,
+        }).find((a) => a.type === 'water_needed');
+
+      expect(build(2)).toMatchObject({ daysOverdue: 2, severity: 'warning' });
+      expect(build(2)?.message).toBe('Watering overdue by 2 days');
+      // Half a 6-day cycle late → critical.
+      expect(build(3)).toMatchObject({ daysOverdue: 3, severity: 'critical' });
+    });
+
+    it('ignores work that is merely due today — that is the ring’s job', () => {
+      const alerts = getFarmAlerts({
+        plants: [makePlant({ id: 'p2' })],
+        todayTasks: [
+          makeTaskTemplate({ id: 't', plant_id: 'p2', task_type: 'water', next_due_at: dueDaysAgo(0) }),
+        ],
+        now: NOW,
+      });
+      expect(alerts.some((a) => a.type === 'water_needed')).toBe(false);
+      expect(ATTENTION_MIN_DAYS_OVERDUE).toBe(1);
+    });
+
+    it('ignores disabled templates — a care type switched off cannot keep firing', () => {
+      // Regression: alerts used to re-derive fertilising from plant fields and so
+      // ignored `fertilising_enabled`, outliving the task the Care Plan dropped.
+      const plant = makePlant({
+        id: 'p2',
+        fertilising_enabled: false,
+        fertilising_frequency_days: 30,
+        last_fertilised_date: '2025-06-01T00:00:00.000Z',
+      });
+      const alerts = getFarmAlerts({
+        plants: [plant],
+        todayTasks: [
+          makeTaskTemplate({
+            id: 't',
+            plant_id: 'p2',
+            task_type: 'fertilise',
+            enabled: false,
+            next_due_at: dueDaysAgo(40),
+          }),
+        ],
+        now: NOW,
+      });
+      expect(alerts.some((a) => a.type === 'fertilise_due')).toBe(false);
+    });
+
+    it('drops templates whose plant is archived or deleted', () => {
+      const alerts = withoutPest(
+        getFarmAlerts({
+          plants: [
+            makePlant({ id: 'gone', archived_at: '2026-02-01T00:00:00.000Z' }),
+            makePlant({ id: 'dead', is_deleted: true }),
+          ],
+          todayTasks: [
+            makeTaskTemplate({ id: 't1', plant_id: 'gone', next_due_at: dueDaysAgo(9) }),
+            makeTaskTemplate({ id: 't2', plant_id: 'dead', next_due_at: dueDaysAgo(9) }),
+            makeTaskTemplate({ id: 't3', plant_id: 'unknown', next_due_at: dueDaysAgo(9) }),
+          ],
+          emptyOrRestingBedCount: 0,
+          now: NOW,
+        })
+      );
+      expect(alerts).toHaveLength(0);
+    });
+
+    it('titles bed-scoped tasks with the bed name', () => {
+      const alerts = getFarmAlerts({
+        plants: [],
+        todayTasks: [
+          makeTaskTemplate({
+            id: 't',
+            plant_id: null,
+            bed_id: 'b1',
+            task_type: 'water',
+            next_due_at: dueDaysAgo(4),
+          }),
+        ],
+        bedNames: { b1: 'North Bed' },
+        now: NOW,
+      });
+      expect(alerts.find((a) => a.type === 'water_needed')).toMatchObject({
+        title: 'North Bed',
+        bedId: 'b1',
+      });
+    });
+
+    it('leaves task types with no alert shape to the ring and the Care Plan', () => {
+      const alerts = withoutPest(
+        getFarmAlerts({
+          plants: [makePlant({ id: 'p2' })],
+          todayTasks: [
+            makeTaskTemplate({ id: 't', plant_id: 'p2', task_type: 'spray', next_due_at: dueDaysAgo(9) }),
+          ],
+          emptyOrRestingBedCount: 0,
+          now: NOW,
+        })
+      );
+      expect(alerts).toHaveLength(0);
+    });
+
+    // The whole point of the unification: one input set, one count.
+    it('never reports more overdue care than the hero ring counts', () => {
+      const plants = ['Pepper 01', 'Pepper 02', 'Pepper 03'].map((name, i) =>
+        makePlant({ id: `p${i}`, name })
+      );
+      const todayTasks = [
+        makeTaskTemplate({ id: 'a', plant_id: 'p0', task_type: 'water', next_due_at: dueDaysAgo(4) }),
+        makeTaskTemplate({ id: 'b', plant_id: 'p1', task_type: 'fertilise', next_due_at: dueDaysAgo(2) }),
+        makeTaskTemplate({ id: 'c', plant_id: 'p2', task_type: 'prune', next_due_at: dueDaysAgo(1) }),
+        makeTaskTemplate({ id: 'd', plant_id: 'p2', task_type: 'water', next_due_at: dueDaysAgo(0) }),
+      ];
+
+      const careAlerts = getFarmAlerts({ plants, todayTasks, now: NOW }).filter(
+        (a) => a.templateId != null
+      );
+      const summary = summarizeTodayTasks(todayTasks, [], NOW);
+
+      expect(careAlerts).toHaveLength(summary.overdueCount);
+      expect(new Set(careAlerts.map((a) => a.id)).size).toBe(careAlerts.length);
+    });
   });
 
-  it('flags harvest-ready plants', () => {
-    const plant = makePlant({
-      id: 'p3',
-      name: 'Tomato',
-      expected_harvest_date: '2026-03-10T00:00:00.000Z',
+  describe('harvest readiness (no task behind it)', () => {
+    it('flags harvest-ready plants', () => {
+      const plant = makePlant({
+        id: 'p3',
+        name: 'Tomato',
+        expected_harvest_date: '2026-03-10T00:00:00.000Z',
+      });
+      const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+      expect(alerts.some((a) => a.type === 'harvest_due' && a.plantId === 'p3')).toBe(true);
     });
-    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
-    expect(alerts.some((a) => a.type === 'harvest_due' && a.plantId === 'p3')).toBe(true);
-  });
 
-  it('stops flagging harvest once the plant was harvested on/after the expected date', () => {
-    const plant = makePlant({
-      id: 'p3a',
-      name: 'Tomato',
-      expected_harvest_date: '2026-03-10T00:00:00.000Z',
-      last_harvest_date: '2026-03-12T09:00:00.000Z',
+    it('defers to the harvest task when the plant has one', () => {
+      // Coconuts and perennials get a real harvest template; without this guard
+      // they would be reported twice, once by each path.
+      const plant = makePlant({
+        id: 'p3e',
+        expected_harvest_date: '2026-03-10T00:00:00.000Z',
+      });
+      const alerts = getFarmAlerts({
+        plants: [plant],
+        todayTasks: [
+          makeTaskTemplate({
+            id: 't-h',
+            plant_id: 'p3e',
+            task_type: 'harvest_leaves',
+            next_due_at: dueDaysAgo(2),
+          }),
+        ],
+        now: NOW,
+      });
+      const harvest = alerts.filter((a) => a.type === 'harvest_due');
+      expect(harvest).toHaveLength(1);
+      expect(harvest[0]!.templateId).toBe('t-h');
     });
-    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
-    expect(alerts.some((a) => a.type === 'harvest_due')).toBe(false);
-  });
 
-  it('stops flagging harvest when harvested exactly on the expected date', () => {
-    const plant = makePlant({
-      id: 'p3b',
-      expected_harvest_date: '2026-03-10T00:00:00.000Z',
-      last_harvest_date: '2026-03-10T18:00:00.000Z',
+    it('stops flagging harvest once the plant was harvested on/after the expected date', () => {
+      const plant = makePlant({
+        id: 'p3a',
+        name: 'Tomato',
+        expected_harvest_date: '2026-03-10T00:00:00.000Z',
+        last_harvest_date: '2026-03-12T09:00:00.000Z',
+      });
+      const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+      expect(alerts.some((a) => a.type === 'harvest_due')).toBe(false);
     });
-    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
-    expect(alerts.some((a) => a.type === 'harvest_due')).toBe(false);
-  });
 
-  it('still flags harvest when the last harvest predates the expected date', () => {
-    const plant = makePlant({
-      id: 'p3c',
-      expected_harvest_date: '2026-03-10T00:00:00.000Z',
-      last_harvest_date: '2026-02-01T09:00:00.000Z',
+    it('stops flagging harvest when harvested exactly on the expected date', () => {
+      const plant = makePlant({
+        id: 'p3b',
+        expected_harvest_date: '2026-03-10T00:00:00.000Z',
+        last_harvest_date: '2026-03-10T18:00:00.000Z',
+      });
+      const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+      expect(alerts.some((a) => a.type === 'harvest_due')).toBe(false);
     });
-    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
-    expect(alerts.some((a) => a.type === 'harvest_due' && a.plantId === 'p3c')).toBe(true);
+
+    it('still flags harvest when the last harvest predates the expected date', () => {
+      const plant = makePlant({
+        id: 'p3c',
+        expected_harvest_date: '2026-03-10T00:00:00.000Z',
+        last_harvest_date: '2026-02-01T09:00:00.000Z',
+      });
+      const alerts = getFarmAlerts({ plants: [plant], now: NOW });
+      expect(alerts.some((a) => a.type === 'harvest_due' && a.plantId === 'p3c')).toBe(true);
+    });
   });
 
   // Cut-and-come-again crops get no harvest care task of their own, so the
@@ -166,11 +354,6 @@ describe('getFarmAlerts', () => {
             name: 'Cleared Okra',
             health_status: 'sick',
             expected_harvest_date: '2026-01-10T00:00:00.000Z',
-            watering_frequency_days: 2,
-            last_watered_date: '2026-01-05T08:00:00.000Z',
-            fertilising_frequency_days: 30,
-            last_fertilised_date: null,
-            planting_date: '2025-10-01T00:00:00.000Z',
             archived_at: '2026-02-01T00:00:00.000Z',
           }),
         ],
@@ -192,57 +375,6 @@ describe('getFarmAlerts', () => {
     expect(alerts).toHaveLength(0);
   });
 
-  it('flags a plant that has never been fertilised once older than its frequency', () => {
-    const plant = makePlant({
-      id: 'p5',
-      name: 'Banana',
-      fertilising_frequency_days: 30,
-      planting_date: '2026-01-01T00:00:00.000Z', // 73 days before NOW
-      last_fertilised_date: null,
-    });
-    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
-    const fert = alerts.find((a) => a.type === 'fertilise_due');
-    expect(fert).toMatchObject({
-      plantId: 'p5',
-      severity: 'warning',
-      message: 'First fertilising due — no manure logged yet',
-    });
-    expect(fert?.daysOverdue).toBeGreaterThan(0);
-  });
-
-  it('does not flag a never-fertilised plant younger than its frequency', () => {
-    const plant = makePlant({
-      id: 'p6',
-      fertilising_frequency_days: 90, // older than 73-day plant age
-      planting_date: '2026-01-01T00:00:00.000Z',
-      last_fertilised_date: null,
-    });
-    const alerts = getFarmAlerts({ plants: [plant], now: NOW });
-    expect(alerts.some((a) => a.type === 'fertilise_due')).toBe(false);
-  });
-
-  it('emits one actionable water alert per due plant (badge count is truthful)', () => {
-    // Several plants all watered exactly their frequency ago → each is due today.
-    const dueDate = '2026-03-13T08:00:00.000Z'; // 2 days before NOW
-    const plants = ['Mahogany VVP 01', 'Mahogany VVP 02', 'Teak VVP 01', 'Neem VVP 01'].map(
-      (name, i) =>
-        makePlant({
-          id: `p${i}`,
-          name,
-          watering_frequency_days: 2,
-          last_watered_date: dueDate,
-        })
-    );
-
-    const actionable = getFarmAlerts({ plants, now: NOW }).filter(isActionable);
-    const waterAlerts = actionable.filter((a) => a.type === 'water_needed');
-
-    // One water alert per plant, none silently dropped, ids unique.
-    expect(waterAlerts).toHaveLength(plants.length);
-    expect(waterAlerts.every((a) => a.message === 'Watering due today')).toBe(true);
-    expect(new Set(waterAlerts.map((a) => a.id)).size).toBe(plants.length);
-  });
-
   it('emits rotation alerts from cross-bed status', () => {
     const alerts = getFarmAlerts({
       plants: [],
@@ -261,17 +393,21 @@ describe('getFarmAlerts', () => {
     });
     const rotation = alerts.find((a) => a.type === 'rotation_due');
     expect(rotation).toMatchObject({ severity: 'critical', bedId: 'b1', title: 'North Bed' });
+    // The bed cards below the rail already carry this, so it stays off the rail.
+    expect(isActionable(rotation!)).toBe(false);
   });
 
   describe('farm-level green-manure alert', () => {
-    it('emits a single actionable card naming the empty-bed count', () => {
+    it('emits a single card naming the empty-bed count', () => {
       const alerts = getFarmAlerts({ plants: [], emptyOrRestingBedCount: 2, now: NOW });
       const gm = alerts.filter((a) => a.type === 'bed_resting_end');
       expect(gm).toHaveLength(1);
       expect(gm[0]).toMatchObject({ severity: 'info', title: 'Green manure' });
       expect(gm[0]!.bedId).toBeUndefined();
       expect(gm[0]!.message).toContain('in 2 empty beds');
-      expect(isActionable(gm[0]!)).toBe(true);
+      // A seasonal suggestion, not something the farm has fallen behind on — it
+      // renders under seasonal guidance instead.
+      expect(isActionable(gm[0]!)).toBe(false);
     });
 
     it('uses generic wording while the bed count is unknown (still shows)', () => {
@@ -303,21 +439,32 @@ describe('sortAlerts', () => {
 });
 
 describe('isActionable', () => {
-  it('includes core action types and excludes pest/stress info', () => {
-    const base = { id: 'x', icon: '', title: '', message: '', created_at: '', daysOverdue: 0 };
-    expect(isActionable({ ...base, type: 'water_needed', severity: 'warning' })).toBe(true);
-    expect(isActionable({ ...base, type: 'harvest_due', severity: 'warning' })).toBe(true);
-    expect(isActionable({ ...base, type: 'pest_spotted', severity: 'info' })).toBe(false);
-    expect(isActionable({ ...base, type: 'health_stressed', severity: 'warning' })).toBe(false);
+  const base = { id: 'x', icon: '', title: '', message: '', created_at: '', daysOverdue: 0 };
+
+  it('includes the care types and sick plants', () => {
+    for (const type of ['water_needed', 'fertilise_due', 'prune_due', 'harvest_due'] as const) {
+      expect(isActionable({ ...base, type, severity: 'warning' })).toBe(true);
+    }
+    expect(isActionable({ ...base, type: 'health_sick', severity: 'critical' })).toBe(true);
+  });
+
+  it('excludes what another part of the screen already states', () => {
+    // pest/stress are informational; rotation lives on the bed cards; green
+    // manure under seasonal guidance.
+    for (const type of [
+      'pest_spotted',
+      'health_stressed',
+      'rotation_due',
+      'bed_resting_end',
+    ] as const) {
+      expect(isActionable({ ...base, type, severity: 'warning' })).toBe(false);
+    }
   });
 });
 
 describe('ALERT_COMPLETE_FIELD', () => {
-  it('maps exactly the one-tap-completable alert types to their plant date field', () => {
-    expect(ALERT_COMPLETE_FIELD).toEqual({
-      fertilise_due: 'last_fertilised_date',
-      harvest_due: 'last_harvest_date',
-    });
+  it('covers only the card kind that has no task to complete', () => {
+    expect(ALERT_COMPLETE_FIELD).toEqual({ harvest_due: 'last_harvest_date' });
   });
 
   it('covers only actionable alert types', () => {

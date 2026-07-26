@@ -1,13 +1,18 @@
 /**
- * NeedsAttentionScroll (Phase C, C.8).
+ * NeedsAttentionScroll — the "Falling behind" rail (Phase C, C.8).
  *
  * Horizontal scroll of the actionable farm alerts, ordered most-urgent first.
  * Fed by `alerts.ts` (`getFarmAlerts(...).filter(isActionable)`) — no inline
- * alert logic. By default every actionable alert is shown so the header count
- * matches what's reachable; pass `maxItems` to cap. Tapping a card bubbles the
- * alert up so the screen can navigate. Alerts in `ALERT_COMPLETE_FIELD`
- * (fertilise, harvest) carry a quick ✓ complete action, and the seasonal
- * green-manure card an ✕ month-dismiss.
+ * alert logic. Its job is the tail the hero's ring and per-type rows flatten
+ * into a single number: the plants that have actually slipped, named. Work
+ * merely due today is the ring's business, so an empty rail is the healthy
+ * steady state and the component renders nothing.
+ *
+ * By default every actionable alert is shown so the header count matches what's
+ * reachable; pass `maxItems` to cap. Tapping a card bubbles the alert up so the
+ * screen can navigate. Cards backed by a task template carry a ✓ that completes
+ * it for real (writing a `TaskLog`); the template-less harvest-readiness card
+ * falls back to stamping `ALERT_COMPLETE_FIELD`.
  */
 
 import React, { useMemo, useCallback } from 'react';
@@ -22,10 +27,8 @@ import { createStyles } from '@/styles/needsAttentionScrollStyles';
 interface Props {
   alerts: FarmAlert[];
   onPressAlert: (alert: FarmAlert) => void;
-  /** Quick-complete for fertilise/harvest alerts (stamps the care date as today). */
+  /** Quick-complete: marks the backing task done, or stamps the care date. */
   onCompleteAlert?: (alert: FarmAlert) => void;
-  /** Dismiss for the seasonal green-manure card (hides it for the month). */
-  onDismissAlert?: (alert: FarmAlert) => void;
   /** Optional cap on cards shown. Defaults to showing all actionable alerts. */
   maxItems?: number;
 }
@@ -34,7 +37,9 @@ const keyExtractor = (item: FarmAlert): string => item.id;
 
 /** Past-tense verb for the ✓ chip's accessibility label, per completable type. */
 const COMPLETE_VERB: Partial<Record<FarmAlert['type'], string>> = {
+  water_needed: 'watered',
   fertilise_due: 'fertilised',
+  prune_due: 'pruned',
   harvest_due: 'harvested',
 };
 
@@ -42,7 +47,6 @@ export const NeedsAttentionScroll = React.memo(function NeedsAttentionScroll({
   alerts,
   onPressAlert,
   onCompleteAlert,
-  onDismissAlert,
   maxItems,
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
@@ -60,17 +64,16 @@ export const NeedsAttentionScroll = React.memo(function NeedsAttentionScroll({
         theme={theme}
         onPress={onPressAlert}
         onComplete={onCompleteAlert}
-        onDismiss={onDismissAlert}
       />
     ),
-    [styles, theme, onPressAlert, onCompleteAlert, onDismissAlert]
+    [styles, theme, onPressAlert, onCompleteAlert]
   );
 
   if (visible.length === 0) return null;
 
   return (
     <View style={styles.section}>
-      <Text style={styles.title}>⚠️ Needs Attention ({visible.length})</Text>
+      <Text style={styles.title}>⚠️ Falling behind ({visible.length})</Text>
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -89,20 +92,11 @@ interface CardProps {
   theme: Theme;
   onPress: (alert: FarmAlert) => void;
   onComplete?: (alert: FarmAlert) => void;
-  onDismiss?: (alert: FarmAlert) => void;
 }
 
-function AttentionCard({
-  alert,
-  styles,
-  theme,
-  onPress,
-  onComplete,
-  onDismiss,
-}: CardProps): React.JSX.Element {
+function AttentionCard({ alert, styles, theme, onPress, onComplete }: CardProps): React.JSX.Element {
   const handlePress = useCallback(() => onPress(alert), [onPress, alert]);
   const handleComplete = useCallback(() => onComplete?.(alert), [onComplete, alert]);
-  const handleDismiss = useCallback(() => onDismiss?.(alert), [onDismiss, alert]);
   const cardStyle =
     alert.severity === 'critical'
       ? styles.cardCritical
@@ -116,8 +110,9 @@ function AttentionCard({
       ? styles.iconBubbleWarning
       : styles.iconBubbleInfo;
 
-  const showComplete = !!ALERT_COMPLETE_FIELD[alert.type] && !!onComplete;
-  const showDismiss = alert.type === 'bed_resting_end' && !!onDismiss;
+  // A task-backed card completes the task itself; the template-less harvest
+  // card falls back to stamping the plant's care date.
+  const showComplete = (!!alert.templateId || !!ALERT_COMPLETE_FIELD[alert.type]) && !!onComplete;
 
   return (
     <TouchableOpacity style={[styles.card, cardStyle]} activeOpacity={0.75} onPress={handlePress}>
@@ -140,16 +135,6 @@ function AttentionCard({
           } today`}
         >
           <Ionicons name="checkmark" size={14} color={theme.success} />
-        </TouchableOpacity>
-      )}
-      {showDismiss && (
-        <TouchableOpacity
-          style={styles.actionChip}
-          onPress={handleDismiss}
-          hitSlop={8}
-          accessibilityLabel="Dismiss green manure suggestion for this month"
-        >
-          <Ionicons name="close" size={14} color={theme.textSecondary} />
         </TouchableOpacity>
       )}
     </TouchableOpacity>

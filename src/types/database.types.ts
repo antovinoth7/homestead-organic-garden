@@ -306,6 +306,12 @@ export interface FarmAlert {
   type: FarmAlertType;
   bedId?: string;
   plantId?: string;
+  /**
+   * Backing task template, when the alert presents a real scheduled task rather
+   * than a template-less condition (sick plant, harvest readiness, green manure).
+   * Its presence is what lets the card complete the task for real.
+   */
+  templateId?: string;
   /** Display heading (e.g. plant or bed name). */
   title: string;
   /** Short action/explanation line. */

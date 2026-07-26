@@ -14,6 +14,7 @@ import {
   getStoredTodayTasks,
   getStoredTodayTaskLogs,
   getSeasonalCareReminder,
+  markTaskDone,
 } from '../services/tasks';
 import { getAllPlants, getStoredPlants, updatePlant } from '@/services/plants';
 import { TaskTemplate, Plant, TaskLog, FarmAlert } from '../types/database.types';
@@ -22,13 +23,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { TodayScreenNavigationProp, TodayScreenRouteProp } from '../types/navigation.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../theme';
+import { setStatusBarStyle } from 'expo-status-bar';
+import { useTheme, useThemeMode } from '../theme';
 import { createStyles } from '../styles/todayStyles';
-import {
-  summarizeTodayTasks,
-  computeDonutSegments,
-  filterToKnownPlants,
-} from '@/utils/taskSummary';
+import { summarizeTodayTasks, filterToKnownPlants } from '@/utils/taskSummary';
 import { useTabBarScroll, TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { getErrorMessage } from '../utils/errorLogging';
@@ -45,23 +43,26 @@ import { WeatherCard } from '../components/WeatherCard';
 import { PlantNowSection } from '../components/PlantNowSection';
 import { AlmanacHighlight } from '../components/AlmanacHighlight';
 import { InputReminderStrip } from '../components/InputReminderStrip';
-import { FarmHealthCard } from '../components/FarmHealthCard';
-import { TodayProgressCard } from '../components/TodayProgressCard';
+import { DashboardHero } from '../components/DashboardHero';
 import { BedsQuickScroll } from '../components/BedsQuickScroll';
 import { TipStrip } from '../components/TipStrip';
 import type { BedWithCoverage } from '../hooks/useBedData';
 
+/** Cards kept in the "Falling behind" rail before it defers to the Care Plan. */
+const ATTENTION_MAX_CARDS = 5;
+
 const getGreeting = (): string => {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good Morning';
-  if (hour < 17) return 'Good Afternoon';
-  return 'Good Evening';
+  if (hour < 12) return 'Good morning.';
+  if (hour < 17) return 'Good afternoon.';
+  return 'Good evening.';
 };
 
 export default function TodayScreen(): React.JSX.Element {
   const navigation = useNavigation<TodayScreenNavigationProp>();
   const route = useRoute<TodayScreenRouteProp>();
   const theme = useTheme();
+  const { resolvedMode } = useThemeMode();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -204,12 +205,17 @@ export default function TodayScreen(): React.JSX.Element {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
       resetTabBar();
       void loadData({ silent: true });
-    }, [loadData, resetTabBar])
+
+      // The hero paints a dark green behind the status bar, so light icons are
+      // required here even in light mode. Tab screens stay mounted, so App.tsx's
+      // theme-derived style has to be restored explicitly on blur.
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle(resolvedMode === 'dark' ? 'light' : 'dark');
+    }, [loadData, resetTabBar, resolvedMode])
   );
 
-  // Task progress + per-type stats for the donut, pills and on-screen list.
+  // Task progress + per-type stats for the hero ring and activity bars.
   const taskSummary = useMemo(() => summarizeTodayTasks(tasks, taskLogs), [tasks, taskLogs]);
-  const donutSegments = useMemo(() => computeDonutSegments(taskSummary), [taskSummary]);
 
   // Plant health counts (Garden Health tiles).
   const health = useMemo(() => getPlantHealthSummary(plants), [plants]);
@@ -227,23 +233,29 @@ export default function TodayScreen(): React.JSX.Element {
       bedsLoading ? null : bedList.filter((b) => b.is_resting || b.active_plant_count === 0).length,
     [bedsLoading, bedList]
   );
+  // Care alerts come from the same `tasks` array the hero counts, so the rail's
+  // count and the ring can't disagree — see alertsLogic.ts.
   const farmAlerts = useMemo(
     () =>
       getFarmAlerts({
         plants,
+        todayTasks: tasks,
         rotationStatuses,
         harvestGapWarnings: getHarvestGapWarnings(bedList),
         bedNames,
         emptyOrRestingBedCount,
       }),
-    [plants, rotationStatuses, bedList, bedNames, emptyOrRestingBedCount]
+    [plants, tasks, rotationStatuses, bedList, bedNames, emptyOrRestingBedCount]
   );
-  const actionableAlerts = useMemo(
+  const actionableAlerts = useMemo(() => farmAlerts.filter(isActionable), [farmAlerts]);
+
+  // Green manure is a seasonal suggestion rather than an alert, so it renders in
+  // the seasonal block below and keeps its own month-long dismiss.
+  const greenManureAlert = useMemo(
     () =>
-      farmAlerts.filter(
-        (a) =>
-          isActionable(a) && !(a.type === 'bed_resting_end' && gmDismissedMonth === currentMonthKey)
-      ),
+      gmDismissedMonth === currentMonthKey
+        ? null
+        : farmAlerts.find((a) => a.type === 'bed_resting_end') ?? null,
     [farmAlerts, gmDismissedMonth, currentMonthKey]
   );
 
@@ -267,18 +279,31 @@ export default function TodayScreen(): React.JSX.Element {
     [navigation]
   );
 
-  // Quick ✓ on a card: stamp the alert's care date as today (manure applied,
-  // crop harvested). Optimistic — the alert derives from plant fields, so
-  // patching local state clears the card at once.
+  // Quick ✓ on a card. A task-backed card completes the task for real, so the
+  // work lands in the log, the ring advances and the Care Plan entry clears —
+  // one tap, one truth. Only harvest readiness, which has no task behind it,
+  // still stamps the plant date directly.
   const handleCompleteAlert = useCallback(
     async (alert: FarmAlert) => {
+      if (alert.templateId) {
+        const template = tasks.find((t) => t.id === alert.templateId);
+        if (!template) return;
+        try {
+          await markTaskDone(template);
+        } catch (error: unknown) {
+          if (!isMountedRef.current) return;
+          // Includes the early-completion guard in tasks.ts, which explains why.
+          Alert.alert('Could not complete', getErrorMessage(error));
+        }
+        void loadData({ silent: true });
+        return;
+      }
+
       const field = ALERT_COMPLETE_FIELD[alert.type];
       if (!field || !alert.plantId) return;
       const plantId = alert.plantId;
       const todayIso = new Date().toISOString();
-      setPlants((prev) =>
-        prev.map((p) => (p.id === plantId ? { ...p, [field]: todayIso } : p))
-      );
+      setPlants((prev) => prev.map((p) => (p.id === plantId ? { ...p, [field]: todayIso } : p)));
       try {
         await updatePlant(plantId, { [field]: todayIso });
       } catch (error: unknown) {
@@ -287,8 +312,12 @@ export default function TodayScreen(): React.JSX.Element {
         void loadData({ silent: true });
       }
     },
-    [loadData]
+    [tasks, loadData]
   );
+
+  const openGreenManure = useCallback(() => {
+    if (greenManureAlert) handleAlertPress(greenManureAlert);
+  }, [greenManureAlert, handleAlertPress]);
 
   const openJeevamruthaRecipe = useCallback(() => {
     navigation.navigate('More', {
@@ -329,10 +358,13 @@ export default function TodayScreen(): React.JSX.Element {
   );
   const goToCarePlanPlain = useCallback(() => navigation.navigate('Care Plan'), [navigation]);
 
-  // Daily tip (C.14): prefer the top informational farm alert (e.g. green
-  // manure / pest note), else fall back to a season-specific care reminder.
+  // Daily tip (C.14): prefer the top informational farm alert (e.g. a seasonal
+  // pest note), else fall back to a season-specific care reminder. Matched on
+  // `info` severity rather than "not actionable" so the rail's exclusions —
+  // rotation warnings, which the bed cards already carry — don't get promoted
+  // into the tip; green manure is excluded because it has its own card below.
   const tipText = useMemo(() => {
-    const info = farmAlerts.find((a) => !isActionable(a));
+    const info = farmAlerts.find((a) => a.severity === 'info' && a.type !== 'bed_resting_end');
     if (info) return info.message;
     for (const plant of plants) {
       const tip = getSeasonalCareReminder(plant);
@@ -341,17 +373,30 @@ export default function TodayScreen(): React.JSX.Element {
     return null;
   }, [farmAlerts, plants]);
 
+  // Greeting, ring, activity bars and health tiles all live in the hero, so the
+  // skeleton renders the real block with zeroed counts rather than a bare header.
+  const hero = (
+    <DashboardHero
+      greeting={getGreeting()}
+      dateLabel={todayLabel}
+      completed={taskSummary.completed}
+      totalTasks={taskSummary.totalTasks}
+      overdueCount={taskSummary.overdueCount}
+      typeStats={taskSummary.typeStats}
+      health={health}
+      topInset={insets.top}
+      onPressRing={goToCarePlan}
+      onPressOverdue={goToOverdue}
+      onPressType={goToCarePlanPlain}
+      onPressHealth={handlePressHealth}
+    />
+  );
+
   if (loading && tasks.length === 0 && plants.length === 0) {
     return (
       <View style={styles.container}>
-        <View style={[styles.heroHeader, { paddingTop: insets.top + 16 }]}>
-          <View style={styles.headerRow}>
-            <View style={styles.flexOne}>
-              <Text style={styles.heroGreeting}>{getGreeting()}</Text>
-              <Text style={styles.heroDate}>{todayLabel}</Text>
-            </View>
-          </View>
-        </View>
+        <View style={[styles.statusBackdrop, { height: insets.top }]} />
+        {hero}
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>Loading your farm…</Text>
@@ -362,15 +407,8 @@ export default function TodayScreen(): React.JSX.Element {
 
   return (
     <View style={styles.container}>
-      {/* Hero Header — fixed above the scroller, like the other tab screens */}
-      <View style={[styles.heroHeader, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.headerRow}>
-          <View style={styles.flexOne}>
-            <Text style={styles.heroGreeting}>{getGreeting()}</Text>
-            <Text style={styles.heroDate}>{todayLabel}</Text>
-          </View>
-        </View>
-      </View>
+      {/* Keeps the status-bar strip green once the hero scrolls under it. */}
+      <View style={[styles.statusBackdrop, { height: insets.top }]} />
 
       <ScrollView
         ref={scrollViewRef}
@@ -378,30 +416,27 @@ export default function TodayScreen(): React.JSX.Element {
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 }}
         onScroll={onTabBarScroll}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={loadData}
+            // The hero now scrolls under the status bar, so drop the spinner
+            // clear of it rather than letting it sit on the green.
+            progressViewOffset={insets.top}
+          />
+        }
       >
-        {/* Today's progress donut + task-type pills + "Up next" task (C.11) */}
-        <TodayProgressCard
-          completionRate={taskSummary.completionRate}
-          completed={taskSummary.completed}
-          totalTasks={taskSummary.totalTasks}
-          overdueCount={taskSummary.overdueCount}
-          typeStats={taskSummary.typeStats}
-          donutSegments={donutSegments}
-          onPressRing={goToCarePlan}
-          onPressOverdue={goToOverdue}
-          onPressType={goToCarePlanPlain}
-        />
+        {/* Greeting + task-progress ring + activity bars + garden health */}
+        {hero}
 
-        {/* Garden health: header + health tiles (C.7) */}
-        <FarmHealthCard health={health} onPressHealth={handlePressHealth} />
-
-        {/* Needs Attention — actionable alerts from alerts.ts (C.8/C.10) */}
+        {/* Falling behind — actionable alerts from alerts.ts (C.8/C.10). Capped:
+          past a handful of cards this stops being an exception rail and starts
+          being the Care Plan, which the ring already links to. */}
         <NeedsAttentionScroll
           alerts={actionableAlerts}
           onPressAlert={handleAlertPress}
           onCompleteAlert={handleCompleteAlert}
-          onDismissAlert={dismissGreenManure}
+          maxItems={ATTENTION_MAX_CARDS}
         />
 
         {/* Weather (C.3) + What to Plant Now (C.1) */}
@@ -480,6 +515,32 @@ export default function TodayScreen(): React.JSX.Element {
                   <Text style={styles.rhythmValue}>{seasonRhythm.jeevamruthaInterval}</Text>
                 </View>
               </View>
+            )}
+
+            {/* Green-manure suggestion — a seasonal prompt, dismissible for the
+              month. Lives here rather than in the alert rail: it is advice for
+              the farm, not a plant that has fallen behind. */}
+            {greenManureAlert !== null && (
+              <TouchableOpacity
+                style={styles.greenManureCard}
+                onPress={openGreenManure}
+                activeOpacity={0.75}
+              >
+                <View style={styles.greenManureHeader}>
+                  <Text style={styles.greenManureTitle}>
+                    {greenManureAlert.icon} {greenManureAlert.title}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.greenManureClose}
+                    onPress={dismissGreenManure}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityLabel="Dismiss green manure suggestion for this month"
+                  >
+                    <Ionicons name="close" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.greenManureMessage}>{greenManureAlert.message}</Text>
+              </TouchableOpacity>
             )}
 
             {/* Jeevamrutha batch reminder (C.13) */}
