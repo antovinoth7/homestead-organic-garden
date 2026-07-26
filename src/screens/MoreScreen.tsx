@@ -10,12 +10,25 @@ import { invalidateAll } from '../lib/dataCache';
 import { createStyles } from '../styles/moreStyles';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
 import { getErrorMessage } from '../utils/errorLogging';
+import { useOwnerName } from '@/hooks/useOwnerName';
 
 export default function MoreScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
+  const { ownerName } = useOwnerName();
+
+  const email = auth.currentUser?.email ?? '';
+
+  // With a saved name the bold line is the name and the email drops to a
+  // quiet second line; without one the email takes the bold slot alone.
+  const primaryLine = ownerName || email || 'Not signed in';
+  const secondaryLine = ownerName ? email : '';
+
+  const goToProfile = React.useCallback((): void => {
+    navigation.navigate('Profile');
+  }, [navigation]);
 
   const handleSignOut = async (): Promise<void> => {
     try {
@@ -30,13 +43,25 @@ export default function MoreScreen(): React.JSX.Element {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.accountHeader}>
-          <View style={styles.accountIcon}>
-            <Ionicons name="person-circle" size={26} color={theme.textInverse} />
-          </View>
+          <TouchableOpacity style={styles.avatarWrap} onPress={goToProfile} activeOpacity={0.85}>
+            <View style={styles.avatarCircle}>
+              <Ionicons name="person" size={38} color={theme.primary} />
+            </View>
+            <View style={styles.avatarBadge}>
+              <Ionicons name="pencil" size={11} color={theme.primary} />
+            </View>
+          </TouchableOpacity>
           <View style={styles.accountText}>
-            <Text style={styles.accountEmail}>{auth.currentUser?.email || 'Not signed in'}</Text>
+            <Text style={styles.accountName} numberOfLines={1}>
+              {primaryLine}
+            </Text>
+            {secondaryLine ? (
+              <Text style={styles.accountEmail} numberOfLines={1}>
+                {secondaryLine}
+              </Text>
+            ) : null}
             <TouchableOpacity style={styles.signOutPill} onPress={handleSignOut}>
-              <Ionicons name="log-out-outline" size={14} color={theme.textInverse} />
+              <Ionicons name="log-out-outline" size={15} color={theme.textInverse} />
               <Text style={styles.signOutPillText}>Sign Out</Text>
             </TouchableOpacity>
           </View>
@@ -47,14 +72,6 @@ export default function MoreScreen(): React.JSX.Element {
         style={styles.content}
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 8) + 16 }}
       >
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Profile')}>
-          <View style={styles.menuIcon}>
-            <Ionicons name="person-outline" size={20} color={theme.primary} />
-          </View>
-          <Text style={styles.menuText}>My Profile</Text>
-          <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-        </TouchableOpacity>
-
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('MyFarm')}>
           <View style={styles.menuIcon}>
             <Ionicons name="map-outline" size={20} color={theme.primary} />
