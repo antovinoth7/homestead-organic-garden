@@ -4,6 +4,7 @@
  */
 
 import { PlantType, PlantCareProfile, PlantCareProfiles } from '@/types/database.types';
+import type { PlantingCandidate } from '@/utils/plantingNow';
 
 import { PLANT_CARE_OVERRIDES } from './overrides';
 import { buildProfileKey } from './profileKey';
@@ -74,16 +75,17 @@ export function getPlantCareProfile(
  * Enumerate every known variety with its growing season, for the dashboard
  * "What to Plant Now" section (Phase C, C.1). Structurally a `PlantingCandidate`.
  */
-export function getPlantingCandidates(): {
-  plantType: PlantType;
-  variety: string;
-  growingSeason?: string;
-}[] {
+export function getPlantingCandidates(): PlantingCandidate[] {
   return Object.entries(PLANT_CARE_PROFILES).map(([key, profile]) => {
     const sep = key.indexOf(':');
     const plantType = key.slice(0, sep) as PlantType;
     const variety = key.slice(sep + 1);
-    return { plantType, variety, growingSeason: profile.growingSeason };
+    return {
+      plantType,
+      variety,
+      growingSeason: profile.growingSeason,
+      daysToHarvest: profile.daysToHarvest,
+    };
   });
 }
 

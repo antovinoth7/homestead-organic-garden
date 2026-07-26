@@ -42,7 +42,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.text,
     },
-    // Collapsed-only teaser line so the shut card still says something useful.
+    // Month headline, kept in both states so the shut card still says something.
     headerSubtitle: {
       fontSize: 12,
       fontWeight: '600',
@@ -53,16 +53,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: CARD_PADDING,
       paddingBottom: CARD_PADDING,
     },
-    highlight: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.primary,
-    },
     note: {
       fontSize: 12,
       color: theme.textSecondary,
       lineHeight: 17,
-      marginTop: 4,
     },
     divider: {
       height: 1,
@@ -84,11 +78,42 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       color: theme.text,
     },
+    // Sowing window — its own section on the card surface, set off by the same
+    // divider rule used above the rhythm rows rather than a tint.
+    sowingTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.primary,
+      marginBottom: 8,
+    },
+    sowingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 6,
+    },
+    sowingEmoji: {
+      fontSize: 18,
+    },
+    sowingRowBody: {
+      flex: 1,
+    },
+    sowingName: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    sowingMeta: {
+      fontSize: 11,
+      color: theme.textSecondary,
+      marginTop: 1,
+    },
+    // Footer toggle for the remaining crops.
     link: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 2,
-      marginTop: 12,
+      marginTop: 8,
     },
     linkText: {
       fontSize: 13,

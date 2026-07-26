@@ -39,7 +39,6 @@ import { getHarvestGapWarnings } from '../services/beds';
 import { useCrossBedStatus } from '../hooks/useCrossBedStatus';
 import { NeedsAttentionScroll } from '../components/NeedsAttentionScroll';
 import { WeatherCard } from '../components/WeatherCard';
-import { PlantNowSection } from '../components/PlantNowSection';
 import { SeasonPanel } from '../components/SeasonPanel';
 import { DashboardHero } from '../components/DashboardHero';
 import { BedsQuickScroll } from '../components/BedsQuickScroll';
@@ -71,11 +70,6 @@ export default function TodayScreen(): React.JSX.Element {
   const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
   const isMountedRef = React.useRef(true);
   const { beds: bedList, loading: bedsLoading } = useBedData();
-
-  // Seasonal guidance (rhythm + jeevamrutha + almanac) is collapsed by default
-  // to keep the daily-value cards above the fold and reduce dashboard clutter.
-  const [seasonalExpanded, setSeasonalExpanded] = useState(false);
-  const toggleSeasonal = useCallback(() => setSeasonalExpanded((prev) => !prev), []);
 
   const todayLabel = useMemo(
     () =>
@@ -316,10 +310,6 @@ export default function TodayScreen(): React.JSX.Element {
     if (greenManureAlert) handleAlertPress(greenManureAlert);
   }, [greenManureAlert, handleAlertPress]);
 
-  const openAlmanac = useCallback(() => {
-    navigation.navigate('More', { screen: 'SeasonalAlmanac' });
-  }, [navigation]);
-
   const handlePressHealth = useCallback(
     (healthFilter: 'healthy' | 'stressed' | 'sick') => {
       navigation.navigate('Plants', { screen: 'PlantsList', params: { healthFilter } });
@@ -433,18 +423,17 @@ export default function TodayScreen(): React.JSX.Element {
           maxItems={ATTENTION_MAX_CARDS}
         />
 
-        {/* Bed cards horizontal scroll (C.12). Sits above weather and sowing:
-          the beds are what the grower acts on, those two are context for it. */}
+        {/* Weather (C.3). Sowing suggestions now live inside SeasonPanel. */}
+        <WeatherCard />
+
+        {/* Bed cards horizontal scroll (C.12), below the forecast: the weather
+          frames what the grower is about to do in those beds today. */}
         <BedsQuickScroll
           beds={bedList}
           onPressBed={handlePressBed}
           onNewBed={handleNewBed}
           onPressAllBeds={handlePressAllBeds}
         />
-
-        {/* Weather (C.3) + What to Plant Now (C.1) */}
-        <WeatherCard />
-        <PlantNowSection />
 
         {/* Pre-monsoon prep — only within the 21-day window, dismissible per day */}
         {preMonsoonTasks.length > 0 && !preMonsoonDismissed && (
@@ -477,14 +466,8 @@ export default function TodayScreen(): React.JSX.Element {
         <TipStrip tip={tipText} />
 
         {/* Seasonal guidance — month almanac + season rhythm + the inputs they
-          imply, in one collapsible card (collapsed by default). */}
-        <SeasonPanel
-          rhythm={seasonRhythm}
-          seasonLabel={seasonLabel}
-          expanded={seasonalExpanded}
-          onToggle={toggleSeasonal}
-          onViewAlmanac={openAlmanac}
-        >
+          imply + what is worth sowing now, in one always-open card. */}
+        <SeasonPanel rhythm={seasonRhythm} seasonLabel={seasonLabel}>
           {/* Green-manure suggestion — a seasonal prompt, dismissible for the
             month. Lives here rather than in the alert rail: it is advice for
             the farm, not a plant that has fallen behind. */}

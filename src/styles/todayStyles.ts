@@ -3,8 +3,7 @@ import type { Theme } from '../theme/colors';
 
 /**
  * Shared card metrics for the dashboard's inset blocks. Every card on the
- * Today screen — here and in WeatherCard / PlantNowSection / SeasonPanel /
- * TipStrip — uses the same gutter, radius, padding and
+ * Today screen — here and in WeatherCard / SeasonPanel / TipStrip — uses the same gutter, radius, padding and
  * vertical rhythm, so the scroll reads as one surface.
  */
 const CARD_MARGIN_HORIZONTAL = 16;

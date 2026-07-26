@@ -68,6 +68,27 @@ describe('getWhatToPlantNow', () => {
     expect(result.some((r) => r.variety === 'Mystery')).toBe(false);
   });
 
+  it('carries daysToHarvest through to the suggestion', () => {
+    const [ashGourd] = getWhatToPlantNow(
+      [
+        {
+          plantType: 'vegetable' as const,
+          variety: 'Ash Gourd',
+          growingSeason: 'Southwest Monsoon (Jun-Sep)',
+          daysToHarvest: { min: 100, max: 140 },
+        },
+      ],
+      'sw_monsoon'
+    );
+    expect(ashGourd?.daysToHarvest).toEqual({ min: 100, max: 140 });
+  });
+
+  it('still suggests a candidate whose profile carries no harvest range', () => {
+    const [okra] = getWhatToPlantNow(candidates, 'summer');
+    expect(okra?.variety).toBe('Okra');
+    expect(okra?.daysToHarvest).toBeUndefined();
+  });
+
   it('dedupes by plantType+variety', () => {
     const dupes = [
       { plantType: 'vegetable' as const, variety: 'Okra', growingSeason: 'Year Round' },

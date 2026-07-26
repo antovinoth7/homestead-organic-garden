@@ -1,29 +1,65 @@
 /**
- * SeasonPanel. One collapsible card answering "what does this time of year
- * need?" — merging the former season-rhythm card (inline in TodayScreen) and
- * AlmanacHighlight (C.4), which duplicated each other's calendar framing.
+ * SeasonPanel. One card answering "what does this time of year need?" — merging the former season-rhythm card (inline in TodayScreen),
+ * AlmanacHighlight (C.4) and PlantNowSection (C.1), which all duplicated each
+ * other's calendar framing.
  *
- * Order: month headline + note → care rhythm rows → children (Jeevamrutha
- * strip, green-manure prompt) → link to the full 12-month almanac.
+ * Order: month headline → note → care rhythm rows → children (green-manure
+ * prompt) → the crops worth sowing this season.
+ *
+ * Always expanded — the card is reference the grower scans, not a control.
+ * Only the crop list itself collapses, to a three-row preview.
  */
 
-import React, { useMemo, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useMemo, useCallback, useState } from 'react';
+import { View, Text, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/seasonPanelStyles';
 import { getMonthlyHighlight } from '@/config/almanac';
-import { shortenSeasonLabel } from '@/utils/seasonHelpers';
+import { getCurrentSeason, shortenSeasonLabel } from '@/utils/seasonHelpers';
+import { getPlantingCandidates } from '@/utils/plantCareDefaults';
+import { getWhatToPlantNow, KKSeasonId } from '@/utils/plantingNow';
+import { formatDaysToHarvest } from '@/utils/growSpecFormat';
+import { getPlantEmoji } from '@/utils/plantHelpers';
 import type { SeasonalFrequency } from '@/config/organicInputs/seasonalAdaptations';
+
+// Enable LayoutAnimation on Android only for the old architecture.
+const isNewArchitectureEnabled =
+  (globalThis as { nativeFabricUIManager?: unknown }).nativeFabricUIManager != null;
+
+if (Platform.OS === 'android' && !isNewArchitectureEnabled) {
+  try {
+    if (UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  } catch {
+    // Silently ignore if unavailable.
+  }
+}
+
+/** Ceiling on the sowing list — past this the card stops being a dashboard row. */
+const MAX_SUGGESTIONS = 8;
+/** Rows shown before the grower taps "All N crops". */
+const SOWING_PREVIEW_ROWS = 3;
+
+/** Fallback tier when a variety has no entry in the catalog emoji map. */
+const TYPE_EMOJI: Record<string, string> = {
+  vegetable: '🥕',
+  herb: '🌿',
+  flower: '🌼',
+  fruit_tree: '🌳',
+  timber_tree: '🪵',
+  coconut_tree: '🥥',
+  shrub: '🌱',
+  spinach: '🥬',
+};
+
+const GENERIC_EMOJI = '🌱';
 
 interface Props {
   /** Current-season care cadences; the rhythm rows are hidden when null. */
   rhythm: SeasonalFrequency | null;
   /** Full season label, e.g. "SW Monsoon (Jun–Sep)". */
   seasonLabel: string;
-  expanded: boolean;
-  onToggle: () => void;
-  onViewAlmanac: () => void;
   /** Rendered inside the card, below the rhythm rows. */
   children?: React.ReactNode;
 }
@@ -31,17 +67,17 @@ interface Props {
 export const SeasonPanel = React.memo(function SeasonPanel({
   rhythm,
   seasonLabel,
-  expanded,
-  onToggle,
-  onViewAlmanac,
   children,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const month = useMemo(() => getMonthlyHighlight(), []);
+  const [showAllCrops, setShowAllCrops] = useState(false);
 
-  const handleToggle = useCallback(() => onToggle(), [onToggle]);
-  const handleViewAlmanac = useCallback(() => onViewAlmanac(), [onViewAlmanac]);
+  const toggleShowAllCrops = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowAllCrops((prev) => !prev);
+  }, []);
 
   const rhythmRows = useMemo(
     () =>
@@ -55,55 +91,83 @@ export const SeasonPanel = React.memo(function SeasonPanel({
     [rhythm]
   );
 
+  const suggestions = useMemo(() => {
+    const season = getCurrentSeason() as KKSeasonId;
+    return getWhatToPlantNow(getPlantingCandidates(), season).slice(0, MAX_SUGGESTIONS);
+  }, []);
+
+  const visibleCrops = showAllCrops ? suggestions : suggestions.slice(0, SOWING_PREVIEW_ROWS);
+
   return (
     <View style={styles.card}>
-      <TouchableOpacity
-        style={styles.header}
-        onPress={handleToggle}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel={
-          expanded ? 'Collapse seasonal guidance' : 'Expand seasonal guidance'
-        }
-      >
-        <View style={styles.headerBody}>
-          <Text style={styles.headerTitle}>
-            {month.icon} {month.label} · {shortenSeasonLabel(seasonLabel)}
-          </Text>
-          {!expanded && <Text style={styles.headerSubtitle}>{month.highlight}</Text>}
-        </View>
-        <Ionicons
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={18}
-          color={theme.textSecondary}
-        />
-      </TouchableOpacity>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>
+          {month.icon} {month.label} · {shortenSeasonLabel(seasonLabel)}
+        </Text>
+        <Text style={styles.headerSubtitle}>{month.highlight}</Text>
+      </View>
 
-      {expanded && (
-        <View style={styles.body}>
-          <Text style={styles.highlight}>{month.highlight}</Text>
-          <Text style={styles.note}>{month.note}</Text>
+      <View style={styles.body}>
+        <Text style={styles.note}>{month.note}</Text>
 
-          {rhythmRows.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              {rhythmRows.map((row) => (
-                <View key={row.key} style={styles.rhythmRow}>
-                  <Text style={styles.rhythmLabel}>{row.label}</Text>
-                  <Text style={styles.rhythmValue}>{row.value}</Text>
+        {rhythmRows.length > 0 && (
+          <>
+            <View style={styles.divider} />
+            {rhythmRows.map((row) => (
+              <View key={row.key} style={styles.rhythmRow}>
+                <Text style={styles.rhythmLabel}>{row.label}</Text>
+                <Text style={styles.rhythmValue}>{row.value}</Text>
+              </View>
+            ))}
+          </>
+        )}
+
+        {children}
+
+        {suggestions.length > 0 && (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.sowingTitle}>Sow now</Text>
+
+            {visibleCrops.map((crop) => {
+              const emoji = getPlantEmoji(crop.variety);
+              const icon =
+                emoji === GENERIC_EMOJI ? TYPE_EMOJI[crop.plantType] ?? GENERIC_EMOJI : emoji;
+              // Empty when the care profile carries no harvest range.
+              const days = formatDaysToHarvest(crop.daysToHarvest);
+              return (
+                <View key={`${crop.plantType}:${crop.variety}`} style={styles.sowingRow}>
+                  <Text style={styles.sowingEmoji}>{icon}</Text>
+                  <View style={styles.sowingRowBody}>
+                    <Text style={styles.sowingName} numberOfLines={1}>
+                      {crop.variety}
+                    </Text>
+                    {days.length > 0 && <Text style={styles.sowingMeta}>{days}</Text>}
+                  </View>
                 </View>
-              ))}
-            </>
-          )}
+              );
+            })}
 
-          {children}
-
-          <TouchableOpacity style={styles.link} onPress={handleViewAlmanac} activeOpacity={0.7}>
-            <Text style={styles.linkText}>All 12 months</Text>
-            <Ionicons name="chevron-forward" size={14} color={theme.primary} />
-          </TouchableOpacity>
-        </View>
-      )}
+            {suggestions.length > SOWING_PREVIEW_ROWS && (
+              <TouchableOpacity
+                style={styles.link}
+                onPress={toggleShowAllCrops}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showAllCrops
+                    ? 'Show fewer sowing suggestions'
+                    : `Show all ${suggestions.length} sowing suggestions`
+                }
+              >
+                <Text style={styles.linkText}>
+                  {showAllCrops ? 'Show fewer' : `All ${suggestions.length} crops`}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+      </View>
     </View>
   );
 });

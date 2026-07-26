@@ -2,8 +2,9 @@
  * Seasonal almanac — monthly highlights for the Kanyakumari / Tamil Nadu
  * organic calendar (Phase C, C.4 / G15 Farmer's Almanac).
  *
- * Pure config consumed by the dashboard AlmanacHighlight card and the full
- * SeasonalAlmanacScreen. Each entry is a short, actionable monthly note.
+ * Pure config. `getMonthlyHighlight` drives the dashboard `SeasonPanel` header;
+ * the full 12-month `ALMANAC` has no screen of its own at present. Each entry
+ * is a short, actionable monthly note.
  */
 
 export interface AlmanacMonth {
