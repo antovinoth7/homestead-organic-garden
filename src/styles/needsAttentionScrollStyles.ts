@@ -4,25 +4,19 @@ import type { Theme } from '../theme/colors';
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     section: {
-      backgroundColor: theme.backgroundSecondary,
-      paddingTop: 12,
-      paddingBottom: 14,
-      paddingLeft: 16,
-      marginTop: 1,
-    },
-    title: {
-      fontSize: 17,
-      fontWeight: '600',
-      color: theme.text,
-      marginBottom: 10,
+      // No panel chrome: the rail sits directly on the page background like
+      // every other block on the dashboard.
+      paddingBottom: 4,
     },
     listContent: {
-      paddingRight: 8,
+      paddingLeft: 16,
+      // Cards carry marginRight: 10, so this tops the trailing gap up to 16.
+      paddingRight: 6,
     },
     card: {
       width: 150,
       padding: 12,
-      borderRadius: 14,
+      borderRadius: 12,
       marginRight: 10,
       borderWidth: 1,
     },

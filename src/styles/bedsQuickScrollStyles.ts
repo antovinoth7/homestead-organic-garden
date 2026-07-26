@@ -1,88 +1,112 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 
+/** Card geometry — shared with BedsQuickScroll so the grid lines can be laid out without measuring. */
+export const BED_CARD_WIDTH = 152;
+export const BED_CARD_PADDING = 12;
+export const BED_PREVIEW_HEIGHT = 44;
+/** Grid-paper pitch, in px. Matches the mock's 12px ruling. */
+export const BED_PREVIEW_CELL = 12;
+export const BED_PREVIEW_WIDTH = BED_CARD_WIDTH - BED_CARD_PADDING * 2;
+
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     section: {
-      backgroundColor: theme.backgroundSecondary,
-      paddingTop: 12,
-      paddingBottom: 14,
-      paddingLeft: 16,
-      marginTop: 1,
-    },
-    title: {
-      fontSize: 17,
-      fontWeight: '700',
-      color: theme.text,
-      letterSpacing: 0.3,
-      marginBottom: 10,
+      // No panel chrome: the rail sits directly on the page background like
+      // every other block on the dashboard.
+      paddingBottom: 4,
     },
     listContent: {
-      paddingRight: 8,
+      paddingHorizontal: 16,
       gap: 10,
     },
     card: {
-      width: 132,
-      padding: 12,
-      borderRadius: 14,
-      backgroundColor: theme.background,
+      width: BED_CARD_WIDTH,
+      padding: BED_CARD_PADDING,
+      borderRadius: 12,
+      backgroundColor: theme.backgroundSecondary,
       borderWidth: 1,
       borderColor: theme.border,
     },
-    cardHeader: {
+    // ── Grid-paper preview tile ──────────────────────────────────────────────
+    preview: {
+      height: BED_PREVIEW_HEIGHT,
+      borderRadius: 8,
+      backgroundColor: theme.background,
+      overflow: 'hidden',
+    },
+    gridLineV: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      width: 1,
+      backgroundColor: theme.primary + '24',
+    },
+    gridLineH: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: 1,
+      backgroundColor: theme.primary + '24',
+    },
+    pinRow: {
+      ...StyleSheet.absoluteFillObject,
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 6,
+      justifyContent: 'center',
+      gap: 3,
     },
-    typeBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 8,
+    pin: {
+      fontSize: 15,
     },
-    typeBadgeText: {
-      fontSize: 16,
+    pinPlaceholder: {
+      fontSize: 15,
+      opacity: 0.35,
     },
-    statusDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-    },
+    // ── Card body ────────────────────────────────────────────────────────────
     bedName: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 13,
+      fontWeight: '700',
       color: theme.text,
-      marginBottom: 6,
+      marginTop: 9,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 5,
     },
     statusChip: {
-      alignSelf: 'flex-start',
-      paddingHorizontal: 8,
+      paddingHorizontal: 6,
       paddingVertical: 3,
-      borderRadius: 10,
-      marginBottom: 6,
+      borderRadius: 6,
     },
     statusChipText: {
-      fontSize: 11,
-      fontWeight: '600',
+      fontSize: 10,
+      fontWeight: '700',
     },
     plantCount: {
-      fontSize: 12,
-      color: theme.textSecondary,
+      flexShrink: 1,
+      fontSize: 10.5,
+      color: theme.textTertiary,
     },
+    // ── Ghost "New bed" tile ─────────────────────────────────────────────────
     ghostCard: {
-      width: 132,
-      padding: 12,
-      borderRadius: 14,
+      width: 74,
+      padding: BED_CARD_PADDING,
+      borderRadius: 12,
       borderWidth: 1,
       borderStyle: 'dashed',
       borderColor: theme.primary + '80',
+      backgroundColor: theme.primary + '0a',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
     },
     ghostText: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 10.5,
+      fontWeight: '700',
       color: theme.primary,
+      textAlign: 'center',
     },
   });

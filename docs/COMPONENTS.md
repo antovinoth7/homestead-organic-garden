@@ -27,6 +27,7 @@
 - `FieldHelp` / `FieldLabelWithHelp` — inline help affordances
 - `UndoToast` — post-action undo snackbar
 - `OfflineBanner` (+ `useOfflineStatus`) — connectivity strip above the navigator; shows offline state and pending-sync count from the offline write queue
+- `SectionHeader` — dashboard section heading (17px title + optional right-aligned action link) sitting on the page background above its content; use it for any new home-screen section rather than a bare `<Text>`
 - `ErrorBoundary` — class component error boundary
 - `VoiceDictation` / `VoiceInputButton` (+ `useVoiceInput`) — speech-to-text for any text field
 - `ImageZoomModal` (+ `usePinchZoom`) — pinch-zoom photo viewer
@@ -38,7 +39,7 @@
 - **Catalog detail sections** (`CatalogPlantDetailScreen`): `DetailQuickInfoSection`, `DetailNutritionSection`, `DetailCareGuidanceSection`, `PlantCatalogList`, `PlantCategoryTabs`
 - **Plant forms** (`src/components/forms/`): `PlantAddWizard` + `WizardStep1/2/3`; `PlantEditForm` + `Edit*Section` (BasicInfo, Location, CareSchedule, Coconut, QuickInfo, Nutrition, Relationships, CareGuidance, Safety, Beneficials)
 - **Beds**: `BedCard`, `BedTopDownMap`, `BedLayerStack`, `BedRowLayout`, `BedSuccessionTimeline`, `BedZoneIllustration`, `BedRotationView`, `RotationStatusCard`, `BedContextSection`, `BedFilterSheet`, `BedPlantPickerSheet`, `DraggablePlantRow`, `ClearBedCta`, `PlantEntryResolverSheet`
-- **Today dashboard**: `DashboardHero` (greeting + progress ring + per-type activity rows + health tiles), `NeedsAttentionScroll` (the "Falling behind" rail), `WeatherDeck` + `WeatherPlotCard` (+ legacy `WeatherCard`), `PlantNowSection`, `AlmanacHighlight`, `TipStrip`, `InputReminderStrip`, `BedsQuickScroll`, `PrepCard`
+- **Today dashboard**: `DashboardHero` (greeting + progress ring + per-type activity rows + health tiles), `NeedsAttentionScroll` (the "Falling behind" rail), `WeatherDeck` + `WeatherPlotCard` (+ legacy `WeatherCard`), `PlantNowSection`, `SeasonPanel` (one collapsible seasonal card: month almanac highlight + season care rhythm + nested green-manure prompt, with a link to the full 12-month `SeasonalAlmanacScreen` — replaces the former `AlmanacHighlight`; the Jeevamrutha shortcut `InputReminderStrip` was removed, the recipe lives in More → Input Recipes), `TipStrip`, `BedsQuickScroll` (bed cards with a grid-paper tile of the bed's own plant emoji — pins and the stage-aware status chip come from `utils/bedPreview.ts`), `PrepCard`
 - **Calendar** (`src/components/calendar/`): `MonthCalendarView`, `WeekCalendarView`, `SwipeableTaskCard` (rendered through `CalendarScreen`'s virtualized `SectionList` — add new task rows as section data, not `.map()` in a ScrollView)
 - **Lists/cards**: `PlantCard`, `TaskCard`, `JournalEntryCard`, `PlantFilterSheet`
 - **Locations**: `LocationProfileEditor`

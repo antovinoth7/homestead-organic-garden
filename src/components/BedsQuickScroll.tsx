@@ -1,48 +1,60 @@
 /**
  * BedsQuickScroll (Phase C, C.12).
  *
- * Horizontal scroll of bed mini-cards (type-colored badge, status dot + chip,
- * plant count) ending in a ghost "New bed" card. Replaces the aggregate
- * "Beds Overview" stat card. Reuses BED_TYPE_EMOJI + getBedStatus.
+ * Horizontal rail of bed cards ending in a ghost "New bed" tile. Each card
+ * leads with a grid-paper tile carrying the bed's own plant emoji, so the row
+ * reads as a glance at the garden rather than a list of counts; the name,
+ * status chip and plant count sit beneath it.
+ *
+ * Reuses getBedStatus for the lifecycle and bedPreview for the pins and the
+ * stage-aware chip label.
  */
 
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BedType } from '@/types/database.types';
 import { BedWithCoverage } from '@/hooks/useBedData';
 import { BED_TYPE_EMOJI } from '@/components/BedCard';
+import { SectionHeader } from '@/components/SectionHeader';
 import {
   getBedStatus,
-  LIFECYCLE_LABEL,
   LIFECYCLE_PILL_BG_TOKEN,
   LIFECYCLE_PILL_TEXT_TOKEN,
-  LIFECYCLE_STRIPE_TOKEN,
 } from '@/utils/bedStatus';
+import { bedCardStatusLabel } from '@/utils/bedPreview';
 import { useTheme } from '@/theme';
-import { createStyles } from '@/styles/bedsQuickScrollStyles';
+import {
+  createStyles,
+  BED_PREVIEW_CELL,
+  BED_PREVIEW_HEIGHT,
+  BED_PREVIEW_WIDTH,
+} from '@/styles/bedsQuickScrollStyles';
 
 interface Props {
   beds: BedWithCoverage[];
   onPressBed: (bed: BedWithCoverage) => void;
   onNewBed: () => void;
+  onPressAllBeds: () => void;
 }
 
-/** Bed type → theme color token for the badge tint. */
-const BED_TYPE_TOKEN: Record<BedType, 'success' | 'warning' | 'info' | 'accent' | 'primary'> = {
-  leafy: 'success',
-  fruiting: 'warning',
-  spice: 'info',
-  root_legume: 'accent',
-  climber_trellis: 'primary',
-  three_sisters: 'warning',
-  medicinal_guild: 'info',
-};
+/**
+ * Grid-line offsets. The preview is a fixed size, so these are computed once at
+ * module scope — no onLayout pass and no SVG for what is a handful of hairlines.
+ */
+const GRID_X = buildOffsets(BED_PREVIEW_WIDTH);
+const GRID_Y = buildOffsets(BED_PREVIEW_HEIGHT);
+
+function buildOffsets(extent: number): number[] {
+  const offsets: number[] = [];
+  for (let at = BED_PREVIEW_CELL; at < extent; at += BED_PREVIEW_CELL) offsets.push(at);
+  return offsets;
+}
 
 export const BedsQuickScroll = React.memo(function BedsQuickScroll({
   beds,
   onPressBed,
   onNewBed,
+  onPressAllBeds,
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -51,7 +63,7 @@ export const BedsQuickScroll = React.memo(function BedsQuickScroll({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.title}>🪴 Beds</Text>
+      <SectionHeader title="Beds" actionLabel="All beds" onPressAction={onPressAllBeds} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -60,8 +72,14 @@ export const BedsQuickScroll = React.memo(function BedsQuickScroll({
         {beds.map((bed) => (
           <BedMiniCard key={bed.id} bed={bed} styles={styles} theme={theme} onPress={onPressBed} />
         ))}
-        <TouchableOpacity style={styles.ghostCard} activeOpacity={0.75} onPress={onNewBed}>
-          <Ionicons name="add-circle-outline" size={24} color={theme.primary} />
+        <TouchableOpacity
+          style={styles.ghostCard}
+          activeOpacity={0.75}
+          onPress={onNewBed}
+          accessibilityRole="button"
+          accessibilityLabel="Create a new bed"
+        >
+          <Ionicons name="add-outline" size={20} color={theme.primary} />
           <Text style={styles.ghostText}>New bed</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -79,34 +97,54 @@ interface CardProps {
 function BedMiniCard({ bed, styles, theme, onPress }: CardProps): React.JSX.Element {
   const handlePress = useCallback(() => onPress(bed), [onPress, bed]);
   const status = useMemo(() => getBedStatus(bed), [bed]);
-  const tint = theme[BED_TYPE_TOKEN[bed.type] ?? 'primary'];
-  const dotColor = theme[LIFECYCLE_STRIPE_TOKEN[status.lifecycle]];
   const chipBg = theme[LIFECYCLE_PILL_BG_TOKEN[status.lifecycle]];
   const chipText = theme[LIFECYCLE_PILL_TEXT_TOKEN[status.lifecycle]];
+  const statusLabel = bedCardStatusLabel(bed, status, bed.dominant_stage);
 
-  const statusLabel = bed.water_overdue
-    ? 'Due water'
-    : status.lifecycle === 'resting'
-      ? status.restComplete
-        ? 'Rest done'
-        : `Resting · ${status.restDaysRemaining ?? 0}d`
-      : LIFECYCLE_LABEL[status.lifecycle];
+  // An empty bed still gets a pin — a faded bed-type emoji — so the tile never
+  // reads as a failed render.
+  const pins = bed.preview_emojis;
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.8} onPress={handlePress}>
-      <View style={styles.cardHeader}>
-        <View style={[styles.typeBadge, { backgroundColor: tint + '22' }]}>
-          <Text style={styles.typeBadgeText}>{BED_TYPE_EMOJI[bed.type] ?? '🌿'}</Text>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.8}
+      onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={`${bed.name}, ${statusLabel}, ${bed.active_plant_count} planted`}
+    >
+      <View style={styles.preview}>
+        {GRID_X.map((x) => (
+          <View key={`x${x}`} style={[styles.gridLineV, { left: x }]} />
+        ))}
+        {GRID_Y.map((y) => (
+          <View key={`y${y}`} style={[styles.gridLineH, { top: y }]} />
+        ))}
+        <View style={styles.pinRow}>
+          {pins.length > 0 ? (
+            pins.map((emoji, i) => (
+              <Text key={`${emoji}-${i}`} style={styles.pin}>
+                {emoji}
+              </Text>
+            ))
+          ) : (
+            <Text style={styles.pinPlaceholder}>{BED_TYPE_EMOJI[bed.type] ?? '🌿'}</Text>
+          )}
         </View>
-        <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
       </View>
+
       <Text style={styles.bedName} numberOfLines={1}>
         {bed.name}
       </Text>
-      <View style={[styles.statusChip, { backgroundColor: chipBg }]}>
-        <Text style={[styles.statusChipText, { color: chipText }]}>{statusLabel}</Text>
+
+      <View style={styles.metaRow}>
+        <View style={[styles.statusChip, { backgroundColor: chipBg }]}>
+          <Text style={[styles.statusChipText, { color: chipText }]}>{statusLabel}</Text>
+        </View>
+        <Text style={styles.plantCount} numberOfLines={1}>
+          {bed.active_plant_count} planted
+        </Text>
       </View>
-      <Text style={styles.plantCount}>🌱 {bed.active_plant_count} planted</Text>
     </TouchableOpacity>
   );
 }

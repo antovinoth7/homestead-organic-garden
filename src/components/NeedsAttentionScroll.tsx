@@ -20,6 +20,7 @@ import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FarmAlert } from '@/types/database.types';
 import { ALERT_COMPLETE_FIELD } from '@/services/alerts';
+import { SectionHeader } from '@/components/SectionHeader';
 import { useTheme } from '@/theme';
 import type { Theme } from '@/theme/colors';
 import { createStyles } from '@/styles/needsAttentionScrollStyles';
@@ -73,7 +74,7 @@ export const NeedsAttentionScroll = React.memo(function NeedsAttentionScroll({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.title}>⚠️ Falling behind ({visible.length})</Text>
+      <SectionHeader title={`⚠️ Falling behind · ${visible.length}`} />
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}

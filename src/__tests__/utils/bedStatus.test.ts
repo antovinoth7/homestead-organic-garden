@@ -38,6 +38,8 @@ function makeBed(overrides: Partial<BedWithCoverage> = {}): BedWithCoverage {
     plant_count: 3,
     active_plant_count: 3,
     water_overdue: false,
+    preview_emojis: [],
+    dominant_stage: null,
   };
   return { ...base, ...overrides };
 }

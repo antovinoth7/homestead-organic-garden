@@ -37,12 +37,10 @@ import { getPlantHealthSummary } from '../utils/plantHealth';
 import { getFarmAlerts, isActionable, ALERT_COMPLETE_FIELD } from '../services/alerts';
 import { getHarvestGapWarnings } from '../services/beds';
 import { useCrossBedStatus } from '../hooks/useCrossBedStatus';
-import { useFarmCapacity } from '../hooks/useFarmCapacity';
 import { NeedsAttentionScroll } from '../components/NeedsAttentionScroll';
 import { WeatherCard } from '../components/WeatherCard';
 import { PlantNowSection } from '../components/PlantNowSection';
-import { AlmanacHighlight } from '../components/AlmanacHighlight';
-import { InputReminderStrip } from '../components/InputReminderStrip';
+import { SeasonPanel } from '../components/SeasonPanel';
 import { DashboardHero } from '../components/DashboardHero';
 import { BedsQuickScroll } from '../components/BedsQuickScroll';
 import { TipStrip } from '../components/TipStrip';
@@ -222,7 +220,6 @@ export default function TodayScreen(): React.JSX.Element {
 
   // Farm-wide alerts now flow through the alerts service (C.10) rather than
   // inline computation. Bed rotation context comes from useCrossBedStatus.
-  const { config: farmConfig } = useFarmCapacity();
   const { rotationStatuses } = useCrossBedStatus(bedList);
   const bedNames = useMemo(() => Object.fromEntries(bedList.map((b) => [b.id, b.name])), [bedList]);
   // Beds a green-manure sowing could go into. `null` while beds are still
@@ -319,13 +316,6 @@ export default function TodayScreen(): React.JSX.Element {
     if (greenManureAlert) handleAlertPress(greenManureAlert);
   }, [greenManureAlert, handleAlertPress]);
 
-  const openJeevamruthaRecipe = useCallback(() => {
-    navigation.navigate('More', {
-      screen: 'InputRecipes',
-      params: { initialTab: 'jeevamrutha' },
-    });
-  }, [navigation]);
-
   const openAlmanac = useCallback(() => {
     navigation.navigate('More', { screen: 'SeasonalAlmanac' });
   }, [navigation]);
@@ -346,6 +336,10 @@ export default function TodayScreen(): React.JSX.Element {
 
   const handleNewBed = useCallback(() => {
     navigation.navigate('Beds', { screen: 'BedCreationWizard' });
+  }, [navigation]);
+
+  const handlePressAllBeds = useCallback(() => {
+    navigation.navigate('Beds', { screen: 'BedList' });
   }, [navigation]);
 
   const goToCarePlan = useCallback(
@@ -439,12 +433,18 @@ export default function TodayScreen(): React.JSX.Element {
           maxItems={ATTENTION_MAX_CARDS}
         />
 
+        {/* Bed cards horizontal scroll (C.12). Sits above weather and sowing:
+          the beds are what the grower acts on, those two are context for it. */}
+        <BedsQuickScroll
+          beds={bedList}
+          onPressBed={handlePressBed}
+          onNewBed={handleNewBed}
+          onPressAllBeds={handlePressAllBeds}
+        />
+
         {/* Weather (C.3) + What to Plant Now (C.1) */}
         <WeatherCard />
         <PlantNowSection />
-
-        {/* Bed mini-cards horizontal scroll (C.12) */}
-        <BedsQuickScroll beds={bedList} onPressBed={handlePressBed} onNewBed={handleNewBed} />
 
         {/* Pre-monsoon prep — only within the 21-day window, dismissible per day */}
         {preMonsoonTasks.length > 0 && !preMonsoonDismissed && (
@@ -476,85 +476,41 @@ export default function TodayScreen(): React.JSX.Element {
         {/* Daily tip strip — dismissible per day (C.14) */}
         <TipStrip tip={tipText} />
 
-        {/* Seasonal guidance — low-frequency cards grouped behind one collapsible
-          header (collapsed by default) to keep the dashboard uncluttered:
-          season rhythm + jeevamrutha reminder + monthly almanac. */}
-        <TouchableOpacity
-          style={styles.seasonalToggle}
-          onPress={toggleSeasonal}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={
-            seasonalExpanded ? 'Collapse seasonal guidance' : 'Expand seasonal guidance'
-          }
+        {/* Seasonal guidance — month almanac + season rhythm + the inputs they
+          imply, in one collapsible card (collapsed by default). */}
+        <SeasonPanel
+          rhythm={seasonRhythm}
+          seasonLabel={seasonLabel}
+          expanded={seasonalExpanded}
+          onToggle={toggleSeasonal}
+          onViewAlmanac={openAlmanac}
         >
-          <Text style={styles.seasonalToggleText}>🌿 Seasonal guidance</Text>
-          <Ionicons
-            name={seasonalExpanded ? 'chevron-up' : 'chevron-down'}
-            size={18}
-            color={theme.textSecondary}
-          />
-        </TouchableOpacity>
-
-        {seasonalExpanded && (
-          <>
-            {/* Current-season care rhythm */}
-            {seasonRhythm !== null && (
-              <View style={styles.rhythmCard}>
-                <Text style={styles.rhythmTitle}>🗓️ This Season&apos;s Rhythm · {seasonLabel}</Text>
-                <View style={styles.rhythmRow}>
-                  <Text style={styles.rhythmLabel}>💧 Water</Text>
-                  <Text style={styles.rhythmValue}>{seasonRhythm.waterInterval}</Text>
-                </View>
-                <View style={styles.rhythmRow}>
-                  <Text style={styles.rhythmLabel}>🍂 Mulch</Text>
-                  <Text style={styles.rhythmValue}>{seasonRhythm.mulchCheck}</Text>
-                </View>
-                <View style={styles.rhythmRow}>
-                  <Text style={styles.rhythmLabel}>🧪 Jeevamrutha</Text>
-                  <Text style={styles.rhythmValue}>{seasonRhythm.jeevamruthaInterval}</Text>
-                </View>
+          {/* Green-manure suggestion — a seasonal prompt, dismissible for the
+            month. Lives here rather than in the alert rail: it is advice for
+            the farm, not a plant that has fallen behind. */}
+          {greenManureAlert !== null && (
+            <TouchableOpacity
+              style={styles.greenManureCard}
+              onPress={openGreenManure}
+              activeOpacity={0.75}
+            >
+              <View style={styles.greenManureHeader}>
+                <Text style={styles.greenManureTitle}>
+                  {greenManureAlert.icon} {greenManureAlert.title}
+                </Text>
+                <TouchableOpacity
+                  style={styles.greenManureClose}
+                  onPress={dismissGreenManure}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Dismiss green manure suggestion for this month"
+                >
+                  <Ionicons name="close" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
               </View>
-            )}
-
-            {/* Green-manure suggestion — a seasonal prompt, dismissible for the
-              month. Lives here rather than in the alert rail: it is advice for
-              the farm, not a plant that has fallen behind. */}
-            {greenManureAlert !== null && (
-              <TouchableOpacity
-                style={styles.greenManureCard}
-                onPress={openGreenManure}
-                activeOpacity={0.75}
-              >
-                <View style={styles.greenManureHeader}>
-                  <Text style={styles.greenManureTitle}>
-                    {greenManureAlert.icon} {greenManureAlert.title}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.greenManureClose}
-                    onPress={dismissGreenManure}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityLabel="Dismiss green manure suggestion for this month"
-                  >
-                    <Ionicons name="close" size={16} color={theme.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.greenManureMessage}>{greenManureAlert.message}</Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Jeevamrutha batch reminder (C.13) */}
-            <InputReminderStrip
-              landCents={farmConfig?.land_cents ?? 5}
-              bedCount={bedList.length}
-              cadenceLabel={seasonRhythm?.jeevamruthaInterval}
-              onPress={openJeevamruthaRecipe}
-            />
-
-            {/* Monthly almanac highlight (C.4) */}
-            <AlmanacHighlight onViewAll={openAlmanac} />
-          </>
-        )}
+              <Text style={styles.greenManureMessage}>{greenManureAlert.message}</Text>
+            </TouchableOpacity>
+          )}
+        </SeasonPanel>
 
         {tasks.length === 0 && !loading && (
           <View style={styles.emptyState}>

@@ -42,6 +42,15 @@ export function getSeasonLabel(date?: Date, zone?: AgroClimaticZone): string {
   return season?.label ?? seasonId;
 }
 
+/**
+ * Drops the month-range parenthetical from a season label
+ * ("SW Monsoon (Jun–Sep)" → "SW Monsoon"). Used where the month name is
+ * already on screen next to it, so the range would just be noise.
+ */
+export function shortenSeasonLabel(label: string): string {
+  return label.replace(/\s*\([^)]*\)\s*$/, '');
+}
+
 export function getWateringFrequencyMultiplier(
   spaceType: SpaceType,
   zone?: AgroClimaticZone
