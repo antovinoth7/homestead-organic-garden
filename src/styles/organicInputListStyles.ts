@@ -2,9 +2,10 @@ import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 
 /**
- * Pest & disease browse list — chip-filtered flat list.
- * The organic-input list follows the same layout but keeps its own sheet
- * (`organicInputListStyles`) because its cards carry different metadata.
+ * Organic-input browse list — chip-filtered flat list with a "make your own"
+ * recipe banner above the chips. Mirrors the pest/disease list layout but the
+ * cards carry a category pill, an application rate and a DIY-recipe badge
+ * instead of a seasonal risk badge.
  */
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -66,36 +67,39 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.inputText,
     },
 
-    // Chip row — the ScrollView must not grow into the list's vertical space
-    chipScroll: {
-      flexGrow: 0,
-      flexShrink: 0,
-    },
-    chipRow: {
-      paddingHorizontal: 18,
-      paddingTop: 14,
-      gap: 7,
-      alignItems: 'center',
-    },
-    chip: {
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      borderRadius: 20,
-      backgroundColor: theme.backgroundTertiary,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
-    chipActive: {
+    // "Make your own" recipe banner
+    recipeBanner: {
+      marginHorizontal: 18,
+      marginTop: 14,
       backgroundColor: theme.primary,
-      borderColor: theme.primary,
+      borderRadius: 16,
+      padding: 15,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 13,
     },
-    chipText: {
-      fontSize: 12.5,
-      fontWeight: '600',
-      color: theme.textTertiary,
+    recipeBannerIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: 14,
+      backgroundColor: theme.heroDivider,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    chipTextActive: {
+    recipeBannerBody: {
+      flex: 1,
+      minWidth: 0,
+    },
+    recipeBannerTitle: {
+      fontSize: 15,
+      fontWeight: '700',
       color: theme.textInverse,
+    },
+    recipeBannerSubtitle: {
+      fontSize: 12,
+      lineHeight: 17,
+      color: theme.heroTextMuted,
+      marginTop: 2,
     },
 
     // Count line
@@ -140,14 +144,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
-      overflow: 'hidden',
+      backgroundColor: theme.backgroundTertiary,
     },
     cardTileEmoji: {
       fontSize: 21,
-    },
-    cardTileImage: {
-      width: 44,
-      height: 44,
     },
     cardBody: {
       flex: 1,
@@ -169,7 +169,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.inputPlaceholder,
       flexShrink: 1,
     },
-    cardSymptom: {
+    cardDescription: {
       fontSize: 12.5,
       lineHeight: 17,
       color: theme.textSecondary,
@@ -182,19 +182,32 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       marginTop: 8,
     },
-    riskBadge: {
+    categoryPill: {
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 7,
+      backgroundColor: theme.backgroundTertiary,
     },
-    riskBadgeText: {
+    categoryPillText: {
       fontSize: 10.5,
-      fontWeight: '700',
-      letterSpacing: 0.5,
+      fontWeight: '600',
+      color: theme.textTertiary,
     },
-    cardPlantsLabel: {
+    cardRate: {
       fontSize: 10.5,
       color: theme.inputPlaceholder,
+    },
+    recipeBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 7,
+      backgroundColor: theme.primaryLight,
+    },
+    recipeBadgeText: {
+      fontSize: 10.5,
+      fontWeight: '700',
+      letterSpacing: 0.4,
+      color: theme.primary,
     },
     cardChevron: {
       paddingTop: 12,

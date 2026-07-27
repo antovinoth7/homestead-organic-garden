@@ -5,6 +5,7 @@ import { writeOrQueue } from '@/lib/offlineWrite';
 import { logError } from '@/utils/errorLogging';
 import { getData, setData, KEYS } from '@/lib/storage';
 import { getCached, setCached, invalidate } from '@/lib/dataCache';
+import { sumLandCents } from '@/utils/landCents';
 import type { FarmConfig, Bed, BedType, LocationProfile } from '@/types/database.types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ export function calcWeeklyVegNeed(familiesCount: number): number {
  * Replaces the single user-level land_cents in FarmConfig.
  */
 export function calcCapacityFromProfiles(profiles: Record<string, LocationProfile>): number {
-  return Object.values(profiles).reduce((sum, p) => sum + (p.land_cents ?? 0), 0);
+  return sumLandCents(profiles);
 }
 
 /**

@@ -1,138 +1,266 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
 
+/**
+ * "Make your own" recipe calculator.
+ *
+ * The header deliberately uses the same light treatment as the organic-input
+ * and pest browse lists (background surface, green back pill, dark title)
+ * rather than the dark-green block in the design reference, so all three
+ * organic-input screens read as one flow.
+ */
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     content: { flex: 1 },
     scrollContent: { paddingBottom: 24 },
-    header: {
+
+    // Header block — back button, title + subtitle
+    headerBlock: {
+      paddingHorizontal: 18,
+      paddingBottom: 14,
+      backgroundColor: theme.background,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.borderLight,
+    },
+    headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingBottom: 16,
-      backgroundColor: theme.tabBarBackground,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      gap: 12,
     },
     backButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 34,
+      height: 34,
+      borderRadius: 12,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    headerSpacer: { width: 36 },
-    title: { flex: 1, fontSize: 20, fontWeight: '700', color: theme.text, textAlign: 'center' },
-    // Tab bar
-    tabBar: {
-      flexDirection: 'row',
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 10,
-      padding: 4,
-      marginHorizontal: 16,
-      marginTop: 16,
-      marginBottom: 20,
-      borderWidth: 1,
-      borderColor: theme.border,
+    headerTitleGroup: {
+      flex: 1,
+      minWidth: 0,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    headerSubtitle: {
+      fontSize: 12,
+      color: theme.inputPlaceholder,
+      marginTop: 1,
+    },
+
+    // Recipe tabs — chip row on a light surface, mirroring ReferenceFilterChips
+    tabScroll: {
+      flexGrow: 0,
+      flexShrink: 0,
+    },
+    tabRow: {
+      paddingHorizontal: 18,
+      paddingTop: 13,
+      paddingBottom: 13,
+      gap: 7,
+      alignItems: 'center',
     },
     tab: {
-      flex: 1,
-      paddingVertical: 10,
-      alignItems: 'center',
-      borderRadius: 8,
-    },
-    tabActive: { backgroundColor: theme.primary },
-    tabText: { fontSize: 12, fontWeight: '600', color: theme.textSecondary },
-    tabTextActive: { fontSize: 12, fontWeight: '600', color: theme.textInverse },
-    // Recipe card
-    recipeHeader: { paddingHorizontal: 16, paddingTop: 16, marginBottom: 16 },
-    recipeName: { fontSize: 18, fontWeight: '700', color: theme.text },
-    recipeTamilName: { fontSize: 13, color: theme.textTertiary, marginTop: 2 },
-    recipeDescription: { fontSize: 14, color: theme.textSecondary, marginTop: 8, lineHeight: 20 },
-    // Ingredients section
-    section: { marginBottom: 24, paddingHorizontal: 16 },
-    sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginBottom: 12 },
-    ingredientRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 8,
-      paddingVertical: 10,
-      paddingHorizontal: 14,
-      marginBottom: 8,
+      paddingHorizontal: 13,
+      paddingVertical: 7,
+      borderRadius: 20,
+      backgroundColor: theme.inputBackground,
       borderWidth: 1,
       borderColor: theme.border,
     },
-    ingredientName: { flex: 1, fontSize: 14, color: theme.text },
-    ingredientQty: { fontSize: 14, fontWeight: '700', color: theme.primary, marginLeft: 8 },
-    ingredientNote: { fontSize: 11, color: theme.textTertiary, marginTop: 2, marginLeft: 14 },
-    // Scaling info
-    scalingBanner: {
+    tabActive: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    tabText: {
+      fontSize: 12.5,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    tabTextActive: {
+      color: theme.textInverse,
+    },
+
+    // Recipe intro
+    recipeHeader: { paddingHorizontal: 18, paddingTop: 16 },
+    recipeName: {
+      fontSize: 24,
+      lineHeight: 27,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    recipeTamilName: { fontSize: 13, color: theme.textSecondary, marginTop: 3 },
+    recipeDescription: {
+      fontSize: 13.5,
+      lineHeight: 20,
+      color: theme.textSecondary,
+      marginTop: 9,
+    },
+
+    // Land-size scaler
+    scaler: {
+      marginHorizontal: 18,
+      marginTop: 14,
+      backgroundColor: theme.primaryLight,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 13,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 11,
+    },
+    scalerBody: { flex: 1, minWidth: 0 },
+    scalerLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      color: theme.primary,
+    },
+    scalerValue: {
+      fontSize: 13.5,
+      fontWeight: '600',
+      color: theme.primary,
+      marginTop: 3,
+    },
+    scalerButtons: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      backgroundColor: theme.primaryLight,
-      borderRadius: 8,
-      padding: 12,
-      marginHorizontal: 16,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: theme.border,
     },
-    scalingText: { fontSize: 13, color: theme.primary, flex: 1 },
-    // Steps
-    stepRow: { flexDirection: 'row', marginBottom: 10, paddingRight: 8 },
+    scalerButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    scalerButtonDisabled: {
+      opacity: 0.4,
+    },
+
+    // Section headings
+    sectionLabel: {
+      paddingHorizontal: 18,
+      paddingTop: 22,
+      paddingBottom: 6,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.9,
+      textTransform: 'uppercase',
+      color: theme.textTertiary,
+    },
+
+    // Ingredients
+    ingredientCard: {
+      marginHorizontal: 18,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      borderRadius: 16,
+      paddingHorizontal: 14,
+    },
+    ingredientRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 12,
+      paddingVertical: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.borderLight,
+    },
+    ingredientRowFirst: {
+      borderTopWidth: 0,
+    },
+    ingredientBody: { flex: 1, minWidth: 0 },
+    ingredientName: { fontSize: 14, fontWeight: '600', color: theme.text },
+    ingredientNote: {
+      fontSize: 11.5,
+      lineHeight: 16,
+      color: theme.inputPlaceholder,
+      marginTop: 2,
+    },
+    ingredientQty: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.primary,
+    },
+
+    // Preparation steps
+    stepList: {
+      paddingHorizontal: 18,
+      gap: 9,
+    },
+    stepRow: {
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 13,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 11,
+    },
     stepNumber: {
       width: 24,
       height: 24,
-      borderRadius: 12,
+      borderRadius: 8,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: 10,
-      marginTop: 2,
     },
-    stepNumberText: { fontSize: 12, fontWeight: '700', color: theme.textInverse },
-    stepText: { flex: 1, fontSize: 14, color: theme.textSecondary, lineHeight: 20 },
+    stepNumberText: { fontSize: 11.5, fontWeight: '700', color: theme.textInverse },
+    stepText: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: 13.5,
+      lineHeight: 20,
+      color: theme.text,
+    },
+
     // When to apply
     applyCard: {
-      backgroundColor: theme.accentLight,
-      borderRadius: 10,
-      padding: 14,
+      marginHorizontal: 18,
+      backgroundColor: theme.card,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: theme.borderLight,
+      borderRadius: 16,
+      padding: 14,
     },
-    applyLabel: { fontSize: 12, fontWeight: '600', color: theme.accent, marginBottom: 4 },
-    applyText: { fontSize: 14, color: theme.text, lineHeight: 20 },
-    // Season badges
-    seasonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
+    applyText: {
+      fontSize: 13.5,
+      lineHeight: 20,
+      color: theme.text,
+    },
+    badgeRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 7,
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.borderLight,
+    },
+    frequencyBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 16,
+      backgroundColor: theme.primaryLight,
+    },
+    frequencyBadgeText: { fontSize: 11.5, fontWeight: '700', color: theme.primary },
     seasonBadge: {
       paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 12,
-      backgroundColor: theme.primaryLight,
-      borderWidth: 1,
-      borderColor: theme.border,
+      paddingVertical: 5,
+      borderRadius: 16,
+      backgroundColor: theme.backgroundTertiary,
     },
-    seasonBadgeText: { fontSize: 11, color: theme.primary, fontWeight: '600' },
-    // Frequency badge
-    frequencyBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 8,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      marginTop: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    frequencyText: { fontSize: 13, color: theme.textSecondary },
-    frequencyValue: { fontSize: 13, fontWeight: '700', color: theme.primary },
+    seasonBadgeText: { fontSize: 11.5, color: theme.textTertiary },
   });

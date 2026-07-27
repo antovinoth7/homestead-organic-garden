@@ -2,10 +2,9 @@ import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 
 /**
- * Pest & disease detail — hero-behind-name layout with a seasonal risk card,
- * spot/damage pair, and a numbered action plan.
- * The organic-input detail mirrors this skeleton in `organicInputDetailStyles`
- * with its own sections.
+ * Organic-input detail — emoji-watermark hero, a rate/when/ideal-for stat
+ * strip, then a tinted panel holding the benefit, precaution and ideal-for
+ * sections. Same skeleton as `pestDiseaseDetailStyles`, different sections.
  */
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -48,15 +47,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
     },
 
-    // Hero — image or oversized emoji watermark, scrim, title overlay
+    // Hero — oversized emoji watermark behind the name, scrim, title overlay
     hero: {
       height: 250,
       position: 'relative',
       overflow: 'hidden',
       backgroundColor: theme.backgroundTertiary,
-    },
-    heroImage: {
-      ...StyleSheet.absoluteFillObject,
     },
     heroWatermark: {
       ...StyleSheet.absoluteFillObject,
@@ -92,16 +88,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       right: 18,
       bottom: 16,
     },
-    heroRiskPill: {
+    heroCategoryPill: {
       alignSelf: 'flex-start',
       borderRadius: 8,
       paddingHorizontal: 9,
       paddingVertical: 4,
+      backgroundColor: theme.primaryLight,
     },
-    heroRiskPillText: {
+    heroCategoryPillText: {
       fontSize: 10.5,
       fontWeight: '700',
       letterSpacing: 0.5,
+      color: theme.primary,
     },
     heroTitle: {
       fontSize: 32,
@@ -116,8 +114,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 3,
     },
 
-    // "Risk in your garden" card
-    riskCard: {
+    // Rate / when / ideal-for stat strip
+    statStrip: {
       marginHorizontal: 18,
       marginTop: 16,
       backgroundColor: theme.card,
@@ -125,67 +123,28 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.borderLight,
       borderRadius: 16,
       padding: 14,
-    },
-    riskCardHeader: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
       gap: 10,
     },
-    riskCardTitle: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    riskCardReadout: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.5,
-    },
-    riskBars: {
-      flexDirection: 'row',
-      gap: 4,
-      marginTop: 11,
-    },
-    riskBarColumn: {
-      flex: 1,
-    },
-    riskBarTrack: {
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: theme.borderLight,
-    },
-    riskBarLabel: {
-      fontSize: 9.5,
-      color: theme.inputPlaceholder,
-      marginTop: 5,
-    },
-    riskBarLabelCurrent: {
-      color: theme.text,
-      fontWeight: '700',
-    },
-    riskAffectsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 7,
-      marginTop: 13,
-      paddingTop: 12,
-      borderTopWidth: 1,
-      borderTopColor: theme.borderLight,
-    },
-    riskAffectsLabel: {
-      fontSize: 11.5,
-      color: theme.textSecondary,
-    },
-    riskAffectsValue: {
+    statCell: {
       flex: 1,
       minWidth: 0,
-      fontSize: 11.5,
+    },
+    statLabel: {
+      fontSize: 9.5,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      color: theme.inputPlaceholder,
+    },
+    statValue: {
+      fontSize: 13,
+      lineHeight: 17,
       fontWeight: '600',
       color: theme.primary,
+      marginTop: 3,
     },
 
-    // Lower panel (spot/damage + action plan + prevention)
+    // Lower panel
     panel: {
       backgroundColor: theme.backgroundTertiary,
       borderTopWidth: 1,
@@ -195,12 +154,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingTop: 18,
       paddingBottom: 24,
     },
+    lead: {
+      fontSize: 14.5,
+      lineHeight: 22,
+      color: theme.text,
+    },
 
-    // Spot it / Damage pair
+    // Made from / storage pair
     pairRow: {
       flexDirection: 'row',
       gap: 10,
-      marginBottom: 16,
+      marginTop: 16,
     },
     pairCard: {
       flex: 1,
@@ -219,178 +183,115 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     pairText: {
       fontSize: 12.5,
-      lineHeight: 18,
+      lineHeight: 19,
       color: theme.text,
       marginTop: 6,
     },
 
-    // Action plan
-    planTitle: {
+    // Section headings
+    sectionTitle: {
       fontSize: 15,
       fontWeight: '700',
       color: theme.text,
-      marginBottom: 4,
+      marginTop: 20,
+      marginBottom: 10,
     },
-    planSubtitle: {
-      fontSize: 12.5,
-      color: theme.textSecondary,
-      marginBottom: 14,
-    },
-    planCard: {
+
+    // Benefit list ("What it does")
+    listCard: {
       backgroundColor: theme.card,
       borderWidth: 1,
       borderColor: theme.borderLight,
       borderRadius: 16,
-      marginBottom: 11,
-      overflow: 'hidden',
+      paddingHorizontal: 14,
     },
-    planCardHeader: {
+    listRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      gap: 12,
-      padding: 14,
+      gap: 10,
+      paddingVertical: 11,
+      borderTopWidth: 1,
+      borderTopColor: theme.borderLight,
     },
-    planNumber: {
-      width: 26,
-      height: 26,
-      borderRadius: 9,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
+    listRowFirst: {
+      borderTopWidth: 0,
     },
-    planNumberText: {
-      fontSize: 12.5,
-      fontWeight: '700',
-      color: theme.textInverse,
-    },
-    planCardBody: {
+    listText: {
       flex: 1,
       minWidth: 0,
-    },
-    planName: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: theme.text,
-      lineHeight: 19,
-    },
-    planChipRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginTop: 7,
-    },
-    planChip: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 7,
-    },
-    planChipMethod: {
-      backgroundColor: theme.primaryLight,
-    },
-    planChipEffort: {
-      backgroundColor: theme.accentLight,
-    },
-    planChipDose: {
-      backgroundColor: theme.backgroundTertiary,
-    },
-    planChipText: {
-      fontSize: 10.5,
-      fontWeight: '700',
-      letterSpacing: 0.3,
-      textTransform: 'capitalize',
-    },
-    planChipMethodText: {
-      color: theme.primary,
-    },
-    planChipEffortText: {
-      color: theme.accent,
-    },
-    planChipDoseText: {
-      color: theme.textTertiary,
-      fontWeight: '600',
-      textTransform: 'none',
-    },
-    planCardChevron: {
-      paddingTop: 3,
-    },
-
-    // Expanded action-plan body
-    planDetail: {
-      paddingLeft: 52,
-      paddingRight: 14,
-      paddingBottom: 14,
-    },
-    planDetailDivider: {
-      height: 1,
-      backgroundColor: theme.borderLight,
-      marginBottom: 12,
-    },
-    planDetailText: {
       fontSize: 13.5,
       lineHeight: 20,
       color: theme.text,
-      marginTop: 5,
     },
-    planDetailColumns: {
+
+    // Precaution list ("Watch out for")
+    warnCard: {
+      backgroundColor: theme.accentLight,
+      borderWidth: 1,
+      borderColor: theme.accent,
+      borderRadius: 16,
+      paddingHorizontal: 14,
+    },
+    warnRow: {
       flexDirection: 'row',
-      gap: 16,
-      marginTop: 12,
+      alignItems: 'flex-start',
+      gap: 10,
+      paddingVertical: 11,
+      borderTopWidth: 1,
+      borderTopColor: theme.accent,
     },
-    planDetailColumn: {
+
+    // Ideal-for chips
+    chipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 7,
+    },
+    idealChip: {
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      borderRadius: 16,
+      paddingVertical: 7,
+      paddingHorizontal: 13,
+    },
+    idealChipText: {
+      fontSize: 13,
+      color: theme.text,
+    },
+
+    // "Make your own" recipe CTA
+    recipeCta: {
+      marginTop: 20,
+      backgroundColor: theme.primary,
+      borderRadius: 16,
+      padding: 15,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 13,
+    },
+    recipeCtaIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: 14,
+      backgroundColor: theme.heroDivider,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    recipeCtaBody: {
       flex: 1,
       minWidth: 0,
     },
-    planDetailValue: {
-      fontSize: 12.5,
-      color: theme.text,
-      marginTop: 3,
-    },
-    planNote: {
-      marginTop: 12,
-      backgroundColor: theme.background,
-      borderRadius: 11,
-      paddingVertical: 10,
-      paddingHorizontal: 12,
-    },
-    planNoteText: {
-      fontSize: 12.5,
-      lineHeight: 18,
-      color: theme.textSecondary,
-    },
-    planAddButton: {
-      marginTop: 12,
-      alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 7,
-      backgroundColor: theme.primary,
-      borderRadius: 11,
-      paddingVertical: 9,
-      paddingHorizontal: 14,
-    },
-    planAddButtonText: {
-      fontSize: 13,
+    recipeCtaTitle: {
+      fontSize: 15,
       fontWeight: '700',
       color: theme.textInverse,
     },
-
-    // Prevention card
-    preventionCard: {
-      backgroundColor: theme.primaryLight,
-      borderRadius: 16,
-      padding: 14,
-      marginTop: 6,
-    },
-    preventionTitle: {
-      fontSize: 12.5,
-      fontWeight: '700',
-      color: theme.primary,
-    },
-    preventionItem: {
-      fontSize: 12.5,
-      lineHeight: 19,
-      color: theme.primary,
-      marginTop: 6,
+    recipeCtaSubtitle: {
+      fontSize: 12,
+      lineHeight: 17,
+      color: theme.heroTextMuted,
+      marginTop: 2,
     },
 
     // "Not found" fallback header
