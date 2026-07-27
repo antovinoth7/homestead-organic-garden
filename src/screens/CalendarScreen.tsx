@@ -146,6 +146,10 @@ export default function CalendarScreen(): React.JSX.Element {
   const [createTaskPrefillPlantId, setCreateTaskPrefillPlantId] = useState<string | undefined>(
     undefined
   );
+  // Set when a pest/disease action-plan step deep-links here to spray something.
+  const [createTaskPrefillType, setCreateTaskPrefillType] = useState<TaskType | undefined>(
+    undefined
+  );
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskTemplate | null>(null);
   const [taskNotes, setTaskNotes] = useState('');
@@ -423,9 +427,14 @@ export default function CalendarScreen(): React.JSX.Element {
       }
       if (route.params?.openCreateTask) {
         setCreateTaskPrefillPlantId(route.params.prefillPlantId);
+        setCreateTaskPrefillType(route.params.prefillTaskType);
         setShowModal(true);
         // Consume the one-shot params so returning to this tab doesn't re-open the modal.
-        navigation.setParams({ openCreateTask: undefined, prefillPlantId: undefined });
+        navigation.setParams({
+          openCreateTask: undefined,
+          prefillPlantId: undefined,
+          prefillTaskType: undefined,
+        });
       }
       void loadData(); // debounced — skips if loaded recently
     }, [loadData, resetTabBar, route, navigation, scrollToTop])
@@ -1784,13 +1793,16 @@ export default function CalendarScreen(): React.JSX.Element {
           bottomInset={insets.bottom}
           initialStartDate={createTaskInitialDate}
           initialPlantId={createTaskPrefillPlantId}
+          initialTaskType={createTaskPrefillType}
           onClose={() => {
             setShowModal(false);
             setCreateTaskPrefillPlantId(undefined);
+            setCreateTaskPrefillType(undefined);
           }}
           onCreated={() => {
             setShowModal(false);
             setCreateTaskPrefillPlantId(undefined);
+            setCreateTaskPrefillType(undefined);
             loadData({ force: true });
           }}
         />

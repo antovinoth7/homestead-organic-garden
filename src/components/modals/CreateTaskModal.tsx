@@ -34,6 +34,8 @@ interface CreateTaskModalProps {
   initialStartDate?: Date;
   /** Preselect this plant (or its bed) when the modal opens. */
   initialPlantId?: string;
+  /** Preselect the task type when the modal opens. Defaults to `water`. */
+  initialTaskType?: TaskType;
   onClose: () => void;
   onCreated: () => void;
 }
@@ -46,6 +48,7 @@ export default function CreateTaskModal({
   bottomInset,
   initialStartDate,
   initialPlantId,
+  initialTaskType,
   onClose,
   onCreated,
 }: CreateTaskModalProps): React.JSX.Element {
@@ -70,6 +73,12 @@ export default function CreateTaskModal({
       setStartDate(initialStartDate);
     }
   }, [visible, initialStartDate]);
+
+  useEffect(() => {
+    if (visible && initialTaskType) {
+      setTaskType(initialTaskType);
+    }
+  }, [visible, initialTaskType]);
 
   // Preselect the deep-linked plant when the modal opens. Bed-assigned plants
   // are tasked via the Bed dropdown, so prefill the bed for those instead.
