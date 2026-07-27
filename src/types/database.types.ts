@@ -782,4 +782,11 @@ export interface OrganicInputEntry {
   storageTips?: string;
   plantsIdeal: string[];
   imageAsset?: string;
+  /**
+   * Id of the farm-scaled DIY recipe in `ORGANIC_RECIPES` that prepares this
+   * input, when one exists. Typed as `string` rather than `RecipeId` to keep
+   * `src/config` from being imported by the type module — narrow it at the use
+   * site with `getRecipeById`.
+   */
+  recipeId?: string;
 }

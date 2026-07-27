@@ -1,16 +1,26 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { View, Text, Animated, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '@/theme';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
-import { getOrganicInputById, getCategoryLabel } from '@/config/organicInputs';
-import { createStyles } from '@/styles/referenceDetailStyles';
+import { OrganicInputHero } from '@/components/organicInput/OrganicInputHero';
+import { InputStatStrip } from '@/components/organicInput/InputStatStrip';
+import {
+  getOrganicInputById,
+  getCategoryLabel,
+  getRecipeById,
+  formatIdealFor,
+} from '@/config/organicInputs';
+import { createStyles } from '@/styles/organicInputDetailStyles';
 import type {
   OrganicInputDetailScreenNavigationProp,
   OrganicInputDetailScreenRouteProp,
 } from '@/types/navigation.types';
+
+const HERO_HEIGHT = 250;
+const STICKY_THRESHOLD = HERO_HEIGHT - 80;
 
 export default function OrganicInputDetailScreen(): React.JSX.Element {
   const navigation = useNavigation<OrganicInputDetailScreenNavigationProp>();
@@ -21,6 +31,23 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const input = useMemo(() => getOrganicInputById(route.params.inputId), [route.params.inputId]);
+  const recipe = useMemo(() => getRecipeById(input?.recipeId), [input?.recipeId]);
+
+  const handleOpenRecipe = useCallback(() => {
+    if (!recipe) return;
+    navigation.navigate('InputRecipes', { initialTab: recipe.id });
+  }, [navigation, recipe]);
+
+  const stickyBgOpacity = scrollY.interpolate({
+    inputRange: [STICKY_THRESHOLD, STICKY_THRESHOLD + 40],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const stickyTitleOpacity = scrollY.interpolate({
+    inputRange: [STICKY_THRESHOLD + 10, STICKY_THRESHOLD + 40],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
   if (!input) {
     return (
@@ -35,19 +62,12 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
     );
   }
 
-  const heroHeight = 160;
-  const stickyThreshold = heroHeight - 60;
-
-  const stickyBgOpacity = scrollY.interpolate({
-    inputRange: [stickyThreshold, stickyThreshold + 40],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-  const stickyTitleOpacity = scrollY.interpolate({
-    inputRange: [stickyThreshold + 10, stickyThreshold + 40],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
+  // Ingredients are stored lowercase ("cattle dung", "straw"); sentence-case
+  // the joined list so the card reads as prose.
+  const madeFromList = input.ingredients?.join(', ');
+  const madeFrom = madeFromList
+    ? madeFromList.charAt(0).toUpperCase() + madeFromList.slice(1)
+    : undefined;
 
   return (
     <View style={styles.container}>
@@ -66,8 +86,10 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
           style={styles.stickyBackButton}
           onPress={navigation.goBack}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
+          <Ionicons name="chevron-back" size={20} color={theme.textInverse} />
         </TouchableOpacity>
         <Animated.Text style={[styles.stickyHeaderEmoji, { opacity: stickyTitleOpacity }]}>
           {input.emoji}
@@ -90,138 +112,108 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
           { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 8) + 16 },
         ]}
       >
-        {/* Hero */}
-        <View style={styles.heroContainer}>
-          <View style={styles.emojiFallback}>
-            <Text style={styles.emojiFallbackText}>{input.emoji}</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.backButtonFloat, { top: insets.top + 10 }]}
-            onPress={navigation.goBack}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
-          </TouchableOpacity>
-        </View>
+        <OrganicInputHero
+          name={input.name}
+          tamilName={input.tamilName}
+          categoryLabel={getCategoryLabel(input.category)}
+          emoji={input.emoji}
+          topInset={insets.top}
+          onBack={navigation.goBack}
+        />
 
-        {/* Info block */}
-        <View style={styles.infoBlock}>
-          <Text style={styles.infoTitle} numberOfLines={2}>
-            {input.name}
-          </Text>
-          <Text style={styles.infoSubtitle}>
-            {getCategoryLabel(input.category)}
-            {input.tamilName ? ` · ${input.tamilName}` : ''}
-          </Text>
-          <View style={styles.metaStrip}>
-            <View style={styles.metaChip}>
-              <Text style={styles.metaChipText}>
-                {input.emoji} {getCategoryLabel(input.category)}
-              </Text>
+        <InputStatStrip
+          rate={input.applicationRate}
+          timing={input.applicationTiming}
+          idealForCount={input.plantsIdeal.length}
+        />
+
+        <View style={styles.panel}>
+          <Text style={styles.lead}>{input.description}</Text>
+
+          {madeFrom || input.storageTips ? (
+            <View style={styles.pairRow}>
+              {madeFrom ? (
+                <View style={styles.pairCard}>
+                  <Text style={styles.microLabel}>MADE FROM</Text>
+                  <Text style={styles.pairText}>{madeFrom}</Text>
+                </View>
+              ) : null}
+              {input.storageTips ? (
+                <View style={styles.pairCard}>
+                  <Text style={styles.microLabel}>STORAGE</Text>
+                  <Text style={styles.pairText}>{input.storageTips}</Text>
+                </View>
+              ) : null}
             </View>
-            {input.plantsIdeal.length > 0 && (
-              <View style={styles.metaChip}>
-                <Text style={styles.metaChipText}>🌱 {input.plantsIdeal.length} plants</Text>
-              </View>
-            )}
-          </View>
-        </View>
+          ) : null}
 
-        {/* Description */}
-        <View style={styles.firstSection}>
-          <Text style={styles.sectionTitle}>📝 Overview</Text>
-          <View style={styles.seasonCard}>
-            <Text style={styles.bodyText}>{input.description}</Text>
-          </View>
-        </View>
-
-        {/* Application Rate */}
-        {input.applicationRate && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📊 Application Rate</Text>
-            <View style={styles.seasonCard}>
-              <Text style={styles.bodyText}>{input.applicationRate}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Application Timing */}
-        {input.applicationTiming && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>⏱️ Application Timing</Text>
-            <View style={styles.seasonCard}>
-              <Text style={styles.bodyText}>{input.applicationTiming}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Ingredients */}
-        {input.ingredients && input.ingredients.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🔧 Ingredients</Text>
-            <View style={styles.seasonCard}>
-              {input.ingredients.map((item, i) => (
-                <Text key={i} style={styles.bulletItem}>
-                  • {item}
-                </Text>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Benefits */}
-        {input.benefits && input.benefits.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>✅ Benefits</Text>
-            <View style={styles.seasonCard}>
-              {input.benefits.map((item, i) => (
-                <Text key={i} style={styles.bulletItem}>
-                  • {item}
-                </Text>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Precautions */}
-        {input.precautions && input.precautions.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>⚠️ Precautions</Text>
-            <View style={styles.seasonCard}>
-              {input.precautions.map((item, i) => (
-                <Text key={i} style={styles.bulletItem}>
-                  • {item}
-                </Text>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Storage Tips */}
-        {input.storageTips && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📦 Storage</Text>
-            <View style={styles.seasonCard}>
-              <Text style={styles.bodyText}>{input.storageTips}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Ideal Plants */}
-        {input.plantsIdeal.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🌱 Ideal For</Text>
-            <View style={styles.seasonCard}>
-              <View style={styles.plantTagsContainer}>
-                {input.plantsIdeal.map((plant) => (
-                  <View key={plant} style={styles.plantTag}>
-                    <Text style={styles.plantTagText}>{plant}</Text>
+          {input.benefits && input.benefits.length > 0 ? (
+            <>
+              <Text style={styles.sectionTitle}>What it does</Text>
+              <View style={styles.listCard}>
+                {input.benefits.map((benefit, index) => (
+                  <View
+                    key={benefit}
+                    style={[styles.listRow, index === 0 && styles.listRowFirst]}
+                  >
+                    <Ionicons name="checkmark" size={14} color={theme.primary} />
+                    <Text style={styles.listText}>{benefit}</Text>
                   </View>
                 ))}
               </View>
-            </View>
-          </View>
-        )}
+            </>
+          ) : null}
+
+          {input.precautions && input.precautions.length > 0 ? (
+            <>
+              <Text style={styles.sectionTitle}>Watch out for</Text>
+              <View style={styles.warnCard}>
+                {input.precautions.map((precaution, index) => (
+                  <View
+                    key={precaution}
+                    style={[styles.warnRow, index === 0 && styles.listRowFirst]}
+                  >
+                    <Ionicons name="alert-circle-outline" size={14} color={theme.accent} />
+                    <Text style={styles.listText}>{precaution}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : null}
+
+          {input.plantsIdeal.length > 0 ? (
+            <>
+              <Text style={styles.sectionTitle}>Ideal for</Text>
+              <View style={styles.chipRow}>
+                {input.plantsIdeal.map((plant) => (
+                  <View key={plant} style={styles.idealChip}>
+                    <Text style={styles.idealChipText}>{formatIdealFor(plant)}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : null}
+
+          {recipe ? (
+            <TouchableOpacity
+              style={styles.recipeCta}
+              onPress={handleOpenRecipe}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+            >
+              <View style={styles.recipeCtaIcon}>
+                <Ionicons name="flask" size={21} color={theme.textInverse} />
+              </View>
+              <View style={styles.recipeCtaBody}>
+                <Text style={styles.recipeCtaTitle}>Make your own</Text>
+                <Text style={styles.recipeCtaSubtitle} numberOfLines={2}>
+                  Ingredients and steps, scaled to your farm size
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.textInverse} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </Animated.ScrollView>
     </View>
   );
