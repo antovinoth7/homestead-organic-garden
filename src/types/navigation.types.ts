@@ -5,7 +5,14 @@ import {
 } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { JournalEntry, JournalEntryType, BedType, BedLayer, SunlightLevel } from './database.types';
+import {
+  JournalEntry,
+  JournalEntryType,
+  BedType,
+  BedLayer,
+  SunlightLevel,
+  TaskType,
+} from './database.types';
 
 // ─── Stack param lists ────────────────────────────────────────────────────────
 
@@ -44,7 +51,13 @@ export type RootTabParamList = {
   Plants: NavigatorScreenParams<PlantsStackParamList>;
   Beds: NavigatorScreenParams<BedsStackParamList>;
   'Care Plan':
-    | { resetFilters?: boolean; filterOverdue?: boolean; openCreateTask?: boolean; prefillPlantId?: string }
+    | {
+        resetFilters?: boolean;
+        filterOverdue?: boolean;
+        openCreateTask?: boolean;
+        prefillPlantId?: string;
+        prefillTaskType?: TaskType;
+      }
     | undefined;
   Journal: NavigatorScreenParams<JournalStackParamList> | undefined;
   More: NavigatorScreenParams<MoreStackParamList>;
@@ -171,10 +184,11 @@ export type PestListScreenNavigationProp = NativeStackNavigationProp<
   'PestList'
 >;
 
-// PestDetailScreen — receives pestId param
-export type PestDetailScreenNavigationProp = NativeStackNavigationProp<
-  MoreStackParamList,
-  'PestDetail'
+// PestDetailScreen — receives pestId param; also hops to the Care Plan tab to
+// open the create-task form from an action-plan step (composite)
+export type PestDetailScreenNavigationProp = CompositeNavigationProp<
+  NativeStackNavigationProp<MoreStackParamList, 'PestDetail'>,
+  BottomTabNavigationProp<RootTabParamList>
 >;
 export type PestDetailScreenRouteProp = RouteProp<MoreStackParamList, 'PestDetail'>;
 
@@ -184,10 +198,11 @@ export type DiseaseListScreenNavigationProp = NativeStackNavigationProp<
   'DiseaseList'
 >;
 
-// DiseaseDetailScreen — receives diseaseId param
-export type DiseaseDetailScreenNavigationProp = NativeStackNavigationProp<
-  MoreStackParamList,
-  'DiseaseDetail'
+// DiseaseDetailScreen — receives diseaseId param; also hops to the Care Plan
+// tab to open the create-task form from an action-plan step (composite)
+export type DiseaseDetailScreenNavigationProp = CompositeNavigationProp<
+  NativeStackNavigationProp<MoreStackParamList, 'DiseaseDetail'>,
+  BottomTabNavigationProp<RootTabParamList>
 >;
 export type DiseaseDetailScreenRouteProp = RouteProp<MoreStackParamList, 'DiseaseDetail'>;
 

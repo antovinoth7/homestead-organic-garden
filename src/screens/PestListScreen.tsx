@@ -1,146 +1,46 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TextInput, SectionList, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useCallback, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme } from '@/theme';
-import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
-import FieldHelp from '@/components/FieldHelp';
-import { ReferenceThumb } from '@/components/ReferenceThumb';
+import { ReferenceListView } from '@/components/reference/ReferenceListView';
+import type { ReferenceEntry, ReferenceGroup } from '@/components/reference/types';
 import { getGroupedPestEntries, CATEGORY_DESCRIPTIONS } from '@/config/pests';
 import { getPestImage } from '@/config/referenceAssets';
-import { createStyles } from '@/styles/referenceListStyles';
 import type { PestListScreenNavigationProp } from '@/types/navigation.types';
-import type { PestEntry, PestCategory } from '@/types/database.types';
-
-interface SectionData {
-  title: string;
-  category: PestCategory;
-  data: PestEntry[];
-}
 
 export default function PestListScreen(): React.JSX.Element {
   const navigation = useNavigation<PestListScreenNavigationProp>();
-  const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
-  const insets = useSafeAreaInsets();
-  const [search, setSearch] = useState('');
 
-  const sections: SectionData[] = useMemo(() => {
-    const groups = getGroupedPestEntries();
-    const query = search.trim().toLowerCase();
+  const groups: ReferenceGroup[] = useMemo(
+    () =>
+      getGroupedPestEntries().map((group) => ({
+        category: group.category,
+        label: group.label,
+        entries: group.pests,
+      })),
+    []
+  );
 
-    return groups
-      .map((g) => ({
-        title: g.label,
-        category: g.category,
-        data: query
-          ? g.pests.filter(
-              (p) =>
-                p.name.toLowerCase().includes(query) ||
-                (p.tamilName && p.tamilName.includes(query)) ||
-                p.plantsAffected.some((pl) => pl.toLowerCase().includes(query))
-            )
-          : g.pests,
-      }))
-      .filter((s) => s.data.length > 0);
-  }, [search]);
-
-  const handlePress = useCallback(
+  const handleSelect = useCallback(
     (pestId: string) => {
       navigation.navigate('PestDetail', { pestId });
     },
     [navigation]
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: PestEntry }) => (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => handlePress(item.id)}
-        activeOpacity={0.7}
-      >
-        <ReferenceThumb
-          source={getPestImage(item.id, item.imageAsset)}
-          emoji={item.emoji}
-          variant="row"
-          recyclingKey={item.id}
-        />
-        <View style={styles.cardContent}>
-          <Text style={styles.cardName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          {item.tamilName ? (
-            <Text style={styles.cardCategory} numberOfLines={1}>
-              {item.tamilName}
-            </Text>
-          ) : null}
-        </View>
-        <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-      </TouchableOpacity>
-    ),
-    [styles, theme, handlePress]
+  const getImage = useCallback(
+    (entry: ReferenceEntry) => getPestImage(entry.id, entry.imageAsset),
+    []
   );
-
-  const renderSectionHeader = useCallback(
-    ({ section }: { section: SectionData }) => (
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionHeader}>{section.title}</Text>
-        <FieldHelp
-          title={section.title}
-          description={CATEGORY_DESCRIPTIONS[section.category]}
-          compact
-        />
-      </View>
-    ),
-    [styles]
-  );
-
-  const keyExtractor = useCallback((item: PestEntry) => item.id, []);
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={navigation.goBack}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Pests</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search pests…"
-          placeholderTextColor={theme.inputPlaceholder}
-          value={search}
-          onChangeText={setSearch}
-          autoCorrect={false}
-          returnKeyType="search"
-        />
-      </View>
-
-      <SectionList
-        sections={sections}
-        renderItem={renderItem}
-        renderSectionHeader={renderSectionHeader}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 8) + 16 },
-        ]}
-        stickySectionHeadersEnabled={false}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="search-outline" size={40} color={theme.textSecondary} />
-            <Text style={styles.emptyText}>No pests match your search</Text>
-          </View>
-        }
-      />
-    </View>
+    <ReferenceListView
+      title="Pests"
+      searchPlaceholder="What are you seeing?"
+      itemNoun="pest"
+      groups={groups}
+      categoryDescriptions={CATEGORY_DESCRIPTIONS}
+      getImage={getImage}
+      onSelect={handleSelect}
+      onBack={navigation.goBack}
+    />
   );
 }

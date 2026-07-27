@@ -7,6 +7,7 @@ import {
   getGroupedPestEntries,
   getCategoryLabel,
 } from '../../config/pests';
+import { DEFAULT_ZONE } from '../../config/zones';
 import type { PestCategory } from '../../types/database.types';
 
 describe('pest registry', () => {
@@ -125,6 +126,20 @@ describe('pest registry', () => {
         for (const t of pest.organicTreatments) {
           expect(validMethods.has(t.method)).toBe(true);
           expect(validEfforts.has(t.effort)).toBe(true);
+        }
+      }
+    });
+  });
+
+  describe('seasonal risk validation', () => {
+    it('every seasonalRisk key is a season id of the default zone', () => {
+      const validSeasons = new Set(DEFAULT_ZONE.seasons.map((s) => s.id));
+      const validLevels = new Set(['low', 'moderate', 'high']);
+
+      for (const pest of getAllPests()) {
+        for (const [season, level] of Object.entries(pest.seasonalRisk ?? {})) {
+          expect(validSeasons.has(season)).toBe(true);
+          expect(validLevels.has(level ?? "")).toBe(true);
         }
       }
     });
