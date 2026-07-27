@@ -213,6 +213,7 @@ export default function InputRecipesScreen(): React.JSX.Element {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.tabScroll}
         contentContainerStyle={styles.tabRow}
         keyboardShouldPersistTaps="handled"
       >

@@ -74,7 +74,7 @@ export const NeedsAttentionScroll = React.memo(function NeedsAttentionScroll({
 
   return (
     <View style={styles.section}>
-      <SectionHeader title={`⚠️ Falling behind · ${visible.length}`} />
+      <SectionHeader title={`⚠️ Needs Attention · ${visible.length}`} />
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -95,21 +95,27 @@ interface CardProps {
   onComplete?: (alert: FarmAlert) => void;
 }
 
-function AttentionCard({ alert, styles, theme, onPress, onComplete }: CardProps): React.JSX.Element {
+function AttentionCard({
+  alert,
+  styles,
+  theme,
+  onPress,
+  onComplete,
+}: CardProps): React.JSX.Element {
   const handlePress = useCallback(() => onPress(alert), [onPress, alert]);
   const handleComplete = useCallback(() => onComplete?.(alert), [onComplete, alert]);
   const cardStyle =
     alert.severity === 'critical'
       ? styles.cardCritical
       : alert.severity === 'warning'
-      ? styles.cardWarning
-      : styles.cardInfo;
+        ? styles.cardWarning
+        : styles.cardInfo;
   const bubbleStyle =
     alert.severity === 'critical'
       ? styles.iconBubbleCritical
       : alert.severity === 'warning'
-      ? styles.iconBubbleWarning
-      : styles.iconBubbleInfo;
+        ? styles.iconBubbleWarning
+        : styles.iconBubbleInfo;
 
   // A task-backed card completes the task itself; the template-less harvest
   // card falls back to stamping the plant's care date.
@@ -131,9 +137,7 @@ function AttentionCard({ alert, styles, theme, onPress, onComplete }: CardProps)
           style={styles.actionChip}
           onPress={handleComplete}
           hitSlop={8}
-          accessibilityLabel={`Mark ${alert.title} ${
-            COMPLETE_VERB[alert.type] ?? 'done'
-          } today`}
+          accessibilityLabel={`Mark ${alert.title} ${COMPLETE_VERB[alert.type] ?? 'done'} today`}
         >
           <Ionicons name="checkmark" size={14} color={theme.success} />
         </TouchableOpacity>

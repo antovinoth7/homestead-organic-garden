@@ -66,11 +66,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.inputText,
     },
 
-    // Chip row
+    // Chip row — the ScrollView must not grow into the list's vertical space
+    chipScroll: {
+      flexGrow: 0,
+      flexShrink: 0,
+    },
     chipRow: {
       paddingHorizontal: 18,
       paddingTop: 14,
       gap: 7,
+      alignItems: 'center',
     },
     chip: {
       paddingHorizontal: 12,

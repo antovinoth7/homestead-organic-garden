@@ -53,10 +53,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
 
     // Recipe tabs — chip row on a light surface, mirroring ReferenceFilterChips
+    tabScroll: {
+      flexGrow: 0,
+      flexShrink: 0,
+    },
     tabRow: {
       paddingHorizontal: 18,
       paddingTop: 13,
+      paddingBottom: 13,
       gap: 7,
+      alignItems: 'center',
     },
     tab: {
       paddingHorizontal: 13,

@@ -6,6 +6,7 @@ import { createStyles } from '@/styles/pestDiseaseListStyles';
 export interface ReferenceChip {
   key: string;
   label: string;
+  /** Matches behind this chip — used by callers to drop dead filters, not shown. */
   count: number;
 }
 
@@ -28,6 +29,7 @@ export function ReferenceFilterChips({ chips, activeKey, onChange }: Props): Rea
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.chipScroll}
       contentContainerStyle={styles.chipRow}
       keyboardShouldPersistTaps="handled"
     >
@@ -43,7 +45,7 @@ export function ReferenceFilterChips({ chips, activeKey, onChange }: Props): Rea
             accessibilityState={{ selected: isActive }}
           >
             <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-              {chip.label} {chip.count}
+              {chip.label}
             </Text>
           </TouchableOpacity>
         );
