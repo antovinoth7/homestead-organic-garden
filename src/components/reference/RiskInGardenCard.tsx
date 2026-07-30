@@ -46,11 +46,15 @@ export function RiskInGardenCard({ seasonalRisk, plantsAffected }: Props): React
         {bars.map((bar) => {
           const colors = bar.level ? getRiskColor(bar.level, theme) : undefined;
           return (
-            <View key={bar.seasonId} style={styles.riskBarColumn}>
+            <View key={bar.seasonId} style={[styles.riskBarColumn, { flex: bar.monthCount }]}>
               <View
                 style={[styles.riskBarTrack, colors ? { backgroundColor: colors.text } : null]}
               />
-              <Text style={[styles.riskBarLabel, bar.isCurrent && styles.riskBarLabelCurrent]}>
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={[styles.riskBarLabel, bar.isCurrent && styles.riskBarLabelCurrent]}
+              >
                 {bar.monthLabel}
               </Text>
             </View>

@@ -539,7 +539,7 @@ export default function JournalScreen(): React.JSX.Element {
       {gallery && (
         <ImageZoomModal
           visible
-          uris={gallery.uris}
+          sources={gallery.uris}
           initialIndex={gallery.index}
           onClose={() => setGallery(null)}
         />

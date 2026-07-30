@@ -58,6 +58,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     heroImage: {
       ...StyleSheet.absoluteFillObject,
     },
+    heroImageInner: {
+      width: '100%',
+      height: '100%',
+    },
     heroWatermark: {
       ...StyleSheet.absoluteFillObject,
       alignItems: 'center',
@@ -148,7 +152,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 11,
     },
     riskBarColumn: {
-      flex: 1,
+      // flex weight is set per-bar from the season's month count
+      minWidth: 0,
     },
     riskBarTrack: {
       height: 6,
@@ -156,7 +161,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.borderLight,
     },
     riskBarLabel: {
-      fontSize: 9.5,
+      fontSize: 9,
       color: theme.inputPlaceholder,
       marginTop: 5,
     },

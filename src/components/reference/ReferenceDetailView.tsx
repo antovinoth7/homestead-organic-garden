@@ -7,6 +7,7 @@ import { useTheme } from '@/theme';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 import { createStyles } from '@/styles/pestDiseaseDetailStyles';
 import { getCurrentRisk } from '@/utils/riskHelpers';
+import { ImageZoomModal } from '@/components/ImageZoomModal';
 import { ReferenceHero } from './ReferenceHero';
 import { RiskInGardenCard } from './RiskInGardenCard';
 import { ActionPlanCard } from './ActionPlanCard';
@@ -40,6 +41,11 @@ export function ReferenceDetailView({
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const [expandedStep, setExpandedStep] = useState<number | null>(0);
+  const [previewVisible, setPreviewVisible] = useState(false);
+
+  const previewSources = useMemo(() => (image ? [image] : []), [image]);
+  const handleOpenPreview = useCallback(() => setPreviewVisible(true), []);
+  const handleClosePreview = useCallback(() => setPreviewVisible(false), []);
 
   const risk = getCurrentRisk(entry.seasonalRisk);
 
@@ -110,6 +116,7 @@ export function ReferenceDetailView({
           risk={risk}
           topInset={insets.top}
           onBack={onBack}
+          onPressImage={image ? handleOpenPreview : undefined}
         />
 
         <RiskInGardenCard
@@ -161,6 +168,14 @@ export function ReferenceDetailView({
           ) : null}
         </View>
       </Animated.ScrollView>
+
+      {image ? (
+        <ImageZoomModal
+          visible={previewVisible}
+          sources={previewSources}
+          onClose={handleClosePreview}
+        />
+      ) : null}
     </View>
   );
 }

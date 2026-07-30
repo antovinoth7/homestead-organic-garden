@@ -6,13 +6,14 @@ import {
   PanGestureHandler,
   TapGestureHandler,
 } from 'react-native-gesture-handler';
-import { Image } from 'expo-image';
+import { Image, type ImageSource } from 'expo-image';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/imageZoomModalStyles';
 import { usePinchZoom } from '@/hooks/usePinchZoom';
 
 interface Props {
-  uri: string;
+  /** A photo URI, or a bundled reference asset from `require()`. */
+  source: string | ImageSource;
   /** True when this is the page the pager is currently showing. Resets zoom on change. */
   active: boolean;
   onZoomChange: (zoomed: boolean) => void;
@@ -23,10 +24,14 @@ interface Props {
  * Split out of the modal because each page needs its own `usePinchZoom` instance
  * and hooks cannot be called in a loop.
  */
-export function ZoomableImagePage({ uri, active, onZoomChange }: Props): React.JSX.Element {
+export function ZoomableImagePage({ source, active, onZoomChange }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const zoom = usePinchZoom(active);
+  const imageSource = useMemo(
+    () => (typeof source === 'string' ? { uri: source } : source),
+    [source]
+  );
 
   useEffect(() => {
     if (active) onZoomChange(zoom.isZoomed);
@@ -66,7 +71,7 @@ export function ZoomableImagePage({ uri, active, onZoomChange }: Props): React.J
                 ]}
               >
                 <Image
-                  source={{ uri }}
+                  source={imageSource}
                   style={styles.image as ImageStyle}
                   contentFit="contain"
                   cachePolicy="memory-disk"

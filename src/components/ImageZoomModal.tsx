@@ -3,6 +3,7 @@ import type { ListRenderItemInfo, NativeScrollEvent, NativeSyntheticEvent } from
 import { View, Text, Modal, StatusBar, TouchableOpacity } from 'react-native';
 import { FlatList, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
+import type { ImageSource } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { createStyles, PAGE_WIDTH } from '@/styles/imageZoomModalStyles';
@@ -10,8 +11,11 @@ import { ZoomableImagePage } from '@/components/ZoomableImagePage';
 
 interface Props {
   visible: boolean;
-  /** Photos to page through. Single-photo callers pass a one-element array. */
-  uris: string[];
+  /**
+   * Photos to page through — file URIs or bundled `require()` assets.
+   * Single-photo callers pass a one-element array.
+   */
+  sources: (string | ImageSource)[];
   /** Photo to open on. Defaults to the first. */
   initialIndex?: number;
   onClose: () => void;
@@ -20,7 +24,7 @@ interface Props {
 /** Fullscreen swipeable photo viewer with pinch/pan/double-tap zoom per page. */
 export function ImageZoomModal({
   visible,
-  uris,
+  sources,
   initialIndex = 0,
   onClose,
 }: Props): React.JSX.Element {
@@ -28,7 +32,7 @@ export function ImageZoomModal({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
-  const startIndex = Math.min(Math.max(initialIndex, 0), Math.max(uris.length - 1, 0));
+  const startIndex = Math.min(Math.max(initialIndex, 0), Math.max(sources.length - 1, 0));
   const [currentIndex, setCurrentIndex] = useState(startIndex);
   // The active page reports its zoom state up so the pager can yield the drag.
   const [zoomed, setZoomed] = useState(false);
@@ -49,16 +53,20 @@ export function ImageZoomModal({
   );
 
   const renderItem = useCallback(
-    ({ item, index }: ListRenderItemInfo<string>): React.JSX.Element => (
-      <ZoomableImagePage uri={item} active={index === currentIndex} onZoomChange={setZoomed} />
+    ({ item, index }: ListRenderItemInfo<string | ImageSource>): React.JSX.Element => (
+      <ZoomableImagePage source={item} active={index === currentIndex} onZoomChange={setZoomed} />
     ),
     [currentIndex]
   );
 
-  const keyExtractor = useCallback((item: string, index: number): string => `${index}-${item}`, []);
+  const keyExtractor = useCallback(
+    (item: string | ImageSource, index: number): string =>
+      typeof item === 'string' ? `${index}-${item}` : `${index}-asset`,
+    []
+  );
 
   const getItemLayout = useCallback(
-    (_: ArrayLike<string> | null | undefined, index: number) => ({
+    (_: ArrayLike<string | ImageSource> | null | undefined, index: number) => ({
       length: PAGE_WIDTH,
       offset: PAGE_WIDTH * index,
       index,
@@ -86,14 +94,14 @@ export function ImageZoomModal({
             <Ionicons name="close" size={28} color={theme.textInverse} />
           </TouchableOpacity>
 
-          {uris.length > 1 && (
+          {sources.length > 1 && (
             <View style={[styles.counter, { top: insets.top + 24 }]}>
-              <Text style={styles.counterText}>{`${currentIndex + 1} / ${uris.length}`}</Text>
+              <Text style={styles.counterText}>{`${currentIndex + 1} / ${sources.length}`}</Text>
             </View>
           )}
 
           <FlatList
-            data={uris}
+            data={sources}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
             getItemLayout={getItemLayout}

@@ -71,11 +71,26 @@ export function getSeasonNameById(seasonId: string, zone?: AgroClimaticZone): st
 
 export interface SeasonRiskBar {
   seasonId: string;
-  /** Start-month abbreviation used as the bar's axis label (MAR, JUN, …). */
+  /** Month-range abbreviation used as the bar's axis label (MAR–MAY, JUN–SEP, …). */
   monthLabel: string;
+  /** Season length in months — the bar's flex weight, so the strip reads as a calendar. */
+  monthCount: number;
   name: string;
   level?: RiskLevel;
   isCurrent: boolean;
+}
+
+/** Season length in months, handling seasons that wrap past December. */
+function getMonthCount(startMonth: number, endMonth: number): number {
+  return endMonth >= startMonth ? endMonth - startMonth + 1 : 12 - startMonth + endMonth + 1;
+}
+
+/** "JUN–SEP" for a range, "JUN" for a single-month season. */
+function getMonthRangeLabel(startMonth: number, endMonth: number, fallback: string): string {
+  const start = MONTH_ABBREVIATIONS[startMonth - 1];
+  const end = MONTH_ABBREVIATIONS[endMonth - 1];
+  if (!start || !end) return fallback;
+  return start === end ? start : `${start}–${end}`;
 }
 
 /**
@@ -93,7 +108,12 @@ export function getSeasonRiskBars(
 
   return z.seasons.map((season) => ({
     seasonId: season.id,
-    monthLabel: MONTH_ABBREVIATIONS[season.startMonth - 1] ?? season.name.toUpperCase(),
+    monthLabel: getMonthRangeLabel(
+      season.startMonth,
+      season.endMonth,
+      season.name.toUpperCase()
+    ),
+    monthCount: getMonthCount(season.startMonth, season.endMonth),
     name: season.name,
     level: seasonalRisk?.[season.id],
     isCurrent: season.id === current,

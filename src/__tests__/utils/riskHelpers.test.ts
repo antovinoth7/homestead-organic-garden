@@ -8,6 +8,8 @@ import {
   getSeasonRiskBars,
 } from '../../utils/riskHelpers';
 import { lightTheme } from '../../theme/colors';
+import { HIGH_RAINFALL_ZONE } from '../../config/zones/highRainfall';
+import type { AgroClimaticZone } from '../../config/zones/types';
 import type { SeasonalRisk } from '../../utils/riskHelpers';
 
 // Default zone (Kanyakumari / high rainfall) seasons:
@@ -15,6 +17,15 @@ import type { SeasonalRisk } from '../../utils/riskHelpers';
 const APRIL = new Date(2026, 3, 15); // summer
 const JULY = new Date(2026, 6, 15); // sw_monsoon
 const JANUARY = new Date(2026, 0, 15); // cool_dry
+
+/** Two-season zone where the second season wraps past December. */
+const WRAPPING_ZONE: AgroClimaticZone = {
+  ...HIGH_RAINFALL_ZONE,
+  seasons: [
+    { id: 'wet', name: 'Wet', label: 'Wet (Mar–Oct)', startMonth: 3, endMonth: 10 },
+    { id: 'dry', name: 'Dry', label: 'Dry (Nov–Feb)', startMonth: 11, endMonth: 2 },
+  ],
+};
 
 const SAMPLE: SeasonalRisk = {
   summer: 'high',
@@ -66,7 +77,24 @@ describe('getSeasonRiskBars', () => {
       'ne_monsoon',
       'cool_dry',
     ]);
-    expect(bars.map((b) => b.monthLabel)).toEqual(['MAR', 'JUN', 'OCT', 'JAN']);
+    expect(bars.map((b) => b.monthLabel)).toEqual([
+      'MAR–MAY',
+      'JUN–SEP',
+      'OCT–DEC',
+      'JAN–FEB',
+    ]);
+  });
+
+  it('reports each season length so bars can be sized proportionally', () => {
+    const bars = getSeasonRiskBars(SAMPLE, APRIL);
+    expect(bars.map((b) => b.monthCount)).toEqual([3, 4, 3, 2]);
+    expect(bars.reduce((sum, b) => sum + b.monthCount, 0)).toBe(12);
+  });
+
+  it('handles a season that wraps past December', () => {
+    const bars = getSeasonRiskBars(undefined, APRIL, WRAPPING_ZONE);
+    expect(bars.map((b) => b.monthLabel)).toEqual(['MAR–OCT', 'NOV–FEB']);
+    expect(bars.map((b) => b.monthCount)).toEqual([8, 4]);
   });
 
   it('leaves the level undefined for seasons with no recorded risk', () => {

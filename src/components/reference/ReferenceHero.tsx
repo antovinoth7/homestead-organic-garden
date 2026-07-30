@@ -18,6 +18,8 @@ interface Props {
   risk?: RiskLevel;
   topInset: number;
   onBack: () => void;
+  /** Opens the fullscreen preview. Omit to leave the image non-interactive. */
+  onPressImage?: () => void;
 }
 
 /**
@@ -33,6 +35,7 @@ export function ReferenceHero({
   risk,
   topInset,
   onBack,
+  onPressImage,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -47,12 +50,21 @@ export function ReferenceHero({
   return (
     <View style={styles.hero} onLayout={handleLayout}>
       {image ? (
-        <Image
-          source={image}
-          style={styles.heroImage as ImageStyle}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-        />
+        <TouchableOpacity
+          style={styles.heroImage}
+          activeOpacity={onPressImage ? 0.9 : 1}
+          onPress={onPressImage}
+          disabled={!onPressImage}
+          accessibilityRole="imagebutton"
+          accessibilityLabel={`View ${name} photo full screen`}
+        >
+          <Image
+            source={image}
+            style={styles.heroImageInner as ImageStyle}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        </TouchableOpacity>
       ) : (
         <View style={styles.heroWatermark}>
           <Text style={styles.heroWatermarkText}>{emoji}</Text>

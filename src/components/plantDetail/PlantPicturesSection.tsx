@@ -99,7 +99,7 @@ export function PlantPicturesSection({ plant, journalEntries }: Props): React.JS
       {selectedIndex !== null && (
         <ImageZoomModal
           visible
-          uris={uris}
+          sources={uris}
           initialIndex={selectedIndex}
           onClose={() => setSelectedIndex(null)}
         />
