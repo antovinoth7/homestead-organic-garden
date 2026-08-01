@@ -5,7 +5,7 @@
  */
 
 import { flushOfflineQueue } from '@/services/offlineSync';
-import { enqueueMutations, getQueue } from '@/lib/offlineQueue';
+import { enqueueMutations, getQueue, setQueueOwner } from '@/lib/offlineQueue';
 import { invalidateAll } from '@/lib/dataCache';
 import type { OfflineMutation, OfflineMutationInput } from '@/types/offline.types';
 
@@ -17,6 +17,7 @@ jest.mock('@/lib/storage', () => ({
   getData: jest.fn(async (key: string) => mockMemoryStore.get(key) ?? []),
   setData: jest.fn(async (key: string, value: unknown[]) => {
     mockMemoryStore.set(key, value);
+    return true;
   }),
 }));
 
@@ -59,6 +60,7 @@ const firestoreError = (code: string): Error => {
 beforeEach(() => {
   mockMemoryStore.clear();
   jest.clearAllMocks();
+  setQueueOwner('test-user'); // matches the mocked auth.currentUser
 });
 
 describe('flushOfflineQueue', () => {
@@ -71,7 +73,7 @@ describe('flushOfflineQueue', () => {
     });
 
     expect(replayed).toEqual(['a', 'b', 'c']);
-    expect(result).toEqual({ synced: 3, dropped: 0, remaining: 0 });
+    expect(result).toEqual({ synced: 3, dropped: 0, remaining: 0, skipped: 0 });
     expect(await getQueue()).toHaveLength(0);
     expect(invalidateAll).toHaveBeenCalled();
     expect(mockSafeSetItem).toHaveBeenCalledWith('@garden_last_sync', expect.any(String));
@@ -101,7 +103,7 @@ describe('flushOfflineQueue', () => {
       if (m.docId === 'gone') throw firestoreError('not-found');
     });
 
-    expect(result).toEqual({ synced: 1, dropped: 1, remaining: 0 });
+    expect(result).toEqual({ synced: 1, dropped: 1, remaining: 0, skipped: 0 });
   });
 
   it('pauses on other errors and drops the entry after MAX_RETRIES flushes', async () => {
@@ -146,8 +148,54 @@ describe('flushOfflineQueue', () => {
   it('is a no-op with an empty queue', async () => {
     const executor = jest.fn();
     const result = await flushOfflineQueue(executor);
-    expect(result).toEqual({ synced: 0, dropped: 0, remaining: 0 });
+    expect(result).toEqual({ synced: 0, dropped: 0, remaining: 0, skipped: 0 });
     expect(executor).not.toHaveBeenCalled();
     expect(invalidateAll).not.toHaveBeenCalled();
+  });
+
+  it('keeps an edit that lands while its entry is being replayed', async () => {
+    await enqueueMutations([input({ docId: 'a', payload: { name: 'Tomato' } })]);
+
+    // The executor stands in for a slow Firestore write: the user edits the
+    // same document before it returns, coalescing into the in-flight entry.
+    const result = await flushOfflineQueue(async () => {
+      await enqueueMutations([
+        input({ docId: 'a', op: 'update', payload: { name: 'Roma Tomato' } }),
+      ]);
+    });
+
+    // The original write did reach the server, so it counts as synced — but the
+    // entry must stay queued carrying the newer edit rather than being removed.
+    expect(result.synced).toBe(1);
+    expect(result.remaining).toBe(1);
+    const queue = await getQueue();
+    expect(queue).toHaveLength(1);
+    expect(queue[0]!.payload).toEqual({ name: 'Roma Tomato' });
+  });
+
+  it('skips (does not drop) mutations queued by a different account', async () => {
+    setQueueOwner('other-user');
+    await enqueueMutations([input({ docId: 'theirs' })]);
+    setQueueOwner('test-user');
+    await enqueueMutations([input({ docId: 'mine' })]);
+
+    const replayed: string[] = [];
+    const result = await flushOfflineQueue(async (m: OfflineMutation) => {
+      replayed.push(m.docId);
+    });
+
+    expect(replayed).toEqual(['mine']);
+    expect(result.skipped).toBe(1);
+    expect(result.dropped).toBe(0);
+    expect((await getQueue())[0]!.docId).toBe('theirs');
+  });
+
+  it('replays legacy entries that predate account tagging', async () => {
+    setQueueOwner(null);
+    await enqueueMutations([input({ docId: 'legacy' })]);
+
+    const result = await flushOfflineQueue(async () => undefined);
+    expect(result.synced).toBe(1);
+    expect(result.skipped).toBe(0);
   });
 });

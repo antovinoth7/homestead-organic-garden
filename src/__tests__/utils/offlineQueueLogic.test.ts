@@ -14,6 +14,8 @@ const makeMutation = (overrides: Partial<OfflineMutation> = {}): OfflineMutation
   payload: { name: 'Tomato' },
   createdAt: 1000,
   retryCount: 0,
+  revision: 0,
+  ownerUid: 'user-1',
   ...overrides,
 });
 

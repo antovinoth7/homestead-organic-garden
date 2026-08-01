@@ -27,6 +27,22 @@ export interface OfflineMutation {
   createdAt: number;
   /** Number of failed replay attempts so far */
   retryCount: number;
+  /**
+   * Bumped every time a later mutation coalesces into this entry. Replay
+   * removes an entry only when the stored revision still matches the one it
+   * executed, so an edit made mid-flight is never deleted unsent.
+   * Entries persisted before this field existed read back as 0.
+   */
+  revision: number;
+  /**
+   * uid of the account that queued the mutation. Replay skips entries owned by
+   * a different account so a device shared between users never replays one
+   * user's writes under another's session.
+   */
+  ownerUid: string | null;
 }
 
-export type OfflineMutationInput = Omit<OfflineMutation, 'id' | 'createdAt' | 'retryCount'>;
+export type OfflineMutationInput = Omit<
+  OfflineMutation,
+  'id' | 'createdAt' | 'retryCount' | 'revision' | 'ownerUid'
+>;

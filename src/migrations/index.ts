@@ -9,16 +9,18 @@ import { backfillDistrict } from './001_backfill_district';
 import { seedCatalogEnrichment } from './002_seed_catalog_enrichment';
 import { consolidatePlantProfiles } from './003_consolidate_plant_profiles';
 import { backfillLifecycleType } from './004_backfill_lifecycle_type';
+import { repairFarmConfig } from './005_repair_farm_config';
 
 const SETTINGS_COLLECTION = 'user_settings';
 
-export const LATEST_SCHEMA_VERSION = 4;
+export const LATEST_SCHEMA_VERSION = 5;
 
 const migrations: Migration[] = [
   { version: 1, name: 'backfill_district', run: backfillDistrict },
   { version: 2, name: 'seed_catalog_enrichment', run: seedCatalogEnrichment },
   { version: 3, name: 'consolidate_plant_profiles', run: consolidatePlantProfiles },
   { version: 4, name: 'backfill_lifecycle_type', run: backfillLifecycleType },
+  { version: 5, name: 'repair_farm_config', run: repairFarmConfig },
 ];
 
 export async function getSchemaVersion(userId: string): Promise<number> {

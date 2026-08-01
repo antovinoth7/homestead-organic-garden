@@ -88,13 +88,18 @@ export const safeGetData = async <T>(key: string, retries = 2): Promise<T[]> => 
       } catch (e: unknown) {
         logger.error(`Error reading ${key} (attempt ${i + 1}/${retries + 1}):`, e as Error);
 
-        // If JSON parse error, data is corrupted - clear it
+        // If JSON parse error, data is corrupted. Quarantine rather than delete:
+        // for keys like the offline queue the corrupt blob is the only copy of
+        // writes that never reached Firestore, so it must stay recoverable.
         if (e instanceof SyntaxError || (e instanceof Error && e.message?.includes('JSON'))) {
-          logger.warn(`Corrupted data at ${key}, clearing...`);
+          const quarantineKey = `${key}__corrupt_${Date.now()}`;
+          logger.error(`Corrupted data at ${key}, quarantining to ${quarantineKey}`, e as Error);
           try {
+            const raw = await AsyncStorage.getItem(key);
+            if (raw !== null) await AsyncStorage.setItem(quarantineKey, raw);
             await AsyncStorage.removeItem(key);
           } catch (clearError) {
-            logger.error(`Failed to clear corrupted data at ${key}:`, clearError as Error);
+            logger.error(`Failed to quarantine corrupted data at ${key}:`, clearError as Error);
           }
           return [];
         }
@@ -168,6 +173,29 @@ export const safeGetItem = async (key: string, retries = 2): Promise<string | nu
 
     logger.error(`Failed to read item ${key} after ${retries + 1} attempts`);
     return null;
+  });
+};
+
+/**
+ * Safe single value remove. Returns false when the key could not be removed.
+ */
+export const safeRemoveItem = async (key: string, retries = 2): Promise<boolean> => {
+  return storageQueue.add(async () => {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        await AsyncStorage.removeItem(key);
+        return true;
+      } catch (e: unknown) {
+        logger.error(`Error removing item ${key} (attempt ${i + 1}/${retries + 1}):`, e as Error);
+
+        if (i < retries) {
+          await new Promise((resolve) => setTimeout(resolve, 100 * (i + 1)));
+        }
+      }
+    }
+
+    logger.error(`Failed to remove item ${key} after ${retries + 1} attempts`);
+    return false;
   });
 };
 

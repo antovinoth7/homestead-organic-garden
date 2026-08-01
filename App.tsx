@@ -17,6 +17,8 @@ import { migrateImagesToMediaLibrary } from './src/lib/imageStorage';
 import { runPendingMigrations } from './src/migrations';
 import { subscribeToNetworkChanges } from './src/utils/networkState';
 import { flushOfflineQueue } from './src/services/offlineSync';
+import { clearAllData } from './src/lib/storage';
+import { setQueueOwner } from './src/lib/offlineQueue';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   SafeAreaProvider,
@@ -40,6 +42,9 @@ const captureConsoleBreadcrumbs =
   expoExtra['sentryCaptureConsole'] === '1' ||
   expoExtra['sentryCaptureConsole'] === true;
 const isDev = __DEV__;
+
+/** Last signed-in uid, used to detect an account switch on a shared device. */
+const LAST_UID_KEY = '@garden_last_uid';
 
 // Only log Sentry config in development
 if (isDev) {
@@ -282,6 +287,40 @@ const AppRoot = (): React.JSX.Element | null => {
       }
     };
 
+    /**
+     * Local caches are shared across accounts, so on a device where a second
+     * user signs in they would otherwise render the previous account's plants,
+     * tasks, journal, beds, and farm config. Drop cached data whenever the
+     * signed-in uid changes.
+     *
+     * `clearAllData` deliberately preserves the offline queue — the previous
+     * account's unsent writes stay queued and replay skips them until their
+     * owner signs back in (see offlineSync's ownerUid check).
+     */
+    const clearStateOnAccountChange = async (uid: string | null): Promise<void> => {
+      try {
+        // Stamp subsequent offline writes with their owner so replay can tell
+        // whose they are on a shared device.
+        setQueueOwner(uid);
+
+        const previousUid = await AsyncStorage.getItem(LAST_UID_KEY);
+        if (previousUid === uid) return;
+
+        if (previousUid) {
+          logger.info('Account changed on this device, clearing local caches');
+          await clearAllData(previousUid);
+        }
+
+        if (uid) await AsyncStorage.setItem(LAST_UID_KEY, uid);
+        else await AsyncStorage.removeItem(LAST_UID_KEY);
+      } catch (error) {
+        logger.warn(
+          'Failed to reset local state on account change',
+          error instanceof Error ? error : new Error(String(error))
+        );
+      }
+    };
+
     // Listen for auth state changes with error handling
     const unsubscribe = onAuthStateChanged(
       auth,
@@ -291,8 +330,6 @@ const AppRoot = (): React.JSX.Element | null => {
         if (isDev) {
           logger.debug(`Auth state changed: ${user ? `Logged in as ${user.uid}` : 'Logged out'}`);
         }
-        setUser(user);
-        setLoading(false);
 
         // Update error logging context
         setErrorLogUserId(user?.uid);
@@ -303,19 +340,29 @@ const AppRoot = (): React.JSX.Element | null => {
             id: user.uid,
           });
           Sentry.setTag('user_authenticated', 'true');
-
-          // Run migrations after successful authentication
-          runPendingMigrations(user.uid).catch((error) => {
-            logger.warn(
-              'Schema migration failed',
-              error instanceof Error ? error : new Error(String(error))
-            );
-          });
-          runImageMigration();
         } else {
           Sentry.setUser(null);
           Sentry.setTag('user_authenticated', 'false');
         }
+
+        // Clear stale account data BEFORE the tree renders with the new user,
+        // so no screen can read the previous account's cached records.
+        void clearStateOnAccountChange(user?.uid ?? null).then(() => {
+          if (!isMounted) return;
+          setUser(user);
+          setLoading(false);
+
+          if (user) {
+            // Run migrations after successful authentication
+            runPendingMigrations(user.uid).catch((error) => {
+              logger.warn(
+                'Schema migration failed',
+                error instanceof Error ? error : new Error(String(error))
+              );
+            });
+            runImageMigration();
+          }
+        });
       },
       (error) => {
         if (!isMounted) return;

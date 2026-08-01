@@ -1,6 +1,6 @@
 import { Bed, Plant, TaskType, BedTaskSubtype } from '@/types/database.types';
 import { auth, refreshAuthToken, db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, doc, query, where } from 'firebase/firestore';
+import { collection, getDocs, setDoc, updateDoc, doc, query, where } from 'firebase/firestore';
 import {
   withTimeoutAndRetry,
   FIRESTORE_WRITE_TIMEOUT_MS,
@@ -148,7 +148,12 @@ export async function syncBedTasks(bed: Bed, plants: Plant[]): Promise<void> {
           { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
         );
       } else {
-        await withTimeoutAndRetry(() => addDoc(collection(db, TASKS_COLLECTION), payload), {
+        // Allocate the id once, outside the retry: a client-side timeout does
+        // not cancel the server write, so retrying addDoc (which mints a new id
+        // per call) can leave duplicate tasks behind. setDoc against a stable
+        // id is idempotent.
+        const ref = doc(collection(db, TASKS_COLLECTION));
+        await withTimeoutAndRetry(() => setDoc(ref, payload), {
           timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
         });
       }

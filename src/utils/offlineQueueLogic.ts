@@ -78,6 +78,10 @@ export const decodeTimestamps = (
  * - create + delete      → both dropped (doc never existed remotely)
  * - update/set + delete  → single delete
  * - delete + anything    → appended separately (replayed in FIFO order)
+ *
+ * Any branch that reuses an existing entry's id bumps its `revision`. Replay
+ * removes an entry only on a matching revision, so a mutation coalesced into an
+ * entry that is currently in flight is never deleted before it is sent.
  */
 export const coalesceQueue = (
   queue: OfflineMutation[],
@@ -100,7 +104,14 @@ export const coalesceQueue = (
       return queue.filter((_, i) => i !== index);
     }
     return queue.map((m, i) =>
-      i === index ? { ...incoming, id: existing.id, createdAt: existing.createdAt } : m
+      i === index
+        ? {
+            ...incoming,
+            id: existing.id,
+            createdAt: existing.createdAt,
+            revision: (existing.revision ?? 0) + 1,
+          }
+        : m
     );
   }
 
@@ -112,5 +123,7 @@ export const coalesceQueue = (
         : 'update';
   const payload = { ...(existing.payload ?? {}), ...(incoming.payload ?? {}) };
 
-  return queue.map((m, i) => (i === index ? { ...existing, op, payload } : m));
+  return queue.map((m, i) =>
+    i === index ? { ...existing, op, payload, revision: (existing.revision ?? 0) + 1 } : m
+  );
 };

@@ -982,9 +982,15 @@ export const getTaskLogs = async (templateId?: string): Promise<TaskLog[]> => {
     // Sort in-memory by done_at descending
     logs.sort((a, b) => new Date(b.done_at).getTime() - new Date(a.done_at).getTime());
 
-    // Cache locally (in-memory for fast re-reads, AsyncStorage for offline)
-    if (!templateId) setCached(CACHE_KEYS.TASK_LOGS, logs);
-    await setData(KEYS.TASK_LOGS, logs);
+    // Cache locally (in-memory for fast re-reads, AsyncStorage for offline).
+    // Both caches hold the FULL log list, so a template-filtered result must
+    // never be written to either — doing so would drop unrelated history from
+    // offline views, backups, and delete cascades. Same invariant that
+    // getPlantTaskLogs documents below.
+    if (!templateId) {
+      setCached(CACHE_KEYS.TASK_LOGS, logs);
+      await setData(KEYS.TASK_LOGS, logs);
+    }
 
     return logs;
   } catch (error) {

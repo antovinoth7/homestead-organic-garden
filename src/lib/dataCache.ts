@@ -49,10 +49,33 @@ export function setCached<T>(key: string, data: T): void {
   store.set(key, { data, fetchedAt: Date.now() });
 }
 
+/**
+ * Epoch ms of the most recent invalidation per key. `dedup` compares against
+ * it so a read that started before a mutation cannot write its pre-mutation
+ * result back into the cache after the invalidation.
+ */
+const lastInvalidatedAt = new Map<string, number>();
+/** Same, for prefix invalidations — keys created after the call must also lose. */
+const invalidatedPrefixes = new Map<string, number>();
+/** Same, for `invalidateAll` (e.g. sign-out). */
+let invalidatedAllAt = 0;
+
+/** Epoch ms of the newest invalidation affecting `key`, or 0 if never. */
+function invalidatedSince(key: string): number {
+  let latest = Math.max(invalidatedAllAt, lastInvalidatedAt.get(key) ?? 0);
+  for (const [prefix, at] of invalidatedPrefixes) {
+    if (at > latest && key.startsWith(prefix)) latest = at;
+  }
+  return latest;
+}
+
 /** Mark one or more keys as stale so the next read fetches fresh data. */
 export function invalidate(...keys: string[]): void {
+  const now = Date.now();
   for (const key of keys) {
     store.delete(key);
+    pendingRequests.delete(key);
+    lastInvalidatedAt.set(key, now);
   }
 }
 
@@ -62,18 +85,28 @@ export function invalidate(...keys: string[]): void {
  * enumerate.
  */
 export function invalidatePrefix(prefix: string): void {
+  const now = Date.now();
   for (const key of Array.from(store.keys())) {
     if (key.startsWith(prefix)) store.delete(key);
   }
   for (const key of Array.from(pendingRequests.keys())) {
     if (key.startsWith(prefix)) pendingRequests.delete(key);
   }
+  // Stamp in-flight keys too, so a fetch started before this call cannot
+  // repopulate the prefix after it was cleared.
+  for (const key of Array.from(lastInvalidatedAt.keys())) {
+    if (key.startsWith(prefix)) lastInvalidatedAt.set(key, now);
+  }
+  invalidatedPrefixes.set(prefix, now);
 }
 
 /** Mark everything stale (e.g. on sign-out). */
 export function invalidateAll(): void {
   store.clear();
   pendingRequests.clear();
+  lastInvalidatedAt.clear();
+  invalidatedPrefixes.clear();
+  invalidatedAllAt = Date.now();
 }
 
 /* ── request deduplication ──────────────────────────────── */
@@ -94,6 +127,11 @@ export function dedup<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
   const startTime = Date.now();
   const promise = fetcher()
     .then((result) => {
+      // Don't repopulate the cache with a result that predates an invalidation
+      // (e.g. a mutation committed while this fetch was in-flight) — that would
+      // silently undo the invalidation and serve stale data for STALE_MS.
+      if (invalidatedSince(key) > startTime) return result;
+
       // Don't overwrite a more-recent surgical cache update (e.g. from deletePlantsForBed)
       // that ran while this fetch was in-flight.
       const current = store.get(key);

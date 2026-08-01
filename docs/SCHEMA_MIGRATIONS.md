@@ -22,3 +22,28 @@ The app uses a client-side migration runner (`src/migrations/`) to evolve Firest
 4. If adding a **new collection** → no migration; created on first write.
 5. Bump `LATEST_SCHEMA_VERSION` in `src/migrations/index.ts`.
 6. Add a test for the migration in `src/__tests__/migrations/`.
+
+## Testing migrations without Firestore
+
+Migration modules import `@/lib/firebase`, which throws without `EXPO_PUBLIC_FIREBASE_*`
+env values, and the project forbids mocking Firestore. Split the decision logic into a
+Firebase-free module and test that directly — `005_repair_farm_config.ts` (Firestore I/O)
+plus `farmConfigRepairLogic.ts` (`planFarmConfigRepair`, pure and unit-tested) is the
+reference pattern, mirroring `src/utils/offlineQueueLogic.ts`.
+
+## Migration history
+
+| Version | File | Purpose |
+| ---: | --- | --- |
+| 1 | `001_backfill_district.ts` | Backfilled district/zone. **Wrote top-level `district`/`zone_id`, which no runtime code reads** — superseded by 005. Left as-issued. |
+| 2 | `002_seed_catalog_enrichment.ts` | Normalized catalog enrichment data. |
+| 3 | `003_consolidate_plant_profiles.ts` | Consolidated per-plant profiles into one document. |
+| 4 | `004_backfill_lifecycle_type.ts` | Set `lifecycle_type` on plants missing it. |
+| 5 | `005_repair_farm_config.ts` | Copies 001's stranded top-level `district`/`zone_id` into the nested `farmConfig` object that `farmCapacity.ts` actually reads. |
+
+## Known gap
+
+`runPendingMigrations` is invoked with `.catch()` rather than awaited in `App.tsx`, and the
+runner swallows failures (returns on schema-read failure; catches and breaks on a migration
+throw). Screens can therefore render while a migration is still running. Gating launch on
+the runner is tracked as a follow-up; every migration must stay rerun-safe in the meantime.

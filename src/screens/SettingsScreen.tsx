@@ -17,6 +17,7 @@ import {
 } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { clearAllData } from '@/lib/storage';
+import { clearQueue, getQueueLength } from '@/lib/offlineQueue';
 import { auth } from '@/lib/firebase';
 import { createStyles } from '@/styles/settingsStyles';
 import { logger } from '@/utils/logger';
@@ -195,28 +196,54 @@ export default function SettingsScreen(): React.JSX.Element {
     );
   };
 
+  const runClearCache = React.useCallback(
+    async (discardPending: boolean): Promise<void> => {
+      try {
+        setLoadingAction('cache');
+        if (discardPending) await clearQueue();
+        // Clear AsyncStorage cache (safe - doesn't terminate Firebase)
+        await clearAllData(auth.currentUser?.uid);
+        await loadStats();
+        Alert.alert('Success', 'Local cache cleared. Data will be re-synced from Firebase.');
+      } catch (error: unknown) {
+        Alert.alert('Error', getErrorMessage(error) || 'Failed to clear cache');
+      } finally {
+        setLoadingAction(null);
+      }
+    },
+    [loadStats]
+  );
+
   const handleClearCache = async (): Promise<void> => {
+    // Queued writes have never reached Firestore, so they cannot be "re-synced
+    // from Firebase" — the user has to decide their fate explicitly.
+    const pending = await getQueueLength();
+
+    if (pending > 0) {
+      Alert.alert(
+        'Unsent Changes',
+        `${pending} change${pending === 1 ? '' : 's'} have not reached the server yet. ` +
+          'Clearing the cache keeps them queued — they will sync when you are back online. ' +
+          'Discarding them deletes them permanently.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Keep & Clear Cache', onPress: () => void runClearCache(false) },
+          {
+            text: 'Discard Changes',
+            style: 'destructive',
+            onPress: () => void runClearCache(true),
+          },
+        ]
+      );
+      return;
+    }
+
     Alert.alert(
       'Clear App Cache',
       "This will clear the app's local data cache. Firebase data will be re-synced on next load. Your data will not be deleted.",
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear Cache',
-          onPress: async () => {
-            try {
-              setLoadingAction('cache');
-              // Clear AsyncStorage cache (safe - doesn't terminate Firebase)
-              await clearAllData(auth.currentUser?.uid);
-              await loadStats();
-              Alert.alert('Success', 'Local cache cleared. Data will be re-synced from Firebase.');
-            } catch (error: unknown) {
-              Alert.alert('Error', getErrorMessage(error) || 'Failed to clear cache');
-            } finally {
-              setLoadingAction(null);
-            }
-          },
-        },
+        { text: 'Clear Cache', onPress: () => void runClearCache(false) },
       ]
     );
   };
