@@ -30,6 +30,48 @@ export const PLANT_IMAGE_ALIASES: Record<string, string> = {
   moringa: 'drumstick',
 };
 
+/**
+ * Curated image-prompt coverage for catalog plants that have no emoji-map
+ * entry yet, plus reference-only tropical fruit trees. These names resolve
+ * through the same slug-based asset map as catalog plants without changing
+ * the visible plant catalog.
+ */
+export const EXTRA_REFERENCE_PLANT_NAMES = [
+  'Cauliflower',
+  'Jackfruit',
+  'Chikoo',
+  'Water Apple',
+  'Custard Apple',
+  'Amla',
+  'Soursop',
+  'Mangosteen',
+  'Rambutan',
+  'Red Banana',
+  'Breadfruit',
+  'Passion Fruit',
+  'Star Fruit',
+  'Fig',
+  'Lychee',
+  'Batoko Plum',
+  'Citron',
+  'Cashew Nut',
+  'Neem',
+  'Teak',
+  'Mahogany',
+  'Rosewood',
+  'Sandalwood',
+  'Wild Jack',
+  'Dwarf Coconut',
+  'Tall Coconut',
+  'Hybrid Coconut',
+  'King Coconut',
+] as const;
+
+/** Combines catalog-provided names with curated reference-image-only names. */
+export function getKnownReferencePlantNames(catalogNames: readonly string[]): string[] {
+  return [...new Set([...catalogNames, ...EXTRA_REFERENCE_PLANT_NAMES])];
+}
+
 /** Resolves a plant name to the canonical asset key used in PLANT_IMAGES. */
 export function resolvePlantImageKey(plantName: string): string {
   const slug = slugifyReferenceKey(plantName);

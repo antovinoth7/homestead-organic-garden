@@ -28,9 +28,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 12,
     },
     backButton: {
-      width: 34,
-      height: 34,
-      borderRadius: 12,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -148,6 +148,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     cardTileEmoji: {
       fontSize: 21,
+    },
+    cardTileImage: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
     },
     cardBody: {
       flex: 1,

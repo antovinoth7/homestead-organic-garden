@@ -2,9 +2,9 @@ import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 
 /**
- * SeasonPanel — the single seasonal-guidance card on the Today screen. Shares
- * the dashboard card metrics (gutter / radius / padding) used by todayStyles so
- * the scroll reads as one surface.
+ * SeasonPanel — formerly the seasonal-guidance card on the Today screen, which
+ * now renders `SeasonBlock` instead. Kept with the card metrics the old
+ * dashboard shared, pending a decision on retiring the component.
  */
 const CARD_MARGIN_HORIZONTAL = 16;
 const CARD_MARGIN_TOP = 12;

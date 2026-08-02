@@ -112,7 +112,8 @@ export const AppTabs = (): React.JSX.Element => {
           headerShown: false,
         })}
       >
-        <Tab.Screen name="Home" component={TodayScreen} />
+        {/* Route id stays `Home` (navigation types key off it); only the label reads "Today". */}
+        <Tab.Screen name="Home" component={TodayScreen} options={{ tabBarLabel: 'Today' }} />
         <Tab.Screen
           name="Plants"
           component={PlantStack}

@@ -237,6 +237,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.primary,
       fontWeight: '600',
     },
+    // A facet that would empty the list still shows its "(0)", muted.
+    sheetChipCountZero: {
+      color: theme.textTertiary,
+    },
     // Health-status tone quartet — mirrors the edit form's chips (plantFormStyles)
     // so a status reads identically wherever it appears.
     sheetChipActiveSuccess: {

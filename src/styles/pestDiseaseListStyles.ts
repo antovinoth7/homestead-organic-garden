@@ -27,9 +27,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 12,
     },
     backButton: {
-      width: 34,
-      height: 34,
-      borderRadius: 12,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',

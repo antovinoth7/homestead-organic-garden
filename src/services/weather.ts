@@ -27,7 +27,8 @@ export const KANYAKUMARI_LAT = 8.0883;
 export const KANYAKUMARI_LNG = 77.5385;
 
 /** Open-Meteo forecasts change slowly; refresh at most every 3 hours. */
-const WEATHER_FRESH_MS = 3 * 60 * 60 * 1000;
+/** Exported so callers can label a forecast older than this as cached/offline. */
+export const WEATHER_FRESH_MS = 3 * 60 * 60 * 1000;
 
 /** Open-Meteo on slow mobile data needs more headroom than Firestore reads. */
 const WEATHER_TIMEOUT_MS = 15000;

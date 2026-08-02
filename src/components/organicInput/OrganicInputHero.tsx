@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import type { ImageStyle, LayoutChangeEvent } from 'react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
-import type { LayoutChangeEvent } from 'react-native';
+import { Image, type ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { useTheme } from '@/theme';
@@ -11,8 +12,10 @@ interface Props {
   tamilName?: string;
   categoryLabel: string;
   emoji: string;
+  image?: ImageSource;
   topInset: number;
   onBack: () => void;
+  onPressImage?: () => void;
 }
 
 /**
@@ -26,8 +29,10 @@ export function OrganicInputHero({
   tamilName,
   categoryLabel,
   emoji,
+  image,
   topInset,
   onBack,
+  onPressImage,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -39,9 +44,27 @@ export function OrganicInputHero({
 
   return (
     <View style={styles.hero} onLayout={handleLayout}>
-      <View style={styles.heroWatermark}>
-        <Text style={styles.heroWatermarkText}>{emoji}</Text>
-      </View>
+      {image ? (
+        <TouchableOpacity
+          style={styles.heroImage}
+          activeOpacity={onPressImage ? 0.9 : 1}
+          onPress={onPressImage}
+          disabled={!onPressImage}
+          accessibilityRole="imagebutton"
+          accessibilityLabel={`View ${name} photo full screen`}
+        >
+          <Image
+            source={image}
+            style={styles.heroImageInner as ImageStyle}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.heroWatermark}>
+          <Text style={styles.heroWatermarkText}>{emoji}</Text>
+        </View>
+      )}
 
       {scrimWidth > 0 ? (
         <View style={styles.heroScrim} pointerEvents="none">
@@ -65,7 +88,7 @@ export function OrganicInputHero({
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
-        <Ionicons name="chevron-back" size={20} color={theme.textInverse} />
+        <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
       </TouchableOpacity>
 
       <View style={styles.heroCaption} pointerEvents="none">

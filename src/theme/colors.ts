@@ -112,6 +112,13 @@ export const lightTheme = {
   heroText: '#ffffff',
   heroTextMuted: 'rgba(255,255,255,0.74)',
   heroTextFaint: 'rgba(255,255,255,0.55)',
+  // Alert text on the hero green. The `error*` ramp is tuned for paper and is
+  // near-invisible here (`errorDark` is about 1.6:1 on the green ground), so
+  // this is the one hero value that is a colour rather than white-alpha.
+  heroTextAlert: '#ff8a80',
+  // Raised chip ground on the hero green — a translucent white so it lifts on
+  // either green without carrying a colour of its own.
+  heroSurface: 'rgba(255,255,255,0.10)',
   heroDivider: 'rgba(255,255,255,0.16)',
   heroRingTrack: 'rgba(255,255,255,0.16)',
   heroRingFill: '#a5d6a7',
@@ -207,6 +214,9 @@ export const darkTheme = {
   heroText: '#ffffff',
   heroTextMuted: 'rgba(255,255,255,0.74)',
   heroTextFaint: 'rgba(255,255,255,0.55)',
+  // Same value as light: the hero ground is dark in both themes.
+  heroTextAlert: '#ff8a80',
+  heroSurface: 'rgba(255,255,255,0.10)',
   heroDivider: 'rgba(255,255,255,0.16)',
   heroRingTrack: 'rgba(255,255,255,0.16)',
   heroRingFill: '#81c784',

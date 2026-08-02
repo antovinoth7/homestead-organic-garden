@@ -78,6 +78,26 @@ export const TASK_ICONS: Record<TaskType, keyof typeof Ionicons.glyphMap> = {
   cultivating: 'build',
 };
 
+/**
+ * The same work named as an activity rather than a command. `TASK_LABELS` is
+ * imperative ("Water", "Spray"), which reads wrong as the subject of a sentence
+ * — "Water on Bed 3 is 5 days late" states the wrong thing. Used by the Today
+ * screen's plot line.
+ */
+export const TASK_GERUNDS: Record<TaskType, string> = {
+  water: 'Watering',
+  fertilise: 'Fertilising',
+  prune: 'Pruning',
+  repot: 'Repotting',
+  spray: 'Spraying',
+  mulch: 'Mulching',
+  harvest: 'Harvesting',
+  harvest_leaves: 'Leaf harvest',
+  weeding: 'Weeding',
+  transplanting: 'Transplanting',
+  cultivating: 'Cultivating',
+};
+
 export const TASK_LABELS: Record<TaskType, string> = {
   water: 'Water',
   fertilise: 'Fertilise',

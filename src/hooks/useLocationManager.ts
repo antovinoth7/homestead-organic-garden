@@ -3,26 +3,16 @@ import { Alert } from 'react-native';
 import { generateShortName, getLocationConfig, saveLocationConfig } from '@/services/locations';
 import { getAllPlants, updatePlantLocation } from '@/services/plants';
 import { LocationProfile, Plant } from '@/types/database.types';
-import { sanitizeLandmarkText } from '@/utils/textSanitizer';
+import { parseLocation, buildLocation, sanitizeLocationName } from '@/utils/locationHelpers';
 import { getErrorMessage } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 
 // ─── Pure helpers (exported so modal components can reuse them) ───────────────
 
-export const parseLocation = (value?: string | null): { parent: string; child: string } => {
-  if (!value) return { parent: '', child: '' };
-  const parts = value.split(' - ');
-  const parent = parts[0]?.trim() ?? '';
-  const child = parts.slice(1).join(' - ').trim();
-  return { parent, child };
-};
-
-export const buildLocation = (parent: string, child: string): string => {
-  if (parent && child) return `${parent} - ${child}`;
-  return parent || child || '';
-};
-
-export const sanitizeLocationName = (value: string): string => sanitizeLandmarkText(value).trim();
+// The location-string helpers moved to `@/utils/locationHelpers` so the data
+// layer can use them without importing this hook (which pulls in RN + Firebase).
+// Re-exported here so existing call sites are unaffected.
+export { parseLocation, buildLocation, sanitizeLocationName };
 
 export const isDuplicate = (list: string[], value: string, ignore?: string): boolean => {
   const needle = value.toLowerCase();

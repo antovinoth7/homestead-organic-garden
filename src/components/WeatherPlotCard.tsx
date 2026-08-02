@@ -12,29 +12,16 @@
 
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
-import { DailyWeather } from '@/types/database.types';
 import { useWeather } from '@/hooks/useWeather';
 import { wateringAdvice } from '@/services/weather';
 import type { WeatherPlot } from '@/hooks/useWeatherLocations';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/weatherCardStyles';
+import { weatherEmoji, weekdayLabel } from '@/utils/weatherWords';
 
 /** Placeholder glyph for a slot with nothing to show — holds the row's height. */
 const EMPTY_SLOT = '–';
 const SKELETON_DAYS = [0, 1, 2, 3, 4, 5, 6];
-
-function weekdayLabel(isoDate: string): string {
-  const d = new Date(isoDate);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('en-US', { weekday: 'short' });
-}
-
-function weatherEmoji(day: DailyWeather): string {
-  if (day.precipitationMm >= 10) return '🌧️';
-  if (day.precipitationMm >= 2) return '🌦️';
-  if (day.tempMaxC >= 35) return '🔥';
-  return '☀️';
-}
 
 interface Props {
   plot: WeatherPlot;

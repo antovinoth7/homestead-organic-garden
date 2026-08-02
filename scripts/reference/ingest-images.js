@@ -4,13 +4,17 @@
  *
  * 1. Reads assets-src/manifest.json (run `npm run reference:manifest` first)
  *    to learn the valid ids per kind.
- * 2. Converts every image in assets-src/{pests,diseases,plants}/ to a
+ * 2. Converts every image in assets-src/{pests,diseases,plants,organic-inputs}/ to a
  *    400×300 cover-cropped WebP ≤ 50 KB in assets/reference/<kind>/<id>.webp
  *    (quality starts at 80 and steps down by 5 to a floor of 45).
  * 3. Regenerates src/config/referenceImages.gen.ts from the WebP files that
  *    exist on disk — the gen file must be committed after every run.
  *
- * Usage: npm run reference:ingest
+ * Usage: npm run reference:ingest [-- --missing-only]
+ *
+ * `--missing-only` preserves existing bundled WebPs and converts only staged
+ * sources that do not already have an output file. The generated asset map is
+ * still rebuilt from every bundled WebP.
  */
 const fs = require('fs');
 const path = require('path');
@@ -27,11 +31,13 @@ const HEIGHT = 300;
 const QUALITY_START = 80;
 const QUALITY_FLOOR = 45;
 const QUALITY_STEP = 5;
+const MISSING_ONLY = process.argv.includes('--missing-only');
 
 const KINDS = [
   { kind: 'pest', dir: 'pests', mapName: 'PEST_IMAGES' },
   { kind: 'disease', dir: 'diseases', mapName: 'DISEASE_IMAGES' },
   { kind: 'plant', dir: 'plants', mapName: 'PLANT_IMAGES' },
+  { kind: 'organicInput', dir: 'organic-inputs', mapName: 'ORGANIC_INPUT_IMAGES' },
 ];
 const INPUT_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
 
@@ -42,7 +48,7 @@ function loadManifestIds() {
     process.exit(1);
   }
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  const idsByKind = { pest: new Set(), disease: new Set(), plant: new Set() };
+  const idsByKind = { pest: new Set(), disease: new Set(), plant: new Set(), organicInput: new Set() };
   for (const entry of manifest.entries) {
     if (idsByKind[entry.kind]) idsByKind[entry.kind].add(entry.id);
   }
@@ -92,6 +98,8 @@ async function ingestKind({ dir }, validIds, summary) {
     }
 
     const outputPath = path.join(outputKindDir, `${id}.webp`);
+    if (MISSING_ONLY && fs.existsSync(outputPath)) continue;
+
     const result = await encodeUnderLimit(inputPath, outputPath);
     if (result) {
       summary.converted.push(

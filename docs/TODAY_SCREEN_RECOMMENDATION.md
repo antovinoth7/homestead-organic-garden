@@ -111,6 +111,10 @@ unnecessary duplication.
 
 ### 2. The same overdue work appears several times
 
+> **Fixed.** Overdue work now has exactly one encoding on Home: the `N overdue`
+> figure on its plot card. The needs-action queue no longer restates it — see
+> Release 1, item 6.
+
 The current hero represents overdue work through:
 
 - A red ring arc.
@@ -143,6 +147,10 @@ The proposed queue should accept every task type, display the true total, and
 rank work by operational consequence.
 
 ### 4. Some important exceptions disappear
+
+> **Rotation and harvest-gap: fixed.** `rotation_due` is now in the needs-action
+> queue (`EXCEPTION_TYPES`, `src/services/alertsLogic.ts`). The rest of this
+> section still stands.
 
 Rotation and harvest-gap alerts are computed as `rotation_due`, but that type is
 excluded from the actionable rail. The Home mini bed status does not display
@@ -200,6 +208,17 @@ conditions are central to irrigation decisions rather than rainfall alone:
 [University of Minnesota Extension — Irrigation
 management](https://extension.umn.edu/agricultural-soil-and-water/irrigation).
 
+The advice is also one-directional. During the north-east monsoon the daily
+question flips from "should I water?" to waterlogging, drainage, and fungal
+pressure. The operational weather line should therefore cover both directions,
+for example:
+
+- Heavy rain forecast (≥ 25 mm) — check bed drainage; delay spraying and
+  fertigation.
+- Heat (≥ 35 °C) — shift transplanting and spraying to the evening; check
+  mulch on young beds.
+- Light rain expected — review watering jobs rather than skipping them.
+
 Weather should also display:
 
 - The selected plot.
@@ -215,6 +234,22 @@ The pre-monsoon checklist:
 - Returns every day during its 21-day window.
 - Does not know whether work was completed.
 - May recommend infrastructure work that is irrelevant to a plot.
+- Anticipates only the south-west monsoon (about 1 June). For Kanyakumari and
+  southern Tamil Nadu, the **north-east monsoon (roughly late October through
+  December) is the principal rainy season**, and it currently gets no
+  preparation window at all. See
+  [`getDaysToSWMonsoon`](../src/utils/preMonsoonTasks.ts).
+
+Monsoon preparation should be generalised to the *next* onset for the
+configured zone, with north-east-specific work — clearing drainage, staking
+wind-exposed crops, and preventive fungal care — treated as at least as
+important as the June window.
+
+Seasonal guidance should also align with the Tamil calendar once the Phase G
+language toggle ships: Tamil Nadu sowing tradition is organised around Tamil
+months (for example Aadi-season sowing), so the date header and almanac should
+eventually carry the Tamil month alongside the Gregorian date. Until Phase G,
+this remains data-only per the project's language strategy.
 
 Green manure can appear in the pre-monsoon list, the seasonal panel, and the Bed
 Rotation experience. Almanac text can repeat mulch, drip-line, and Jeevamrutha
@@ -303,6 +338,10 @@ This is a limited preview of scheduled work:
 
 - Show approximately three to five items or batches.
 - Group routine work by plot, section, bed, and activity to reduce walking.
+- Order by preferred time with morning work first. Tamil Nadu field work
+  happens roughly 6–10 am and again 4–6:30 pm, so a watering job missed by
+  mid-morning realistically waits until evening. This is also why
+  **remaining**, not completed, must stay the headline number.
 - Keep critical individual crop issues separate from routine batches.
 - Retain quick completion.
 - Use `View all N jobs` to open the fully scoped Care Plan.
@@ -347,6 +386,12 @@ Production records should preserve what, when, where, and how much:
 Crops](https://extension.umn.edu/marketing-farm-products/recordkeeping-specialty-crops).
 
 ## Behaviour for one or multiple plots and farms
+
+In Tamil Nadu smallholdings, "multiple farms" most often means fragmented
+parcels — a house plot plus one or two fields nearby, in the same district and
+climate zone. The plot selector serves that common case well. Distinct farms
+with different districts, zones, or seasons are the rarer estate case, which is
+why the true multi-farm foundation is deferred to Release 3.
 
 | Situation | Home behaviour |
 | --- | --- |
@@ -503,16 +548,32 @@ currently counted equally.
 1. Treat `parentLocation` consistently as Plot.
 2. Add an `All plots / selected plot` scope selector.
 3. Scope linked plants, beds, tasks, health exceptions, and weather together.
-4. Label unresolved farm-level work as Whole Farm or Unassigned.
+4. Label unresolved farm-level work as Whole Farm or Unassigned. ✅
 5. Replace the hero with compact remaining, overdue, and completed job counts.
-6. Merge due work and condition alerts into one canonical priority queue.
-7. Include every task type.
-8. Restore rotation and harvest-gap exceptions.
+6. ~~Merge due work and condition alerts into one canonical priority queue.~~
+   ✅ **Resolved by separation instead of merging.** Merging would have put one
+   task in two places on the same screen, since the plot cards already state
+   scheduled work per plot. The screen now divides it: the plot cards own *how
+   much* work each plot owes, and "Needs action" lists only conditions with no
+   task behind them, each labelled with its plot. `isActionable`
+   (`src/services/alertsLogic.ts`) enforces this by rejecting any alert carrying
+   a `templateId`.
+7. ~~Include every task type.~~ **Withdrawn** — a consequence of item 6. No task
+   type appears in the queue now, so the coverage gap is gone; naming routine
+   work is the job of the Today's Work section below, which is not yet built.
+8. Restore rotation and harvest-gap exceptions. ✅ `rotation_due` is back in the
+   queue, so rotation conflicts and harvest-gap risk are visible again.
 9. Reduce weather to a 24–48-hour operational impact.
 10. Remove BedsQuickScroll, TipStrip, generic SeasonPanel content, and the
-    duplicate bottom empty state.
+    duplicate bottom empty state. ✅
 11. Keep quick completion, deep links, cache-first behaviour, and Care Plan as
     the full schedule.
+12. Generalise monsoon preparation to the next onset — south-west (June) and
+    north-east (October–December) — for the configured zone.
+
+**Open follow-up from item 6/7:** overdue routine work is now counted per plot
+but named nowhere on Home. The Today's Work preview (see §"Today's Work") is
+what closes that, and should be the next piece built.
 
 ### Release 2: correctness and trust
 
@@ -545,6 +606,8 @@ Only after the data supports it:
 - Route or visit ordering across separate farms.
 - Input and equipment blockers.
 - Farm-specific sowing opportunities using soil, space, crop goals, and season.
+- Irrigation windows constrained by three-phase power supply schedules.
+- Weekly market (santhai) days influencing harvest timing.
 
 ## Definition of done
 

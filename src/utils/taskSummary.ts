@@ -124,3 +124,32 @@ export function summarizeTodayTasks(
     typeStats,
   };
 }
+
+/**
+ * Work still owed today: due plus overdue, with completions already removed by
+ * `summarizeTodayTasks`. `totalTasks` states the day's whole workload and so
+ * never falls as work is logged — this is the figure the Today header wants,
+ * and it equals the sum of the plot cards' due + overdue counts.
+ */
+export function countRemaining(summary: TodayTaskSummary): number {
+  return summary.todayTasks.length + summary.overdueTasks.length;
+}
+
+/**
+ * Per-plot summaries for the Today screen's plot cards, keyed by plot id.
+ *
+ * A thin fan-out over `summarizeTodayTasks` rather than a second counting
+ * implementation, so a card's "7 DUE · 2 OVERDUE" always uses the same rules as
+ * the account-wide header. The caller supplies groups already partitioned by
+ * `groupByPlot`.
+ */
+export function summarizeTasksByPlot(
+  groups: readonly { id: string; tasks: TaskTemplate[]; logs: TaskLog[] }[],
+  now: number = Date.now()
+): Map<string, TodayTaskSummary> {
+  const byPlot = new Map<string, TodayTaskSummary>();
+  for (const group of groups) {
+    byPlot.set(group.id, summarizeTodayTasks(group.tasks, group.logs, now));
+  }
+  return byPlot;
+}

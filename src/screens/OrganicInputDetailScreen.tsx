@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, Animated, TouchableOpacity } from 'react-native';
+import type { ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -7,12 +8,14 @@ import { useTheme } from '@/theme';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 import { OrganicInputHero } from '@/components/organicInput/OrganicInputHero';
 import { InputStatStrip } from '@/components/organicInput/InputStatStrip';
+import { ImageZoomModal } from '@/components/ImageZoomModal';
 import {
   getOrganicInputById,
   getCategoryLabel,
   getRecipeById,
   formatIdealFor,
 } from '@/config/organicInputs';
+import { getOrganicInputImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/organicInputDetailStyles';
 import type {
   OrganicInputDetailScreenNavigationProp,
@@ -32,11 +35,19 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
 
   const input = useMemo(() => getOrganicInputById(route.params.inputId), [route.params.inputId]);
   const recipe = useMemo(() => getRecipeById(input?.recipeId), [input?.recipeId]);
+  const heroImage = useMemo(
+    () => (input ? getOrganicInputImage(input.id, input.imageAsset) : undefined),
+    [input]
+  );
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const previewSources = useMemo<ImageSource[]>(() => (heroImage ? [heroImage] : []), [heroImage]);
 
   const handleOpenRecipe = useCallback(() => {
     if (!recipe) return;
     navigation.navigate('InputRecipes', { initialTab: recipe.id });
   }, [navigation, recipe]);
+  const handleOpenPreview = useCallback(() => setPreviewVisible(true), []);
+  const handleClosePreview = useCallback(() => setPreviewVisible(false), []);
 
   const stickyBgOpacity = scrollY.interpolate({
     inputRange: [STICKY_THRESHOLD, STICKY_THRESHOLD + 40],
@@ -54,7 +65,7 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
       <View style={styles.container}>
         <View style={[styles.fallbackHeader, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity style={styles.fallbackBackButton} onPress={navigation.goBack}>
-            <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
+            <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
           </TouchableOpacity>
           <Text style={styles.fallbackTitle}>Not Found</Text>
         </View>
@@ -89,7 +100,7 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={20} color={theme.textInverse} />
+          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
         </TouchableOpacity>
         <Animated.Text style={[styles.stickyHeaderEmoji, { opacity: stickyTitleOpacity }]}>
           {input.emoji}
@@ -117,8 +128,10 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
           tamilName={input.tamilName}
           categoryLabel={getCategoryLabel(input.category)}
           emoji={input.emoji}
+          image={heroImage}
           topInset={insets.top}
           onBack={navigation.goBack}
+          onPressImage={heroImage ? handleOpenPreview : undefined}
         />
 
         <InputStatStrip
@@ -215,6 +228,14 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
           ) : null}
         </View>
       </Animated.ScrollView>
+
+      {heroImage ? (
+        <ImageZoomModal
+          visible={previewVisible}
+          sources={previewSources}
+          onClose={handleClosePreview}
+        />
+      ) : null}
     </View>
   );
 }

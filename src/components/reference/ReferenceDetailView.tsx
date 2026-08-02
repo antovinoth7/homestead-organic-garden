@@ -85,7 +85,7 @@ export function ReferenceDetailView({
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={20} color={theme.textInverse} />
+          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
         </TouchableOpacity>
         <Animated.Text style={[styles.stickyHeaderEmoji, { opacity: stickyTitleOpacity }]}>
           {entry.emoji}

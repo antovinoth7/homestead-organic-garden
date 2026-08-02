@@ -124,7 +124,7 @@ export function ReferenceListView({
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="chevron-back" size={20} color={theme.textInverse} />
+            <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
           </TouchableOpacity>
           <View style={styles.headerTitleGroup}>
             <Text style={styles.headerTitle}>{title}</Text>

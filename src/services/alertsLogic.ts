@@ -6,10 +6,11 @@
  *
  * Care alerts are a *presentation of task templates*, not a second scheduler:
  * `water_needed` / `fertilise_due` / `prune_due` / `harvest_due` come from
- * overdue `TaskTemplate`s, so the dashboard rail, the hero ring and the Care
- * Plan can never disagree about what is due. Only conditions with no template
- * behind them are derived from plant fields here — a plant marked sick, harvest
- * readiness for crops that get no harvest task, bed rotation, green manure.
+ * overdue `TaskTemplate`s, so no surface built on this can disagree with the
+ * Care Plan about what is due. Only conditions with no template behind them are
+ * derived from plant fields here — a plant marked sick, harvest readiness for
+ * crops that get no harvest task, bed rotation, green manure. That split is
+ * what `isActionable` keys off to separate exceptions from routine work.
  */
 
 import {
@@ -32,10 +33,13 @@ import { getGreenManureForMonth } from '@/config/beds';
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 /**
- * How far a task must have slipped before it earns a card. Work due *today* is
- * already fully stated by the hero's ring and per-type rows; this rail exists
- * for the tail those aggregates flatten into a single number, so it starts one
- * whole day late.
+ * How far a task must have slipped before it earns a care alert. Work due
+ * *today* is already stated by the per-plot due counts, so these start one whole
+ * day late.
+ *
+ * Care alerts no longer reach the Today queue (`isActionable` drops anything
+ * with a `templateId`), but they remain part of this service's output for
+ * `getTopAlert` and for callers that want the schedule expressed as alerts.
  */
 export const ATTENTION_MIN_DAYS_OVERDUE = 1;
 
@@ -75,20 +79,28 @@ const SEVERITY_RANK: Record<FarmAlertSeverity, number> = {
 };
 
 /**
- * Alert types shown in the actionable "Falling behind" rail (C.8).
+ * Alert types the Today screen's "Needs action" queue lists.
  *
- * Deliberately narrow: every type here is something no other part of the Home
- * screen states. `rotation_due` is excluded because the bed cards a few hundred
- * pixels below already carry it with better context, and `bed_resting_end`
- * because a dismissible seasonal suggestion belongs under seasonal guidance,
- * not under a ⚠️ header. Both are still emitted for `TipStrip`.
+ * The queue is an *exception* list, not a second overdue count: the plot cards
+ * state how much scheduled work each plot owes, so a card for work that already
+ * has a task behind it would say the same thing twice, in numbers that cannot
+ * be reconciled (the cards count every task type and drop what was completed
+ * today; these alerts do neither). Only conditions with no task to complete
+ * belong here — see `isActionable`, which enforces that with `templateId`.
+ *
+ * `bed_resting_end` stays out because a seasonal green-manure suggestion is
+ * advice, not something the farm has fallen behind on; it renders as the season
+ * block's closing line instead. `pest_spotted` and `health_stressed` are
+ * likewise informational.
  */
-const ACTIONABLE_TYPES = new Set<FarmAlert['type']>([
-  'harvest_due',
-  'water_needed',
-  'fertilise_due',
-  'prune_due',
+const EXCEPTION_TYPES = new Set<FarmAlert['type']>([
   'health_sick',
+  // Only the field-derived readiness nudge reaches the queue — a harvest that
+  // has a real task carries `templateId` and is counted on its plot card.
+  'harvest_due',
+  // Rotation conflicts and harvest-gap risk. Nothing else on the screen states
+  // these, so without them they are computed and shown nowhere.
+  'rotation_due',
 ]);
 
 /**
@@ -361,9 +373,16 @@ export function sortAlerts(alerts: FarmAlert[]): FarmAlert[] {
   });
 }
 
-/** Whether an alert belongs in the actionable "Needs Attention" scroll (C.8). */
+/**
+ * Whether an alert belongs in the Today screen's "Needs action" queue.
+ *
+ * `templateId` is the exact test for "a task already covers this": it is set
+ * only on the alerts built from `todayTasks`. Anything carrying one is routine
+ * scheduled work that the plot cards count and the Care Plan owns; what is left
+ * is a condition with nothing to complete, which no count on the screen states.
+ */
 export function isActionable(alert: FarmAlert): boolean {
-  return ACTIONABLE_TYPES.has(alert.type);
+  return alert.templateId === undefined && EXCEPTION_TYPES.has(alert.type);
 }
 
 /** Highest-priority alert overall, or null when there are none. Drives TipStrip (C.14). */

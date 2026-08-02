@@ -1,19 +1,10 @@
-/**
- * Seasonal almanac — monthly highlights for the Kanyakumari / Tamil Nadu
- * organic calendar (Phase C, C.4 / G15 Farmer's Almanac).
- *
- * Pure config. `getMonthlyHighlight` drives the dashboard `SeasonPanel` header;
- * the full 12-month `ALMANAC` has no screen of its own at present. Each entry
- * is a short, actionable monthly note.
- */
+/** Monthly, district-aware guidance for the Today seasonal card. */
 
 export interface AlmanacMonth {
-  /** 1–12 */
+  /** 1-12 */
   month: number;
   label: string;
-  /** Headline activity for the month. */
   highlight: string;
-  /** One-line guidance for the gardener. */
   note: string;
   icon: string;
 }
@@ -23,91 +14,90 @@ export const ALMANAC: AlmanacMonth[] = [
     month: 1,
     label: 'January',
     highlight: 'Cool-dry harvests',
-    note: 'Harvest Rabi greens and pulses. Mulch to hold soil moisture as rains taper.',
-    icon: '🥬',
+    note: 'Harvest short-duration greens and pulses. Check soil moisture before watering.',
+    icon: 'leaf',
   },
   {
     month: 2,
     label: 'February',
-    highlight: 'Summer sowing prep',
-    note: 'Prepare beds for summer crops. Sow okra, gourds, and amaranth; add compost.',
-    icon: '🌱',
+    highlight: 'Summer sowing starts',
+    note: 'Prepare beds for warm-season crops. Sow amaranthus, gourds, and cowpea; add compost.',
+    icon: 'seedling',
   },
   {
     month: 3,
     label: 'March',
-    highlight: 'Beat the heat',
-    note: 'Water every 2 days. Provide shade for seedlings; sow heat-tolerant greens.',
-    icon: '☀️',
+    highlight: 'Protect new seedlings',
+    note: 'Provide shade for recent seedlings and water only after checking soil moisture.',
+    icon: 'sun',
   },
   {
     month: 4,
     label: 'April',
     highlight: 'Peak summer care',
-    note: 'Heavy mulching and evening watering. Harvest mango; protect fruiting beds.',
-    icon: '🥭',
+    note: 'Keep bare soil mulched and focus on heat-tolerant leafy crops while preparing beds.',
+    icon: 'mulch',
   },
   {
     month: 5,
     label: 'May',
-    highlight: 'Pre-monsoon prep',
-    note: 'Lay fresh mulch, clean drip lines, prepare Jeevamrutha before the rains.',
-    icon: '🛠️',
+    highlight: 'Pre-monsoon preparation',
+    note: 'Refresh mulch, clear drainage paths, and prepare beds before the southwest monsoon.',
+    icon: 'tools',
   },
   {
     month: 6,
     label: 'June',
-    highlight: 'SW Monsoon onset',
-    note: 'Sow Kharif crops and green manure. Check drainage; switch to rain-fed care.',
-    icon: '🌧️',
+    highlight: 'SW monsoon onset',
+    note: 'Start monsoon crops in raised, well-drained beds and check drainage after heavy rain.',
+    icon: 'rain',
   },
   {
     month: 7,
     label: 'July',
     highlight: 'Monsoon growth',
-    note: 'Manage weeds and fungal risk. Stake climbers; sow successive leafy crops.',
-    icon: '🌿',
+    note: 'Stake climbers, manage weeds, and sow successive leafy crops in well-drained soil.',
+    icon: 'growth',
   },
   {
     month: 8,
     label: 'August',
     highlight: 'Mid-monsoon',
-    note: 'Chop-and-drop accumulators. Watch for waterlogging on low beds.',
-    icon: '💦',
+    note: 'Use raised, well-drained beds for monsoon crops; postpone direct sowing in standing water.',
+    icon: 'water',
   },
   {
     month: 9,
     label: 'September',
-    highlight: 'Kharif harvest',
-    note: 'Harvest monsoon crops. Prepare beds for the NE monsoon / Rabi season.',
-    icon: '🧺',
+    highlight: 'Season transition',
+    note: 'Clear finished monsoon beds and begin short-duration greens and pulses for the next season.',
+    icon: 'harvest',
   },
   {
     month: 10,
     label: 'October',
-    highlight: 'NE Monsoon begins',
-    note: 'Heaviest rains — ensure drainage daily. Sow Rabi pulses and greens.',
-    icon: '🌧️',
+    highlight: 'NE monsoon begins',
+    note: 'Maintain drainage through the northeast monsoon and sow short-duration greens in raised beds.',
+    icon: 'rain',
   },
   {
     month: 11,
     label: 'November',
     highlight: 'Rabi planting',
-    note: 'Transplant winter vegetables. Apply Jeevamrutha every 12 days.',
-    icon: '🌾',
+    note: 'Continue beetroot and fenugreek sowing; transplant onion seedlings where drainage is sound.',
+    icon: 'seedling',
   },
   {
     month: 12,
     label: 'December',
-    highlight: 'Fruit-tree flowering',
-    note: 'Mango and jackfruit flower. Prune for shape; sow cool-season crops.',
-    icon: '🌸',
+    highlight: 'Next-cycle preparation',
+    note: 'Harvest tender greens, refresh compost, and transplant tomato seedlings for the next cycle.',
+    icon: 'compost',
   },
 ];
 
 /** The almanac entry for the given date's calendar month. */
 export function getMonthlyHighlight(date: Date = new Date()): AlmanacMonth {
   const month = date.getMonth() + 1;
-  // ALMANAC is dense (1–12) so the find always resolves; fall back defensively.
-  return ALMANAC.find((m) => m.month === month) ?? ALMANAC[0]!;
+  return ALMANAC.find((entry) => entry.month === month) ?? ALMANAC[0]!;
 }

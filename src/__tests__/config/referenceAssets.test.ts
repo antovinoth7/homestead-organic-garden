@@ -1,14 +1,27 @@
 import {
   getDiseaseImage,
+  getOrganicInputImage,
   getPestImage,
   getPlantImage,
   PLANT_IMAGE_ALIASES,
   slugifyReferenceKey,
 } from '@/config/referenceAssets';
-import { DISEASE_IMAGES, PEST_IMAGES, PLANT_IMAGES } from '@/config/referenceImages.gen';
+import {
+  EXTRA_REFERENCE_PLANT_NAMES,
+  getKnownReferencePlantNames,
+} from '@/config/referenceKeys';
+import {
+  DISEASE_IMAGES,
+  ORGANIC_INPUT_IMAGES,
+  PEST_IMAGES,
+  PLANT_IMAGES,
+} from '@/config/referenceImages.gen';
 import { getAllDiseases } from '@/config/diseases';
+import { getAllOrganicInputs } from '@/config/organicInputs';
 import { getAllPests } from '@/config/pests';
 import { getKnownPlantNames } from '@/utils/plantHelpers';
+
+const KNOWN_REFERENCE_PLANT_NAMES = getKnownReferencePlantNames(getKnownPlantNames());
 
 describe('slugifyReferenceKey', () => {
   it('lowercases and replaces separators with underscores', () => {
@@ -28,12 +41,14 @@ describe('image resolvers', () => {
   it('return undefined for unknown ids/names', () => {
     expect(getPestImage('not_a_real_pest')).toBeUndefined();
     expect(getDiseaseImage('not_a_real_disease')).toBeUndefined();
+    expect(getOrganicInputImage('not_a_real_input')).toBeUndefined();
     expect(getPlantImage('Not A Real Plant')).toBeUndefined();
   });
 
   it('return undefined when imageAsset override is also unknown', () => {
     expect(getPestImage('aphids', 'no_such_asset')).toBeUndefined();
     expect(getDiseaseImage('powdery_mildew', 'no_such_asset')).toBeUndefined();
+    expect(getOrganicInputImage('compost_basic', 'no_such_asset')).toBeUndefined();
   });
 
   it('resolve every bundled pest/disease image by its id', () => {
@@ -42,6 +57,9 @@ describe('image resolvers', () => {
     }
     for (const id of Object.keys(DISEASE_IMAGES)) {
       expect(getDiseaseImage(id)).toBeDefined();
+    }
+    for (const id of Object.keys(ORGANIC_INPUT_IMAGES)) {
+      expect(getOrganicInputImage(id)).toBeDefined();
     }
   });
 });
@@ -71,7 +89,7 @@ describe('generated map integrity (gen file must match config ids)', () => {
 
   it('every PLANT_IMAGES key is a canonical slug of a known plant name', () => {
     const canonical = new Set(
-      getKnownPlantNames().map((name) => {
+      KNOWN_REFERENCE_PLANT_NAMES.map((name) => {
         const slug = slugifyReferenceKey(name);
         return PLANT_IMAGE_ALIASES[slug] ?? slug;
       })
@@ -80,11 +98,22 @@ describe('generated map integrity (gen file must match config ids)', () => {
       expect(canonical).toContain(key);
     }
   });
+
+  it('every ORGANIC_INPUT_IMAGES key is a known organic-input id or imageAsset', () => {
+    const known = new Set<string>();
+    for (const input of getAllOrganicInputs()) {
+      known.add(input.id);
+      if (input.imageAsset) known.add(input.imageAsset);
+    }
+    for (const key of Object.keys(ORGANIC_INPUT_IMAGES)) {
+      expect(known).toContain(key);
+    }
+  });
 });
 
 describe('PLANT_IMAGE_ALIASES', () => {
   it('maps slugs of known plant names to canonical slugs of known plant names', () => {
-    const slugs = new Set(getKnownPlantNames().map(slugifyReferenceKey));
+    const slugs = new Set(KNOWN_REFERENCE_PLANT_NAMES.map(slugifyReferenceKey));
     for (const [alias, canonical] of Object.entries(PLANT_IMAGE_ALIASES)) {
       expect(slugs).toContain(alias);
       expect(slugs).toContain(canonical);
@@ -96,5 +125,12 @@ describe('PLANT_IMAGE_ALIASES', () => {
     expect(getPlantImage('Eggplant')).toBe(getPlantImage('Brinjal'));
     expect(getPlantImage('Long Brinjal')).toBe(getPlantImage('Brinjal'));
     expect(getPlantImage('Maize')).toBe(getPlantImage('Corn'));
+  });
+
+  it('includes all curated supplemental plants in the reference-image name set', () => {
+    const names = new Set(KNOWN_REFERENCE_PLANT_NAMES);
+    for (const name of EXTRA_REFERENCE_PLANT_NAMES) {
+      expect(names).toContain(name);
+    }
   });
 });

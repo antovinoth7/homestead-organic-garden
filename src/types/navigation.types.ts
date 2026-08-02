@@ -77,7 +77,17 @@ export interface PlantFormPrefill {
 
 export type PlantsStackParamList = {
   PlantsList:
-    | { healthFilter?: string; refresh?: number; savedPlantId?: string; savedPlantName?: string }
+    | {
+        healthFilter?: string;
+        /**
+         * Parent location name, or `UNASSIGNED_PLOT_ID` — scopes the list to one
+         * plot by preselecting the filter sheet's Location filter.
+         */
+        plotFilter?: string;
+        refresh?: number;
+        savedPlantId?: string;
+        savedPlantName?: string;
+      }
     | undefined;
   ArchivedPlants: undefined;
   PlantDetail: { plantId: string };

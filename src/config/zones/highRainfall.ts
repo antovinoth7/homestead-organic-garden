@@ -4,7 +4,7 @@ export const HIGH_RAINFALL_ZONE: AgroClimaticZone = {
   id: 'high_rainfall',
   name: 'High Rainfall Zone',
   districts: ['Kanyakumari'],
-  annualRainfallMm: 2124,
+  annualRainfallMm: 1361.2,
   soilTypes: ['laterite', 'alluvial', 'red_sandy_loam'],
   irrigationDominant: 'well',
 

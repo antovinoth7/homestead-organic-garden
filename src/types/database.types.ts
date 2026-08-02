@@ -375,6 +375,156 @@ export interface LocationConfig {
   parentLocationProfiles?: Record<string, LocationProfile>;
 }
 
+// ─── Today briefing view-model (derived, never persisted) ────────────────────
+
+/**
+ * Bucket for plants/beds/tasks whose parent location is blank. Kept as an
+ * explicit plot rather than dropped, so the plot cards' counts always add up to
+ * the header's account-wide total.
+ */
+export const UNASSIGNED_PLOT_ID = '__unassigned__';
+
+/**
+ * Open-Meteo is queried for daily aggregates only (no weather code, no hourly),
+ * so the condition is derived from precipitation and max temperature.
+ */
+export type WeatherConditionId = 'heavy_rain' | 'rain' | 'showers' | 'hot' | 'clear' | 'unknown';
+
+export interface PlotWeatherBrief {
+  lat: number;
+  lng: number;
+  /** Drives the forecast overlay's "district reading, not this plot" banner. */
+  source: 'plot' | 'district' | 'default';
+  /** The whole 7-day forecast, so the overlay opens without a second fetch. */
+  forecast: WeatherForecast | null;
+  /** The entry in `forecast.daily` whose date is today — not necessarily `daily[0]`. */
+  today: DailyWeather | null;
+  condition: WeatherConditionId;
+  conditionLabel: string;
+  conditionEmoji: string;
+  fetched_at: string | null;
+  /** True once the forecast is past the weather service's freshness window. */
+  stale: boolean;
+}
+
+/** One count per `HealthStatus` — the shape `getPlantHealthSummary` returns. */
+export interface PlotHealthCounts {
+  healthy: number;
+  stressed: number;
+  recovering: number;
+  sick: number;
+  total: number;
+}
+
+/**
+ * The plot card's one line of context — what is going on here, as opposed to
+ * the standing counts around it. Both halves are nullable and the card renders
+ * nothing at all when both are, so a plot with no history shows no empty row.
+ */
+export interface PlotBriefLine {
+  /**
+   * The single most decision-changing signal for this plot, or null on a quiet
+   * one — where the title row already says "Nothing due" and repeating it would
+   * waste the line.
+   */
+  headline: string | null;
+  /**
+   * When work was last recorded here, from the beds' and plants' `last_*`
+   * dates. Null when none of them is set. Says "worked", not "walked": those
+   * fields only cover watering, jeevamrutha, weeding, fertilising and
+   * harvesting, so an unlogged visit leaves no trace.
+   */
+  freshness: string | null;
+}
+
+/** One plot card on the Today screen. */
+export interface PlotBrief {
+  /** Parent location name, or `UNASSIGNED_PLOT_ID`. Stable list key. */
+  id: string;
+  name: string;
+  /** False for the unassigned bucket, unrecognised parents, and the no-plots fallback card. */
+  isConfigured: boolean;
+  district: string | null;
+  /** Plants in pots and ground only — bed plants are counted by `bedCount`. */
+  cropCount: number;
+  bedCount: number;
+  dueCount: number;
+  overdueCount: number;
+  /** Same scope as `cropCount`: pots and ground, so it matches the plant list. */
+  health: PlotHealthCounts;
+  weather: PlotWeatherBrief;
+  /** One line of context between the facts line and the weather chip. */
+  line: PlotBriefLine;
+}
+
+export interface SeasonProgress {
+  seasonId: string;
+  /** Short name, e.g. "SW Monsoon". */
+  seasonName: string;
+  /** Full label with its month range, e.g. "SW Monsoon (Jun–Sep)". */
+  seasonLabel: string;
+  monthLabel: string;
+  /** 1-based week within the season. */
+  week: number;
+  totalWeeks: number;
+  elapsedDays: number;
+  totalDays: number;
+  /** 0–1. Drives the two-segment progress bar. */
+  elapsedFraction: number;
+}
+
+/** How a crop should be established in the current month. */
+export type PlantNowAction = 'sow' | 'transplant';
+
+/** One curated crop chip in the Today screen's seasonal card. */
+export interface PlantNowRecommendation {
+  key: string;
+  emoji: string;
+  label: string;
+  action: PlantNowAction;
+}
+
+/** A single seasonal reminder for perennials already established on the farm. */
+export interface PerennialCareBrief {
+  count: number;
+  message: string;
+}
+
+/**
+ * One row in the Today screen's "Needs action" queue: an exception plus where it
+ * is. Built by `buildNeedsActionItems`, which resolves the alert's plant/bed id
+ * against the plot grouping.
+ */
+export interface NeedsActionItem {
+  alert: FarmAlert;
+  /**
+   * "Home farm · Bed 3", "Home farm", "Bed 3", or "" when neither segment
+   * applies — the row omits the line rather than printing a stray separator.
+   */
+  where: string;
+}
+
+/**
+ * Everything the Today screen renders, assembled by `useTodayBrief` so the
+ * screen composes blocks rather than deriving data.
+ */
+export interface TodayBrief {
+  /** Pre-formatted, e.g. "Friday 31 July". */
+  dateLabel: string;
+  /** Work still owed today: due plus overdue, completions removed. */
+  remainingTasks: number;
+  needActionCount: number;
+  plots: PlotBrief[];
+  needsAction: NeedsActionItem[];
+  season: SeasonProgress;
+  seasonNote: string;
+  seasonTip: string;
+  district: string | null;
+  plantNow: PlantNowRecommendation[];
+  /** Total suggestions available, so the chip row can offer "All N ›". */
+  perennialCare: PerennialCareBrief | null;
+}
+
 export interface VarietyDetail {
   daysToMaturity?: number;
   /** Values are strings from GROWING_SEASON_OPTIONS in plantLabels.ts */

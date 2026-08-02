@@ -1,9 +1,12 @@
 import React, { useCallback, useMemo } from 'react';
+import type { ImageStyle } from 'react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/organicInputListStyles';
 import { getCategoryLabel } from '@/config/organicInputs';
+import { getOrganicInputImage } from '@/config/referenceAssets';
 import type { OrganicInputEntry } from '@/types/database.types';
 
 interface Props {
@@ -19,13 +22,27 @@ interface Props {
 export function OrganicInputCard({ entry, onPress }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const image = useMemo(
+    () => getOrganicInputImage(entry.id, entry.imageAsset),
+    [entry.id, entry.imageAsset]
+  );
 
   const handlePress = useCallback(() => onPress(entry.id), [onPress, entry.id]);
 
   return (
     <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.75}>
       <View style={styles.cardTile}>
-        <Text style={styles.cardTileEmoji}>{entry.emoji}</Text>
+        {image ? (
+          <Image
+            source={image}
+            style={styles.cardTileImage as ImageStyle}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            recyclingKey={entry.id}
+          />
+        ) : (
+          <Text style={styles.cardTileEmoji}>{entry.emoji}</Text>
+        )}
       </View>
 
       <View style={styles.cardBody}>

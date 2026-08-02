@@ -192,7 +192,7 @@ describe('getFarmAlerts', () => {
     });
 
     // The whole point of the unification: one input set, one count.
-    it('never reports more overdue care than the hero ring counts', () => {
+    it('never reports more overdue care than the plot counts do', () => {
       const plants = ['Pepper 01', 'Pepper 02', 'Pepper 03'].map((name, i) =>
         makePlant({ id: `p${i}`, name })
       );
@@ -393,8 +393,9 @@ describe('getFarmAlerts', () => {
     });
     const rotation = alerts.find((a) => a.type === 'rotation_due');
     expect(rotation).toMatchObject({ severity: 'critical', bedId: 'b1', title: 'North Bed' });
-    // The bed cards below the rail already carry this, so it stays off the rail.
-    expect(isActionable(rotation!)).toBe(false);
+    // Nothing else on the Today screen states rotation risk, so it belongs in
+    // the needs-action queue.
+    expect(isActionable(rotation!)).toBe(true);
   });
 
   describe('farm-level green-manure alert', () => {
@@ -441,24 +442,41 @@ describe('sortAlerts', () => {
 describe('isActionable', () => {
   const base = { id: 'x', icon: '', title: '', message: '', created_at: '', daysOverdue: 0 };
 
-  it('includes the care types and sick plants', () => {
-    for (const type of ['water_needed', 'fertilise_due', 'prune_due', 'harvest_due'] as const) {
-      expect(isActionable({ ...base, type, severity: 'warning' })).toBe(true);
-    }
+  it('includes the conditions no count on the screen states', () => {
     expect(isActionable({ ...base, type: 'health_sick', severity: 'critical' })).toBe(true);
+    expect(isActionable({ ...base, type: 'harvest_due', severity: 'warning' })).toBe(true);
+    expect(isActionable({ ...base, type: 'rotation_due', severity: 'critical' })).toBe(true);
   });
 
-  it('excludes what another part of the screen already states', () => {
-    // pest/stress are informational; rotation lives on the bed cards; green
-    // manure under seasonal guidance.
-    for (const type of [
-      'pest_spotted',
-      'health_stressed',
-      'rotation_due',
-      'bed_resting_end',
-    ] as const) {
+  it('excludes anything a task already covers, whatever its type', () => {
+    // The plot cards count scheduled work; a card for it here would be the same
+    // fact twice, under counting rules that disagree.
+    for (const type of ['water_needed', 'fertilise_due', 'prune_due', 'harvest_due'] as const) {
+      expect(isActionable({ ...base, type, severity: 'warning', templateId: 't1' })).toBe(false);
+    }
+  });
+
+  it('excludes the care types even with no template id, since they only arise from tasks', () => {
+    for (const type of ['water_needed', 'fertilise_due', 'prune_due'] as const) {
       expect(isActionable({ ...base, type, severity: 'warning' })).toBe(false);
     }
+  });
+
+  it('excludes informational and advisory types', () => {
+    // pest/stress are informational; green manure is advice, and renders as the
+    // season block's closing line.
+    for (const type of ['pest_spotted', 'health_stressed', 'bed_resting_end'] as const) {
+      expect(isActionable({ ...base, type, severity: 'warning' })).toBe(false);
+    }
+  });
+
+  it('separates the two harvest_due sources', () => {
+    // Field-derived readiness has nothing to complete and belongs in the queue;
+    // the same type built from an overdue harvest task does not.
+    expect(isActionable({ ...base, type: 'harvest_due', severity: 'warning' })).toBe(true);
+    expect(
+      isActionable({ ...base, type: 'harvest_due', severity: 'warning', templateId: 't1' })
+    ).toBe(false);
   });
 });
 

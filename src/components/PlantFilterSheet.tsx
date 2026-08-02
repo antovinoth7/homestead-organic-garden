@@ -4,19 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { SheetHandle } from './SheetHandle';
 import { createStyles } from '../styles/plantsStyles';
-import {
-  PlantType,
-  HealthStatus,
-  SpaceType,
-  SunlightLevel,
-  WaterRequirement,
-} from '../types/database.types';
+import { HealthStatus, UNASSIGNED_PLOT_ID } from '../types/database.types';
+import { UNASSIGNED_PLOT_NAME } from '../utils/plotGrouping';
+import type { ActiveFilters, PlantFacetCounts } from '../utils/plantFilters';
 import { TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HEALTH_STATUS_LABELS, HEALTH_STATUS_TONE } from '../utils/plantLabels';
 import type { StatusTone } from '../utils/plantLabels';
 
-type FilterType = 'all' | PlantType;
 type SortOption = 'name' | 'newest' | 'oldest' | 'health' | 'age';
 
 const HEALTH_STATUSES: HealthStatus[] = ['healthy', 'stressed', 'recovering', 'sick'];
@@ -52,25 +47,19 @@ const TONE_STYLE_KEYS = {
   error: { chip: 'sheetChipActiveError', text: 'sheetChipTextError', dot: 'statusDotError' },
 } as const satisfies Record<StatusTone, { chip: string; text: string; dot: string }>;
 
-interface ActiveFilters {
-  type: FilterType;
-  health: HealthStatus | 'all';
-  space: SpaceType | 'all';
-  sunlight: SunlightLevel | 'all';
-  water: WaterRequirement | 'all';
-  parentLocation: string;
-  childLocation: string;
-  pestStatus: 'all' | 'active_issues' | 'no_issues';
-}
-
-interface PlantCounts {
-  type: Record<string, number>;
-  health: Record<string, number>;
-  space: Record<string, number>;
-  sunlight: Record<string, number>;
-  water: Record<string, number>;
-  pestActive: number;
-  pestNone: number;
+/**
+ * The " (n)" on a chip. Counts are taken against the other active filters, so a
+ * zero is information — "picking this empties the list" — and has to be shown
+ * rather than hidden, but muted so it doesn't read as an invitation.
+ */
+function FacetCount({
+  count,
+  styles,
+}: {
+  count: number;
+  styles: ReturnType<typeof createStyles>;
+}): React.JSX.Element {
+  return <Text style={count === 0 ? styles.sheetChipCountZero : undefined}> ({count})</Text>;
 }
 
 interface Props {
@@ -80,7 +69,7 @@ interface Props {
   updateFilter: <K extends keyof ActiveFilters>(category: K, value: ActiveFilters[K]) => void;
   clearAllFilters: () => void;
   hasActiveFilters: boolean;
-  plantCounts: PlantCounts;
+  plantCounts: PlantFacetCounts;
   parentLocations: string[];
   childLocations: string[];
   onClose: () => void;
@@ -101,6 +90,13 @@ export function PlantFilterSheet({
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
+
+  /** An active parent location the configured list has no chip for, if any. */
+  const extraLocation = useMemo<string | null>(() => {
+    const active = filters.parentLocation;
+    if (active === '' || parentLocations.includes(active)) return null;
+    return active === UNASSIGNED_PLOT_ID ? UNASSIGNED_PLOT_NAME : active;
+  }, [filters.parentLocation, parentLocations]);
 
   return (
     <View style={[StyleSheet.absoluteFill, styles.sheetOverlay]}>
@@ -176,13 +172,15 @@ export function PlantFilterSheet({
               <TouchableOpacity
                 key={val}
                 style={[styles.sheetChip, filters.type === val && styles.sheetChipActive]}
-                onPress={() => updateFilter('type', val as FilterType)}
+                onPress={() => updateFilter('type', val)}
               >
                 <Text
                   style={[styles.sheetChipText, filters.type === val && styles.sheetChipTextActive]}
                 >
                   {label}
-                  {val !== 'all' && plantCounts.type[val] ? ` (${plantCounts.type[val]})` : ''}
+                  {val !== 'all' && (
+                    <FacetCount count={plantCounts.type[val] ?? 0} styles={styles} />
+                  )}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -224,7 +222,7 @@ export function PlantFilterSheet({
                   <View style={[styles.statusDot, styles[tone.dot]]} />
                   <Text style={[styles.sheetChipText, isActive && styles[tone.text]]}>
                     {HEALTH_STATUS_LABELS[status]}
-                    {count ? ` (${count})` : ''}
+                    <FacetCount count={count} styles={styles} />
                   </Text>
                 </TouchableOpacity>
               );
@@ -247,7 +245,7 @@ export function PlantFilterSheet({
               <TouchableOpacity
                 key={val}
                 style={[styles.sheetChip, filters.space === val && styles.sheetChipActive]}
-                onPress={() => updateFilter('space', val as SpaceType | 'all')}
+                onPress={() => updateFilter('space', val)}
               >
                 <Text
                   style={[
@@ -256,7 +254,9 @@ export function PlantFilterSheet({
                   ]}
                 >
                   {label}
-                  {val !== 'all' && plantCounts.space[val] ? ` (${plantCounts.space[val]})` : ''}
+                  {val !== 'all' && (
+                    <FacetCount count={plantCounts.space[val] ?? 0} styles={styles} />
+                  )}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -280,7 +280,7 @@ export function PlantFilterSheet({
                 <TouchableOpacity
                   key={val}
                   style={[styles.sheetChip, isActive && styles.sheetChipActive]}
-                  onPress={() => updateFilter('sunlight', val as SunlightLevel | 'all')}
+                  onPress={() => updateFilter('sunlight', val)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isActive }}
                 >
@@ -293,9 +293,9 @@ export function PlantFilterSheet({
                   )}
                   <Text style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}>
                     {label}
-                    {val !== 'all' && plantCounts.sunlight[val]
-                      ? ` (${plantCounts.sunlight[val]})`
-                      : ''}
+                    {val !== 'all' && (
+                      <FacetCount count={plantCounts.sunlight[val] ?? 0} styles={styles} />
+                    )}
                   </Text>
                 </TouchableOpacity>
               );
@@ -316,12 +316,12 @@ export function PlantFilterSheet({
               ] as const
             ).map(([val, label, drops]) => {
               const isActive = filters.water === val;
-              const count = val !== 'all' ? plantCounts.water[val] : 0;
+              const count = val !== 'all' ? (plantCounts.water[val] ?? 0) : null;
               return (
                 <TouchableOpacity
                   key={val}
                   style={[styles.sheetChip, isActive && styles.sheetChipActive]}
-                  onPress={() => updateFilter('water', val as WaterRequirement | 'all')}
+                  onPress={() => updateFilter('water', val)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isActive }}
                   accessibilityLabel={val === 'all' ? 'All' : `${label} water requirement`}
@@ -340,7 +340,7 @@ export function PlantFilterSheet({
                   )}
                   <Text style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}>
                     {label}
-                    {count ? ` (${count})` : ''}
+                    {count !== null && <FacetCount count={count} styles={styles} />}
                   </Text>
                 </TouchableOpacity>
               );
@@ -377,12 +377,12 @@ export function PlantFilterSheet({
                   )}
                   <Text style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}>
                     {label}
-                    {val === 'active_issues' && plantCounts.pestActive > 0
-                      ? ` (${plantCounts.pestActive})`
-                      : ''}
-                    {val === 'no_issues' && plantCounts.pestNone > 0
-                      ? ` (${plantCounts.pestNone})`
-                      : ''}
+                    {val === 'active_issues' && (
+                      <FacetCount count={plantCounts.pestActive} styles={styles} />
+                    )}
+                    {val === 'no_issues' && (
+                      <FacetCount count={plantCounts.pestNone} styles={styles} />
+                    )}
                   </Text>
                 </TouchableOpacity>
               );
@@ -429,6 +429,22 @@ export function PlantFilterSheet({
                 </Text>
               </TouchableOpacity>
             ))}
+            {/* A Today plot card can scope the list to a plot with no chip of its
+                own — the unassigned bucket, or a plot renamed since its plants
+                were placed. Shown so the filter is never invisible. */}
+            {extraLocation !== null && (
+              <TouchableOpacity
+                style={[styles.sheetChip, styles.sheetChipActive]}
+                onPress={() => {
+                  updateFilter('parentLocation', '');
+                  updateFilter('childLocation', '');
+                }}
+              >
+                <Text style={[styles.sheetChipText, styles.sheetChipTextActive]}>
+                  📍 {extraLocation}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
           {filters.parentLocation !== '' && (
             <>

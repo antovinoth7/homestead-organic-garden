@@ -38,7 +38,7 @@ export default function PestDetailScreen(): React.JSX.Element {
       <View style={styles.container}>
         <View style={[styles.fallbackHeader, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity style={styles.fallbackBackButton} onPress={navigation.goBack}>
-            <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
+            <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
           </TouchableOpacity>
           <Text style={styles.fallbackTitle}>Not Found</Text>
         </View>
