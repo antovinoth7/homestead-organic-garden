@@ -84,7 +84,13 @@ describe('disease registry', () => {
     it('returns groups in the expected order', () => {
       const groups = getGroupedDiseaseEntries();
       const categories = groups.map((g) => g.category);
-      const expectedOrder: DiseaseCategory[] = ['fungal', 'bacterial', 'viral', 'physiological'];
+      const expectedOrder: DiseaseCategory[] = [
+        'fungal',
+        'bacterial',
+        'viral',
+        'phytoplasma',
+        'physiological',
+      ];
       let lastIdx = -1;
       for (const cat of categories) {
         const idx = expectedOrder.indexOf(cat);
@@ -103,7 +109,13 @@ describe('disease registry', () => {
 
   describe('getCategoryLabel', () => {
     it('returns readable labels for all categories', () => {
-      const categories: DiseaseCategory[] = ['fungal', 'bacterial', 'viral', 'physiological'];
+      const categories: DiseaseCategory[] = [
+        'fungal',
+        'bacterial',
+        'viral',
+        'phytoplasma',
+        'physiological',
+      ];
       for (const cat of categories) {
         const label = getCategoryLabel(cat);
         expect(label).toBeTruthy();

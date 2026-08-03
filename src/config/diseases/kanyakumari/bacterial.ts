@@ -255,7 +255,7 @@ export const BACTERIAL_DISEASES: DiseaseEntry[] = [
     name: 'Panama Wilt',
     tamilName: 'பனாமா வாடல்',
     scientificName: 'Fusarium oxysporum f.sp. cubense',
-    category: 'bacterial',
+    category: 'fungal',
     emoji: '🥀',
     identification:
       'Yellowing of older leaves starting from margins. Leaves break at petiole. Pseudostem splitting. Brown vascular discolouration.',
@@ -309,7 +309,7 @@ export const BACTERIAL_DISEASES: DiseaseEntry[] = [
     name: 'Thanjavur Wilt',
     tamilName: 'தஞ்சாவூர் வாடல்',
     scientificName: 'Ganoderma lucidum',
-    category: 'bacterial',
+    category: 'fungal',
     emoji: '🥀',
     identification:
       'Yellowing and drooping of outer fronds. Brown exudation from trunk base. Bracket fungus may appear on trunk.',
@@ -361,7 +361,7 @@ export const BACTERIAL_DISEASES: DiseaseEntry[] = [
     id: 'root_wilt',
     name: 'Root Wilt',
     tamilName: 'வேர் வாடல்',
-    category: 'bacterial',
+    category: 'phytoplasma',
     emoji: '🥀',
     identification:
       'Yellowing (ribbing) of leaflets. Flaccidity of fronds. Reduced crown size. Gradual decline in nut production.',

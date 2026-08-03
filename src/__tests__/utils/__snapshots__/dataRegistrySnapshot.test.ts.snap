@@ -8963,7 +8963,7 @@ exports[`data registry snapshots disease registry is unchanged 1`] = `
     "tamilName": "எலுமிச்சை புண்",
   },
   {
-    "category": "bacterial",
+    "category": "fungal",
     "damageDescription": "Soil-borne — persists for decades. Kills plants before harvest. No cure once infected. Plant resistant varieties only.",
     "emoji": "🥀",
     "id": "panama_wilt",
@@ -9013,7 +9013,7 @@ exports[`data registry snapshots disease registry is unchanged 1`] = `
     "tamilName": "பனாமா வாடல்",
   },
   {
-    "category": "bacterial",
+    "category": "fungal",
     "damageDescription": "Slow decline and death of coconut palm over 1–3 years. Root and basal trunk rot. Major problem in TN coconut belt.",
     "emoji": "🥀",
     "id": "thanjavur_wilt",
@@ -9063,7 +9063,7 @@ exports[`data registry snapshots disease registry is unchanged 1`] = `
     "tamilName": "தஞ்சாவூர் வாடல்",
   },
   {
-    "category": "bacterial",
+    "category": "phytoplasma",
     "damageDescription": "Chronic decline disease of coconut. Reduces yield progressively over years. Caused by phytoplasma transmitted by plant hoppers.",
     "emoji": "🥀",
     "id": "root_wilt",
@@ -9403,7 +9403,7 @@ exports[`data registry snapshots disease registry is unchanged 1`] = `
     "tamilName": "பப்பாளி வளைய புள்ளி நோய்",
   },
   {
-    "category": "viral",
+    "category": "bacterial",
     "damageDescription": "Fatal disease of citrus. No cure — trees decline over 3–5 years. Transmitted by citrus psylla. Most devastating citrus disease.",
     "emoji": "🧬",
     "id": "greening_disease",
@@ -9454,7 +9454,7 @@ exports[`data registry snapshots disease registry is unchanged 1`] = `
     "tamilName": "பசுமை நோய்",
   },
   {
-    "category": "viral",
+    "category": "phytoplasma",
     "damageDescription": "Stunted plants, no fruit production. Transmitted by leafhoppers. Common in brinjal.",
     "emoji": "🧬",
     "id": "little_leaf_disease",

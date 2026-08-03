@@ -317,7 +317,7 @@ export const VIRAL_DISEASES: DiseaseEntry[] = [
     name: 'Greening Disease',
     tamilName: 'பசுமை நோய்',
     scientificName: 'Candidatus Liberibacter asiaticus',
-    category: 'viral',
+    category: 'bacterial',
     emoji: '🧬',
     identification:
       'Asymmetric yellowing (blotchy mottle) on leaves. Fruit remains green, small, lopsided and bitter. Tree decline.',
@@ -369,7 +369,7 @@ export const VIRAL_DISEASES: DiseaseEntry[] = [
     id: 'little_leaf_disease',
     name: 'Little Leaf Disease',
     tamilName: 'சிறு இலை நோய்',
-    category: 'viral',
+    category: 'phytoplasma',
     emoji: '🧬',
     identification:
       "Leaves become abnormally small, narrow and yellow. Shortened internodes give bushy witches'-broom appearance.",
