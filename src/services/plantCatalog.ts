@@ -71,6 +71,15 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Maize',
         // Bed-type plants — aquatic
         'Lotus Stem',
+        // Additional Tamil Nadu warm-season and short cool-season crops
+        'Turnip',
+        'Knol Khol',
+        'Green Peas',
+        'Lablab Bean',
+        'Winged Bean',
+        'Sword Bean',
+        'Watermelon',
+        'Muskmelon',
         // Companion plants
         'Strawberry',
       ],
@@ -117,6 +126,14 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Moringa: ['PKM 1', 'PKM 2', 'Local'],
         'Pasalai Keerai': ['Green Stem', 'Red Stem', 'Local'],
         Strawberry: ['Sweet Charlie', 'Festival', 'Local Hill'],
+        Turnip: ['Purple Top White Globe', 'Pusa Sweti', 'Local'],
+        'Knol Khol': ['White Vienna', 'Purple Vienna', 'Local'],
+        'Green Peas': ['Arkel', 'Bonneville', 'Local'],
+        'Lablab Bean': ['CO 1', 'CO 2', 'Local'],
+        'Winged Bean': ['AKWB 1', 'Local Green'],
+        'Sword Bean': ['Bush', 'Climbing', 'Local'],
+        Watermelon: ['Sugar Baby', 'Arka Manik', 'Local'],
+        Muskmelon: ['Pusa Sharbati', 'Hara Madhu', 'Local'],
       },
       tamilNames: {
         Brinjal: 'கத்தரிக்காய்',
@@ -169,6 +186,14 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Maize: 'மக்காச்சோளம்',
         'Lotus Stem': 'தாமரைத்தண்டு',
         Strawberry: 'ஸ்ட்ராபெர்ரி',
+        Turnip: 'டர்னிப்',
+        'Knol Khol': 'நூல்கோல்',
+        'Green Peas': 'பச்சைப் பட்டாணி',
+        'Lablab Bean': 'அவரைக்காய்',
+        'Winged Bean': 'சிறகவரை',
+        'Sword Bean': 'வாள் அவரை',
+        Watermelon: 'தர்பூசணி',
+        Muskmelon: 'முலாம்பழம்',
       },
       descriptions: {
         Brinjal:
@@ -231,6 +256,14 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Lotus Stem':
           'Aquatic perennial with crunchy, tunnel-riddled rhizomes used in South Indian cooking',
         Strawberry: 'Low-growing fruiting plant producing sweet red berries; companion to spinach',
+        Turnip: 'Fast cool-season root crop best scheduled for Kanyakumari’s milder months',
+        'Knol Khol': 'Cool-season brassica grown for its tender swollen stem',
+        'Green Peas': 'Short cool-season climbing legume suited to the mildest local months',
+        'Lablab Bean': 'Heat-tolerant perennial bean widely grown as avarai in Tamil Nadu',
+        'Winged Bean': 'Humid-tropical climbing legume with edible pods, leaves, flowers, and tubers',
+        'Sword Bean': 'Vigorous tropical bean suited to fences and trellises; young pods are cooked',
+        Watermelon: 'Warm-season trailing cucurbit requiring drainage and a relatively dry fruiting period',
+        Muskmelon: 'Warm-season melon performing best with full sun, drainage, and low leaf wetness',
       },
     },
     herb: {
@@ -510,8 +543,14 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
     coconut_tree: {
       plants: ['Dwarf Coconut', 'Tall Coconut', 'Hybrid Coconut', 'King Coconut'],
       varieties: {
-        'Dwarf Coconut': ['COD', 'Malayan Dwarf'],
-        'Tall Coconut': ['West Coast Tall', 'East Coast Tall'],
+        'Dwarf Coconut': [
+          'Chowghat Orange Dwarf',
+          'Chowghat Green Dwarf',
+          'Malayan Yellow Dwarf',
+        ],
+        'Tall Coconut': ['West Coast Tall', 'East Coast Tall', 'Tiptur Tall', 'Arasampatti Tall'],
+        'Hybrid Coconut': ['VHC 1', 'VHC 2', 'VHC 3', 'Kerasankara', 'Chandrasankara'],
+        'King Coconut': ['Sri Lanka King Coconut'],
       },
       tamilNames: {
         'Dwarf Coconut': 'குட்டைத் தென்னை',
@@ -520,11 +559,14 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'King Coconut': 'ராஜ தென்னை',
       },
       descriptions: {
-        'Dwarf Coconut': 'Compact coconut palm ideal for small plots, bears early',
-        'Tall Coconut': 'Traditional tall coconut grown along the Kanyakumari coast',
+        'Dwarf Coconut':
+          'Early-bearing compact palms, mainly for tender nuts; choose locally tested planting material',
+        'Tall Coconut':
+          'Long-lived palms including West Coast Tall, a strong fit for humid Kanyakumari conditions',
         'Hybrid Coconut':
-          'Cross between Dwarf and Tall combining early bearing with high copra yield',
-        'King Coconut': 'Orange-skinned coconut prized for its naturally sweet water',
+          'Tall × Dwarf or Dwarf × Tall crosses; yield depends on certified true-to-type seedlings and management',
+        'King Coconut':
+          'Orange tender-nut type suited climatically but less standard in Tamil Nadu than released local cultivars',
       },
     },
     shrub: {
@@ -578,49 +620,50 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
     spinach: {
       plants: [
         'Palak',
-        'Saag',
-        'Pusa Jyoti',
-        'Hybrid Leafy',
-        'Local Green',
-        'Pusa Green',
-        'Winter Spinach',
-        'Red Stem',
+        'Malabar Spinach',
+        'Water Spinach',
+        'Amaranth Greens',
+        'Ponnanganni Keerai',
+        'Manathakkali Keerai',
+        'Mustard Greens',
+        'Vallarai Keerai',
       ],
       varieties: {
-        Palak: ['Palak Green', 'Palak Red', 'Palak Local', 'Palak Hybrid'],
-        Saag: ['Palak Saag', 'Mustard Saag', 'Mixed Saag', 'Traditional Saag'],
-        'Pusa Jyoti': ['CO 1', 'CO 2', 'Standard'],
-        'Hybrid Leafy': ['Hybrid A', 'Hybrid B', 'Hybrid Premium'],
-        'Local Green': ['Kanyakumari Local', 'Tamil Nadu Local', 'Traditional'],
-        'Pusa Green': ['PB 47', 'PB 51', 'Early Pusa'],
-        'Winter Spinach': ['Winter Green', 'Cool Season', 'Frost Hardy'],
-        'Red Stem': ['Red Veined', 'Purple Stem', 'Ornamental Red'],
+        Palak: ['All Green', 'Pusa Palak', 'Jobner Green', 'Local'],
+        'Malabar Spinach': ['Green Stem', 'Red Stem', 'Local'],
+        'Water Spinach': ['Broad Leaf', 'Narrow Leaf', 'Local'],
+        'Amaranth Greens': ['Arai Keerai', 'Siru Keerai', 'Mulai Keerai', 'CO 1'],
+        'Ponnanganni Keerai': ['Green', 'Red', 'Local'],
+        'Manathakkali Keerai': ['Local Green'],
+        'Mustard Greens': ['Broad Leaf', 'Local'],
+        'Vallarai Keerai': ['Local'],
       },
       tamilNames: {
-        Palak: 'பசலை',
-        Saag: 'சாக்',
-        'Pusa Jyoti': 'புஷா ஜோதி',
-        'Hybrid Leafy': 'கலப்பின பசலை',
-        'Local Green': 'தமிழ்நாடு பசலை',
-        'Pusa Green': 'புஷா பசலை',
-        'Winter Spinach': 'குளிர்காலப் பசலை',
-        'Red Stem': 'சிவப்பு கிழங்கு பசலை',
+        Palak: 'பாலக் கீரை',
+        'Malabar Spinach': 'பசலைக் கீரை',
+        'Water Spinach': 'நீர்க் கீரை',
+        'Amaranth Greens': 'அமராந்தஸ் கீரைகள்',
+        'Ponnanganni Keerai': 'பொன்னாங்கண்ணிக் கீரை',
+        'Manathakkali Keerai': 'மணத்தக்காளிக் கீரை',
+        'Mustard Greens': 'கடுகுக் கீரை',
+        'Vallarai Keerai': 'வல்லாரைக் கீரை',
       },
       descriptions: {
         Palak:
-          'Classic spinach variety rich in iron and vitamins, smooth dark-green leaves ideal for curries and saag',
-        Saag: 'Leafy green blend used in traditional Tamil and North Indian cooking for its earthy, nutritious profile',
-        'Pusa Jyoti':
-          'High-yielding bold-leaved variety suited to cool and moderate climates across South India',
-        'Hybrid Leafy':
-          'Modern hybrid combining fast growth, disease resistance, and tender leaf texture',
-        'Local Green':
-          'Heritage variety adapted to Tamil Nadu climate with superior bolt resistance',
-        'Pusa Green': 'Cold-tolerant variety bred for winter gardens in tropical regions',
-        'Winter Spinach':
-          'Frost-hardy variety optimised for December–March growing season in Kanyakumari',
-        'Red Stem':
-          'Ornamental-edible variety with striking red veins and purple stems for aesthetic vegetable gardens',
+          'True spinach grown as a short cool-season leafy crop during Kanyakumari’s mildest months',
+        'Malabar Spinach':
+          'Heat- and humidity-tolerant climbing leafy vegetable well suited to Kanyakumari',
+        'Water Spinach':
+          'Fast-growing tropical leafy vegetable for consistently moist beds; prevent escape into waterways',
+        'Amaranth Greens':
+          'Quick warm-season keerai group including arai, siru, and mulai types',
+        'Ponnanganni Keerai':
+          'Low-growing traditional Tamil leafy vegetable suited to moist soil and repeated harvest',
+        'Manathakkali Keerai':
+          'Traditional short-lived Tamil green; cook leaves and use correctly identified planting material',
+        'Mustard Greens': 'Peppery cool-season leaves best grown during the mild, less humid months',
+        'Vallarai Keerai':
+          'Moisture-loving creeping Tamil green suited to partial shade and humid home gardens',
       },
     },
   },

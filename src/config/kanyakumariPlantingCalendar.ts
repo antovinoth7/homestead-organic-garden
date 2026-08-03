@@ -76,11 +76,11 @@ export const KANYAKUMARI_PLANTING_CALENDAR: Readonly<Record<number, readonly Kan
     transplant('Brinjal'),
     transplant('Chilli'),
   ],
-  9: [sow('Fenugreek'), sow('Spinach', 'spinach'), sow('Turnip'), sow('Beans')],
+  9: [sow('Fenugreek'), sow('Palak', 'spinach'), sow('Turnip'), sow('Beans')],
   10: [
     sow('Beetroot'),
     sow('Fenugreek'),
-    sow('Spinach', 'spinach'),
+    sow('Palak', 'spinach'),
     sow('Turnip'),
     transplant('Onion'),
   ],

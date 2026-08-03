@@ -4245,7 +4245,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "spinach:Hybrid Leafy": {
+  "spinach:Amaranth Greens": {
     "profile": {
       "fertilisingFrequencyDays": 21,
       "growthStageDurations": {
@@ -4269,7 +4269,55 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "spinach:Local Green": {
+  "spinach:Malabar Spinach": {
+    "profile": {
+      "fertilisingFrequencyDays": 21,
+      "growthStageDurations": {
+        "mature": 10,
+        "seedling": 10,
+        "vegetative": 20,
+      },
+      "initialGrowthStage": "seedling",
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 14,
+      "soilType": "garden_soil",
+      "sunlight": "partial_sun",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 2,
+    },
+    "pruning": {
+      "tips": [
+        "Harvest leaves regularly to encourage growth",
+        "Remove yellow or damaged leaves",
+        "Pinch flowering tips to extend leaf harvest",
+      ],
+    },
+  },
+  "spinach:Manathakkali Keerai": {
+    "profile": {
+      "fertilisingFrequencyDays": 21,
+      "growthStageDurations": {
+        "mature": 10,
+        "seedling": 10,
+        "vegetative": 20,
+      },
+      "initialGrowthStage": "seedling",
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 14,
+      "soilType": "garden_soil",
+      "sunlight": "partial_sun",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 2,
+    },
+    "pruning": {
+      "tips": [
+        "Harvest leaves regularly to encourage growth",
+        "Remove yellow or damaged leaves",
+        "Pinch flowering tips to extend leaf harvest",
+      ],
+    },
+  },
+  "spinach:Mustard Greens": {
     "profile": {
       "fertilisingFrequencyDays": 21,
       "growthStageDurations": {
@@ -4317,7 +4365,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "spinach:Pusa Green": {
+  "spinach:Ponnanganni Keerai": {
     "profile": {
       "fertilisingFrequencyDays": 21,
       "growthStageDurations": {
@@ -4341,7 +4389,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "spinach:Pusa Jyoti": {
+  "spinach:Vallarai Keerai": {
     "profile": {
       "fertilisingFrequencyDays": 21,
       "growthStageDurations": {
@@ -4365,55 +4413,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "spinach:Red Stem": {
-    "profile": {
-      "fertilisingFrequencyDays": 21,
-      "growthStageDurations": {
-        "mature": 10,
-        "seedling": 10,
-        "vegetative": 20,
-      },
-      "initialGrowthStage": "seedling",
-      "preferredFertiliser": "compost",
-      "pruningFrequencyDays": 14,
-      "soilType": "garden_soil",
-      "sunlight": "partial_sun",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 2,
-    },
-    "pruning": {
-      "tips": [
-        "Harvest leaves regularly to encourage growth",
-        "Remove yellow or damaged leaves",
-        "Pinch flowering tips to extend leaf harvest",
-      ],
-    },
-  },
-  "spinach:Saag": {
-    "profile": {
-      "fertilisingFrequencyDays": 21,
-      "growthStageDurations": {
-        "mature": 10,
-        "seedling": 10,
-        "vegetative": 20,
-      },
-      "initialGrowthStage": "seedling",
-      "preferredFertiliser": "compost",
-      "pruningFrequencyDays": 14,
-      "soilType": "garden_soil",
-      "sunlight": "partial_sun",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 2,
-    },
-    "pruning": {
-      "tips": [
-        "Harvest leaves regularly to encourage growth",
-        "Remove yellow or damaged leaves",
-        "Pinch flowering tips to extend leaf harvest",
-      ],
-    },
-  },
-  "spinach:Winter Spinach": {
+  "spinach:Water Spinach": {
     "profile": {
       "fertilisingFrequencyDays": 21,
       "growthStageDurations": {
@@ -6137,6 +6137,31 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
+  "vegetable:Green Peas": {
+    "profile": {
+      "fertilisingFrequencyDays": 14,
+      "growthStageDurations": {
+        "flowering": 15,
+        "fruiting": 22,
+        "seedling": 18,
+        "vegetative": 25,
+      },
+      "initialGrowthStage": "seedling",
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 21,
+      "soilType": "garden_soil",
+      "sunlight": "full_sun",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 2,
+    },
+    "pruning": {
+      "tips": [
+        "Remove yellowing lower leaves",
+        "Pinch tips to encourage branching",
+        "Cut diseased stems at the base",
+      ],
+    },
+  },
   "vegetable:Groundnut": {
     "profile": {
       "daysToHarvest": {
@@ -6184,6 +6209,56 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "taxonomicFamily": "Fabaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 3,
+    },
+    "pruning": {
+      "tips": [
+        "Remove yellowing lower leaves",
+        "Pinch tips to encourage branching",
+        "Cut diseased stems at the base",
+      ],
+    },
+  },
+  "vegetable:Knol Khol": {
+    "profile": {
+      "fertilisingFrequencyDays": 14,
+      "growthStageDurations": {
+        "flowering": 15,
+        "fruiting": 22,
+        "seedling": 18,
+        "vegetative": 25,
+      },
+      "initialGrowthStage": "seedling",
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 21,
+      "soilType": "garden_soil",
+      "sunlight": "full_sun",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 2,
+    },
+    "pruning": {
+      "tips": [
+        "Remove yellowing lower leaves",
+        "Pinch tips to encourage branching",
+        "Cut diseased stems at the base",
+      ],
+    },
+  },
+  "vegetable:Lablab Bean": {
+    "profile": {
+      "fertilisingFrequencyDays": 14,
+      "growthStageDurations": {
+        "flowering": 15,
+        "fruiting": 22,
+        "seedling": 18,
+        "vegetative": 25,
+      },
+      "initialGrowthStage": "seedling",
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 21,
+      "soilType": "garden_soil",
+      "sunlight": "full_sun",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 2,
     },
     "pruning": {
       "tips": [
@@ -6582,6 +6657,31 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "taxonomicFamily": "Moringaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 4,
+    },
+    "pruning": {
+      "tips": [
+        "Remove yellowing lower leaves",
+        "Pinch tips to encourage branching",
+        "Cut diseased stems at the base",
+      ],
+    },
+  },
+  "vegetable:Muskmelon": {
+    "profile": {
+      "fertilisingFrequencyDays": 14,
+      "growthStageDurations": {
+        "flowering": 15,
+        "fruiting": 22,
+        "seedling": 18,
+        "vegetative": 25,
+      },
+      "initialGrowthStage": "seedling",
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 21,
+      "soilType": "garden_soil",
+      "sunlight": "full_sun",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 2,
     },
     "pruning": {
       "tips": [
@@ -7378,6 +7478,31 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
+  "vegetable:Sword Bean": {
+    "profile": {
+      "fertilisingFrequencyDays": 14,
+      "growthStageDurations": {
+        "flowering": 15,
+        "fruiting": 22,
+        "seedling": 18,
+        "vegetative": 25,
+      },
+      "initialGrowthStage": "seedling",
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 21,
+      "soilType": "garden_soil",
+      "sunlight": "full_sun",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 2,
+    },
+    "pruning": {
+      "tips": [
+        "Remove yellowing lower leaves",
+        "Pinch tips to encourage branching",
+        "Cut diseased stems at the base",
+      ],
+    },
+  },
   "vegetable:Tapioca": {
     "profile": {
       "daysToHarvest": {
@@ -7548,6 +7673,81 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "Remove suckers below first flower cluster",
         "Pinch growing tip after 5–6 clusters",
         "Prune lower leaves touching soil",
+      ],
+    },
+  },
+  "vegetable:Turnip": {
+    "profile": {
+      "fertilisingFrequencyDays": 14,
+      "growthStageDurations": {
+        "flowering": 15,
+        "fruiting": 22,
+        "seedling": 18,
+        "vegetative": 25,
+      },
+      "initialGrowthStage": "seedling",
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 21,
+      "soilType": "garden_soil",
+      "sunlight": "full_sun",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 2,
+    },
+    "pruning": {
+      "tips": [
+        "Remove yellowing lower leaves",
+        "Pinch tips to encourage branching",
+        "Cut diseased stems at the base",
+      ],
+    },
+  },
+  "vegetable:Watermelon": {
+    "profile": {
+      "fertilisingFrequencyDays": 14,
+      "growthStageDurations": {
+        "flowering": 15,
+        "fruiting": 22,
+        "seedling": 18,
+        "vegetative": 25,
+      },
+      "initialGrowthStage": "seedling",
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 21,
+      "soilType": "garden_soil",
+      "sunlight": "full_sun",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 2,
+    },
+    "pruning": {
+      "tips": [
+        "Remove yellowing lower leaves",
+        "Pinch tips to encourage branching",
+        "Cut diseased stems at the base",
+      ],
+    },
+  },
+  "vegetable:Winged Bean": {
+    "profile": {
+      "fertilisingFrequencyDays": 14,
+      "growthStageDurations": {
+        "flowering": 15,
+        "fruiting": 22,
+        "seedling": 18,
+        "vegetative": 25,
+      },
+      "initialGrowthStage": "seedling",
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 21,
+      "soilType": "garden_soil",
+      "sunlight": "full_sun",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 2,
+    },
+    "pruning": {
+      "tips": [
+        "Remove yellowing lower leaves",
+        "Pinch tips to encourage branching",
+        "Cut diseased stems at the base",
       ],
     },
   },

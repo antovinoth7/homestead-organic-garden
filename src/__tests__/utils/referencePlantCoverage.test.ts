@@ -1,5 +1,6 @@
 import { getDiseaseById } from '@/config/diseases';
 import { getOrganicInputById } from '@/config/organicInputs';
+import { DEFAULT_PLANT_CATALOG } from '@/services/plantCatalog';
 import {
   getPlantReferenceCoverage,
   getUnknownReferenceHosts,
@@ -20,7 +21,11 @@ describe('Tamil Nadu reference-data accuracy checks', () => {
 
   it('reports application coverage for every catalog row', () => {
     const coverage = getPlantReferenceCoverage();
-    expect(coverage).toHaveLength(137);
+    const catalogRows = Object.values(DEFAULT_PLANT_CATALOG.categories).reduce(
+      (total, category) => total + category.plants.length,
+      0
+    );
+    expect(coverage).toHaveLength(catalogRows);
     expect(coverage.find((row) => row.plantName === 'Tomato')?.pestIds.length).toBeGreaterThan(0);
     expect(
       coverage.find((row) => row.plantName === 'Tomato')?.diseaseIds.length

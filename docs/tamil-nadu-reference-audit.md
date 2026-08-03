@@ -8,9 +8,9 @@ Kanyakumari/high-rainfall zone.
 
 The reference is a useful **first-response garden guide**, not an exhaustive crop-protection
 manual. It currently contains 36 pest entries, 36 disease/disorder entries, and 12 organic
-inputs. Application-label cross-checking against the 137 rows in the default plant catalog
-finds at least one pest reference for 98 rows (71.5%) and at least one disease reference for
-71 rows (51.8%). A broad label such as `Vegetables` counts as coverage; therefore these figures
+inputs. Application-label cross-checking against the 145 rows in the default plant catalog
+finds at least one pest reference for 114 rows (78.6%) and at least one disease reference for
+87 rows (60.0%). A broad label such as `Vegetables` counts as coverage; therefore these figures
 measure discoverability, not proof that every listed treatment is suitable for every cultivar.
 
 The application audit is implemented in `referencePlantCoverage.ts`. It recognises deliberate
@@ -36,6 +36,15 @@ test rather than silently drifting away from the plant catalog.
 7. Farmyard manure no longer lists poultry waste as a defining ingredient or treats four to six
    weeks as universal proof of maturity. Beejamrutha no longer tells users to soak every seed
    overnight.
+8. Placeholder spinach rows such as `Hybrid Leafy`, `Local Green`, and the inappropriate
+   frost-oriented `Winter Spinach` were replaced with actual warm-humid and Tamil leafy crops:
+   Malabar spinach, water spinach, amaranth greens, ponnanganni, manathakkali, mustard greens,
+   and vallarai. Palak remains, but is explicitly described as a short cool-season crop.
+9. Turnip, knol khol, green peas, lablab bean, winged bean, sword bean, watermelon, and muskmelon
+   were added with Tamil names, useful cultivars, and Kanyakumari season or drainage cautions.
+10. Coconut choices now name Chowghat dwarf cultivars, West Coast and other tall cultivars, and
+    the VHC 1–3 Tamil Nadu hybrids. King coconut remains available but is clearly identified as
+    less standard locally than Tamil Nadu-released material.
 
 ## Important remaining gaps
 
@@ -44,8 +53,8 @@ test rather than silently drifting away from the plant catalog.
 The largest uncovered areas are herbs/spices, medicinal plants, ornamentals, and several fruit
 trees. Examples include coriander, mint, curry leaf, tulsi, basil, black pepper, cardamom,
 brahmi, ashwagandha, aloe vera, rose, marigold, pomegranate, jackfruit, arecanut, cocoa, and
-nutmeg. Catalog variety-like spinach rows also lack direct links. These should be filled crop by
-crop; assigning a generic disease to all of them merely to reach 100% would be unsafe.
+nutmeg. These should be filled crop by crop; assigning a generic disease to all of them merely
+to reach 100% would be unsafe.
 
 High-priority Tamil Nadu additions for a later, source-backed content pass include:
 

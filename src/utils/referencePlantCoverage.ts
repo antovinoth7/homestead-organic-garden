@@ -6,12 +6,13 @@ import type { DiseaseEntry, PestEntry, PlantType } from '@/types/database.types'
 type PlantReference = PestEntry | DiseaseEntry;
 
 /** Broad labels intentionally used by reference entries. */
-export const REFERENCE_GROUP_BY_PLANT_TYPE: Partial<Record<PlantType, string>> = {
-  vegetable: 'Vegetables',
-  fruit_tree: 'Fruit trees',
-  coconut_tree: 'Coconut',
-  flower: 'Flower crops',
-  timber_tree: 'Timber trees',
+export const REFERENCE_GROUPS_BY_PLANT_TYPE: Partial<Record<PlantType, string[]>> = {
+  vegetable: ['Vegetables'],
+  spinach: ['Vegetables'],
+  fruit_tree: ['Fruit trees'],
+  coconut_tree: ['Coconut'],
+  flower: ['Flower crops'],
+  timber_tree: ['Timber trees'],
 };
 
 /** Legitimate hosts mentioned by the regional guide but not offered by the plant catalog. */
@@ -33,9 +34,7 @@ function referenceAppliesToPlant(
   plantType: PlantType
 ): boolean {
   const acceptedLabels = new Set(
-    [plantName, REFERENCE_GROUP_BY_PLANT_TYPE[plantType]].filter(Boolean).map((name) =>
-      normalise(name!)
-    )
+    [plantName, ...(REFERENCE_GROUPS_BY_PLANT_TYPE[plantType] ?? [])].map(normalise)
   );
 
   return reference.plantsAffected.some((host) => acceptedLabels.has(normalise(host)));
@@ -82,7 +81,7 @@ export function getUnknownReferenceHosts(): string[] {
   const knownHosts = new Set(
     [
       ...catalogHosts,
-      ...Object.values(REFERENCE_GROUP_BY_PLANT_TYPE),
+      ...Object.values(REFERENCE_GROUPS_BY_PLANT_TYPE).flat(),
       ...RECOGNISED_EXTERNAL_HOSTS,
     ].map(normalise)
   );
