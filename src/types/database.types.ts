@@ -862,7 +862,12 @@ export interface JournalEntry {
 
 export type PestCategory = 'sap_sucking' | 'mites' | 'borers_larvae' | 'beetles_weevils' | 'other';
 
-export type DiseaseCategory = 'fungal' | 'bacterial' | 'viral' | 'physiological';
+export type DiseaseCategory =
+  | 'fungal'
+  | 'bacterial'
+  | 'viral'
+  | 'phytoplasma'
+  | 'physiological';
 
 export type RiskLevel = 'low' | 'moderate' | 'high';
 export type TreatmentEffort = 'easy' | 'moderate' | 'advanced';

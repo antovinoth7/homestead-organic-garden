@@ -41,6 +41,7 @@ const CATEGORY_LABELS: Record<DiseaseCategory, string> = {
   fungal: 'Fungal Diseases',
   bacterial: 'Bacterial Diseases',
   viral: 'Viral Diseases',
+  phytoplasma: 'Phytoplasma Diseases',
   physiological: 'Physiological Disorders',
 };
 
@@ -51,11 +52,19 @@ export const CATEGORY_DESCRIPTIONS: Record<DiseaseCategory, string> = {
     'Caused by bacteria entering through wounds or stomata; leads to wilting, cankers, or oozing lesions.',
   viral:
     'Caused by plant viruses spread by insect vectors; symptoms include mosaic patterns, stunting, and deformity.',
+  phytoplasma:
+    'Caused by phloem-limited bacteria spread mainly by sap-feeding insects; common signs include little leaves, yellowing, and witches\u2019-broom growth.',
   physiological:
     'Non-infectious disorders caused by nutrient deficiency, watering extremes, or environmental stress.',
 };
 
-const CATEGORY_ORDER: DiseaseCategory[] = ['fungal', 'bacterial', 'viral', 'physiological'];
+const CATEGORY_ORDER: DiseaseCategory[] = [
+  'fungal',
+  'bacterial',
+  'viral',
+  'phytoplasma',
+  'physiological',
+];
 
 export function getGroupedDiseaseEntries(): DiseaseCategoryGroup[] {
   const groups: Partial<Record<DiseaseCategory, DiseaseEntry[]>> = {};
