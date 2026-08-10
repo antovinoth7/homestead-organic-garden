@@ -17,7 +17,7 @@ import { wateringAdvice } from '@/services/weather';
 import type { WeatherPlot } from '@/hooks/useWeatherLocations';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/weatherCardStyles';
-import { weatherEmoji, weekdayLabel } from '@/utils/weatherWords';
+import { selectForecastDays, weatherEmoji, weekdayLabel } from '@/utils/weatherWords';
 
 /** Placeholder glyph for a slot with nothing to show — holds the row's height. */
 const EMPTY_SLOT = '–';
@@ -43,7 +43,7 @@ export const WeatherPlotCard = React.memo(function WeatherPlotCard({
     return null;
   }
 
-  const days = forecast?.daily.slice(0, 7) ?? [];
+  const days = selectForecastDays(forecast).available;
   const advice = wateringAdvice(rainSoon);
 
   return (

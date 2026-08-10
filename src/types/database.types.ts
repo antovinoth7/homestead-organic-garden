@@ -102,10 +102,7 @@ export type IssueSeverity = 'low' | 'medium' | 'high' | 'severe';
 // ─── Journal pest/disease + milestone + harvest vocab ────────────────────────
 export type PestDiseaseKind = 'pest' | 'disease';
 export type PestStatus = 'active' | 'treated' | 'resolved';
-export type TreatmentEffectiveness =
-  | 'effective'
-  | 'partially_effective'
-  | 'ineffective';
+export type TreatmentEffectiveness = 'effective' | 'partially_effective' | 'ineffective';
 export type MilestoneKind =
   | 'germinated'
   | 'first_flower'
@@ -335,6 +332,10 @@ export interface DailyWeather {
   tempMinC: number;
   /** Total precipitation in mm for the day. */
   precipitationMm: number;
+  /** Open-Meteo daily WMO weather code. Null only for a normalized legacy cache entry. */
+  weatherCode: number | null;
+  /** Maximum daily precipitation probability (0-100). Null for legacy/unavailable data. */
+  precipitationProbabilityPct: number | null;
 }
 
 export interface WeatherForecast {
@@ -342,6 +343,8 @@ export interface WeatherForecast {
   longitude: number;
   /** 7-day daily forecast, soonest first. */
   daily: DailyWeather[];
+  /** IANA timezone used to build the provider's daily buckets. */
+  timezone: string;
   /** ISO timestamp the forecast was fetched. */
   fetched_at: string;
 }
@@ -384,11 +387,20 @@ export interface LocationConfig {
  */
 export const UNASSIGNED_PLOT_ID = '__unassigned__';
 
-/**
- * Open-Meteo is queried for daily aggregates only (no weather code, no hourly),
- * so the condition is derived from precipitation and max temperature.
- */
-export type WeatherConditionId = 'heavy_rain' | 'rain' | 'showers' | 'hot' | 'clear' | 'unknown';
+export type WeatherConditionId =
+  | 'clear'
+  | 'partly_cloudy'
+  | 'cloudy'
+  | 'fog'
+  | 'drizzle'
+  | 'rain'
+  | 'heavy_rain'
+  | 'showers'
+  | 'heavy_showers'
+  | 'snow'
+  | 'thunderstorm'
+  | 'hot'
+  | 'unknown';
 
 export interface PlotWeatherBrief {
   lat: number;
@@ -405,6 +417,8 @@ export interface PlotWeatherBrief {
   fetched_at: string | null;
   /** True once the forecast is past the weather service's freshness window. */
   stale: boolean;
+  /** True while this plot's forecast is being fetched or revalidated. */
+  loading: boolean;
 }
 
 /** One count per `HealthStatus` — the shape `getPlantHealthSummary` returns. */
@@ -862,12 +876,7 @@ export interface JournalEntry {
 
 export type PestCategory = 'sap_sucking' | 'mites' | 'borers_larvae' | 'beetles_weevils' | 'other';
 
-export type DiseaseCategory =
-  | 'fungal'
-  | 'bacterial'
-  | 'viral'
-  | 'phytoplasma'
-  | 'physiological';
+export type DiseaseCategory = 'fungal' | 'bacterial' | 'viral' | 'phytoplasma' | 'physiological';
 
 export type RiskLevel = 'low' | 'moderate' | 'high';
 export type TreatmentEffort = 'easy' | 'moderate' | 'advanced';

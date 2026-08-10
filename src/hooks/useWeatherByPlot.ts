@@ -1,26 +1,21 @@
-/**
- * Forecasts for every plot at once, keyed by plot name.
- *
- * The Today screen shows a weather chip on each plot card. Mounting one
- * `useWeather` per card would give N independent loading states and N renders;
- * this fetches them in one `Promise.all` and commits once.
- *
- * Cache-first like `useWeather`: the initial state is seeded synchronously from
- * the in-memory cache, so revisits paint the chips in the same frame as the
- * cards rather than flashing empty.
- */
+/** Fetch and cache forecasts for multiple named plots in one state commit. */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WeatherForecast } from '@/types/database.types';
 import { getCachedForecast, getWeatherForecast } from '@/services/weather';
 import type { WeatherPlot } from '@/hooks/useWeatherLocations';
 import { logError } from '@/utils/errorLogging';
 
+export interface WeatherRefreshOptions {
+  force?: boolean;
+  /** Omit to refresh every plot. */
+  plotName?: string;
+}
+
 export interface UseWeatherByPlotResult {
-  /** Plot name → forecast. Absent/`null` means nothing cached or fetched yet. */
   byPlotName: ReadonlyMap<string, WeatherForecast | null>;
   loading: boolean;
-  refresh: () => void;
+  refresh: (options?: WeatherRefreshOptions) => Promise<void>;
 }
 
 function seedFromCache(plots: WeatherPlot[]): Map<string, WeatherForecast | null> {
@@ -30,53 +25,61 @@ function seedFromCache(plots: WeatherPlot[]): Map<string, WeatherForecast | null
 }
 
 export function useWeatherByPlot(plots: WeatherPlot[]): UseWeatherByPlotResult {
-  // `useWeatherLocations` rebuilds its array each mount, so depend on the plots'
-  // identity rather than the array's — otherwise every render refetches.
   const plotsKey = useMemo(
-    () => plots.map((p) => `${p.name}:${p.lat},${p.lng}`).join('|'),
+    () => plots.map((plot) => `${plot.name}:${plot.lat},${plot.lng}`).join('|'),
     [plots]
   );
-
   const [byPlotName, setByPlotName] = useState<Map<string, WeatherForecast | null>>(() =>
     seedFromCache(plots)
   );
   const [loading, setLoading] = useState(plots.length > 0);
+  const generationRef = useRef(0);
 
-  const load = useCallback(async () => {
-    if (plots.length === 0) {
-      setByPlotName(new Map());
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    // One failing plot must not blank the others, hence the per-plot catch.
-    // `getWeatherForecast` dedups by coordinate, so plots sharing district
-    // coordinates cost a single request.
-    const results = await Promise.all(
-      plots.map((plot) =>
-        getWeatherForecast(plot.lat, plot.lng).catch((err: unknown) => {
-          logError('network', `useWeatherByPlot: ${plot.name} forecast failed`, err as Error);
-          return null;
-        })
-      )
-    );
-    setByPlotName((prev) => {
-      const next = new Map<string, WeatherForecast | null>();
-      plots.forEach((plot, i) => {
-        // Keep the cached copy rather than downgrading a painted chip to empty.
-        next.set(plot.name, results[i] ?? prev.get(plot.name) ?? null);
+  const refresh = useCallback(
+    async (options: WeatherRefreshOptions = {}) => {
+      const targets = options.plotName
+        ? plots.filter((plot) => plot.name === options.plotName)
+        : plots;
+      if (targets.length === 0) {
+        if (!options.plotName) setByPlotName(new Map());
+        setLoading(false);
+        return;
+      }
+
+      const generation = ++generationRef.current;
+      setLoading(true);
+      const results = await Promise.all(
+        targets.map((plot) =>
+          getWeatherForecast(plot.lat, plot.lng, { force: options.force }).catch((err: unknown) => {
+            logError('network', `useWeatherByPlot: ${plot.name} forecast failed`, err as Error);
+            return null;
+          })
+        )
+      );
+      if (generation !== generationRef.current) return;
+      setByPlotName((previous) => {
+        const next = options.plotName
+          ? new Map(previous)
+          : new Map<string, WeatherForecast | null>();
+        targets.forEach((plot, index) => {
+          next.set(plot.name, results[index] ?? previous.get(plot.name) ?? null);
+        });
+        return next;
       });
-      return next;
-    });
-    setLoading(false);
-    // `plots` is covered by `plotsKey` — depending on the array itself would
-    // refetch on every parent render.
+      setLoading(false);
+    },
+    // `plotsKey` captures every value used by the request without depending on
+    // an array that callers may reconstruct on otherwise unrelated renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plotsKey]);
+    [plotsKey]
+  );
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void refresh();
+    return () => {
+      generationRef.current += 1;
+    };
+  }, [refresh]);
 
-  return { byPlotName, loading, refresh: load };
+  return { byPlotName, loading, refresh };
 }

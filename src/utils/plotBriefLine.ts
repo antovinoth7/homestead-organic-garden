@@ -36,7 +36,7 @@ import { TodayTaskSummary } from '@/utils/taskSummary';
 import { MS_PER_DAY, TASK_GERUNDS, TASK_LABELS } from '@/utils/taskConstants';
 import { isPlantArchived } from '@/utils/plantHelpers';
 import { toLocalDateString } from '@/utils/dateHelpers';
-import { DRY_DAY_MM, SHOWERS_MM, weekdayLabel } from '@/utils/weatherWords';
+import { DRY_DAY_MM, SHOWERS_MM, forecastDateKey, weekdayLabel } from '@/utils/weatherWords';
 
 export interface PlotBriefLineInput {
   /** This plot's summary from `summarizeTasksByPlot` — reused, never recomputed. */
@@ -122,9 +122,9 @@ function overdueHeadline(input: PlotBriefLineInput, today: Date): string | null 
 /** The forecast entry for today, which is not always `daily[0]` on a stale copy. */
 function findTodayIndex(forecast: WeatherForecast | null, now: number): number {
   if (!forecast || forecast.daily.length === 0) return -1;
-  const key = toLocalDateString(new Date(now));
+  const key = forecastDateKey(new Date(now), forecast.timezone);
   const index = forecast.daily.findIndex((d) => d.date === key);
-  return index >= 0 ? index : 0;
+  return index;
 }
 
 /** Rung 2 — "12 mm on Sat — do today's 2 sprays before it." */

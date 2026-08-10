@@ -53,7 +53,7 @@ export default function TodayScreen(): React.JSX.Element {
   const listRef = useRef<FlatList<NeedsActionItem>>(null);
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
 
-  const { brief, loading, error, reload, jobsByDateFor } = useTodayBrief();
+  const { brief, loading, error, reload, refreshWeatherFor, jobsByDateFor } = useTodayBrief();
   const [forecastPlotId, setForecastPlotId] = useState<string | null>(null);
 
   const openPlot = useMemo<PlotBrief | null>(
@@ -64,7 +64,7 @@ export default function TodayScreen(): React.JSX.Element {
   // Refresh param, e.g. after completing work in another tab.
   useEffect(() => {
     if (route.params?.refresh) {
-      reload();
+      void reload();
       navigation.setParams({ refresh: undefined });
     }
   }, [route.params, navigation, reload]);
@@ -73,7 +73,7 @@ export default function TodayScreen(): React.JSX.Element {
     useCallback(() => {
       listRef.current?.scrollToOffset({ offset: 0, animated: false });
       resetTabBar();
-      reload({ silent: true });
+      void reload({ silent: true });
       // Leaving the tab with the overlay open would strand the user on a
       // forecast when they came back.
       return () => setForecastPlotId(null);
@@ -123,6 +123,12 @@ export default function TodayScreen(): React.JSX.Element {
   const handlePressPlot = useCallback(() => goToCarePlan(), [goToCarePlan]);
   const handlePressWeather = useCallback((plotId: string) => setForecastPlotId(plotId), []);
   const closeForecast = useCallback(() => setForecastPlotId(null), []);
+  const retryForecast = useCallback(() => {
+    if (forecastPlotId) void refreshWeatherFor(forecastPlotId);
+  }, [forecastPlotId, refreshWeatherFor]);
+  const handleRefresh = useCallback(() => {
+    void reload({ forceWeather: true });
+  }, [reload]);
 
   // The bed count on a card — beds are not counted in the card's plant figures,
   // so this is where they are answered for.
@@ -262,7 +268,7 @@ export default function TodayScreen(): React.JSX.Element {
         refreshControl={
           <RefreshControl
             refreshing={loading}
-            onRefresh={reload}
+            onRefresh={handleRefresh}
             progressViewOffset={insets.top}
           />
         }
@@ -275,7 +281,9 @@ export default function TodayScreen(): React.JSX.Element {
           source={openPlot.weather.source}
           forecast={openPlot.weather.forecast}
           stale={openPlot.weather.stale}
+          loading={openPlot.weather.loading}
           jobsByDate={jobsByDateFor(openPlot.id)}
+          onRetry={retryForecast}
           onClose={closeForecast}
         />
       )}

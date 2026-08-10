@@ -5,12 +5,25 @@
 
 import { WeatherForecast, LocationProfile } from '@/types/database.types';
 import { getDistrictCoordinates, DEFAULT_COORDINATES } from '@/config/zones/districtCoordinates';
+import { forecastDateKey } from '@/utils/weatherWords';
 
 export interface WeatherCoords {
   lat: number;
   lng: number;
   /** Where the coordinates came from — drives nothing, but handy for debugging/UI. */
   source: 'plot' | 'district' | 'default';
+}
+
+/** Service-boundary validation also protects callers from corrupt stored profiles. */
+export function isValidWeatherCoordinates(lat: number, lng: number): boolean {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  );
 }
 
 /**
@@ -22,7 +35,11 @@ export function resolveWeatherCoords(
   profile?: LocationProfile | null,
   district?: string | null
 ): WeatherCoords {
-  if (profile?.latitude != null && profile?.longitude != null) {
+  if (
+    profile?.latitude != null &&
+    profile?.longitude != null &&
+    isValidWeatherCoordinates(profile.latitude, profile.longitude)
+  ) {
     return { lat: profile.latitude, lng: profile.longitude, source: 'plot' };
   }
   const districtCoords = getDistrictCoordinates(district);
@@ -50,16 +67,8 @@ export interface WateringAdvice {
  */
 export function wateringAdvice(rainSoon: boolean): WateringAdvice {
   return rainSoon
-    ? { emoji: '🌧️', text: 'Rain expected soon — skip watering' }
+    ? { emoji: '🌧️', text: 'Rain expected soon — check soil before watering' }
     : { emoji: '☀️', text: 'No rain expected soon — keep watering' };
-}
-
-/** Local calendar-day key (YYYY-MM-DD) matching `DailyWeather.date`. */
-function toForecastDateKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
 }
 
 /**
@@ -72,6 +81,6 @@ export function isRainPredictedOnDate(
   minMm = 2
 ): boolean {
   if (!forecast) return false;
-  const key = toForecastDateKey(date);
+  const key = forecastDateKey(date, forecast.timezone);
   return forecast.daily.some((d) => d.date === key && d.precipitationMm >= minMm);
 }

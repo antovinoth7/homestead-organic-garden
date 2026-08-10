@@ -200,6 +200,38 @@ export const safeRemoveItem = async (key: string, retries = 2): Promise<boolean>
 };
 
 /**
+ * Every key currently in storage, or an empty list if they cannot be read.
+ * For housekeeping sweeps that must find keys they no longer know the shape of.
+ */
+export const safeGetAllKeys = async (): Promise<string[]> => {
+  return storageQueue.add(async () => {
+    try {
+      return [...(await AsyncStorage.getAllKeys())];
+    } catch (e: unknown) {
+      logger.error('Error reading storage keys:', e as Error);
+      return [];
+    }
+  });
+};
+
+/**
+ * Safe bulk remove. Returns false when the batch could not be removed; callers
+ * sweeping obsolete keys can ignore that — the keys simply persist.
+ */
+export const safeMultiRemove = async (keys: string[]): Promise<boolean> => {
+  if (keys.length === 0) return true;
+  return storageQueue.add(async () => {
+    try {
+      await AsyncStorage.multiRemove(keys);
+      return true;
+    } catch (e: unknown) {
+      logger.error(`Error removing ${keys.length} items:`, e as Error);
+      return false;
+    }
+  });
+};
+
+/**
  * Safe single value set
  */
 export const safeSetItem = async (key: string, value: string, retries = 2): Promise<boolean> => {

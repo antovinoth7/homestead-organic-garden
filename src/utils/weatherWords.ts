@@ -1,18 +1,6 @@
-/**
- * Weather wording for the Today screen and its forecast overlay.
- *
- * Open-Meteo is queried for daily aggregates only — max/min temperature and
- * total precipitation, no weather code and no hourly series (see
- * `services/weather.ts`). So the condition word is derived from those three
- * numbers, and nothing here can promise a time of day ("dry till evening").
- *
- * The emoji ladder is exactly the one `WeatherPlotCard` used before this moved
- * here, so that card renders identically. The labels split its 🌦️ band into
- * "Rain" and "Showers" — a distinction the overlay's wording needs but the
- * emoji never made.
- */
+/** Shared weather wording and farm-timezone date helpers. */
 
-import { DailyWeather, WeatherConditionId } from '@/types/database.types';
+import { DailyWeather, WeatherConditionId, WeatherForecast } from '@/types/database.types';
 
 export interface DayDescription {
   id: WeatherConditionId;
@@ -20,62 +8,152 @@ export interface DayDescription {
   emoji: string;
 }
 
-const HEAVY_RAIN_MM = 10;
-const RAIN_MM = 5;
-/**
- * Exported so the plot line's rain warning fires on exactly the millimetres
- * that make `describeDay` say "Showers" — the sentence and the chip beside it
- * must not disagree about whether a day is wet.
- */
+export interface VisibleForecastDays {
+  today: DailyWeather | null;
+  future: DailyWeather[];
+  available: DailyWeather[];
+  todayKey: string;
+}
+
+export const FARM_TIMEZONE = 'Asia/Kolkata';
 export const SHOWERS_MM = 2;
+export const DRY_DAY_MM = 1;
+const HEAVY_RAIN_MM = 10;
 const HOT_C = 35;
 
-/** Below this a day reads as dry — the rain slot shows a dash instead of "0mm". */
-export const DRY_DAY_MM = 1;
+function codeDescription(code: number): DayDescription {
+  if (code === 0) return { id: 'clear', label: 'Clear', emoji: '☀️' };
+  if (code === 1) return { id: 'clear', label: 'Mostly clear', emoji: '🌤️' };
+  if (code === 2) return { id: 'partly_cloudy', label: 'Partly cloudy', emoji: '⛅' };
+  if (code === 3) return { id: 'cloudy', label: 'Overcast', emoji: '☁️' };
+  if (code === 45 || code === 48) return { id: 'fog', label: 'Fog', emoji: '🌫️' };
+  if ([51, 53, 55, 56, 57].includes(code)) return { id: 'drizzle', label: 'Drizzle', emoji: '🌦️' };
+  if ([61, 63, 66].includes(code)) return { id: 'rain', label: 'Rain', emoji: '🌧️' };
+  if (code === 65 || code === 67) return { id: 'heavy_rain', label: 'Heavy rain', emoji: '🌧️' };
+  if (code === 80 || code === 81) return { id: 'showers', label: 'Showers', emoji: '🌦️' };
+  if (code === 82) return { id: 'heavy_showers', label: 'Heavy showers', emoji: '🌧️' };
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return { id: 'snow', label: 'Snow', emoji: '🌨️' };
+  if ([95, 96, 99].includes(code))
+    return { id: 'thunderstorm', label: 'Thunderstorm', emoji: '⛈️' };
+  return { id: 'unknown', label: 'Unknown', emoji: '☁️' };
+}
 
 export function describeDay(day: DailyWeather | null | undefined): DayDescription {
   if (!day) return { id: 'unknown', label: 'No forecast', emoji: '☁️' };
+
+  if (day.weatherCode != null) {
+    const described = codeDescription(day.weatherCode);
+    // Heat is the more operationally important signal on otherwise benign days.
+    if (day.tempMaxC >= HOT_C && day.weatherCode >= 0 && day.weatherCode <= 3) {
+      return { id: 'hot', label: 'Hot', emoji: '🔥' };
+    }
+    return described;
+  }
+
+  // Backward-compatible cache fallback. Total precipitation cannot distinguish
+  // showers from steady rain, so legacy entries deliberately use generic rain.
   if (day.precipitationMm >= HEAVY_RAIN_MM)
     return { id: 'heavy_rain', label: 'Heavy rain', emoji: '🌧️' };
-  if (day.precipitationMm >= RAIN_MM) return { id: 'rain', label: 'Rain', emoji: '🌦️' };
-  if (day.precipitationMm >= SHOWERS_MM) return { id: 'showers', label: 'Showers', emoji: '🌦️' };
+  if (day.precipitationMm >= SHOWERS_MM) return { id: 'rain', label: 'Rain', emoji: '🌧️' };
   if (day.tempMaxC >= HOT_C) return { id: 'hot', label: 'Hot', emoji: '🔥' };
   return { id: 'clear', label: 'Clear', emoji: '☀️' };
 }
 
-/** Kept as its own export so `WeatherPlotCard` can drop its private copy. */
 export function weatherEmoji(day: DailyWeather): string {
   return describeDay(day).emoji;
 }
 
-export function weekdayLabel(isoDate: string): string {
-  const d = new Date(isoDate);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('en-US', { weekday: 'short' });
+function dateAtNoonUtc(isoDate: string): Date {
+  return new Date(`${isoDate}T12:00:00.000Z`);
 }
 
-/** "31° / 24°", or a dash pair when the day is missing. */
+export function weekdayLabel(isoDate: string): string {
+  const d = dateAtNoonUtc(isoDate);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+}
+
+export function forecastDateKey(now: Date = new Date(), timeZone = FARM_TIMEZONE): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now);
+    const value = (type: Intl.DateTimeFormatPartTypes): string =>
+      parts.find((part) => part.type === type)?.value ?? '';
+    const key = `${value('year')}-${value('month')}-${value('day')}`;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(key)) return key;
+  } catch {
+    // Invalid/unsupported stored timezones fall back to the farm default below.
+  }
+  if (timeZone !== FARM_TIMEZONE) return forecastDateKey(now, FARM_TIMEZONE);
+  // Only reachable if the runtime cannot resolve Asia/Kolkata at all, which
+  // Hermes with its bundled tz data does not do. This last resort is UTC, so it
+  // is 5:30h behind the farm and names the previous day after 18:30 IST.
+  return now.toISOString().slice(0, 10);
+}
+
+export function selectForecastDays(
+  forecast: WeatherForecast | null,
+  now: Date = new Date()
+): VisibleForecastDays {
+  const todayKey = forecastDateKey(now, forecast?.timezone ?? FARM_TIMEZONE);
+  const available = (forecast?.daily ?? []).filter((day) => day.date >= todayKey).slice(0, 7);
+  const today = available.find((day) => day.date === todayKey) ?? null;
+  const future = available.filter((day) => day.date > todayKey).slice(0, today ? 6 : 7);
+  return { today, future, available, todayKey };
+}
+
+export function forecastDayLabel(isoDate: string, todayKey: string): string {
+  const today = dateAtNoonUtc(todayKey);
+  const date = dateAtNoonUtc(isoDate);
+  if (Number.isNaN(today.getTime()) || Number.isNaN(date.getTime())) return weekdayLabel(isoDate);
+  const days = Math.round((date.getTime() - today.getTime()) / 86_400_000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Tomorrow';
+  return `${weekdayLabel(isoDate)} · ${date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  })}`;
+}
+
+export function formatForecastDate(isoDate: string): string {
+  const date = dateAtNoonUtc(isoDate);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+}
+
 export function formatTempRange(day: DailyWeather | null | undefined): string {
   if (!day) return '—';
   return `${Math.round(day.tempMaxC)}° / ${Math.round(day.tempMinC)}°`;
 }
 
-/** "8mm" once there is meaningful rain, otherwise a dash. */
 export function formatRain(day: DailyWeather | null | undefined): string {
   if (!day || day.precipitationMm < DRY_DAY_MM) return '—';
   return `${Math.round(day.precipitationMm)}mm`;
 }
 
-/**
- * Explains a forecast that isn't actually this plot's. `WeatherPlot.source` is
- * set by `resolveWeatherCoords`: 'plot' when the plot has its own GPS pin,
- * 'district' when it falls back to the farm's district, 'default' when even
- * that is unset.
- */
-export const FALLBACK_BANNER_COPY: Record<'district' | 'default', (district: string | null) => string> =
-  {
-    district: (district) =>
-      `Showing ${district ?? 'district'} readings — this plot has no location saved, so the figures are for the district, not the field.`,
-    default: () =>
-      'Showing the default Kanyakumari readings — no district or plot location is saved yet.',
-  };
+export function formatRainChance(day: DailyWeather | null | undefined): string {
+  if (!day || day.precipitationProbabilityPct == null) return '—';
+  return `${Math.round(day.precipitationProbabilityPct)}%`;
+}
+
+export const FALLBACK_BANNER_COPY: Record<
+  'district' | 'default',
+  (district: string | null) => string
+> = {
+  district: (district) =>
+    `Showing ${
+      district ?? 'district'
+    } readings — this plot has no location saved, so the figures are for the district, not the field.`,
+  default: () =>
+    'Showing the default Kanyakumari readings — no district or plot location is saved yet.',
+};

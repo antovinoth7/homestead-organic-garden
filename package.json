@@ -1,6 +1,6 @@
 {
   "name": "organic-gardening-app",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "version": "1.1.0",
   "main": "index.ts",
   "scripts": {

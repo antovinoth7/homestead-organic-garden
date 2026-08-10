@@ -36,7 +36,7 @@ interface Props {
   /** Shared StyleSheet from the screen — avoids rebuilding the large factory per card. */
   styles: ReturnType<typeof createStyles>;
   bedMap?: Map<string, string>;
-  /** Watering tasks: rain predicted on the due date — show a "may skip" badge. */
+  /** Watering tasks: rain predicted on the due date — prompt a soil check. */
   rainExpected?: boolean;
   /** Harvest tasks: formatted estimated harvest date hint (e.g. "Aug 12"). */
   harvestHint?: string | null;
@@ -237,7 +237,7 @@ function SwipeableTaskCardComponent({
                   )}
                   {rainExpected && (
                     <View style={styles.taskRainBadge}>
-                      <Text style={styles.taskRainBadgeText}>🌧️ Rain expected — may skip</Text>
+                      <Text style={styles.taskRainBadgeText}>🌧️ Rain expected — check soil</Text>
                     </View>
                   )}
                 </View>
@@ -283,7 +283,13 @@ function SwipeableTaskCardComponent({
                   accessibilityState={{ disabled: isBlocked, selected: isSelected }}
                 >
                   <Ionicons
-                    name={isBlocked ? 'ban-outline' : isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                    name={
+                      isBlocked
+                        ? 'ban-outline'
+                        : isSelected
+                        ? 'checkmark-circle'
+                        : 'ellipse-outline'
+                    }
                     size={22}
                     color={isSelected ? theme.primary : theme.border}
                   />

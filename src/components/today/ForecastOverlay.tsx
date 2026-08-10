@@ -1,19 +1,10 @@
-/**
- * ForecastOverlay — one plot's seven days, opened from its weather chip.
- *
- * Purely presentational: the forecast was already fetched when the plot cards
- * painted, so this opens instantly and works from cache offline. It renders as
- * a full-screen sibling of the Today list rather than an RN `Modal` — a Modal
- * gets its own native window, which breaks the floating tab bar's transform and
- * the safe-area insets.
- *
- * Open-Meteo gives daily aggregates only, so nothing here promises a time of
- * day; when the reading isn't actually this plot's, the banner says so.
- */
+/** Full-screen, cached seven-day forecast for one plot. */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
+  ActivityIndicator,
   BackHandler,
+  Linking,
   ScrollView,
   StyleProp,
   Text,
@@ -27,41 +18,42 @@ import { WeatherConditionId, WeatherForecast } from '@/types/database.types';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/forecastOverlayStyles';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
+import { OPEN_METEO_ATTRIBUTION_URL } from '@/services/weather';
 import {
   describeDay,
   FALLBACK_BANNER_COPY,
+  forecastDayLabel,
+  formatForecastDate,
   formatRain,
+  formatRainChance,
   formatTempRange,
-  weekdayLabel,
+  selectForecastDays,
 } from '@/utils/weatherWords';
 
 interface Props {
   plotName: string;
   district: string | null;
-  /** 'plot' means a real pin; anything else needs the caveat banner. */
   source: 'plot' | 'district' | 'default';
   forecast: WeatherForecast | null;
-  /** Whether the forecast is past its freshness window. */
   stale: boolean;
-  /** Forecast date → job text, from `useTodayBrief().jobsByDateFor`. */
+  loading: boolean;
   jobsByDate: ReadonlyMap<string, string>;
+  onRetry: () => void;
   onClose: () => void;
 }
 
-/**
- * The card tint for a day, picked by its condition — the same style-object
- * lookup `PlotCard` uses for its weather chip, so no colour is computed in the
- * render path and every tint stays a theme token.
- */
 function dayTone(
   styles: ReturnType<typeof createStyles>,
   condition: WeatherConditionId
 ): StyleProp<ViewStyle> {
   switch (condition) {
     case 'heavy_rain':
+    case 'heavy_showers':
+    case 'thunderstorm':
     case 'rain':
       return styles.dayToneRain;
     case 'showers':
+    case 'drizzle':
       return styles.dayToneShowers;
     case 'hot':
       return styles.dayToneHot;
@@ -70,12 +62,16 @@ function dayTone(
   }
 }
 
-/** "05:50" from an ISO timestamp. */
 function formatFetchedAt(iso: string | null): string | null {
   if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export const ForecastOverlay = React.memo(function ForecastOverlay({
@@ -84,12 +80,17 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
   source,
   forecast,
   stale,
+  loading,
   jobsByDate,
+  onRetry,
   onClose,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
+  const { today, future, available, todayKey } = selectForecastDays(forecast);
+  const todayDescription = describeDay(today);
+  const fetchedAt = formatFetchedAt(forecast?.fetched_at ?? null);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -99,10 +100,11 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
     return () => sub.remove();
   }, [onClose]);
 
-  const days = forecast?.daily.slice(0, 7) ?? [];
-  const today = days[0] ?? null;
-  const todayDescription = describeDay(today);
-  const fetchedAt = formatFetchedAt(forecast?.fetched_at ?? null);
+  const openAttribution = useCallback(() => {
+    void Linking.openURL(OPEN_METEO_ATTRIBUTION_URL).catch(() => undefined);
+  }, []);
+
+  const rows = today ? future : available;
 
   return (
     <View style={styles.overlay}>
@@ -138,35 +140,90 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
           </View>
         )}
 
-        {today !== null && (
-          <View style={styles.today}>
-            <Text style={styles.todayLabel}>Today · {weekdayLabel(today.date)}</Text>
-            <View style={styles.todayRow}>
-              <Text style={styles.todayEmoji}>{todayDescription.emoji}</Text>
-              <Text style={styles.todayTemp}>{formatTempRange(today)}</Text>
-              <Text style={styles.todayRain}>{formatRain(today)}</Text>
-              <Text style={styles.todayCondition}>{todayDescription.label}</Text>
-            </View>
+        {stale && (
+          <View style={styles.staleBanner}>
+            <Text style={styles.staleText}>
+              Cached forecast · reconnect and retry for current data
+            </Text>
+            <TouchableOpacity
+              onPress={onRetry}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Refresh forecast"
+            >
+              <Text style={styles.retryLink}>{loading ? 'Refreshing…' : 'Retry'}</Text>
+            </TouchableOpacity>
           </View>
         )}
 
-        <Text style={styles.sectionLabel}>Seven days</Text>
+        {today !== null && (
+          <View style={styles.today}>
+            <Text style={styles.todayLabel}>Today · {formatForecastDate(today.date)}</Text>
+            <View style={styles.todayRow}>
+              <Text style={styles.todayEmoji}>{todayDescription.emoji}</Text>
+              <View style={styles.todayWeather}>
+                <Text style={styles.todayTemp}>{formatTempRange(today)}</Text>
+                <Text style={styles.todayMetrics}>
+                  {formatRainChance(today)} rain · {formatRain(today)}
+                </Text>
+              </View>
+              <Text style={styles.todayCondition}>{todayDescription.label}</Text>
+            </View>
+            <Text style={styles.todayJob}>
+              {jobsByDate.get(today.date) ?? 'No garden jobs scheduled'}
+            </Text>
+          </View>
+        )}
 
-        {days.length === 0 ? (
-          <Text style={styles.noData}>No forecast cached for this plot yet.</Text>
+        <Text style={styles.sectionLabel}>{today ? 'Next six days' : 'Available forecast'}</Text>
+
+        {available.length === 0 ? (
+          <View style={styles.noDataBlock}>
+            {loading ? (
+              <ActivityIndicator color={theme.primary} />
+            ) : (
+              <>
+                <Text style={styles.noData}>No current forecast is available for this plot.</Text>
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  onPress={onRetry}
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry forecast"
+                >
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         ) : (
           <View style={styles.days}>
-            {days.map((day) => {
+            {rows.map((day) => {
               const description = describeDay(day);
+              const accessibility = `${forecastDayLabel(day.date, todayKey)}, ${
+                description.label
+              }, ${formatTempRange(day)}, ${formatRainChance(day)} chance of rain, ${formatRain(
+                day
+              )}, ${jobsByDate.get(day.date) ?? 'no garden jobs scheduled'}`;
               return (
-                <View key={day.date} style={[styles.dayRow, dayTone(styles, description.id)]}>
-                  <Text style={styles.dayName}>{weekdayLabel(day.date)}</Text>
-                  <Text style={styles.dayEmoji}>{description.emoji}</Text>
-                  <Text style={styles.dayTemp}>{formatTempRange(day)}</Text>
-                  <Text style={styles.dayRain}>{formatRain(day)}</Text>
-                  <Text style={styles.dayJob} numberOfLines={1}>
-                    {jobsByDate.get(day.date) ?? '—'}
-                  </Text>
+                <View
+                  key={day.date}
+                  style={[styles.dayRow, dayTone(styles, description.id)]}
+                  accessible
+                  accessibilityLabel={accessibility}
+                >
+                  <View style={styles.dayTopRow}>
+                    <Text style={styles.dayName}>{forecastDayLabel(day.date, todayKey)}</Text>
+                    <Text style={styles.dayEmoji}>{description.emoji}</Text>
+                    <Text style={styles.dayCondition}>{description.label}</Text>
+                  </View>
+                  <View style={styles.dayDetailRow}>
+                    <Text style={styles.dayTemp}>{formatTempRange(day)}</Text>
+                    <Text style={styles.dayRain}>{formatRainChance(day)} rain</Text>
+                    <Text style={styles.dayRain}>{formatRain(day)}</Text>
+                    <Text style={styles.dayJob} numberOfLines={2}>
+                      {jobsByDate.get(day.date) ?? 'No jobs'}
+                    </Text>
+                  </View>
                 </View>
               );
             })}
@@ -175,9 +232,17 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Source · Open-Meteo
-            {fetchedAt ? `\nFetched ${fetchedAt}${stale ? ' · cached offline' : ''}` : ''}
-            {`\n${plotName}${district ? ` · ${district}` : ''}`}
+            {fetchedAt ? `Updated ${fetchedAt}${stale ? ' · cached offline' : ''}\n` : ''}
+            {plotName}
+            {district ? ` · ${district}` : ''}
+          </Text>
+          <Text
+            style={styles.attributionLink}
+            onPress={openAttribution}
+            accessibilityRole="link"
+            accessibilityLabel="Weather data by Open-Meteo, licensed CC BY 4.0"
+          >
+            Weather data by Open-Meteo · CC BY 4.0
           </Text>
         </View>
       </ScrollView>

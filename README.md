@@ -72,6 +72,7 @@ Notes:
 - React Navigation
 - fflate
 - Sentry
+- Open-Meteo weather data
 
 ## Prerequisites
 
@@ -478,3 +479,22 @@ in `jest.config.js`.
 eas build --platform android
 eas build --platform ios
 ```
+
+## Weather Data and Non-Commercial Operation
+
+This maintained application is free, has no advertising or subscriptions, and uses the
+Open-Meteo free API for non-commercial weather forecasts. Weather data is provided by
+[Open-Meteo](https://open-meteo.com/) under CC BY 4.0. The client caches forecasts for
+three hours and sends only the selected plot or fallback district coordinates needed for
+the forecast request.
+
+Open-Meteo's free service currently requires fewer than 10,000 calls per day, 5,000 per
+hour, and 600 per minute, and remains subject to its published terms. A commercial
+deployment or commercial fork must obtain an appropriate Open-Meteo plan or replace the
+weather provider; the Apache-2.0 license does not restrict commercial reuse of this code.
+See `THIRD_PARTY_NOTICES.md` for attribution details and verify current provider terms
+before publishing a build.
+
+## License
+
+Licensed under the Apache License 2.0. See `LICENSE`.

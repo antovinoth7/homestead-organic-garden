@@ -14,6 +14,7 @@ This document describes what user data the Organic Gardening Planner collects, w
 | **Photo filenames**        | e.g. `plant_1234567890.jpg`                                  | Firestore (filename only, not the image)        |
 | **User settings**          | Locations, plant catalog, care profiles                      | Firestore `user_settings/{uid}`                 |
 | **Error/crash data**       | Stack traces, anonymised user ID                             | Sentry (if configured)                          |
+| **Weather location**       | Saved plot coordinates or district fallback coordinates      | Open-Meteo request + local forecast cache       |
 
 ## Where Data Lives
 
@@ -33,6 +34,19 @@ This document describes what user data the Organic Gardening Planner collects, w
 - User ID is sent to Sentry for crash correlation. Email is **not** sent.
 - Sensitive context keys (password, token, email, credential) are auto-redacted from error payloads.
 - Stack traces and device metadata are collected for debugging.
+
+### Weather Forecasts (Open-Meteo)
+
+- The app sends the selected plot's manually entered latitude/longitude to Open-Meteo. If
+  no complete valid coordinate pair is saved, it sends district headquarters coordinates
+  or the documented Kanyakumari default.
+- The device IP address is necessarily visible to Open-Meteo when making the request.
+- Forecast responses are cached in memory and AsyncStorage for offline use and to reduce
+  requests. They contain forecast data, coordinates, provider timezone, and fetch time.
+- Open-Meteo states that free-service webserver logs may contain IP addresses and geographic
+  coordinates and are deleted after 90 days. Consult Open-Meteo's current privacy terms for
+  authoritative retention details.
+- The app does not collect phone GPS location or continuously track location.
 
 ## Data Retention
 
@@ -61,11 +75,12 @@ This document describes what user data the Organic Gardening Planner collects, w
 
 ## Third-Party Services
 
-| Service                 | Purpose        | Data Shared                                   |
-| ----------------------- | -------------- | --------------------------------------------- |
-| Firebase Authentication | User sign-in   | Email, password (hashed)                      |
-| Cloud Firestore         | Data storage   | Plant/task/journal records, settings          |
-| Sentry                  | Error tracking | Anonymised user ID, stack traces, device info |
+| Service                 | Purpose          | Data Shared                                   |
+| ----------------------- | ---------------- | --------------------------------------------- |
+| Firebase Authentication | User sign-in     | Email, password (hashed)                      |
+| Cloud Firestore         | Data storage     | Plant/task/journal records, settings          |
+| Sentry                  | Error tracking   | Anonymised user ID, stack traces, device info |
+| Open-Meteo              | Weather forecast | Plot or fallback coordinates and device IP    |
 
 No analytics, advertising, or social media SDKs are integrated.
 

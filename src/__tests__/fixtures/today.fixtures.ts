@@ -20,6 +20,8 @@ export function makeDailyWeather(overrides: Partial<DailyWeather> = {}): DailyWe
     tempMaxC: 31,
     tempMinC: 24,
     precipitationMm: 0,
+    weatherCode: 0,
+    precipitationProbabilityPct: 0,
     ...overrides,
   };
 }
@@ -33,6 +35,7 @@ export function makeWeatherForecast(
     latitude: 8.08,
     longitude: 77.55,
     daily: days,
+    timezone: 'Asia/Kolkata',
     fetched_at: '2026-01-01T05:50:00.000Z',
     ...overrides,
   };

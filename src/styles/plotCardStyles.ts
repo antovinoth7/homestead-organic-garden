@@ -2,7 +2,7 @@
  * Plot card — one per parent location on the Today screen.
  *
  * Five stacked rows: name + due/overdue counts, a facts line, a sentence of
- * context, a tappable weather chip, and the health triad. The chip's three
+ * context, a tappable weather chip, and the health footer. The chip's three
  * tints (wet / hot / neutral) come from the semantic chip tokens so both themes
  * are covered.
  *
@@ -140,21 +140,37 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
 
     // ─── Health counts ───────────────────────────────────────────────────────
-    // Four counts do not fit one line on a narrow phone, and RN's default
-    // `flexShrink: 0` would paint the last one outside the card's radius rather
-    // than compress it — so the row wraps.
+    // The footer runs edge-to-edge inside the card. Equal-width columns keep
+    // all four statuses aligned, while the second line leaves enough room for
+    // the longest label on narrow screens.
     healthRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: 14,
-      rowGap: 8,
-      marginTop: 11,
+      marginHorizontal: -17,
+      marginBottom: -15,
+      marginTop: 13,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.borderLight,
     },
     healthItem: {
+      flex: 1,
+      minWidth: 0,
+      minHeight: 56,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 2,
+      paddingVertical: 8,
+    },
+    healthValueRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      justifyContent: 'center',
+      gap: 5,
+    },
+    healthDivider: {
+      width: StyleSheet.hairlineWidth,
+      height: 30,
+      backgroundColor: theme.borderLight,
     },
     healthDot: {
       width: 7,
@@ -173,11 +189,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     healthDotSick: {
       backgroundColor: theme.error,
     },
+    healthValue: {
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '700',
+      color: theme.text,
+    },
     healthLabel: {
-      fontSize: 11,
+      fontSize: 9.5,
+      lineHeight: 13,
       fontWeight: '600',
-      letterSpacing: 0.7,
-      color: theme.textSecondary,
+      letterSpacing: 0.55,
+      color: theme.textTertiary,
       textTransform: 'uppercase',
+      marginTop: 2,
     },
   });

@@ -10,13 +10,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Bed,
-  PlantNowRecommendation,
-  PlotBrief,
-  TodayBrief,
-  WeatherForecast,
-} from '@/types/database.types';
+import { Bed, PlantNowRecommendation, PlotBrief, TodayBrief } from '@/types/database.types';
 import { getMonthlyHighlight } from '@/config/almanac';
 import { getKanyakumariPlantingRecommendations } from '@/config/kanyakumariPlantingCalendar';
 import { getFarmAlerts, isActionable } from '@/services/alerts';
@@ -27,7 +21,7 @@ import {
   getTodayBriefSources,
   TodayBriefSources,
 } from '@/services/todayBrief';
-import { WEATHER_FRESH_MS } from '@/services/weather';
+import { resolveWeatherCoords, WEATHER_FRESH_MS } from '@/services/weather';
 import { useWeatherByPlot } from '@/hooks/useWeatherByPlot';
 import { useWeatherLocations, WeatherPlot } from '@/hooks/useWeatherLocations';
 import { getErrorMessage } from '@/utils/errorLogging';
@@ -42,8 +36,7 @@ import { getSeasonProgress } from '@/utils/seasonProgress';
 import { toPlantNowChips } from '@/utils/sowNowChips';
 import { countRemaining, summarizeTasksByPlot, summarizeTodayTasks } from '@/utils/taskSummary';
 import { countJobsByDate, formatJobText } from '@/utils/upcomingJobs';
-import { describeDay } from '@/utils/weatherWords';
-import { toLocalDateString } from '@/utils/dateHelpers';
+import { describeDay, selectForecastDays } from '@/utils/weatherWords';
 
 /** Chips shown before the row defers to "All N ›". */
 export interface UseTodayBriefResult {
@@ -52,7 +45,9 @@ export interface UseTodayBriefResult {
   /** True only on a cold start with nothing cached to paint. */
   loading: boolean;
   error: string | null;
-  reload: (options?: { silent?: boolean }) => void;
+  reload: (options?: { silent?: boolean; forceWeather?: boolean }) => Promise<void>;
+  /** Force-refresh one plot from the forecast overlay. */
+  refreshWeatherFor: (plotId: string) => Promise<void>;
   /** Forecast-date → job text for one plot, for the forecast overlay's rows. */
   jobsByDateFor: (plotId: string) => ReadonlyMap<string, string>;
 }
@@ -79,21 +74,13 @@ function formatDateLabel(date: Date): string {
   return `${weekday}, ${day}`;
 }
 
-/** The forecast entry for today, which is not always `daily[0]` on a stale copy. */
-function pickToday(forecast: WeatherForecast | null): WeatherForecast['daily'][number] | null {
-  if (!forecast || forecast.daily.length === 0) return null;
-  const key = toLocalDateString(new Date());
-  return forecast.daily.find((d) => d.date === key) ?? forecast.daily[0] ?? null;
-}
-
 export function useTodayBrief(): UseTodayBriefResult {
   const [sources, setSources] = useState<TodayBriefSources>(EMPTY_SOURCES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
 
-  const { plots: weatherPlots } = useWeatherLocations();
-  const { byPlotName } = useWeatherByPlot(weatherPlots);
+  const { plots: configuredWeatherPlots, loading: weatherLocationsLoading } = useWeatherLocations();
 
   const load = useCallback(async (options?: { silent?: boolean }) => {
     if (isMountedRef.current && !options?.silent) setLoading(true);
@@ -212,12 +199,36 @@ export function useTodayBrief(): UseTodayBriefResult {
     [grouping.groups, plantsById, bedNames]
   );
 
+  // Unassigned/unrecognised groups must use a district/default reading rather
+  // than silently borrowing the first configured plot's GPS pin.
+  const fallbackWeatherPlot = useMemo<WeatherPlot>(
+    () => ({ name: '__weather_fallback__', ...resolveWeatherCoords(undefined, district) }),
+    [district]
+  );
+
+  const weatherPlots = useMemo(() => {
+    if (weatherLocationsLoading) return [];
+    const configuredKeys = new Set(configuredWeatherPlots.map((plot) => locationKey(plot.name)));
+    const needsFallback = grouping.groups.some(
+      (group) => !configuredKeys.has(locationKey(group.name))
+    );
+    return needsFallback
+      ? [...configuredWeatherPlots, fallbackWeatherPlot]
+      : configuredWeatherPlots;
+  }, [configuredWeatherPlots, fallbackWeatherPlot, grouping.groups, weatherLocationsLoading]);
+
+  const {
+    byPlotName,
+    loading: weatherLoading,
+    refresh: refreshWeather,
+  } = useWeatherByPlot(weatherPlots);
+
   /** Plot name → its weather plot, matched case-insensitively on the free text. */
   const weatherPlotByKey = useMemo(() => {
     const map = new Map<string, WeatherPlot>();
-    for (const plot of weatherPlots) map.set(locationKey(plot.name), plot);
+    for (const plot of configuredWeatherPlots) map.set(locationKey(plot.name), plot);
     return map;
-  }, [weatherPlots]);
+  }, [configuredWeatherPlots]);
 
   const plotBriefs = useMemo<PlotBrief[]>(() => {
     const summaries = summarizeTasksByPlot(grouping.groups);
@@ -228,12 +239,12 @@ export function useTodayBrief(): UseTodayBriefResult {
       // what the plant list shows when one is tapped. Bed plants are counted by
       // `bedCount`, which routes to the Beds tab.
       const potPlants = filterPotAndGround(group.plants);
-      // Buckets with no plot of their own (Unassigned, unrecognised parents)
-      // borrow the first plot's coordinates; `source` then explains the figures.
+      // Buckets with no configured plot use the explicit district/default
+      // request above. They never borrow another plot's private GPS forecast.
       const matched = weatherPlotByKey.get(locationKey(group.name));
-      const weatherPlot = matched ?? weatherPlots[0] ?? null;
+      const weatherPlot = matched ?? fallbackWeatherPlot;
       const forecast = weatherPlot ? byPlotName.get(weatherPlot.name) ?? null : null;
-      const today = pickToday(forecast);
+      const today = selectForecastDays(forecast).today;
       const description = describeDay(today);
       const fetchedAt = forecast?.fetched_at ?? null;
 
@@ -261,7 +272,7 @@ export function useTodayBrief(): UseTodayBriefResult {
         weather: {
           lat: weatherPlot?.lat ?? 0,
           lng: weatherPlot?.lng ?? 0,
-          source: matched ? weatherPlot?.source ?? 'district' : 'district',
+          source: weatherPlot.source,
           forecast,
           today,
           condition: description.id,
@@ -269,10 +280,24 @@ export function useTodayBrief(): UseTodayBriefResult {
           conditionEmoji: description.emoji,
           fetched_at: fetchedAt,
           stale: fetchedAt ? Date.now() - new Date(fetchedAt).getTime() > WEATHER_FRESH_MS : false,
+          // Covers revalidation, not just the cold fetch: the overlay's stale
+          // banner only exists when a forecast is already painted, so gating
+          // this on `forecast === null` left its Retry with no feedback at all.
+          loading: weatherLoading,
         },
       };
     });
-  }, [grouping, weatherPlotByKey, weatherPlots, byPlotName, district, bedsById, bedNames, plantsById]);
+  }, [
+    grouping,
+    weatherPlotByKey,
+    fallbackWeatherPlot,
+    byPlotName,
+    weatherLoading,
+    district,
+    bedsById,
+    bedNames,
+    plantsById,
+  ]);
 
   const totals = useMemo(() => summarizeTodayTasks(tasks, logs), [tasks, logs]);
   const season = useMemo(() => getSeasonProgress(), []);
@@ -347,11 +372,25 @@ export function useTodayBrief(): UseTodayBriefResult {
   );
 
   const reload = useCallback(
-    (options?: { silent?: boolean }) => {
-      void load(options);
+    async (options?: { silent?: boolean; forceWeather?: boolean }) => {
+      await Promise.all([load(options), refreshWeather({ force: options?.forceWeather })]);
     },
-    [load]
+    [load, refreshWeather]
   );
 
-  return { brief, loading, error, reload, jobsByDateFor };
+  const refreshWeatherFor = useCallback(
+    async (plotId: string) => {
+      const group = grouping.groups.find((candidate) => candidate.id === plotId);
+      const matched = group ? weatherPlotByKey.get(locationKey(group.name)) : null;
+      const target = (matched ?? fallbackWeatherPlot).name;
+      // Naming a plot the weather hook is not tracking makes it a silent no-op,
+      // which would leave the overlay's Retry doing nothing. Refresh the lot
+      // instead — one wasted request beats a dead button.
+      const tracked = weatherPlots.some((plot) => plot.name === target);
+      await refreshWeather({ force: true, plotName: tracked ? target : undefined });
+    },
+    [fallbackWeatherPlot, grouping.groups, refreshWeather, weatherPlotByKey, weatherPlots]
+  );
+
+  return { brief, loading, error, reload, refreshWeatherFor, jobsByDateFor };
 }

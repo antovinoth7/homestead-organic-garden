@@ -144,7 +144,9 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
   // this cheap), so swiping to a card beyond the mounted layers never loads.
   useEffect(() => {
     plots.forEach((p) => {
-      void getWeatherForecast(p.lat, p.lng);
+      // Warming only — the cards read from cache and show their own state, so a
+      // rejection (bad coordinates, network) has nothing to report here.
+      void getWeatherForecast(p.lat, p.lng).catch(() => undefined);
     });
   }, [plots]);
 

@@ -82,6 +82,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 17,
       color: theme.textSecondary,
     },
+    staleBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      backgroundColor: theme.warningLight,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.warningBorder,
+    },
+    staleText: {
+      flex: 1,
+      fontSize: 11.5,
+      lineHeight: 17,
+      color: theme.textSecondary,
+    },
+    retryLink: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.primary,
+    },
 
     // ─── Today block ─────────────────────────────────────────────────────────
     today: {
@@ -103,6 +124,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 10,
       marginTop: 7,
     },
+    todayWeather: {
+      flex: 1,
+    },
     todayEmoji: {
       fontSize: 24,
     },
@@ -112,9 +136,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.text,
     },
-    todayRain: {
+    todayMetrics: {
       ...MONO_META,
-      fontSize: 13,
+      marginTop: 3,
+      fontSize: 11,
       fontWeight: '500',
       color: theme.textTertiary,
     },
@@ -126,6 +151,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       textAlign: 'right',
       textTransform: 'uppercase',
+    },
+    todayJob: {
+      marginTop: 9,
+      fontSize: 11.5,
+      fontWeight: '600',
+      color: theme.textSecondary,
     },
 
     // ─── Seven days ──────────────────────────────────────────────────────────
@@ -148,14 +179,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // component picks the tone. The column widths below keep the cards' figures
     // in a straight line despite the tints changing nothing about the grid.
     dayRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
       paddingHorizontal: 13,
-      paddingVertical: 12,
+      paddingVertical: 11,
       marginBottom: 8,
       borderRadius: 14,
       borderWidth: 1,
+    },
+    dayTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    dayDetailRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 7,
     },
     dayToneRain: {
       backgroundColor: theme.infoLight,
@@ -174,24 +213,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.borderLight,
     },
     dayName: {
-      width: 38,
+      flex: 1,
       fontSize: 11.5,
       fontWeight: '600',
       color: theme.text,
     },
     dayEmoji: {
-      fontSize: 13,
+      fontSize: 14,
+    },
+    dayCondition: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.textSecondary,
     },
     dayTemp: {
       ...MONO_META,
-      width: 64,
+      width: 68,
       fontSize: 11,
       fontWeight: '500',
       color: theme.textTertiary,
     },
     dayRain: {
       ...MONO_META,
-      width: 40,
+      minWidth: 42,
       fontSize: 11,
       fontWeight: '500',
       color: theme.textTertiary,
@@ -205,10 +249,28 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
     },
     noData: {
-      paddingHorizontal: 20,
-      paddingVertical: 18,
       fontSize: 13,
       color: theme.textSecondary,
+    },
+    noDataBlock: {
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 24,
+    },
+    retryButton: {
+      minWidth: 88,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 18,
+      borderRadius: 22,
+      backgroundColor: theme.primary,
+    },
+    retryButtonText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.textInverse,
     },
 
     // ─── Source footer ───────────────────────────────────────────────────────
@@ -223,5 +285,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 17,
       color: theme.textTertiary,
       textTransform: 'uppercase',
+    },
+    attributionLink: {
+      marginTop: 7,
+      paddingVertical: 8,
+      fontSize: 11,
+      fontWeight: '700',
+      color: theme.primary,
+      textDecorationLine: 'underline',
     },
   });
