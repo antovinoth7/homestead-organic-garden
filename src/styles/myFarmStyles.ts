@@ -168,34 +168,6 @@ export const createStyles = (theme: Theme) =>
       justifyContent: 'center',
     },
 
-    // ── Aggregate capacity ───────────────────────────────────────────────────
-    capacityRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      marginHorizontal: 18,
-      marginTop: 12,
-      backgroundColor: theme.primaryLight,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-      borderRadius: 14,
-      paddingVertical: 12,
-    },
-    capacityStat: { alignItems: 'center' },
-    capacityValue: {
-      fontSize: 17,
-      fontWeight: '700',
-      color: theme.primary,
-      fontFamily: MONO_FONT,
-    },
-    capacityLabel: { fontSize: 11, color: theme.textSecondary, marginTop: 2 },
-    capacityEmpty: {
-      fontSize: 12.5,
-      color: theme.textTertiary,
-      textAlign: 'center',
-      marginHorizontal: 18,
-      marginTop: 12,
-    },
-
     // ── Section tiles ────────────────────────────────────────────────────────
     sectionGrid: {
       flexDirection: 'row',

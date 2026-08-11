@@ -13,7 +13,6 @@ import { SectionEditSheet } from '@/components/modals/SectionEditSheet';
 import { LocationReassignModal } from '@/components/modals/LocationReassignModal';
 import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import { useLocationManager, hasSoilData } from '@/hooks/useLocationManager';
-import { calcUsableSqm, calcMaxBeds, calcCapacityFromProfiles } from '@/services/farmCapacity';
 
 const LOCATION_HELP = {
   parentLocations:
@@ -311,11 +310,6 @@ export default function MyFarmScreen(): React.JSX.Element {
     handleDeleteRequest(target.type, target.original);
   }, [editModal, setEditModal, handleDeleteRequest]);
 
-  const totalCents = useMemo(() => calcCapacityFromProfiles(locationProfiles), [locationProfiles]);
-  const usableSqm = useMemo(() => calcUsableSqm(totalCents), [totalCents]);
-  const maxBeds = useMemo(() => calcMaxBeds(usableSqm), [usableSqm]);
-  const hasAnySize = totalCents > 0;
-
   const plotsSubtitle = `${parentLocations.length} plot${
     parentLocations.length === 1 ? '' : 's'
   } · tap ✎ to open`;
@@ -370,30 +364,6 @@ export default function MyFarmScreen(): React.JSX.Element {
               <Ionicons name="add" size={22} color={theme.textInverse} />
             </TouchableOpacity>
           </View>
-
-          {/* Aggregate capacity */}
-          {hasAnySize ? (
-            <View style={styles.capacityRow}>
-              <View style={styles.capacityStat}>
-                <Text style={styles.capacityValue}>{totalCents}</Text>
-                <Text style={styles.capacityLabel}>cents total</Text>
-              </View>
-              <View style={styles.capacityStat}>
-                <Text style={styles.capacityValue}>{usableSqm}</Text>
-                <Text style={styles.capacityLabel}>sqm usable</Text>
-              </View>
-              <View style={styles.capacityStat}>
-                <Text style={styles.capacityValue}>{maxBeds}</Text>
-                <Text style={styles.capacityLabel}>max beds</Text>
-              </View>
-            </View>
-          ) : (
-            parentLocations.length > 0 && (
-              <Text style={styles.capacityEmpty}>
-                Set a plot&apos;s size to see how much you can grow.
-              </Text>
-            )
-          )}
 
           {parentLocations.length === 0 ? (
             <View style={styles.emptyStateCard}>
