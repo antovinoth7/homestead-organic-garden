@@ -1,4 +1,5 @@
 import type { Theme } from '@/theme/colors';
+import type { Bed } from '@/types/database.types';
 import type { BedWithCoverage } from '@/hooks/useBedData';
 import { bedExpectsLegumes } from '@/config/beds/legumeRelevance';
 import { LOW_LEGUME_THRESHOLD } from '@/utils/filterAndSortBeds';
@@ -32,6 +33,23 @@ function daysSince(iso: string | null | undefined, now: number): number | null {
 }
 
 /**
+ * Which bucket a bed falls in, from the two flags on the record plus how many
+ * live plants it holds. Split out from `getBedStatus` so callers that only have
+ * a raw `Bed` and its plants — the Today screen's plot cards — share this one
+ * precedence instead of restating it.
+ */
+export function getBedLifecycle(
+  bed: Pick<Bed, 'is_permanent' | 'is_resting'>,
+  activePlantCount: number
+): BedLifecycle {
+  // Precedence: permanent > resting > empty > growing.
+  if (bed.is_permanent) return 'permanent';
+  if (bed.is_resting) return 'resting';
+  if (activePlantCount === 0) return 'empty';
+  return 'growing';
+}
+
+/**
  * Derive a bed's lifecycle state and any actionable attention flags from the
  * fields already stored on the bed. Pure and Firebase-free so the listing, the
  * detail screen, and tests can all share one source of truth.
@@ -44,12 +62,7 @@ export function getBedStatus(bed: BedWithCoverage, now: number = Date.now()): Be
       ? Math.max(0, Math.ceil((restUntilMs - now) / MS_PER_DAY))
       : null;
 
-  // Lifecycle precedence: permanent > resting > empty > growing.
-  let lifecycle: BedLifecycle;
-  if (bed.is_permanent) lifecycle = 'permanent';
-  else if (bed.is_resting) lifecycle = 'resting';
-  else if (bed.active_plant_count === 0) lifecycle = 'empty';
-  else lifecycle = 'growing';
+  const lifecycle = getBedLifecycle(bed, bed.active_plant_count);
 
   const attention: BedAttentionReason[] = [];
   if (lifecycle !== 'permanent' && bed.prev_crop_family === 'solanaceae') {

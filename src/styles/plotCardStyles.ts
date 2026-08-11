@@ -1,18 +1,29 @@
 /**
  * Plot card — one per parent location on the Today screen.
  *
- * Five stacked rows: name + due/overdue counts, a facts line, a sentence of
- * context, a tappable weather chip, and the health footer. The chip's three
- * tints (wet / hot / neutral) come from the semantic chip tokens so both themes
- * are covered.
+ * The card is border-defined rather than shadowed, and carries no tinted bands:
+ * the district eyebrow, the plot name with its forecast pill, the due/overdue
+ * counts and the context sentence all sit directly on the card ground, so the
+ * two tiles below them are the only filled surfaces and read as the card's
+ * subject.
  *
- * The small label lines are uppercase with open letter-spacing rather than a
- * mono face — the same treatment the season card uses for its labels, so the
- * screen reads as one typeface.
+ * One full-bleed hairline separates the identity block — where this is and what
+ * the sky is doing — from the plot's state below it. It is the only rule on the
+ * card: the tiles already separate themselves by being a different surface.
+ *
+ * Those tiles are the inventory: plants on the left, beds on the right, each a
+ * total set large in mono over its states stacked as rows. A state with nothing
+ * in it keeps its row and its dot colour — the tile stays readable as a legend —
+ * but the number and the word drop to the tertiary ramp, so the shape of the
+ * tile is stable while the eye still goes straight to what is there.
+ *
+ * Status rows are tap targets, so they carry a 30px minimum and the component
+ * adds vertical hitSlop on top of it.
  */
 
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { MONO_META } from './typography';
 import { CARD_GUTTER } from './todayScreenStyles';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
@@ -21,71 +32,134 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginHorizontal: CARD_GUTTER,
       marginTop: 12,
       backgroundColor: theme.card,
-      borderRadius: 18,
-      paddingHorizontal: 17,
-      paddingVertical: 15,
-      // On dark the shadow is invisible, so the card/background contrast and
-      // the elevation carry the lift instead.
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.06,
-      shadowRadius: 10,
-      elevation: 2,
+      borderRadius: 20,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.borderLight,
+      padding: 15,
     },
 
-    titleRow: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      gap: 8,
-    },
-    name: {
-      flex: 1,
-      fontSize: 14.5,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    counts: {
-      fontSize: 11.5,
-      fontWeight: '600',
-      letterSpacing: 0.6,
-      textTransform: 'uppercase',
-    },
-    countsDue: {
-      color: theme.textSecondary,
-    },
-    countsOverdue: {
-      color: theme.errorDark,
-    },
-    countsMuted: {
-      color: theme.textTertiary,
-    },
-
-    meta: {
+    // ─── Header ──────────────────────────────────────────────────────────────
+    eyebrow: {
       fontSize: 10.5,
       fontWeight: '600',
-      letterSpacing: 0.9,
+      letterSpacing: 1.1,
       color: theme.textTertiary,
-      marginTop: 5,
       textTransform: 'uppercase',
     },
-    // The bed count inside the meta line — a link into the Beds tab, so it
-    // carries the brand colour rather than the tertiary ramp.
-    metaLink: {
-      color: theme.primary,
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 9,
+      marginTop: 4,
+    },
+    // The name takes what the forecast pill leaves and ellipsises inside it, so
+    // a long plot name never pushes the pill off the row.
+    nameTouch: {
+      flex: 1,
+      minWidth: 0,
+    },
+    name: {
+      fontSize: 17,
       fontWeight: '700',
+      letterSpacing: -0.2,
+      color: theme.text,
     },
 
-    // ─── Context line ────────────────────────────────────────────────────────
-    // Sentence case, and the only such text on the card. The contrast against
-    // the uppercase label lines above and below is what makes this read as
-    // prose rather than a third row of counts.
-    line: {
-      fontSize: 12.5,
-      lineHeight: 19,
-      color: theme.textSecondary,
-      marginTop: 7,
+    // ─── Forecast pill ───────────────────────────────────────────────────────
+    // Today's temperatures beside the plot name, sized to their content. The
+    // emoji carries the condition, so no word is needed and the pill stays the
+    // same width whatever the sky is doing. Tapping it opens the seven-day view
+    // — the card's one other destination, and the reason nothing here is a
+    // second chevron.
+    weatherPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      height: 26,
+      paddingHorizontal: 9,
+      borderRadius: 999,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.border,
     },
-    // The signal itself carries the weight; the freshness tail behind it is
+    weatherPillEmoji: {
+      fontSize: 12.5,
+    },
+    weatherPillText: {
+      fontSize: 11.5,
+      fontWeight: '500',
+      color: theme.textSecondary,
+    },
+
+    // ─── Identity rule ───────────────────────────────────────────────────────
+    // Full-bleed against the card's 15px padding: the name row reads as the
+    // card's header, everything under it is the plot's state.
+    divider: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.borderLight,
+      marginHorizontal: -15,
+      marginTop: 12,
+      marginBottom: 10,
+    },
+
+    // ─── Counts ──────────────────────────────────────────────────────────────
+    // Due and overdue are different states, so they are separate pills rather
+    // than one string with a separator. They always own this row, whatever the
+    // data, so one count and two produce the same card skeleton. The row packs
+    // to the right, so the counts sit against the chevron that opens them and a
+    // quiet plot's "Nothing due" lands in the same place a pill would.
+    countsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: 6,
+      minHeight: 34,
+    },
+    pill: {
+      overflow: 'hidden',
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      fontSize: 11.5,
+      fontWeight: '700',
+    },
+    pillDue: {
+      backgroundColor: theme.successLight,
+      color: theme.successDark,
+    },
+    pillOverdue: {
+      backgroundColor: theme.errorLight,
+      color: theme.errorDark,
+    },
+    // A quiet plot has nothing to badge — a grey pill would give the absence of
+    // work the same weight as work.
+    countsMuted: {
+      fontSize: 11.5,
+      fontWeight: '600',
+      color: theme.textTertiary,
+    },
+    // Outside the pills: the row opens the Care Plan, not either count. The one
+    // chevron on the card, so it means exactly one thing.
+    chevron: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: theme.textTertiary,
+    },
+
+    // ─── Context lines ───────────────────────────────────────────────────────
+    // The only prose on the card, and the only part that is not a standing
+    // total. Two statements, so two rows: what is wrong now, then when this plot
+    // was last worked. Running them together made the second read as a tail of
+    // the first.
+    lines: {
+      marginTop: 2,
+      gap: 2,
+    },
+    line: {
+      fontSize: 13.5,
+      lineHeight: 20,
+      color: theme.textSecondary,
+    },
+    // The signal itself carries the weight; the freshness line under it is
     // background, so it drops to the tertiary ramp.
     lineStrong: {
       color: theme.text,
@@ -95,113 +169,122 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
     },
 
-    // ─── Weather chip ────────────────────────────────────────────────────────
-    chip: {
+    // ─── Inventory tiles ─────────────────────────────────────────────────────
+    tiles: {
       flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginTop: 11,
-      minHeight: 44,
-      paddingHorizontal: 10,
-      borderRadius: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-    },
-    chipWet: {
-      backgroundColor: theme.infoLight,
-      borderColor: theme.infoBorder,
-    },
-    chipHot: {
-      backgroundColor: theme.cautionLight,
-      borderColor: theme.cautionBorder,
-    },
-    chipNeutral: {
-      backgroundColor: theme.backgroundTertiary,
-      borderColor: theme.borderLight,
-    },
-    chipText: {
-      flex: 1,
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 0.7,
-      textTransform: 'uppercase',
-    },
-    chipLink: {
-      fontSize: 10.5,
-      fontWeight: '600',
-    },
-    chipTextWet: {
-      color: theme.infoDark,
-    },
-    chipTextHot: {
-      color: theme.cautionDark,
-    },
-    chipTextNeutral: {
-      color: theme.textSecondary,
-    },
-
-    // ─── Health counts ───────────────────────────────────────────────────────
-    // The footer runs edge-to-edge inside the card. Equal-width columns keep
-    // all four statuses aligned, while the second line leaves enough room for
-    // the longest label on narrow screens.
-    healthRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginHorizontal: -17,
-      marginBottom: -15,
+      gap: 10,
       marginTop: 13,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: theme.borderLight,
     },
-    healthItem: {
+    // `background` is the tile ground in both themes: near-white on the white
+    // card in light, and a genuine recess against `card` in dark.
+    // `backgroundTertiary` is green in dark and cannot be used here.
+    tile: {
       flex: 1,
       minWidth: 0,
-      minHeight: 56,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 2,
-      paddingVertical: 8,
+      backgroundColor: theme.background,
+      borderRadius: 14,
+      padding: 12,
     },
-    healthValueRow: {
+    tileHead: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 6,
+    },
+    tileTotal: {
+      ...MONO_META,
+      fontSize: 22,
+      lineHeight: 24,
+      fontWeight: '500',
+      color: theme.text,
+    },
+    tileUnit: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: theme.textTertiary,
+    },
+    // The bed total's unit doubles as the link into the Beds tab, so it takes
+    // the brand colour.
+    tileUnitLink: {
+      color: theme.primary,
+      fontWeight: '600',
+    },
+
+    // ─── Status rows ─────────────────────────────────────────────────────────
+    // The rows read as one list, so they sit close: the 30px row height is what
+    // separates them, not the gap. The component's vertical hitSlop keeps each
+    // one comfortably tappable at this density.
+    statusRows: {
+      marginTop: 9,
+      gap: 2,
+    },
+    statusRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      gap: 5,
+      gap: 7,
+      minHeight: 30,
     },
-    healthDivider: {
-      width: StyleSheet.hairlineWidth,
-      height: 30,
-      backgroundColor: theme.borderLight,
-    },
-    healthDot: {
+    statusDot: {
       width: 7,
       height: 7,
       borderRadius: 4,
     },
-    healthDotHealthy: {
+    statusDotHealthy: {
       backgroundColor: theme.primary,
     },
-    healthDotStressed: {
+    statusDotStressed: {
       backgroundColor: theme.warning,
     },
-    healthDotRecovering: {
+    statusDotRecovering: {
       backgroundColor: theme.info,
     },
-    healthDotSick: {
+    statusDotSick: {
       backgroundColor: theme.error,
     },
-    healthValue: {
-      fontSize: 12,
-      lineHeight: 16,
-      fontWeight: '700',
-      color: theme.text,
+    // Bed lifecycles, matching `LIFECYCLE_STRIPE_TOKEN` so a bed reads the same
+    // colour here as it does on the bed list.
+    statusDotGrowing: {
+      backgroundColor: theme.success,
     },
-    healthLabel: {
-      fontSize: 9.5,
-      lineHeight: 13,
-      fontWeight: '600',
-      letterSpacing: 0.55,
+    statusDotResting: {
+      backgroundColor: theme.purpleDark,
+    },
+    statusDotReady: {
+      backgroundColor: theme.accent,
+    },
+    statusDotPermanent: {
+      backgroundColor: theme.info,
+    },
+    statusValue: {
+      fontSize: 12.5,
+      fontWeight: '500',
+      color: theme.textSecondary,
+    },
+    statusLabel: {
+      fontSize: 12.5,
+      fontWeight: '500',
+      color: theme.textSecondary,
+    },
+    statusMuted: {
+      fontWeight: '400',
       color: theme.textTertiary,
-      textTransform: 'uppercase',
-      marginTop: 2,
+    },
+
+    // ─── Empty beds ──────────────────────────────────────────────────────────
+    // Stands in for the bed tile on a plot with no beds: a tile of noughts would
+    // imply beds that do not exist.
+    emptyBedsTile: {
+      justifyContent: 'center',
+    },
+    emptyBedsLine: {
+      fontSize: 12.5,
+      lineHeight: 18,
+      fontWeight: '500',
+      color: theme.textTertiary,
+    },
+    emptyBedsLink: {
+      fontSize: 12.5,
+      fontWeight: '600',
+      color: theme.primary,
+      marginTop: 9,
     },
   });

@@ -30,6 +30,7 @@ import { buildNeedsActionItems } from '@/utils/needsActionItems';
 import { filterPotAndGround, getPlantHealthSummary } from '@/utils/plantHealth';
 import { isPlantArchived } from '@/utils/plantHelpers';
 import { getPerennialCareBrief } from '@/utils/perennialCare';
+import { countBedLifecycles } from '@/utils/plotBedCounts';
 import { buildPlotBriefLine } from '@/utils/plotBriefLine';
 import { groupByPlot } from '@/utils/plotGrouping';
 import { getSeasonProgress } from '@/utils/seasonProgress';
@@ -239,6 +240,11 @@ export function useTodayBrief(): UseTodayBriefResult {
       // what the plant list shows when one is tapped. Bed plants are counted by
       // `bedCount`, which routes to the Beds tab.
       const potPlants = filterPotAndGround(group.plants);
+      // `PlotGroup` carries bed ids; both the bed strip's tally and the context
+      // line need the records themselves, so resolve them once.
+      const plotBeds = group.bedIds
+        .map((id) => bedsById.get(id))
+        .filter((bed): bed is Bed => bed !== undefined);
       // Buckets with no configured plot use the explicit district/default
       // request above. They never borrow another plot's private GPS forecast.
       const matched = weatherPlotByKey.get(locationKey(group.name));
@@ -255,6 +261,7 @@ export function useTodayBrief(): UseTodayBriefResult {
         district,
         cropCount: potPlants.length,
         bedCount: group.bedIds.length,
+        bedStatus: countBedLifecycles(plotBeds, plantsByBedId),
         dueCount: summary?.todayTasks.length ?? 0,
         overdueCount: summary?.overdueCount ?? 0,
         health: getPlantHealthSummary(potPlants),
@@ -265,7 +272,7 @@ export function useTodayBrief(): UseTodayBriefResult {
           summary,
           forecast,
           plants: group.plants,
-          beds: group.bedIds.map((id) => bedsById.get(id)).filter((b): b is Bed => b !== undefined),
+          beds: plotBeds,
           bedNames,
           plantsById,
         }),
@@ -297,6 +304,7 @@ export function useTodayBrief(): UseTodayBriefResult {
     bedsById,
     bedNames,
     plantsById,
+    plantsByBedId,
   ]);
 
   const totals = useMemo(() => summarizeTodayTasks(tasks, logs), [tasks, logs]);

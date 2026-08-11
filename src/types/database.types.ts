@@ -431,6 +431,19 @@ export interface PlotHealthCounts {
 }
 
 /**
+ * Beds on a plot split by lifecycle — the same precedence `getBedStatus` uses
+ * (permanent > resting > empty > growing), so a bed lands in exactly one bucket
+ * and `total` equals the plot's `bedCount`.
+ */
+export interface PlotBedCounts {
+  growing: number;
+  resting: number;
+  empty: number;
+  permanent: number;
+  total: number;
+}
+
+/**
  * The plot card's one line of context — what is going on here, as opposed to
  * the standing counts around it. Both halves are nullable and the card renders
  * nothing at all when both are, so a plot with no history shows no empty row.
@@ -462,6 +475,8 @@ export interface PlotBrief {
   /** Plants in pots and ground only — bed plants are counted by `bedCount`. */
   cropCount: number;
   bedCount: number;
+  /** The same beds `bedCount` totals, split by lifecycle for the card's bed strip. */
+  bedStatus: PlotBedCounts;
   dueCount: number;
   overdueCount: number;
   /** Same scope as `cropCount`: pots and ground, so it matches the plant list. */

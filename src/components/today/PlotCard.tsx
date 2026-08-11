@@ -3,24 +3,35 @@
  *
  * A plot is a `LocationConfig.parentLocations` entry; the app has one farm, so
  * these are the units a grower actually walks between. The card answers, in
- * order: how much work is owed here, what this plot is, what is going on, what
- * the sky is doing, and how the plants are holding up.
+ * order: where this is and what the sky is doing, how much work is owed here,
+ * what is going on, and what stands in the ground.
  *
- * The context line is the only sentence on the card, and the only part that is
- * not a standing total — see `utils/plotBriefLine`. It is deliberately not a
- * tap target: the title and the weather chip already own theirs, and a third in
- * the middle would leave nowhere unambiguous to press.
+ * The identity block — plot name and today's temperatures — sits above a
+ * full-bleed hairline and reads as the card's header. The counts always own the
+ * row under it, whatever the data, so one count and two produce the same card
+ * skeleton and the plot name always gets its full width.
  *
- * The weather chip is its own tap target — it opens the plot's forecast — so it
- * carries the 44px minimum rather than relying on the card behind it. The four
- * health counts are targets too: each opens the plant list filtered to that
- * status *and* to this plot, so the list it opens holds exactly the plants the
- * count named. They are one equal-width column per `HealthStatus`, in the order
- * the plant list's filter sheet shows them.
+ * The context lines are the only prose on the card, and the only part that is
+ * not a standing total — see `utils/plotBriefLine`. The headline and the
+ * freshness tail are two statements, so they take a row each. They are
+ * deliberately not a tap target: the name, the forecast pill and the counts row
+ * already own theirs.
+ *
+ * Two destinations, one chevron. The forecast pill opens the plot's seven-day
+ * view; the `›` on the counts row means one thing only — open the plot.
+ *
+ * The inventory is two tiles side by side: plants left, beds right. Each states
+ * its total — `cropCount` over the four health counts it is the sum of,
+ * `bedCount` over the four lifecycles — then that total split into rows. Each
+ * health row is a target that opens the plant list filtered to that status *and*
+ * to this plot, so the list holds exactly the plants the row named; they run in
+ * the order the plant list's filter sheet shows them. The bed rows are read-only
+ * — no list is filtered by lifecycle — but the bed total is the link into the
+ * Beds tab.
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleProp, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { PlotBrief } from '@/types/database.types';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/plotCardStyles';
@@ -37,8 +48,11 @@ interface Props {
   onPressBeds: () => void;
 }
 
+/** The rows are 30px tall; this lifts each touch area clear of the 44px floor. */
+const ROW_HIT_SLOP = { top: 7, bottom: 7, left: 0, right: 0 };
+
 /**
- * "1 DUE · 53 OVERDUE" — only what is non-zero, so a quiet plot states that it
+ * "1 due", "53 overdue" — only what is non-zero, so a quiet plot states that it
  * is quiet instead of showing a row of noughts.
  */
 function buildCounts(plot: PlotBrief): { key: string; label: string; tone: 'due' | 'overdue' }[] {
@@ -79,157 +93,185 @@ export const PlotCard = React.memo(function PlotCard({
     [onPressHealth, plot.id]
   );
 
-  const { weather, health } = plot;
+  const { weather, health, bedStatus } = plot;
   const counts = buildCounts(plot);
   const countsLabel = counts.length > 0 ? counts.map((c) => c.label).join(', ') : 'nothing due';
-  const isWet =
-    weather.condition === 'heavy_rain' ||
-    weather.condition === 'rain' ||
-    weather.condition === 'showers' ||
-    weather.condition === 'heavy_showers' ||
-    weather.condition === 'drizzle' ||
-    weather.condition === 'thunderstorm';
-  const isHot = weather.condition === 'hot';
-  const chipTone = isWet ? styles.chipWet : isHot ? styles.chipHot : styles.chipNeutral;
-  const chipTextTone = isWet
-    ? styles.chipTextWet
-    : isHot
-    ? styles.chipTextHot
-    : styles.chipTextNeutral;
+  // The visible unit is capitalised to match the status words under it; the
+  // spoken one stays lowercase so the label reads as a sentence.
+  const bedWord = plot.bedCount === 1 ? 'Bed' : 'Beds';
+  const bedWordSpoken = plot.bedCount === 1 ? 'bed' : 'beds';
+
+  /**
+   * A status row: the dot, the count, the word. A zero mutes only its text —
+   * the dot keeps its status colour so the tile stays readable as a legend.
+   */
+  const statusRow = (
+    key: string,
+    value: number,
+    label: string,
+    dotStyle: StyleProp<ViewStyle>,
+    press?: { onPress: () => void; accessibilityLabel: string }
+  ): React.JSX.Element => {
+    const zero = value === 0;
+    const body = (
+      <>
+        <View style={[styles.statusDot, dotStyle]} />
+        <Text style={[styles.statusValue, zero && styles.statusMuted]}>{value}</Text>
+        <Text style={[styles.statusLabel, zero && styles.statusMuted]}>{label}</Text>
+      </>
+    );
+    return press === undefined ? (
+      <View key={key} style={styles.statusRow}>
+        {body}
+      </View>
+    ) : (
+      <TouchableOpacity
+        key={key}
+        style={styles.statusRow}
+        hitSlop={ROW_HIT_SLOP}
+        onPress={press.onPress}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={press.accessibilityLabel}
+      >
+        {body}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.card}>
+      {plot.district !== null && <Text style={styles.eyebrow}>{plot.district}</Text>}
+
+      <View style={styles.titleRow}>
+        <TouchableOpacity
+          style={styles.nameTouch}
+          onPress={handlePress}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`${plot.name}, ${countsLabel}`}
+        >
+          <Text style={styles.name} numberOfLines={1}>
+            {plot.name}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Temperatures only — the emoji carries the condition, and the stale
+            state is stated in the forecast itself rather than on the card. */}
+        <TouchableOpacity
+          style={styles.weatherPill}
+          onPress={handlePressWeather}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`Forecast for ${plot.name}. ${
+            weather.conditionLabel
+          }, ${formatTempRange(weather.today)}${weather.stale ? ', cached forecast' : ''}`}
+        >
+          <Text style={styles.weatherPillEmoji}>{weather.conditionEmoji}</Text>
+          <Text style={styles.weatherPillText}>{formatTempRange(weather.today)}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.divider} />
+
       <TouchableOpacity
-        style={styles.titleRow}
+        style={styles.countsRow}
         onPress={handlePress}
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${plot.name}, ${countsLabel}`}
       >
-        <Text style={styles.name} numberOfLines={1}>
-          {plot.name}
-        </Text>
-        <Text style={styles.counts}>
-          {counts.length === 0 && <Text style={styles.countsMuted}>Nothing due</Text>}
-          {counts.map((part, index) => (
-            <Text key={part.key}>
-              {index > 0 && <Text style={styles.countsMuted}> · </Text>}
-              <Text style={part.tone === 'overdue' ? styles.countsOverdue : styles.countsDue}>
-                {part.label}
-              </Text>
-            </Text>
-          ))}
-          <Text style={styles.countsMuted}> ›</Text>
-        </Text>
+        {counts.length === 0 && <Text style={styles.countsMuted}>Nothing due</Text>}
+        {counts.map((part) => (
+          <Text
+            key={part.key}
+            style={[styles.pill, part.tone === 'overdue' ? styles.pillOverdue : styles.pillDue]}
+          >
+            {part.label}
+          </Text>
+        ))}
+        <Text style={styles.chevron}>›</Text>
       </TouchableOpacity>
-
-      {/* The bed count is a link into the Beds tab, and the crop figure names
-          its scope: everything on this card counts pots and ground only, which
-          is exactly what the plant list shows when a health count is tapped. */}
-      <Text style={styles.meta} numberOfLines={2}>
-        {plot.district !== null && `${plot.district} · `}
-        {plot.bedCount > 0 && (
-          <>
-            <Text
-              style={styles.metaLink}
-              onPress={handlePressBeds}
-              accessibilityRole="button"
-              accessibilityLabel={`${plot.bedCount} ${
-                plot.bedCount === 1 ? 'bed' : 'beds'
-              }. Opens the beds tab.`}
-            >
-              {plot.bedCount} {plot.bedCount === 1 ? 'bed' : 'beds'} ›
-            </Text>
-            {' · '}
-          </>
-        )}
-        {plot.cropCount} in pots & ground
-      </Text>
 
       {(plot.line.headline !== null || plot.line.freshness !== null) && (
-        <Text style={styles.line} numberOfLines={2}>
+        <View style={styles.lines}>
           {plot.line.headline !== null && (
-            <Text style={styles.lineStrong}>{plot.line.headline}</Text>
+            <Text style={[styles.line, styles.lineStrong]} numberOfLines={2}>
+              {plot.line.headline}
+            </Text>
           )}
-          {plot.line.headline !== null && plot.line.freshness !== null && ' '}
           {plot.line.freshness !== null && (
-            <Text style={styles.lineMuted}>{plot.line.freshness}</Text>
+            <Text style={[styles.line, styles.lineMuted]} numberOfLines={1}>
+              {plot.line.freshness}
+            </Text>
           )}
-        </Text>
+        </View>
       )}
 
-      <TouchableOpacity
-        style={[styles.chip, chipTone]}
-        onPress={handlePressWeather}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel={`Forecast for ${plot.name}. ${
-          weather.conditionLabel
-        }, ${formatTempRange(weather.today)}${weather.stale ? ', cached forecast' : ''}`}
-      >
-        <Text style={[styles.chipText, chipTextTone]} numberOfLines={1}>
-          {weather.conditionEmoji} {formatTempRange(weather.today)} · {weather.conditionLabel}
-          {weather.stale ? ' · Cached' : ''}
-        </Text>
-        <Text style={[styles.chipLink, chipTextTone]}>7 days ›</Text>
-      </TouchableOpacity>
+      <View style={styles.tiles}>
+        {/* Plants: the total, then the four conditions it divides into. */}
+        <View style={styles.tile}>
+          <View style={styles.tileHead}>
+            <Text style={styles.tileTotal}>{plot.cropCount}</Text>
+            <Text style={styles.tileUnit}>Plants</Text>
+          </View>
+          <View style={styles.statusRows}>
+            {statusRow('healthy', health.healthy, 'Healthy', styles.statusDotHealthy, {
+              onPress: handlePressHealthy,
+              accessibilityLabel: `${health.healthy} healthy plants in ${plot.name}. Opens the plant list.`,
+            })}
+            {statusRow('stressed', health.stressed, 'Stressed', styles.statusDotStressed, {
+              onPress: handlePressStressed,
+              accessibilityLabel: `${health.stressed} stressed plants in ${plot.name}. Opens the plant list.`,
+            })}
+            {statusRow('recovering', health.recovering, 'Recovering', styles.statusDotRecovering, {
+              onPress: handlePressRecovering,
+              accessibilityLabel: `${health.recovering} recovering plants in ${plot.name}. Opens the plant list.`,
+            })}
+            {statusRow('sick', health.sick, 'Sick', styles.statusDotSick, {
+              onPress: handlePressSick,
+              accessibilityLabel: `${health.sick} sick plants in ${plot.name}. Opens the plant list.`,
+            })}
+          </View>
+        </View>
 
-      <View style={styles.healthRow}>
-        <TouchableOpacity
-          style={styles.healthItem}
-          onPress={handlePressHealthy}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={`${health.healthy} healthy plants in ${plot.name}. Opens the plant list.`}
-        >
-          <View style={styles.healthValueRow}>
-            <View style={[styles.healthDot, styles.healthDotHealthy]} />
-            <Text style={styles.healthValue}>{health.healthy}</Text>
+        {plot.bedCount === 0 ? (
+          <View style={[styles.tile, styles.emptyBedsTile]}>
+            <Text style={styles.emptyBedsLine}>
+              No beds here — everything is in pots &amp; ground.
+            </Text>
+            <Text
+              style={styles.emptyBedsLink}
+              onPress={handlePressBeds}
+              accessibilityRole="button"
+              accessibilityLabel="Add a bed. Opens the beds tab."
+            >
+              Add a bed ›
+            </Text>
           </View>
-          <Text style={styles.healthLabel}>Healthy</Text>
-        </TouchableOpacity>
-        <View style={styles.healthDivider} />
-        <TouchableOpacity
-          style={styles.healthItem}
-          onPress={handlePressStressed}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={`${health.stressed} stressed plants in ${plot.name}. Opens the plant list.`}
-        >
-          <View style={styles.healthValueRow}>
-            <View style={[styles.healthDot, styles.healthDotStressed]} />
-            <Text style={styles.healthValue}>{health.stressed}</Text>
+        ) : (
+          /* Beds: the same shape again. Lifecycles come from `getBedLifecycle`,
+             so a bed reads here as it does on the bed list. */
+          <View style={styles.tile}>
+            <View style={styles.tileHead}>
+              <Text style={styles.tileTotal}>{plot.bedCount}</Text>
+              <Text
+                style={[styles.tileUnit, styles.tileUnitLink]}
+                onPress={handlePressBeds}
+                accessibilityRole="button"
+                accessibilityLabel={`${plot.bedCount} ${bedWordSpoken}. Opens the beds tab.`}
+              >
+                {bedWord} ›
+              </Text>
+            </View>
+            <View style={styles.statusRows}>
+              {statusRow('growing', bedStatus.growing, 'Growing', styles.statusDotGrowing)}
+              {statusRow('resting', bedStatus.resting, 'Resting', styles.statusDotResting)}
+              {statusRow('ready', bedStatus.empty, 'Ready', styles.statusDotReady)}
+              {statusRow('permanent', bedStatus.permanent, 'Permanent', styles.statusDotPermanent)}
+            </View>
           </View>
-          <Text style={styles.healthLabel}>Stressed</Text>
-        </TouchableOpacity>
-        <View style={styles.healthDivider} />
-        <TouchableOpacity
-          style={styles.healthItem}
-          onPress={handlePressRecovering}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={`${health.recovering} recovering plants in ${plot.name}. Opens the plant list.`}
-        >
-          <View style={styles.healthValueRow}>
-            <View style={[styles.healthDot, styles.healthDotRecovering]} />
-            <Text style={styles.healthValue}>{health.recovering}</Text>
-          </View>
-          <Text style={styles.healthLabel}>Recovering</Text>
-        </TouchableOpacity>
-        <View style={styles.healthDivider} />
-        <TouchableOpacity
-          style={styles.healthItem}
-          onPress={handlePressSick}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={`${health.sick} sick plants in ${plot.name}. Opens the plant list.`}
-        >
-          <View style={styles.healthValueRow}>
-            <View style={[styles.healthDot, styles.healthDotSick]} />
-            <Text style={styles.healthValue}>{health.sick}</Text>
-          </View>
-          <Text style={styles.healthLabel}>Sick</Text>
-        </TouchableOpacity>
+        )}
       </View>
     </View>
   );
