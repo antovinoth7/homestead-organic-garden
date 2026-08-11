@@ -103,9 +103,6 @@ export const createStyles = (theme: Theme) =>
     fieldRowFirst: {
       paddingTop: 0,
     },
-    fieldRowLast: {
-      paddingBottom: 0,
-    },
     fieldLabel: {
       width: 96,
       fontSize: 13,
@@ -181,13 +178,23 @@ export const createStyles = (theme: Theme) =>
     },
 
     // ── Coordinates ──────────────────────────────────────────────────────────
+    // Stacked rather than sharing a row with the 96px label: two boxes plus the
+    // label do not fit the card on a narrow screen, and the second one clips.
+    coordRow: {
+      paddingTop: 11,
+      gap: 8,
+    },
+    /** Stacked, so the label sizes to its text instead of the row's 96px column. */
+    coordLabel: {
+      width: 'auto',
+    },
     coordInputs: {
-      flex: 1,
       flexDirection: 'row',
       gap: 8,
     },
     coordInput: {
       flex: 1,
+      minWidth: 0,
       backgroundColor: theme.background,
       borderWidth: 1,
       borderColor: theme.inputBorder,

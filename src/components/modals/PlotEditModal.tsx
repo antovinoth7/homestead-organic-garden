@@ -294,8 +294,8 @@ export function PlotEditModal({
 
             <View style={styles.cardDivider} />
 
-            <View style={[styles.fieldRow, styles.fieldRowLast]}>
-              <Text style={styles.fieldLabel}>Coordinates</Text>
+            <View style={styles.coordRow}>
+              <Text style={[styles.fieldLabel, styles.coordLabel]}>Coordinates</Text>
               <View style={styles.coordInputs}>
                 <TextInput
                   style={[styles.coordInput, latInvalid && styles.coordInputError]}
