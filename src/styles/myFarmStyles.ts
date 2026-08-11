@@ -204,6 +204,7 @@ export const createStyles = (theme: Theme) =>
       color: theme.text,
       lineHeight: 17,
     },
+    sectionTileActions: { flexDirection: 'row', gap: 7 },
     sectionTileCount: {
       fontSize: 11.5,
       color: theme.textSecondary,

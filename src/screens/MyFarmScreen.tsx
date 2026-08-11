@@ -200,8 +200,9 @@ function SectionTile({
         <Text style={styles.sectionTileName} numberOfLines={2}>
           {name}
         </Text>
-        {/* Same stacked pair as a plot card, so both tiles read alike. */}
-        <View style={styles.plotActions}>
+        {/* Same buttons as a plot card, but in a row: stacked, they are taller
+            than the tile's two lines of text and force a third empty row. */}
+        <View style={styles.sectionTileActions}>
           <TouchableOpacity
             style={styles.editButton}
             onPress={handleEdit}
