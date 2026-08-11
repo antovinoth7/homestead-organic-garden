@@ -109,7 +109,9 @@ function PlotCard({
                     { backgroundColor: deriveDrainageColor(profile.drainageQuality, theme) },
                   ]}
                 />
-                <Text style={styles.chipText}>{profile.drainageQuality}</Text>
+                <Text style={[styles.chipText, styles.chipTextCapitalized]}>
+                  {profile.drainageQuality}
+                </Text>
               </View>
             )}
             {hasNpk && (

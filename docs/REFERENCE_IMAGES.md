@@ -54,10 +54,14 @@ Render sites:
 | --- | --- |
 | Pest, disease, and plant list rows | 36 x 36 |
 | Journal pest/disease chips | 20 x 20 |
-| Pest and disease heroes | full width x 240 |
-| Catalog plant hero | full width x 180 |
+| Pest and disease heroes | full width x 250; tappable fullscreen preview |
+| Catalog plant hero | full width x 250; tappable fullscreen preview (shares `ReferenceHero`) |
 | Organic-input list cards | 44 x 44 |
 | Organic-input hero | full width x 250; tappable fullscreen preview |
+
+Every full-width hero upscales the bundled 400 x 300 source roughly 3x on a phone. If that
+softness becomes a problem, raise the ingest output size for all of them together rather than
+shrinking one consumer.
 
 ## Validation and Staging
 

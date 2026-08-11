@@ -18,20 +18,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.textSecondary,
     },
-    header: {
+    /**
+     * Absolute bar that fades in as the hero scrolls away, mirroring the pest
+     * and disease detail screens. It overlays the ScrollView rather than sitting
+     * above it, so the hero image can run full-bleed to the top of the screen.
+     */
+    stickyHeader: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 16,
-      backgroundColor: theme.tabBarBackground,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      paddingBottom: 10,
+      gap: 10,
     },
-    headerActionSlot: {
-      width: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
+    stickyHeaderTitle: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: 17,
+      fontWeight: '700',
+      color: theme.text,
     },
     backButton: {
       width: 36,
@@ -41,112 +50,73 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: theme.text,
-      textAlign: 'center',
-      width: '100%',
-    },
-    headerContent: {
-      flex: 1,
-      minWidth: 0,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 12,
-    },
-    headerMetaRow: {
+    /**
+     * Save lives in the header rather than a footer bar so it stays reachable
+     * from every tab. It remains pressable when clean — pressing it with no
+     * changes just validates and leaves, rather than stranding someone who
+     * edited and then reverted.
+     */
+    headerSaveButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 2,
-      minWidth: 0,
       gap: 6,
+      backgroundColor: theme.primary,
+      paddingHorizontal: 16,
+      paddingVertical: 9,
+      borderRadius: 20,
     },
-    headerMetaText: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      fontWeight: '600',
-      flexShrink: 1,
+    headerSaveButtonDisabled: {
+      opacity: 0.6,
     },
-    headerStatePill: {
-      paddingHorizontal: 7,
-      paddingVertical: 3,
-      borderRadius: 999,
-      borderWidth: 1,
-    },
-    headerStatePillCustom: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary + '40',
-    },
-    headerStatePillDefault: {
-      backgroundColor: theme.background,
-      borderColor: theme.border,
-    },
-    headerStatePillText: {
-      fontSize: 10,
+    headerSaveText: {
+      fontSize: 14,
       fontWeight: '700',
+      color: theme.textInverse,
     },
-    headerStatePillTextCustom: {
-      color: theme.primary,
-    },
-    headerStatePillTextDefault: {
-      color: theme.textSecondary,
+    /** Amber dot marking unsaved edits. */
+    headerSaveDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: theme.accent,
     },
     scroll: {
       flex: 1,
     },
+    /** Tab bar as it scrolls with the content. */
+    inFlowTabBar: {
+      backgroundColor: theme.background,
+      paddingBottom: 4,
+    },
+    /**
+     * Pinned copy shown once the in-flow bar scrolls away. Rendered outside the
+     * ScrollView because Android drops taps on translated sticky headers.
+     */
+    pinnedTabBar: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      backgroundColor: theme.background,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.border,
+      paddingBottom: 4,
+    },
     scrollContent: {
-      padding: 16,
+      paddingHorizontal: 16,
+      paddingBottom: 16,
       gap: 10,
     },
-    catalogHeroImage: {
-      width: '100%',
-      height: 180,
-      borderRadius: 16,
-      backgroundColor: theme.backgroundSecondary,
-    },
-    nameSection: {
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      padding: 14,
-    },
-    nameSectionLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: theme.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.6,
-      marginBottom: 8,
+    /**
+     * Cancels `scrollContent`'s inset so the hero runs full-bleed. Done with a
+     * negative margin rather than by un-padding the container, so every section
+     * keeps measuring its offset against the same parent and the scroll-spy
+     * offsets stay correct.
+     */
+    heroBleed: {
+      marginHorizontal: -16,
     },
     fieldGroup: {
       marginBottom: 8,
-    },
-    fieldGroupLast: {
-      marginBottom: 0,
-    },
-    addRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 8,
-    },
-    addButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.primary,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 10,
-      gap: 6,
-    },
-    addButtonText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.textInverse,
     },
     input: {
       flex: 1,
@@ -180,18 +150,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       fontWeight: '600',
     },
-    readChip: {
-      paddingHorizontal: 8,
-      paddingVertical: 5,
-      borderRadius: 14,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    readChipText: {
-      fontSize: 12,
-      color: theme.textSecondary,
-    },
     emptyText: {
       fontSize: 13,
       color: theme.textTertiary,
@@ -199,10 +157,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     fieldLabelRow: {
       marginBottom: 6,
-    },
-    rangeRow: {
-      flexDirection: 'row',
-      gap: 10,
     },
     rangeField: {
       flex: 1,
@@ -215,95 +169,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomWidth: 1,
       borderBottomColor: theme.borderLight,
     },
-    infoRowLast: {
-      borderBottomWidth: 0,
-    },
-    infoLabel: {
-      fontSize: 13,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
-    infoValue: {
-      fontSize: 13,
-      color: theme.text,
-      fontWeight: '600',
-      textAlign: 'right',
-      flex: 1,
-      marginLeft: 16,
-    },
-    toxicBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-      backgroundColor: theme.error,
-    },
-    safeBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-      backgroundColor: theme.primaryLight,
-    },
     badgeText: {
       fontSize: 11,
       fontWeight: '700',
       color: theme.textInverse,
     },
-    safeBadgeText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: theme.primary,
-    },
-    descriptionInput: {
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-      borderRadius: 8,
-      padding: 10,
-      minHeight: 72,
-      color: theme.text,
-      fontSize: 14,
-      textAlignVertical: 'top',
-      backgroundColor: theme.backgroundSecondary,
-    },
     pruningTipsLabel: {
       fontSize: 12,
       color: theme.textTertiary,
       marginBottom: 6,
-    },
-    pruningTipsInput: {
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-      borderRadius: 8,
-      padding: 10,
-      minHeight: 80,
-      color: theme.text,
-      fontSize: 14,
-      textAlignVertical: 'top',
-      backgroundColor: theme.backgroundSecondary,
-    },
-    careStatus: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingVertical: 4,
-    },
-    careStatusBanner: {
-      marginBottom: 10,
-      padding: 12,
-      borderRadius: 12,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
-    careStatusText: {
-      fontSize: 13,
-      color: theme.textSecondary,
-      fontWeight: '600',
-    },
-    careStatusNote: {
-      fontSize: 12,
-      lineHeight: 18,
-      color: theme.textTertiary,
-      marginTop: 4,
     },
     footer: {
       paddingHorizontal: 16,
@@ -311,74 +185,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderTopWidth: 1,
       borderTopColor: theme.border,
       backgroundColor: theme.backgroundSecondary,
-    },
-    footerRow: {
-      flexDirection: 'row',
-      gap: 10,
-    },
-    footerActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    btnPrimary: {
-      flex: 1,
-      alignItems: 'center',
-      paddingVertical: 11,
-      borderRadius: 12,
-      backgroundColor: theme.primary,
-    },
-    btnPrimaryText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: theme.textInverse,
-    },
-    btnSecondary: {
-      flex: 1,
-      alignItems: 'center',
-      paddingVertical: 13,
-      borderRadius: 12,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    btnSecondaryText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-    btnDanger: {
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderRadius: 12,
-    },
-    btnDangerText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.error,
-    },
-    btnDangerIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.background,
-    },
-    btnResetPill: {
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.background,
-    },
-    btnResetPillText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.textTertiary,
     },
     sectionHeaderAction: {
       width: 30,
@@ -489,20 +295,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     reassignTextActive: {
       color: theme.primary,
     },
-    addPickerBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.primary,
-      marginTop: 10,
-    },
-    addPickerBtnText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.primary,
-    },
     pickerModalContent: {
       maxHeight: '75%',
       padding: 16,
@@ -532,42 +324,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     pickerSeparator: {
       height: 0,
     },
-    feedingHint: {
-      fontSize: 12,
-      color: theme.textTertiary,
-      marginTop: 4,
-      fontStyle: 'italic',
-    },
-    nutritionSection: {
-      marginTop: 10,
-      paddingTop: 10,
-      borderTopWidth: 1,
-      borderTopColor: theme.borderLight,
-    },
-    nutritionGroup: {
-      marginBottom: 10,
-    },
-    nutritionGroupLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: theme.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      marginBottom: 6,
-    },
-    modalButtonPrimary: {
-      backgroundColor: theme.primary,
-    },
     chipDot: {
       width: 6,
       height: 6,
       borderRadius: 3,
       backgroundColor: theme.primary,
-    },
-    chipLabelArea: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
     },
     seasonPillRow: {
       flexDirection: 'row',
@@ -595,6 +356,62 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     seasonPillTextActive: {
       color: theme.primary,
       fontWeight: '600',
+    },
+    /**
+     * Applied after `modalContent`, which is shared with the picker and reassign
+     * modals and so must stay untouched. Drops the card's own padding — the
+     * header owns its inset and its separator has to reach both edges — and caps
+     * the height so a keyboard can never push the header out of frame.
+     */
+    varietyCard: {
+      padding: 0,
+      maxHeight: '85%',
+      overflow: 'hidden',
+    },
+    /** Variety sheet header: close left, title centre, Done right. */
+    varietyHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.borderLight,
+    },
+    varietyHeaderText: {
+      flex: 1,
+      minWidth: 0,
+      paddingHorizontal: 8,
+    },
+    varietyHeaderTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: theme.text,
+      textAlign: 'center',
+    },
+    /** Restores the inset `varietyCard` gave up, now that the body scrolls. */
+    varietyScrollContent: {
+      padding: 20,
+    },
+    varietyCloseButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: theme.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    varietyDoneButton: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: 18,
+      paddingVertical: 9,
+      borderRadius: 20,
+    },
+    varietyDoneText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.textInverse,
     },
     modalCloseButton: {
       width: 30,

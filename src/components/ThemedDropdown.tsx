@@ -1,26 +1,17 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Pressable,
-  FlatList,
-  useWindowDimensions,
-} from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import { createStyles } from '../styles/themedDropdownStyles';
 import FieldHelp from './FieldHelp';
-import { BottomSheetModal } from './BottomSheetModal';
-import { SheetHandle } from './SheetHandle';
+import { OptionPickerSheet } from './OptionPickerSheet';
+import type { PickerOption } from './OptionPickerSheet';
 
-export interface DropdownItem {
-  label: string;
-  value: string;
-  color?: string;
-}
+/**
+ * @deprecated Prefer importing `PickerOption` from `OptionPickerSheet`. Kept as
+ * an alias so existing dropdown call sites keep compiling unchanged.
+ */
+export type DropdownItem = PickerOption;
 
 interface ThemedDropdownProps {
   items: DropdownItem[];
@@ -39,8 +30,6 @@ interface ThemedDropdownProps {
   helpLabel?: string;
 }
 
-const ROW_HEIGHT = 52;
-
 export default function ThemedDropdown({
   items,
   selectedValue,
@@ -54,11 +43,8 @@ export default function ThemedDropdown({
   helpLabel,
 }: ThemedDropdownProps): React.JSX.Element {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
   const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
   const [visible, setVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const selectedItem = useMemo(
     () => items.find((item) => item.value === selectedValue),
@@ -67,59 +53,10 @@ export default function ThemedDropdown({
 
   const open = useCallback(() => {
     if (!enabled) return;
-    setSearchQuery('');
     setVisible(true);
   }, [enabled]);
 
   const close = useCallback(() => setVisible(false), []);
-
-  const handleSelect = useCallback(
-    (value: string) => {
-      onValueChange(value);
-      close();
-    },
-    [onValueChange, close]
-  );
-
-  const filteredItems = useMemo(() => {
-    if (!searchable || !searchQuery.trim()) return items;
-    const q = searchQuery.trim().toLowerCase();
-    return items.filter((item) => item.label.toLowerCase().includes(q));
-  }, [items, searchQuery, searchable]);
-
-  const renderItem = useCallback(
-    ({ item }: { item: DropdownItem }) => {
-      const isSelected = item.value === selectedValue;
-      return (
-        <TouchableOpacity
-          style={[styles.optionRow, isSelected && styles.optionRowSelected]}
-          onPress={() => handleSelect(item.value)}
-          activeOpacity={0.7}
-        >
-          <Text
-            style={[styles.optionText, isSelected && styles.optionTextSelected]}
-            numberOfLines={1}
-          >
-            {item.label}
-          </Text>
-          {isSelected && <Ionicons name="checkmark-circle" size={20} color={theme.primary} />}
-        </TouchableOpacity>
-      );
-    },
-    [selectedValue, handleSelect, styles, theme.primary]
-  );
-
-  const keyExtractor = useCallback(
-    (item: DropdownItem, index: number) => `${item.value}-${index}`,
-    []
-  );
-
-  // Bottom-sheet sizing: cap the sheet below the top inset and bound the list so
-  // it scrolls instead of pushing the sheet past the screen.
-  const bottomInset = Math.max(insets.bottom, 24);
-  const sheetMaxHeight = windowHeight - insets.top - 24;
-  const headerAllowance = searchable ? 150 : 90;
-  const listMaxHeight = Math.max(ROW_HEIGHT, sheetMaxHeight - headerAllowance - bottomInset);
 
   return (
     <>
@@ -181,56 +118,15 @@ export default function ThemedDropdown({
         />
       </Pressable>
 
-      <BottomSheetModal
+      <OptionPickerSheet
         visible={visible}
         onClose={close}
-        sheetStyle={[styles.sheet, { maxHeight: sheetMaxHeight, paddingBottom: bottomInset }]}
-      >
-        <SheetHandle onClose={close}>
-          <Text style={styles.sheetTitle}>{placeholder}</Text>
-        </SheetHandle>
-        {searchable && (
-          <View style={styles.searchContainer}>
-            <Ionicons
-              name="search"
-              size={18}
-              color={theme.textTertiary}
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={`Search ${placeholder.toLowerCase()}...`}
-              placeholderTextColor={theme.inputPlaceholder}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCorrect={false}
-              autoCapitalize="none"
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
-                <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-        {searchable && filteredItems.length === 0 && (
-          <Text style={styles.emptyText}>No matches found</Text>
-        )}
-        <FlatList
-          data={filteredItems}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          style={{ maxHeight: listMaxHeight }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          getItemLayout={(_, index) => ({
-            length: ROW_HEIGHT,
-            offset: ROW_HEIGHT * index,
-            index,
-          })}
-        />
-      </BottomSheetModal>
+        title={placeholder}
+        options={items}
+        selectedValue={selectedValue}
+        onSelect={onValueChange}
+        searchable={searchable}
+      />
     </>
   );
 }

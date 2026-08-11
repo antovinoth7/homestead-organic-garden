@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
-import { MONO_FONT } from '@/styles/typography';
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const createStyles = (theme: Theme) =>
@@ -97,7 +96,6 @@ export const createStyles = (theme: Theme) =>
       fontWeight: '700',
       color: theme.primary,
       letterSpacing: 0.5,
-      fontFamily: MONO_FONT,
     },
     plotBody: { flex: 1, minWidth: 0 },
     plotTitleRow: {
@@ -111,7 +109,6 @@ export const createStyles = (theme: Theme) =>
       fontSize: 12,
       fontWeight: '600',
       color: theme.textSecondary,
-      fontFamily: MONO_FONT,
     },
     plotMeta: { fontSize: 12, color: theme.textSecondary, marginTop: 2 },
     chipStrip: {
@@ -133,6 +130,9 @@ export const createStyles = (theme: Theme) =>
       borderRadius: 8,
     },
     chipText: { fontSize: 11, fontWeight: '600', color: theme.textTertiary },
+    // Drainage only. Not folded into `chipText`: the pH chip shares that key and
+    // 'capitalize' would render "pH 5.0" as "PH 5.0".
+    chipTextCapitalized: { textTransform: 'capitalize' },
     coordChip: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -146,7 +146,6 @@ export const createStyles = (theme: Theme) =>
       fontSize: 11,
       fontWeight: '600',
       color: theme.primary,
-      fontFamily: MONO_FONT,
     },
     npkDotRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
     npkDot: { width: 7, height: 7, borderRadius: 4 },
@@ -205,11 +204,11 @@ export const createStyles = (theme: Theme) =>
       lineHeight: 17,
     },
     sectionTileActions: { flexDirection: 'row', gap: 7 },
+    // Matches `plotMeta` — both render the same "N plants" line.
     sectionTileCount: {
-      fontSize: 11.5,
+      fontSize: 12,
       color: theme.textSecondary,
       marginTop: 8,
-      fontFamily: MONO_FONT,
     },
 
     // ── Empty states ─────────────────────────────────────────────────────────

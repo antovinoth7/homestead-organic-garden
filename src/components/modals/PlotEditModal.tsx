@@ -246,7 +246,7 @@ export function PlotEditModal({
             <View style={styles.fieldRow}>
               <Text style={styles.fieldLabel}>Short name</Text>
               <TextInput
-                style={[styles.fieldInput, styles.fieldInputMono]}
+                style={[styles.fieldInput, styles.fieldInputCode]}
                 value={editModal?.shortName ?? ''}
                 onChangeText={onChangeShortName}
                 placeholder="KNK"

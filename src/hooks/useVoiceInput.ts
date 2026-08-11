@@ -31,6 +31,27 @@ const SpeechModule = requireOptionalNativeModule<typeof ExpoSpeechRecognitionMod
 
 const UNAVAILABLE_ERROR = 'Speech recognition is not available on this device.';
 
+/**
+ * Why the recognizer is unusable, so callers can tell a missing binary apart
+ * from a device with no speech service:
+ * - `none`          — usable.
+ * - `no-module`     — the native module is not compiled in (Expo Go, web, or a
+ *                     dev client built before `expo-speech-recognition` landed).
+ *                     Hide the control entirely; there is nothing to explain.
+ * - `no-recognizer` — the module is there but the OS exposes no recognizer.
+ *                     Worth showing a disabled control that explains itself.
+ */
+export type VoiceUnavailableReason = 'none' | 'no-module' | 'no-recognizer';
+
+// Surfaced once at load so a stale dev client is visible in the console rather
+// than silently erasing every mic in the app.
+if (!SpeechModule) {
+  logger.warn(
+    'useVoiceInput: ExpoSpeechRecognition native module missing — voice input is hidden. ' +
+      'Rebuild the dev client (npx expo prebuild --clean) if this is not Expo Go.'
+  );
+}
+
 // User-correctable outcomes (silence, pausing too long, denying the mic) —
 // worth showing a message for, but not worth an error-tracker event.
 const BENIGN_VOICE_ERRORS = new Set(['no-speech', 'speech-timeout', 'not-allowed']);
@@ -51,6 +72,8 @@ export interface UseVoiceInputResult {
   error: string | null;
   /** Whether the device exposes a usable speech recognizer. */
   isAvailable: boolean;
+  /** Why it is unusable — lets callers hide vs. explain. `'none'` when usable. */
+  unavailableReason: VoiceUnavailableReason;
   start: () => Promise<void>;
   stop: () => void;
 }
@@ -61,6 +84,9 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
   const [partialTranscript, setPartialTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isAvailable, setIsAvailable] = useState(false);
+  const [unavailableReason, setUnavailableReason] = useState<VoiceUnavailableReason>(
+    SpeechModule ? 'no-recognizer' : 'no-module'
+  );
 
   // Keep the latest onResult without resubscribing native listeners.
   const onResultRef = useRef(onResult);
@@ -77,13 +103,22 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
   useEffect(() => {
     if (!SpeechModule) {
       setIsAvailable(false);
+      setUnavailableReason('no-module');
       return;
     }
 
+    let available = false;
     try {
-      setIsAvailable(SpeechModule.isRecognitionAvailable());
+      available = SpeechModule.isRecognitionAvailable();
     } catch {
-      setIsAvailable(false);
+      available = false;
+    }
+    setIsAvailable(available);
+    setUnavailableReason(available ? 'none' : 'no-recognizer');
+    if (!available) {
+      logger.warn(
+        'useVoiceInput: no speech recognizer on this device — the mic is shown disabled.'
+      );
     }
 
     const subscriptions = [
@@ -169,5 +204,14 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
     }
   }, [locale]);
 
-  return { isListening, transcript, partialTranscript, error, isAvailable, start, stop };
+  return {
+    isListening,
+    transcript,
+    partialTranscript,
+    error,
+    isAvailable,
+    unavailableReason,
+    start,
+    stop,
+  };
 }

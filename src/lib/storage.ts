@@ -18,6 +18,7 @@ const STORAGE_KEYS = {
   FARM_CONFIG: '@garden_farm_config',
   WEATHER: '@garden_weather',
   ONBOARDING_COMPLETE: '@garden_onboarding_complete',
+  CATALOG_RECENT_SEARCHES: '@garden_catalog_recent_searches',
 };
 
 // Export as KEYS for backwards compatibility
