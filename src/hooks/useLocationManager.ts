@@ -68,7 +68,6 @@ export type EditModalState = {
   value: string;
   shortName?: string;
   profile?: LocationProfile;
-  activeTab?: 'name' | 'plot' | 'soil';
   showDatePicker?: boolean;
 };
 

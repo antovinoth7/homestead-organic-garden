@@ -14,7 +14,7 @@ const SETTINGS_COLLECTION = 'user_settings';
 const FARM_CONFIG_FIELD = 'farmConfig';
 
 /** 1 cent = 40.47 sqm */
-const SQM_PER_CENT = 40.47;
+export const SQM_PER_CENT = 40.47;
 /** Usable factor: ~70% after paths, structures */
 const USABLE_FACTOR = 0.7;
 /** Average bed area in sqm (1.2m × 4m) */
