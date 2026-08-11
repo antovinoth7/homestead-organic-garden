@@ -37,9 +37,9 @@ export function CatalogRangeRow({
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <View>
+    <View style={[styles.rowGroup, isLast && styles.rowGroupLast, !!errorText && styles.rowError]}>
       <TouchableOpacity
-        style={[styles.row, isLast && !errorText && styles.rowLast, !!errorText && styles.rowError]}
+        style={styles.row}
         onPress={onPress}
         activeOpacity={0.6}
         accessibilityRole="button"

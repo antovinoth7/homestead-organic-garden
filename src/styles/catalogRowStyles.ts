@@ -9,6 +9,18 @@ import { MONO_FONT } from './typography';
  */
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
+    /**
+     * The separator belongs to the whole group — row plus any hint or error —
+     * so trailing copy reads as part of the field above it rather than as a
+     * caption on the field below.
+     */
+    rowGroup: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.borderLight,
+    },
+    rowGroupLast: {
+      borderBottomWidth: 0,
+    },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -16,11 +28,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 14,
       paddingVertical: 11,
       minHeight: 44,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: theme.borderLight,
-    },
-    rowLast: {
-      borderBottomWidth: 0,
     },
     rowError: {
       backgroundColor: theme.errorLight,
@@ -48,11 +55,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       textAlign: 'right',
     },
-    valueMono: {
-      fontFamily: MONO_FONT,
-      fontWeight: '400',
-      letterSpacing: 0.4,
-    },
     valuePlaceholder: {
       color: theme.textTertiary,
       fontWeight: '400',
@@ -63,7 +65,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       paddingHorizontal: 14,
       paddingBottom: 10,
-      marginTop: -4,
+      marginTop: -6,
     },
     errorWrap: {
       paddingHorizontal: 14,

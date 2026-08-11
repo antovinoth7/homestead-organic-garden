@@ -116,17 +116,35 @@ export function VarietyDetailModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{isAdding ? 'Add Variety' : editingVariety}</Text>
-            <TouchableOpacity style={styles.modalCloseButton} onPress={onClose}>
-              <Ionicons name="close" size={16} color={theme.textInverse} />
+          {/* Close left, Done right. The close circle is deliberately neutral
+              rather than the shared filled-primary one — two primary controls
+              flanking the title would compete for the same emphasis. */}
+          <View style={styles.varietyHeader}>
+            <TouchableOpacity
+              style={styles.varietyCloseButton}
+              onPress={onClose}
+              accessibilityLabel="Close"
+            >
+              <Ionicons name="close" size={16} color={theme.textSecondary} />
+            </TouchableOpacity>
+            <View style={styles.varietyHeaderText}>
+              <Text style={styles.modalTitle} numberOfLines={1}>
+                {isAdding ? 'Add Variety' : editingVariety}
+              </Text>
+              <Text style={styles.varietyHeaderHint} numberOfLines={1}>
+                {isAdding
+                  ? 'Enter a name and optional details'
+                  : 'Optional details for this variety'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.varietyDoneButton}
+              onPress={onSave}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.varietyDoneText}>Done</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.modalHint}>
-            {isAdding
-              ? 'Enter a name and optional details'
-              : 'Optional details for this variety'}
-          </Text>
 
           {isAdding && (
             <FloatingLabelInput
@@ -176,15 +194,6 @@ export function VarietyDetailModal({
             placeholder="Farmer observations, soil preference, yield notes..."
             placeholderTextColor={theme.textTertiary}
           />
-
-          <View style={styles.modalActions}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonPrimary]}
-              onPress={onSave}
-            >
-              <Text style={styles.modalButtonTextPrimary}>Done</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>

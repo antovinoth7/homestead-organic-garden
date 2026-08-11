@@ -71,7 +71,6 @@ export function PruningSection({ editor }: Props): React.JSX.Element {
         kind="text"
         label="Pruning frequency"
         value={careForm.pruningFrequencyDays ? `${careForm.pruningFrequencyDays} days` : ''}
-        mono
         helpText={CATALOG_FIELD_HELP.pruningFrequencyDays}
         onPress={onFrequency}
       />
@@ -92,10 +91,13 @@ export function PruningSection({ editor }: Props): React.JSX.Element {
         dictation
         numberOfLines={2}
       />
+      {/* Sits directly under the shape-pruning tip, so the label needs no
+          qualifier; the sheet title carries one, since the row is out of view
+          once the editor opens. */}
       {hasShapeTip && (
         <CatalogDetailRow
           kind="text"
-          label="Shape pruning — best months"
+          label="Best months"
           value={careForm.shapePruningMonths}
           helpText={CATALOG_FIELD_HELP.shapePruningMonths}
           onPress={onShapeMonths}
@@ -114,7 +116,7 @@ export function PruningSection({ editor }: Props): React.JSX.Element {
       {hasFlowerTip && (
         <CatalogDetailRow
           kind="text"
-          label="Flower pruning — best months"
+          label="Best months"
           value={careForm.flowerPruningMonths}
           helpText={CATALOG_FIELD_HELP.flowerPruningMonths}
           onPress={onFlowerMonths}

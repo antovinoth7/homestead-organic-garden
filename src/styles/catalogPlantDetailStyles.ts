@@ -148,11 +148,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       padding: 16,
       gap: 10,
     },
-    catalogHeroImage: {
-      width: '100%',
-      height: 180,
-      borderRadius: 16,
-      backgroundColor: theme.backgroundSecondary,
+    /**
+     * Compact plant thumbnail in the header. Reference art is bundled at
+     * 400×300, so showing it small keeps it sharp — a full-width hero upscaled
+     * it roughly 3× on a phone.
+     */
+    headerThumb: {
+      marginLeft: 10,
     },
     fieldGroup: {
       marginBottom: 8,
@@ -363,9 +365,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     pickerSeparator: {
       height: 0,
     },
-    modalButtonPrimary: {
-      backgroundColor: theme.primary,
-    },
     chipDot: {
       width: 6,
       height: 6,
@@ -398,6 +397,43 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     seasonPillTextActive: {
       color: theme.primary,
       fontWeight: '600',
+    },
+    /** Variety sheet header: close left, title centre, Done right. */
+    varietyHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 14,
+    },
+    varietyHeaderText: {
+      flex: 1,
+      minWidth: 0,
+    },
+    varietyHeaderHint: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
+    varietyCloseButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    varietyDoneButton: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: 18,
+      paddingVertical: 9,
+      borderRadius: 20,
+    },
+    varietyDoneText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.textInverse,
     },
     modalCloseButton: {
       width: 30,

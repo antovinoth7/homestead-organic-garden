@@ -37,4 +37,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 13,
       textAlign: 'center',
     },
+    heroImage: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: theme.backgroundSecondary,
+    },
+    heroFallback: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.backgroundSecondary,
+    },
+    heroFallbackText: {
+      fontSize: 24,
+      textAlign: 'center',
+    },
   });

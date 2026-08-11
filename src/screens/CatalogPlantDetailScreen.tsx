@@ -1,10 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import type {
-  ImageStyle,
-  LayoutChangeEvent,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-} from 'react-native';
+import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import {
   View,
   Text,
@@ -14,13 +9,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '@/theme';
 import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/catalogPlantDetailStyles';
 import CollapsibleSection from '@/components/CollapsibleSection';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
 import type { SegmentedTab } from '@/components/SegmentedTabs';
 import { OptionPickerSheet } from '@/components/OptionPickerSheet';
@@ -71,7 +66,12 @@ import {
   varietiesSummary,
 } from '@/utils/catalogSummaries';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
-import { getCommonDiseases, getCommonPests, getPestDiseaseEmoji } from '@/utils/plantHelpers';
+import {
+  getCommonDiseases,
+  getCommonPests,
+  getPestDiseaseEmoji,
+  getPlantEmoji,
+} from '@/utils/plantHelpers';
 import {
   CATEGORY_LABELS,
   GROWTH_STAGE_LABELS,
@@ -522,6 +522,16 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         <TouchableOpacity onPress={onBackPress} style={styles.backButton}>
           <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
         </TouchableOpacity>
+        {/* Always rendered — ReferenceThumb falls back to the plant emoji, so
+            the five catalog plants without bundled art still show something. */}
+        <View style={styles.headerThumb}>
+          <ReferenceThumb
+            source={heroImage}
+            emoji={getPlantEmoji(lookupName)}
+            variant="hero"
+            recyclingKey={`${plantType}:${lookupName}`}
+          />
+        </View>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {displayName}
@@ -575,16 +585,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         onScroll={handleScroll}
         onMomentumScrollEnd={onMomentumScrollEnd}
       >
-        {heroImage && (
-          <Image
-            source={heroImage}
-            style={styles.catalogHeroImage as ImageStyle}
-            contentFit="cover"
-            transition={200}
-            cachePolicy="memory-disk"
-          />
-        )}
-
         <View style={styles.inFlowTabBar} onLayout={handleTabBarLayout}>
           {tabBar}
         </View>

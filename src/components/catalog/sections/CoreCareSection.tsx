@@ -156,7 +156,6 @@ export function CoreCareSection({ editor }: Props): React.JSX.Element {
         kind="text"
         label="Watering frequency"
         value={careForm.wateringFrequencyDays ? `${careForm.wateringFrequencyDays} days` : ''}
-        mono
         helpText={CATALOG_FIELD_HELP.wateringFrequencyDays}
         onPress={onWateringFrequency}
         errorText={showErrors ? errors.wateringFrequencyDays : undefined}
@@ -176,7 +175,6 @@ export function CoreCareSection({ editor }: Props): React.JSX.Element {
         value={
           careForm.fertilisingFrequencyDays ? `${careForm.fertilisingFrequencyDays} days` : ''
         }
-        mono
         helpText={CATALOG_FIELD_HELP.fertilisingFrequencyDays}
         onPress={onFertilisingFrequency}
         errorText={showErrors ? errors.fertilisingFrequencyDays : undefined}

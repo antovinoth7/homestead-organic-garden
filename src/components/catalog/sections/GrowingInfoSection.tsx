@@ -170,7 +170,6 @@ export function GrowingInfoSection({ editor }: Props): React.JSX.Element {
         kind="text"
         label="Years to first harvest"
         value={careForm.yearsToFirstHarvest}
-        mono
         helpText={CATALOG_FIELD_HELP.yearsToFirstHarvest}
         onPress={onYearsToFirstHarvest}
       />
@@ -187,7 +186,6 @@ export function GrowingInfoSection({ editor }: Props): React.JSX.Element {
         kind="text"
         label="Spacing"
         value={careForm.spacingCm ? `${careForm.spacingCm} cm` : ''}
-        mono
         helpText={CATALOG_FIELD_HELP.spacingCm}
         onPress={onSpacing}
       />
@@ -195,7 +193,6 @@ export function GrowingInfoSection({ editor }: Props): React.JSX.Element {
         kind="text"
         label="Planting depth"
         value={careForm.plantingDepthCm ? `${careForm.plantingDepthCm} cm` : ''}
-        mono
         helpText={CATALOG_FIELD_HELP.plantingDepthCm}
         onPress={onPlantingDepth}
       />

@@ -14,8 +14,6 @@ interface Props {
   label: string;
   /** Falls back to an em-dash when empty, so every row keeps its shape. */
   value?: string;
-  /** Renders the value in the monospace face — for numerics and intervals. */
-  mono?: boolean;
   kind: CatalogRowKind;
   helpText?: string;
   /** FieldHelp popover title; defaults to `label`. */
@@ -60,7 +58,6 @@ function useBadgeColors(tone: BadgeTone): { bg: string; border: string; fg: stri
 export function CatalogDetailRow({
   label,
   value,
-  mono = false,
   kind,
   helpText,
   helpTitle,
@@ -110,11 +107,7 @@ export function CatalogDetailRow({
           </View>
         ) : (
           <Text
-            style={[
-              styles.value,
-              mono && styles.valueMono,
-              isEmpty && styles.valuePlaceholder,
-            ]}
+            style={[styles.value, isEmpty && styles.valuePlaceholder]}
             numberOfLines={2}
           >
             {isEmpty ? EMPTY_VALUE : value}
@@ -129,10 +122,10 @@ export function CatalogDetailRow({
   );
 
   return (
-    <View>
+    <View style={[styles.rowGroup, isLast && styles.rowGroupLast, !!errorText && styles.rowError]}>
       {interactive ? (
         <TouchableOpacity
-          style={[styles.row, isLast && !hint && !errorText && styles.rowLast, !!errorText && styles.rowError]}
+          style={styles.row}
           onPress={onPress}
           activeOpacity={0.6}
           accessibilityRole="button"
@@ -141,11 +134,7 @@ export function CatalogDetailRow({
           {body}
         </TouchableOpacity>
       ) : (
-        <View
-          style={[styles.row, isLast && !hint && !errorText && styles.rowLast, !!errorText && styles.rowError]}
-        >
-          {body}
-        </View>
+        <View style={styles.row}>{body}</View>
       )}
       {errorText ? (
         <View style={styles.errorWrap}>
