@@ -18,10 +18,13 @@ export const createStyles = (theme: Theme) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.borderLight,
     },
+    // Circular 36px primary — the shared back/add treatment on every stack
+    // screen (Plants, Manage catalog, Archived plants). The comp drew rounded
+    // squares; matching the rest of the app wins over matching the comp.
     backButton: {
-      width: 34,
-      height: 34,
-      borderRadius: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -51,16 +54,16 @@ export const createStyles = (theme: Theme) =>
     },
     sectionSubtitle: { fontSize: 11.5, color: theme.textTertiary, marginTop: 2 },
     sectionAddButton: {
-      width: 34,
-      height: 34,
-      borderRadius: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: theme.primary,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.28,
-      shadowRadius: 9,
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.18,
+      shadowRadius: 4,
       elevation: 3,
     },
 

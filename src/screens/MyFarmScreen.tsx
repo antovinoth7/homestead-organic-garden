@@ -329,7 +329,7 @@ export default function MyFarmScreen(): React.JSX.Element {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="chevron-back" size={20} color={theme.textInverse} />
+          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
         </TouchableOpacity>
         <Text style={styles.title}>My Farm</Text>
       </View>
