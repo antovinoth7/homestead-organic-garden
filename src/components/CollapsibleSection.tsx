@@ -30,6 +30,10 @@ interface CollapsibleSectionProps {
   summary?: string;
   headerAction?: React.ReactNode;
   sectionStatus?: 'required_incomplete' | 'complete' | 'optional';
+  /** Renders the icon inside a tinted circle; pass a theme token, not a literal. */
+  iconTint?: string;
+  /** Keeps the summary visible while expanded, so the card stays scannable. */
+  alwaysShowSummary?: boolean;
 }
 
 export default function CollapsibleSection({
@@ -44,6 +48,8 @@ export default function CollapsibleSection({
   summary,
   headerAction,
   sectionStatus,
+  iconTint,
+  alwaysShowSummary = false,
 }: CollapsibleSectionProps): React.JSX.Element {
   const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
   const theme = useTheme();
@@ -65,14 +71,19 @@ export default function CollapsibleSection({
       <View style={[styles.header, hasError && styles.headerError]}>
         <TouchableOpacity style={styles.headerMain} onPress={toggleExpanded} activeOpacity={0.7}>
           <View style={styles.headerLeft}>
-            {icon && (
-              <Ionicons
-                name={icon}
-                size={20}
-                color={hasError ? '#FF6B6B' : theme.primary}
-                style={styles.headerIcon}
-              />
-            )}
+            {icon &&
+              (iconTint ? (
+                <View style={[styles.headerIconCircle, { backgroundColor: iconTint }]}>
+                  <Ionicons name={icon} size={15} color={hasError ? theme.error : theme.primary} />
+                </View>
+              ) : (
+                <Ionicons
+                  name={icon}
+                  size={20}
+                  color={hasError ? theme.error : theme.primary}
+                  style={styles.headerIcon}
+                />
+              ))}
             <View style={styles.headerTextBlock}>
               <View style={styles.headerTitleRow}>
                 <Text
@@ -104,7 +115,7 @@ export default function CollapsibleSection({
                 )}
                 {hasError && <View style={styles.errorDot} />}
               </View>
-              {!isExpanded && summary ? (
+              {(alwaysShowSummary || !isExpanded) && summary ? (
                 <Text style={styles.headerSummary} numberOfLines={2}>
                   {summary}
                 </Text>

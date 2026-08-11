@@ -1,745 +1,505 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ImageStyle } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import type {
+  ImageStyle,
+  LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+} from 'react-native';
 import {
   View,
   Text,
   ScrollView,
-  FlatList,
-  TextInput,
   TouchableOpacity,
-  Alert,
   Modal,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme';
 import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/catalogPlantDetailStyles';
-import FloatingLabelInput from '@/components/FloatingLabelInput';
-import VoiceDictation from '@/components/VoiceDictation';
-import ThemedDropdown from '@/components/ThemedDropdown';
 import CollapsibleSection from '@/components/CollapsibleSection';
-import FieldLabelWithHelp from '@/components/FieldLabelWithHelp';
+import { SegmentedTabs } from '@/components/SegmentedTabs';
+import type { SegmentedTab } from '@/components/SegmentedTabs';
+import { OptionPickerSheet } from '@/components/OptionPickerSheet';
 import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
-import {
-  DEFAULT_PLANT_PROFILES,
-  getPlantProfiles,
-  getPlantNamesForType,
-  savePlantProfile,
-  deletePlantProfile,
-  savePlantProfiles,
-} from '@/services/plantProfiles';
-import { getAllPlants, updatePlantVariety } from '@/services/plants';
-import {
-  DiseaseEntry,
-  FeedingIntensity,
-  FertiliserType,
-  GrowthStage,
-  PestEntry,
-  PlantLifecycle,
-  Plant,
-  PlantCareProfile,
-  PlantProfile,
-  PlantProfiles,
-  SoilType,
-  SunlightLevel,
-  ToleranceLevel,
-  VarietyDetail,
-  WaterRequirement,
-} from '@/types/database.types';
+import { AlertDialog } from '@/components/modals/AlertDialog';
+import { CatalogChipList } from '@/components/catalog/CatalogChipList';
+import type { CatalogChip } from '@/components/catalog/CatalogChipList';
+import { CatalogDangerFooter } from '@/components/catalog/CatalogDangerFooter';
+import { CatalogTextEditSheet } from '@/components/catalog/CatalogTextEditSheet';
+import { CatalogRangeEditSheet } from '@/components/catalog/CatalogRangeEditSheet';
+import { PestDiseasePickerModal } from '@/components/catalog/PestDiseasePickerModal';
+import { VarietyDetailModal } from '@/components/catalog/VarietyDetailModal';
+import { ReassignPlantsModal } from '@/components/catalog/ReassignPlantsModal';
+import { PlantInfoSection } from '@/components/catalog/sections/PlantInfoSection';
+import { CoreCareSection } from '@/components/catalog/sections/CoreCareSection';
+import { GrowingInfoSection } from '@/components/catalog/sections/GrowingInfoSection';
+import { PruningSection } from '@/components/catalog/sections/PruningSection';
+import { TolerancesSection } from '@/components/catalog/sections/TolerancesSection';
+import { PlantingSection } from '@/components/catalog/sections/PlantingSection';
+import type {
+  CatalogEditor,
+  PickerSheetConfig,
+  RangeSheetConfig,
+  TextSheetConfig,
+} from '@/components/catalog/catalogEditor';
+import { useCatalogEntryForm } from '@/hooks/useCatalogEntryForm';
+import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
+import { getAllPests } from '@/config/pests';
+import { getAllDiseases } from '@/config/diseases';
+import type { VarietyDetail } from '@/types/database.types';
 import { MoreStackParamList } from '@/types/navigation.types';
-import { getPlantCareProfile, getStaticPruningDefaults } from '@/utils/plantCareDefaults';
-import { getCommonPests, getCommonDiseases, getPestDiseaseEmoji } from '@/utils/plantHelpers';
+import { sanitizeName } from '@/utils/catalogDraft';
+import {
+  FIELD_TO_SECTION,
+  SECTION_TO_TAB,
+  sectionHasError,
+} from '@/utils/catalogValidation';
+import type { CatalogSectionKey, CatalogTabKey } from '@/utils/catalogValidation';
+import {
+  coreCareSummary,
+  diseasesSummary,
+  growingInfoSummary,
+  pestsSummary,
+  plantInfoSummary,
+  plantingSummary,
+  pruningSummary,
+  toleranceSummary,
+  varietiesSummary,
+} from '@/utils/catalogSummaries';
+import { getPlantCareProfile } from '@/utils/plantCareDefaults';
+import { getCommonDiseases, getCommonPests, getPestDiseaseEmoji } from '@/utils/plantHelpers';
 import {
   CATEGORY_LABELS,
-  FEEDING_INTENSITY_LABELS,
-  FEEDING_INTENSITY_SUGGESTED_DAYS,
-  FERTILISER_LABELS,
   GROWTH_STAGE_LABELS,
-  GROWING_SEASON_OPTIONS,
-  LIFECYCLE_DESCRIPTIONS,
   LIFECYCLE_LABELS,
-  SOIL_LABELS,
   SUNLIGHT_LABELS,
   TOLERANCE_LABELS,
   WATER_REQUIREMENT_LABELS,
 } from '@/utils/plantLabels';
-import { getAllPests } from '@/config/pests';
-import { getAllDiseases } from '@/config/diseases';
-import { sanitizeLandmarkText } from '@/utils/textSanitizer';
-import { getErrorMessage } from '@/utils/errorLogging';
 
-type NavProp = NativeStackNavigationProp<MoreStackParamList, 'CatalogPlantDetail'>;
 type RouteParam = RouteProp<MoreStackParamList, 'CatalogPlantDetail'>;
 
-type CareFormState = {
-  // Core care
-  waterRequirement: WaterRequirement;
-  wateringFrequencyDays: string;
-  fertilisingFrequencyDays: string;
-  sunlight: SunlightLevel;
-  soilType: SoilType;
-  preferredFertiliser: FertiliserType;
-  initialGrowthStage: GrowthStage;
-  // Pruning
-  pruningFrequencyDays: string;
-  pruningTips: string;
-  shapePruningTip: string;
-  shapePruningMonths: string;
-  flowerPruningTip: string;
-  flowerPruningMonths: string;
-  // Botanical identity
-  scientificName: string;
-  taxonomicFamily: string;
-  lifecycle: PlantLifecycle | '';
-  description: string;
-  tamilName: string;
-  // Growing parameters
-  growingSeason: string;
-  daysToHarvestMin: string;
-  daysToHarvestMax: string;
-  yearsToFirstHarvest: string;
-  heightCmMin: string;
-  heightCmMax: string;
-  spacingCm: string;
-  plantingDepthCm: string;
-  germinationDaysMin: string;
-  germinationDaysMax: string;
-  germinationTempMin: string;
-  germinationTempMax: string;
-  soilPhMin: string;
-  soilPhMax: string;
-  // Tolerances
-  heatTolerance: ToleranceLevel | '';
-  droughtTolerance: ToleranceLevel | '';
-  feedingIntensity: FeedingIntensity | '';
-  // Custom pests & diseases
-  customPests: string[];
-  customDiseases: string[];
+const TAB_KEYS: readonly CatalogTabKey[] = ['basics', 'care', 'growing', 'health', 'varieties'];
+
+const TABS: readonly SegmentedTab<CatalogTabKey>[] = [
+  { key: 'basics', label: 'Basics', icon: 'information-circle-outline' },
+  { key: 'care', label: 'Care', icon: 'water-outline' },
+  { key: 'growing', label: 'Growing', icon: 'stats-chart-outline' },
+  { key: 'health', label: 'Health', icon: 'shield-checkmark-outline' },
+  { key: 'varieties', label: 'Varieties', icon: 'albums-outline' },
+];
+
+const ALL_EXPANDED: Record<CatalogSectionKey, boolean> = {
+  plantInfo: true,
+  coreCare: true,
+  pruning: true,
+  growingInfo: true,
+  planting: true,
+  tolerances: true,
+  pests: true,
+  diseases: true,
+  varieties: true,
 };
 
-const sanitizeName = (v: string): string => sanitizeLandmarkText(v).trim();
-const sanitizeNum = (v: string): string => v.replace(/[^0-9]/g, '');
-const sanitizeDecimal = (v: string): string => v.replace(/[^0-9.]/g, '');
-
-const FIELD_HELP = {
-  name: 'Primary catalog name shown in lists, details, and linked garden plants.',
-  tamilName:
-    'Tamil name stored with this catalog entry for localized views and future Tamil UI support.',
-  description:
-    'Short plain-language summary of the plant. Keep it brief so it reads well in detail views.',
-  scientificName:
-    'Botanical Latin name used for accurate identification and future grouping logic.',
-  taxonomicFamily:
-    'Plant family, such as Solanaceae or Fabaceae. Useful for related-crop and rotation features.',
-  lifecycle:
-    'Defines whether the plant finishes its life cycle in one season, two seasons, or continues for multiple years.',
-  growingSeason: 'Best sowing or growing window for Tamil Nadu and Kanyakumari conditions.',
-  waterRequirement:
-    'Overall water demand for this plant. Use it together with the watering interval below.',
-  wateringFrequencyDays: 'How often watering reminders should repeat, in days.',
-  fertilisingFrequencyDays:
-    'How often fertiliser reminders should repeat, in days. Set Feeding Intensity above to auto-suggest this value.',
-  sunlight: 'Amount of direct sun or shade the plant prefers in normal growing conditions.',
-  soilType: 'Best-matching soil profile for drainage, root health, and nutrient performance.',
-  preferredFertiliser: "Default fertiliser type suggested for this plant's care profile.",
-  daysToHarvest:
-    'Typical time from planting to first harvest. Use a range when timing varies by climate or variety.',
-  yearsToFirstHarvest:
-    'For trees and long-lived crops, how many years it usually takes to give the first useful harvest.',
-  heightCm: 'Typical mature height range in centimeters.',
-  spacingCm: 'Recommended distance between plants to reduce crowding and improve airflow.',
-  plantingDepthCm: 'Suggested sowing or planting depth in centimeters.',
-  germinationDays: 'How long seeds usually take to sprout under suitable conditions.',
-  germinationTempC: 'Temperature range where germination is most reliable.',
-  soilPhRange: 'Preferred soil acidity or alkalinity range for healthy growth.',
-  heatTolerance: 'How well the plant handles sustained hot weather and heat stress.',
-  droughtTolerance: 'How well the plant copes with dry spells or missed watering.',
-  feedingIntensity:
-    'How heavily the plant draws nutrients from the soil. Light: ~60 days between fertilising. Medium: ~30 days. Heavy: ~14 days. Selecting this auto-fills the fertilising interval below.',
-  pruningFrequencyDays: 'How often pruning reminders should repeat, in days.',
-  pruningTips: 'Short, practical pruning guidance. Add one tip per line.',
-  shapePruningTip: 'How to prune for structure, airflow, and overall plant shape.',
-  shapePruningMonths: 'Best months or season window for structural pruning.',
-  flowerPruningTip: 'How to prune to support flowering and bloom quality.',
-  flowerPruningMonths: 'Best months or season window for flower-focused pruning.',
-  initialGrowthStage:
-    'Default stage assigned when a new garden plant is created from this catalog entry.',
-  petToxicity:
-    'Whether this plant is known to be toxic or safe for common household pets such as dogs and cats. Always confirm with a vet before allowing animals near the plant.',
-} as const;
-
-function rangeStr(val?: { min: number; max: number }): [string, string] {
-  if (!val) return ['', ''];
-  return [String(val.min), String(val.max)];
-}
-
-function toRange(min: string, max: string): { min: number; max: number } | undefined {
-  const mn = parseFloat(min);
-  const mx = parseFloat(max);
-  if (Number.isNaN(mn) || Number.isNaN(mx)) return undefined;
-  return { min: mn, max: mx };
-}
-
-function toOptNum(s: string): number | undefined {
-  const n = parseFloat(s);
-  return Number.isNaN(n) ? undefined : n;
-}
-
-function joinSummary(parts: (string | null | undefined)[]): string | undefined {
-  const values = parts.map((part) => part?.trim()).filter((part): part is string => Boolean(part));
-
-  return values.length > 0 ? values.join(' • ') : undefined;
-}
-
-function formatRangeLabel(min: string, max: string, unit: string): string | undefined {
-  if (min && max) return `${min}-${max} ${unit}`;
-  if (min) return `From ${min} ${unit}`;
-  if (max) return `Up to ${max} ${unit}`;
-  return undefined;
-}
-
-function formatCount(count: number, singular: string, plural = `${singular}s`): string {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
-
-const pickerKeyExtractor = (item: PestEntry | DiseaseEntry): string => item.id;
-
 export default function CatalogPlantDetailScreen(): React.JSX.Element {
-  const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteParam>();
+  const navigation = useNavigation();
   const { plantName: initialName, plantType, isCreating = false } = route.params;
 
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
-  const [profiles, setProfiles] = useState<PlantProfiles>(DEFAULT_PLANT_PROFILES);
-  const [plants, setPlants] = useState<Plant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  // ─── Modal visibility ─────────────────────────────────────────────────────
 
-  const [name, setName] = useState(initialName);
-  const [careForm, setCareForm] = useState<CareFormState | null>(null);
-  const [newVariety, setNewVariety] = useState('');
-  const [showReassign, setShowReassign] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [reassignReplacement, setReassignReplacement] = useState('');
+  const [textSheet, setTextSheet] = useState<TextSheetConfig | null>(null);
+  const [pickerSheet, setPickerSheet] = useState<PickerSheetConfig | null>(null);
+  const [rangeSheet, setRangeSheet] = useState<RangeSheetConfig | null>(null);
   const [showPestPicker, setShowPestPicker] = useState(false);
   const [showDiseasePicker, setShowDiseasePicker] = useState(false);
-  const [pestSearch, setPestSearch] = useState('');
-  const [diseaseSearch, setDiseaseSearch] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReassign, setShowReassign] = useState(false);
+  const [reassignReplacement, setReassignReplacement] = useState('');
   const [editingVariety, setEditingVariety] = useState<string | null>(null);
-  const [varietyDetailDraft, setVarietyDetailDraft] = useState<VarietyDetail>({});
+  const [newVariety, setNewVariety] = useState('');
+  const [varietyDraft, setVarietyDraft] = useState<VarietyDetail>({});
 
-  const currentProfile: PlantProfile | undefined = profiles[plantType]?.[initialName];
-  const categoryPlants = getPlantNamesForType(profiles, plantType);
-  const varieties: string[] = currentProfile?.varieties ?? [];
-  const varietyDetails: Record<string, VarietyDetail> = currentProfile?.varietyDetails ?? {};
+  const anyModalOpen =
+    textSheet !== null ||
+    pickerSheet !== null ||
+    rangeSheet !== null ||
+    showPestPicker ||
+    showDiseasePicker ||
+    showDeleteConfirm ||
+    showReassign ||
+    editingVariety !== null;
 
-  const usageCount = useMemo(
-    () =>
-      plants.filter((p) => p.plant_type === plantType && p.plant_variety === initialName).length,
-    [plants, plantType, initialName]
+  const form = useCatalogEntryForm({ initialName, plantType, isCreating, anyModalOpen });
+  const {
+    loading,
+    saving,
+    name,
+    setName,
+    careForm,
+    setForm,
+    varieties,
+    varietyDetails,
+    setVarieties,
+    setVarietyDetails,
+    lookupName,
+    categoryPlants,
+    usageCount,
+    hasOverride,
+    isDirty,
+    errors,
+    showErrors,
+    attemptSave,
+    resetCare,
+    requestDelete,
+    confirmDelete,
+    showDiscardDialog,
+    dismissDiscard,
+    discardChanges,
+  } = form;
+
+  // ─── Tabs + section expansion ─────────────────────────────────────────────
+
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [tabsStuck, setTabsStuck] = useState(false);
+  const tabBarYRef = useRef(0);
+  const [sectionExpanded, setSectionExpanded] =
+    useState<Record<CatalogSectionKey, boolean>>(ALL_EXPANDED);
+
+  const {
+    activeKey,
+    scrollRef,
+    registerSection,
+    onTabBarLayout,
+    onScroll,
+    onMomentumScrollEnd,
+    scrollToKey,
+  } = useSectionScrollSpy<CatalogTabKey>(TAB_KEYS, headerHeight);
+
+  const onHeaderLayout = useCallback(
+    (event: LayoutChangeEvent) => setHeaderHeight(event.nativeEvent.layout.height),
+    []
   );
-  const usageSummary = usageCount === 0 ? 'Not in garden yet' : `${usageCount} in garden`;
 
-  // hasOverride: user has saved care fields (waterRequirement is always set on save)
-  const hasOverride = currentProfile?.waterRequirement !== undefined;
-
-  const buildCareForm = useCallback(
-    (profs: PlantProfiles): CareFormState | null => {
-      const base = isCreating ? null : getPlantCareProfile(initialName, plantType);
-      if (!base && !isCreating) return null;
-      const profileEntry = isCreating ? undefined : profs[plantType]?.[initialName];
-      const merged: PlantCareProfile = base
-        ? { ...base, ...(profileEntry ?? {}) }
-        : {
-            waterRequirement: 'medium',
-            sunlight: 'full_sun',
-            soilType: 'garden_soil',
-            preferredFertiliser: 'compost',
-            initialGrowthStage: 'seedling',
-          };
-
-      const hasUserPruning =
-        profileEntry?.pruningTips ||
-        profileEntry?.shapePruningTip ||
-        profileEntry?.flowerPruningTip;
-      const staticPruning = getStaticPruningDefaults(plantType, initialName);
-
-      const [dthMin, dthMax] = rangeStr(merged.daysToHarvest);
-      const [htMin, htMax] = rangeStr(merged.heightCm);
-      const [gdMin, gdMax] = rangeStr(merged.germinationDays);
-      const [gtMin, gtMax] = rangeStr(merged.germinationTempC);
-      const [phMin, phMax] = rangeStr(merged.soilPhRange);
-
-      return {
-        waterRequirement: merged.waterRequirement,
-        wateringFrequencyDays: merged.wateringFrequencyDays?.toString() ?? '',
-        fertilisingFrequencyDays: merged.fertilisingFrequencyDays?.toString() ?? '',
-        pruningFrequencyDays: merged.pruningFrequencyDays?.toString() ?? '',
-        sunlight: merged.sunlight,
-        soilType: merged.soilType,
-        preferredFertiliser: merged.preferredFertiliser,
-        initialGrowthStage: merged.initialGrowthStage,
-        pruningTips: hasUserPruning
-          ? (profileEntry?.pruningTips ?? []).join('\n')
-          : staticPruning.tips.join('\n'),
-        shapePruningTip: hasUserPruning
-          ? profileEntry?.shapePruningTip ?? ''
-          : staticPruning.shapePruning?.tip ?? '',
-        shapePruningMonths: hasUserPruning
-          ? profileEntry?.shapePruningMonths ?? ''
-          : staticPruning.shapePruning?.months ?? '',
-        flowerPruningTip: hasUserPruning
-          ? profileEntry?.flowerPruningTip ?? ''
-          : staticPruning.flowerPruning?.tip ?? '',
-        flowerPruningMonths: hasUserPruning
-          ? profileEntry?.flowerPruningMonths ?? ''
-          : staticPruning.flowerPruning?.months ?? '',
-        // Botanical identity
-        scientificName: merged.scientificName ?? '',
-        taxonomicFamily: merged.taxonomicFamily ?? '',
-        lifecycle: merged.lifecycle ?? '',
-        description: merged.description ?? '',
-        tamilName: merged.tamilName ?? '',
-        // Growing parameters
-        growingSeason: merged.growingSeason ?? '',
-        daysToHarvestMin: dthMin,
-        daysToHarvestMax: dthMax,
-        yearsToFirstHarvest: merged.yearsToFirstHarvest?.toString() ?? '',
-        heightCmMin: htMin,
-        heightCmMax: htMax,
-        spacingCm: merged.spacingCm?.toString() ?? '',
-        plantingDepthCm: merged.plantingDepthCm?.toString() ?? '',
-        germinationDaysMin: gdMin,
-        germinationDaysMax: gdMax,
-        germinationTempMin: gtMin,
-        germinationTempMax: gtMax,
-        soilPhMin: phMin,
-        soilPhMax: phMax,
-        // Tolerances
-        heatTolerance: merged.heatTolerance ?? '',
-        droughtTolerance: merged.droughtTolerance ?? '',
-        feedingIntensity: merged.feedingIntensity ?? '',
-        // Custom pests & diseases
-        customPests: profileEntry?.customPests ?? [],
-        customDiseases: profileEntry?.customDiseases ?? [],
-      };
+  const handleTabBarLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      tabBarYRef.current = event.nativeEvent.layout.y;
+      onTabBarLayout(event);
     },
-    [initialName, plantType, isCreating]
+    [onTabBarLayout]
   );
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [profilesData, allPlants] = await Promise.all([getPlantProfiles(), getAllPlants()]);
-      setProfiles(profilesData);
-      setPlants(allPlants);
-      setCareForm(buildCareForm(profilesData));
-    } catch (error: unknown) {
-      Alert.alert('Error', getErrorMessage(error) ?? 'Failed to load plant data.');
-    } finally {
-      setLoading(false);
-    }
-  }, [buildCareForm]);
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // Once the in-flow bar reaches the top of the viewport the pinned copy
+      // takes over, so the handoff is seamless.
+      const stuck = event.nativeEvent.contentOffset.y >= tabBarYRef.current;
+      setTabsStuck((prev) => (prev === stuck ? prev : stuck));
+      onScroll(event);
+    },
+    [onScroll]
+  );
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const setExpanded = useCallback(
+    (section: CatalogSectionKey) => (expanded: boolean) =>
+      setSectionExpanded((prev) => ({ ...prev, [section]: expanded })),
+    []
+  );
 
-  // ─── Variety helpers ──────────────────────────────────────────────────────
+  // ─── Field editing ────────────────────────────────────────────────────────
 
-  const hasVarietyDetail = (v: string): boolean => {
-    const d = varietyDetails[v];
-    if (!d) return false;
-    return (
-      d.daysToMaturity !== undefined ||
-      (d.seasonSuitability?.length ?? 0) > 0 ||
-      Boolean(d.seedSource?.trim()) ||
-      Boolean(d.notes?.trim())
-    );
-  };
+  const closeTextSheet = useCallback(() => setTextSheet(null), []);
+  const closePickerSheet = useCallback(() => setPickerSheet(null), []);
+  const closeRangeSheet = useCallback(() => setRangeSheet(null), []);
 
-  const handleAddVariety = (): void => {
+  const editor = useMemo<CatalogEditor | null>(
+    () =>
+      careForm
+        ? {
+            careForm,
+            setForm,
+            errors,
+            showErrors,
+            openText: setTextSheet,
+            openPicker: setPickerSheet,
+            openRange: setRangeSheet,
+          }
+        : null,
+    [careForm, setForm, errors, showErrors]
+  );
+
+  // ─── Pests & diseases ─────────────────────────────────────────────────────
+
+  // Keyed off the live name, so a rename in this session updates what the
+  // entry inherits rather than leaving the previous plant's lists behind.
+  const inheritedPests = useMemo(
+    () => getCommonPests(plantType, lookupName),
+    [plantType, lookupName]
+  );
+  const inheritedDiseases = useMemo(
+    () => getCommonDiseases(plantType, lookupName),
+    [plantType, lookupName]
+  );
+  const baseProfile = useMemo(
+    () => getPlantCareProfile(lookupName, plantType),
+    [lookupName, plantType]
+  );
+
+  const pestChips = useMemo<CatalogChip[]>(
+    () => [
+      ...inheritedPests.map((pest) => ({
+        key: `inherited:${pest}`,
+        label: pest,
+        emoji: getPestDiseaseEmoji(pest, 'pest'),
+        removable: false,
+      })),
+      ...(careForm?.customPests ?? []).map((pest) => ({
+        key: pest,
+        label: pest,
+        emoji: getPestDiseaseEmoji(pest, 'pest'),
+        removable: true,
+      })),
+    ],
+    [inheritedPests, careForm?.customPests]
+  );
+
+  const diseaseChips = useMemo<CatalogChip[]>(
+    () => [
+      ...inheritedDiseases.map((disease) => ({
+        key: `inherited:${disease}`,
+        label: disease,
+        emoji: getPestDiseaseEmoji(disease, 'disease'),
+        removable: false,
+      })),
+      ...(careForm?.customDiseases ?? []).map((disease) => ({
+        key: disease,
+        label: disease,
+        emoji: getPestDiseaseEmoji(disease, 'disease'),
+        removable: true,
+      })),
+    ],
+    [inheritedDiseases, careForm?.customDiseases]
+  );
+
+  const onAddPest = useCallback(
+    (pest: string) => setForm({ customPests: [...(careForm?.customPests ?? []), pest] }),
+    [setForm, careForm?.customPests]
+  );
+  const onRemovePest = useCallback(
+    (pest: string) =>
+      setForm({ customPests: (careForm?.customPests ?? []).filter((p) => p !== pest) }),
+    [setForm, careForm?.customPests]
+  );
+  const onAddDisease = useCallback(
+    (disease: string) =>
+      setForm({ customDiseases: [...(careForm?.customDiseases ?? []), disease] }),
+    [setForm, careForm?.customDiseases]
+  );
+  const onRemoveDisease = useCallback(
+    (disease: string) =>
+      setForm({
+        customDiseases: (careForm?.customDiseases ?? []).filter((d) => d !== disease),
+      }),
+    [setForm, careForm?.customDiseases]
+  );
+
+  const openPestPicker = useCallback(() => setShowPestPicker(true), []);
+  const closePestPicker = useCallback(() => setShowPestPicker(false), []);
+  const openDiseasePicker = useCallback(() => setShowDiseasePicker(true), []);
+  const closeDiseasePicker = useCallback(() => setShowDiseasePicker(false), []);
+
+  const takenPestNames = useMemo(
+    () => [...inheritedPests, ...(careForm?.customPests ?? [])],
+    [inheritedPests, careForm?.customPests]
+  );
+  const takenDiseaseNames = useMemo(
+    () => [...inheritedDiseases, ...(careForm?.customDiseases ?? [])],
+    [inheritedDiseases, careForm?.customDiseases]
+  );
+
+  // ─── Varieties ────────────────────────────────────────────────────────────
+
+  const hasVarietyDetail = useCallback(
+    (variety: string): boolean => {
+      const detail = varietyDetails[variety];
+      if (!detail) return false;
+      return (
+        detail.daysToMaturity !== undefined ||
+        (detail.seasonSuitability?.length ?? 0) > 0 ||
+        Boolean(detail.seedSource?.trim()) ||
+        Boolean(detail.notes?.trim())
+      );
+    },
+    [varietyDetails]
+  );
+
+  const varietyChips = useMemo<CatalogChip[]>(
+    () =>
+      varieties.map((variety) => ({
+        key: variety,
+        label: variety,
+        dot: hasVarietyDetail(variety),
+        removable: true,
+      })),
+    [varieties, hasVarietyDetail]
+  );
+
+  const onAddVariety = useCallback(() => {
     setNewVariety('');
-    setVarietyDetailDraft({});
+    setVarietyDraft({});
     setEditingVariety('');
-  };
+  }, []);
 
-  const handleRemoveVariety = (v: string): void => {
-    const nextVarieties = varieties.filter((x) => x.toLowerCase() !== v.toLowerCase());
-    const nextVarietyDetails = { ...varietyDetails };
-    delete nextVarietyDetails[v];
-    setProfiles((prev) => ({
-      ...prev,
-      [plantType]: {
-        ...prev[plantType],
-        [initialName]: {
-          ...prev[plantType][initialName],
-          varieties: nextVarieties,
-          varietyDetails: nextVarietyDetails,
-        },
-      },
-    }));
-  };
+  const onEditVariety = useCallback(
+    (variety: string) => {
+      setVarietyDraft(varietyDetails[variety] ?? {});
+      setEditingVariety(variety);
+    },
+    [varietyDetails]
+  );
 
-  const handleEditVarietyDetail = (v: string): void => {
-    setEditingVariety(v);
-    setVarietyDetailDraft(varietyDetails[v] ?? {});
-  };
+  const onRemoveVariety = useCallback(
+    (variety: string) => {
+      setVarieties((prev) => prev.filter((v) => v.toLowerCase() !== variety.toLowerCase()));
+      setVarietyDetails((prev) => {
+        const next = { ...prev };
+        delete next[variety];
+        return next;
+      });
+    },
+    [setVarieties, setVarietyDetails]
+  );
 
-  const handleSaveVarietyDetail = (): void => {
+  const closeVarietyModal = useCallback(() => setEditingVariety(null), []);
+
+  const onSaveVariety = useCallback(() => {
     if (editingVariety === null) return;
 
-    if (editingVariety === '') {
-      const v = sanitizeName(newVariety);
-      if (!v) {
-        setEditingVariety(null);
-        return;
-      }
-      if (varieties.some((x) => x.toLowerCase() === v.toLowerCase())) {
-        setNewVariety('');
-        setEditingVariety(null);
-        return;
-      }
-      const draft: VarietyDetail = {
-        ...varietyDetailDraft,
-        seedSource: varietyDetailDraft.seedSource?.trim(),
-        notes: varietyDetailDraft.notes?.trim(),
-      };
-      const hasContent =
-        draft.daysToMaturity !== undefined ||
-        (draft.seasonSuitability?.length ?? 0) > 0 ||
-        Boolean(draft.seedSource) ||
-        Boolean(draft.notes);
-      const nextVarieties = [...varieties, v];
-      const nextVarietyDetails = { ...varietyDetails };
-      if (hasContent) nextVarietyDetails[v] = draft;
-      setProfiles((prev) => ({
-        ...prev,
-        [plantType]: {
-          ...prev[plantType],
-          [initialName]: {
-            ...prev[plantType][initialName],
-            varieties: nextVarieties,
-            varietyDetails: nextVarietyDetails,
-          },
-        },
-      }));
-      setNewVariety('');
-      setEditingVariety(null);
-      return;
-    }
-
+    // Detail is only worth storing when it actually says something.
     const draft: VarietyDetail = {
-      ...varietyDetailDraft,
-      seedSource: varietyDetailDraft.seedSource?.trim(),
-      notes: varietyDetailDraft.notes?.trim(),
+      ...varietyDraft,
+      seedSource: varietyDraft.seedSource?.trim(),
+      notes: varietyDraft.notes?.trim(),
     };
     const hasContent =
       draft.daysToMaturity !== undefined ||
       (draft.seasonSuitability?.length ?? 0) > 0 ||
       Boolean(draft.seedSource) ||
       Boolean(draft.notes);
-    const next = { ...varietyDetails };
-    if (hasContent) next[editingVariety] = draft;
-    else delete next[editingVariety];
-    setProfiles((prev) => ({
-      ...prev,
-      [plantType]: {
-        ...prev[plantType],
-        [initialName]: {
-          ...prev[plantType][initialName],
-          varietyDetails: next,
-        },
-      },
-    }));
+
+    if (editingVariety === '') {
+      const variety = sanitizeName(newVariety);
+      if (!variety) {
+        setEditingVariety(null);
+        return;
+      }
+      if (varieties.some((v) => v.toLowerCase() === variety.toLowerCase())) {
+        setNewVariety('');
+        setEditingVariety(null);
+        return;
+      }
+      setVarieties((prev) => [...prev, variety]);
+      if (hasContent) {
+        setVarietyDetails((prev) => ({ ...prev, [variety]: draft }));
+      }
+      setNewVariety('');
+      setEditingVariety(null);
+      return;
+    }
+
+    setVarietyDetails((prev) => {
+      const next = { ...prev };
+      if (hasContent) next[editingVariety] = draft;
+      else delete next[editingVariety];
+      return next;
+    });
     setEditingVariety(null);
-  };
+  }, [editingVariety, varietyDraft, newVariety, varieties, setVarieties, setVarietyDetails]);
 
-  // ─── Save ─────────────────────────────────────────────────────────────────
+  // ─── Save / delete ────────────────────────────────────────────────────────
 
-  const handleSave = async (): Promise<void> => {
-    const trimmedName = sanitizeName(name);
-    if (!trimmedName) {
-      Alert.alert('Name Required', 'Enter a plant name.');
-      return;
-    }
-    const wateringDaysVal = parseInt(careForm?.wateringFrequencyDays ?? '', 10);
-    if (Number.isNaN(wateringDaysVal) || wateringDaysVal < 1) {
-      Alert.alert('Validation Error', 'Enter a valid watering frequency (days).');
-      return;
-    }
-    const fertDaysVal = parseInt(careForm?.fertilisingFrequencyDays ?? '', 10);
-    if (Number.isNaN(fertDaysVal) || fertDaysVal < 1) {
-      Alert.alert('Validation Error', 'Enter a valid fertilising frequency (days).');
-      return;
-    }
-    const isDuplicate =
-      trimmedName.toLowerCase() !== initialName.toLowerCase() &&
-      categoryPlants.some((p) => p.toLowerCase() === trimmedName.toLowerCase());
-    if (isDuplicate) {
-      Alert.alert('Already Exists', 'A plant with that name already exists.');
-      return;
-    }
-    const renameCount =
-      trimmedName !== initialName
-        ? plants.filter((p) => p.plant_type === plantType && p.plant_variety === initialName).length
-        : 0;
+  const onSavePress = useCallback(() => {
+    const blocked = attemptSave();
+    if (!blocked) return;
 
-    if (renameCount > 0) {
-      Alert.alert('Update Plants', `Renaming will update ${renameCount} plant(s). Continue?`, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Rename', onPress: () => void doSave(trimmedName) },
-      ]);
-    } else {
-      void doSave(trimmedName);
-    }
-  };
+    const section = FIELD_TO_SECTION[blocked];
+    setSectionExpanded((prev) => ({ ...prev, [section]: true }));
+    // Offsets are stale until the just-expanded section re-lays-out.
+    requestAnimationFrame(() => scrollToKey(SECTION_TO_TAB[section]));
+  }, [attemptSave, scrollToKey]);
 
-  const doSave = async (trimmedName: string): Promise<void> => {
-    if (!careForm) return;
-    setSaving(true);
-    try {
-      // Rename: update linked garden plants
-      if (trimmedName !== initialName && !isCreating) {
-        const targets = plants.filter(
-          (p) => p.plant_type === plantType && p.plant_variety === initialName
-        );
-        for (const p of targets) {
-          await updatePlantVariety(p.id, trimmedName);
-        }
-      }
-
-      const pruningDaysVal = parseInt(careForm.pruningFrequencyDays, 10);
-      const pruningTips = careForm.pruningTips
-        .split('\n')
-        .map((t) => t.trim())
-        .filter((t) => t.length > 0);
-
-      const profileData: Omit<PlantProfile, 'plantType' | 'name'> = {
-        // Catalog fields — preserve varieties from local state
-        varieties: varieties.length > 0 ? varieties : undefined,
-        varietyDetails: Object.keys(varietyDetails).length > 0 ? varietyDetails : undefined,
-        isUserAdded: currentProfile?.isUserAdded,
-        tamilName: careForm.tamilName.trim() || undefined,
-        description: careForm.description.trim() || undefined,
-        // Care fields
-        waterRequirement: careForm.waterRequirement,
-        wateringFrequencyDays: parseInt(careForm.wateringFrequencyDays, 10),
-        fertilisingFrequencyDays: parseInt(careForm.fertilisingFrequencyDays, 10),
-        pruningFrequencyDays:
-          Number.isNaN(pruningDaysVal) || pruningDaysVal < 1 ? undefined : pruningDaysVal,
-        sunlight: careForm.sunlight,
-        soilType: careForm.soilType,
-        preferredFertiliser: careForm.preferredFertiliser,
-        initialGrowthStage: careForm.initialGrowthStage,
-        pruningTips: pruningTips.length > 0 ? pruningTips : undefined,
-        shapePruningTip: careForm.shapePruningTip.trim() || undefined,
-        shapePruningMonths: careForm.shapePruningMonths.trim() || undefined,
-        flowerPruningTip: careForm.flowerPruningTip.trim() || undefined,
-        flowerPruningMonths: careForm.flowerPruningMonths.trim() || undefined,
-        scientificName: careForm.scientificName.trim() || undefined,
-        taxonomicFamily: careForm.taxonomicFamily.trim() || undefined,
-        lifecycle: (careForm.lifecycle || undefined) as PlantLifecycle | undefined,
-        growingSeason: careForm.growingSeason.trim() || undefined,
-        daysToHarvest: toRange(careForm.daysToHarvestMin, careForm.daysToHarvestMax),
-        yearsToFirstHarvest: toOptNum(careForm.yearsToFirstHarvest),
-        heightCm: toRange(careForm.heightCmMin, careForm.heightCmMax),
-        spacingCm: toOptNum(careForm.spacingCm),
-        plantingDepthCm: toOptNum(careForm.plantingDepthCm),
-        germinationDays: toRange(careForm.germinationDaysMin, careForm.germinationDaysMax),
-        germinationTempC: toRange(careForm.germinationTempMin, careForm.germinationTempMax),
-        soilPhRange: toRange(careForm.soilPhMin, careForm.soilPhMax),
-        heatTolerance: (careForm.heatTolerance || undefined) as ToleranceLevel | undefined,
-        droughtTolerance: (careForm.droughtTolerance || undefined) as ToleranceLevel | undefined,
-        feedingIntensity: (careForm.feedingIntensity || undefined) as FeedingIntensity | undefined,
-        customPests: careForm.customPests.length > 0 ? careForm.customPests : undefined,
-        customDiseases: careForm.customDiseases.length > 0 ? careForm.customDiseases : undefined,
-      };
-
-      if (trimmedName !== initialName && !isCreating) {
-        // Rename: move old entry to new key in one atomic write
-        const current = await getPlantProfiles();
-        const next: PlantProfiles = { ...current, [plantType]: { ...current[plantType] } };
-        delete next[plantType][initialName];
-        next[plantType][trimmedName] = { plantType, name: trimmedName, ...profileData };
-        await savePlantProfiles(next);
-      } else {
-        await savePlantProfile(plantType, trimmedName, profileData);
-      }
-
-      navigation.goBack();
-    } catch (error: unknown) {
-      Alert.alert('Error', getErrorMessage(error) ?? 'Failed to save. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleResetCare = (): void => {
-    if (!hasOverride) return;
-    Alert.alert('Reset Defaults', 'Remove custom care defaults and use app defaults?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reset',
-        style: 'destructive',
-        onPress: async () => {
-          setSaving(true);
-          try {
-            // Keep only catalog fields; strip all care override fields
-            const catalogOnly: PlantProfile = {
-              plantType,
-              name: initialName,
-              tamilName: currentProfile?.tamilName,
-              description: currentProfile?.description,
-              varieties: currentProfile?.varieties,
-              varietyDetails: currentProfile?.varietyDetails,
-              isUserAdded: currentProfile?.isUserAdded,
-            };
-            const current = await getPlantProfiles();
-            const next: PlantProfiles = {
-              ...current,
-              [plantType]: { ...current[plantType], [initialName]: catalogOnly },
-            };
-            await savePlantProfiles(next);
-            setProfiles(next);
-            setCareForm(buildCareForm(next));
-          } catch (error: unknown) {
-            Alert.alert('Error', getErrorMessage(error) ?? 'Failed to reset.');
-          } finally {
-            setSaving(false);
-          }
-        },
-      },
-    ]);
-  };
-
-  const handleDeleteRequest = (): void => {
-    if (usageCount === 0) {
+  const onDeletePress = useCallback(() => {
+    const mode = requestDelete();
+    if (mode === 'confirm') {
       setShowDeleteConfirm(true);
-      return;
+    } else if (mode === 'reassign') {
+      const remaining = categoryPlants.filter((p) => p !== initialName);
+      setReassignReplacement(remaining[0] ?? '');
+      setShowReassign(true);
     }
-    const remaining = categoryPlants.filter((p) => p !== initialName);
-    if (remaining.length === 0) {
-      Alert.alert('Cannot Delete', 'Add another plant option before deleting this one.');
-      return;
-    }
-    setReassignReplacement(remaining[0]!);
-    setShowReassign(true);
-  };
+  }, [requestDelete, categoryPlants, initialName]);
 
-  const doDelete = async (replacement?: string): Promise<void> => {
-    setSaving(true);
-    try {
-      if (replacement) {
-        const targets = plants.filter(
-          (p) => p.plant_type === plantType && p.plant_variety === initialName
-        );
-        for (const p of targets) {
-          await updatePlantVariety(p.id, replacement);
-        }
-      }
-      await deletePlantProfile(plantType, initialName);
-      setShowReassign(false);
-      navigation.goBack();
-    } catch (error: unknown) {
-      Alert.alert('Error', getErrorMessage(error) ?? 'Failed to delete.');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const onConfirmDelete = useCallback(() => {
+    setShowDeleteConfirm(false);
+    void confirmDelete();
+  }, [confirmDelete]);
 
-  const heroImage = useMemo(() => getPlantImage(initialName), [initialName]);
+  const onConfirmReassign = useCallback(() => {
+    setShowReassign(false);
+    void confirmDelete(reassignReplacement);
+  }, [confirmDelete, reassignReplacement]);
 
-  const pests = useMemo(() => getCommonPests(plantType, initialName), [plantType, initialName]);
-  const diseases = useMemo(
-    () => getCommonDiseases(plantType, initialName),
-    [plantType, initialName]
+  const closeReassign = useCallback(() => setShowReassign(false), []);
+  const closeDeleteConfirm = useCallback(() => setShowDeleteConfirm(false), []);
+  const onBackPress = useCallback(() => navigation.goBack(), [navigation]);
+
+  // ─── Derived display ──────────────────────────────────────────────────────
+
+  const heroImage = useMemo(
+    () => getPlantImage(lookupName) ?? getPlantImage(initialName),
+    [lookupName, initialName]
   );
 
-  // Read-only data from base profile for nutrition display
-  const baseProfile = useMemo(
-    () => getPlantCareProfile(initialName, plantType),
-    [initialName, plantType]
+  const displayName =
+    name.trim() || (isCreating ? `New ${CATEGORY_LABELS[plantType]}` : initialName);
+  const usageSummary = usageCount > 0 ? `${usageCount} in garden` : 'Not in garden yet';
+
+  const summaryLabels = useMemo(
+    () => ({
+      lifecycleLabel: careForm?.lifecycle ? LIFECYCLE_LABELS[careForm.lifecycle] : undefined,
+      waterRequirementLabel: careForm
+        ? WATER_REQUIREMENT_LABELS[careForm.waterRequirement]
+        : undefined,
+      sunlightLabel: careForm ? SUNLIGHT_LABELS[careForm.sunlight] : undefined,
+      heatToleranceLabel: careForm?.heatTolerance
+        ? TOLERANCE_LABELS[careForm.heatTolerance]
+        : undefined,
+      droughtToleranceLabel: careForm?.droughtTolerance
+        ? TOLERANCE_LABELS[careForm.droughtTolerance]
+        : undefined,
+      growthStageLabel: careForm ? GROWTH_STAGE_LABELS[careForm.initialGrowthStage] : undefined,
+    }),
+    [careForm]
   );
 
-  const setForm = useCallback(
-    (patch: Partial<CareFormState>) => setCareForm((prev) => (prev ? { ...prev, ...patch } : prev)),
-    []
+  const pruningTipsCount = useMemo(
+    () =>
+      careForm?.pruningTips
+        .split('\n')
+        .map((tip) => tip.trim())
+        .filter((tip) => tip.length > 0).length ?? 0,
+    [careForm?.pruningTips]
   );
 
-  const customPests = careForm?.customPests;
-  const customDiseases = careForm?.customDiseases;
-
-  const availablePests = useMemo(() => {
-    const taken = new Set([...pests, ...(customPests ?? [])].map((n) => n.toLowerCase()));
-    const search = pestSearch.trim().toLowerCase();
-    return getAllPests().filter(
-      (p) => !taken.has(p.name.toLowerCase()) && (!search || p.name.toLowerCase().includes(search))
-    );
-  }, [pests, customPests, pestSearch]);
-
-  const availableDiseases = useMemo(() => {
-    const taken = new Set([...diseases, ...(customDiseases ?? [])].map((n) => n.toLowerCase()));
-    const search = diseaseSearch.trim().toLowerCase();
-    return getAllDiseases().filter(
-      (d) => !taken.has(d.name.toLowerCase()) && (!search || d.name.toLowerCase().includes(search))
-    );
-  }, [diseases, customDiseases, diseaseSearch]);
-
-  const handlePickPest = useCallback((pestName: string) => {
-    setCareForm((prev) =>
-      prev ? { ...prev, customPests: [...prev.customPests, pestName] } : prev
-    );
-    setShowPestPicker(false);
-    setPestSearch('');
-  }, []);
-
-  const handlePickDisease = useCallback((diseaseName: string) => {
-    setCareForm((prev) =>
-      prev ? { ...prev, customDiseases: [...prev.customDiseases, diseaseName] } : prev
-    );
-    setShowDiseasePicker(false);
-    setDiseaseSearch('');
-  }, []);
-
-  const renderPickerSeparator = useCallback(
-    () => <View style={styles.pickerSeparator} />,
-    [styles]
-  );
-
-  const renderPestPickerRow = useCallback(
-    ({ item }: { item: PestEntry }) => (
-      <TouchableOpacity style={styles.pickerRow} onPress={() => handlePickPest(item.name)}>
-        <Text style={styles.pickerRowText}>
-          {item.emoji} {item.name}
-        </Text>
-      </TouchableOpacity>
-    ),
-    [styles, handlePickPest]
-  );
-
-  const renderDiseasePickerRow = useCallback(
-    ({ item }: { item: DiseaseEntry }) => (
-      <TouchableOpacity style={styles.pickerRow} onPress={() => handlePickDisease(item.name)}>
-        <Text style={styles.pickerRowText}>
-          {item.emoji} {item.name}
-        </Text>
-      </TouchableOpacity>
-    ),
-    [styles, handlePickDisease]
-  );
-
-  if (loading) {
+  if (loading || !careForm || !editor) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.primary} />
@@ -748,95 +508,20 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     );
   }
 
-  const toleranceItems = Object.entries(TOLERANCE_LABELS).map(([value, label]) => ({
-    label,
-    value,
-  }));
-  const displayName =
-    name.trim() || (isCreating ? `New ${CATEGORY_LABELS[plantType]}` : initialName);
-  const lifecycleLabel = careForm?.lifecycle
-    ? LIFECYCLE_LABELS[careForm.lifecycle as PlantLifecycle]
-    : undefined;
-  const waterRequirementLabel = careForm
-    ? WATER_REQUIREMENT_LABELS[careForm.waterRequirement]
-    : undefined;
-  const sunlightLabel = careForm ? SUNLIGHT_LABELS[careForm.sunlight] : undefined;
-  const growthStageLabel = careForm ? GROWTH_STAGE_LABELS[careForm.initialGrowthStage] : undefined;
-  const heatToleranceLabel = careForm?.heatTolerance
-    ? TOLERANCE_LABELS[careForm.heatTolerance as ToleranceLevel]
-    : undefined;
-  const droughtToleranceLabel = careForm?.droughtTolerance
-    ? TOLERANCE_LABELS[careForm.droughtTolerance as ToleranceLevel]
-    : undefined;
-  const pruningTipsCount =
-    careForm?.pruningTips
-      .split('\n')
-      .map((tip) => tip.trim())
-      .filter((tip) => tip.length > 0).length ?? 0;
-  const linkedPestCount = pests.length + (careForm?.customPests.length ?? 0);
-  const linkedDiseaseCount = diseases.length + (careForm?.customDiseases.length ?? 0);
-
-  const plantInfoSummary =
-    joinSummary([
-      careForm?.scientificName,
-      lifecycleLabel,
-      careForm?.tamilName ? `Tamil: ${careForm.tamilName}` : undefined,
-    ]) ?? 'Name, identity, and description';
-  const coreCareSummary =
-    joinSummary([
-      waterRequirementLabel,
-      careForm?.wateringFrequencyDays
-        ? `Water every ${careForm.wateringFrequencyDays} days`
-        : undefined,
-      sunlightLabel,
-    ]) ?? 'Water, sunlight, and soil defaults';
-  const growingInfoSummary =
-    joinSummary([
-      careForm?.growingSeason,
-      formatRangeLabel(careForm?.daysToHarvestMin ?? '', careForm?.daysToHarvestMax ?? '', 'days'),
-      careForm?.spacingCm ? `Spacing ${careForm.spacingCm} cm` : undefined,
-    ]) ?? 'Harvest timing, spacing, and germination';
-  const toleranceSummary =
-    joinSummary([
-      heatToleranceLabel ? `Heat ${heatToleranceLabel}` : undefined,
-      droughtToleranceLabel ? `Drought ${droughtToleranceLabel}` : undefined,
-      baseProfile?.petToxicity !== undefined
-        ? baseProfile.petToxicity
-          ? 'Pet toxic'
-          : 'Pet safe'
-        : undefined,
-    ]) ?? 'Stress tolerance and safety info';
-  const pruningSummary =
-    joinSummary([
-      careForm?.pruningFrequencyDays ? `Every ${careForm.pruningFrequencyDays} days` : undefined,
-      pruningTipsCount > 0 ? formatCount(pruningTipsCount, 'tip') : undefined,
-      careForm?.shapePruningTip ? 'Shape pruning' : undefined,
-    ]) ?? 'Timing and pruning guidance';
-  const plantingSummary = growthStageLabel
-    ? `Starts at ${growthStageLabel}`
-    : 'Default growth stage';
-  const pestsSummary =
-    linkedPestCount > 0
-      ? formatCount(linkedPestCount, 'linked pest', 'linked pests')
-      : 'No linked pests';
-  const diseasesSummary =
-    linkedDiseaseCount > 0
-      ? formatCount(linkedDiseaseCount, 'linked disease', 'linked diseases')
-      : 'No linked diseases';
-  const varietiesSummary =
-    varieties.length > 0
-      ? formatCount(varieties.length, 'saved variety', 'saved varieties')
-      : 'No saved varieties';
+  const tabBar = <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={scrollToKey} />;
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.headerActionSlot}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-          </TouchableOpacity>
-        </View>
+      <View
+        style={[styles.header, { paddingTop: insets.top + 10 }]}
+        onLayout={onHeaderLayout}
+      >
+        {/* Plain goBack — the hook's beforeRemove listener raises the discard
+            prompt when there are unsaved edits. */}
+        <TouchableOpacity onPress={onBackPress} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
+        </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {displayName}
@@ -866,998 +551,338 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
             </View>
           )}
         </View>
-        <View style={styles.headerActionSlot}>
-          {!isCreating && (
-            <TouchableOpacity style={styles.btnDangerIcon} onPress={handleDeleteRequest}>
-              <Ionicons name="trash-outline" size={18} color={theme.error} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <TouchableOpacity
+          style={[styles.headerSaveButton, saving && styles.headerSaveButtonDisabled]}
+          onPress={onSavePress}
+          disabled={saving}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.headerSaveText}>Save</Text>
+          {isDirty && !saving && <View style={styles.headerSaveDot} />}
+        </TouchableOpacity>
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 16 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 24) + 40 },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
+        onMomentumScrollEnd={onMomentumScrollEnd}
       >
         {heroImage && (
           <Image
             source={heroImage}
             style={styles.catalogHeroImage as ImageStyle}
             contentFit="cover"
-            cachePolicy="memory-disk"
             transition={200}
+            cachePolicy="memory-disk"
           />
         )}
-        {/* ── Plant Info ─────────────────────────────────────────────────── */}
-        <CollapsibleSection
-          title="Plant Info"
-          icon="information-circle-outline"
-          defaultExpanded={true}
-          summary={plantInfoSummary}
-        >
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Name"
-              value={name}
-              onChangeText={setName}
-              helpText={FIELD_HELP.name}
-              autoCorrect={false}
+
+        <View style={styles.inFlowTabBar} onLayout={handleTabBarLayout}>
+          {tabBar}
+        </View>
+
+        {/* ── Basics ── */}
+        <View onLayout={registerSection('basics')}>
+          <CollapsibleSection
+            title="Plant info"
+            icon="information-circle-outline"
+            iconTint={theme.primaryLight}
+            alwaysShowSummary
+            summary={plantInfoSummary(careForm, summaryLabels)}
+            expanded={sectionExpanded.plantInfo}
+            onExpandedChange={setExpanded('plantInfo')}
+            hasError={showErrors && sectionHasError(errors, 'plantInfo')}
+          >
+            <PlantInfoSection
+              editor={editor}
+              name={name}
+              setName={setName}
+              isCreating={isCreating}
+              hasOverride={hasOverride}
             />
-          </View>
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Tamil name"
-              value={careForm?.tamilName ?? ''}
-              onChangeText={(v) => setForm({ tamilName: v })}
-              helpText={FIELD_HELP.tamilName}
-              autoCorrect={false}
+          </CollapsibleSection>
+        </View>
+
+        {/* ── Care ── */}
+        <View onLayout={registerSection('care')}>
+          <CollapsibleSection
+            title="Core care"
+            icon="water-outline"
+            iconTint={theme.infoLight}
+            alwaysShowSummary
+            summary={coreCareSummary(careForm, summaryLabels)}
+            expanded={sectionExpanded.coreCare}
+            onExpandedChange={setExpanded('coreCare')}
+            hasError={showErrors && sectionHasError(errors, 'coreCare')}
+          >
+            <CoreCareSection editor={editor} />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Pruning"
+            icon="cut-outline"
+            iconTint={theme.purpleLight}
+            alwaysShowSummary
+            summary={pruningSummary(careForm, pruningTipsCount)}
+            expanded={sectionExpanded.pruning}
+            onExpandedChange={setExpanded('pruning')}
+          >
+            <PruningSection editor={editor} />
+          </CollapsibleSection>
+        </View>
+
+        {/* ── Growing ── */}
+        <View onLayout={registerSection('growing')}>
+          <CollapsibleSection
+            title="Growing info"
+            icon="stats-chart-outline"
+            iconTint={theme.primaryLight}
+            alwaysShowSummary
+            summary={growingInfoSummary(careForm)}
+            expanded={sectionExpanded.growingInfo}
+            onExpandedChange={setExpanded('growingInfo')}
+            hasError={showErrors && sectionHasError(errors, 'growingInfo')}
+          >
+            <GrowingInfoSection editor={editor} />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Planting"
+            icon="leaf-outline"
+            iconTint={theme.successLight}
+            alwaysShowSummary
+            summary={plantingSummary(summaryLabels.growthStageLabel)}
+            expanded={sectionExpanded.planting}
+            onExpandedChange={setExpanded('planting')}
+          >
+            <PlantingSection editor={editor} />
+          </CollapsibleSection>
+        </View>
+
+        {/* ── Health ── */}
+        <View onLayout={registerSection('health')}>
+          <CollapsibleSection
+            title="Tolerances & safety"
+            icon="shield-checkmark-outline"
+            iconTint={theme.successLight}
+            alwaysShowSummary
+            summary={toleranceSummary(summaryLabels, baseProfile?.petToxicity)}
+            expanded={sectionExpanded.tolerances}
+            onExpandedChange={setExpanded('tolerances')}
+          >
+            <TolerancesSection editor={editor} petToxicity={baseProfile?.petToxicity} />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Known pests"
+            icon="bug-outline"
+            iconTint={theme.accentLight}
+            alwaysShowSummary
+            summary={pestsSummary(pestChips.length)}
+            expanded={sectionExpanded.pests}
+            onExpandedChange={setExpanded('pests')}
+            headerAction={
+              <TouchableOpacity
+                style={styles.sectionHeaderAction}
+                onPress={openPestPicker}
+                accessibilityLabel="Add pest"
+              >
+                <Ionicons name="add" size={18} color={theme.primary} />
+              </TouchableOpacity>
+            }
+          >
+            <CatalogChipList
+              chips={pestChips}
+              emptyText="No linked pests yet."
+              onRemove={onRemovePest}
             />
-          </View>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Known diseases"
+            icon="medkit-outline"
+            iconTint={theme.errorLight}
+            alwaysShowSummary
+            summary={diseasesSummary(diseaseChips.length)}
+            expanded={sectionExpanded.diseases}
+            onExpandedChange={setExpanded('diseases')}
+            headerAction={
+              <TouchableOpacity
+                style={styles.sectionHeaderAction}
+                onPress={openDiseasePicker}
+                accessibilityLabel="Add disease"
+              >
+                <Ionicons name="add" size={18} color={theme.primary} />
+              </TouchableOpacity>
+            }
+          >
+            <CatalogChipList
+              chips={diseaseChips}
+              emptyText="No linked diseases yet."
+              onRemove={onRemoveDisease}
+            />
+          </CollapsibleSection>
+        </View>
+
+        {/* ── Varieties ── */}
+        <View onLayout={registerSection('varieties')}>
+          <CollapsibleSection
+            title="Varieties"
+            icon="albums-outline"
+            iconTint={theme.accentLight}
+            alwaysShowSummary
+            summary={varietiesSummary(varieties.length)}
+            expanded={sectionExpanded.varieties}
+            onExpandedChange={setExpanded('varieties')}
+            headerAction={
+              <TouchableOpacity
+                style={styles.sectionHeaderAction}
+                onPress={onAddVariety}
+                accessibilityLabel="Add variety"
+              >
+                <Ionicons name="add" size={18} color={theme.primary} />
+              </TouchableOpacity>
+            }
+          >
+            <CatalogChipList
+              chips={varietyChips}
+              emptyText="No varieties yet."
+              onChipPress={onEditVariety}
+              onRemove={onRemoveVariety}
+            />
+          </CollapsibleSection>
+
           {!isCreating && (
-            <View style={styles.careStatusBanner}>
-              <View style={styles.careStatus}>
-                <Ionicons
-                  name={hasOverride ? 'settings' : 'leaf-outline'}
-                  size={15}
-                  color={hasOverride ? theme.primary : theme.textSecondary}
-                />
-                <Text style={styles.careStatusText}>
-                  {hasOverride ? 'Custom defaults active' : 'Using shared app defaults'}
-                </Text>
-              </View>
-              <Text style={styles.careStatusNote}>
-                New garden plants created from this catalog entry will inherit these values.
-              </Text>
-            </View>
+            <CatalogDangerFooter
+              showReset={hasOverride}
+              onReset={resetCare}
+              onDelete={onDeletePress}
+              usageCount={usageCount}
+              disabled={saving}
+            />
           )}
-          {careForm?.description !== undefined && (
-            <View style={styles.fieldGroup}>
-              <FieldLabelWithHelp
-                helpText={FIELD_HELP.description}
-                label="Description"
-                labelStyle={styles.pruningTipsLabel}
-                style={styles.fieldLabelRow}
-              />
-              <VoiceDictation
-                value={careForm.description}
-                onChangeText={(v) => setForm({ description: v })}
-              />
-              <TextInput
-                style={styles.descriptionInput}
-                multiline
-                value={careForm.description}
-                onChangeText={(v) => setForm({ description: v })}
-                placeholder="Brief description of this plant"
-                placeholderTextColor={theme.inputPlaceholder}
-              />
-            </View>
-          )}
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Scientific name"
-              value={careForm?.scientificName ?? ''}
-              onChangeText={(v) => setForm({ scientificName: v })}
-              helpText={FIELD_HELP.scientificName}
-              autoCorrect={false}
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Taxonomic family"
-              value={careForm?.taxonomicFamily ?? ''}
-              onChangeText={(v) => setForm({ taxonomicFamily: v })}
-              helpText={FIELD_HELP.taxonomicFamily}
-              autoCorrect={false}
-            />
-          </View>
-          <View style={[styles.fieldGroup, styles.fieldGroupLast]}>
-            <ThemedDropdown
-              items={Object.entries(LIFECYCLE_LABELS).map(([value, label]) => ({ label, value }))}
-              selectedValue={careForm?.lifecycle ?? ''}
-              onValueChange={(v) => setForm({ lifecycle: v as PlantLifecycle })}
-              label="Lifecycle"
-              placeholder="Lifecycle"
-              helpText={
-                careForm?.lifecycle
-                  ? `${FIELD_HELP.lifecycle}\n\n${
-                      LIFECYCLE_LABELS[careForm.lifecycle as PlantLifecycle]
-                    }: ${LIFECYCLE_DESCRIPTIONS[careForm.lifecycle as PlantLifecycle]}`
-                  : FIELD_HELP.lifecycle
-              }
-              compact
-            />
-          </View>
-        </CollapsibleSection>
-
-        {/* ── Core Care ─────────────────────────────────────────────────── */}
-        <CollapsibleSection
-          title="Core Care"
-          icon="water-outline"
-          defaultExpanded={true}
-          summary={coreCareSummary}
-        >
-          <View style={styles.fieldGroup}>
-            <ThemedDropdown
-              items={Object.entries(WATER_REQUIREMENT_LABELS).map(([value, label]) => ({
-                label,
-                value,
-              }))}
-              selectedValue={careForm?.waterRequirement ?? ''}
-              onValueChange={(v) => setForm({ waterRequirement: v as WaterRequirement })}
-              label="Water requirement"
-              placeholder="Water requirement"
-              helpText={FIELD_HELP.waterRequirement}
-              compact
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Watering frequency (days)"
-              keyboardType="numeric"
-              value={careForm?.wateringFrequencyDays ?? ''}
-              onChangeText={(v) => setForm({ wateringFrequencyDays: sanitizeNum(v) })}
-              helpText={FIELD_HELP.wateringFrequencyDays}
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <ThemedDropdown
-              items={Object.entries(FEEDING_INTENSITY_LABELS).map(([value, label]) => ({
-                label,
-                value,
-              }))}
-              selectedValue={careForm?.feedingIntensity ?? ''}
-              onValueChange={(v) => {
-                const intensity = v as FeedingIntensity;
-                setForm({
-                  feedingIntensity: intensity,
-                  fertilisingFrequencyDays: String(FEEDING_INTENSITY_SUGGESTED_DAYS[intensity]),
-                });
-              }}
-              label="Feeding intensity"
-              placeholder="Feeding intensity"
-              helpText={FIELD_HELP.feedingIntensity}
-              compact
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Fertilising frequency (days)"
-              keyboardType="numeric"
-              value={careForm?.fertilisingFrequencyDays ?? ''}
-              onChangeText={(v) => setForm({ fertilisingFrequencyDays: sanitizeNum(v) })}
-              helpText={FIELD_HELP.fertilisingFrequencyDays}
-            />
-            {careForm?.feedingIntensity ? (
-              <Text style={styles.feedingHint}>
-                Suggested: {FEEDING_INTENSITY_SUGGESTED_DAYS[careForm.feedingIntensity]} days for{' '}
-                {FEEDING_INTENSITY_LABELS[careForm.feedingIntensity].toLowerCase()} feeders
-              </Text>
-            ) : null}
-          </View>
-          <View style={styles.fieldGroup}>
-            <ThemedDropdown
-              items={Object.entries(SUNLIGHT_LABELS).map(([value, label]) => ({ label, value }))}
-              selectedValue={careForm?.sunlight ?? ''}
-              onValueChange={(v) => setForm({ sunlight: v as SunlightLevel })}
-              label="Sunlight"
-              placeholder="Sunlight"
-              helpText={FIELD_HELP.sunlight}
-              compact
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <ThemedDropdown
-              items={Object.entries(SOIL_LABELS).map(([value, label]) => ({ label, value }))}
-              selectedValue={careForm?.soilType ?? ''}
-              onValueChange={(v) => setForm({ soilType: v as SoilType })}
-              label="Soil type"
-              placeholder="Soil type"
-              helpText={FIELD_HELP.soilType}
-              compact
-            />
-          </View>
-          <View style={[styles.fieldGroup, styles.fieldGroupLast]}>
-            <ThemedDropdown
-              items={Object.entries(FERTILISER_LABELS).map(([value, label]) => ({ label, value }))}
-              selectedValue={careForm?.preferredFertiliser ?? ''}
-              onValueChange={(v) => setForm({ preferredFertiliser: v as FertiliserType })}
-              label="Preferred fertiliser"
-              placeholder="Preferred fertiliser"
-              helpText={FIELD_HELP.preferredFertiliser}
-              compact
-            />
-          </View>
-        </CollapsibleSection>
-
-        {/* ── Growing Info ──────────────────────────────────────────────── */}
-        <CollapsibleSection
-          title="Growing Info"
-          icon="stats-chart-outline"
-          defaultExpanded={false}
-          summary={growingInfoSummary}
-        >
-          <View style={styles.fieldGroup}>
-            <ThemedDropdown
-              items={GROWING_SEASON_OPTIONS}
-              selectedValue={careForm?.growingSeason ?? ''}
-              onValueChange={(v) => setForm({ growingSeason: v })}
-              label="Growing season"
-              placeholder="Select growing season"
-              helpText={FIELD_HELP.growingSeason}
-              compact
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <FieldLabelWithHelp
-              helpText={FIELD_HELP.daysToHarvest}
-              label="Days to harvest (min – max)"
-              labelStyle={styles.pruningTipsLabel}
-              style={styles.fieldLabelRow}
-            />
-            <View style={styles.rangeRow}>
-              <View style={styles.rangeField}>
-                <FloatingLabelInput
-                  label="Min days"
-                  keyboardType="numeric"
-                  value={careForm?.daysToHarvestMin ?? ''}
-                  onChangeText={(v) => setForm({ daysToHarvestMin: sanitizeNum(v) })}
-                />
-              </View>
-              <View style={styles.rangeField}>
-                <FloatingLabelInput
-                  label="Max days"
-                  keyboardType="numeric"
-                  value={careForm?.daysToHarvestMax ?? ''}
-                  onChangeText={(v) => setForm({ daysToHarvestMax: sanitizeNum(v) })}
-                />
-              </View>
-            </View>
-          </View>
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Years to first harvest"
-              keyboardType="numeric"
-              value={careForm?.yearsToFirstHarvest ?? ''}
-              onChangeText={(v) => setForm({ yearsToFirstHarvest: sanitizeNum(v) })}
-              helpText={FIELD_HELP.yearsToFirstHarvest}
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <FieldLabelWithHelp
-              helpText={FIELD_HELP.heightCm}
-              label="Height cm (min – max)"
-              labelStyle={styles.pruningTipsLabel}
-              style={styles.fieldLabelRow}
-            />
-            <View style={styles.rangeRow}>
-              <View style={styles.rangeField}>
-                <FloatingLabelInput
-                  label="Min cm"
-                  keyboardType="numeric"
-                  value={careForm?.heightCmMin ?? ''}
-                  onChangeText={(v) => setForm({ heightCmMin: sanitizeNum(v) })}
-                />
-              </View>
-              <View style={styles.rangeField}>
-                <FloatingLabelInput
-                  label="Max cm"
-                  keyboardType="numeric"
-                  value={careForm?.heightCmMax ?? ''}
-                  onChangeText={(v) => setForm({ heightCmMax: sanitizeNum(v) })}
-                />
-              </View>
-            </View>
-          </View>
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Spacing cm"
-              keyboardType="numeric"
-              value={careForm?.spacingCm ?? ''}
-              onChangeText={(v) => setForm({ spacingCm: sanitizeNum(v) })}
-              helpText={FIELD_HELP.spacingCm}
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Planting depth cm"
-              keyboardType="decimal-pad"
-              value={careForm?.plantingDepthCm ?? ''}
-              onChangeText={(v) => setForm({ plantingDepthCm: sanitizeDecimal(v) })}
-              helpText={FIELD_HELP.plantingDepthCm}
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <FieldLabelWithHelp
-              helpText={FIELD_HELP.germinationDays}
-              label="Germination days (min – max)"
-              labelStyle={styles.pruningTipsLabel}
-              style={styles.fieldLabelRow}
-            />
-            <View style={styles.rangeRow}>
-              <View style={styles.rangeField}>
-                <FloatingLabelInput
-                  label="Min days"
-                  keyboardType="numeric"
-                  value={careForm?.germinationDaysMin ?? ''}
-                  onChangeText={(v) => setForm({ germinationDaysMin: sanitizeNum(v) })}
-                />
-              </View>
-              <View style={styles.rangeField}>
-                <FloatingLabelInput
-                  label="Max days"
-                  keyboardType="numeric"
-                  value={careForm?.germinationDaysMax ?? ''}
-                  onChangeText={(v) => setForm({ germinationDaysMax: sanitizeNum(v) })}
-                />
-              </View>
-            </View>
-          </View>
-          <View style={styles.fieldGroup}>
-            <FieldLabelWithHelp
-              helpText={FIELD_HELP.germinationTempC}
-              label="Germination temp °C (min – max)"
-              labelStyle={styles.pruningTipsLabel}
-              style={styles.fieldLabelRow}
-            />
-            <View style={styles.rangeRow}>
-              <View style={styles.rangeField}>
-                <FloatingLabelInput
-                  label="Min °C"
-                  keyboardType="decimal-pad"
-                  value={careForm?.germinationTempMin ?? ''}
-                  onChangeText={(v) => setForm({ germinationTempMin: sanitizeDecimal(v) })}
-                />
-              </View>
-              <View style={styles.rangeField}>
-                <FloatingLabelInput
-                  label="Max °C"
-                  keyboardType="decimal-pad"
-                  value={careForm?.germinationTempMax ?? ''}
-                  onChangeText={(v) => setForm({ germinationTempMax: sanitizeDecimal(v) })}
-                />
-              </View>
-            </View>
-          </View>
-          <View style={[styles.fieldGroup, styles.fieldGroupLast]}>
-            <FieldLabelWithHelp
-              helpText={FIELD_HELP.soilPhRange}
-              label="Soil pH range (min – max)"
-              labelStyle={styles.pruningTipsLabel}
-              style={styles.fieldLabelRow}
-            />
-            <View style={styles.rangeRow}>
-              <View style={styles.rangeField}>
-                <FloatingLabelInput
-                  label="Min pH"
-                  keyboardType="decimal-pad"
-                  value={careForm?.soilPhMin ?? ''}
-                  onChangeText={(v) => setForm({ soilPhMin: sanitizeDecimal(v) })}
-                />
-              </View>
-              <View style={styles.rangeField}>
-                <FloatingLabelInput
-                  label="Max pH"
-                  keyboardType="decimal-pad"
-                  value={careForm?.soilPhMax ?? ''}
-                  onChangeText={(v) => setForm({ soilPhMax: sanitizeDecimal(v) })}
-                />
-              </View>
-            </View>
-          </View>
-        </CollapsibleSection>
-
-        {/* ── Tolerances & Safety ──────────────────────────────────── */}
-        <CollapsibleSection
-          title="Tolerances & Safety"
-          icon="shield-checkmark-outline"
-          defaultExpanded={false}
-          summary={toleranceSummary}
-        >
-          <View style={styles.fieldGroup}>
-            <ThemedDropdown
-              items={toleranceItems}
-              selectedValue={careForm?.heatTolerance ?? ''}
-              onValueChange={(v) => setForm({ heatTolerance: v as ToleranceLevel })}
-              label="Heat tolerance"
-              placeholder="Heat tolerance"
-              helpText={FIELD_HELP.heatTolerance}
-              compact
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <ThemedDropdown
-              items={toleranceItems}
-              selectedValue={careForm?.droughtTolerance ?? ''}
-              onValueChange={(v) => setForm({ droughtTolerance: v as ToleranceLevel })}
-              label="Drought tolerance"
-              placeholder="Drought tolerance"
-              helpText={FIELD_HELP.droughtTolerance}
-              compact
-            />
-          </View>
-          {/* Pet safety info */}
-          {baseProfile?.petToxicity !== undefined && (
-            <View style={[styles.fieldGroup, styles.fieldGroupLast]}>
-              <FieldLabelWithHelp
-                label="Animal Safety"
-                helpText={FIELD_HELP.petToxicity}
-                style={styles.fieldLabelRow}
-              />
-              <View style={baseProfile.petToxicity ? styles.toxicBadge : styles.safeBadge}>
-                <Text style={baseProfile.petToxicity ? styles.badgeText : styles.safeBadgeText}>
-                  {baseProfile.petToxicity ? '⚠️ Pet Toxic' : '✓ Pet Safe'}
-                </Text>
-              </View>
-            </View>
-          )}
-        </CollapsibleSection>
-
-        {/* ── Pruning ───────────────────────────────────────────────────── */}
-        <CollapsibleSection
-          title="Pruning"
-          icon="cut-outline"
-          defaultExpanded={false}
-          summary={pruningSummary}
-        >
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Pruning frequency (days)"
-              keyboardType="numeric"
-              value={careForm?.pruningFrequencyDays ?? ''}
-              onChangeText={(v) => setForm({ pruningFrequencyDays: sanitizeNum(v) })}
-              helpText={FIELD_HELP.pruningFrequencyDays}
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <FieldLabelWithHelp
-              helpText={FIELD_HELP.pruningTips}
-              label="Tips (one per line)"
-              labelStyle={styles.pruningTipsLabel}
-              style={styles.fieldLabelRow}
-            />
-            <VoiceDictation
-              value={careForm?.pruningTips ?? ''}
-              onChangeText={(v) => setForm({ pruningTips: v })}
-            />
-            <TextInput
-              style={styles.pruningTipsInput}
-              multiline
-              value={careForm?.pruningTips ?? ''}
-              onChangeText={(v) => setForm({ pruningTips: v })}
-              placeholder="e.g. Remove yellowing lower leaves"
-              placeholderTextColor={theme.inputPlaceholder}
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Shape pruning tip"
-              value={careForm?.shapePruningTip ?? ''}
-              onChangeText={(v) => setForm({ shapePruningTip: v })}
-              helpText={FIELD_HELP.shapePruningTip}
-            />
-          </View>
-          {!!careForm?.shapePruningTip && (
-            <View style={styles.fieldGroup}>
-              <FloatingLabelInput
-                label="Shape pruning — best months"
-                value={careForm?.shapePruningMonths ?? ''}
-                onChangeText={(v) => setForm({ shapePruningMonths: v })}
-                helpText={FIELD_HELP.shapePruningMonths}
-                placeholder="e.g. Jan–Feb"
-              />
-            </View>
-          )}
-          <View style={styles.fieldGroup}>
-            <FloatingLabelInput
-              label="Flower pruning tip"
-              value={careForm?.flowerPruningTip ?? ''}
-              onChangeText={(v) => setForm({ flowerPruningTip: v })}
-              helpText={FIELD_HELP.flowerPruningTip}
-            />
-          </View>
-          {!!careForm?.flowerPruningTip && (
-            <View style={[styles.fieldGroup, styles.fieldGroupLast]}>
-              <FloatingLabelInput
-                label="Flower pruning — best months"
-                value={careForm?.flowerPruningMonths ?? ''}
-                onChangeText={(v) => setForm({ flowerPruningMonths: v })}
-                helpText={FIELD_HELP.flowerPruningMonths}
-                placeholder="e.g. Year-round"
-              />
-            </View>
-          )}
-        </CollapsibleSection>
-
-        {/* ── Planting ──────────────────────────────────────────────────── */}
-        <CollapsibleSection
-          title="Planting"
-          icon="leaf-outline"
-          defaultExpanded={false}
-          summary={plantingSummary}
-        >
-          <View style={[styles.fieldGroup, styles.fieldGroupLast]}>
-            <ThemedDropdown
-              items={Object.entries(GROWTH_STAGE_LABELS).map(([value, label]) => ({
-                label,
-                value,
-              }))}
-              selectedValue={careForm?.initialGrowthStage ?? ''}
-              onValueChange={(v) => setForm({ initialGrowthStage: v as GrowthStage })}
-              label="Initial growth stage"
-              placeholder="Initial growth stage"
-              helpText={FIELD_HELP.initialGrowthStage}
-              compact
-            />
-          </View>
-        </CollapsibleSection>
-
-        {/* ── Known Pests ───────────────────────────────────────────────── */}
-        <CollapsibleSection
-          title="Known Pests"
-          icon="bug-outline"
-          defaultExpanded={false}
-          summary={pestsSummary}
-          headerAction={
-            <TouchableOpacity
-              style={styles.sectionHeaderAction}
-              onPress={() => setShowPestPicker(true)}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Add pest"
-            >
-              <Ionicons name="add" size={16} color={theme.primary} />
-            </TouchableOpacity>
-          }
-        >
-          <View style={styles.chipRow}>
-            {pests.map((pest) => (
-              <View key={pest} style={styles.readChip}>
-                <Text style={styles.readChipText}>
-                  {getPestDiseaseEmoji(pest, 'pest')} {pest}
-                </Text>
-              </View>
-            ))}
-            {(careForm?.customPests ?? []).map((pest) => (
-              <View key={pest} style={styles.chip}>
-                <Text style={styles.chipText}>
-                  {getPestDiseaseEmoji(pest, 'pest')} {pest}
-                </Text>
-                <TouchableOpacity
-                  onPress={() =>
-                    setForm({
-                      customPests: (careForm?.customPests ?? []).filter((p) => p !== pest),
-                    })
-                  }
-                >
-                  <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        </CollapsibleSection>
-
-        {/* ── Known Diseases ─────────────────────────────────────────────── */}
-        <CollapsibleSection
-          title="Known Diseases"
-          icon="medkit-outline"
-          defaultExpanded={false}
-          summary={diseasesSummary}
-          headerAction={
-            <TouchableOpacity
-              style={styles.sectionHeaderAction}
-              onPress={() => setShowDiseasePicker(true)}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Add disease"
-            >
-              <Ionicons name="add" size={16} color={theme.primary} />
-            </TouchableOpacity>
-          }
-        >
-          <View style={styles.chipRow}>
-            {diseases.map((disease) => (
-              <View key={disease} style={styles.readChip}>
-                <Text style={styles.readChipText}>
-                  {getPestDiseaseEmoji(disease, 'disease')} {disease}
-                </Text>
-              </View>
-            ))}
-            {(careForm?.customDiseases ?? []).map((disease) => (
-              <View key={disease} style={styles.chip}>
-                <Text style={styles.chipText}>
-                  {getPestDiseaseEmoji(disease, 'disease')} {disease}
-                </Text>
-                <TouchableOpacity
-                  onPress={() =>
-                    setForm({
-                      customDiseases: (careForm?.customDiseases ?? []).filter((d) => d !== disease),
-                    })
-                  }
-                >
-                  <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        </CollapsibleSection>
-
-        {/* ── Varieties ─────────────────────────────────────────────────── */}
-        <CollapsibleSection
-          title="Varieties"
-          icon="albums-outline"
-          defaultExpanded={false}
-          summary={varietiesSummary}
-          headerAction={
-            <TouchableOpacity
-              style={styles.sectionHeaderAction}
-              onPress={handleAddVariety}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Add variety"
-            >
-              <Ionicons name="add" size={16} color={theme.primary} />
-            </TouchableOpacity>
-          }
-        >
-          <View style={styles.fieldGroup}>
-            <View style={styles.chipRow}>
-              {varieties.length === 0 ? (
-                <Text style={styles.emptyText}>No varieties yet.</Text>
-              ) : (
-                varieties.map((v) => (
-                  <View key={v} style={styles.chip}>
-                    <TouchableOpacity
-                      style={styles.chipLabelArea}
-                      onPress={() => handleEditVarietyDetail(v)}
-                      activeOpacity={0.7}
-                    >
-                      {hasVarietyDetail(v) && <View style={styles.chipDot} />}
-                      <Text style={styles.chipText}>{v}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveVariety(v)}
-                      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                    >
-                      <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                ))
-              )}
-            </View>
-          </View>
-        </CollapsibleSection>
+        </View>
       </ScrollView>
 
-      {/* Footer */}
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-        <View style={styles.footerActions}>
-          {!isCreating && hasOverride && (
-            <TouchableOpacity style={styles.btnResetPill} onPress={handleResetCare}>
-              <Text style={styles.btnResetPillText}>Reset</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={styles.btnPrimary} onPress={handleSave} disabled={saving}>
-            <Text style={styles.btnPrimaryText}>Save</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Pinned tab bar — outside the ScrollView, since Android drops taps on
+          translated sticky headers. */}
+      {tabsStuck && <View style={[styles.pinnedTabBar, { top: headerHeight }]}>{tabBar}</View>}
 
-      {/* Variety detail modal */}
-      <Modal
-        visible={editingVariety !== null}
-        transparent
-        animationType="fade"
-        hardwareAccelerated
-        statusBarTranslucent
-        navigationBarTranslucent
-        onRequestClose={() => setEditingVariety(null)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {editingVariety === '' ? 'Add Variety' : editingVariety}
-              </Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setEditingVariety(null)}
-              >
-                <Ionicons name="close" size={16} color={theme.textInverse} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalHint}>
-              {editingVariety === ''
-                ? 'Enter a name and optional details'
-                : 'Optional details for this variety'}
-            </Text>
+      {/* ── Sheets & modals ── */}
+      {textSheet && (
+        <CatalogTextEditSheet
+          visible
+          onClose={closeTextSheet}
+          title={textSheet.title}
+          value={textSheet.value}
+          onCommit={textSheet.onCommit}
+          keyboardType={textSheet.keyboardType}
+          sanitize={textSheet.sanitize}
+          placeholder={textSheet.placeholder}
+          helpText={textSheet.helpText}
+          maxLength={textSheet.maxLength}
+          autoCapitalize={textSheet.autoCapitalize}
+        />
+      )}
 
-            {editingVariety === '' && (
-              <FloatingLabelInput
-                label="Variety name *"
-                value={newVariety}
-                onChangeText={setNewVariety}
-                autoFocus
-                autoCorrect={false}
-              />
-            )}
+      {pickerSheet && (
+        <OptionPickerSheet
+          visible
+          onClose={closePickerSheet}
+          title={pickerSheet.title}
+          options={pickerSheet.options}
+          selectedValue={pickerSheet.selectedValue}
+          onSelect={pickerSheet.onSelect}
+          searchable={pickerSheet.searchable}
+          allowClear={pickerSheet.allowClear}
+        />
+      )}
 
-            <FloatingLabelInput
-              label="Days to maturity"
-              keyboardType="numeric"
-              value={
-                varietyDetailDraft.daysToMaturity !== undefined
-                  ? String(varietyDetailDraft.daysToMaturity)
-                  : ''
-              }
-              onChangeText={(t) => {
-                const n = parseInt(sanitizeNum(t), 10);
-                setVarietyDetailDraft((d) => ({
-                  ...d,
-                  daysToMaturity: Number.isNaN(n) ? undefined : n,
-                }));
-              }}
-            />
+      {rangeSheet && (
+        <CatalogRangeEditSheet
+          visible
+          onClose={closeRangeSheet}
+          title={rangeSheet.title}
+          min={rangeSheet.min}
+          max={rangeSheet.max}
+          minLabel={rangeSheet.minLabel}
+          maxLabel={rangeSheet.maxLabel}
+          decimal={rangeSheet.decimal}
+          helpText={rangeSheet.helpText}
+          onCommit={rangeSheet.onCommit}
+        />
+      )}
 
-            <Text style={styles.pruningTipsLabel}>Season suitability</Text>
-            <View style={styles.seasonPillRow}>
-              {GROWING_SEASON_OPTIONS.map((opt) => {
-                const active = (varietyDetailDraft.seasonSuitability ?? []).includes(opt.value);
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[styles.seasonPill, active && styles.seasonPillActive]}
-                    onPress={() =>
-                      setVarietyDetailDraft((d) => {
-                        const cur = d.seasonSuitability ?? [];
-                        return {
-                          ...d,
-                          seasonSuitability: active
-                            ? cur.filter((s) => s !== opt.value)
-                            : [...cur, opt.value],
-                        };
-                      })
-                    }
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.seasonPillText, active && styles.seasonPillTextActive]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+      <PestDiseasePickerModal
+        visible={showPestPicker}
+        onClose={closePestPicker}
+        title="Add Pest"
+        searchPlaceholder="Search pests..."
+        allEntries={getAllPests()}
+        takenNames={takenPestNames}
+        onSelect={onAddPest}
+      />
 
-            <FloatingLabelInput
-              label="Seed source (e.g. TNAU, saved seed)"
-              value={varietyDetailDraft.seedSource ?? ''}
-              onChangeText={(t) => setVarietyDetailDraft((d) => ({ ...d, seedSource: t }))}
-              autoCorrect={false}
-            />
+      <PestDiseasePickerModal
+        visible={showDiseasePicker}
+        onClose={closeDiseasePicker}
+        title="Link Disease"
+        searchPlaceholder="Search diseases..."
+        allEntries={getAllDiseases()}
+        takenNames={takenDiseaseNames}
+        onSelect={onAddDisease}
+      />
 
-            <Text style={styles.pruningTipsLabel}>Notes</Text>
-            <VoiceDictation
-              value={varietyDetailDraft.notes ?? ''}
-              onChangeText={(t) => setVarietyDetailDraft((d) => ({ ...d, notes: t }))}
-            />
-            <TextInput
-              style={styles.varietyNotesInput}
-              value={varietyDetailDraft.notes ?? ''}
-              onChangeText={(t) => setVarietyDetailDraft((d) => ({ ...d, notes: t }))}
-              multiline
-              numberOfLines={3}
-              placeholder="Farmer observations, soil preference, yield notes..."
-              placeholderTextColor={theme.textTertiary}
-            />
+      <VarietyDetailModal
+        editingVariety={editingVariety}
+        newVariety={newVariety}
+        onNewVarietyChange={setNewVariety}
+        draft={varietyDraft}
+        onDraftChange={setVarietyDraft}
+        onClose={closeVarietyModal}
+        onSave={onSaveVariety}
+      />
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonPrimary]}
-                onPress={handleSaveVarietyDetail}
-              >
-                <Text style={styles.modalButtonTextPrimary}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Delete confirmation modal */}
       <ConfirmDeleteModal
         visible={showDeleteConfirm}
         title="Delete plant?"
         message={`Remove "${initialName}" from the catalog? This cannot be undone.`}
         confirmLabel="Delete"
-        onCancel={() => setShowDeleteConfirm(false)}
-        onConfirm={() => {
-          setShowDeleteConfirm(false);
-          void doDelete();
-        }}
+        onCancel={closeDeleteConfirm}
+        onConfirm={onConfirmDelete}
       />
 
-      {/* Reassign modal */}
-      <Modal
+      <ReassignPlantsModal
         visible={showReassign}
-        transparent
-        animationType="fade"
-        hardwareAccelerated
-        statusBarTranslucent
-        navigationBarTranslucent
-        onRequestClose={() => setShowReassign(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Move Plants & Delete</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowReassign(false)}
-              >
-                <Ionicons name="close" size={16} color={theme.textInverse} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalHint}>
-              {usageCount} plant{usageCount === 1 ? '' : 's'} use &quot;{initialName}&quot;. Select
-              a replacement.
-            </Text>
-            <View style={styles.reassignList}>
-              {categoryPlants
-                .filter((p) => p !== initialName)
-                .map((option) => (
-                  <TouchableOpacity
-                    key={option}
-                    style={[
-                      styles.reassignItem,
-                      reassignReplacement === option && styles.reassignItemActive,
-                    ]}
-                    onPress={() => setReassignReplacement(option)}
-                  >
-                    <Text
-                      style={[
-                        styles.reassignText,
-                        reassignReplacement === option && styles.reassignTextActive,
-                      ]}
-                    >
-                      {option}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-            </View>
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSecondary]}
-                onPress={() => setShowReassign(false)}
-              >
-                <Text style={styles.modalButtonTextSecondary}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonDanger]}
-                onPress={() => void doDelete(reassignReplacement)}
-              >
-                <Text style={styles.modalButtonTextPrimary}>Move & Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={closeReassign}
+        plantName={initialName}
+        usageCount={usageCount}
+        options={categoryPlants.filter((p) => p !== initialName)}
+        selected={reassignReplacement}
+        onSelect={setReassignReplacement}
+        onConfirm={onConfirmReassign}
+      />
 
-      {/* Pest picker */}
-      <Modal
-        visible={showPestPicker}
-        transparent
-        animationType="fade"
-        hardwareAccelerated
-        statusBarTranslucent
-        navigationBarTranslucent
-        onRequestClose={() => {
-          setShowPestPicker(false);
-          setPestSearch('');
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, styles.pickerModalContent]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Pest</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => {
-                  setShowPestPicker(false);
-                  setPestSearch('');
-                }}
-              >
-                <Ionicons name="close" size={16} color={theme.textInverse} />
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.pickerSearch}
-              placeholder="Search pests..."
-              placeholderTextColor={theme.textTertiary}
-              value={pestSearch}
-              onChangeText={setPestSearch}
-              autoCorrect={false}
-            />
-            <FlatList
-              style={styles.pickerList}
-              keyboardShouldPersistTaps="handled"
-              data={availablePests}
-              keyExtractor={pickerKeyExtractor}
-              ItemSeparatorComponent={renderPickerSeparator}
-              renderItem={renderPestPickerRow}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* Disease picker */}
-      <Modal
-        visible={showDiseasePicker}
-        transparent
-        animationType="fade"
-        hardwareAccelerated
-        statusBarTranslucent
-        navigationBarTranslucent
-        onRequestClose={() => {
-          setShowDiseasePicker(false);
-          setDiseaseSearch('');
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, styles.pickerModalContent]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Link Disease</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => {
-                  setShowDiseasePicker(false);
-                  setDiseaseSearch('');
-                }}
-              >
-                <Ionicons name="close" size={16} color={theme.textInverse} />
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.pickerSearch}
-              placeholder="Search diseases..."
-              placeholderTextColor={theme.textTertiary}
-              value={diseaseSearch}
-              onChangeText={setDiseaseSearch}
-              autoCorrect={false}
-            />
-            <FlatList
-              style={styles.pickerList}
-              keyboardShouldPersistTaps="handled"
-              data={availableDiseases}
-              keyExtractor={pickerKeyExtractor}
-              ItemSeparatorComponent={renderPickerSeparator}
-              renderItem={renderDiseasePickerRow}
-            />
-          </View>
-        </View>
-      </Modal>
+      <AlertDialog
+        visible={showDiscardDialog}
+        title="Discard changes?"
+        message="Your edits to this catalog entry have not been saved."
+        icon="warning-outline"
+        tone="warning"
+        actions={[
+          { label: 'Keep editing', variant: 'primary', onPress: dismissDiscard },
+          { label: 'Discard', variant: 'ghost', onPress: discardChanges },
+        ]}
+        onDismiss={dismissDiscard}
+      />
 
       {/* Saving overlay */}
       <Modal

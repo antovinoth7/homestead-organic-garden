@@ -37,6 +37,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     headerIcon: {
       marginRight: 8,
     },
+    /** Tinted circle behind the icon — opt-in via the `iconTint` prop. */
+    headerIconCircle: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 10,
+    },
     headerTextBlock: {
       flex: 1,
       minWidth: 0,
