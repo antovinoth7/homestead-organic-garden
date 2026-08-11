@@ -25,8 +25,11 @@ interface Props {
  * தமிழ்/English locale toggle, a mic button, and a live transcript preview, then
  * appends finalized speech to the field via `appendVoiceTranscript`.
  *
- * Renders nothing when the device has no usable recognizer (e.g. Expo Go / web),
- * so callers can drop it above any field without extra guards.
+ * Renders nothing when the binary has no speech module at all (Expo Go / web /
+ * a dev client built before the dependency landed) — there is nothing the user
+ * could act on. When the module is present but the OS exposes no recognizer the
+ * mic stays visible but disabled and explains itself on tap, so the feature
+ * never just silently vanishes. Either way callers need no extra guards.
  */
 export default function VoiceDictation({
   value,
@@ -56,17 +59,25 @@ export default function VoiceDictation({
     partialTranscript,
     error: voiceError,
     isAvailable,
+    unavailableReason,
     start,
     stop,
   } = useVoiceInput({ locale, onResult: handleResult });
 
   const handleMicPress = useCallback(() => {
+    if (!isAvailable) {
+      Alert.alert(
+        'Voice Input',
+        'This device has no speech recognition service. On Android, install or enable the Google app and set it as the speech service.'
+      );
+      return;
+    }
     if (isListening) {
       stop();
     } else {
       start();
     }
-  }, [isListening, start, stop]);
+  }, [isAvailable, isListening, start, stop]);
 
   useEffect(() => {
     if (voiceError) {
@@ -74,7 +85,7 @@ export default function VoiceDictation({
     }
   }, [voiceError]);
 
-  if (!isAvailable) {
+  if (unavailableReason === 'no-module') {
     return null;
   }
 
@@ -90,7 +101,7 @@ export default function VoiceDictation({
                 locale === loc.code && styles.voiceLocaleChipActive,
               ]}
               onPress={() => setLocale(loc.code)}
-              disabled={isListening}
+              disabled={isListening || !isAvailable}
             >
               <Text
                 style={[
@@ -103,7 +114,12 @@ export default function VoiceDictation({
             </TouchableOpacity>
           ))}
         </View>
-        <VoiceInputButton isListening={isListening} disabled={disabled} onPress={handleMicPress} />
+        <VoiceInputButton
+          isListening={isListening}
+          disabled={disabled}
+          unavailable={!isAvailable}
+          onPress={handleMicPress}
+        />
       </View>
       {isListening && <Text style={styles.voicePreview}>{partialTranscript || 'Listening…'}</Text>}
     </View>

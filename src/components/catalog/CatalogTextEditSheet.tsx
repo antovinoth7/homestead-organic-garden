@@ -6,6 +6,7 @@ import { createStyles } from '@/styles/catalogSheetStyles';
 import { BottomSheetModal } from '@/components/BottomSheetModal';
 import { SheetHandle } from '@/components/SheetHandle';
 import FloatingLabelInput from '@/components/FloatingLabelInput';
+import VoiceDictation from '@/components/VoiceDictation';
 
 interface Props {
   visible: boolean;
@@ -20,6 +21,8 @@ interface Props {
   helpText?: string;
   maxLength?: number;
   autoCapitalize?: 'none' | 'sentences' | 'words';
+  /** Renders the தமிழ்/English + mic control above the input. */
+  dictation?: boolean;
 }
 
 /**
@@ -41,6 +44,7 @@ export function CatalogTextEditSheet({
   helpText,
   maxLength,
   autoCapitalize = 'sentences',
+  dictation = false,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -75,6 +79,9 @@ export function CatalogTextEditSheet({
         <Text style={styles.sheetTitle}>{title}</Text>
       </SheetHandle>
       {helpText ? <Text style={styles.helpText}>{helpText}</Text> : null}
+      {/* Feeds `draft`, not `value` — the sheet commits its own copy, and
+          `handleChange` keeps dictated text under the same sanitizer as typing. */}
+      {dictation && <VoiceDictation value={draft} onChangeText={handleChange} />}
       <FloatingLabelInput
         label={title}
         value={draft}

@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-08-11 — src/: 594 files, 106,648 lines.
+> Snapshot: 2026-08-11 — src/: 594 files, 106,854 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -17,8 +17,8 @@
 - src/services/plants.ts (1126)
 - src/components/BedRowLayout.tsx (982)
 - src/types/database.types.ts (972)
+- src/screens/CatalogPlantDetailScreen.tsx (970)
 - src/hooks/useBedCreationWizard.ts (937)
-- src/screens/CatalogPlantDetailScreen.tsx (904)
 - src/services/plantCatalog.ts (879)
 - src/lib/imageStorage.ts (873)
 - src/screens/PlantsScreen.tsx (827)
@@ -162,7 +162,7 @@
 - plantCapacity.test.ts (21)
 - growSpecFormat.test.ts (17)
 
-### src/components/ — 71 files, 11,566 lines
+### src/components/ — 71 files, 11,609 lines
 
 - BedRowLayout.tsx (982) ⚠️ large — Grep/search inside, do not read whole
 - BedTopDownMap.tsx (773)
@@ -197,10 +197,10 @@
 - ThemedDropdown.tsx (133)
 - DraggablePlantRow.tsx (131)
 - StagePickerSheet.tsx (129)
+- VoiceDictation.tsx (128)
 - ImageZoomModal.tsx (124)
 - SegmentedTabs.tsx (119)
 - TaskCard.tsx (114)
-- VoiceDictation.tsx (112)
 - HarvestWeightInput.tsx (110)
 - CareScheduleSection.tsx (109)
 - GrowthStageSection.tsx (108)
@@ -219,15 +219,15 @@
 - BedContextSection.tsx (71)
 - UndoToast.tsx (65)
 - TipStrip.tsx (64)
+- ReferenceThumb.tsx (63)
 - PlantCategoryTabs.tsx (61)
 - ClearBedCta.tsx (60)
+- VoiceInputButton.tsx (57)
 - OfflineBanner.tsx (53)
 - ScreenHeader.tsx (53)
 - HarvestInfoSection.tsx (52)
 - CompanionPlantingSection.tsx (51)
 - SectionHeader.tsx (49)
-- VoiceInputButton.tsx (47)
-- ReferenceThumb.tsx (46)
 - HarvestYieldChart.tsx (45)
 - WeatherCard.tsx (45)
 - PlantInfoRow.tsx (40)
@@ -242,30 +242,30 @@
 - MonthCalendarView.tsx (126)
 - WeekCalendarView.tsx (110)
 
-### src/components/catalog/ — 15 files, 1,448 lines
+### src/components/catalog/ — 15 files, 1,455 lines
 
-- VarietyDetailModal.tsx (193)
-- CatalogDetailRow.tsx (159)
+- VarietyDetailModal.tsx (202)
+- CatalogDetailRow.tsx (148)
 - PestDiseasePickerModal.tsx (127)
 - ReassignPlantsModal.tsx (109)
 - CatalogChipList.tsx (106)
+- CatalogTextEditSheet.tsx (104)
 - CatalogRangeEditSheet.tsx (99)
-- CatalogTextEditSheet.tsx (97)
 - CatalogSearchResultRow.tsx (92)
 - CatalogRangeRow.tsx (87)
+- catalogEditor.ts (70)
 - CatalogBrowseRow.tsx (68)
-- catalogEditor.ts (68)
 - CatalogDangerFooter.tsx (66)
 - CatalogTextBlock.tsx (66)
 - RecentSearchChips.tsx (57)
 - CatalogSearchBar.tsx (54)
 
-### src/components/catalog/sections/ — 6 files, 870 lines
+### src/components/catalog/sections/ — 6 files, 869 lines
 
-- GrowingInfoSection.tsx (232)
-- CoreCareSection.tsx (210)
-- PlantInfoSection.tsx (178)
-- PruningSection.tsx (127)
+- GrowingInfoSection.tsx (229)
+- CoreCareSection.tsx (208)
+- PlantInfoSection.tsx (180)
+- PruningSection.tsx (129)
 - TolerancesSection.tsx (77)
 - PlantingSection.tsx (46)
 
@@ -327,11 +327,11 @@
 - PlantDetailGuideSection.tsx (43)
 - DetailCard.tsx (33)
 
-### src/components/reference/ — 8 files, 865 lines
+### src/components/reference/ — 8 files, 885 lines
 
 - ReferenceListView.tsx (204)
 - ReferenceDetailView.tsx (182)
-- ReferenceHero.tsx (117)
+- ReferenceHero.tsx (137)
 - ActionPlanCard.tsx (116)
 - ReferenceListCard.tsx (86)
 - RiskInGardenCard.tsx (74)
@@ -412,7 +412,7 @@
 - index.ts (40)
 - types.ts (30)
 
-### src/hooks/ — 32 files, 6,382 lines
+### src/hooks/ — 32 files, 6,426 lines
 
 - usePlantFormState.ts (1202) ⚠️ large — Grep/search inside, do not read whole
 - useBedCreationWizard.ts (937) ⚠️ large — Grep/search inside, do not read whole
@@ -420,9 +420,9 @@
 - useLocationManager.ts (567)
 - useCatalogEntryForm.ts (497)
 - useTodayBrief.ts (405)
+- useVoiceInput.ts (218)
 - usePinchZoom.ts (185)
 - usePlantFormData.ts (180)
-- useVoiceInput.ts (174)
 - usePlantDetail.ts (110)
 - useSectionScrollSpy.ts (110)
 - usePlantCatalogManager.ts (108)
@@ -471,10 +471,10 @@
 
 - AppNavigator.tsx (197)
 
-### src/screens/ — 28 files, 10,376 lines
+### src/screens/ — 28 files, 10,442 lines
 
 - CalendarScreen.tsx (2079) ⚠️ large — Grep/search inside, do not read whole
-- CatalogPlantDetailScreen.tsx (904) ⚠️ large — Grep/search inside, do not read whole
+- CatalogPlantDetailScreen.tsx (970) ⚠️ large — Grep/search inside, do not read whole
 - PlantsScreen.tsx (827) ⚠️ large — Grep/search inside, do not read whole
 - JournalFormScreen.tsx (710)
 - JournalScreen.tsx (559)
@@ -533,7 +533,7 @@
 - weatherLogic.ts (87)
 - alerts.ts (19)
 
-### src/styles/ — 93 files, 19,284 lines
+### src/styles/ — 93 files, 19,311 lines
 
 - bedCreationWizardStyles.ts (1886) ⚠️ large — Grep/search inside, do not read whole
 - plantFormStyles.ts (1719) ⚠️ large — Grep/search inside, do not read whole
@@ -544,8 +544,8 @@
 - journalStyles.ts (521)
 - plantsStyles.ts (503)
 - plotEditStyles.ts (441)
-- pestDiseaseDetailStyles.ts (427)
-- catalogPlantDetailStyles.ts (423)
+- pestDiseaseDetailStyles.ts (439)
+- catalogPlantDetailStyles.ts (418)
 - enrichedSectionStyles.ts (393)
 - bedListStyles.ts (336)
 - plantCardStyles.ts (335)
@@ -557,7 +557,7 @@
 - myFarmStyles.ts (253)
 - bedPlantPickerStyles.ts (250)
 - organicInputListStyles.ts (246)
-- catalogRowStyles.ts (234)
+- catalogRowStyles.ts (236)
 - bedLayerStackStyles.ts (231)
 - pestDiseaseListStyles.ts (228)
 - bedDetailStyles.ts (215)
@@ -601,6 +601,7 @@
 - expandableBlockStyles.ts (69)
 - floatingLabelInputStyles.ts (67)
 - catalogSheetStyles.ts (61)
+- referenceThumbStyles.ts (59)
 - authStyles.ts (58)
 - plantHistoryTabStyles.ts (58)
 - bedTasksStyles.ts (54)
@@ -612,7 +613,6 @@
 - plantPicturesTabStyles.ts (43)
 - segmentedTabsStyles.ts (43)
 - plantQuickActionsStyles.ts (42)
-- referenceThumbStyles.ts (41)
 - undoToastStyles.ts (40)
 - showMoreFooterStyles.ts (39)
 - detailCardStyles.ts (37)
@@ -747,14 +747,14 @@
 - archive/ROADMAP_ARCHIVE.md (1861)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (704)
+- CODEMAP.md (763)
 - COMPONENTS.md (65)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (44)
 - ENTERPRISE_AUDIT.md (416)
 - IMAGE_STORAGE.md (38)
 - IMPLEMENTATION_ROADMAP.md (349)
-- REFERENCE_IMAGES.md (67)
+- REFERENCE_IMAGES.md (71)
 - SCHEMA_MIGRATIONS.md (50)
 - SERVICES.md (186)
 - tamil-nadu-reference-audit.md (118)

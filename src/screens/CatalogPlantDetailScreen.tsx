@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import {
+  Animated,
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   Modal,
   ActivityIndicator,
@@ -15,7 +15,8 @@ import { useTheme } from '@/theme';
 import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/catalogPlantDetailStyles';
 import CollapsibleSection from '@/components/CollapsibleSection';
-import { ReferenceThumb } from '@/components/ReferenceThumb';
+import { ImageZoomModal } from '@/components/ImageZoomModal';
+import { ReferenceHero } from '@/components/reference/ReferenceHero';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
 import type { SegmentedTab } from '@/components/SegmentedTabs';
 import { OptionPickerSheet } from '@/components/OptionPickerSheet';
@@ -92,6 +93,11 @@ const TABS: readonly SegmentedTab<CatalogTabKey>[] = [
   { key: 'health', label: 'Health', icon: 'shield-checkmark-outline' },
   { key: 'varieties', label: 'Varieties', icon: 'albums-outline' },
 ];
+
+/** Matches `heroBleed`/`hero` in the shared reference styles. */
+const HERO_HEIGHT = 250;
+/** Where the sticky bar starts taking over from the hero's own controls. */
+const STICKY_THRESHOLD = HERO_HEIGHT - 80;
 
 const ALL_EXPANDED: Record<CatalogSectionKey, boolean> = {
   plantInfo: true,
@@ -170,7 +176,11 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
 
   const [headerHeight, setHeaderHeight] = useState(0);
   const [tabsStuck, setTabsStuck] = useState(false);
+  /** Sticky bar fully faded in — only then may it take taps from the hero. */
+  const [headerStuck, setHeaderStuck] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
   const tabBarYRef = useRef(0);
+  const scrollY = useRef(new Animated.Value(0)).current;
   const [sectionExpanded, setSectionExpanded] =
     useState<Record<CatalogSectionKey, boolean>>(ALL_EXPANDED);
 
@@ -199,14 +209,49 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      // Once the in-flow bar reaches the top of the viewport the pinned copy
-      // takes over, so the handoff is seamless.
-      const stuck = event.nativeEvent.contentOffset.y >= tabBarYRef.current;
+      // The sticky bar overlays the scroll view, so the in-flow bar is covered
+      // once it reaches the bar's *bottom* edge — that is where the pinned copy
+      // takes over, keeping the handoff seamless.
+      const y = event.nativeEvent.contentOffset.y;
+      const stuck = y >= tabBarYRef.current - headerHeight;
       setTabsStuck((prev) => (prev === stuck ? prev : stuck));
+      const barOpaque = y >= STICKY_THRESHOLD + 40;
+      setHeaderStuck((prev) => (prev === barOpaque ? prev : barOpaque));
       onScroll(event);
     },
-    [onScroll]
+    [onScroll, headerHeight]
   );
+
+  const stickyBgOpacity = useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [STICKY_THRESHOLD, STICKY_THRESHOLD + 40],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+      }),
+    [scrollY]
+  );
+  const stickyTitleOpacity = useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [STICKY_THRESHOLD + 10, STICKY_THRESHOLD + 40],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+      }),
+    [scrollY]
+  );
+
+  const handleScrollEvent = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+        useNativeDriver: true,
+        listener: handleScroll,
+      }),
+    [scrollY, handleScroll]
+  );
+
+  const openPreview = useCallback(() => setPreviewVisible(true), []);
+  const closePreview = useCallback(() => setPreviewVisible(false), []);
 
   const setExpanded = useCallback(
     (section: CatalogSectionKey) => (expanded: boolean) =>
@@ -468,6 +513,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     [lookupName, initialName]
   );
 
+  const previewSources = useMemo(() => (heroImage ? [heroImage] : []), [heroImage]);
+
   const displayName =
     name.trim() || (isCreating ? `New ${CATEGORY_LABELS[plantType]}` : initialName);
   const usageSummary = usageCount > 0 ? `${usageCount} in garden` : 'Not in garden yet';
@@ -510,69 +557,27 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
 
   const tabBar = <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={scrollToKey} />;
 
+  const saveButton = (
+    <TouchableOpacity
+      style={[styles.headerSaveButton, saving && styles.headerSaveButtonDisabled]}
+      onPress={onSavePress}
+      disabled={saving}
+      activeOpacity={0.85}
+    >
+      <Text style={styles.headerSaveText}>Save</Text>
+      {isDirty && !saving && <View style={styles.headerSaveDot} />}
+    </TouchableOpacity>
+  );
+
+  // Tamil name first — it is how the plant is actually spoken about here — then
+  // whether it is growing anywhere.
+  const heroSubtitle = [careForm.tamilName.trim(), isCreating ? '' : usageSummary]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View
-        style={[styles.header, { paddingTop: insets.top + 10 }]}
-        onLayout={onHeaderLayout}
-      >
-        {/* Plain goBack — the hook's beforeRemove listener raises the discard
-            prompt when there are unsaved edits. */}
-        <TouchableOpacity onPress={onBackPress} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-        </TouchableOpacity>
-        {/* Always rendered — ReferenceThumb falls back to the plant emoji, so
-            the five catalog plants without bundled art still show something. */}
-        <View style={styles.headerThumb}>
-          <ReferenceThumb
-            source={heroImage}
-            emoji={getPlantEmoji(lookupName)}
-            variant="hero"
-            recyclingKey={`${plantType}:${lookupName}`}
-          />
-        </View>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {displayName}
-          </Text>
-          {!isCreating && (
-            <View style={styles.headerMetaRow}>
-              <Text style={styles.headerMetaText} numberOfLines={1}>
-                {usageSummary}
-              </Text>
-              <View
-                style={[
-                  styles.headerStatePill,
-                  hasOverride ? styles.headerStatePillCustom : styles.headerStatePillDefault,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.headerStatePillText,
-                    hasOverride
-                      ? styles.headerStatePillTextCustom
-                      : styles.headerStatePillTextDefault,
-                  ]}
-                >
-                  {hasOverride ? 'Custom' : 'App defaults'}
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
-        <TouchableOpacity
-          style={[styles.headerSaveButton, saving && styles.headerSaveButtonDisabled]}
-          onPress={onSavePress}
-          disabled={saving}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.headerSaveText}>Save</Text>
-          {isDirty && !saving && <View style={styles.headerSaveDot} />}
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
+      <Animated.ScrollView
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[
@@ -582,9 +587,35 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
-        onScroll={handleScroll}
+        onScroll={handleScrollEvent}
         onMomentumScrollEnd={onMomentumScrollEnd}
       >
+        {/* Always rendered — ReferenceHero falls back to an emoji watermark, so
+            the catalog plants without bundled art still show something. */}
+        <View style={styles.heroBleed}>
+          <ReferenceHero
+            name={displayName}
+            subtitle={heroSubtitle}
+            emoji={getPlantEmoji(lookupName)}
+            image={heroImage}
+            badge={
+              isCreating
+                ? undefined
+                : {
+                    label: hasOverride ? 'CUSTOM DEFAULTS' : 'APP DEFAULTS',
+                    bg: hasOverride ? theme.primaryLight : theme.backgroundSecondary,
+                    color: hasOverride ? theme.primary : theme.textSecondary,
+                  }
+            }
+            topInset={insets.top}
+            /* Plain goBack — the hook's beforeRemove listener raises the discard
+               prompt when there are unsaved edits. */
+            onBack={onBackPress}
+            onPressImage={heroImage ? openPreview : undefined}
+            headerRight={saveButton}
+          />
+        </View>
+
         <View style={styles.inFlowTabBar} onLayout={handleTabBarLayout}>
           {tabBar}
         </View>
@@ -770,11 +801,45 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
             />
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {/* Sticky bar — fades in as the hero scrolls away, so back and Save stay
+          reachable from every tab. */}
+      <Animated.View
+        style={[
+          styles.stickyHeader,
+          {
+            paddingTop: insets.top + 10,
+            backgroundColor: theme.tabBarBackground,
+            opacity: stickyBgOpacity,
+          },
+        ]}
+        onLayout={onHeaderLayout}
+        pointerEvents={headerStuck ? 'auto' : 'none'}
+      >
+        <TouchableOpacity onPress={onBackPress} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
+        </TouchableOpacity>
+        <Animated.Text
+          style={[styles.stickyHeaderTitle, { opacity: stickyTitleOpacity }]}
+          numberOfLines={1}
+        >
+          {displayName}
+        </Animated.Text>
+        {saveButton}
+      </Animated.View>
 
       {/* Pinned tab bar — outside the ScrollView, since Android drops taps on
           translated sticky headers. */}
       {tabsStuck && <View style={[styles.pinnedTabBar, { top: headerHeight }]}>{tabBar}</View>}
+
+      {heroImage && (
+        <ImageZoomModal
+          visible={previewVisible}
+          sources={previewSources}
+          onClose={closePreview}
+        />
+      )}
 
       {/* ── Sheets & modals ── */}
       {textSheet && (
@@ -790,6 +855,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
           helpText={textSheet.helpText}
           maxLength={textSheet.maxLength}
           autoCapitalize={textSheet.autoCapitalize}
+          dictation={textSheet.dictation}
         />
       )}
 

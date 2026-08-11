@@ -90,13 +90,7 @@ export function LocationProfileEditor({
               style={[styles.chip, selected && styles.chipSelected]}
               onPress={() => updateProfile({ soilPH: selected ? null : ph })}
             >
-              <Text
-                style={[
-                  styles.chipText,
-                  styles.chipTextMono,
-                  selected && styles.chipTextSelected,
-                ]}
-              >
+              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
                 {ph.toFixed(1)}
               </Text>
             </TouchableOpacity>

@@ -18,20 +18,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.textSecondary,
     },
-    header: {
+    /**
+     * Absolute bar that fades in as the hero scrolls away, mirroring the pest
+     * and disease detail screens. It overlays the ScrollView rather than sitting
+     * above it, so the hero image can run full-bleed to the top of the screen.
+     */
+    stickyHeader: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 16,
-      backgroundColor: theme.tabBarBackground,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      paddingBottom: 10,
+      gap: 10,
     },
-    headerActionSlot: {
-      width: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
+    stickyHeaderTitle: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: 17,
+      fontWeight: '700',
+      color: theme.text,
     },
     backButton: {
       width: 36,
@@ -40,58 +49,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: theme.text,
-      textAlign: 'center',
-      width: '100%',
-    },
-    headerContent: {
-      flex: 1,
-      minWidth: 0,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 12,
-    },
-    headerMetaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 2,
-      minWidth: 0,
-      gap: 6,
-    },
-    headerMetaText: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      fontWeight: '600',
-      flexShrink: 1,
-    },
-    headerStatePill: {
-      paddingHorizontal: 7,
-      paddingVertical: 3,
-      borderRadius: 999,
-      borderWidth: 1,
-    },
-    headerStatePillCustom: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary + '40',
-    },
-    headerStatePillDefault: {
-      backgroundColor: theme.background,
-      borderColor: theme.border,
-    },
-    headerStatePillText: {
-      fontSize: 10,
-      fontWeight: '700',
-    },
-    headerStatePillTextCustom: {
-      color: theme.primary,
-    },
-    headerStatePillTextDefault: {
-      color: theme.textSecondary,
     },
     /**
      * Save lives in the header rather than a footer bar so it stays reachable
@@ -145,16 +102,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingBottom: 4,
     },
     scrollContent: {
-      padding: 16,
+      paddingHorizontal: 16,
+      paddingBottom: 16,
       gap: 10,
     },
     /**
-     * Compact plant thumbnail in the header. Reference art is bundled at
-     * 400×300, so showing it small keeps it sharp — a full-width hero upscaled
-     * it roughly 3× on a phone.
+     * Cancels `scrollContent`'s inset so the hero runs full-bleed. Done with a
+     * negative margin rather than by un-padding the container, so every section
+     * keeps measuring its offset against the same parent and the scroll-spy
+     * offsets stay correct.
      */
-    headerThumb: {
-      marginLeft: 10,
+    heroBleed: {
+      marginHorizontal: -16,
     },
     fieldGroup: {
       marginBottom: 8,
@@ -398,29 +357,48 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.primary,
       fontWeight: '600',
     },
+    /**
+     * Applied after `modalContent`, which is shared with the picker and reassign
+     * modals and so must stay untouched. Drops the card's own padding — the
+     * header owns its inset and its separator has to reach both edges — and caps
+     * the height so a keyboard can never push the header out of frame.
+     */
+    varietyCard: {
+      padding: 0,
+      maxHeight: '85%',
+      overflow: 'hidden',
+    },
     /** Variety sheet header: close left, title centre, Done right. */
     varietyHeader: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
       gap: 12,
-      marginBottom: 14,
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.borderLight,
     },
     varietyHeaderText: {
       flex: 1,
       minWidth: 0,
+      paddingHorizontal: 8,
     },
-    varietyHeaderHint: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      marginTop: 2,
+    varietyHeaderTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: theme.text,
+      textAlign: 'center',
+    },
+    /** Restores the inset `varietyCard` gave up, now that the body scrolls. */
+    varietyScrollContent: {
+      padding: 20,
     },
     varietyCloseButton: {
       width: 34,
       height: 34,
       borderRadius: 17,
-      borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.background,
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
     },

@@ -10,20 +10,23 @@ export const createStyles = (theme: Theme) =>
       borderTopLeftRadius: 26,
       borderTopRightRadius: 26,
       paddingHorizontal: 20,
+      // Fallback for the runtime safe-area inset the sheet passes in; without
+      // either, the translucent nav bar sits over the sheet's bottom edge.
+      paddingBottom: 24,
     },
     header: {
       marginTop: 14,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: 12,
+      gap: 10,
     },
     headerText: {
       flex: 1,
       minWidth: 0,
     },
     title: {
-      fontSize: 21,
+      fontSize: 18,
       fontWeight: '700',
       color: theme.text,
     },
@@ -91,23 +94,17 @@ export const createStyles = (theme: Theme) =>
       fontWeight: '600',
       color: theme.primary,
     },
-    footer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginTop: 20,
-    },
+    // Header pill, matching the plot editor's header save.
     saveButton: {
-      flex: 1,
       backgroundColor: theme.primary,
-      borderRadius: 15,
-      paddingVertical: 15,
-      alignItems: 'center',
+      paddingHorizontal: 18,
+      paddingVertical: 9,
+      borderRadius: 20,
       shadowColor: theme.primary,
-      shadowOffset: { width: 0, height: 5 },
-      shadowOpacity: 0.3,
-      shadowRadius: 16,
-      elevation: 4,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.28,
+      shadowRadius: 10,
+      elevation: 3,
     },
     saveButtonDisabled: {
       backgroundColor: theme.borderDark,
@@ -115,7 +112,7 @@ export const createStyles = (theme: Theme) =>
       elevation: 0,
     },
     saveButtonText: {
-      fontSize: 15.5,
+      fontSize: 14,
       fontWeight: '700',
       color: theme.textInverse,
     },

@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
-import { MONO_FONT } from '@/styles/typography';
 
 /**
  * Styles for the full-page plot editor (`PlotEditModal`) and the soil chip
@@ -117,8 +116,8 @@ export const createStyles = (theme: Theme) =>
       color: theme.text,
       padding: 0,
     },
-    fieldInputMono: {
-      fontFamily: MONO_FONT,
+    /** Short name — a 5-char uppercase code, spaced out to read as one. */
+    fieldInputCode: {
       fontWeight: '700',
       letterSpacing: 1,
     },
@@ -139,7 +138,6 @@ export const createStyles = (theme: Theme) =>
       fontSize: 11.5,
       color: theme.textTertiary,
       marginTop: 2,
-      fontFamily: MONO_FONT,
     },
     stepperControls: {
       flexDirection: 'row',
@@ -170,7 +168,6 @@ export const createStyles = (theme: Theme) =>
       fontSize: 19,
       fontWeight: '700',
       color: theme.primary,
-      fontFamily: MONO_FONT,
     },
     stepperUnit: {
       fontSize: 12,
@@ -204,7 +201,6 @@ export const createStyles = (theme: Theme) =>
       fontSize: 14,
       color: theme.inputText,
       textAlign: 'center',
-      fontFamily: MONO_FONT,
     },
     coordInputError: {
       borderColor: theme.error,
@@ -253,9 +249,6 @@ export const createStyles = (theme: Theme) =>
     chipTextSelected: {
       color: theme.primary,
     },
-    chipTextMono: {
-      fontFamily: MONO_FONT,
-    },
 
     // Full-width segmented controls (drainage, moisture, wind, NPK).
     segmentRow: {
@@ -297,7 +290,6 @@ export const createStyles = (theme: Theme) =>
       fontSize: 14,
       fontWeight: '700',
       color: theme.text,
-      fontFamily: MONO_FONT,
     },
     npkSegments: {
       flex: 1,
@@ -334,7 +326,6 @@ export const createStyles = (theme: Theme) =>
       fontWeight: '600',
       color: theme.text,
       marginTop: 2,
-      fontFamily: MONO_FONT,
     },
     datePlaceholder: {
       fontSize: 14,
@@ -397,7 +388,6 @@ export const createStyles = (theme: Theme) =>
       color: theme.textTertiary,
       textAlign: 'right',
       marginTop: 6,
-      fontFamily: MONO_FONT,
     },
 
     // ── Delete ───────────────────────────────────────────────────────────────

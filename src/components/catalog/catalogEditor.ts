@@ -12,6 +12,8 @@ export interface TextSheetConfig {
   helpText?: string;
   maxLength?: number;
   autoCapitalize?: 'none' | 'sentences' | 'words';
+  /** Shows the தமிழ்/English + mic control above the input. */
+  dictation?: boolean;
 }
 
 export interface PickerSheetConfig {

@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetModal } from '@/components/BottomSheetModal';
 import { SheetHandle } from '@/components/SheetHandle';
@@ -35,6 +36,7 @@ export function SectionEditSheet({
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
 
   const visible = editModal?.type === 'child';
   const isNew = editModal?.original === '';
@@ -61,17 +63,15 @@ export function SectionEditSheet({
     <BottomSheetModal
       visible={visible}
       onClose={onClose}
-      sheetStyle={styles.sheet}
+      sheetStyle={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 24) }]}
       keyboardAvoiding
       dismissOnBackdropPress={!saving}
     >
       <SheetHandle onClose={onClose} />
 
+      {/* Close left, save right — the plot editor's header layout. Save used to
+          sit in a footer, where the translucent nav bar covered it. */}
       <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>{isNew ? 'New section' : 'Rename section'}</Text>
-          <Text style={styles.subtitle}>A direction or zone shared across plots</Text>
-        </View>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={onClose}
@@ -79,6 +79,26 @@ export function SectionEditSheet({
           accessibilityLabel="Close"
         >
           <Ionicons name="close" size={20} color={theme.textInverse} />
+        </TouchableOpacity>
+        <View style={styles.headerText}>
+          <Text style={styles.title} numberOfLines={1}>
+            {isNew ? 'New section' : 'Rename section'}
+          </Text>
+          <Text style={styles.subtitle} numberOfLines={1}>
+            A direction or zone shared across plots
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.saveButton, saveDisabled && styles.saveButtonDisabled]}
+          onPress={onSave}
+          disabled={saveDisabled}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Save section"
+        >
+          <Text style={[styles.saveButtonText, saveDisabled && styles.saveButtonTextDisabled]}>
+            Save
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -111,19 +131,6 @@ export function SectionEditSheet({
           ))}
         </View>
       )}
-
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.saveButton, saveDisabled && styles.saveButtonDisabled]}
-          onPress={onSave}
-          disabled={saveDisabled}
-          activeOpacity={0.85}
-        >
-          <Text style={[styles.saveButtonText, saveDisabled && styles.saveButtonTextDisabled]}>
-            Save section
-          </Text>
-        </TouchableOpacity>
-      </View>
     </BottomSheetModal>
   );
 }

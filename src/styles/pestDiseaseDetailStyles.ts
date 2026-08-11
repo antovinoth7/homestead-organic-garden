@@ -90,6 +90,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       zIndex: 5,
     },
+    /**
+     * Slot opposite the back button for a screen-specific action (the catalog
+     * puts its Save button here). Sized to clear the 40px back button, but the
+     * child owns its own width.
+     */
+    heroHeaderRight: {
+      position: 'absolute',
+      right: 16,
+      minHeight: 40,
+      justifyContent: 'center',
+      zIndex: 5,
+    },
     heroCaption: {
       position: 'absolute',
       left: 18,

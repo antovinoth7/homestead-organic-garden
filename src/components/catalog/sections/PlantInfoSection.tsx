@@ -44,6 +44,7 @@ export function PlantInfoSection({
         sanitize: sanitizeName,
         helpText: CATALOG_FIELD_HELP.name,
         autoCapitalize: 'words',
+        dictation: true,
       }),
     [openText, name, setName]
   );
@@ -56,6 +57,7 @@ export function PlantInfoSection({
         onCommit: (tamilName) => setForm({ tamilName }),
         helpText: CATALOG_FIELD_HELP.tamilName,
         autoCapitalize: 'none',
+        dictation: true,
       }),
     [openText, careForm.tamilName, setForm]
   );

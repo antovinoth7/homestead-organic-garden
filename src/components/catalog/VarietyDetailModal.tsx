@@ -5,6 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   Modal,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -115,26 +116,23 @@ export function VarietyDetailModal({
         style={styles.modalOverlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.modalContent}>
-          {/* Close left, Done right. The close circle is deliberately neutral
-              rather than the shared filled-primary one — two primary controls
-              flanking the title would compete for the same emphasis. */}
+        <View style={[styles.modalContent, styles.varietyCard]}>
+          {/* The app's shared editor bar — filled-primary close left, centred
+              title, primary action right — as used by the plot editor and the
+              task modals. Pinned outside the ScrollView so both controls stay
+              in frame however tall the form gets or how far it is scrolled. */}
           <View style={styles.varietyHeader}>
             <TouchableOpacity
               style={styles.varietyCloseButton}
               onPress={onClose}
+              accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <Ionicons name="close" size={16} color={theme.textSecondary} />
+              <Ionicons name="close" size={18} color={theme.textInverse} />
             </TouchableOpacity>
             <View style={styles.varietyHeaderText}>
-              <Text style={styles.modalTitle} numberOfLines={1}>
+              <Text style={styles.varietyHeaderTitle} numberOfLines={1}>
                 {isAdding ? 'Add Variety' : editingVariety}
-              </Text>
-              <Text style={styles.varietyHeaderHint} numberOfLines={1}>
-                {isAdding
-                  ? 'Enter a name and optional details'
-                  : 'Optional details for this variety'}
               </Text>
             </View>
             <TouchableOpacity
@@ -146,54 +144,60 @@ export function VarietyDetailModal({
             </TouchableOpacity>
           </View>
 
-          {isAdding && (
+          <ScrollView
+            contentContainerStyle={styles.varietyScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {isAdding && (
+              <FloatingLabelInput
+                label="Variety name *"
+                value={newVariety}
+                onChangeText={onNewVarietyChange}
+                autoFocus
+                autoCorrect={false}
+              />
+            )}
+
             <FloatingLabelInput
-              label="Variety name *"
-              value={newVariety}
-              onChangeText={onNewVarietyChange}
-              autoFocus
+              label="Days to maturity"
+              keyboardType="numeric"
+              value={draft.daysToMaturity !== undefined ? String(draft.daysToMaturity) : ''}
+              onChangeText={onDaysChange}
+            />
+
+            <Text style={styles.pruningTipsLabel}>Season suitability</Text>
+            <View style={styles.seasonPillRow}>
+              {GROWING_SEASON_OPTIONS.map((option) => (
+                <SeasonPill
+                  key={option.value}
+                  label={option.label}
+                  value={option.value}
+                  active={(draft.seasonSuitability ?? []).includes(option.value)}
+                  onToggle={onToggleSeason}
+                />
+              ))}
+            </View>
+
+            <FloatingLabelInput
+              label="Seed source (e.g. TNAU, saved seed)"
+              value={draft.seedSource ?? ''}
+              onChangeText={onSeedSourceChange}
               autoCorrect={false}
             />
-          )}
 
-          <FloatingLabelInput
-            label="Days to maturity"
-            keyboardType="numeric"
-            value={draft.daysToMaturity !== undefined ? String(draft.daysToMaturity) : ''}
-            onChangeText={onDaysChange}
-          />
-
-          <Text style={styles.pruningTipsLabel}>Season suitability</Text>
-          <View style={styles.seasonPillRow}>
-            {GROWING_SEASON_OPTIONS.map((option) => (
-              <SeasonPill
-                key={option.value}
-                label={option.label}
-                value={option.value}
-                active={(draft.seasonSuitability ?? []).includes(option.value)}
-                onToggle={onToggleSeason}
-              />
-            ))}
-          </View>
-
-          <FloatingLabelInput
-            label="Seed source (e.g. TNAU, saved seed)"
-            value={draft.seedSource ?? ''}
-            onChangeText={onSeedSourceChange}
-            autoCorrect={false}
-          />
-
-          <Text style={styles.pruningTipsLabel}>Notes</Text>
-          <VoiceDictation value={draft.notes ?? ''} onChangeText={onNotesChange} />
-          <TextInput
-            style={styles.varietyNotesInput}
-            value={draft.notes ?? ''}
-            onChangeText={onNotesChange}
-            multiline
-            numberOfLines={3}
-            placeholder="Farmer observations, soil preference, yield notes..."
-            placeholderTextColor={theme.textTertiary}
-          />
+            <Text style={styles.pruningTipsLabel}>Notes</Text>
+            <VoiceDictation value={draft.notes ?? ''} onChangeText={onNotesChange} />
+            <TextInput
+              style={styles.varietyNotesInput}
+              value={draft.notes ?? ''}
+              onChangeText={onNotesChange}
+              multiline
+              numberOfLines={3}
+              placeholder="Farmer observations, soil preference, yield notes..."
+              placeholderTextColor={theme.textTertiary}
+            />
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>

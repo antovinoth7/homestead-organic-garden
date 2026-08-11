@@ -9,6 +9,13 @@ import { createStyles } from '@/styles/pestDiseaseDetailStyles';
 import { getRiskColor } from '@/utils/riskHelpers';
 import type { RiskLevel } from '@/types/database.types';
 
+/** Caption pill for screens that have no seasonal risk to show. */
+export interface HeroBadge {
+  label: string;
+  bg: string;
+  color: string;
+}
+
 interface Props {
   name: string;
   subtitle: string;
@@ -16,10 +23,14 @@ interface Props {
   image?: ImageSource;
   /** Current-season risk; omitted when nothing is recorded for this season. */
   risk?: RiskLevel;
+  /** Generic caption pill, used when `risk` does not apply. `risk` wins. */
+  badge?: HeroBadge;
   topInset: number;
   onBack: () => void;
   /** Opens the fullscreen preview. Omit to leave the image non-interactive. */
   onPressImage?: () => void;
+  /** Action rendered opposite the back button (e.g. the catalog's Save). */
+  headerRight?: React.ReactNode;
 }
 
 /**
@@ -33,15 +44,22 @@ export function ReferenceHero({
   emoji,
   image,
   risk,
+  badge,
   topInset,
   onBack,
   onPressImage,
+  headerRight,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [scrimWidth, setScrimWidth] = useState(0);
 
   const riskColors = risk ? getRiskColor(risk, theme) : undefined;
+  // A seasonal risk is the more specific signal, so it wins over a plain badge.
+  const pill =
+    risk && riskColors
+      ? { label: `${risk.toUpperCase()} RISK NOW`, bg: riskColors.bg, color: riskColors.text }
+      : badge;
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     setScrimWidth(event.nativeEvent.layout.width);
@@ -96,12 +114,14 @@ export function ReferenceHero({
         <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
       </TouchableOpacity>
 
+      {headerRight ? (
+        <View style={[styles.heroHeaderRight, { top: topInset + 10 }]}>{headerRight}</View>
+      ) : null}
+
       <View style={styles.heroCaption} pointerEvents="none">
-        {risk && riskColors ? (
-          <View style={[styles.heroRiskPill, { backgroundColor: riskColors.bg }]}>
-            <Text style={[styles.heroRiskPillText, { color: riskColors.text }]}>
-              {risk.toUpperCase()} RISK NOW
-            </Text>
+        {pill ? (
+          <View style={[styles.heroRiskPill, { backgroundColor: pill.bg }]}>
+            <Text style={[styles.heroRiskPillText, { color: pill.color }]}>{pill.label}</Text>
           </View>
         ) : null}
         <Text style={styles.heroTitle} numberOfLines={2}>
