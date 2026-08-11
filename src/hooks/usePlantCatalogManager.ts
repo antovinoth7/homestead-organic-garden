@@ -27,6 +27,8 @@ export interface UsePlantCatalogManagerReturn {
   reload: () => Promise<void>;
   /** Total catalog plant count per category — drives pill badges. */
   allCategoryCounts: Record<PlantType, number>;
+  /** Garden-plant counts keyed by category then variety name — feeds search. */
+  plantCountsByType: Record<PlantType, Record<string, number>>;
 }
 
 export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
@@ -100,5 +102,6 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     categoryData,
     reload,
     allCategoryCounts,
+    plantCountsByType,
   };
 }

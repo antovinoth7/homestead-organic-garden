@@ -1,5 +1,9 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { MONO_FONT } from './typography';
+
+/** Fixed row height for the browse list, so FlatList can skip measurement. */
+export const CATALOG_ROW_HEIGHT = 56;
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -44,6 +48,33 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.textSecondary,
     },
+
+    // ---- Search bar -------------------------------------------------------
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 4,
+      paddingHorizontal: 14,
+      minHeight: 46,
+      borderRadius: 16,
+      backgroundColor: theme.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    searchBarActive: {
+      borderColor: theme.primary,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 15,
+      color: theme.inputText,
+      paddingVertical: 0,
+    },
+
+    // ---- Category pills ---------------------------------------------------
     categoryScroll: {
       marginBottom: 8,
     },
@@ -98,56 +129,163 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     categoryPillBadgeTextActive: {
       color: theme.textInverse,
     },
+
+    // ---- List -------------------------------------------------------------
     contentWrapper: {
       flex: 1,
     },
-    content: {
-      padding: 16,
+    listContent: {
+      paddingHorizontal: 16,
+    },
+    listCard: {
+      backgroundColor: theme.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: theme.border,
+      overflow: 'hidden',
+    },
+    listCardFirst: {
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
+    },
+    listCardLast: {
+      borderBottomLeftRadius: 12,
+      borderBottomRightRadius: 12,
+      marginBottom: 16,
     },
     plantRowCompact: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 16,
       paddingVertical: 10,
-      backgroundColor: theme.backgroundSecondary,
-      minHeight: 48,
-    },
-    plantEmoji: {
-      fontSize: 18,
-      width: 24,
-      textAlign: 'center',
-      marginRight: 10,
+      minHeight: CATALOG_ROW_HEIGHT,
     },
     plantThumbWrap: {
       marginRight: 10,
+    },
+    plantInfo: {
+      flex: 1,
+      minWidth: 0,
+    },
+    plantName: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.text,
     },
     plantCountChip: {
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 10,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
+      backgroundColor: theme.primaryLight,
       marginRight: 4,
     },
     plantCountChipText: {
+      fontFamily: MONO_FONT,
       fontSize: 11,
-      color: theme.textTertiary,
+      color: theme.primary,
       fontWeight: '600',
     },
     rowDivider: {
-      height: 1,
+      height: StyleSheet.hairlineWidth,
       backgroundColor: theme.borderLight,
       marginLeft: 50,
     },
-    listCard: {
+    emptyText: {
+      fontSize: 13,
+      color: theme.textTertiary,
+      fontStyle: 'italic',
+      textAlign: 'center',
+      paddingVertical: 32,
+    },
+
+    // ---- Search results ---------------------------------------------------
+    sectionLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 8,
+      marginTop: 12,
+      marginBottom: 8,
+    },
+    sectionLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+      color: theme.textSecondary,
+    },
+    sectionLabelCount: {
+      fontFamily: MONO_FONT,
+      fontSize: 12,
+      color: theme.textTertiary,
+    },
+    resultSub: {
+      fontSize: 11.5,
+      color: theme.textTertiary,
+      marginTop: 2,
+    },
+    resultHighlight: {
+      backgroundColor: theme.accentLight,
+      color: theme.warningDark,
+      fontWeight: '700',
+    },
+
+    // ---- Recent searches --------------------------------------------------
+    recentHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 20,
+      marginBottom: 8,
+    },
+    recentClearText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.primary,
+    },
+    recentChipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    recentChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 20,
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
       borderWidth: 1,
       borderColor: theme.border,
-      overflow: 'hidden',
-      marginBottom: 16,
     },
+    recentChipText: {
+      fontSize: 13,
+      color: theme.text,
+    },
+
+    // ---- "Add as new plant" call to action --------------------------------
+    createCta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 20,
+      marginBottom: 24,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: theme.primaryLight,
+    },
+    createCtaText: {
+      flex: 1,
+      fontSize: 13,
+      lineHeight: 18,
+      color: theme.primary,
+    },
+    createCtaStrong: {
+      fontWeight: '700',
+      textDecorationLine: 'underline',
+    },
+
+    // ---- FAB --------------------------------------------------------------
     fab: {
       position: 'absolute',
       right: 16,
@@ -162,376 +300,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       shadowOpacity: 0.22,
       shadowRadius: 8,
       elevation: 6,
-    },
-
-    section: {
-      marginBottom: 24,
-    },
-
-    actionSheetOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'flex-end',
-    },
-    actionSheet: {
-      backgroundColor: theme.backgroundSecondary,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      paddingTop: 12,
-      paddingHorizontal: 16,
-      borderTopWidth: 1,
-      borderColor: theme.border,
-    },
-    actionSheetHandle: {
-      width: 36,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.border,
-      alignSelf: 'center',
-      marginBottom: 16,
-    },
-    actionSheetTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.text,
-      marginBottom: 12,
-      paddingHorizontal: 4,
-    },
-    actionSheetItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 14,
-      paddingVertical: 14,
-      borderTopWidth: 1,
-      borderTopColor: theme.border,
-    },
-    actionSheetItemDanger: {
-      borderTopWidth: 1,
-      borderTopColor: theme.border,
-    },
-    actionSheetItemText: {
-      fontSize: 16,
-      color: theme.text,
-      fontWeight: '500',
-    },
-    actionSheetItemTextDanger: {
-      color: theme.error,
-    },
-    plantInfo: {
-      flex: 1,
-    },
-    addRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 12,
-    },
-    input: {
-      flex: 1,
-      backgroundColor: theme.inputBackground,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      paddingHorizontal: 14,
-      height: 44,
-      fontSize: 16,
-      color: theme.inputText,
-      textAlignVertical: 'center',
-    },
-    addButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.primary,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 12,
-      gap: 6,
-    },
-    addButtonText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.textInverse,
-    },
-    plantName: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.text,
-    },
-    plantMeta: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      marginTop: 4,
-    },
-    plantActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginLeft: 12,
-    },
-    iconButton: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: theme.background,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    emptyText: {
-      fontSize: 13,
-      color: theme.textTertiary,
-      fontStyle: 'italic',
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'flex-end',
-    },
-    modalHandle: {
-      width: 36,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.border,
-      alignSelf: 'center',
-      marginBottom: 16,
-    },
-    modalContent: {
-      width: '100%',
-      backgroundColor: theme.backgroundSecondary,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      padding: 20,
-      paddingBottom: 32,
-      borderTopWidth: 1,
-      borderLeftWidth: 1,
-      borderRightWidth: 1,
-      borderColor: theme.border,
-    },
-    careModalContent: {
-      maxHeight: '85%',
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    closeButton: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    modalTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    modalHint: {
-      fontSize: 13,
-      color: theme.textSecondary,
-      marginBottom: 12,
-    },
-    modalInput: {
-      backgroundColor: theme.inputBackground,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      paddingHorizontal: 14,
-      height: 44,
-      fontSize: 16,
-      color: theme.inputText,
-      textAlignVertical: 'center',
-    },
-    modalScroll: {
-      marginBottom: 12,
-    },
-    modalScrollContent: {
-      paddingBottom: 4,
-    },
-    careStatus: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingVertical: 6,
-      marginBottom: 12,
-    },
-    careStatusText: {
-      fontSize: 13,
-      color: theme.textSecondary,
-      fontWeight: '600',
-    },
-    formSection: {
-      backgroundColor: theme.background,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      padding: 12,
-      marginBottom: 12,
-    },
-    formSectionTitle: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: theme.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.6,
-      marginBottom: 10,
-    },
-    fieldGroup: {
-      marginBottom: 10,
-    },
-    fieldGroupLast: {
-      marginBottom: 0,
-    },
-    modalActions: {
-      flexDirection: 'row',
-      gap: 12,
-      marginTop: 8,
-    },
-    modalButton: {
-      flex: 1,
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderRadius: 10,
-    },
-    modalButtonSecondary: {
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    modalButtonPrimary: {
-      backgroundColor: theme.primary,
-    },
-    modalButtonDanger: {
-      backgroundColor: theme.error,
-    },
-    modalButtonTextSecondary: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-    modalButtonTextPrimary: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.textInverse,
-    },
-    fieldLabel: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.text,
-      marginBottom: 6,
-    },
-    careInput: {
-      backgroundColor: theme.inputBackground,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      paddingHorizontal: 14,
-      height: 44,
-      fontSize: 16,
-      color: theme.inputText,
-      textAlignVertical: 'center',
-    },
-
-    reassignList: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      marginBottom: 12,
-    },
-    reassignItem: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    reassignItemActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    reassignText: {
-      fontSize: 13,
-      color: theme.textSecondary,
-      fontWeight: '600',
-    },
-    reassignTextActive: {
-      color: theme.primary,
-    },
-    varietyChips: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      marginBottom: 12,
-    },
-    varietyChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 16,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    varietyChipText: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      fontWeight: '600',
-    },
-    resetButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      marginTop: 8,
-      paddingVertical: 8,
-    },
-    resetButtonText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-
-    pruningTipsLabel: {
-      fontSize: 12,
-      color: theme.textTertiary,
-      marginBottom: 6,
-    },
-    pruningTipsInput: {
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-      borderRadius: 8,
-      padding: 10,
-      minHeight: 80,
-      color: theme.text,
-      fontSize: 14,
-      textAlignVertical: 'top',
-      backgroundColor: theme.backgroundSecondary,
-    },
-    chipRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    chip: {
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 12,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    chipText: {
-      fontSize: 12,
-      color: theme.textSecondary,
     },
   });
