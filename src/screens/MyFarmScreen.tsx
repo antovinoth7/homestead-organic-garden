@@ -200,22 +200,23 @@ function SectionTile({
         <Text style={styles.sectionTileName} numberOfLines={2}>
           {name}
         </Text>
-        <View style={styles.sectionTileActions}>
+        {/* Same stacked pair as a plot card, so both tiles read alike. */}
+        <View style={styles.plotActions}>
           <TouchableOpacity
-            style={styles.sectionTileEdit}
+            style={styles.editButton}
             onPress={handleEdit}
             accessibilityRole="button"
             accessibilityLabel={`Rename ${name}`}
           >
-            <Ionicons name="create-outline" size={13} color={theme.primary} />
+            <Ionicons name="create-outline" size={16} color={theme.primary} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.sectionTileDelete}
+            style={styles.deleteButton}
             onPress={handleDelete}
             accessibilityRole="button"
             accessibilityLabel={`Delete ${name}`}
           >
-            <Ionicons name="trash-outline" size={13} color={theme.error} />
+            <Ionicons name="trash-outline" size={16} color={theme.error} />
           </TouchableOpacity>
         </View>
       </View>

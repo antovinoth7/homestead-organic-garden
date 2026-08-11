@@ -204,23 +204,6 @@ export const createStyles = (theme: Theme) =>
       color: theme.text,
       lineHeight: 17,
     },
-    sectionTileActions: { flexDirection: 'row', gap: 6 },
-    sectionTileEdit: {
-      width: 26,
-      height: 26,
-      borderRadius: 9,
-      backgroundColor: theme.backgroundTertiary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    sectionTileDelete: {
-      width: 26,
-      height: 26,
-      borderRadius: 9,
-      backgroundColor: theme.errorLight,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
     sectionTileCount: {
       fontSize: 11.5,
       color: theme.textSecondary,
