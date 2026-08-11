@@ -5,10 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
 import { useTheme } from '@/theme';
 import type { Theme } from '@/theme/colors';
-import { DrainageQuality, NutrientLevel } from '@/types/database.types';
+import { DrainageQuality, LocationProfile, NutrientLevel } from '@/types/database.types';
 import { createStyles } from '@/styles/myFarmStyles';
 import FieldLabelWithHelp from '@/components/FieldLabelWithHelp';
-import { LocationEditModal } from '@/components/modals/LocationEditModal';
+import { PlotEditModal } from '@/components/modals/PlotEditModal';
+import { SectionEditSheet } from '@/components/modals/SectionEditSheet';
 import { LocationReassignModal } from '@/components/modals/LocationReassignModal';
 import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import { useLocationManager, hasSoilData } from '@/hooks/useLocationManager';
@@ -41,6 +42,170 @@ const formatCoord = (lat: number, lng: number): string => {
   const lngDir = lng >= 0 ? 'E' : 'W';
   return `${Math.abs(lat).toFixed(2)}°${latDir} ${Math.abs(lng).toFixed(2)}°${lngDir}`;
 };
+
+const plantCountLabel = (count: number, loading: boolean): string =>
+  loading ? 'Counting plants…' : `${count} plant${count === 1 ? '' : 's'}`;
+
+type Styles = ReturnType<typeof createStyles>;
+
+interface PlotCardProps {
+  name: string;
+  shortName: string;
+  profile: LocationProfile | undefined;
+  count: number;
+  plantsLoading: boolean;
+  styles: Styles;
+  theme: Theme;
+  onEdit: (name: string) => void;
+  onDelete: (name: string) => void;
+}
+
+/** One farm plot: short-name avatar, size, plant count, and a soil chip strip. */
+function PlotCard({
+  name,
+  shortName,
+  profile,
+  count,
+  plantsLoading,
+  styles,
+  theme,
+  onEdit,
+  onDelete,
+}: PlotCardProps): React.JSX.Element {
+  const handleEdit = useCallback(() => onEdit(name), [onEdit, name]);
+  const handleDelete = useCallback(() => onDelete(name), [onDelete, name]);
+
+  const hasSize = (profile?.land_cents ?? 0) > 0;
+  const hasCoords = profile?.latitude != null && profile?.longitude != null;
+  const hasNpk = !!(profile?.nitrogenLevel || profile?.phosphorusLevel || profile?.potassiumLevel);
+  const showChips = hasSoilData(profile) || hasCoords;
+
+  return (
+    <View style={styles.plotCard}>
+      <View style={styles.plotAvatar}>
+        <Text style={styles.plotAvatarText}>{shortName || name.slice(0, 3).toUpperCase()}</Text>
+      </View>
+
+      <View style={styles.plotBody}>
+        <View style={styles.plotTitleRow}>
+          <Text style={styles.plotName} numberOfLines={1}>
+            {name}
+          </Text>
+          {hasSize && <Text style={styles.plotCents}>{profile?.land_cents} cents</Text>}
+        </View>
+        <Text style={styles.plotMeta}>{plantCountLabel(count, plantsLoading)}</Text>
+
+        {showChips && (
+          <View style={styles.chipStrip}>
+            {profile?.soilPH != null && (
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>pH {profile.soilPH.toFixed(1)}</Text>
+              </View>
+            )}
+            {profile?.drainageQuality && (
+              <View style={styles.chip}>
+                <View
+                  style={[
+                    styles.npkDot,
+                    { backgroundColor: deriveDrainageColor(profile.drainageQuality, theme) },
+                  ]}
+                />
+                <Text style={styles.chipText}>{profile.drainageQuality}</Text>
+              </View>
+            )}
+            {hasNpk && (
+              <View style={styles.chip}>
+                <View style={styles.npkDotRow}>
+                  <View
+                    style={[
+                      styles.npkDot,
+                      { backgroundColor: deriveNpkColor(profile?.nitrogenLevel, theme) },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.npkDot,
+                      { backgroundColor: deriveNpkColor(profile?.phosphorusLevel, theme) },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.npkDot,
+                      { backgroundColor: deriveNpkColor(profile?.potassiumLevel, theme) },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.chipText}>NPK</Text>
+              </View>
+            )}
+            {hasCoords && (
+              <View style={styles.coordChip}>
+                <Ionicons name="location" size={10} color={theme.primary} />
+                <Text style={styles.coordChipText}>
+                  {formatCoord(profile!.latitude!, profile!.longitude!)}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.plotActions}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={handleEdit}
+          accessibilityRole="button"
+          accessibilityLabel={`Edit ${name}`}
+        >
+          <Ionicons name="create-outline" size={16} color={theme.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDelete}
+          accessibilityRole="button"
+          accessibilityLabel={`Delete ${name}`}
+        >
+          <Ionicons name="trash-outline" size={16} color={theme.error} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+interface SectionTileProps {
+  name: string;
+  count: number;
+  plantsLoading: boolean;
+  styles: Styles;
+  theme: Theme;
+  onEdit: (name: string) => void;
+}
+
+/** One section tile in the two-up grid. Delete lives inside the rename sheet. */
+function SectionTile({
+  name,
+  count,
+  plantsLoading,
+  styles,
+  theme,
+  onEdit,
+}: SectionTileProps): React.JSX.Element {
+  const handleEdit = useCallback(() => onEdit(name), [onEdit, name]);
+
+  return (
+    <TouchableOpacity style={styles.sectionTile} onPress={handleEdit} activeOpacity={0.8}>
+      <View style={styles.sectionTileTop}>
+        <Text style={styles.sectionTileName} numberOfLines={2}>
+          {name}
+        </Text>
+        <View style={styles.sectionTileEdit}>
+          <Ionicons name="create-outline" size={13} color={theme.primary} />
+        </View>
+      </View>
+      <Text style={styles.sectionTileCount}>{plantCountLabel(count, plantsLoading)}</Text>
+    </TouchableOpacity>
+  );
+}
 
 export default function MyFarmScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -94,30 +259,79 @@ export default function MyFarmScreen(): React.JSX.Element {
     [setEditModal]
   );
 
-  const onChangeTab = useCallback(
-    (tab: 'name' | 'plot' | 'soil') =>
-      setEditModal((prev) => (prev ? { ...prev, activeTab: tab } : prev)),
-    [setEditModal]
-  );
-
   const onReplacementChange = useCallback(
     (value: string) => setReassignModal((prev) => (prev ? { ...prev, replacement: value } : prev)),
     [setReassignModal]
   );
+
+  const handleBack = useCallback(() => navigation.goBack(), [navigation]);
+  const closeEditModal = useCallback(() => setEditModal(null), [setEditModal]);
+  const closeReassignModal = useCallback(() => setReassignModal(null), [setReassignModal]);
+  const closeDeleteConfirm = useCallback(() => setDeleteConfirm(null), [setDeleteConfirm]);
+
+  const handleAddPlot = useCallback(
+    () =>
+      setEditModal({ type: 'parent', original: '', value: '', shortName: '', profile: {} }),
+    [setEditModal]
+  );
+
+  const handleEditPlot = useCallback(
+    (location: string) =>
+      setEditModal({
+        type: 'parent',
+        original: location,
+        value: location,
+        shortName: shortNames[location] ?? '',
+        profile: locationProfiles[location] ?? {},
+      }),
+    [setEditModal, shortNames, locationProfiles]
+  );
+
+  const handleDeletePlot = useCallback(
+    (location: string) => handleDeleteRequest('parent', location),
+    [handleDeleteRequest]
+  );
+
+  const handleAddSection = useCallback(
+    () => setEditModal({ type: 'child', original: '', value: '' }),
+    [setEditModal]
+  );
+
+  const handleEditSection = useCallback(
+    (location: string) => setEditModal({ type: 'child', original: location, value: location }),
+    [setEditModal]
+  );
+
+  // Both editors hand delete back to the shared request flow, which routes an
+  // in-use location to the reassign modal rather than a plain confirm.
+  const handleDeleteFromEditor = useCallback(() => {
+    const target = editModal;
+    if (!target || target.original === '') return;
+    setEditModal(null);
+    handleDeleteRequest(target.type, target.original);
+  }, [editModal, setEditModal, handleDeleteRequest]);
 
   const totalCents = useMemo(() => calcCapacityFromProfiles(locationProfiles), [locationProfiles]);
   const usableSqm = useMemo(() => calcUsableSqm(totalCents), [totalCents]);
   const maxBeds = useMemo(() => calcMaxBeds(usableSqm), [usableSqm]);
   const hasAnySize = totalCents > 0;
 
+  const plotsSubtitle = `${parentLocations.length} plot${
+    parentLocations.length === 1 ? '' : 's'
+  } · tap ✎ to open`;
+
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="chevron-back" size={20} color={theme.textInverse} />
         </TouchableOpacity>
         <Text style={styles.title}>My Farm</Text>
-        <View style={styles.headerSpacer} />
       </View>
 
       {loading ? (
@@ -133,285 +347,164 @@ export default function MyFarmScreen(): React.JSX.Element {
           contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
         >
           {/* ── Farm Plots (parent) ── */}
-          <View>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionHeaderText}>
-                <FieldLabelWithHelp
-                  label="Farm Plots"
-                  helpText={LOCATION_HELP.parentLocations}
-                  helpLabel="Farm Plots"
-                  style={styles.sectionTitleRow}
-                  labelStyle={styles.sectionTitle}
-                />
-              </View>
-              <TouchableOpacity
-                style={styles.sectionAddButton}
-                onPress={() =>
-                  setEditModal({
-                    type: 'parent',
-                    original: '',
-                    value: '',
-                    shortName: '',
-                    profile: {},
-                    activeTab: 'name',
-                  })
-                }
-                disabled={saving}
-              >
-                <Ionicons name="add" size={22} color="#fff" />
-              </TouchableOpacity>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderText}>
+              <FieldLabelWithHelp
+                label="Farm plots"
+                helpText={LOCATION_HELP.parentLocations}
+                helpLabel="Farm plots"
+                style={styles.sectionTitleRow}
+                labelStyle={styles.sectionTitle}
+              />
+              {parentLocations.length > 0 && (
+                <Text style={styles.sectionSubtitle}>{plotsSubtitle}</Text>
+              )}
             </View>
-
-            {/* Aggregate capacity */}
-            {hasAnySize ? (
-              <View style={styles.capacityRow}>
-                <View style={styles.capacityStat}>
-                  <Text style={styles.capacityValue}>{totalCents}</Text>
-                  <Text style={styles.capacityLabel}>cents total</Text>
-                </View>
-                <View style={styles.capacityStat}>
-                  <Text style={styles.capacityValue}>{usableSqm}</Text>
-                  <Text style={styles.capacityLabel}>sqm usable</Text>
-                </View>
-                <View style={styles.capacityStat}>
-                  <Text style={styles.capacityValue}>{maxBeds}</Text>
-                  <Text style={styles.capacityLabel}>max beds</Text>
-                </View>
-              </View>
-            ) : (
-              parentLocations.length > 0 && (
-                <Text style={styles.capacityEmpty}>
-                  Add land area in a plot&apos;s Plot tab to see capacity.
-                </Text>
-              )
-            )}
-
-            {parentLocations.length === 0 ? (
-              <View style={styles.emptyStateCard}>
-                <Ionicons
-                  name="map-outline"
-                  size={36}
-                  color={theme.textTertiary}
-                  style={styles.emptyStateIcon}
-                />
-                <Text style={styles.emptyStateTitle}>No farm plots yet</Text>
-                <Text style={styles.emptyStateSubtitle}>
-                  Tap + to add your first plot, like &apos;Kanyakumari Field&apos; or
-                  &apos;Backyard&apos;.
-                </Text>
-              </View>
-            ) : (
-              parentLocations.map((location) => {
-                const profile = locationProfiles[location];
-                const showSoilStrip = hasSoilData(profile);
-                const hasSize = (profile?.land_cents ?? 0) > 0;
-                const hasCoords = profile?.latitude != null && profile?.longitude != null;
-                return (
-                  <View key={location} style={styles.locationRow}>
-                    <View style={styles.locationInfo}>
-                      <View style={styles.locationNameRow}>
-                        <Text style={styles.locationName}>{location}</Text>
-                        {shortNames[location] ? (
-                          <View style={styles.shortNameBadge}>
-                            <Text style={styles.shortNameBadgeText}>{shortNames[location]}</Text>
-                          </View>
-                        ) : null}
-                        {hasSize && (
-                          <View style={styles.sizeBadge}>
-                            <Text style={styles.sizeBadgeText}>{profile!.land_cents} cents</Text>
-                          </View>
-                        )}
-                        {hasCoords && (
-                          <View style={styles.coordBadge}>
-                            <Ionicons name="location" size={10} color={theme.primary} />
-                            <Text style={styles.coordBadgeText}>
-                              {formatCoord(profile!.latitude!, profile!.longitude!)}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.locationMeta}>
-                        {plantsLoading
-                          ? 'Counting plants…'
-                          : `${parentCounts[location] || 0} plant${
-                              (parentCounts[location] || 0) === 1 ? '' : 's'
-                            }`}
-                      </Text>
-                      {showSoilStrip && (
-                        <View style={styles.profileSummaryStrip}>
-                          {profile?.soilPH != null && (
-                            <View style={styles.profileBadge}>
-                              <Text style={styles.profileBadgeText}>
-                                pH {profile.soilPH.toFixed(1)}
-                              </Text>
-                            </View>
-                          )}
-                          {profile?.drainageQuality && (
-                            <View style={styles.profileBadge}>
-                              <Ionicons
-                                name="water-outline"
-                                size={10}
-                                color={deriveDrainageColor(profile.drainageQuality, theme)}
-                              />
-                              <Text style={styles.profileBadgeText}>{profile.drainageQuality}</Text>
-                            </View>
-                          )}
-                          {(profile?.nitrogenLevel ||
-                            profile?.phosphorusLevel ||
-                            profile?.potassiumLevel) && (
-                            <View style={styles.profileBadge}>
-                              <View style={styles.npkDotRow}>
-                                <View
-                                  style={[
-                                    styles.npkDot,
-                                    {
-                                      backgroundColor: deriveNpkColor(
-                                        profile?.nitrogenLevel,
-                                        theme
-                                      ),
-                                    },
-                                  ]}
-                                />
-                                <View
-                                  style={[
-                                    styles.npkDot,
-                                    {
-                                      backgroundColor: deriveNpkColor(
-                                        profile?.phosphorusLevel,
-                                        theme
-                                      ),
-                                    },
-                                  ]}
-                                />
-                                <View
-                                  style={[
-                                    styles.npkDot,
-                                    {
-                                      backgroundColor: deriveNpkColor(
-                                        profile?.potassiumLevel,
-                                        theme
-                                      ),
-                                    },
-                                  ]}
-                                />
-                              </View>
-                              <Text style={styles.profileBadgeText}>NPK</Text>
-                            </View>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.locationActions}>
-                      <TouchableOpacity
-                        style={styles.iconButton}
-                        onPress={() =>
-                          setEditModal({
-                            type: 'parent',
-                            original: location,
-                            value: location,
-                            shortName: shortNames[location] ?? '',
-                            profile: locationProfiles[location] ?? {},
-                            activeTab: 'name',
-                          })
-                        }
-                      >
-                        <Ionicons name="create-outline" size={18} color={theme.primary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.iconButton}
-                        onPress={() => handleDeleteRequest('parent', location)}
-                      >
-                        <Ionicons name="trash-outline" size={18} color={theme.error} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              })
-            )}
+            <TouchableOpacity
+              style={styles.sectionAddButton}
+              onPress={handleAddPlot}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Add farm plot"
+            >
+              <Ionicons name="add" size={22} color={theme.textInverse} />
+            </TouchableOpacity>
           </View>
+
+          {/* Aggregate capacity */}
+          {hasAnySize ? (
+            <View style={styles.capacityRow}>
+              <View style={styles.capacityStat}>
+                <Text style={styles.capacityValue}>{totalCents}</Text>
+                <Text style={styles.capacityLabel}>cents total</Text>
+              </View>
+              <View style={styles.capacityStat}>
+                <Text style={styles.capacityValue}>{usableSqm}</Text>
+                <Text style={styles.capacityLabel}>sqm usable</Text>
+              </View>
+              <View style={styles.capacityStat}>
+                <Text style={styles.capacityValue}>{maxBeds}</Text>
+                <Text style={styles.capacityLabel}>max beds</Text>
+              </View>
+            </View>
+          ) : (
+            parentLocations.length > 0 && (
+              <Text style={styles.capacityEmpty}>
+                Set a plot&apos;s size to see how much you can grow.
+              </Text>
+            )
+          )}
+
+          {parentLocations.length === 0 ? (
+            <View style={styles.emptyStateCard}>
+              <Ionicons
+                name="map-outline"
+                size={36}
+                color={theme.textTertiary}
+                style={styles.emptyStateIcon}
+              />
+              <Text style={styles.emptyStateTitle}>No farm plots yet</Text>
+              <Text style={styles.emptyStateSubtitle}>
+                Tap + to add your first plot, like &apos;Kanyakumari Field&apos; or
+                &apos;Backyard&apos;.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.plotList}>
+              {parentLocations.map((location) => (
+                <PlotCard
+                  key={location}
+                  name={location}
+                  shortName={shortNames[location] ?? ''}
+                  profile={locationProfiles[location]}
+                  count={parentCounts[location] || 0}
+                  plantsLoading={plantsLoading}
+                  styles={styles}
+                  theme={theme}
+                  onEdit={handleEditPlot}
+                  onDelete={handleDeletePlot}
+                />
+              ))}
+            </View>
+          )}
 
           {/* ── Sections / Directions (child) ── */}
-          <View style={styles.childSection}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionHeaderText}>
-                <FieldLabelWithHelp
-                  label="Sections / Directions"
-                  helpText={LOCATION_HELP.childLocations}
-                  helpLabel="Sections / Directions"
-                  style={styles.sectionTitleRow}
-                  labelStyle={styles.sectionTitle}
-                />
-              </View>
-              <TouchableOpacity
-                style={styles.sectionAddButton}
-                onPress={() => setEditModal({ type: 'child', original: '', value: '' })}
-                disabled={saving}
-              >
-                <Ionicons name="add" size={22} color="#fff" />
-              </TouchableOpacity>
+          <View style={[styles.sectionHeader, styles.sectionHeaderSpaced]}>
+            <View style={styles.sectionHeaderText}>
+              <FieldLabelWithHelp
+                label="Sections / directions"
+                helpText={LOCATION_HELP.childLocations}
+                helpLabel="Sections / directions"
+                style={styles.sectionTitleRow}
+                labelStyle={styles.sectionTitle}
+              />
+              <Text style={styles.sectionSubtitle}>Shared across every plot</Text>
             </View>
-
-            {childLocations.length === 0 ? (
-              <View style={styles.emptyStateCard}>
-                <Ionicons
-                  name="compass-outline"
-                  size={36}
-                  color={theme.textTertiary}
-                  style={styles.emptyStateIcon}
-                />
-                <Text style={styles.emptyStateTitle}>No sections yet</Text>
-                <Text style={styles.emptyStateSubtitle}>
-                  Add directions or zones like &quot;North&quot;, &quot;South&quot;, or
-                  &quot;Front&quot;.
-                </Text>
-              </View>
-            ) : (
-              childLocations.map((location) => (
-                <View key={location} style={styles.locationRow}>
-                  <View style={styles.locationInfo}>
-                    <Text style={styles.locationName}>{location}</Text>
-                    <Text style={styles.locationMeta}>
-                      {plantsLoading
-                        ? 'Counting plants…'
-                        : `${childCounts[location] || 0} plant${
-                            (childCounts[location] || 0) === 1 ? '' : 's'
-                          }`}
-                    </Text>
-                  </View>
-                  <View style={styles.locationActions}>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={() =>
-                        setEditModal({ type: 'child', original: location, value: location })
-                      }
-                    >
-                      <Ionicons name="create-outline" size={18} color={theme.primary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={() => handleDeleteRequest('child', location)}
-                    >
-                      <Ionicons name="trash-outline" size={18} color={theme.error} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
-            )}
+            <TouchableOpacity
+              style={styles.sectionAddButton}
+              onPress={handleAddSection}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Add section"
+            >
+              <Ionicons name="add" size={22} color={theme.textInverse} />
+            </TouchableOpacity>
           </View>
+
+          {childLocations.length === 0 ? (
+            <View style={styles.emptyStateCard}>
+              <Ionicons
+                name="compass-outline"
+                size={36}
+                color={theme.textTertiary}
+                style={styles.emptyStateIcon}
+              />
+              <Text style={styles.emptyStateTitle}>No sections yet</Text>
+              <Text style={styles.emptyStateSubtitle}>
+                Add directions or zones like &quot;North&quot;, &quot;South&quot;, or
+                &quot;Front&quot;.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.sectionGrid}>
+              {childLocations.map((location) => (
+                <SectionTile
+                  key={location}
+                  name={location}
+                  count={childCounts[location] || 0}
+                  plantsLoading={plantsLoading}
+                  styles={styles}
+                  theme={theme}
+                  onEdit={handleEditSection}
+                />
+              ))}
+            </View>
+          )}
         </ScrollView>
       )}
 
-      <LocationEditModal
+      <PlotEditModal
         editModal={editModal}
         editCount={editCount}
         saving={saving}
         onSave={handleRename}
-        onClose={() => setEditModal(null)}
+        onClose={closeEditModal}
+        onDelete={handleDeleteFromEditor}
         onChangeValue={onChangeValue}
         onChangeShortName={onChangeShortName}
-        onChangeTab={onChangeTab}
         setEditModal={setEditModal}
         updateProfile={updateProfile}
+      />
+
+      <SectionEditSheet
+        editModal={editModal}
+        editCount={editCount}
+        saving={saving}
+        childLocations={childLocations}
+        onSave={handleRename}
+        onClose={closeEditModal}
+        onDelete={handleDeleteFromEditor}
+        onChangeValue={onChangeValue}
       />
 
       <LocationReassignModal
@@ -419,7 +512,7 @@ export default function MyFarmScreen(): React.JSX.Element {
         reassignOptions={reassignOptions}
         reassignCount={reassignCount}
         onConfirm={handleReassignConfirm}
-        onClose={() => setReassignModal(null)}
+        onClose={closeReassignModal}
         onReplacementChange={onReplacementChange}
       />
 
@@ -432,7 +525,7 @@ export default function MyFarmScreen(): React.JSX.Element {
             : ''
         }
         confirmLabel="Delete"
-        onCancel={() => setDeleteConfirm(null)}
+        onCancel={closeDeleteConfirm}
         onConfirm={handleDeleteConfirm}
       />
 

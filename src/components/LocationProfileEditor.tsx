@@ -1,10 +1,7 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { useTheme } from '../theme';
-import VoiceDictation from './VoiceDictation';
-import { createStyles } from '@/styles/locationModalStyles';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { createStyles } from '@/styles/plotEditStyles';
+import { useTheme } from '@/theme';
 import {
   DrainageQuality,
   LocationProfile,
@@ -12,23 +9,12 @@ import {
   NutrientLevel,
   WindExposure,
   WaterSource,
-} from '../types/database.types';
-import { LOCATION_SOIL_TYPES, SOIL_LABELS } from '../utils/plantLabels';
-import { toLocalDateString } from '../utils/dateHelpers';
-
-interface EditModalState {
-  type: 'parent' | 'child';
-  original: string;
-  value: string;
-  shortName?: string;
-  profile?: LocationProfile;
-  activeTab?: 'name' | 'soil' | 'plot';
-  showDatePicker?: boolean;
-}
+} from '@/types/database.types';
+import { LOCATION_SOIL_TYPES, SOIL_LABELS } from '@/utils/plantLabels';
+import type { EditModalState } from '@/hooks/useLocationManager';
 
 interface Props {
   editModal: EditModalState;
-  setEditModal: React.Dispatch<React.SetStateAction<EditModalState | null>>;
   updateProfile: (patch: Partial<LocationProfile>) => void;
 }
 
@@ -68,21 +54,21 @@ const WATER_SOURCE_OPTIONS: { value: WaterSource; label: string }[] = [
   { value: 'mixed', label: 'Mixed' },
 ];
 
-const formatDateDisplay = (isoDate: string): string => {
-  const d = new Date(isoDate);
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-};
+const NPK_FIELDS = [
+  { field: 'nitrogenLevel', letter: 'N' },
+  { field: 'phosphorusLevel', letter: 'P' },
+  { field: 'potassiumLevel', letter: 'K' },
+] as const;
 
-const isSoilTestStale = (isoDate?: string | null): boolean => {
-  if (!isoDate) return false;
-  const tested = new Date(isoDate).getTime();
-  const oneYear = 365 * 24 * 60 * 60 * 1000;
-  return Date.now() - tested > oneYear;
-};
-
+/**
+ * The soil card of the plot editor: pH and soil type as wrapping pills, the
+ * ordinal scales (drainage, moisture, wind, NPK) as full-width segmented
+ * controls so the order reads left-to-right.
+ *
+ * Renders inside `PlotEditModal`'s scroll view — it owns no scroll of its own.
+ */
 export function LocationProfileEditor({
   editModal,
-  setEditModal,
   updateProfile,
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
@@ -90,279 +76,153 @@ export function LocationProfileEditor({
 
   if (editModal.type !== 'parent') return null;
   const profile = editModal.profile ?? {};
-  const isStale = isSoilTestStale(profile.lastSoilTestDate);
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+    <View style={styles.card}>
       {/* pH */}
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>Soil pH</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.profileChipScroll}
-        >
-          <View style={styles.profileChipRow}>
-            {PH_VALUES.map((ph) => {
-              const selected = profile.soilPH === ph;
-              return (
-                <TouchableOpacity
-                  key={ph}
-                  style={[styles.profileChip, selected && styles.profileChipSelected]}
-                  onPress={() => updateProfile({ soilPH: selected ? null : ph })}
-                >
-                  <Text
-                    style={[styles.profileChipText, selected && styles.profileChipTextSelected]}
-                  >
-                    {ph.toFixed(1)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
-      </View>
-
-      <View style={styles.profileSectionDivider} />
-
-      {/* Soil Type */}
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>Soil Type</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.profileChipScroll}
-        >
-          <View style={styles.profileChipRow}>
-            {LOCATION_SOIL_TYPES.map((st) => {
-              const selected = profile.soilType === st;
-              return (
-                <TouchableOpacity
-                  key={st}
-                  style={[styles.profileChip, selected && styles.profileChipSelected]}
-                  onPress={() => updateProfile({ soilType: selected ? null : st })}
-                >
-                  <Text
-                    style={[styles.profileChipText, selected && styles.profileChipTextSelected]}
-                  >
-                    {SOIL_LABELS[st]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
-      </View>
-
-      <View style={styles.profileSectionDivider} />
-
-      {/* Drainage & Moisture */}
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>Drainage</Text>
-        <View style={styles.profileChipRow}>
-          {DRAINAGE_OPTIONS.map(({ value, label }) => {
-            const selected = profile.drainageQuality === value;
-            return (
-              <TouchableOpacity
-                key={value}
-                style={[styles.profileChip, selected && styles.profileChipSelected]}
-                onPress={() => updateProfile({ drainageQuality: selected ? null : value })}
-              >
-                <Text style={[styles.profileChipText, selected && styles.profileChipTextSelected]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>Moisture Retention</Text>
-        <View style={styles.profileChipRow}>
-          {MOISTURE_OPTIONS.map(({ value, label }) => {
-            const selected = profile.moistureRetention === value;
-            return (
-              <TouchableOpacity
-                key={value}
-                style={[styles.profileChip, selected && styles.profileChipSelected]}
-                onPress={() => updateProfile({ moistureRetention: selected ? null : value })}
-              >
-                <Text style={[styles.profileChipText, selected && styles.profileChipTextSelected]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={styles.profileSectionDivider} />
-
-      {/* NPK */}
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>NPK Levels</Text>
-        {(['nitrogenLevel', 'phosphorusLevel', 'potassiumLevel'] as const).map((field, i) => {
-          const letter = ['N', 'P', 'K'][i];
+      <Text style={styles.groupLabel}>Soil pH</Text>
+      <View style={styles.chipWrap}>
+        {PH_VALUES.map((ph) => {
+          const selected = profile.soilPH === ph;
           return (
-            <View key={field} style={styles.profileNpkRow}>
-              <Text style={styles.profileNpkLabel}>{letter}</Text>
-              <View style={styles.profileNpkChips}>
-                {NPK_OPTIONS.map(({ value, label }) => {
-                  const selected = profile[field] === value;
-                  return (
-                    <TouchableOpacity
-                      key={value}
-                      style={[styles.profileNpkChip, selected && styles.profileNpkChipSelected]}
-                      onPress={() => updateProfile({ [field]: selected ? null : value })}
-                    >
-                      <Text
-                        style={[
-                          styles.profileNpkChipText,
-                          selected && styles.profileNpkChipTextSelected,
-                        ]}
-                      >
-                        {label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
+            <TouchableOpacity
+              key={ph}
+              style={[styles.chip, selected && styles.chipSelected]}
+              onPress={() => updateProfile({ soilPH: selected ? null : ph })}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  styles.chipTextMono,
+                  selected && styles.chipTextSelected,
+                ]}
+              >
+                {ph.toFixed(1)}
+              </Text>
+            </TouchableOpacity>
           );
         })}
       </View>
 
-      <View style={styles.profileSectionDivider} />
-
-      {/* Wind & Water Source */}
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>Wind Exposure</Text>
-        <View style={styles.profileChipRow}>
-          {WIND_OPTIONS.map(({ value, label }) => {
-            const selected = profile.windExposure === value;
-            return (
-              <TouchableOpacity
-                key={value}
-                style={[styles.profileChip, selected && styles.profileChipSelected]}
-                onPress={() => updateProfile({ windExposure: selected ? null : value })}
-              >
-                <Text style={[styles.profileChipText, selected && styles.profileChipTextSelected]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+      {/* Soil type */}
+      <Text style={[styles.groupLabel, styles.groupLabelSpaced]}>Soil type</Text>
+      <View style={styles.chipWrap}>
+        {LOCATION_SOIL_TYPES.map((st) => {
+          const selected = profile.soilType === st;
+          return (
+            <TouchableOpacity
+              key={st}
+              style={[styles.chip, selected && styles.chipSelected]}
+              onPress={() => updateProfile({ soilType: selected ? null : st })}
+            >
+              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                {SOIL_LABELS[st]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>Water Source</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.profileChipScroll}
+      {/* Drainage */}
+      <Text style={[styles.groupLabel, styles.groupLabelSpaced]}>Drainage</Text>
+      <View style={styles.segmentRow}>
+        {DRAINAGE_OPTIONS.map(({ value, label }) => {
+          const selected = profile.drainageQuality === value;
+          return (
+            <TouchableOpacity
+              key={value}
+              style={[styles.segment, selected && styles.segmentSelected]}
+              onPress={() => updateProfile({ drainageQuality: selected ? null : value })}
+            >
+              <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Moisture retention */}
+      <Text style={[styles.groupLabel, styles.groupLabelSpaced]}>Moisture retention</Text>
+      <View style={styles.segmentRow}>
+        {MOISTURE_OPTIONS.map(({ value, label }) => {
+          const selected = profile.moistureRetention === value;
+          return (
+            <TouchableOpacity
+              key={value}
+              style={[styles.segment, selected && styles.segmentSelected]}
+              onPress={() => updateProfile({ moistureRetention: selected ? null : value })}
+            >
+              <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* NPK */}
+      <Text style={[styles.groupLabel, styles.groupLabelSpaced]}>NPK levels</Text>
+      {NPK_FIELDS.map(({ field, letter }, i) => (
+        <View
+          key={field}
+          style={[styles.npkRow, i === NPK_FIELDS.length - 1 && styles.npkRowLast]}
         >
-          <View style={styles.profileChipRow}>
-            {WATER_SOURCE_OPTIONS.map(({ value, label }) => {
-              const selected = profile.waterSource === value;
+          <Text style={styles.npkLetter}>{letter}</Text>
+          <View style={styles.npkSegments}>
+            {NPK_OPTIONS.map(({ value, label }) => {
+              const selected = profile[field] === value;
               return (
                 <TouchableOpacity
                   key={value}
-                  style={[styles.profileChip, selected && styles.profileChipSelected]}
-                  onPress={() => updateProfile({ waterSource: selected ? null : value })}
+                  style={[styles.segment, selected && styles.segmentSelected]}
+                  onPress={() => updateProfile({ [field]: selected ? null : value })}
                 >
-                  <Text
-                    style={[styles.profileChipText, selected && styles.profileChipTextSelected]}
-                  >
+                  <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
                     {label}
                   </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
-        </ScrollView>
-      </View>
-
-      <View style={styles.profileSectionDivider} />
-
-      {/* Last Soil Test Date */}
-      <View style={styles.profileSection}>
-        <View style={styles.profileDateCard}>
-          <TouchableOpacity
-            style={styles.profileDateCardTouchable}
-            onPress={() =>
-              setEditModal((prev) => (prev ? { ...prev, showDatePicker: true } : prev))
-            }
-          >
-            <View style={styles.profileDateCardIconWrap}>
-              <Ionicons name="calendar" size={18} color={theme.primary} />
-            </View>
-            <View style={styles.profileDateCardContent}>
-              <Text style={styles.profileDateCardLabel}>Last Soil Test Date</Text>
-              <Text
-                style={
-                  profile.lastSoilTestDate
-                    ? styles.profileDateCardValue
-                    : styles.profileDateCardPlaceholder
-                }
-              >
-                {profile.lastSoilTestDate
-                  ? formatDateDisplay(profile.lastSoilTestDate)
-                  : 'Tap to select date'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-          </TouchableOpacity>
         </View>
-        {isStale && (
-          <Text style={styles.profileStaleDateHint}>
-            Soil test is over 1 year old — consider retesting.
-          </Text>
-        )}
-        {editModal?.showDatePicker && (
-          <DateTimePicker
-            value={profile.lastSoilTestDate ? new Date(profile.lastSoilTestDate) : new Date()}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            maximumDate={new Date()}
-            onChange={(_, selectedDate) => {
-              setEditModal((prev) => {
-                if (!prev) return prev;
-                return {
-                  ...prev,
-                  showDatePicker: Platform.OS === 'ios',
-                  profile: {
-                    ...(prev.profile ?? {}),
-                    lastSoilTestDate: selectedDate
-                      ? toLocalDateString(selectedDate)
-                      : prev.profile?.lastSoilTestDate ?? null,
-                  },
-                };
-              });
-            }}
-          />
-        )}
+      ))}
+
+      {/* Wind exposure */}
+      <Text style={[styles.groupLabel, styles.groupLabelSpaced]}>Wind exposure</Text>
+      <View style={styles.segmentRow}>
+        {WIND_OPTIONS.map(({ value, label }) => {
+          const selected = profile.windExposure === value;
+          return (
+            <TouchableOpacity
+              key={value}
+              style={[styles.segment, selected && styles.segmentSelected]}
+              onPress={() => updateProfile({ windExposure: selected ? null : value })}
+            >
+              <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      {/* Notes */}
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>Notes</Text>
-        <VoiceDictation
-          value={profile.notes ?? ''}
-          onChangeText={(text) => updateProfile({ notes: text.slice(0, 200) })}
-        />
-        <TextInput
-          style={styles.profileNotesInput}
-          placeholder="e.g. Floods during heavy rain, coconut shade after 2pm..."
-          placeholderTextColor={theme.textTertiary}
-          value={profile.notes ?? ''}
-          onChangeText={(text) => updateProfile({ notes: text.slice(0, 200) })}
-          multiline
-          maxLength={200}
-          selectionColor={theme.primary}
-        />
+      {/* Water source */}
+      <Text style={[styles.groupLabel, styles.groupLabelSpaced]}>Water source</Text>
+      <View style={styles.chipWrap}>
+        {WATER_SOURCE_OPTIONS.map(({ value, label }) => {
+          const selected = profile.waterSource === value;
+          return (
+            <TouchableOpacity
+              key={value}
+              style={[styles.chip, selected && styles.chipSelected]}
+              onPress={() => updateProfile({ waterSource: selected ? null : value })}
+            >
+              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
-    </ScrollView>
+    </View>
   );
 }
