@@ -310,10 +310,6 @@ export default function MyFarmScreen(): React.JSX.Element {
     handleDeleteRequest(target.type, target.original);
   }, [editModal, setEditModal, handleDeleteRequest]);
 
-  const plotsSubtitle = `${parentLocations.length} plot${
-    parentLocations.length === 1 ? '' : 's'
-  } · tap ✎ to open`;
-
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -350,9 +346,6 @@ export default function MyFarmScreen(): React.JSX.Element {
                 style={styles.sectionTitleRow}
                 labelStyle={styles.sectionTitle}
               />
-              {parentLocations.length > 0 && (
-                <Text style={styles.sectionSubtitle}>{plotsSubtitle}</Text>
-              )}
             </View>
             <TouchableOpacity
               style={styles.sectionAddButton}

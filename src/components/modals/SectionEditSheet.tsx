@@ -2,6 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetModal } from '@/components/BottomSheetModal';
+import { SheetHandle } from '@/components/SheetHandle';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/sectionSheetStyles';
 import type { EditModalState } from '@/hooks/useLocationManager';
@@ -66,7 +67,7 @@ export function SectionEditSheet({
       keyboardAvoiding
       dismissOnBackdropPress={!saving}
     >
-      <View style={styles.grabber} />
+      <SheetHandle onClose={onClose} />
 
       <View style={styles.header}>
         <View style={styles.headerText}>
@@ -79,7 +80,7 @@ export function SectionEditSheet({
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Ionicons name="close" size={16} color={theme.textTertiary} />
+          <Ionicons name="close" size={20} color={theme.textInverse} />
         </TouchableOpacity>
       </View>
 

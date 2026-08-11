@@ -10,17 +10,9 @@ export const createStyles = (theme: Theme) =>
       borderTopLeftRadius: 26,
       borderTopRightRadius: 26,
       paddingHorizontal: 20,
-      paddingTop: 14,
-    },
-    grabber: {
-      width: 38,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.borderDark,
-      alignSelf: 'center',
-      marginBottom: 18,
     },
     header: {
+      marginTop: 14,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -40,13 +32,13 @@ export const createStyles = (theme: Theme) =>
       color: theme.textSecondary,
       marginTop: 2,
     },
+    // The app's shared close treatment — 36px primary circle, white glyph — as
+    // used by every other sheet and modal header (Create task, plant form).
     closeButton: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: theme.card,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
     },
