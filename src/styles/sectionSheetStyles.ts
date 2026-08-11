@@ -97,16 +97,6 @@ export const createStyles = (theme: Theme) =>
       gap: 10,
       marginTop: 20,
     },
-    deleteButton: {
-      width: 52,
-      height: 52,
-      borderRadius: 15,
-      backgroundColor: theme.errorLight,
-      borderWidth: 1,
-      borderColor: theme.errorBorder,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
     saveButton: {
       flex: 1,
       backgroundColor: theme.primary,

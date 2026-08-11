@@ -178,9 +178,10 @@ interface SectionTileProps {
   styles: Styles;
   theme: Theme;
   onEdit: (name: string) => void;
+  onDelete: (name: string) => void;
 }
 
-/** One section tile in the two-up grid. Delete lives inside the rename sheet. */
+/** One section tile in the two-up grid — edit and delete sit on the tile, as on a plot card. */
 function SectionTile({
   name,
   count,
@@ -188,21 +189,38 @@ function SectionTile({
   styles,
   theme,
   onEdit,
+  onDelete,
 }: SectionTileProps): React.JSX.Element {
   const handleEdit = useCallback(() => onEdit(name), [onEdit, name]);
+  const handleDelete = useCallback(() => onDelete(name), [onDelete, name]);
 
   return (
-    <TouchableOpacity style={styles.sectionTile} onPress={handleEdit} activeOpacity={0.8}>
+    <View style={styles.sectionTile}>
       <View style={styles.sectionTileTop}>
         <Text style={styles.sectionTileName} numberOfLines={2}>
           {name}
         </Text>
-        <View style={styles.sectionTileEdit}>
-          <Ionicons name="create-outline" size={13} color={theme.primary} />
+        <View style={styles.sectionTileActions}>
+          <TouchableOpacity
+            style={styles.sectionTileEdit}
+            onPress={handleEdit}
+            accessibilityRole="button"
+            accessibilityLabel={`Rename ${name}`}
+          >
+            <Ionicons name="create-outline" size={13} color={theme.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sectionTileDelete}
+            onPress={handleDelete}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete ${name}`}
+          >
+            <Ionicons name="trash-outline" size={13} color={theme.error} />
+          </TouchableOpacity>
         </View>
       </View>
       <Text style={styles.sectionTileCount}>{plantCountLabel(count, plantsLoading)}</Text>
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -299,6 +317,11 @@ export default function MyFarmScreen(): React.JSX.Element {
   const handleEditSection = useCallback(
     (location: string) => setEditModal({ type: 'child', original: location, value: location }),
     [setEditModal]
+  );
+
+  const handleDeleteSection = useCallback(
+    (location: string) => handleDeleteRequest('child', location),
+    [handleDeleteRequest]
   );
 
   // Both editors hand delete back to the shared request flow, which routes an
@@ -439,6 +462,7 @@ export default function MyFarmScreen(): React.JSX.Element {
                   styles={styles}
                   theme={theme}
                   onEdit={handleEditSection}
+                  onDelete={handleDeleteSection}
                 />
               ))}
             </View>
@@ -466,7 +490,6 @@ export default function MyFarmScreen(): React.JSX.Element {
         childLocations={childLocations}
         onSave={handleRename}
         onClose={closeEditModal}
-        onDelete={handleDeleteFromEditor}
         onChangeValue={onChangeValue}
       />
 

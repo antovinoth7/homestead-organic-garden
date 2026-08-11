@@ -14,7 +14,6 @@ interface Props {
   childLocations: string[];
   onSave: () => void;
   onClose: () => void;
-  onDelete: () => void;
   onChangeValue: (text: string) => void;
 }
 
@@ -32,7 +31,6 @@ export function SectionEditSheet({
   childLocations,
   onSave,
   onClose,
-  onDelete,
   onChangeValue,
 }: Props): React.JSX.Element {
   const theme = useTheme();
@@ -115,16 +113,6 @@ export function SectionEditSheet({
       )}
 
       <View style={styles.footer}>
-        {!isNew && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={onDelete}
-            accessibilityRole="button"
-            accessibilityLabel="Delete section"
-          >
-            <Ionicons name="trash-outline" size={19} color={theme.error} />
-          </TouchableOpacity>
-        )}
         <TouchableOpacity
           style={[styles.saveButton, saveDisabled && styles.saveButtonDisabled]}
           onPress={onSave}
