@@ -97,6 +97,9 @@ export default function TodayScreen(): React.JSX.Element {
   // Scrolls by measured offset rather than `scrollToIndex`: the first row sits
   // below a tall header, so it is often not laid out yet and the index call
   // would fail. `onLayout` on the section heading is measured either way.
+  //
+  // `layout.y` is relative to the parent, so the heading has to stay a direct
+  // child of the list header's root view for this to be a list offset.
   const sectionYRef = useRef(0);
   const handleSectionLayout = useCallback((e: LayoutChangeEvent) => {
     sectionYRef.current = e.nativeEvent.layout.y;
@@ -169,10 +172,11 @@ export default function TodayScreen(): React.JSX.Element {
           onPressNeedAction={goToNeedsAction}
         />
 
-        {/* The paper lifting over the hero — everything below the header is on it. */}
-        <View style={styles.sheet}>
-          {error !== null && <Text style={styles.errorText}>{error}</Text>}
+        {error !== null && <Text style={styles.errorText}>{error}</Text>}
 
+        {/* The card rides up onto the green. Suppressed while an error is
+            showing, so the card cannot pull up over the message. */}
+        <View style={error === null ? styles.plotsLift : null}>
           <PlotCarousel
             plots={brief.plots}
             onPressPlot={handlePressPlot}
@@ -180,16 +184,15 @@ export default function TodayScreen(): React.JSX.Element {
             onPressHealth={handlePressHealth}
             onPressBeds={goToBeds}
           />
-
-
-          {/* Withheld on an all-clear day: no heading, no empty row. */}
-          {brief.needActionCount > 0 && (
-            <View style={styles.sectionHeader} onLayout={handleSectionLayout}>
-              <Text style={styles.sectionTitle}>Needs action</Text>
-              <Text style={styles.sectionCount}>{brief.needActionCount}</Text>
-            </View>
-          )}
         </View>
+
+        {/* Withheld on an all-clear day: no heading, no empty row. */}
+        {brief.needActionCount > 0 && (
+          <View style={styles.sectionHeader} onLayout={handleSectionLayout}>
+            <Text style={styles.sectionTitle}>Needs action</Text>
+            <Text style={styles.sectionCount}>{brief.needActionCount}</Text>
+          </View>
+        )}
       </View>
     ),
     [

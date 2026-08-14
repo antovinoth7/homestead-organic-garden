@@ -1,5 +1,5 @@
 /**
- * Today screen shell — the paper header, the "Needs action" section rule, and
+ * Today screen shell — the hero header, the "Needs action" section rule, and
  * the list's empty/loading rows.
  *
  * The screen is one scroll surface on paper: the header and the section labels
@@ -30,11 +30,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // text ramp. The date opens the day; the two figures that decide what
     // happens next sit beneath it on a raised panel.
     //
-    // The bottom padding is deliberately deep: the sheet below rides up over it
-    // by `sheet.marginTop`, so this is what shows through the rounded corners.
+    // The bottom padding is what stays green behind the plot card: the card
+    // rides up over it by `plotsLift`, leaving a band under the panel rather
+    // than letting the card touch the figures.
     hero: {
       paddingHorizontal: 20,
-      paddingBottom: 38,
+      paddingBottom: 26,
       backgroundColor: theme.heroGradientStart,
     },
     heroDate: {
@@ -92,15 +93,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.heroTextAlert,
     },
 
-    // The paper lifting over the hero. Everything below the header lives on
-    // this sheet, so the curve reads as one surface starting rather than a
-    // rounded box floating on green.
-    sheet: {
-      backgroundColor: theme.background,
-      borderTopLeftRadius: 26,
-      borderTopRightRadius: 26,
-      marginTop: -22,
-      paddingTop: 6,
+    // The plot card riding up onto the green. The green ends in a straight
+    // edge and the card overlaps it, so the card reads as sitting *on* the
+    // hero rather than on a rounded panel floating over it.
+    //
+    // A bare offset, deliberately: no ground and no radius, so the green shows
+    // around the card and `container`'s paper shows below it. The card brings
+    // its own 12px top margin — `plotCardStyles.card` on the single-plot path,
+    // `plotCarouselStyles.rail` on the rail — so -26 lands the card 14px onto
+    // the green either way.
+    plotsLift: {
+      marginTop: -26,
     },
 
     // ─── "Needs action" section label ────────────────────────────────────────
