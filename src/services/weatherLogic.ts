@@ -5,7 +5,7 @@
 
 import { WeatherForecast, LocationProfile } from '@/types/database.types';
 import { getDistrictCoordinates, DEFAULT_COORDINATES } from '@/config/zones/districtCoordinates';
-import { forecastDateKey } from '@/utils/weatherWords';
+import { forecastDateKey, selectForecastDays, SHOWERS_MM } from '@/utils/weatherWords';
 
 export interface WeatherCoords {
   lat: number;
@@ -49,10 +49,22 @@ export function resolveWeatherCoords(
   return { lat: DEFAULT_COORDINATES.lat, lng: DEFAULT_COORDINATES.lng, source: 'default' };
 }
 
-/** True when any of the next `days` days has meaningful rain (≥ 2mm). */
-export function hasRainSoon(forecast: WeatherForecast | null, days = 2): boolean {
+/**
+ * True when any of the next `days` days has meaningful rain (≥ `SHOWERS_MM`).
+ *
+ * Counts forward from today, not from `daily[0]`: a cached forecast served
+ * offline keeps the days it has already passed, so slicing the raw array let
+ * yesterday's rain tell the grower not to water today.
+ */
+export function hasRainSoon(
+  forecast: WeatherForecast | null,
+  days = 2,
+  now: Date = new Date()
+): boolean {
   if (!forecast) return false;
-  return forecast.daily.slice(0, days).some((d) => d.precipitationMm >= 2);
+  return selectForecastDays(forecast, now)
+    .available.slice(0, days)
+    .some((d) => d.precipitationMm >= SHOWERS_MM);
 }
 
 export interface WateringAdvice {
@@ -78,7 +90,7 @@ export function wateringAdvice(rainSoon: boolean): WateringAdvice {
 export function isRainPredictedOnDate(
   forecast: WeatherForecast | null,
   date: Date,
-  minMm = 2
+  minMm = SHOWERS_MM
 ): boolean {
   if (!forecast) return false;
   const key = forecastDateKey(date, forecast.timezone);

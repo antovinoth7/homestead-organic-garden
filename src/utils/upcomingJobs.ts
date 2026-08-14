@@ -4,8 +4,18 @@
  *
  * Task templates carry `next_due_at` but no plot id, so the caller passes the
  * `resolveTaskPlotId` returned by `groupByPlot`. Sharing that resolver is the
- * point: the overlay's counts and the plot card's "7 DUE" then come from one
- * join, and cannot drift apart.
+ * point: the overlay's counts and the plot card's "7 DUE" come from one join.
+ *
+ * What the two surfaces share: the `resolveTaskPlotId` join, the completion-log
+ * subtraction (via `completedTemplateIds`), and known-plant scoping applied by
+ * the caller. What they deliberately do not share: the bucketing timezone. Dates
+ * here are the forecast's own provider buckets, because they are compared
+ * against `WeatherForecast.daily[].date`; `taskSummary` buckets in device time
+ * because it answers "what is due today" for the person holding the phone.
+ *
+ * A template appears once, on its `next_due_at`. `frequency_days` is not
+ * projected across the window — a job repeating every two days shows on one row,
+ * not three. That is intended, not an oversight.
  *
  * Pure — no React Native, no Firestore.
  */
@@ -13,6 +23,7 @@
 import { TaskTemplate, TaskType } from '@/types/database.types';
 import { PlotAssignable } from '@/utils/plotGrouping';
 import { TASK_LABELS } from '@/utils/taskConstants';
+import { FARM_TIMEZONE, forecastDateKeyFrom } from '@/utils/weatherWords';
 
 export interface DayJobs {
   count: number;
@@ -22,25 +33,31 @@ export interface DayJobs {
   topType: TaskType | null;
 }
 
-/** Local-date key (YYYY-MM-DD) matching the dates Open-Meteo returns. */
-function localDateKey(value: string | Date): string {
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return '';
-  const month = `${d.getMonth() + 1}`.padStart(2, '0');
-  const day = `${d.getDate()}`.padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
+export interface CountJobsOptions {
+  /**
+   * The forecast's own timezone. Its dates are provider buckets, so a due date
+   * has to be resolved in that zone rather than the device's — otherwise a job
+   * due late evening IST renders against the previous day's card abroad.
+   */
+  timeZone?: string;
+  /** Templates already logged done today, so a day's count falls as work lands. */
+  completedTemplateIds?: ReadonlySet<string>;
 }
 
 /**
  * Buckets one plot's enabled templates onto the forecast's dates. Anything due
  * before the window starts folds into the first day as `overdue` — it is work
  * the grower still has to fit in, so hiding it would understate the day.
+ *
+ * Pass only the dates that will actually be rendered. Folding overdue work onto
+ * a `forecastDates[0]` the UI then filters out makes it vanish silently.
  */
 export function countJobsByDate(
   templates: TaskTemplate[],
   resolveTaskPlotId: (task: PlotAssignable) => string,
   plotId: string,
-  forecastDates: string[]
+  forecastDates: string[],
+  options: CountJobsOptions = {}
 ): Map<string, DayJobs> {
   const result = new Map<string, DayJobs>();
   if (forecastDates.length === 0) return result;
@@ -51,11 +68,14 @@ export function countJobsByDate(
   const window = new Set(forecastDates);
   const typeTally = new Map<string, Map<TaskType, number>>();
 
+  const timeZone = options.timeZone ?? FARM_TIMEZONE;
+
   for (const template of templates) {
     if (!template.enabled) continue;
+    if (options.completedTemplateIds?.has(template.id)) continue;
     if (resolveTaskPlotId(template) !== plotId) continue;
 
-    const key = localDateKey(template.next_due_at);
+    const key = forecastDateKeyFrom(template.next_due_at, timeZone);
     if (!key) continue;
 
     const isOverdue = key < firstDate;

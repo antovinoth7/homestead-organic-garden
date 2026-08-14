@@ -241,13 +241,28 @@ function buildFreshness(input: PlotBriefLineInput, today: Date): string | null {
 /**
  * The plot card's context line. Both halves may be null; the card renders
  * nothing when they both are.
+ *
+ * The winning rung is reported as `kind` rather than thrown away: the card tags
+ * the sentence with it, so a late job and a work-mix summary are told apart
+ * before either is read.
  */
 export function buildPlotBriefLine(input: PlotBriefLineInput): PlotBriefLine {
   const now = input.now ?? Date.now();
   const today = startOfDay(now) ?? new Date(now);
 
-  const headline =
-    overdueHeadline(input, today) ?? rainHeadline(input, now) ?? workMixHeadline(input) ?? null;
+  // Ordered highest rung first; first non-null wins, exactly as the `??` chain
+  // this replaced did. Each call is cheap and side-effect free, so evaluating
+  // all three to find the winner costs nothing worth branching around.
+  const rungs = [
+    { kind: 'overdue', headline: overdueHeadline(input, today) },
+    { kind: 'rain', headline: rainHeadline(input, now) },
+    { kind: 'load', headline: workMixHeadline(input) },
+  ] as const;
+  const hit = rungs.find((rung) => rung.headline !== null);
 
-  return { headline, freshness: buildFreshness(input, today) };
+  return {
+    kind: hit?.kind ?? null,
+    headline: hit?.headline ?? null,
+    freshness: buildFreshness(input, today),
+  };
 }

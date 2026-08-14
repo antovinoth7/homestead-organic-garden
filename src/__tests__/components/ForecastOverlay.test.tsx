@@ -112,6 +112,35 @@ describe('ForecastOverlay', () => {
     expect(output).toContain('Weather data by Open-Meteo · CC BY 4.0');
   });
 
+  // A cached forecast keeps the days it has already passed, so `selectForecastDays`
+  // trims it. The heading used to be hardcoded and announced six days over four.
+  it('matches the heading to a trimmed window from a stale cache', () => {
+    const staleForecast = makeWeatherForecast(
+      Array.from({ length: 7 }, (_, index) =>
+        makeDailyWeather({ date: `2026-08-${String(index + 7).padStart(2, '0')}` })
+      ),
+      { fetched_at: '2026-08-07T04:00:00.000Z' }
+    );
+
+    let rendered!: RenderedTree;
+    TestRenderer.act(() => {
+      rendered = TestRenderer.create(
+        React.createElement(ForecastOverlay, {
+          ...baseProps,
+          forecast: staleForecast,
+          stale: true,
+        })
+      );
+    });
+    const output = JSON.stringify(rendered.toJSON());
+
+    expect(output).toContain('Next four days');
+    expect(output).not.toContain('Next six days');
+    // The two days before today are dropped, not rendered above Today.
+    expect(output).not.toContain('2026-08-07');
+    expect(output).toContain('Today');
+  });
+
   it('renders stale and retry states', () => {
     let rendered!: RenderedTree;
     TestRenderer.act(() => {

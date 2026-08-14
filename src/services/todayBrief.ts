@@ -54,21 +54,29 @@ async function readPlants(): Promise<Plant[]> {
   return stored.length > 0 ? stored : getAllPlants();
 }
 
-/** Drops tasks and logs pointing at plants we don't know about. */
+/**
+ * Drops tasks, logs and templates pointing at plants we don't know about.
+ *
+ * `allTemplates` is scoped too: an unscoped template for a deleted plant still
+ * resolves to a plot (`resolveTaskPlotId` falls back), so it inflated the
+ * forecast overlay's per-day job counts against a plant that no longer exists.
+ */
 function scopeToKnownPlants(
   plants: Plant[],
   tasks: TaskTemplate[],
-  logs: TaskLog[]
-): { tasks: TaskTemplate[]; logs: TaskLog[] } {
+  logs: TaskLog[],
+  allTemplates: TaskTemplate[]
+): { tasks: TaskTemplate[]; logs: TaskLog[]; allTemplates: TaskTemplate[] } {
   const plantIds = new Set(plants.map((plant) => plant.id));
   return {
     tasks: filterToKnownPlants(tasks, plantIds),
     logs: filterToKnownPlants(logs, plantIds),
+    allTemplates: filterToKnownPlants(allTemplates, plantIds),
   };
 }
 
 export async function getTodayBriefSources(): Promise<TodayBriefSources> {
-  const [rawTasks, rawLogs, allTemplates, plants, beds, locationConfig, farmConfig] =
+  const [rawTasks, rawLogs, rawTemplates, plants, beds, locationConfig, farmConfig] =
     await Promise.all([
       getTodayTasks(),
       getTodayTaskLogs(),
@@ -79,7 +87,12 @@ export async function getTodayBriefSources(): Promise<TodayBriefSources> {
       getFarmConfig(),
     ]);
 
-  const { tasks, logs } = scopeToKnownPlants(plants, rawTasks, rawLogs);
+  const { tasks, logs, allTemplates } = scopeToKnownPlants(
+    plants,
+    rawTasks,
+    rawLogs,
+    rawTemplates
+  );
   return { tasks, logs, allTemplates, plants, beds, locationConfig, farmConfig };
 }
 
@@ -101,8 +114,8 @@ export async function getStoredTodayBriefSources(): Promise<TodayBriefSources | 
 
   if (rawTasks.length === 0 && plants.length === 0) return null;
 
-  const { tasks, logs } = scopeToKnownPlants(plants, rawTasks, rawLogs);
   // The overlay's job counts need every template; the cached today-tasks are the
   // best available stand-in until the revalidate lands.
-  return { tasks, logs, allTemplates: tasks, plants, beds, locationConfig, farmConfig };
+  const { tasks, logs, allTemplates } = scopeToKnownPlants(plants, rawTasks, rawLogs, rawTasks);
+  return { tasks, logs, allTemplates, plants, beds, locationConfig, farmConfig };
 }

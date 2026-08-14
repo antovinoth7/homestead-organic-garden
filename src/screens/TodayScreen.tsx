@@ -17,8 +17,10 @@
  *
  * The list is a FlatList because the needs-action list is unbounded: a farm
  * with enough plants routinely produces more rows than a ScrollView should
- * hold. The plot cards ride in the header, which must stay a memoized element
- * or it remounts every time an alert changes.
+ * hold. The plot cards ride in the header — as a swipeable rail once there is
+ * more than one of them, see `PlotCarousel` — which must stay a memoized
+ * element or it remounts every time an alert changes, taking the rail's scroll
+ * position with it.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -39,7 +41,8 @@ import { createStyles } from '@/styles/todayScreenStyles';
 import { useTodayBrief } from '@/hooks/useTodayBrief';
 import { useTabBarScroll, TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 import { TodayHeader } from '@/components/today/TodayHeader';
-import { PlotCard, PlotHealthFilter } from '@/components/today/PlotCard';
+import { PlotHealthFilter } from '@/components/today/PlotCard';
+import { PlotCarousel } from '@/components/today/PlotCarousel';
 import { NeedsActionRow } from '@/components/today/NeedsActionRow';
 import { SeasonBlock } from '@/components/today/SeasonBlock';
 import { ForecastOverlay } from '@/components/today/ForecastOverlay';
@@ -170,16 +173,14 @@ export default function TodayScreen(): React.JSX.Element {
         <View style={styles.sheet}>
           {error !== null && <Text style={styles.errorText}>{error}</Text>}
 
-          {brief.plots.map((plot) => (
-            <PlotCard
-              key={plot.id}
-              plot={plot}
-              onPress={handlePressPlot}
-              onPressWeather={handlePressWeather}
-              onPressHealth={handlePressHealth}
-              onPressBeds={goToBeds}
-            />
-          ))}
+          <PlotCarousel
+            plots={brief.plots}
+            onPressPlot={handlePressPlot}
+            onPressWeather={handlePressWeather}
+            onPressHealth={handlePressHealth}
+            onPressBeds={goToBeds}
+          />
+
 
           {/* Withheld on an all-clear day: no heading, no empty row. */}
           {brief.needActionCount > 0 && (

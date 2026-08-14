@@ -31,11 +31,12 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { StyleProp, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
-import { PlotBrief } from '@/types/database.types';
+import { StyleProp, Text, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { PlotBrief, PlotBriefLineKind } from '@/types/database.types';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/plotCardStyles';
 import { formatTempRange } from '@/utils/weatherWords';
+import { WeatherTone, weatherTone } from '@/utils/weatherTone';
 
 /** The health buckets the plant list can be filtered by. */
 export type PlotHealthFilter = 'healthy' | 'stressed' | 'recovering' | 'sick';
@@ -46,10 +47,61 @@ interface Props {
   onPressWeather: (plotId: string) => void;
   onPressHealth: (plotId: string, status: PlotHealthFilter) => void;
   onPressBeds: () => void;
+  /**
+   * Merged over the card's own frame. `PlotCarousel` uses it to size a page and
+   * drop the card's gutter; a card rendered on its own leaves it undefined and
+   * keeps the full-width layout.
+   */
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 /** The rows are 30px tall; this lifts each touch area clear of the 44px floor. */
 const ROW_HIT_SLOP = { top: 7, bottom: 7, left: 0, right: 0 };
+
+/**
+ * The tag before the context sentence. Short enough to sit on the sentence's own
+ * line: it says which kind of signal this is, not what the signal is.
+ */
+const RUNG_LABEL: Record<PlotBriefLineKind, string> = {
+  overdue: 'Late',
+  rain: 'Rain',
+  load: 'Load',
+};
+
+function rungTone(
+  styles: ReturnType<typeof createStyles>,
+  kind: PlotBriefLineKind
+): StyleProp<TextStyle> {
+  switch (kind) {
+    case 'overdue':
+      return styles.rungTagOverdue;
+    case 'rain':
+      return styles.rungTagRain;
+    case 'load':
+      return styles.rungTagLoad;
+  }
+}
+
+/** The pill's ground and its ink move together, so they are picked together. */
+function pillTone(
+  styles: ReturnType<typeof createStyles>,
+  tone: WeatherTone
+): { pill: StyleProp<ViewStyle>; text: StyleProp<TextStyle> } {
+  switch (tone) {
+    case 'rain':
+      return { pill: styles.weatherPillRain, text: styles.weatherPillTextRain };
+    case 'showers':
+      return { pill: styles.weatherPillShowers, text: styles.weatherPillTextShowers };
+    case 'clear':
+      return { pill: styles.weatherPillClear, text: styles.weatherPillTextClear };
+    case 'hot':
+      return { pill: styles.weatherPillHot, text: styles.weatherPillTextHot };
+    case 'storm':
+      return { pill: styles.weatherPillStorm, text: styles.weatherPillTextStorm };
+    case 'neutral':
+      return { pill: styles.weatherPillNeutral, text: styles.weatherPillTextNeutral };
+  }
+}
 
 /**
  * "1 due", "53 overdue" — only what is non-zero, so a quiet plot states that it
@@ -70,6 +122,7 @@ export const PlotCard = React.memo(function PlotCard({
   onPressWeather,
   onPressHealth,
   onPressBeds: handlePressBeds,
+  containerStyle,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -94,6 +147,7 @@ export const PlotCard = React.memo(function PlotCard({
   );
 
   const { weather, health, bedStatus } = plot;
+  const pill = pillTone(styles, weatherTone(weather.condition));
   const counts = buildCounts(plot);
   const countsLabel = counts.length > 0 ? counts.map((c) => c.label).join(', ') : 'nothing due';
   // The visible unit is capitalised to match the status words under it; the
@@ -140,7 +194,7 @@ export const PlotCard = React.memo(function PlotCard({
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, containerStyle]}>
       {plot.district !== null && <Text style={styles.eyebrow}>{plot.district}</Text>}
 
       <View style={styles.titleRow}>
@@ -156,10 +210,10 @@ export const PlotCard = React.memo(function PlotCard({
           </Text>
         </TouchableOpacity>
 
-        {/* Temperatures only — the emoji carries the condition, and the stale
-            state is stated in the forecast itself rather than on the card. */}
+        {/* Temperatures only — the emoji and the tint carry the condition, and
+            the stale state is stated in the forecast itself rather than here. */}
         <TouchableOpacity
-          style={styles.weatherPill}
+          style={[styles.weatherPill, pill.pill]}
           onPress={handlePressWeather}
           activeOpacity={0.7}
           accessibilityRole="button"
@@ -168,7 +222,7 @@ export const PlotCard = React.memo(function PlotCard({
           }, ${formatTempRange(weather.today)}${weather.stale ? ', cached forecast' : ''}`}
         >
           <Text style={styles.weatherPillEmoji}>{weather.conditionEmoji}</Text>
-          <Text style={styles.weatherPillText}>{formatTempRange(weather.today)}</Text>
+          <Text style={[styles.weatherPillText, pill.text]}>{formatTempRange(weather.today)}</Text>
         </TouchableOpacity>
       </View>
 
@@ -196,9 +250,31 @@ export const PlotCard = React.memo(function PlotCard({
       {(plot.line.headline !== null || plot.line.freshness !== null) && (
         <View style={styles.lines}>
           {plot.line.headline !== null && (
-            <Text style={[styles.line, styles.lineStrong]} numberOfLines={2}>
-              {plot.line.headline}
-            </Text>
+            <View style={styles.lineRow}>
+              {/* The tag is decoration for a sighted reader and the sentence's
+                  first word for everyone else, so it is hidden from the reader
+                  and spoken as part of the headline instead. */}
+              {plot.line.kind !== null && (
+                <Text
+                  style={[styles.rungTag, rungTone(styles, plot.line.kind)]}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                >
+                  {RUNG_LABEL[plot.line.kind]}
+                </Text>
+              )}
+              <Text
+                style={[styles.line, styles.lineStrong, styles.lineHeadline]}
+                numberOfLines={2}
+                accessibilityLabel={
+                  plot.line.kind !== null
+                    ? `${RUNG_LABEL[plot.line.kind]}. ${plot.line.headline}`
+                    : plot.line.headline
+                }
+              >
+                {plot.line.headline}
+              </Text>
+            </View>
           )}
           {plot.line.freshness !== null && (
             <Text style={[styles.line, styles.lineMuted]} numberOfLines={1}>

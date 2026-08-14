@@ -58,8 +58,22 @@ export const DISTRICT_COORDINATES: Record<string, Coordinates> = {
 /** Default coordinates when no plot GPS and no known district (Kanyakumari town). */
 export const DEFAULT_COORDINATES: Coordinates = { lat: 8.0883, lng: 77.5385 };
 
-/** Coordinates for a district name, or null when unknown/absent. */
+/**
+ * Case- and whitespace-insensitive index, built once. The district on a farm
+ * config is free text, so an exact-match lookup sent every district but the
+ * default one to `DEFAULT_COORDINATES` — and because that default *is*
+ * Kanyakumari, the bug was invisible on the one farm most likely to notice it.
+ */
+const COORDINATES_BY_KEY = new Map<string, Coordinates>(
+  Object.entries(DISTRICT_COORDINATES).map(([name, coords]) => [name.trim().toLowerCase(), coords])
+);
+
+/**
+ * Coordinates for a district name, or null when unknown/absent. Normalizes the
+ * name the same way `getZoneByDistrict` does, so the two lookups agree on what
+ * counts as the same district.
+ */
 export function getDistrictCoordinates(district?: string | null): Coordinates | null {
   if (!district) return null;
-  return DISTRICT_COORDINATES[district] ?? null;
+  return COORDINATES_BY_KEY.get(district.trim().toLowerCase()) ?? null;
 }

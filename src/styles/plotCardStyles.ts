@@ -67,10 +67,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     // ─── Forecast pill ───────────────────────────────────────────────────────
     // Today's temperatures beside the plot name, sized to their content. The
-    // emoji carries the condition, so no word is needed and the pill stays the
-    // same width whatever the sky is doing. Tapping it opens the seven-day view
-    // — the card's one other destination, and the reason nothing here is a
-    // second chevron.
+    // emoji names the condition and the tint states it a second time in colour,
+    // so a wet plot is legible in a glance across a rail of cards. The pill
+    // stays the same width whatever the sky is doing — only its ground moves.
+    // Tapping it opens the seven-day view — the card's one other destination,
+    // and the reason nothing here is a second chevron.
     weatherPill: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -79,7 +80,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 9,
       borderRadius: 999,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.border,
     },
     weatherPillEmoji: {
       fontSize: 12.5,
@@ -87,6 +87,52 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     weatherPillText: {
       fontSize: 11.5,
       fontWeight: '500',
+    },
+
+    // One pair per `WeatherTone`. Cloud, fog and a missing forecast take
+    // `neutral`, which is the plain hairline pill the card carried before the
+    // tints existed — nothing to report, nothing to colour.
+    weatherPillRain: {
+      backgroundColor: theme.infoLight,
+      borderColor: theme.infoBorder,
+    },
+    weatherPillTextRain: {
+      color: theme.infoDark,
+    },
+    weatherPillShowers: {
+      backgroundColor: theme.infoLight,
+      borderColor: theme.borderLight,
+    },
+    weatherPillTextShowers: {
+      color: theme.infoDark,
+    },
+    // The ochre ramp has no dark ink of its own, so clear borrows warning's —
+    // the same family, and the only token pitched to read on `accentLight`.
+    weatherPillClear: {
+      backgroundColor: theme.accentLight,
+      borderColor: theme.warningBorder,
+    },
+    weatherPillTextClear: {
+      color: theme.warningDark,
+    },
+    weatherPillHot: {
+      backgroundColor: theme.errorLight,
+      borderColor: theme.errorBorder,
+    },
+    weatherPillTextHot: {
+      color: theme.errorDark,
+    },
+    weatherPillStorm: {
+      backgroundColor: theme.purpleLight,
+      borderColor: theme.purpleBorder,
+    },
+    weatherPillTextStorm: {
+      color: theme.purpleDark,
+    },
+    weatherPillNeutral: {
+      borderColor: theme.border,
+    },
+    weatherPillTextNeutral: {
       color: theme.textSecondary,
     },
 
@@ -154,10 +200,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 2,
       gap: 2,
     },
+    // The headline shares its row with the rung tag. Baseline-aligned so the
+    // small uppercase tag sits on the sentence's line rather than floating above
+    // it, and the sentence wraps beside the tag instead of under it.
+    lineRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 7,
+    },
     line: {
       fontSize: 13.5,
       lineHeight: 20,
       color: theme.textSecondary,
+    },
+    lineHeadline: {
+      flex: 1,
+      minWidth: 0,
     },
     // The signal itself carries the weight; the freshness line under it is
     // background, so it drops to the tertiary ramp.
@@ -166,6 +224,37 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
     },
     lineMuted: {
+      color: theme.textTertiary,
+    },
+
+    // ─── Rung tag ────────────────────────────────────────────────────────────
+    // Which rung of `plotBriefLine`'s ladder produced the sentence, so the kind
+    // of signal is scannable before the sentence is read. It carries the
+    // urgency and the colour, which is what lets the sentence itself stay plain
+    // prose in every state — a late job, a closing weather window and a day's
+    // work mix have nothing in common but this row.
+    rungTag: {
+      overflow: 'hidden',
+      borderRadius: 6,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      fontSize: 9.5,
+      fontWeight: '700',
+      letterSpacing: 0.9,
+      textTransform: 'uppercase',
+    },
+    rungTagOverdue: {
+      backgroundColor: theme.errorLight,
+      color: theme.errorDark,
+    },
+    rungTagRain: {
+      backgroundColor: theme.infoLight,
+      color: theme.infoDark,
+    },
+    // The day's work mix is not a warning — it is what today weighs. `background`
+    // is the same recess the tiles use, so the tag reads as a label, not an alarm.
+    rungTagLoad: {
+      backgroundColor: theme.background,
       color: theme.textTertiary,
     },
 
@@ -228,8 +317,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       height: 7,
       borderRadius: 4,
     },
+    // Health dots track `HEALTH_STATUS_TONE` in `utils/plantLabels`, the same
+    // mapping the plant list and its filter sheet use — these rows open that
+    // list, so a status has to be the same colour on both sides of the tap.
     statusDotHealthy: {
-      backgroundColor: theme.primary,
+      backgroundColor: theme.success,
     },
     statusDotStressed: {
       backgroundColor: theme.warning,

@@ -41,7 +41,11 @@ function makeInput(
 
 describe('buildPlotBriefLine', () => {
   it('returns nothing at all for a plot with no work and no history', () => {
-    expect(buildPlotBriefLine(makeInput())).toEqual({ headline: null, freshness: null });
+    expect(buildPlotBriefLine(makeInput())).toEqual({
+      kind: null,
+      headline: null,
+      freshness: null,
+    });
   });
 
   describe('rung 1 — the oldest overdue job', () => {
@@ -57,6 +61,7 @@ describe('buildPlotBriefLine', () => {
       );
 
       expect(line.headline).toBe('Watering on Bed 3 is 5 days late.');
+      expect(line.kind).toBe('overdue');
     });
 
     it('falls back to the plant name when the task has no bed', () => {
@@ -104,6 +109,7 @@ describe('buildPlotBriefLine', () => {
       );
 
       expect(line.headline).toBe('12 mm on Sat — do today\'s 2 spray jobs before it.');
+      expect(line.kind).toBe('rain');
     });
 
     it('stays generic when the work at risk is of mixed kinds', () => {
@@ -202,6 +208,7 @@ describe('buildPlotBriefLine', () => {
       );
 
       expect(line.headline).toBe('Mostly watering — 3 of 4 jobs.');
+      expect(line.kind).toBe('load');
     });
 
     it('stays generic on an even split, where no type dominates', () => {
@@ -272,6 +279,7 @@ describe('buildPlotBriefLine', () => {
       );
 
       expect(line).toEqual({
+        kind: 'overdue',
         headline: 'Watering is 1 day late.',
         freshness: 'Last worked yesterday.',
       });

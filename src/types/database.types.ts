@@ -448,7 +448,15 @@ export interface PlotBedCounts {
  * the standing counts around it. Both halves are nullable and the card renders
  * nothing at all when both are, so a plot with no history shows no empty row.
  */
+/**
+ * Which rung of `buildPlotBriefLine`'s ladder produced the headline: an overdue
+ * job, rain closing a window, or what today's load consists of.
+ */
+export type PlotBriefLineKind = 'overdue' | 'rain' | 'load';
+
 export interface PlotBriefLine {
+  /** The rung `headline` came from, or null when there is no headline. */
+  kind: PlotBriefLineKind | null;
   /**
    * The single most decision-changing signal for this plot, or null on a quiet
    * one — where the title row already says "Nothing due" and repeating it would

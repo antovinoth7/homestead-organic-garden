@@ -74,6 +74,10 @@ export function weekdayLabel(isoDate: string): string {
 }
 
 export function forecastDateKey(now: Date = new Date(), timeZone = FARM_TIMEZONE): string {
+  // An unparseable date has to bail before the formatter: `formatToParts` throws
+  // on it, which sends the non-farm-zone branch into a recursion that ends at
+  // `toISOString()` — and that throws too, uncaught.
+  if (Number.isNaN(now.getTime())) return '';
   try {
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZone,
@@ -93,6 +97,37 @@ export function forecastDateKey(now: Date = new Date(), timeZone = FARM_TIMEZONE
   // Hermes with its bundled tz data does not do. This last resort is UTC, so it
   // is 5:30h behind the farm and names the previous day after 18:30 IST.
   return now.toISOString().slice(0, 10);
+}
+
+/**
+ * The same calendar-date key, for a value that is not already a `Date`.
+ *
+ * Any key that will be compared against `WeatherForecast.daily[].date` must come
+ * from here: those dates are the provider's buckets in the farm's timezone, not
+ * the device's calendar days. Returns '' for an unparseable value so callers can
+ * skip the record rather than bucket it wrongly.
+ */
+export function forecastDateKeyFrom(
+  value: string | number | Date,
+  timeZone = FARM_TIMEZONE
+): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return forecastDateKey(date, timeZone);
+}
+
+const DAY_COUNT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
+
+/**
+ * Heading above the day rows. Derived from how many rows actually render, not
+ * from the seven days a full forecast would have — a cached copy that starts
+ * before today is trimmed by `selectForecastDays` and would otherwise be
+ * announced as six days while showing five.
+ */
+export function forecastSectionLabel(hasToday: boolean, rowCount: number): string {
+  if (!hasToday) return 'Available forecast';
+  if (rowCount <= 0) return 'Nothing further forecast';
+  if (rowCount === 1) return 'Tomorrow only';
+  return `Next ${DAY_COUNT_WORDS[rowCount] ?? rowCount} days`;
 }
 
 export function selectForecastDays(

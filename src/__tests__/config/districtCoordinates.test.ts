@@ -31,4 +31,14 @@ describe('districtCoordinates', () => {
     expect(getDistrictCoordinates(null)).toBeNull();
     expect(getDistrictCoordinates(undefined)).toBeNull();
   });
+
+  // The district on a farm config is free text. An exact-match lookup sent every
+  // district but the default one to Kanyakumari — and because the default *is*
+  // Kanyakumari, the bug was invisible on the farm most likely to notice it.
+  it('matches district names regardless of case and surrounding whitespace', () => {
+    const expected = DISTRICT_COORDINATES.Coimbatore;
+    expect(getDistrictCoordinates('coimbatore')).toEqual(expected);
+    expect(getDistrictCoordinates('COIMBATORE')).toEqual(expected);
+    expect(getDistrictCoordinates('  Coimbatore  ')).toEqual(expected);
+  });
 });

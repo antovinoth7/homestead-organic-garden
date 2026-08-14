@@ -3,9 +3,17 @@ import { makeTaskTemplate } from '../fixtures/task.fixtures';
 
 const DATES = ['2026-07-31', '2026-08-01', '2026-08-02'];
 
-/** Local-noon ISO for a date key, so the local-date bucketing is unambiguous. */
-const dueAt = (year: number, month: number, day: number): string =>
-  new Date(year, month - 1, day, 12).toISOString();
+/**
+ * Midday *farm time* (06:30Z = 12:00 IST) for a date key. Deliberately not
+ * device-local: buckets are resolved in the forecast's timezone, so a fixture
+ * built from the machine's clock would make these assertions depend on where
+ * the test runs.
+ */
+const dueAt = (year: number, month: number, day: number): string => {
+  const mm = `${month}`.padStart(2, '0');
+  const dd = `${day}`.padStart(2, '0');
+  return `${year}-${mm}-${dd}T06:30:00.000Z`;
+};
 
 /** Every template belongs to the plot under test unless it says otherwise. */
 const onePlot = (): string => 'home';
@@ -101,6 +109,109 @@ describe('countJobsByDate', () => {
 
   it('returns nothing when there is no forecast window', () => {
     expect(countJobsByDate([makeTaskTemplate()], onePlot, 'home', []).size).toBe(0);
+  });
+
+  // Forecast dates are the provider's buckets in a named timezone, not the
+  // device's calendar days. Asserting the *same instant* against two zones makes
+  // this independent of where the suite runs — the old device-local key could
+  // not be caught by any fixture built with `new Date(y, m, d)`.
+  describe('timezone', () => {
+    // 20:30 UTC on 9 Aug is already 02:00 on 10 Aug in Kanyakumari, but still
+    // 9 Aug in Niue (UTC-11).
+    const LATE_EVENING_IST = '2026-08-09T20:30:00.000Z';
+    const WINDOW = ['2026-08-09', '2026-08-10'];
+
+    const bucketIn = (timeZone: string): Map<string, number> => {
+      const counts = countJobsByDate(
+        [makeTaskTemplate({ id: 't1', next_due_at: LATE_EVENING_IST })],
+        onePlot,
+        'home',
+        WINDOW,
+        { timeZone }
+      );
+      return new Map([...counts].map(([date, jobs]) => [date, jobs.count]));
+    };
+
+    it('buckets a due date in the forecast timezone, not the device timezone', () => {
+      expect(bucketIn('Asia/Kolkata').get('2026-08-10')).toBe(1);
+      expect(bucketIn('Asia/Kolkata').get('2026-08-09')).toBe(0);
+
+      expect(bucketIn('Pacific/Niue').get('2026-08-09')).toBe(1);
+      expect(bucketIn('Pacific/Niue').get('2026-08-10')).toBe(0);
+    });
+
+    it('defaults to the farm timezone when none is given', () => {
+      const counts = countJobsByDate(
+        [makeTaskTemplate({ id: 't1', next_due_at: LATE_EVENING_IST })],
+        onePlot,
+        'home',
+        WINDOW
+      );
+      expect(counts.get('2026-08-10')?.count).toBe(1);
+    });
+
+    it('skips a template whose due date cannot be parsed', () => {
+      const counts = countJobsByDate(
+        [makeTaskTemplate({ id: 't1', next_due_at: 'not-a-date' })],
+        onePlot,
+        'home',
+        WINDOW
+      );
+      expect([...counts.values()].every((jobs) => jobs.count === 0)).toBe(true);
+    });
+  });
+
+  describe('completed work', () => {
+    it('excludes templates already logged done today', () => {
+      const counts = countJobsByDate(
+        [
+          makeTaskTemplate({ id: 't1', next_due_at: dueAt(2026, 8, 1) }),
+          makeTaskTemplate({ id: 't2', next_due_at: dueAt(2026, 8, 1) }),
+        ],
+        onePlot,
+        'home',
+        DATES,
+        { completedTemplateIds: new Set(['t1']) }
+      );
+
+      expect(counts.get('2026-08-01')?.count).toBe(1);
+    });
+
+    it('does not let completed work sway the dominant task type', () => {
+      const counts = countJobsByDate(
+        [
+          makeTaskTemplate({ id: 't1', task_type: 'water', next_due_at: dueAt(2026, 8, 1) }),
+          makeTaskTemplate({ id: 't2', task_type: 'water', next_due_at: dueAt(2026, 8, 1) }),
+          makeTaskTemplate({ id: 't3', task_type: 'prune', next_due_at: dueAt(2026, 8, 1) }),
+        ],
+        onePlot,
+        'home',
+        DATES,
+        { completedTemplateIds: new Set(['t1', 't2']) }
+      );
+
+      expect(counts.get('2026-08-01')).toMatchObject({ count: 1, topType: 'prune' });
+    });
+  });
+
+  // The C3 invariant: when the caller passes only the days the UI renders (all
+  // >= today), overdue work folds onto today's row rather than onto a past row
+  // that is filtered out before paint.
+  it('folds overdue work onto the first rendered day', () => {
+    const visibleWindow = ['2026-08-01', '2026-08-02'];
+    const counts = countJobsByDate(
+      [
+        makeTaskTemplate({ id: 't1', next_due_at: dueAt(2026, 7, 20) }),
+        makeTaskTemplate({ id: 't2', next_due_at: dueAt(2026, 7, 28) }),
+        makeTaskTemplate({ id: 't3', next_due_at: dueAt(2026, 8, 1) }),
+      ],
+      onePlot,
+      'home',
+      visibleWindow
+    );
+
+    expect(counts.get('2026-08-01')).toMatchObject({ count: 3, overdue: 2 });
+    expect(formatJobText(counts.get('2026-08-01'))).toBe('2 overdue · 3 jobs');
   });
 });
 

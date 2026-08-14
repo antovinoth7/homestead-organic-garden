@@ -37,7 +37,7 @@ import { getSeasonProgress } from '@/utils/seasonProgress';
 import { toPlantNowChips } from '@/utils/sowNowChips';
 import { countRemaining, summarizeTasksByPlot, summarizeTodayTasks } from '@/utils/taskSummary';
 import { countJobsByDate, formatJobText } from '@/utils/upcomingJobs';
-import { describeDay, selectForecastDays } from '@/utils/weatherWords';
+import { describeDay, FARM_TIMEZONE, selectForecastDays } from '@/utils/weatherWords';
 
 /** Chips shown before the row defers to "All N ›". */
 export interface UseTodayBriefResult {
@@ -367,16 +367,30 @@ export function useTodayBrief(): UseTodayBriefResult {
     ]
   );
 
+  // The same set `summarizeTodayTasks` builds internally, so the overlay's day
+  // counts and the plot card's due count subtract completed work identically.
+  const completedTemplateIds = useMemo(
+    () => new Set(logs.map((log) => log.template_id)),
+    [logs]
+  );
+
   const jobsByDateFor = useCallback(
     (plotId: string): ReadonlyMap<string, string> => {
       const plot = plotBriefs.find((p) => p.id === plotId);
-      const dates = plot?.weather.forecast?.daily.map((d) => d.date) ?? [];
-      const counts = countJobsByDate(allTemplates, grouping.resolveTaskPlotId, plotId, dates);
+      const forecast = plot?.weather.forecast ?? null;
+      // Only the days the overlay actually renders. `countJobsByDate` folds
+      // overdue work onto the first date it is given, so passing the raw
+      // `daily` array parked it on a past row that is filtered out before paint.
+      const dates = selectForecastDays(forecast).available.map((d) => d.date);
+      const counts = countJobsByDate(allTemplates, grouping.resolveTaskPlotId, plotId, dates, {
+        timeZone: forecast?.timezone ?? FARM_TIMEZONE,
+        completedTemplateIds,
+      });
       const text = new Map<string, string>();
       for (const date of dates) text.set(date, formatJobText(counts.get(date)));
       return text;
     },
-    [plotBriefs, allTemplates, grouping]
+    [plotBriefs, allTemplates, grouping, completedTemplateIds]
   );
 
   const reload = useCallback(

@@ -21,6 +21,7 @@ jest.mock('@/styles/plotCardStyles', () => ({
 import React from 'react';
 import { PlotCard, PlotHealthFilter } from '@/components/today/PlotCard';
 import { PlotBrief } from '@/types/database.types';
+import { makePlotBrief } from '../fixtures/today.fixtures';
 
 interface RenderedNode {
   type: unknown;
@@ -41,32 +42,7 @@ const TestRenderer = jest.requireActual('react-test-renderer') as {
   act: (callback: () => void) => void;
 };
 
-const plot: PlotBrief = {
-  id: 'north-plot',
-  name: 'North Plot',
-  isConfigured: true,
-  district: 'Kanyakumari',
-  cropCount: 92,
-  bedCount: 3,
-  bedStatus: { growing: 2, resting: 1, empty: 0, permanent: 0, total: 3 },
-  dueCount: 1,
-  overdueCount: 0,
-  health: { healthy: 77, stressed: 0, recovering: 12, sick: 3, total: 92 },
-  weather: {
-    lat: 8.08,
-    lng: 77.55,
-    source: 'plot',
-    forecast: null,
-    today: null,
-    condition: 'clear',
-    conditionLabel: 'Clear',
-    conditionEmoji: '\u2600\ufe0f',
-    fetched_at: '2026-08-10T00:00:00.000Z',
-    stale: false,
-    loading: false,
-  },
-  line: { headline: null, freshness: null },
-};
+const plot: PlotBrief = makePlotBrief();
 
 describe('PlotCard health footer', () => {
   let consoleErrorSpy: jest.SpyInstance;
@@ -154,6 +130,61 @@ describe('PlotCard health footer', () => {
     // gone and the one chevron left means "open the plot".
     expect(hostText(rendered, 'weatherLink')).toHaveLength(0);
     expect(hostText(rendered, 'chevron')).toHaveLength(1);
+  });
+
+  // The pill's second style entry is the tone, so it is the tail of the array
+  // rather than the base key `baseStyle` reads.
+  const pillStyle = (rendered: RenderedTree) => {
+    const pill = rendered.root.findAll(
+      (node) => node.type === 'TouchableOpacity' && baseStyle(node.props.style) === 'weatherPill'
+    )[0];
+    return Array.isArray(pill?.props.style) ? pill.props.style : [];
+  };
+
+  it.each([
+    ['rain', 'weatherPillRain'],
+    ['drizzle', 'weatherPillShowers'],
+    ['clear', 'weatherPillClear'],
+    ['hot', 'weatherPillHot'],
+    ['thunderstorm', 'weatherPillStorm'],
+    ['cloudy', 'weatherPillNeutral'],
+  ] as const)('tints the forecast pill for %s', (condition, toneKey) => {
+    const rendered = render(
+      jest.fn(),
+      makePlotBrief({ weather: { ...plot.weather, condition } })
+    );
+    expect(pillStyle(rendered)).toContain(toneKey);
+  });
+
+  it('tags the context sentence with the rung that produced it', () => {
+    const rendered = render(
+      jest.fn(),
+      makePlotBrief({
+        line: {
+          kind: 'overdue',
+          headline: 'Watering on Carrot (VVH) is 4 days late.',
+          freshness: 'Last worked 2 weeks ago.',
+        },
+      })
+    );
+
+    expect(hostText(rendered, 'rungTag')).toEqual(['Late']);
+    // The tag is hidden from the reader and folded into the sentence instead,
+    // so the row is one utterance rather than two.
+    expect(
+      rendered.root.findByProps({
+        accessibilityLabel: 'Late. Watering on Carrot (VVH) is 4 days late.',
+      })
+    ).toBeTruthy();
+  });
+
+  it('leaves the sentence untagged on a rung-less plot', () => {
+    const rendered = render(
+      jest.fn(),
+      makePlotBrief({ line: { kind: null, headline: null, freshness: 'Worked today.' } })
+    );
+    expect(hostText(rendered, 'rungTag')).toHaveLength(0);
+    expect(hostText(rendered, 'line')).toEqual(['Worked today.']);
   });
 
   it('replaces the bed tile with a sentence when the plot has no beds', () => {

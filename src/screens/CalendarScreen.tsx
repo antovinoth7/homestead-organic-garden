@@ -48,7 +48,9 @@ import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { useCalendarData, HarvestReadyItem } from '../hooks/useCalendarData';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { useBedOptions } from '@/hooks/useBedOptions';
-import { useWeather } from '../hooks/useWeather';
+import { useWeather } from '@/hooks/useWeather';
+import { useWeatherLocations } from '@/hooks/useWeatherLocations';
+import { DEFAULT_COORDINATES } from '@/config/zones/districtCoordinates';
 import { isRainPredictedOnDate } from '../services/weather';
 import { calculateExpectedHarvestDate } from '../utils/plantHelpers';
 import CreateTaskModal from '../components/modals/CreateTaskModal';
@@ -165,7 +167,14 @@ export default function CalendarScreen(): React.JSX.Element {
   const { beds: bedList } = useBedOptions();
   const bedMap = useMemo(() => new Map(bedList.map((b) => [b.id, b.name])), [bedList]);
   const [bedSegment, setBedSegment] = useState<'bed' | 'other'>('other');
-  const { forecast } = useWeather();
+  // The calendar's rain markers have to be the farm's, not a hardcoded default.
+  // `useWeatherLocations` resolves plot GPS → district → default and both of its
+  // reads are cached, so this shares a cache key with the Today screen rather
+  // than costing a second fetch. One forecast covers the whole calendar; a farm
+  // with several parent locations gets its first one.
+  const { plots: weatherPlots } = useWeatherLocations();
+  const farmCoords = weatherPlots[0] ?? DEFAULT_COORDINATES;
+  const { forecast } = useWeather(farmCoords.lat, farmCoords.lng);
   // The Beds segment forces bed grouping; otherwise the View Options group menu applies.
   const effectiveGroupBy = bedSegment === 'bed' ? 'bed' : groupBy;
   const [searchQuery, setSearchQuery] = useState('');

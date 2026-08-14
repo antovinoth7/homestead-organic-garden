@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-08-11 — src/: 594 files, 106,854 lines.
+> Snapshot: 2026-08-14 — src/: 598 files, 107,490 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -16,7 +16,7 @@
 - src/hooks/usePlantFormState.ts (1202)
 - src/services/plants.ts (1126)
 - src/components/BedRowLayout.tsx (982)
-- src/types/database.types.ts (972)
+- src/types/database.types.ts (980)
 - src/screens/CatalogPlantDetailScreen.tsx (970)
 - src/hooks/useBedCreationWizard.ts (937)
 - src/services/plantCatalog.ts (879)
@@ -25,10 +25,11 @@
 
 ## src/
 
-### src/__tests__/components/ — 5 files, 526 lines
+### src/__tests__/components/ — 6 files, 683 lines
 
-- PlotCard.test.tsx (192)
+- PlotCard.test.tsx (223)
 - ForecastOverlay.test.tsx (133)
+- PlotCarousel.test.tsx (126)
 - bedRotationSummary.test.ts (100)
 - bedSuccessionTimeline.harvest.test.ts (60)
 - DraggablePlantRow.test.ts (41)
@@ -52,10 +53,10 @@
 - bedTypeMeta.test.ts (53)
 - plantingSequence.test.ts (35)
 
-### src/__tests__/fixtures/ — 5 files, 176 lines
+### src/__tests__/fixtures/ — 5 files, 216 lines
 
+- today.fixtures.ts (83)
 - plant.fixtures.ts (64)
-- today.fixtures.ts (43)
 - task.fixtures.ts (30)
 - bed.fixtures.ts (23)
 - journal.fixtures.ts (16)
@@ -92,12 +93,12 @@
 - careTaskScheduling.test.ts (87)
 - preMonsoonTasks.test.ts (83)
 
-### src/__tests__/utils/ — 67 files, 8,131 lines
+### src/__tests__/utils/ — 67 files, 8,139 lines
 
 - rowLayoutEngine.test.ts (523)
 - growthStage.test.ts (371)
 - rowLayoutEngine.bedTypes.test.ts (343)
-- plotBriefLine.test.ts (281)
+- plotBriefLine.test.ts (289)
 - plotGrouping.test.ts (228)
 - catalogValidation.test.ts (199)
 - plantFilters.test.ts (197)
@@ -162,7 +163,7 @@
 - plantCapacity.test.ts (21)
 - growSpecFormat.test.ts (17)
 
-### src/components/ — 71 files, 11,609 lines
+### src/components/ — 71 files, 11,603 lines
 
 - BedRowLayout.tsx (982) ⚠️ large — Grep/search inside, do not read whole
 - BedTopDownMap.tsx (773)
@@ -177,7 +178,7 @@
 - PlantEntryResolverSheet.tsx (253)
 - BedCard.tsx (236)
 - WeatherDeck.tsx (235)
-- LocationProfileEditor.tsx (229)
+- LocationProfileEditor.tsx (223)
 - DetailCareGuidanceSection.tsx (210)
 - GrowthStageTimeline.tsx (197)
 - BedLayerStack.tsx (192)
@@ -242,9 +243,9 @@
 - MonthCalendarView.tsx (126)
 - WeekCalendarView.tsx (110)
 
-### src/components/catalog/ — 15 files, 1,455 lines
+### src/components/catalog/ — 15 files, 1,459 lines
 
-- VarietyDetailModal.tsx (202)
+- VarietyDetailModal.tsx (206)
 - CatalogDetailRow.tsx (148)
 - PestDiseasePickerModal.tsx (127)
 - ReassignPlantsModal.tsx (109)
@@ -291,13 +292,13 @@
 - FormSectionCard.tsx (49)
 - EditBeneficialsSection.tsx (35)
 
-### src/components/modals/ — 11 files, 1,796 lines
+### src/components/modals/ — 11 files, 1,803 lines
 
 - CreateTaskModal.tsx (431)
 - PlotEditModal.tsx (415)
 - SkipTaskModal.tsx (175)
 - AlertDialog.tsx (159)
-- SectionEditSheet.tsx (130)
+- SectionEditSheet.tsx (137)
 - TaskCompletionModal.tsx (111)
 - ConfirmDeleteModal.tsx (101)
 - LocationReassignModal.tsx (80)
@@ -338,10 +339,11 @@
 - ReferenceFilterChips.tsx (56)
 - types.ts (30)
 
-### src/components/today/ — 5 files, 788 lines
+### src/components/today/ — 6 files, 991 lines
 
-- PlotCard.tsx (279)
+- PlotCard.tsx (355)
 - ForecastOverlay.tsx (252)
+- PlotCarousel.tsx (127)
 - SeasonBlock.tsx (104)
 - TodayHeader.tsx (82)
 - NeedsActionRow.tsx (71)
@@ -471,14 +473,14 @@
 
 - AppNavigator.tsx (197)
 
-### src/screens/ — 28 files, 10,442 lines
+### src/screens/ — 28 files, 10,445 lines
 
 - CalendarScreen.tsx (2079) ⚠️ large — Grep/search inside, do not read whole
 - CatalogPlantDetailScreen.tsx (970) ⚠️ large — Grep/search inside, do not read whole
 - PlantsScreen.tsx (827) ⚠️ large — Grep/search inside, do not read whole
 - JournalFormScreen.tsx (710)
 - JournalScreen.tsx (559)
-- MyFarmScreen.tsx (536)
+- MyFarmScreen.tsx (538)
 - BedListScreen.tsx (516)
 - SettingsScreen.tsx (427)
 - ArchivedPlantsScreen.tsx (390)
@@ -486,7 +488,7 @@
 - BedCreationWizardScreen.tsx (369)
 - BedDetailScreen.tsx (365)
 - OnboardingScreen.tsx (317)
-- TodayScreen.tsx (293)
+- TodayScreen.tsx (294)
 - ManagePlantCatalogScreen.tsx (285)
 - InputRecipesScreen.tsx (242)
 - OrganicInputDetailScreen.tsx (242)
@@ -533,7 +535,7 @@
 - weatherLogic.ts (87)
 - alerts.ts (19)
 
-### src/styles/ — 93 files, 19,311 lines
+### src/styles/ — 94 files, 19,470 lines
 
 - bedCreationWizardStyles.ts (1886) ⚠️ large — Grep/search inside, do not read whole
 - plantFormStyles.ts (1719) ⚠️ large — Grep/search inside, do not read whole
@@ -543,18 +545,18 @@
 - journalFormStyles.ts (609)
 - journalStyles.ts (521)
 - plantsStyles.ts (503)
-- plotEditStyles.ts (441)
 - pestDiseaseDetailStyles.ts (439)
-- catalogPlantDetailStyles.ts (418)
+- catalogPlantDetailStyles.ts (437)
+- plotEditStyles.ts (431)
 - enrichedSectionStyles.ts (393)
+- plotCardStyles.ts (380)
 - bedListStyles.ts (336)
 - plantCardStyles.ts (335)
 - organicInputDetailStyles.ts (330)
 - managePlantCatalogStyles.ts (305)
 - forecastOverlayStyles.ts (298)
-- plotCardStyles.ts (291)
 - inputRecipesStyles.ts (267)
-- myFarmStyles.ts (253)
+- myFarmStyles.ts (252)
 - bedPlantPickerStyles.ts (250)
 - organicInputListStyles.ts (246)
 - catalogRowStyles.ts (236)
@@ -573,9 +575,9 @@
 - weatherCardStyles.ts (153)
 - seasonBlockStyles.ts (139)
 - plantPickerSheetStyles.ts (133)
-- sectionSheetStyles.ts (126)
 - bedRotationStyles.ts (124)
 - seasonPanelStyles.ts (124)
+- sectionSheetStyles.ts (123)
 - optionPickerSheetStyles.ts (117)
 - bedsQuickScrollStyles.ts (113)
 - moreStyles.ts (113)
@@ -600,6 +602,7 @@
 - imageZoomModalStyles.ts (70)
 - expandableBlockStyles.ts (69)
 - floatingLabelInputStyles.ts (67)
+- plotCarouselStyles.ts (65)
 - catalogSheetStyles.ts (61)
 - referenceThumbStyles.ts (59)
 - authStyles.ts (58)
@@ -634,20 +637,20 @@
 - colors.ts (230)
 - index.tsx (89)
 
-### src/types/ — 3 files, 1,282 lines
+### src/types/ — 3 files, 1,290 lines
 
-- database.types.ts (972) ⚠️ large — Grep/search inside, do not read whole
+- database.types.ts (980) ⚠️ large — Grep/search inside, do not read whole
 - navigation.types.ts (261)
 - offline.types.ts (49)
 
-### src/utils/ — 77 files, 9,913 lines
+### src/utils/ — 78 files, 9,966 lines
 
 - plantHelpers.ts (1958) ⚠️ large — Grep/search inside, do not read whole
 - rowLayoutEngine.ts (660)
 - zipHelper.ts (296)
 - catalogDraft.ts (273)
+- plotBriefLine.ts (269)
 - safeStorage.ts (256)
-- plotBriefLine.ts (254)
 - carePlanDisplay.ts (244)
 - plantLabels.ts (242)
 - plotGrouping.ts (216)
@@ -704,6 +707,7 @@
 - recipeQuantityEngine.ts (45)
 - appLifecycle.ts (44)
 - svgArc.ts (40)
+- weatherTone.ts (38)
 - preMonsoonTasks.ts (36)
 - perennialCare.ts (35)
 - voiceInput.ts (35)
@@ -747,8 +751,8 @@
 - archive/ROADMAP_ARCHIVE.md (1861)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (763)
-- COMPONENTS.md (65)
+- CODEMAP.md (767)
+- COMPONENTS.md (66)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (44)
 - ENTERPRISE_AUDIT.md (416)

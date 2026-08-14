@@ -27,6 +27,7 @@ import {
   formatRain,
   formatRainChance,
   formatTempRange,
+  forecastSectionLabel,
   selectForecastDays,
 } from '@/utils/weatherWords';
 
@@ -175,7 +176,9 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
           </View>
         )}
 
-        <Text style={styles.sectionLabel}>{today ? 'Next six days' : 'Available forecast'}</Text>
+        <Text style={styles.sectionLabel}>
+          {forecastSectionLabel(today !== null, rows.length)}
+        </Text>
 
         {available.length === 0 ? (
           <View style={styles.noDataBlock}>

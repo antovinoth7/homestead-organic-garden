@@ -2,7 +2,9 @@ import {
   describeDay,
   FALLBACK_BANNER_COPY,
   forecastDateKey,
+  forecastDateKeyFrom,
   forecastDayLabel,
+  forecastSectionLabel,
   formatForecastDate,
   formatRain,
   formatRainChance,
@@ -148,5 +150,55 @@ describe('FALLBACK_BANNER_COPY', () => {
 
   it('explains the default coordinates', () => {
     expect(FALLBACK_BANNER_COPY.default(null)).toContain('default');
+  });
+});
+
+describe('forecastDateKeyFrom', () => {
+  it('accepts an ISO string, an epoch number and a Date', () => {
+    const iso = '2026-08-09T20:30:00.000Z';
+    const expected = '2026-08-10';
+    expect(forecastDateKeyFrom(iso)).toBe(expected);
+    expect(forecastDateKeyFrom(new Date(iso).getTime())).toBe(expected);
+    expect(forecastDateKeyFrom(new Date(iso))).toBe(expected);
+  });
+
+  it('resolves the same instant differently per timezone', () => {
+    const iso = '2026-08-09T20:30:00.000Z';
+    expect(forecastDateKeyFrom(iso, 'Asia/Kolkata')).toBe('2026-08-10');
+    expect(forecastDateKeyFrom(iso, 'Pacific/Niue')).toBe('2026-08-09');
+  });
+
+  it('returns an empty key for an unparseable value', () => {
+    expect(forecastDateKeyFrom('not-a-date')).toBe('');
+    expect(forecastDateKeyFrom(Number.NaN)).toBe('');
+  });
+});
+
+describe('forecastDateKey', () => {
+  // Previously this threw: `formatToParts` rejects an invalid Date, the
+  // non-farm-zone branch recursed, and `toISOString()` threw uncaught.
+  it('returns an empty key for an invalid date instead of throwing', () => {
+    expect(forecastDateKey(new Date(Number.NaN))).toBe('');
+    expect(forecastDateKey(new Date(Number.NaN), 'Pacific/Niue')).toBe('');
+  });
+});
+
+describe('forecastSectionLabel', () => {
+  it('says six days only when six rows follow today', () => {
+    expect(forecastSectionLabel(true, 6)).toBe('Next six days');
+  });
+
+  // A cached forecast starting before today is trimmed by `selectForecastDays`,
+  // so the heading has to follow the rows rather than assume a full week.
+  it('matches a trimmed window rather than over-promising', () => {
+    expect(forecastSectionLabel(true, 5)).toBe('Next five days');
+    expect(forecastSectionLabel(true, 2)).toBe('Next two days');
+    expect(forecastSectionLabel(true, 1)).toBe('Tomorrow only');
+    expect(forecastSectionLabel(true, 0)).toBe('Nothing further forecast');
+  });
+
+  it('falls back to the available-forecast wording with no today row', () => {
+    expect(forecastSectionLabel(false, 4)).toBe('Available forecast');
+    expect(forecastSectionLabel(false, 0)).toBe('Available forecast');
   });
 });
