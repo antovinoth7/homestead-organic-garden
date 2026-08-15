@@ -4,39 +4,56 @@ import type { Theme } from '@/theme/colors';
 /**
  * Styles for the reusable VoiceDictation control. Carried over from the
  * journal's inline voice block so every notes/analysis field gets the same
- * compact locale-toggle + mic + live-preview look.
+ * compact segmented locale + mic + live-preview look.
  */
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     voiceRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 8,
+      justifyContent: 'flex-start',
+      minHeight: 44,
+      marginBottom: 4,
     },
     voiceLocaleRow: {
       flexDirection: 'row',
-      gap: 8,
+      alignItems: 'center',
+      height: 44,
+      position: 'relative',
     },
-    voiceLocaleChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+    voiceLocaleCapsule: {
+      position: 'absolute',
+      top: 6,
+      right: 0,
+      bottom: 6,
+      left: 0,
       borderRadius: 16,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
+      backgroundColor: theme.backgroundTertiary,
     },
-    voiceLocaleChipActive: {
+    voiceLocaleTouchTarget: {
+      height: 44,
+      paddingHorizontal: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    voiceLocaleSegment: {
+      height: 28,
+      paddingHorizontal: 10,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    voiceLocaleSegmentActive: {
       backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
     },
-    voiceLocaleChipText: {
-      fontSize: 13,
+    voiceLocaleText: {
+      fontSize: 12,
       color: theme.textSecondary,
       fontWeight: '500',
     },
-    voiceLocaleChipTextActive: {
+    voiceLocaleTextActive: {
       color: theme.primary,
+      fontWeight: '600',
     },
     voicePreview: {
       fontSize: 14,

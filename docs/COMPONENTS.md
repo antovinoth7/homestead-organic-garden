@@ -29,7 +29,7 @@
 - `OfflineBanner` (+ `useOfflineStatus`) — connectivity strip above the navigator; shows offline state and pending-sync count from the offline write queue
 - `SectionHeader` — dashboard section heading (17px title + optional right-aligned action link) sitting on the page background above its content; use it for any new home-screen section rather than a bare `<Text>`
 - `ErrorBoundary` — class component error boundary
-- `VoiceDictation` / `VoiceInputButton` (+ `useVoiceInput`) — speech-to-text for any text field
+- `VoiceDictation` / `VoiceInputButton` (+ `useVoiceInput`) — speech-to-text for existing notes/analysis fields, using a compact Tamil/English segmented control and adjacent mic while retaining 44px touch targets
 - `ImageZoomModal` (+ `usePinchZoom`) — pinch-zoom photo viewer
 - Modals in `src/components/modals/`: `ConfirmDeleteModal` (shared delete confirmation — use this, not bespoke modals), `DiscardChangesModal`, `PhotoSourceModal`, `TaskCompletionModal`, `CreateTaskModal`, `PestDiseaseModal`, `LocationEditModal`, `LocationReassignModal`, `BedCapacityModal`
 

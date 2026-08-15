@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { createStyles } from '../styles/voiceInputButtonStyles';
@@ -33,7 +33,7 @@ export default function VoiceInputButton({
 
   return (
     <TouchableOpacity
-      style={[styles.button, isListening && styles.buttonListening, muted && styles.buttonDisabled]}
+      style={styles.button}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
@@ -46,11 +46,19 @@ export default function VoiceInputButton({
       }
       accessibilityState={{ disabled, busy: isListening }}
     >
-      <Ionicons
-        name={isListening ? 'stop' : 'mic'}
-        size={22}
-        color={isListening ? theme.textInverse : muted ? theme.textTertiary : theme.primary}
-      />
+      <View
+        style={[
+          styles.buttonCircle,
+          isListening && styles.buttonListening,
+          muted && styles.buttonDisabled,
+        ]}
+      >
+        <Ionicons
+          name={isListening ? 'stop' : 'mic'}
+          size={17}
+          color={isListening ? theme.textInverse : muted ? theme.textTertiary : theme.primary}
+        />
+      </View>
     </TouchableOpacity>
   );
 }

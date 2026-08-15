@@ -22,7 +22,7 @@ interface Props {
 
 /**
  * Reusable speech-to-text control for notes/analysis fields. Renders a compact
- * தமிழ்/English locale toggle, a mic button, and a live transcript preview, then
+ * தமிழ்/English segmented control, a mic button, and a live transcript preview, then
  * appends finalized speech to the field via `appendVoiceTranscript`.
  *
  * Renders nothing when the binary has no speech module at all (Expo Go / web /
@@ -93,24 +93,35 @@ export default function VoiceDictation({
     <View>
       <View style={styles.voiceRow}>
         <View style={styles.voiceLocaleRow}>
+          <View pointerEvents="none" style={styles.voiceLocaleCapsule} />
           {VOICE_LOCALES.map((loc) => (
             <TouchableOpacity
               key={loc.code}
-              style={[
-                styles.voiceLocaleChip,
-                locale === loc.code && styles.voiceLocaleChipActive,
-              ]}
+              style={styles.voiceLocaleTouchTarget}
               onPress={() => setLocale(loc.code)}
               disabled={isListening || !isAvailable}
+              accessibilityRole="button"
+              accessibilityLabel={`${loc.label} voice language`}
+              accessibilityState={{
+                disabled: isListening || !isAvailable,
+                selected: locale === loc.code,
+              }}
             >
-              <Text
+              <View
                 style={[
-                  styles.voiceLocaleChipText,
-                  locale === loc.code && styles.voiceLocaleChipTextActive,
+                  styles.voiceLocaleSegment,
+                  locale === loc.code && styles.voiceLocaleSegmentActive,
                 ]}
               >
-                {loc.label}
-              </Text>
+                <Text
+                  style={[
+                    styles.voiceLocaleText,
+                    locale === loc.code && styles.voiceLocaleTextActive,
+                  ]}
+                >
+                  {loc.label}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>

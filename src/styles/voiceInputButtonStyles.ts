@@ -6,7 +6,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     button: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    buttonCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.primaryLight,
