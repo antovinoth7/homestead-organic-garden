@@ -1,25 +1,33 @@
 /** Full-screen, cached seven-day forecast for one plot. */
 
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
+  LayoutChangeEvent,
   Linking,
   ScrollView,
   StyleProp,
+  StyleSheet,
   Text,
+  TextStyle,
   TouchableOpacity,
   View,
   ViewStyle,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
 import { GardenIcon } from '@/components/GardenIcon';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WeatherConditionId, WeatherForecast } from '@/types/database.types';
+import { DailyWeather, WeatherForecast } from '@/types/database.types';
+import { Theme } from '@/theme/colors';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/forecastOverlayStyles';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 import { OPEN_METEO_ATTRIBUTION_URL } from '@/services/weather';
+import { DayJobs, formatJobText } from '@/utils/upcomingJobs';
+import { TASK_LABELS } from '@/utils/taskConstants';
+import { WeatherTone, weatherTone } from '@/utils/weatherTone';
 import {
   describeDay,
   FALLBACK_BANNER_COPY,
@@ -27,6 +35,7 @@ import {
   formatForecastDate,
   formatRain,
   formatRainChance,
+  formatTemp,
   formatTempRange,
   forecastSectionLabel,
   selectForecastDays,
@@ -39,28 +48,35 @@ interface Props {
   forecast: WeatherForecast | null;
   stale: boolean;
   loading: boolean;
-  jobsByDate: ReadonlyMap<string, string>;
+  jobsByDate: ReadonlyMap<string, DayJobs>;
   onRetry: () => void;
   onClose: () => void;
 }
 
-function dayTone(
-  styles: ReturnType<typeof createStyles>,
-  condition: WeatherConditionId
-): StyleProp<ViewStyle> {
-  switch (condition) {
-    case 'heavy_rain':
-    case 'heavy_showers':
-    case 'thunderstorm':
+type Styles = ReturnType<typeof createStyles>;
+
+/**
+ * The rail down the left edge of a day card, and the ink its icon borrows.
+ *
+ * One 3px stripe rather than a tinted card: the condition is worth marking, but
+ * not worth the whole surface. `neutral` — cloud, fog, no forecast — draws a
+ * hairline-coloured rail, which is to say it draws nothing, because a grey day
+ * is not news.
+ */
+function railTone(styles: Styles, theme: Theme, tone: WeatherTone): { rail: StyleProp<ViewStyle>; ink: string } {
+  switch (tone) {
     case 'rain':
-      return styles.dayToneRain;
+      return { rail: styles.dayRailRain, ink: theme.infoDark };
     case 'showers':
-    case 'drizzle':
-      return styles.dayToneShowers;
+      return { rail: styles.dayRailShowers, ink: theme.info };
+    case 'clear':
+      return { rail: styles.dayRailClear, ink: theme.accent };
     case 'hot':
-      return styles.dayToneHot;
-    default:
-      return styles.dayToneNeutral;
+      return { rail: styles.dayRailHot, ink: theme.warningDark };
+    case 'storm':
+      return { rail: styles.dayRailStorm, ink: theme.purpleDark };
+    case 'neutral':
+      return { rail: styles.dayRailNeutral, ink: theme.textTertiary };
   }
 }
 
@@ -75,6 +91,160 @@ function formatFetchedAt(iso: string | null): string | null {
     minute: '2-digit',
   });
 }
+
+/** Spoken as one sentence, so a day is heard whole rather than as five fragments. */
+function dayAccessibilityLabel(day: DailyWeather, dayLabel: string, jobText: string): string {
+  const description = describeDay(day);
+  return [
+    dayLabel,
+    description.label,
+    formatTempRange(day),
+    `${formatRainChance(day)} chance of rain`,
+    formatRain(day),
+    jobText === '—' ? 'no garden jobs scheduled' : jobText,
+  ].join(', ');
+}
+
+interface TodayCardProps {
+  day: DailyWeather;
+  jobs: DayJobs | undefined;
+  styles: Styles;
+  theme: Theme;
+}
+
+/**
+ * Today, on the hero green — the same ground as the header this overlay covers,
+ * so the day the grower is standing in stays the brightest thing on screen.
+ *
+ * The jobs figure is the total. Overdue work sits beneath it in the alert ink
+ * rather than in front of the total, because the two used to run together as
+ * "31 overdue · 46 jobs" and read as seventy-seven pieces of work.
+ */
+const ForecastTodayCard = React.memo(function ForecastTodayCard({
+  day,
+  jobs,
+  styles,
+  theme,
+}: TodayCardProps): React.JSX.Element {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const description = describeDay(day);
+  const count = jobs?.count ?? 0;
+  const overdue = jobs?.overdue ?? 0;
+  const topLabel = jobs?.topType ? TASK_LABELS[jobs.topType] : null;
+
+  const onLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setSize((prev) => (prev.width === width && prev.height === height ? prev : { width, height }));
+  }, []);
+
+  const note = overdue > 0 ? `${overdue} overdue` : topLabel;
+  const noteStyle: StyleProp<TextStyle> = [
+    styles.todayStatNote,
+    overdue > 0 ? styles.todayStatNoteAlert : null,
+  ];
+
+  return (
+    <View
+      style={styles.today}
+      onLayout={onLayout}
+      accessible
+      accessibilityLabel={dayAccessibilityLabel(day, 'Today', formatJobText(jobs))}
+    >
+      {size.width > 0 && (
+        <Svg style={StyleSheet.absoluteFill} width={size.width} height={size.height}>
+          <Defs>
+            <SvgLinearGradient id="forecastTodayGround" x1="0" y1="0" x2="0.3" y2="1">
+              <Stop offset="0" stopColor={theme.heroGradientStart} />
+              <Stop offset="1" stopColor={theme.heroGradientEnd} />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect x={0} y={0} width={size.width} height={size.height} fill="url(#forecastTodayGround)" />
+        </Svg>
+      )}
+
+      <View style={styles.todayEyebrowRow}>
+        <Text style={styles.todayEyebrow}>Today · {formatForecastDate(day.date)}</Text>
+        <Text style={styles.todayCondition}>{description.label}</Text>
+      </View>
+
+      <View style={styles.todayFigureRow}>
+        <GardenIcon name={description.iconKey} size={34} color={theme.heroText} />
+        <Text style={styles.todayTemp}>{formatTempRange(day)}</Text>
+      </View>
+
+      <View style={styles.todayPanel}>
+        <View style={styles.todayStat}>
+          <Text style={styles.todayStatValue}>{formatRainChance(day)}</Text>
+          <Text style={styles.todayStatLabel}>Chance</Text>
+        </View>
+        <View style={styles.todayStatDivider} />
+        <View style={styles.todayStat}>
+          <Text style={styles.todayStatValue}>{formatRain(day)}</Text>
+          <Text style={styles.todayStatLabel}>Rainfall</Text>
+        </View>
+        <View style={styles.todayStatDivider} />
+        <View style={styles.todayStat}>
+          <Text style={styles.todayStatValue}>{count}</Text>
+          <Text style={styles.todayStatLabel}>{count === 1 ? 'Job' : 'Jobs'}</Text>
+          {note !== null && <Text style={noteStyle}>{note}</Text>}
+        </View>
+      </View>
+    </View>
+  );
+});
+
+interface DayCardProps {
+  day: DailyWeather;
+  dayLabel: string;
+  jobs: DayJobs | undefined;
+  styles: Styles;
+  theme: Theme;
+}
+
+const ForecastDayCard = React.memo(function ForecastDayCard({
+  day,
+  dayLabel,
+  jobs,
+  styles,
+  theme,
+}: DayCardProps): React.JSX.Element {
+  const description = describeDay(day);
+  const tone = railTone(styles, theme, weatherTone(description.id));
+  const jobText = formatJobText(jobs);
+  const jobStyle: StyleProp<TextStyle> = [
+    styles.dayJob,
+    jobs && jobs.overdue > 0 ? styles.dayJobOverdue : null,
+  ];
+
+  return (
+    <View
+      style={styles.dayCard}
+      accessible
+      accessibilityLabel={dayAccessibilityLabel(day, dayLabel, jobText)}
+    >
+      <View style={[styles.dayRail, tone.rail]} />
+
+      <View style={styles.dayTopRow}>
+        <Text style={styles.dayName}>{dayLabel}</Text>
+        <Text style={styles.dayTemp}>
+          {formatTemp(day.tempMaxC)}
+          <Text style={styles.dayTempMin}> / {formatTemp(day.tempMinC)}</Text>
+        </Text>
+      </View>
+
+      <View style={styles.dayMetaRow}>
+        <GardenIcon name={description.iconKey} size={15} color={tone.ink} />
+        <Text style={styles.dayConditionLabel}>{description.label}</Text>
+        <View style={styles.daySpacer} />
+        <Text style={styles.dayRain} numberOfLines={1}>
+          {formatRainChance(day)} chance · {formatRain(day)}
+        </Text>
+      </View>
+
+      {jobText !== '—' && <Text style={jobStyle}>{jobText}</Text>}
+    </View>
+  );
+});
 
 export const ForecastOverlay = React.memo(function ForecastOverlay({
   plotName,
@@ -91,7 +261,6 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const { today, future, available, todayKey } = selectForecastDays(forecast);
-  const todayDescription = describeDay(today);
   const fetchedAt = formatFetchedAt(forecast?.fetched_at ?? null);
 
   useEffect(() => {
@@ -110,24 +279,18 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
 
   return (
     <View style={styles.overlay}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity
-          style={styles.back}
-          onPress={onClose}
-          activeOpacity={0.7}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel="Back to today"
-        >
-          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Forecast</Text>
-        <View style={styles.pill}>
-          <Text style={styles.pillText} numberOfLines={1}>
-            {plotName}
-          </Text>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Forecast"
+        onBack={onClose}
+        backAccessibilityLabel="Back to today"
+        right={
+          <View style={styles.pill}>
+            <Text style={styles.pillText} numberOfLines={1}>
+              {plotName}
+            </Text>
+          </View>
+        }
+      />
 
       <ScrollView
         style={styles.scroll}
@@ -136,15 +299,15 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
         }}
       >
         {source !== 'plot' && (
-          <View style={styles.banner}>
+          <View style={styles.notice}>
             <GardenIcon name="general.location" size={16} color={theme.textSecondary} />
-            <Text style={styles.bannerText}>{FALLBACK_BANNER_COPY[source](district)}</Text>
+            <Text style={styles.noticeText}>{FALLBACK_BANNER_COPY[source](district)}</Text>
           </View>
         )}
 
         {stale && (
-          <View style={styles.staleBanner}>
-            <Text style={styles.staleText}>
+          <View style={[styles.notice, styles.noticeStale]}>
+            <Text style={styles.noticeText}>
               Cached forecast · reconnect and retry for current data
             </Text>
             <TouchableOpacity
@@ -159,22 +322,12 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
         )}
 
         {today !== null && (
-          <View style={styles.today}>
-            <Text style={styles.todayLabel}>Today · {formatForecastDate(today.date)}</Text>
-            <View style={styles.todayRow}>
-              <GardenIcon name={todayDescription.iconKey} size={28} color={theme.primary} />
-              <View style={styles.todayWeather}>
-                <Text style={styles.todayTemp}>{formatTempRange(today)}</Text>
-                <Text style={styles.todayMetrics}>
-                  {formatRainChance(today)} rain · {formatRain(today)}
-                </Text>
-              </View>
-              <Text style={styles.todayCondition}>{todayDescription.label}</Text>
-            </View>
-            <Text style={styles.todayJob}>
-              {jobsByDate.get(today.date) ?? 'No garden jobs scheduled'}
-            </Text>
-          </View>
+          <ForecastTodayCard
+            day={today}
+            jobs={jobsByDate.get(today.date)}
+            styles={styles}
+            theme={theme}
+          />
         )}
 
         <Text style={styles.sectionLabel}>
@@ -201,36 +354,16 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
           </View>
         ) : (
           <View style={styles.days}>
-            {rows.map((day) => {
-              const description = describeDay(day);
-              const accessibility = `${forecastDayLabel(day.date, todayKey)}, ${
-                description.label
-              }, ${formatTempRange(day)}, ${formatRainChance(day)} chance of rain, ${formatRain(
-                day
-              )}, ${jobsByDate.get(day.date) ?? 'no garden jobs scheduled'}`;
-              return (
-                <View
-                  key={day.date}
-                  style={[styles.dayRow, dayTone(styles, description.id)]}
-                  accessible
-                  accessibilityLabel={accessibility}
-                >
-                  <View style={styles.dayTopRow}>
-                    <Text style={styles.dayName}>{forecastDayLabel(day.date, todayKey)}</Text>
-                    <GardenIcon name={description.iconKey} size={16} color={theme.textSecondary} />
-                    <Text style={styles.dayCondition}>{description.label}</Text>
-                  </View>
-                  <View style={styles.dayDetailRow}>
-                    <Text style={styles.dayTemp}>{formatTempRange(day)}</Text>
-                    <Text style={styles.dayRain}>{formatRainChance(day)} rain</Text>
-                    <Text style={styles.dayRain}>{formatRain(day)}</Text>
-                    <Text style={styles.dayJob} numberOfLines={2}>
-                      {jobsByDate.get(day.date) ?? 'No jobs'}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
+            {rows.map((day) => (
+              <ForecastDayCard
+                key={day.date}
+                day={day}
+                dayLabel={forecastDayLabel(day.date, todayKey)}
+                jobs={jobsByDate.get(day.date)}
+                styles={styles}
+                theme={theme}
+              />
+            ))}
           </View>
         )}
 

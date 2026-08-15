@@ -109,11 +109,19 @@ export function countJobsByDate(
   return result;
 }
 
-/** Row text: "—", "4 jobs", "4 jobs · Water", "2 overdue · 4 jobs". */
+/**
+ * Row text: "—", "4 jobs", "4 jobs · Water", "4 jobs · Water · 2 overdue".
+ *
+ * The total leads. `overdue` counts templates already inside `count`, so naming
+ * it first — as this once did — reads as two quantities that add up, and a day
+ * of "31 overdue · 46 jobs" gets mistaken for 77 pieces of work. Trailing it
+ * also stops overdue work from suppressing the task type, which is the part
+ * that says what the day actually holds.
+ */
 export function formatJobText(jobs: DayJobs | undefined): string {
   if (!jobs || jobs.count === 0) return '—';
-  const countText = jobs.count === 1 ? '1 job' : `${jobs.count} jobs`;
-  if (jobs.overdue > 0) return `${jobs.overdue} overdue · ${countText}`;
-  const label = jobs.topType ? TASK_LABELS[jobs.topType] : null;
-  return label ? `${countText} · ${label}` : countText;
+  const parts = [jobs.count === 1 ? '1 job' : `${jobs.count} jobs`];
+  if (jobs.topType) parts.push(TASK_LABELS[jobs.topType]);
+  if (jobs.overdue > 0) parts.push(`${jobs.overdue} overdue`);
+  return parts.join(' · ');
 }

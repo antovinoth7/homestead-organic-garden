@@ -4,11 +4,22 @@
  * A full-bleed page rather than a sheet: it fills the screen above the list so
  * the safe-area insets and the floating tab bar keep behaving as they do on the
  * Today screen itself.
+ *
+ * Built in the Today screen's card language, because that is the screen this
+ * one covers: `CARD_GUTTER` insets, hairline borders, radius 16–20, and no
+ * shadows anywhere. Today's weather is the one block that leaves paper — it
+ * carries the `hero*` tokens, matching the green header directly behind it.
+ *
+ * The six day cards stay on `card` and let a 3px rail carry the condition.
+ * Tinting the whole card, as this once did, spends the loudest channel on the
+ * least surprising fact: a monsoon week is six identical blue blocks, and the
+ * one day that differs is the one that stops standing out.
  */
 
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 import { MONO_META } from './typography';
+import { CARD_GUTTER } from './todayScreenStyles';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -21,33 +32,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
     },
 
-    // ─── Header ──────────────────────────────────────────────────────────────
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      paddingHorizontal: 16,
-      paddingBottom: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: theme.border,
-    },
-    // The circular primary chip every other screen's back button uses — see
-    // `plantDetailStyles.floatingCircleButton` / `plantFormStyles.headerIconButton`.
-    back: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitle: {
-      flex: 1,
-      fontSize: 15.5,
-      fontWeight: '700',
-      color: theme.text,
-      letterSpacing: -0.2,
-    },
+    // ─── Plot name, in the shared header's right slot ─────────────────────────
     pill: {
       backgroundColor: theme.primaryLight,
       borderWidth: StyleSheet.hairlineWidth,
@@ -55,6 +40,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 999,
       paddingHorizontal: 11,
       paddingVertical: 5,
+      maxWidth: 140,
     },
     pillText: {
       fontSize: 11.5,
@@ -62,37 +48,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.primary,
     },
 
-    // ─── "Not this plot's reading" banner ────────────────────────────────────
-    banner: {
-      flexDirection: 'row',
-      gap: 11,
-      paddingHorizontal: 20,
-      paddingVertical: 13,
-      backgroundColor: theme.cautionLight,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: theme.cautionBorder,
-    },
-    bannerGlyph: {
-      fontSize: 14,
-      lineHeight: 18,
-    },
-    bannerText: {
-      flex: 1,
-      fontSize: 11.5,
-      lineHeight: 17,
-      color: theme.textSecondary,
-    },
-    staleBanner: {
+    // ─── Notice cards ────────────────────────────────────────────────────────
+    // Inset cards rather than full-bleed bands: they interrupt the card stack,
+    // so they read as belonging to it rather than to the header.
+    notice: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      backgroundColor: theme.warningLight,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: theme.warningBorder,
+      gap: 10,
+      marginHorizontal: CARD_GUTTER,
+      marginTop: 14,
+      paddingHorizontal: 13,
+      paddingVertical: 11,
+      borderRadius: 12,
+      borderWidth: StyleSheet.hairlineWidth,
+      backgroundColor: theme.cautionLight,
+      borderColor: theme.cautionBorder,
     },
-    staleText: {
+    noticeStale: {
+      backgroundColor: theme.warningLight,
+      borderColor: theme.warningBorder,
+    },
+    noticeText: {
       flex: 1,
       fontSize: 11.5,
       lineHeight: 17,
@@ -102,161 +78,221 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       fontWeight: '700',
       color: theme.primary,
+      paddingVertical: 4,
     },
 
-    // ─── Today block ─────────────────────────────────────────────────────────
+    // ─── Today card ──────────────────────────────────────────────────────────
+    // The gradient is painted by an SVG rect underneath; `overflow: 'hidden'`
+    // is what rounds it, so the radius lives here and not in the drawing.
     today: {
-      paddingHorizontal: 20,
-      paddingVertical: 15,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: theme.border,
+      marginHorizontal: CARD_GUTTER,
+      marginTop: 14,
+      borderRadius: 20,
+      overflow: 'hidden',
+      padding: 16,
+      backgroundColor: theme.heroGradientStart,
     },
-    todayLabel: {
-      ...MONO_META,
-      fontSize: 10.5,
-      fontWeight: '500',
-      color: theme.textTertiary,
-      textTransform: 'uppercase',
-    },
-    todayRow: {
+    todayEyebrowRow: {
       flexDirection: 'row',
-      alignItems: 'baseline',
+      alignItems: 'center',
       gap: 10,
-      marginTop: 7,
     },
-    todayWeather: {
+    todayEyebrow: {
+      ...MONO_META,
       flex: 1,
-    },
-    todayEmoji: {
-      fontSize: 24,
-    },
-    todayTemp: {
-      ...MONO_META,
-      fontSize: 26,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    todayMetrics: {
-      ...MONO_META,
-      marginTop: 3,
-      fontSize: 11,
-      fontWeight: '500',
-      color: theme.textTertiary,
+      fontSize: 10.5,
+      fontWeight: '600',
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+      color: theme.heroTextMuted,
     },
     todayCondition: {
       ...MONO_META,
-      flex: 1,
       fontSize: 10.5,
-      fontWeight: '500',
-      color: theme.textTertiary,
-      textAlign: 'right',
-      textTransform: 'uppercase',
-    },
-    todayJob: {
-      marginTop: 9,
-      fontSize: 11.5,
       fontWeight: '600',
-      color: theme.textSecondary,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+      color: theme.heroTextMuted,
+    },
+    todayFigureRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 14,
+      marginBottom: 16,
+    },
+    todayTemp: {
+      ...MONO_META,
+      fontSize: 34,
+      lineHeight: 40,
+      fontWeight: '700',
+      color: theme.heroText,
     },
 
-    // ─── Seven days ──────────────────────────────────────────────────────────
-    sectionLabel: {
-      fontSize: 10,
+    // Three figures on a raised panel, the `todayScreenStyles.heroPanel` recipe.
+    todayPanel: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      backgroundColor: theme.heroSurface,
+      borderRadius: 14,
+      paddingVertical: 11,
+    },
+    todayStat: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+    },
+    todayStatDivider: {
+      width: StyleSheet.hairlineWidth,
+      backgroundColor: theme.heroDivider,
+      marginVertical: 2,
+    },
+    todayStatValue: {
+      ...MONO_META,
+      fontSize: 20,
+      lineHeight: 24,
+      fontWeight: '700',
+      color: theme.heroText,
+    },
+    todayStatLabel: {
+      fontSize: 9.5,
       fontWeight: '600',
-      letterSpacing: 1.3,
+      letterSpacing: 0.9,
+      textTransform: 'uppercase',
+      color: theme.heroTextFaint,
+      marginTop: 4,
+    },
+    // Sits under the jobs figure. Overdue work is the one thing on this card
+    // that is not weather, so it gets the one alert colour the hero ramp has.
+    todayStatNote: {
+      fontSize: 10.5,
+      fontWeight: '700',
+      color: theme.heroTextMuted,
+      marginTop: 3,
+      textAlign: 'center',
+    },
+    todayStatNoteAlert: {
+      color: theme.heroTextAlert,
+    },
+
+    // ─── Six days ────────────────────────────────────────────────────────────
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 1.2,
       textTransform: 'uppercase',
       color: theme.textTertiary,
-      paddingHorizontal: 20,
-      paddingTop: 13,
-      paddingBottom: 6,
+      paddingHorizontal: CARD_GUTTER,
+      paddingTop: 22,
+      paddingBottom: 10,
     },
     days: {
-      paddingHorizontal: 20,
-      paddingTop: 2,
-      paddingBottom: 14,
+      paddingHorizontal: CARD_GUTTER,
+      paddingBottom: 6,
     },
-    // Each day is its own card, tinted by its weather — `dayTone` in the
-    // component picks the tone. The column widths below keep the cards' figures
-    // in a straight line despite the tints changing nothing about the grid.
-    dayRow: {
-      paddingHorizontal: 13,
-      paddingVertical: 11,
-      marginBottom: 8,
-      borderRadius: 14,
-      borderWidth: 1,
+    // No fixed column widths anywhere below. The figures used to be aligned by
+    // a hardcoded `width: 68` on the temperature and a `minWidth` on the rain,
+    // which clipped at large font scales and squeezed the job text to a couple
+    // of characters on a narrow phone. Row order does that work instead.
+    dayCard: {
+      marginBottom: 10,
+      borderRadius: 16,
+      overflow: 'hidden',
+      backgroundColor: theme.card,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.borderLight,
+      paddingVertical: 12,
+      paddingLeft: 16,
+      paddingRight: 14,
     },
+    dayRail: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 3,
+    },
+    dayRailRain: { backgroundColor: theme.infoDark },
+    dayRailShowers: { backgroundColor: theme.info },
+    dayRailClear: { backgroundColor: theme.accent },
+    dayRailHot: { backgroundColor: theme.warningDark },
+    dayRailStorm: { backgroundColor: theme.purpleDark },
+    dayRailNeutral: { backgroundColor: theme.borderLight },
+
     dayTopRow: {
       flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    dayDetailRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'baseline',
       gap: 10,
-      marginTop: 7,
-    },
-    dayToneRain: {
-      backgroundColor: theme.infoLight,
-      borderColor: theme.infoBorder,
-    },
-    dayToneShowers: {
-      backgroundColor: theme.infoLight,
-      borderColor: theme.borderLight,
-    },
-    dayToneHot: {
-      backgroundColor: theme.warningLight,
-      borderColor: theme.warningBorder,
-    },
-    dayToneNeutral: {
-      backgroundColor: theme.card,
-      borderColor: theme.borderLight,
     },
     dayName: {
       flex: 1,
-      fontSize: 11.5,
+      fontSize: 13.5,
       fontWeight: '600',
       color: theme.text,
-    },
-    dayEmoji: {
-      fontSize: 14,
-    },
-    dayCondition: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: theme.textSecondary,
+      letterSpacing: -0.2,
     },
     dayTemp: {
       ...MONO_META,
-      width: 68,
-      fontSize: 11,
+      fontSize: 13.5,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    // The overnight low is the quieter half of the pair, so it is nested in the
+    // same line rather than given a column of its own.
+    dayTempMin: {
       fontWeight: '500',
       color: theme.textTertiary,
     },
-    dayRain: {
-      ...MONO_META,
-      minWidth: 42,
-      fontSize: 11,
-      fontWeight: '500',
-      color: theme.textTertiary,
+    dayMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      marginTop: 8,
     },
-    dayJob: {
-      flex: 1,
-      minWidth: 0,
-      textAlign: 'right',
-      fontSize: 10.5,
+    dayConditionLabel: {
+      fontSize: 12,
       fontWeight: '600',
       color: theme.textSecondary,
     },
+    dayRain: {
+      ...MONO_META,
+      flexShrink: 1,
+      textAlign: 'right',
+      fontSize: 11.5,
+      fontWeight: '500',
+      color: theme.textTertiary,
+    },
+    daySpacer: {
+      flex: 1,
+      minWidth: 8,
+    },
+    dayJob: {
+      marginTop: 8,
+      fontSize: 11.5,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    dayJobOverdue: {
+      color: theme.errorDark,
+    },
+
+    // ─── Empty / retry ───────────────────────────────────────────────────────
     noData: {
       fontSize: 13,
+      textAlign: 'center',
       color: theme.textSecondary,
     },
     noDataBlock: {
       alignItems: 'center',
       gap: 12,
+      marginHorizontal: CARD_GUTTER,
       paddingHorizontal: 20,
-      paddingVertical: 24,
+      paddingVertical: 28,
+      borderRadius: 16,
+      backgroundColor: theme.card,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.borderLight,
     },
     retryButton: {
       minWidth: 88,
@@ -275,8 +311,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     // ─── Source footer ───────────────────────────────────────────────────────
     footer: {
-      paddingHorizontal: 20,
-      paddingTop: 13,
+      paddingHorizontal: CARD_GUTTER,
+      paddingTop: 16,
     },
     footerText: {
       ...MONO_META,
@@ -287,8 +323,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textTransform: 'uppercase',
     },
     attributionLink: {
-      marginTop: 7,
-      paddingVertical: 8,
+      marginTop: 6,
+      paddingVertical: 10,
       fontSize: 11,
       fontWeight: '700',
       color: theme.primary,

@@ -211,7 +211,7 @@ describe('countJobsByDate', () => {
     );
 
     expect(counts.get('2026-08-01')).toMatchObject({ count: 3, overdue: 2 });
-    expect(formatJobText(counts.get('2026-08-01'))).toBe('2 overdue · 3 jobs');
+    expect(formatJobText(counts.get('2026-08-01'))).toBe('3 jobs · Water · 2 overdue');
   });
 });
 
@@ -230,7 +230,12 @@ describe('formatJobText', () => {
     expect(formatJobText({ count: 4, overdue: 0, topType: 'water' })).toBe('4 jobs · Water');
   });
 
-  it('leads with overdue, which matters more than what kind', () => {
-    expect(formatJobText({ count: 4, overdue: 2, topType: 'water' })).toBe('2 overdue · 4 jobs');
+  // Overdue templates are already inside `count`, so leading with them — as this
+  // once did — reads as 2 + 4 rather than as 2 of 4.
+  it('trails overdue behind the total it is part of, and keeps the type', () => {
+    expect(formatJobText({ count: 4, overdue: 2, topType: 'water' })).toBe(
+      '4 jobs · Water · 2 overdue'
+    );
+    expect(formatJobText({ count: 4, overdue: 2, topType: null })).toBe('4 jobs · 2 overdue');
   });
 });

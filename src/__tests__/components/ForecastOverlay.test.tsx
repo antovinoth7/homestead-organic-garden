@@ -15,16 +15,58 @@ jest.mock('react-native', () => {
     View: host('View'),
     BackHandler: { addEventListener: jest.fn(() => ({ remove: jest.fn() })) },
     Linking: { openURL: jest.fn(async () => undefined) },
-    StyleSheet: { absoluteFillObject: {}, hairlineWidth: 1, create: (value: unknown) => value },
+    StyleSheet: {
+      absoluteFill: {},
+      absoluteFillObject: {},
+      hairlineWidth: 1,
+      create: (value: unknown) => value,
+    },
   };
 });
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+// The today card paints its gradient ground with SVG. Nothing here inspects it,
+// but it has to render without a native host.
+jest.mock('react-native-svg', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  const host = (name: string) =>
+    function Host({ children, ...props }: { children?: React.ReactNode }) {
+      return React.createElement(name, props, children);
+    };
+  return {
+    __esModule: true,
+    default: host('Svg'),
+    Defs: host('Defs'),
+    LinearGradient: host('LinearGradient'),
+    Rect: host('Rect'),
+    Stop: host('Stop'),
+  };
+});
 jest.mock('@/components/GardenIcon', () => ({ GardenIcon: () => null }));
+jest.mock('@/components/ScreenHeader', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  return {
+    ScreenHeader: ({ title, right }: { title: string; right?: React.ReactNode }) =>
+      React.createElement('ScreenHeader', { title }, right),
+  };
+});
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 jest.mock('@/theme', () => ({
-  useTheme: () => ({ primary: '#26734d', textInverse: '#fff' }),
+  useTheme: () => ({
+    primary: '#26734d',
+    textInverse: '#fff',
+    textTertiary: '#645242',
+    textSecondary: '#4a3828',
+    heroText: '#fff',
+    heroGradientStart: '#1a4a2e',
+    heroGradientEnd: '#0f2d1a',
+    info: '#2196f3',
+    infoDark: '#1565C0',
+    accent: '#c8842a',
+    warningDark: '#E65100',
+    purpleDark: '#7B1FA2',
+  }),
 }));
 jest.mock('@/styles/forecastOverlayStyles', () => ({
   createStyles: () => new Proxy({}, { get: (_target, property) => String(property) }),
@@ -34,6 +76,7 @@ jest.mock('@/services/weather', () => ({ OPEN_METEO_ATTRIBUTION_URL: 'https://op
 
 import React from 'react';
 import { ForecastOverlay } from '@/components/today/ForecastOverlay';
+import type { DayJobs } from '@/utils/upcomingJobs';
 import { makeDailyWeather, makeWeatherForecast } from '../fixtures/today.fixtures';
 
 interface RenderedTree {
@@ -60,16 +103,32 @@ function forecast() {
   );
 }
 
+const jobs = (count: number, overdue: number, topType: DayJobs['topType']): DayJobs => ({
+  count,
+  overdue,
+  topType,
+});
+
 const baseProps = {
   plotName: 'North Plot',
   district: 'Kanyakumari',
   source: 'plot' as const,
   stale: false,
   loading: false,
-  jobsByDate: new Map([['2026-08-10', '2 watering jobs']]),
+  jobsByDate: new Map<string, DayJobs>([['2026-08-10', jobs(2, 0, 'water')]]),
   onRetry: jest.fn(),
   onClose: jest.fn(),
 };
+
+function render(props: Partial<typeof baseProps> & { forecast: unknown }): RenderedTree {
+  let rendered!: RenderedTree;
+  TestRenderer.act(() => {
+    rendered = TestRenderer.create(
+      React.createElement(ForecastOverlay, { ...baseProps, ...props } as never)
+    );
+  });
+  return rendered;
+}
 
 describe('ForecastOverlay', () => {
   let consoleErrorSpy: jest.SpyInstance;
@@ -91,12 +150,7 @@ describe('ForecastOverlay', () => {
   });
 
   it('renders Today plus six future dates with garden-essential details and attribution', () => {
-    let rendered!: RenderedTree;
-    TestRenderer.act(() => {
-      rendered = TestRenderer.create(
-        React.createElement(ForecastOverlay, { ...baseProps, forecast: forecast() })
-      );
-    });
+    const rendered = render({ forecast: forecast() });
     const output = JSON.stringify(rendered.toJSON());
     expect(output).toContain('Today');
     expect(output).toContain('Next six days');
@@ -105,12 +159,37 @@ describe('ForecastOverlay', () => {
     expect(
       rendered.root.findByProps({
         accessibilityLabel:
-          'Tomorrow, Showers, 31° / 24°, 70% chance of rain, 4mm, 2 watering jobs',
+          'Tomorrow, Showers, 31° / 24°, 70% chance of rain, 4 mm, 2 jobs · Water',
       })
     ).toBeTruthy();
-    expect(output).toContain('4mm');
-    expect(output).toContain('2 watering jobs');
+    expect(output).toContain('4 mm');
+    expect(output).toContain('2 jobs · Water');
     expect(output).toContain('Weather data by Open-Meteo · CC BY 4.0');
+  });
+
+  // A rainless day is a forecast, not a gap in one. It used to render the same
+  // em dash `formatRainChance` uses for data that never arrived.
+  it('words a dry day rather than dashing it', () => {
+    const output = JSON.stringify(render({ forecast: forecast() }).toJSON());
+    expect(output).toContain('dry');
+  });
+
+  // The total and its overdue share used to run together as "31 overdue · 46
+  // jobs", which reads as seventy-seven pieces of work.
+  it('sets the day total and its overdue share as separate figures', () => {
+    const rendered = render({
+      forecast: forecast(),
+      jobsByDate: new Map<string, DayJobs>([['2026-08-09', jobs(46, 31, 'water')]]),
+    });
+    const output = JSON.stringify(rendered.toJSON());
+    expect(output).toContain('31 overdue');
+    expect(output).not.toContain('31 overdue · 46 jobs');
+    expect(
+      rendered.root.findByProps({
+        accessibilityLabel:
+          'Today, Partly cloudy, 31° / 24°, 10% chance of rain, dry, 46 jobs · Water · 31 overdue',
+      })
+    ).toBeTruthy();
   });
 
   // A cached forecast keeps the days it has already passed, so `selectForecastDays`
@@ -123,17 +202,7 @@ describe('ForecastOverlay', () => {
       { fetched_at: '2026-08-07T04:00:00.000Z' }
     );
 
-    let rendered!: RenderedTree;
-    TestRenderer.act(() => {
-      rendered = TestRenderer.create(
-        React.createElement(ForecastOverlay, {
-          ...baseProps,
-          forecast: staleForecast,
-          stale: true,
-        })
-      );
-    });
-    const output = JSON.stringify(rendered.toJSON());
+    const output = JSON.stringify(render({ forecast: staleForecast, stale: true }).toJSON());
 
     expect(output).toContain('Next four days');
     expect(output).not.toContain('Next six days');
@@ -143,17 +212,7 @@ describe('ForecastOverlay', () => {
   });
 
   it('renders stale and retry states', () => {
-    let rendered!: RenderedTree;
-    TestRenderer.act(() => {
-      rendered = TestRenderer.create(
-        React.createElement(ForecastOverlay, {
-          ...baseProps,
-          forecast: null,
-          stale: true,
-          loading: false,
-        })
-      );
-    });
+    const rendered = render({ forecast: null, stale: true, loading: false });
     const output = JSON.stringify(rendered.toJSON());
     expect(output).toContain('Cached forecast');
     expect(output).toContain('No current forecast is available');

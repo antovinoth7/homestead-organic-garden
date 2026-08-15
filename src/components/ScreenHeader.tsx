@@ -10,6 +10,8 @@ interface Props {
   /** When provided, a circular back button is rendered on the left. */
   onBack?: () => void;
   backIcon?: keyof typeof Ionicons.glyphMap;
+  /** Overrides "Go back" where the destination is worth naming. */
+  backAccessibilityLabel?: string;
   /** Action node rendered on the right (icons, badges, edit button…). */
   right?: React.ReactNode;
   titleNumberOfLines?: number;
@@ -24,6 +26,7 @@ export function ScreenHeader({
   title,
   onBack,
   backIcon = 'chevron-back',
+  backAccessibilityLabel = 'Go back',
   right,
   titleNumberOfLines = 1,
 }: Props): React.JSX.Element {
@@ -38,7 +41,7 @@ export function ScreenHeader({
           style={styles.backButton}
           onPress={onBack}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={backAccessibilityLabel}
         >
           <Ionicons name={backIcon} size={22} color={theme.textInverse} />
         </TouchableOpacity>

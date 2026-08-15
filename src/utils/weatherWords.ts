@@ -180,14 +180,28 @@ export function formatForecastDate(isoDate: string): string {
   });
 }
 
-export function formatTempRange(day: DailyWeather | null | undefined): string {
-  if (!day) return '—';
-  return `${Math.round(day.tempMaxC)}° / ${Math.round(day.tempMinC)}°`;
+/** One temperature. Separate so a caller setting the two halves in different
+ * type still rounds them the way the range does. */
+export function formatTemp(celsius: number): string {
+  return `${Math.round(celsius)}°`;
 }
 
+export function formatTempRange(day: DailyWeather | null | undefined): string {
+  if (!day) return '—';
+  return `${formatTemp(day.tempMaxC)} / ${formatTemp(day.tempMinC)}`;
+}
+
+/**
+ * The day's rainfall. An em dash means "no forecast" and nothing else — a dry
+ * day says so in words. Sharing the dash with `formatRainChance`'s missing-data
+ * case made "61% rain · —" read as a gap in the data rather than as a real
+ * forecast of under a millimetre.
+ */
 export function formatRain(day: DailyWeather | null | undefined): string {
-  if (!day || day.precipitationMm < DRY_DAY_MM) return '—';
-  return `${Math.round(day.precipitationMm)}mm`;
+  if (!day) return '—';
+  if (day.precipitationMm <= 0) return 'dry';
+  if (day.precipitationMm < DRY_DAY_MM) return '<1 mm';
+  return `${Math.round(day.precipitationMm)} mm`;
 }
 
 export function formatRainChance(day: DailyWeather | null | undefined): string {

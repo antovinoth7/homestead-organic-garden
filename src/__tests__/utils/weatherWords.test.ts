@@ -134,13 +134,20 @@ describe('weather formatting', () => {
       precipitationProbabilityPct: 64.6,
     });
     expect(formatTempRange(day)).toBe('31° / 23°');
-    expect(formatRain(day)).toBe('12mm');
+    expect(formatRain(day)).toBe('12 mm');
     expect(formatRainChance(day)).toBe('65%');
   });
 
-  it('uses dashes for unavailable or immaterial values', () => {
+  // A dash means "no forecast" and nothing else. Spending it on a dry day too
+  // made "61% chance · —" read as missing data rather than as under a millimetre.
+  it('says a dry day in words, keeping the dash for missing data', () => {
+    expect(formatRain(makeDailyWeather({ precipitationMm: 0 }))).toBe('dry');
+    expect(formatRain(makeDailyWeather({ precipitationMm: 0.4 }))).toBe('<1 mm');
+    expect(formatRain(null)).toBe('—');
+  });
+
+  it('uses dashes for unavailable values', () => {
     expect(formatTempRange(null)).toBe('—');
-    expect(formatRain(makeDailyWeather({ precipitationMm: 0.4 }))).toBe('—');
     expect(formatRainChance(makeDailyWeather({ precipitationProbabilityPct: null }))).toBe('—');
   });
 

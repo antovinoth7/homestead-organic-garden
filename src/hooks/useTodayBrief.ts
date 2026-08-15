@@ -44,7 +44,7 @@ import { groupByPlot } from '@/utils/plotGrouping';
 import { getSeasonProgress } from '@/utils/seasonProgress';
 import { toPlantNowChips } from '@/utils/sowNowChips';
 import { countRemaining, summarizeTasksByPlot, summarizeTodayTasks } from '@/utils/taskSummary';
-import { countJobsByDate, formatJobText } from '@/utils/upcomingJobs';
+import { countJobsByDate, DayJobs } from '@/utils/upcomingJobs';
 import { describeDay, FARM_TIMEZONE, selectForecastDays } from '@/utils/weatherWords';
 
 /** Chips shown before the row defers to "All N ›". */
@@ -57,8 +57,12 @@ export interface UseTodayBriefResult {
   reload: (options?: { silent?: boolean; forceWeather?: boolean }) => Promise<void>;
   /** Force-refresh one plot from the forecast overlay. */
   refreshWeatherFor: (plotId: string) => Promise<void>;
-  /** Forecast-date → job text for one plot, for the forecast overlay's rows. */
-  jobsByDateFor: (plotId: string) => ReadonlyMap<string, string>;
+  /**
+   * Forecast-date → job counts for one plot, for the forecast overlay's rows.
+   * Counts, not text: the overlay's today card sets the total and the overdue
+   * figure in different type, so it does its own formatting.
+   */
+  jobsByDateFor: (plotId: string) => ReadonlyMap<string, DayJobs>;
 }
 
 /** Matches the service's own default so a pre-load render is coherent, not blank. */
@@ -420,20 +424,17 @@ export function useTodayBrief(): UseTodayBriefResult {
   );
 
   const jobsByDateFor = useCallback(
-    (plotId: string): ReadonlyMap<string, string> => {
+    (plotId: string): ReadonlyMap<string, DayJobs> => {
       const plot = plotBriefs.find((p) => p.id === plotId);
       const forecast = plot?.weather.forecast ?? null;
       // Only the days the overlay actually renders. `countJobsByDate` folds
       // overdue work onto the first date it is given, so passing the raw
       // `daily` array parked it on a past row that is filtered out before paint.
       const dates = selectForecastDays(forecast).available.map((d) => d.date);
-      const counts = countJobsByDate(allTemplates, grouping.resolveTaskPlotId, plotId, dates, {
+      return countJobsByDate(allTemplates, grouping.resolveTaskPlotId, plotId, dates, {
         timeZone: forecast?.timezone ?? FARM_TIMEZONE,
         completedTemplateIds,
       });
-      const text = new Map<string, string>();
-      for (const date of dates) text.set(date, formatJobText(counts.get(date)));
-      return text;
     },
     [plotBriefs, allTemplates, grouping, completedTemplateIds]
   );
