@@ -3,6 +3,7 @@ import type { ImageStyle } from 'react-native';
 import { View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { GardenIcon } from '@/components/GardenIcon';
+import { REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceAssets';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/referenceThumbStyles';
 import type { VisualIconKey } from '@/types/visual.types';
@@ -71,7 +72,7 @@ export function ReferenceThumb({
       style={variantStyles.image as ImageStyle}
       accessibilityLabel={accessibilityLabel}
       contentFit="cover"
-      cachePolicy="memory-disk"
+      cachePolicy={REFERENCE_IMAGE_CACHE_POLICY}
       recyclingKey={recyclingKey}
       transition={150}
     />

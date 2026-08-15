@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import { Plant } from '../types/database.types';
 import { Ionicons } from '@expo/vector-icons';
 import { GardenIcon } from '@/components/GardenIcon';
-import { getPlantImage } from '@/config/referenceAssets';
+import { getPlantImage, REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceAssets';
 import { useTheme } from '../theme';
 import { getYearsOld } from '../utils/dateHelpers';
 import { getPlantWaterStatus, daysSinceLastWatered } from '../utils/plantWatering';
@@ -190,7 +190,7 @@ function PlantCard({
               contentFit="cover"
               transition={150}
               recyclingKey={`reference:${plant.name}`}
-              cachePolicy="memory-disk"
+              cachePolicy={REFERENCE_IMAGE_CACHE_POLICY}
             />
           ) : (
             <View style={[styles.image, styles.placeholder, { backgroundColor: getPlantTypeBg() }]}>

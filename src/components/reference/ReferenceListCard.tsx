@@ -4,6 +4,7 @@ import type { ImageStyle } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { GardenIcon } from '@/components/GardenIcon';
+import { REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceAssets';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/pestDiseaseListStyles';
 import { getCurrentRisk, getRiskColor } from '@/utils/riskHelpers';
@@ -42,7 +43,7 @@ export function ReferenceListCard({ entry, image, fallbackIcon, onPress }: Props
             source={image}
             style={styles.cardTileImage as ImageStyle}
             contentFit="cover"
-            cachePolicy="memory-disk"
+            cachePolicy={REFERENCE_IMAGE_CACHE_POLICY}
             recyclingKey={entry.id}
           />
         ) : (

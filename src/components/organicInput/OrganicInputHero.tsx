@@ -5,6 +5,7 @@ import { Image, type ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { GardenIcon } from '@/components/GardenIcon';
 import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import { REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceAssets';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/organicInputDetailStyles';
 
@@ -56,7 +57,7 @@ export function OrganicInputHero({
             source={image}
             style={styles.heroImageInner as ImageStyle}
             contentFit="cover"
-            cachePolicy="memory-disk"
+            cachePolicy={REFERENCE_IMAGE_CACHE_POLICY}
           />
         </TouchableOpacity>
       ) : (

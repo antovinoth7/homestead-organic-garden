@@ -7,6 +7,7 @@ import {
   TapGestureHandler,
 } from 'react-native-gesture-handler';
 import { Image, type ImageSource } from 'expo-image';
+import { REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceAssets';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/imageZoomModalStyles';
 import { usePinchZoom } from '@/hooks/usePinchZoom';
@@ -32,6 +33,9 @@ export function ZoomableImagePage({ source, active, onZoomChange }: Props): Reac
     () => (typeof source === 'string' ? { uri: source } : source),
     [source]
   );
+  // A string is a user photo URI; an object is a bundled `require()`d reference asset, which
+  // must not be disk-cached. See REFERENCE_IMAGE_CACHE_POLICY.
+  const cachePolicy = typeof source === 'string' ? 'memory-disk' : REFERENCE_IMAGE_CACHE_POLICY;
 
   useEffect(() => {
     if (active) onZoomChange(zoom.isZoomed);
@@ -74,7 +78,7 @@ export function ZoomableImagePage({ source, active, onZoomChange }: Props): Reac
                   source={imageSource}
                   style={styles.image as ImageStyle}
                   contentFit="contain"
-                  cachePolicy="memory-disk"
+                  cachePolicy={cachePolicy}
                 />
               </Animated.View>
             </PinchGestureHandler>

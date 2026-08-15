@@ -7,7 +7,7 @@ import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/organicInputListStyles';
 import { getCategoryLabel } from '@/config/organicInputs';
-import { getOrganicInputImage } from '@/config/referenceAssets';
+import { getOrganicInputImage, REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceAssets';
 import type { OrganicInputEntry } from '@/types/database.types';
 
 interface Props {
@@ -38,7 +38,7 @@ export function OrganicInputCard({ entry, onPress }: Props): React.JSX.Element {
             source={image}
             style={styles.cardTileImage as ImageStyle}
             contentFit="cover"
-            cachePolicy="memory-disk"
+            cachePolicy={REFERENCE_IMAGE_CACHE_POLICY}
             recyclingKey={entry.id}
           />
         ) : (

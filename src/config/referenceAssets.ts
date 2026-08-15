@@ -29,6 +29,21 @@ import { resolvePlantImageKey } from './referenceKeys';
 export { PLANT_IMAGE_ALIASES, slugifyReferenceKey } from './referenceKeys';
 
 /**
+ * The `cachePolicy` every bundled reference image must render with.
+ *
+ * These assets are baked into the app binary, so the disk cache buys nothing — the bytes are on
+ * local storage either way. Worse, its key derives from the asset path (Android flattens
+ * `assets/reference/plants/brinjal.webp` to the drawable `assets_reference_plants_brinjal`), not
+ * from the content, and the cache directory survives an install-over-the-top app update. A
+ * re-ingested image would therefore keep serving the old bitmap on every existing install until
+ * the user uninstalled. Memory-only avoids that at no real cost.
+ *
+ * User-captured photos are unaffected and keep `memory-disk`: their URIs are already unique per
+ * photo, so they never go stale, and persisting them across cold starts is worth it.
+ */
+export const REFERENCE_IMAGE_CACHE_POLICY = 'memory' as const;
+
+/**
  * Returns the bundled image for a pest, or undefined if none exists.
  * Uses `imageAsset` if set, otherwise falls back to the pest's `id`.
  */
