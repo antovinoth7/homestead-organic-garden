@@ -11,6 +11,7 @@ import { createStyles } from '@/styles/pestDiseaseListStyles';
 import { ReferenceFilterChips, type ReferenceChip } from './ReferenceFilterChips';
 import { ReferenceListCard } from './ReferenceListCard';
 import type { ReferenceEntry, ReferenceGroup } from './types';
+import type { VisualIconKey } from '@/types/visual.types';
 
 const ALL_KEY = '__all__';
 
@@ -24,6 +25,7 @@ interface Props {
   groups: readonly ReferenceGroup[];
   categoryDescriptions: Readonly<Record<string, string>>;
   getImage: (entry: ReferenceEntry) => ImageSource | undefined;
+  fallbackIcon: VisualIconKey;
   onSelect: (id: string) => void;
   onBack: () => void;
 }
@@ -40,6 +42,7 @@ export function ReferenceListView({
   groups,
   categoryDescriptions,
   getImage,
+  fallbackIcon,
   onSelect,
   onBack,
 }: Props): React.JSX.Element {
@@ -106,9 +109,14 @@ export function ReferenceListView({
 
   const renderItem = useCallback(
     ({ item }: { item: ReferenceEntry }) => (
-      <ReferenceListCard entry={item} image={getImage(item)} onPress={onSelect} />
+      <ReferenceListCard
+        entry={item}
+        image={getImage(item)}
+        fallbackIcon={fallbackIcon}
+        onPress={onSelect}
+      />
     ),
-    [getImage, onSelect]
+    [fallbackIcon, getImage, onSelect]
   );
 
   const keyExtractor = useCallback((item: ReferenceEntry) => item.id, []);

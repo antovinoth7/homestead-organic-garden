@@ -11,7 +11,6 @@ import type { StageResolvable } from '../../utils/plantHelpers';
 import { getPlantCareProfile } from '../../utils/plantCareDefaults';
 import {
   GROWTH_STAGE_DESCRIPTIONS,
-  GROWTH_STAGE_EMOJIS,
   GROWTH_STAGE_LABELS,
   GROWTH_STAGE_SOURCE_HINTS,
   GROWTH_STAGE_SOURCE_LABELS,
@@ -19,6 +18,7 @@ import {
   HEALTH_STATUS_LABELS,
   HEALTH_STATUS_TONE,
 } from '../../utils/plantLabels';
+import { GROWTH_STAGE_ICON_KEYS } from '@/config/iconRegistry';
 import type { StatusTone } from '../../utils/plantLabels';
 import type { GrowthStage, HealthStatus } from '../../types/database.types';
 
@@ -185,7 +185,7 @@ export function EditPlantHealthSection({ formState }: Props): React.JSX.Element 
       <PickerField
         label="Growth Stage"
         value={GROWTH_STAGE_LABELS[effectiveStage.stage]}
-        emoji={GROWTH_STAGE_EMOJIS[effectiveStage.stage]}
+        fallbackIcon={GROWTH_STAGE_ICON_KEYS[effectiveStage.stage]}
         badge={GROWTH_STAGE_SOURCE_LABELS[effectiveStage.source]}
         subtitle={GROWTH_STAGE_DESCRIPTIONS[effectiveStage.stage]}
         placeholder="Choose a stage"

@@ -17,9 +17,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.warning + '40',
     },
-    icon: {
-      fontSize: 16,
-    },
     text: {
       flex: 1,
       fontSize: 13,

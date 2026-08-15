@@ -12,12 +12,13 @@
 
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useWeather } from '@/hooks/useWeather';
 import { wateringAdvice } from '@/services/weather';
 import type { WeatherPlot } from '@/hooks/useWeatherLocations';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/weatherCardStyles';
-import { selectForecastDays, weatherEmoji, weekdayLabel } from '@/utils/weatherWords';
+import { selectForecastDays, weatherIconKey, weekdayLabel } from '@/utils/weatherWords';
 
 /** Placeholder glyph for a slot with nothing to show — holds the row's height. */
 const EMPTY_SLOT = '–';
@@ -48,12 +49,18 @@ export const WeatherPlotCard = React.memo(function WeatherPlotCard({
 
   return (
     <View style={[styles.card, minHeight ? { minHeight } : null]}>
-      <Text style={styles.title}>🌤️ 7-Day Forecast</Text>
-      <Text style={styles.locationLabel}>📍 {plot.name}</Text>
+      <View style={styles.titleRow}>
+        <GardenIcon name="weather.partly_cloudy" size={17} color={theme.primary} />
+        <Text style={styles.title}>7-Day Forecast</Text>
+      </View>
+      <View style={styles.locationRow}>
+        <GardenIcon name="general.location" size={14} color={theme.textSecondary} />
+        <Text style={styles.locationLabel}>{plot.name}</Text>
+      </View>
 
       {/* Always rendered, in both states, so the card is the same height either way. */}
       <View style={[styles.weatherLine, rainSoon ? styles.weatherLineRain : styles.weatherLineDry]}>
-        <Text style={styles.weatherLineEmoji}>{advice.emoji}</Text>
+        <GardenIcon name={advice.iconKey} size={15} color={theme.textSecondary} />
         <Text style={styles.weatherLineText} numberOfLines={1}>
           {advice.text}
         </Text>
@@ -72,7 +79,7 @@ export const WeatherPlotCard = React.memo(function WeatherPlotCard({
           : days.map((day) => (
               <View key={day.date} style={styles.dayCol}>
                 <Text style={styles.dayLabel}>{weekdayLabel(day.date)}</Text>
-                <Text style={styles.dayEmoji}>{weatherEmoji(day)}</Text>
+                <GardenIcon name={weatherIconKey(day)} size={20} color={theme.primary} />
                 <Text style={styles.dayTemp}>
                   {Math.round(day.tempMaxC)}°/{Math.round(day.tempMinC)}°
                 </Text>

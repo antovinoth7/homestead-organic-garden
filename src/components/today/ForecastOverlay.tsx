@@ -13,6 +13,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WeatherConditionId, WeatherForecast } from '@/types/database.types';
 import { useTheme } from '@/theme';
@@ -136,7 +137,7 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
       >
         {source !== 'plot' && (
           <View style={styles.banner}>
-            <Text style={styles.bannerGlyph}>📍</Text>
+            <GardenIcon name="general.location" size={16} color={theme.textSecondary} />
             <Text style={styles.bannerText}>{FALLBACK_BANNER_COPY[source](district)}</Text>
           </View>
         )}
@@ -161,7 +162,7 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
           <View style={styles.today}>
             <Text style={styles.todayLabel}>Today · {formatForecastDate(today.date)}</Text>
             <View style={styles.todayRow}>
-              <Text style={styles.todayEmoji}>{todayDescription.emoji}</Text>
+              <GardenIcon name={todayDescription.iconKey} size={28} color={theme.primary} />
               <View style={styles.todayWeather}>
                 <Text style={styles.todayTemp}>{formatTempRange(today)}</Text>
                 <Text style={styles.todayMetrics}>
@@ -216,7 +217,7 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
                 >
                   <View style={styles.dayTopRow}>
                     <Text style={styles.dayName}>{forecastDayLabel(day.date, todayKey)}</Text>
-                    <Text style={styles.dayEmoji}>{description.emoji}</Text>
+                    <GardenIcon name={description.iconKey} size={16} color={theme.textSecondary} />
                     <Text style={styles.dayCondition}>{description.label}</Text>
                   </View>
                   <View style={styles.dayDetailRow}>

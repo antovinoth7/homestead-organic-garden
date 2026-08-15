@@ -33,6 +33,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { StyleProp, Text, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { PlotBrief, PlotBriefLineKind } from '@/types/database.types';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/plotCardStyles';
 import { formatTempRange } from '@/utils/weatherWords';
@@ -210,7 +211,7 @@ export const PlotCard = React.memo(function PlotCard({
           </Text>
         </TouchableOpacity>
 
-        {/* Temperatures only — the emoji and the tint carry the condition, and
+        {/* Temperatures only — the icon and the tint carry the condition, and
             the stale state is stated in the forecast itself rather than here. */}
         <TouchableOpacity
           style={[styles.weatherPill, pill.pill]}
@@ -221,7 +222,7 @@ export const PlotCard = React.memo(function PlotCard({
             weather.conditionLabel
           }, ${formatTempRange(weather.today)}${weather.stale ? ', cached forecast' : ''}`}
         >
-          <Text style={styles.weatherPillEmoji}>{weather.conditionEmoji}</Text>
+          <GardenIcon name={weather.conditionIconKey} size={14} color={theme.textSecondary} />
           <Text style={[styles.weatherPillText, pill.text]}>{formatTempRange(weather.today)}</Text>
         </TouchableOpacity>
       </View>

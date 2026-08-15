@@ -5,6 +5,7 @@ import type { Bed, Plant, CropFamily } from '@/types/database.types';
 import { getGreenManureForMonth } from '@/config/beds';
 import { getDaysToHarvestRange, isTreeLikePlant } from '@/utils/timelineHarvest';
 import { createStyles } from '@/styles/bedSuccessionTimelineStyles';
+import { GardenIcon } from '@/components/GardenIcon';
 
 const DAY_PX = 2;
 const BAND_HEIGHT = 22;
@@ -392,7 +393,8 @@ export function BedSuccessionTimeline({ bed, plants }: Props): React.JSX.Element
 
       {/* Green manure rationale */}
       <View style={styles.gmRationale}>
-        <Text style={styles.gmRationaleText}>🌱 {greenManureInfo.gm.rationale}</Text>
+        <GardenIcon name="growth.seedling" size={16} color={theme.primary} />
+        <Text style={styles.gmRationaleText}>{greenManureInfo.gm.rationale}</Text>
       </View>
 
       {/* Next crop rotation hint */}

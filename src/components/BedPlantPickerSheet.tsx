@@ -15,7 +15,8 @@ import { BottomSheetModal } from '@/components/BottomSheetModal';
 import { SheetHandle } from '@/components/SheetHandle';
 import { getAllPlants } from '@/services/plants';
 import { getGuildTemplate } from '@/config/beds';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { createStyles } from '@/styles/bedPlantPickerStyles';
 import type { BedLayer, BedType, Plant, PlantEntry } from '@/types/database.types';
 import type { PlantRow } from '@/config/beds/guildTemplates';
@@ -131,7 +132,12 @@ function GuildTab({
 
   const renderRow = (row: PlantRow, isCompanion: boolean, count: number): React.JSX.Element => (
     <View key={row.name} style={styles.guildPlantRow}>
-      <Text style={styles.guildEmoji}>{getPlantEmoji(row.name)}</Text>
+      <ReferenceThumb
+        source={getPlantImage(row.name)}
+        fallbackIcon="general.plant"
+        variant="row"
+        accessibilityLabel={`${row.name} reference image`}
+      />
       <View style={styles.guildMeta}>
         <View style={styles.nameRow}>
           <Text style={styles.guildName}>{row.name}</Text>
@@ -147,14 +153,14 @@ function GuildTab({
           <View style={styles.guildLayerBadge}>
             <Text style={styles.guildLayerBadgeText}>{LAYER_LABEL[row.layer]}</Text>
           </View>
-          <Text style={styles.spacingTag}>↔ {row.spacing_cm}cm</Text>
+          <Text style={styles.spacingTag}>Spacing {row.spacing_cm}cm</Text>
           <Text style={styles.spacingTag}>
-            ↕ {row.row_gap_cm ?? Math.max(row.spacing_cm, MIN_ROW_GAP_CM)}cm row gap
+            Row gap {row.row_gap_cm ?? Math.max(row.spacing_cm, MIN_ROW_GAP_CM)}cm
           </Text>
           {isCompanion && (
             <View style={[styles.guildLayerBadge, { backgroundColor: theme.primaryLight }]}>
               <Text style={[styles.guildLayerBadgeText, { color: theme.primary }]}>
-                ★ companion
+                Companion
               </Text>
             </View>
           )}
@@ -316,9 +322,9 @@ function MyPlantsTab({
                 <Text style={styles.myPlantVariety}>{item.plant_variety}</Text>
               ) : null}
               <View style={styles.spacingTagRow}>
-                <Text style={styles.spacingTag}>↔ {colSpacing}cm</Text>
+                <Text style={styles.spacingTag}>Spacing {colSpacing}cm</Text>
                 <Text style={styles.spacingTag}>
-                  ↕ {Math.max(colSpacing, MIN_ROW_GAP_CM)}cm row gap
+                  Row gap {Math.max(colSpacing, MIN_ROW_GAP_CM)}cm
                 </Text>
               </View>
               {isSelected && (

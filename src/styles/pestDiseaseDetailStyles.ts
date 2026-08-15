@@ -66,11 +66,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       ...StyleSheet.absoluteFillObject,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    heroWatermarkText: {
-      fontSize: 190,
-      lineHeight: 210,
-      opacity: 0.16,
+      opacity: 0.14,
     },
     heroScrim: {
       position: 'absolute',

@@ -10,7 +10,7 @@ import {
   formatRainChance,
   formatTempRange,
   selectForecastDays,
-  weatherEmoji,
+  weatherIconKey,
   weekdayLabel,
 } from '../../utils/weatherWords';
 import { makeDailyWeather, makeWeatherForecast } from '../fixtures/today.fixtures';
@@ -137,8 +137,8 @@ describe('weather formatting', () => {
     expect(formatRainChance(makeDailyWeather({ precipitationProbabilityPct: null }))).toBe('—');
   });
 
-  it('uses the condition mapping for weather emoji', () => {
-    expect(weatherEmoji(makeDailyWeather({ weatherCode: 95 }))).toBe('⛈️');
+  it('uses the semantic icon mapping for weather conditions', () => {
+    expect(weatherIconKey(makeDailyWeather({ weatherCode: 95 }))).toBe('weather.thunderstorm');
   });
 });
 

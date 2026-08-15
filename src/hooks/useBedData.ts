@@ -14,8 +14,8 @@ export interface BedWithCoverage extends Bed {
   active_plant_count: number;
   /** True when at least one active plant in the bed is due/overdue for watering. */
   water_overdue: boolean;
-  /** Plant emoji for the bed card's mini grid — at most MAX_PREVIEW_PINS. */
-  preview_emojis: string[];
+  /** Plant names for the bed card's mini thumbnails — at most MAX_PREVIEW_PINS. */
+  preview_plant_names: string[];
   /** Stage most of the bed's plants are in; null when none has one recorded. */
   dominant_stage: GrowthStage | null;
 }
@@ -71,7 +71,7 @@ export function useBedData(): UseBedDataResult {
           plant_count: bedPlants.length,
           active_plant_count: activePlants.length,
           water_overdue: activePlants.some((p) => isPlantWaterOverdue(p, now)),
-          preview_emojis: preview.emojis,
+          preview_plant_names: preview.plantNames,
           dominant_stage: preview.dominantStage,
         };
       });

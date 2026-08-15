@@ -3,6 +3,7 @@ import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { useBedDetail } from '@/hooks/useBedDetail';
 import { RotationStatusCard } from '@/components/RotationStatusCard';
@@ -17,12 +18,13 @@ import {
 } from '@/services/beds';
 import { getSmartNextCrops, getGuildTemplate } from '@/config/beds';
 import { getLayerColor } from '@/config/beds/layerMeta';
-import { BED_TYPE_NAME, BED_TYPE_EMOJI } from '@/config/beds/bedTypeMeta';
+import { BED_TYPE_NAME } from '@/config/beds/bedTypeMeta';
+import { BED_TYPE_ICON_KEYS } from '@/config/iconRegistry';
 import { computeRowLayout } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
 import { plantToLayoutEntries } from '@/utils/bedEditReconcile';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/bedDetailStyles';
 import { logger } from '@/utils/logger';
 import type { BedLayer } from '@/types/database.types';
@@ -99,7 +101,7 @@ export default function BedDetailScreen(): React.JSX.Element {
     );
   }, [bed, plants]);
 
-  // Companion conflicts mapped onto the rows that contain them (⚠ row tags).
+  // Companion conflicts mapped onto the rows that contain warning tags.
   const rowWarnings = useMemo(() => {
     if (!rowLayout) return [];
     const warnings: { rowIndex: number; message: string }[] = [];
@@ -198,9 +200,8 @@ export default function BedDetailScreen(): React.JSX.Element {
       {/* Bed meta: type · size · raised */}
       <View style={styles.metaRow}>
         <View style={styles.typeChip}>
-          <Text style={styles.typeChipText}>
-            {BED_TYPE_EMOJI[bed.type]} {BED_TYPE_NAME[bed.type]}
-          </Text>
+          <GardenIcon name={BED_TYPE_ICON_KEYS[bed.type]} size={15} color={theme.primary} />
+          <Text style={styles.typeChipText}>{BED_TYPE_NAME[bed.type]}</Text>
         </View>
         <View style={styles.metaDim}>
           <Ionicons name="resize-outline" size={14} color={theme.textSecondary} />
@@ -229,7 +230,7 @@ export default function BedDetailScreen(): React.JSX.Element {
             widthM={bed.dimensions.width_m}
             lengthM={bed.dimensions.length_m}
             rows={rowLayout.rows}
-            plantEmoji={getPlantEmoji}
+            plantImage={getPlantImage}
             layerColor={resolveLayerColor}
             walkingPathCm={rowLayout.walkingPathCm}
             edgeBufferCm={rowLayout.edgeBufferCm}

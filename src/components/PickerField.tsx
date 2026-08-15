@@ -1,18 +1,23 @@
 import React, { useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import type { ImageSource } from 'expo-image';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/pickerFieldStyles';
 import FieldErrorText from '@/components/FieldErrorText';
+import type { VisualIconKey } from '@/types/visual.types';
 
 interface Props {
   label: string;
   /** Current value; empty/undefined renders the placeholder. */
   value?: string;
   placeholder: string;
-  /** Emoji thumbnail shown when a value is selected (e.g. plant emoji). */
-  emoji?: string;
-  /** Ionicons fallback shown when no emoji applies (e.g. location field). */
+  /** Reference thumbnail shown when a value is selected. */
+  thumbnailSource?: ImageSource;
+  /** Semantic fallback used when the selected value has no thumbnail. */
+  fallbackIcon?: VisualIconKey;
+  /** Ionicons fallback for fields that are not domain artwork (e.g. location). */
   icon?: keyof typeof Ionicons.glyphMap;
   /** Secondary line under the value (e.g. auto-filled category). */
   subtitle?: string;
@@ -33,7 +38,8 @@ export function PickerField({
   label,
   value,
   placeholder,
-  emoji,
+  thumbnailSource,
+  fallbackIcon,
   icon,
   subtitle,
   badge,
@@ -55,10 +61,12 @@ export function PickerField({
         accessibilityLabel={label}
         accessibilityState={{ disabled }}
       >
-        {value && emoji ? (
-          <View style={styles.emojiCircle}>
-            <Text style={styles.emoji}>{emoji}</Text>
-          </View>
+        {value && (thumbnailSource || fallbackIcon) ? (
+          <ReferenceThumb
+            source={thumbnailSource}
+            fallbackIcon={fallbackIcon}
+            variant="row"
+          />
         ) : (
           <View style={styles.iconCircle}>
             <Ionicons name={icon ?? 'leaf-outline'} size={18} color={theme.primary} />

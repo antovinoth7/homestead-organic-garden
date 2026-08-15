@@ -341,9 +341,12 @@ export default function SettingsScreen(): React.JSX.Element {
             )}
           </TouchableOpacity>
 
-          <Text style={styles.backupNote}>
-            ⚠️ Restoring replaces the data on this device with the backup contents.
-          </Text>
+          <View style={styles.backupNoteRow}>
+            <Ionicons name="warning-outline" size={16} color={theme.warning} />
+            <Text style={styles.backupNoteText}>
+              Restoring replaces the data on this device with the backup contents.
+            </Text>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -386,10 +389,13 @@ export default function SettingsScreen(): React.JSX.Element {
             )}
           </TouchableOpacity>
 
-          <Text style={styles.backupNote}>
-            📸 Note: Images are stored with their original filenames. When imported, they&apos;ll
-            automatically match with your existing plants and journal entries.
-          </Text>
+          <View style={styles.backupNoteRow}>
+            <Ionicons name="images-outline" size={16} color={theme.textSecondary} />
+            <Text style={styles.backupNoteText}>
+              Note: Images are stored with their original filenames. When imported, they&apos;ll
+              automatically match with your existing plants and journal entries.
+            </Text>
+          </View>
         </View>
 
         <View style={styles.section}>

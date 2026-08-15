@@ -1,13 +1,15 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/catalogRowStyles';
+import type { VisualIconKey } from '@/types/visual.types';
 
 export interface CatalogChip {
   key: string;
   label: string;
-  emoji?: string;
+  iconKey?: VisualIconKey;
   /** Secondary line inside the chip, e.g. a variety's days/season/source. */
   sub?: string;
   /** Small accent dot — varieties that carry saved detail. */
@@ -31,7 +33,9 @@ function Chip({ chip, onPress, onRemove }: ChipProps): React.JSX.Element {
 
   const body = (
     <>
-      {chip.emoji ? <Text style={styles.chipText}>{chip.emoji}</Text> : null}
+      {chip.iconKey ? (
+        <GardenIcon name={chip.iconKey} size={14} color={theme.textSecondary} />
+      ) : null}
       <View style={styles.chipBody}>
         <Text style={styles.chipText} numberOfLines={1}>
           {chip.label}

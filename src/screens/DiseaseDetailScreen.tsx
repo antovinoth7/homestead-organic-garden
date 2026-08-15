@@ -54,6 +54,7 @@ export default function DiseaseDetailScreen(): React.JSX.Element {
       entry={disease}
       categoryLabel={getCategoryLabel(disease.category)}
       image={heroImage}
+      fallbackIcon="general.disease"
       onBack={navigation.goBack}
       onAddToTasks={handleAddToTasks}
     />

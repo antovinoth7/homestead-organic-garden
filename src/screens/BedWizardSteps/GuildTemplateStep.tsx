@@ -19,7 +19,8 @@ import {
   COMPANION_DEFAULT_LAYER,
   COMPANION_DEFAULT_SPACING,
 } from '@/utils/quickStartPlanner';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 
 const generateId = (): string =>
@@ -463,7 +464,7 @@ export function GuildTemplateStep({
     );
     onChange({ plant_entries: entries, quick_start_applied: true });
     if (dropped.length > 0) {
-      setAutoAddedMsg(`⚠️ Bed full — couldn't fit ${dropped.join(', ')}. Try a larger bed size.`);
+      setAutoAddedMsg(`Bed full — couldn't fit ${dropped.join(', ')}. Try a larger bed size.`);
     }
   }, [template, widthM, lengthM, bedTypeForEngine, construction, onChange]);
 
@@ -485,6 +486,7 @@ export function GuildTemplateStep({
     <ScrollView contentContainerStyle={styles.stepContainer} showsVerticalScrollIndicator={false}>
       {autoAddedMsg !== null && (
         <View style={styles.gtAutoAddedBanner}>
+          <Ionicons name="information-circle-outline" size={18} color={theme.success} />
           <Text style={styles.gtAutoAddedBannerText}>{autoAddedMsg}</Text>
           <TouchableOpacity
             onPress={() => setAutoAddedMsg(null)}
@@ -497,11 +499,18 @@ export function GuildTemplateStep({
 
       <View style={[styles.gtUseFullPlanBtn, quickStartApplied && styles.gtUseFullPlanBtnApplied]}>
         <View style={styles.gtQuickStartTextCol}>
-          <Text
-            style={[styles.gtQuickStartTitle, quickStartApplied && styles.gtQuickStartTitleApplied]}
-          >
-            {quickStartApplied ? '✓ Quick Start applied' : '⚡ Quick Start'}
-          </Text>
+          <View style={styles.inlineLabelRow}>
+            <Ionicons
+              name={quickStartApplied ? 'checkmark-circle-outline' : 'flash-outline'}
+              size={16}
+              color={quickStartApplied ? theme.success : theme.primary}
+            />
+            <Text
+              style={[styles.gtQuickStartTitle, quickStartApplied && styles.gtQuickStartTitleApplied]}
+            >
+              {quickStartApplied ? 'Quick Start applied' : 'Quick Start'}
+            </Text>
+          </View>
           <Text style={styles.gtQuickStartSubtitle} numberOfLines={1}>
             {quickStartApplied
               ? `Balanced ${template.label} guild`
@@ -537,9 +546,12 @@ export function GuildTemplateStep({
 
       {template.low_light_flag && (
         <View style={styles.infoBadge}>
-          <Text style={styles.infoBadgeText}>
-            🌥️ Low-light bed — shade-tolerant plants recommended
-          </Text>
+          <View style={styles.inlineLabelRow}>
+            <Ionicons name="cloudy-outline" size={17} color={theme.infoDark} />
+            <Text style={styles.infoBadgeText}>
+              Low-light bed — shade-tolerant plants recommended
+            </Text>
+          </View>
         </View>
       )}
 
@@ -563,10 +575,13 @@ export function GuildTemplateStep({
       ) : (
         <View style={styles.sequenceCard}>
           <Text style={styles.sequenceTitle}>Planting Sequence</Text>
-          <Text style={styles.sequenceNote}>
-            🌱 Sow all crops together — this guild has no staggering, so plant the whole bed in
-            one go.
-          </Text>
+          <View style={styles.inlineLabelRow}>
+            <Ionicons name="leaf-outline" size={17} color={theme.primary} />
+            <Text style={styles.sequenceNote}>
+              Sow all crops together — this guild has no staggering, so plant the whole bed in
+              one go.
+            </Text>
+          </View>
         </View>
       )}
 
@@ -580,7 +595,6 @@ export function GuildTemplateStep({
         const blockedReason = !isSelected ? getBlockedReason(row.name) : null;
         const isBlocked = !!blockedReason;
         const remaining = maxFitMap.get(row.name) ?? 0;
-        const emoji = getPlantEmoji(row.name);
         const layerLabel = LAYER_LABEL[row.layer] ?? row.layer.replace(/_/g, ' ');
         const isMain = row.is_companion !== true;
         const speciesPPR = isMain
@@ -600,7 +614,12 @@ export function GuildTemplateStep({
             ]}
           >
             <View style={[styles.gtEmojiCircle, isSelected && styles.gtEmojiCircleSelected]}>
-              <Text style={styles.gtEmoji}>{emoji}</Text>
+              <ReferenceThumb
+                source={getPlantImage(row.name)}
+                fallbackIcon="general.plant"
+                variant="hero"
+                accessibilityLabel={`${row.name} reference image`}
+              />
             </View>
 
             <View style={styles.gtPlantMeta}>
@@ -639,16 +658,22 @@ export function GuildTemplateStep({
                   </View>
                 )}
               </View>
-              {isBlocked && <Text style={styles.gtAntagonistText}>⛔ {blockedReason}</Text>}
+              {isBlocked && (
+                <View style={styles.inlineLabelRow}>
+                  <Ionicons name="ban-outline" size={14} color={theme.error} />
+                  <Text style={styles.gtAntagonistText}>{blockedReason}</Text>
+                </View>
+              )}
               {step2?.waterlogging_risk && row.needs_good_drainage && (
                 <View style={styles.gtDrainageBadge}>
-                  <Text style={styles.gtDrainageBadgeText}>⚠ Needs drainage</Text>
+                  <Ionicons name="warning-outline" size={12} color={theme.textInverse} />
+                  <Text style={styles.gtDrainageBadgeText}>Needs drainage</Text>
                 </View>
               )}
             </View>
 
             <View style={styles.gtPlantRight}>
-              <Text style={styles.gtSpacingCompact}>↔{row.spacing_cm}cm</Text>
+              <Text style={styles.gtSpacingCompact}>Spacing {row.spacing_cm}cm</Text>
               <Text style={styles.gtPlantCountTag}>
                 {capacityText(candidate, instanceCount, isMain)}
               </Text>
@@ -702,10 +727,15 @@ export function GuildTemplateStep({
               const compFitLabel =
                 compCount > 0
                   ? capacityText(compCandidate, compCount, false)
-                  : 'Interplants in gaps';
+                : 'Interplants in gaps';
               return (
                 <View key={comp} style={styles.gtCompanionRow}>
-                  <Text style={styles.gtCompanionEmoji}>{getPlantEmoji(comp)}</Text>
+                  <ReferenceThumb
+                    source={getPlantImage(comp)}
+                    fallbackIcon="general.plant"
+                    variant="row"
+                    accessibilityLabel={`${comp} reference image`}
+                  />
                   <View style={styles.gtCompanionNameBlock}>
                     <Text style={styles.gtCompanionName}>{comp}</Text>
                     <Text style={styles.gtCompanionFitText}>{compFitLabel}</Text>
@@ -770,9 +800,12 @@ export function GuildTemplateStep({
                     disabled={accBlocked || (maxFitMap.get(acc.name) ?? 0) < 1}
                   />
                 </View>
-                <Text style={[styles.gtIntervalText, isAdded && styles.gtIntervalTextSelected]}>
-                  ✂️ Chop every {acc.chop_drop_interval_days} days
-                </Text>
+                <View style={styles.inlineLabelRow}>
+                  <Ionicons name="cut-outline" size={15} color={theme.textSecondary} />
+                  <Text style={[styles.gtIntervalText, isAdded && styles.gtIntervalTextSelected]}>
+                    Chop every {acc.chop_drop_interval_days} days
+                  </Text>
+                </View>
                 <View style={styles.gtNutrientRow}>
                   {acc.nutrients_mined.map((n) => (
                     <View

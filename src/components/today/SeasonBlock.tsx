@@ -7,6 +7,8 @@
 
 import React, { useMemo } from 'react';
 import { Text, View } from 'react-native';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
+import { getPlantImage } from '@/config/referenceAssets';
 import {
   PerennialCareBrief,
   PlantNowRecommendation,
@@ -40,7 +42,10 @@ export const SeasonBlock = React.memo(function SeasonBlock({
     (recommendation) => recommendation.action === 'transplant'
   );
 
-  const renderGroup = (title: string, items: PlantNowRecommendation[]) => {
+  const renderGroup = (
+    title: string,
+    items: PlantNowRecommendation[]
+  ): React.JSX.Element | null => {
     if (items.length === 0) return null;
     return (
       <View style={styles.plantGroup}>
@@ -48,9 +53,8 @@ export const SeasonBlock = React.memo(function SeasonBlock({
         <View style={styles.chipRow}>
           {items.map((item) => (
             <View key={item.key} style={styles.chip}>
-              <Text style={styles.chipText}>
-                {item.emoji} {item.label}
-              </Text>
+              <ReferenceThumb source={getPlantImage(item.label)} variant="chip" />
+              <Text style={styles.chipText}>{item.label}</Text>
             </View>
           ))}
         </View>

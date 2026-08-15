@@ -17,17 +17,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.border,
     },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 2,
+    },
     title: {
       fontSize: 14,
       fontWeight: '700',
       color: theme.text,
-      marginBottom: 2,
+    },
+    locationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginBottom: 10,
     },
     locationLabel: {
       fontSize: 12,
       color: theme.textSecondary,
       fontWeight: '600',
-      marginBottom: 10,
     },
     /**
      * Watering advice strip. Rendered in both the rainy and dry state, on one

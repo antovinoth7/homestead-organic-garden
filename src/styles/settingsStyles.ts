@@ -122,6 +122,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontStyle: 'italic',
       lineHeight: 18,
     },
+    backupNoteRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 7,
+      marginTop: 12,
+    },
+    backupNoteText: {
+      flex: 1,
+      fontSize: 13,
+      color: theme.textSecondary,
+      fontStyle: 'italic',
+      lineHeight: 18,
+    },
     helpText: {
       fontSize: 13,
       color: theme.textSecondary,

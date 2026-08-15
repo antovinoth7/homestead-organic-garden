@@ -208,6 +208,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 8,
     },
     sheetChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 20,
@@ -780,12 +783,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskLocation: {
       fontSize: 12,
       color: theme.textTertiary,
-      marginTop: 2,
     },
     taskBed: {
       fontSize: 12,
       color: theme.primary,
-      marginTop: 2,
     },
     taskRight: {
       alignItems: 'flex-end',
@@ -888,6 +889,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.textSecondary,
     },
+    harvestStatusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
     modalContent: {
       backgroundColor: theme.backgroundSecondary,
       borderTopLeftRadius: 24,
@@ -986,6 +992,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     timeButton: {
       flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 5,
       paddingVertical: 12,
       paddingHorizontal: 8,
       borderRadius: 12,
@@ -1014,6 +1023,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     toggleButton: {
       flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 6,
       paddingVertical: 14,
       paddingHorizontal: 12,
       borderRadius: 12,
@@ -1272,9 +1284,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskPreferredTime: {
       fontSize: 11,
       color: theme.textTertiary,
+    },
+    previewTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    taskMetaLine: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
       marginTop: 2,
     },
     taskRainBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 6,
@@ -1296,6 +1321,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     weekDoneChip: {
       flexDirection: 'row',
       alignItems: 'center',
+      gap: 3,
       paddingHorizontal: 8,
       paddingVertical: 2,
       backgroundColor: theme.success + '20',
@@ -1339,9 +1365,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskDetailEmoji: {
       width: 52,
       height: 52,
-      fontSize: 30,
-      textAlign: 'center',
-      lineHeight: 52,
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: theme.background,
       borderRadius: 14,
       overflow: 'hidden',
@@ -1383,6 +1408,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textAlign: 'right',
       flex: 1,
       marginLeft: 16,
+    },
+    taskDetailValueRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: 5,
+      marginLeft: 16,
+    },
+    taskDetailValueInline: {
+      fontSize: 13,
+      color: theme.text,
+      fontWeight: '600',
     },
     taskDetailActions: {
       flexDirection: 'row',

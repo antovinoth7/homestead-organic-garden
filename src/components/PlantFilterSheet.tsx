@@ -160,13 +160,13 @@ export function PlantFilterSheet({
             {(
               [
                 ['all', 'All'],
-                ['vegetable', '🥕 Vegetable'],
-                ['fruit_tree', '🍇 Fruit'],
-                ['coconut_tree', '🥥 Coconut'],
-                ['herb', '🌿 Herb'],
-                ['timber_tree', '🌳 Timber'],
-                ['flower', '🌸 Flower'],
-                ['shrub', '🪴 Shrub'],
+                ['vegetable', 'Vegetable'],
+                ['fruit_tree', 'Fruit'],
+                ['coconut_tree', 'Coconut'],
+                ['herb', 'Herb'],
+                ['timber_tree', 'Timber'],
+                ['flower', 'Flower'],
+                ['shrub', 'Shrub'],
               ] as const
             ).map(([val, label]) => (
               <TouchableOpacity
@@ -174,6 +174,13 @@ export function PlantFilterSheet({
                 style={[styles.sheetChip, filters.type === val && styles.sheetChipActive]}
                 onPress={() => updateFilter('type', val)}
               >
+                {val !== 'all' && (
+                  <Ionicons
+                    name="leaf-outline"
+                    size={14}
+                    color={filters.type === val ? theme.primary : theme.textSecondary}
+                  />
+                )}
                 <Text
                   style={[styles.sheetChipText, filters.type === val && styles.sheetChipTextActive]}
                 >
@@ -419,13 +426,18 @@ export function PlantFilterSheet({
                   updateFilter('childLocation', '');
                 }}
               >
+                <Ionicons
+                  name="location-outline"
+                  size={14}
+                  color={filters.parentLocation === loc ? theme.primary : theme.textSecondary}
+                />
                 <Text
                   style={[
                     styles.sheetChipText,
                     filters.parentLocation === loc && styles.sheetChipTextActive,
                   ]}
                 >
-                  📍 {loc}
+                  {loc}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -440,8 +452,9 @@ export function PlantFilterSheet({
                   updateFilter('childLocation', '');
                 }}
               >
+                <Ionicons name="location-outline" size={14} color={theme.primary} />
                 <Text style={[styles.sheetChipText, styles.sheetChipTextActive]}>
-                  📍 {extraLocation}
+                  {extraLocation}
                 </Text>
               </TouchableOpacity>
             )}

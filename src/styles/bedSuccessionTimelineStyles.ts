@@ -173,6 +173,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     // Green manure rationale text
     gmRationale: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 7,
       marginTop: 8,
       backgroundColor: theme.backgroundSecondary,
       borderRadius: 6,
@@ -182,6 +185,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderLeftColor: theme.accent,
     },
     gmRationaleText: {
+      flex: 1,
       fontSize: 11,
       color: theme.textSecondary,
       lineHeight: 16,

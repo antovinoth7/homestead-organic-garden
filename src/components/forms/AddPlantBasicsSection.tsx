@@ -13,7 +13,7 @@ import { PickerField } from '../PickerField';
 import { PlantPickerSheet } from '../PlantPickerSheet';
 import { sanitizeAlphaNumericSpaces } from '@/utils/textSanitizer';
 import { toLocalDateString, formatDateDisplay } from '@/utils/dateHelpers';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
 import { CATEGORY_FULL_LABELS } from '@/utils/plantLabels';
 import type { PlantPickerItem } from '@/utils/plantPickerItems';
 
@@ -106,7 +106,8 @@ export function AddPlantBasicsSection({ formState }: Props): React.JSX.Element {
           label="Plant"
           value={plantVariety}
           placeholder="Choose a plant"
-          emoji={plantVariety ? getPlantEmoji(plantVariety) : undefined}
+          thumbnailSource={plantVariety ? getPlantImage(plantVariety) : undefined}
+          fallbackIcon="general.plant"
           subtitle={plantVariety && plantType ? CATEGORY_FULL_LABELS[plantType] : undefined}
           onPress={() => setPlantSheetVisible(true)}
           errorText={

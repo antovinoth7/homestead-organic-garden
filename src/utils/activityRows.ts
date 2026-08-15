@@ -10,7 +10,7 @@
 
 import { TaskType } from '@/types/database.types';
 import { TaskTypeStat } from '@/utils/taskSummary';
-import { TASK_EMOJIS } from '@/utils/taskConstants';
+import { TASK_TYPE_ORDER } from '@/utils/taskConstants';
 
 /** Rows kept visible when collapsed — matches the hero donut's height. */
 export const HERO_VISIBLE_ROWS = 3;
@@ -40,11 +40,11 @@ function rowPriority(row: ActivityRow): number {
 
 /**
  * Build one row per known task type (types absent from `typeStats` become empty
- * rows), stable-sorted by priority with ties broken by TASK_EMOJIS declaration
+ * rows), stable-sorted by priority with ties broken by TASK_TYPE_ORDER
  * order so the list doesn't reshuffle between renders.
  */
 export function buildActivityRows(typeStats: TaskTypeStat[]): ActivityRow[] {
-  const rows = (Object.keys(TASK_EMOJIS) as TaskType[]).map((type) => {
+  const rows = TASK_TYPE_ORDER.map((type) => {
     const stat = typeStats.find((s) => s.type === type);
     const done = stat?.done ?? 0;
     const total = stat?.total ?? 0;

@@ -12,7 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { BottomSheetModal } from '@/components/BottomSheetModal';
 import { SheetHandle } from '@/components/SheetHandle';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
+import { getPlantImage } from '@/config/referenceAssets';
 import { CATEGORY_FULL_LABELS } from '@/utils/plantLabels';
 import { createStyles } from '@/styles/plantPickerSheetStyles';
 import type { PlantPickerItem } from '@/utils/plantPickerItems';
@@ -124,9 +125,11 @@ export function PlantPickerSheet({
           onPress={() => handleSelect(item)}
           activeOpacity={0.7}
         >
-          <View style={styles.emojiCircle}>
-            <Text style={styles.emoji}>{getPlantEmoji(item.name)}</Text>
-          </View>
+          <ReferenceThumb
+            source={getPlantImage(item.name)}
+            variant="row"
+            recyclingKey={`${item.plantType}:${item.name}`}
+          />
           <View style={styles.rowMeta}>
             <Text style={styles.rowName}>{item.name}</Text>
             <View style={styles.badgeRow}>

@@ -3,6 +3,7 @@ import type { ImageStyle, LayoutChangeEvent } from 'react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/organicInputDetailStyles';
@@ -11,7 +12,6 @@ interface Props {
   name: string;
   tamilName?: string;
   categoryLabel: string;
-  emoji: string;
   image?: ImageSource;
   topInset: number;
   onBack: () => void;
@@ -28,7 +28,6 @@ export function OrganicInputHero({
   name,
   tamilName,
   categoryLabel,
-  emoji,
   image,
   topInset,
   onBack,
@@ -62,7 +61,7 @@ export function OrganicInputHero({
         </TouchableOpacity>
       ) : (
         <View style={styles.heroWatermark}>
-          <Text style={styles.heroWatermarkText}>{emoji}</Text>
+          <GardenIcon name="general.plant" size={132} color={theme.primary} />
         </View>
       )}
 

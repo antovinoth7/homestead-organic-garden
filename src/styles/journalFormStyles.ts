@@ -270,9 +270,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primaryLight,
       borderColor: theme.primary,
     },
-    qualityEmoji: {
-      fontSize: 18,
-    },
     qualityChipText: {
       fontSize: 13,
       color: theme.textSecondary,
@@ -438,8 +435,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       fontWeight: '600',
       color: theme.textSecondary,
-      marginBottom: 6,
       letterSpacing: 0.3,
+    },
+    groupLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      marginBottom: 6,
     },
     suggestionGroupChips: {
       flexDirection: 'row',
@@ -495,6 +497,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 12,
     },
     affectedPartChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
       paddingHorizontal: 12,
       paddingVertical: 8,
       borderRadius: 16,
@@ -547,9 +552,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       fontWeight: '600',
       color: theme.textSecondary,
-      marginBottom: 6,
       letterSpacing: 0.3,
     },
+    treatmentChipContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    effortDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+    },
+    effortEasy: { backgroundColor: theme.success },
+    effortModerate: { backgroundColor: theme.warning },
+    effortAdvanced: { backgroundColor: theme.error },
     treatmentGroupChips: {
       flexDirection: 'row',
       flexWrap: 'wrap',

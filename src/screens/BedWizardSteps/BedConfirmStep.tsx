@@ -9,7 +9,7 @@ import { getLayerColor } from '@/config/beds/layerMeta';
 import { computeRowLayout } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import { BedTopDownMap } from '@/components/BedTopDownMap';
 import VoiceDictation from '@/components/VoiceDictation';
@@ -144,7 +144,7 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
             widthM={s3.width_m}
             lengthM={s3.length_m}
             rows={rowLayout.rows}
-            plantEmoji={getPlantEmoji}
+            plantImage={getPlantImage}
             layerColor={resolveLayerColor}
             walkingPathCm={rowLayout.walkingPathCm}
             edgeBufferCm={rowLayout.edgeBufferCm}
@@ -162,16 +162,27 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
               activeOpacity={0.7}
               onPress={() => setPrepExpanded((v) => !v)}
             >
-              <Text style={styles.szPrepCardTitle}>
-                🌱 Prep checklist · {prepSteps.length} steps
-              </Text>
-              <Text style={styles.szPrepChevron}>{prepExpanded ? '▲' : '▼'}</Text>
+              <View style={styles.inlineLabelRow}>
+                <Ionicons name="checkmark-done-outline" size={18} color={theme.primary} />
+                <Text style={styles.szPrepCardTitle}>
+                  Prep checklist · {prepSteps.length} steps
+                </Text>
+              </View>
+              <Ionicons
+                name={prepExpanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={theme.textSecondary}
+              />
             </TouchableOpacity>
             {prepExpanded &&
               prepSteps.map((s, i) => (
                 <View key={i} style={[styles.szPrepStepRow, i === 0 && styles.szPrepFirstStep]}>
                   <View style={styles.szPrepStepNumber}>
-                    <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+                    {s.kind === 'warning' ? (
+                      <Ionicons name="warning" size={15} color={theme.warning} />
+                    ) : (
+                      <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+                    )}
                   </View>
                   <View style={styles.szPrepStepContent}>
                     <Text style={styles.szPrepStepText}>{s.text}</Text>

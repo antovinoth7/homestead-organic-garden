@@ -70,8 +70,6 @@ import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import {
   getCommonDiseases,
   getCommonPests,
-  getPestDiseaseEmoji,
-  getPlantEmoji,
 } from '@/utils/plantHelpers';
 import {
   CATEGORY_LABELS,
@@ -303,13 +301,13 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       ...inheritedPests.map((pest) => ({
         key: `inherited:${pest}`,
         label: pest,
-        emoji: getPestDiseaseEmoji(pest, 'pest'),
+        iconKey: 'general.pest' as const,
         removable: false,
       })),
       ...(careForm?.customPests ?? []).map((pest) => ({
         key: pest,
         label: pest,
-        emoji: getPestDiseaseEmoji(pest, 'pest'),
+        iconKey: 'general.pest' as const,
         removable: true,
       })),
     ],
@@ -321,13 +319,13 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       ...inheritedDiseases.map((disease) => ({
         key: `inherited:${disease}`,
         label: disease,
-        emoji: getPestDiseaseEmoji(disease, 'disease'),
+        iconKey: 'general.disease' as const,
         removable: false,
       })),
       ...(careForm?.customDiseases ?? []).map((disease) => ({
         key: disease,
         label: disease,
-        emoji: getPestDiseaseEmoji(disease, 'disease'),
+        iconKey: 'general.disease' as const,
         removable: true,
       })),
     ],
@@ -596,7 +594,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
           <ReferenceHero
             name={displayName}
             subtitle={heroSubtitle}
-            emoji={getPlantEmoji(lookupName)}
+            fallbackIcon="general.plant"
             image={heroImage}
             badge={
               isCreating
@@ -890,7 +888,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       <PestDiseasePickerModal
         visible={showPestPicker}
         onClose={closePestPicker}
-        title="Add Pest"
+          title="Add Pest"
+          kind="pest"
         searchPlaceholder="Search pests..."
         allEntries={getAllPests()}
         takenNames={takenPestNames}
@@ -900,7 +899,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       <PestDiseasePickerModal
         visible={showDiseasePicker}
         onClose={closeDiseasePicker}
-        title="Link Disease"
+          title="Link Disease"
+          kind="disease"
         searchPlaceholder="Search diseases..."
         allEntries={getAllDiseases()}
         takenNames={takenDiseaseNames}

@@ -8,6 +8,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import type { ImageSource } from 'expo-image';
 import {
   GestureHandlerRootView,
   PinchGestureHandler,
@@ -24,6 +25,7 @@ import { createStyles } from '@/styles/bedCreationWizardStyles';
 import { computeEmptySlotPositions, computeInterleavedEastPositions } from '@/utils/rowLayoutEngine';
 import type { BedRow } from '@/utils/rowLayoutEngine';
 import type { BedLayer } from '@/types/database.types';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
 
 interface RowWarning {
   rowIndex: number;
@@ -34,7 +36,7 @@ interface BedTopDownMapProps {
   widthM: number;
   lengthM: number;
   rows: BedRow[];
-  plantEmoji: (name: string) => string;
+  plantImage: (name: string) => ImageSource | undefined;
   layerColor: (layer: BedLayer) => string;
   walkingPathCm?: number;
   edgeBufferCm?: number;
@@ -141,7 +143,7 @@ function BedTopDownCanvas({
   widthM,
   lengthM,
   rows,
-  plantEmoji,
+  plantImage,
   layerColor,
   walkingPathCm = 60,
   edgeBufferCm = 0,
@@ -156,7 +158,6 @@ function BedTopDownCanvas({
 
   const pinScale = clamp(mapWidth / 360, 0.9, 1.5);
   const pinSize = Math.round(22 * pinScale);
-  const pinEmojiSize = Math.round(11 * pinScale);
   const pinLabelSize = Math.max(6, Math.round(7 * pinScale));
   const gapCaretSize = Math.max(6, Math.round(7 * pinScale));
   const pinWrapWidth = pinSize + 10;
@@ -360,7 +361,7 @@ function BedTopDownCanvas({
                 accessibilityLabel={`Row ${row.rowIndex}${warning ? ` · ${warning}` : ''}`}
               >
                 <Text style={styles.tdmRowTagText}>R{row.rowIndex}</Text>
-                {warning ? <Text style={styles.tdmRowTagWarn}> ⚠</Text> : null}
+                {warning ? <Ionicons name="warning" size={10} color={theme.warning} /> : null}
               </View>
             );
           })}
@@ -479,7 +480,7 @@ function BedTopDownCanvas({
                         style={[styles.tdmRowGapChipText, { fontSize: gapCaretSize }]}
                         numberOfLines={1}
                       >
-                        ↕ {gapCm} cm
+                        Gap {gapCm} cm
                       </Text>
                     </View>
                   );
@@ -517,7 +518,7 @@ function BedTopDownCanvas({
                           style={[styles.tdmGapCaretText, { fontSize: gapCaretSize }]}
                           numberOfLines={1}
                         >
-                          ↔{gapCm}
+                          {gapCm}cm
                         </Text>
                       </View>
                     );
@@ -561,9 +562,12 @@ function BedTopDownCanvas({
                               : { borderColor: layerColor(row.layer) },
                           ]}
                         >
-                          <Text style={[styles.tdmPinEmoji, { fontSize: pinEmojiSize }]}>
-                            {plantEmoji(plant.name)}
-                          </Text>
+                          <ReferenceThumb
+                            source={plantImage(plant.name)}
+                            fallbackIcon="general.plant"
+                            variant="chip"
+                            accessibilityLabel={`${plant.name} reference image`}
+                          />
                         </View>
                         <Animated.Text
                           style={[
@@ -607,8 +611,9 @@ function BedTopDownCanvas({
 
                 {overflowCm > 0 && (
                   <View style={styles.tdmOverflowBadge}>
+                    <Ionicons name="warning-outline" size={13} color={theme.error} />
                     <Text style={styles.tdmOverflowText}>
-                      ⚠ Overflow {Math.round(overflowCm)} cm
+                      Overflow {Math.round(overflowCm)} cm
                     </Text>
                   </View>
                 )}

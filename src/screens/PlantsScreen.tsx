@@ -65,7 +65,7 @@ const HEALTH_EMPTY_STATE: Record<
   stressed: {
     icon: 'warning-outline',
     title: 'No stressed plants — looking good!',
-    subtitle: 'Your garden is healthy and happy 🎉',
+    subtitle: 'Your garden is healthy and happy',
   },
   recovering: {
     icon: 'bandage-outline',
@@ -75,7 +75,7 @@ const HEALTH_EMPTY_STATE: Record<
   sick: {
     icon: 'medkit-outline',
     title: 'No sick plants — great news!',
-    subtitle: 'All your plants are doing well 🌱',
+    subtitle: 'All your plants are doing well',
   },
 };
 

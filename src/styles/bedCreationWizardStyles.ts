@@ -212,7 +212,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     typeCardSelected: { borderColor: theme.primary, backgroundColor: theme.primaryLight },
     typeCardDimmed: { opacity: 0.5 },
-    typeEmoji: { fontSize: 24, marginBottom: 4 },
+    typeIcon: { marginBottom: 4 },
     typeLabel: { fontSize: 13, fontWeight: '600', color: theme.text, textAlign: 'center' },
     typeLabelSelected: { color: theme.primary },
     typeDesc: { fontSize: 11, color: theme.textSecondary, textAlign: 'center', marginTop: 2 },
@@ -238,6 +238,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     btIdealBadgeText: { fontSize: 9, fontWeight: '700' as const, color: theme.textInverse },
     // Step 1 — Season context banner
     btSeasonBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
       backgroundColor: theme.infoLight,
       borderRadius: 8,
       paddingHorizontal: 12,
@@ -359,6 +362,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     switchThumbActive: { alignSelf: 'flex-end' as const },
     blockAlert: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
       backgroundColor: theme.errorLight,
       borderRadius: 8,
       padding: 12,
@@ -367,8 +373,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.error,
     },
-    blockAlertText: { color: theme.error, fontSize: 13 },
+    blockAlertText: { color: theme.error, fontSize: 13, flex: 1 },
     sunlightWarning: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
       backgroundColor: theme.warningLight,
       borderRadius: 8,
       padding: 10,
@@ -376,7 +385,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.warning,
     },
-    sunlightWarningText: { color: theme.warning, fontSize: 12 },
+    sunlightWarningText: { color: theme.warning, fontSize: 12, flex: 1 },
+    inlineLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
     // Step 3 — size
     recommendationCard: {
       backgroundColor: theme.primaryLight,
@@ -750,6 +760,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     szUnitBtnText: { fontSize: 13, fontWeight: '600' as const, color: theme.textSecondary },
     szUnitBtnTextActive: { color: theme.textInverse },
     szArmReachHint: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 7,
       backgroundColor: theme.warningLight,
       borderRadius: 8,
       paddingHorizontal: 10,
@@ -1658,6 +1671,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       maxWidth: 56,
     },
     tdmOverflowBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
       position: 'absolute' as const,
       bottom: 4,
       left: 4,
@@ -1731,6 +1747,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       letterSpacing: 0.2,
     },
     blTrellisCard: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
       backgroundColor: theme.warningLight,
       borderRadius: 10,
       padding: 12,
@@ -1819,6 +1838,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 12,
       borderWidth: 1,
       borderColor: theme.success,
+      gap: 8,
     },
     gtAutoAddedBannerText: {
       flex: 1,

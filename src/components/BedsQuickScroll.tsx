@@ -13,8 +13,11 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
+import { getPlantImage } from '@/config/referenceAssets';
 import { BedWithCoverage } from '@/hooks/useBedData';
-import { BED_TYPE_EMOJI } from '@/components/BedCard';
+import { BED_TYPE_ICON_KEYS } from '@/config/iconRegistry';
 import { SectionHeader } from '@/components/SectionHeader';
 import {
   getBedStatus,
@@ -103,7 +106,7 @@ function BedMiniCard({ bed, styles, theme, onPress }: CardProps): React.JSX.Elem
 
   // An empty bed still gets a pin — a faded bed-type emoji — so the tile never
   // reads as a failed render.
-  const pins = bed.preview_emojis;
+  const pins = bed.preview_plant_names;
 
   return (
     <TouchableOpacity
@@ -122,13 +125,18 @@ function BedMiniCard({ bed, styles, theme, onPress }: CardProps): React.JSX.Elem
         ))}
         <View style={styles.pinRow}>
           {pins.length > 0 ? (
-            pins.map((emoji, i) => (
-              <Text key={`${emoji}-${i}`} style={styles.pin}>
-                {emoji}
-              </Text>
+            pins.map((plantName, i) => (
+              <ReferenceThumb
+                key={`${plantName}-${i}`}
+                source={getPlantImage(plantName)}
+                variant="chip"
+                recyclingKey={`${bed.id}:${plantName}:${i}`}
+              />
             ))
           ) : (
-            <Text style={styles.pinPlaceholder}>{BED_TYPE_EMOJI[bed.type] ?? '🌿'}</Text>
+            <View style={styles.pinPlaceholder}>
+              <GardenIcon name={BED_TYPE_ICON_KEYS[bed.type]} size={18} color={theme.primary} />
+            </View>
           )}
         </View>
       </View>

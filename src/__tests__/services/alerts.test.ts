@@ -429,7 +429,12 @@ describe('getFarmAlerts', () => {
 
 describe('sortAlerts', () => {
   it('orders critical before warning before info', () => {
-    const base = { icon: '', message: '', created_at: '', daysOverdue: 0 };
+    const base = {
+      iconKey: 'general.warning' as const,
+      message: '',
+      created_at: '',
+      daysOverdue: 0,
+    };
     const alerts: FarmAlert[] = [
       { ...base, id: '1', type: 'pest_spotted', title: 'c', severity: 'info' },
       { ...base, id: '2', type: 'water_needed', title: 'b', severity: 'critical' },
@@ -440,7 +445,14 @@ describe('sortAlerts', () => {
 });
 
 describe('isActionable', () => {
-  const base = { id: 'x', icon: '', title: '', message: '', created_at: '', daysOverdue: 0 };
+  const base = {
+    id: 'x',
+    iconKey: 'general.warning' as const,
+    title: '',
+    message: '',
+    created_at: '',
+    daysOverdue: 0,
+  };
 
   it('includes the conditions no count on the screen states', () => {
     expect(isActionable({ ...base, type: 'health_sick', severity: 'critical' })).toBe(true);
@@ -486,7 +498,14 @@ describe('ALERT_COMPLETE_FIELD', () => {
   });
 
   it('covers only actionable alert types', () => {
-    const base = { id: 'x', icon: '', title: '', message: '', created_at: '', daysOverdue: 0 };
+    const base = {
+      id: 'x',
+      iconKey: 'general.warning' as const,
+      title: '',
+      message: '',
+      created_at: '',
+      daysOverdue: 0,
+    };
     for (const type of Object.keys(ALERT_COMPLETE_FIELD) as FarmAlert['type'][]) {
       expect(isActionable({ ...base, type, severity: 'warning' })).toBe(true);
     }

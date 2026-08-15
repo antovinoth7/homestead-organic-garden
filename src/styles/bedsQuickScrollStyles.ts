@@ -56,11 +56,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       gap: 3,
     },
-    pin: {
-      fontSize: 15,
-    },
     pinPlaceholder: {
-      fontSize: 15,
       opacity: 0.35,
     },
     // ── Card body ────────────────────────────────────────────────────────────

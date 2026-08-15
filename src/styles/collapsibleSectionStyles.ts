@@ -90,6 +90,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.error,
     },
     autoFilledBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
       backgroundColor: theme.success + '20',
       paddingHorizontal: 8,
       paddingVertical: 2,

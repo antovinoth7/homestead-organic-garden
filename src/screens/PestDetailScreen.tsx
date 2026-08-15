@@ -51,6 +51,7 @@ export default function PestDetailScreen(): React.JSX.Element {
       entry={pest}
       categoryLabel={getCategoryLabel(pest.category)}
       image={heroImage}
+      fallbackIcon="general.pest"
       onBack={navigation.goBack}
       onAddToTasks={handleAddToTasks}
     />

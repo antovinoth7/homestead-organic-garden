@@ -467,18 +467,25 @@ export default function JournalScreen(): React.JSX.Element {
               <View style={styles.sheetChipWrap}>
                 {(
                   [
-                    [null, 'All'],
-                    [JournalEntryType.Observation, '👁️ Observation'],
-                    [JournalEntryType.Harvest, '🧺 Harvest'],
-                    [JournalEntryType.PestDisease, '🐛 Pest/Disease'],
-                    [JournalEntryType.Milestone, '🏁 Milestone'],
+                    [null, 'All', null],
+                    [JournalEntryType.Observation, 'Observation', 'eye-outline'],
+                    [JournalEntryType.Harvest, 'Harvest', 'basket-outline'],
+                    [JournalEntryType.PestDisease, 'Pest/Disease', 'bug-outline'],
+                    [JournalEntryType.Milestone, 'Milestone', 'flag-outline'],
                   ] as const
-                ).map(([val, label]) => (
+                ).map(([val, label, icon]) => (
                   <TouchableOpacity
                     key={val ?? 'all'}
                     style={[styles.sheetChip, selectedType === val && styles.sheetChipActive]}
                     onPress={() => setSelectedType(val as JournalEntryType | null)}
                   >
+                    {icon && (
+                      <Ionicons
+                        name={icon}
+                        size={14}
+                        color={selectedType === val ? theme.primary : theme.textSecondary}
+                      />
+                    )}
                     <Text
                       style={[
                         styles.sheetChipText,

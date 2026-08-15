@@ -31,6 +31,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 4,
     },
     typeChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
       backgroundColor: theme.primaryLight,
       borderWidth: 1,
       borderColor: theme.primary,

@@ -39,6 +39,7 @@ export default function PestListScreen(): React.JSX.Element {
       groups={groups}
       categoryDescriptions={CATEGORY_DESCRIPTIONS}
       getImage={getImage}
+      fallbackIcon="general.pest"
       onSelect={handleSelect}
       onBack={navigation.goBack}
     />

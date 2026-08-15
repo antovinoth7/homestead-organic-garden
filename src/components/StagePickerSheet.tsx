@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { BottomSheetModal } from '@/components/BottomSheetModal';
@@ -8,9 +9,9 @@ import { SheetHandle } from '@/components/SheetHandle';
 import { createStyles } from '@/styles/stagePickerSheetStyles';
 import {
   GROWTH_STAGE_DESCRIPTIONS,
-  GROWTH_STAGE_EMOJIS,
   GROWTH_STAGE_LABELS,
 } from '@/utils/plantLabels';
+import { GROWTH_STAGE_ICON_KEYS } from '@/config/iconRegistry';
 import type { GrowthStage } from '@/types/database.types';
 
 interface Props {
@@ -102,8 +103,12 @@ export function StagePickerSheet({
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
             >
-              <View style={styles.emojiCircle}>
-                <Text style={styles.emoji}>{GROWTH_STAGE_EMOJIS[stage]}</Text>
+              <View style={styles.iconCircle}>
+                <GardenIcon
+                  name={GROWTH_STAGE_ICON_KEYS[stage]}
+                  size={18}
+                  color={theme.primary}
+                />
               </View>
               <View style={styles.rowMeta}>
                 <View style={styles.rowNameLine}>

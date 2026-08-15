@@ -1,5 +1,5 @@
 import { buildActivityRows, fmtCount, HERO_VISIBLE_ROWS } from '@/utils/activityRows';
-import { TASK_EMOJIS } from '@/utils/taskConstants';
+import { TASK_TYPE_ORDER } from '@/utils/taskConstants';
 import { TaskTypeStat } from '@/utils/taskSummary';
 import { TaskType } from '@/types/database.types';
 
@@ -14,7 +14,7 @@ describe('buildActivityRows', () => {
   it('emits one row per known task type, even with no stats at all', () => {
     const rows = buildActivityRows([]);
 
-    expect(rows).toHaveLength(Object.keys(TASK_EMOJIS).length);
+    expect(rows).toHaveLength(TASK_TYPE_ORDER.length);
     expect(rows.every((r) => r.total === 0 && r.donePct === 0 && r.overduePct === 0)).toBe(true);
   });
 
@@ -39,7 +39,7 @@ describe('buildActivityRows', () => {
   });
 
   it('breaks ties by declaration order so rows do not reshuffle', () => {
-    const declared = Object.keys(TASK_EMOJIS) as TaskType[];
+    const declared = [...TASK_TYPE_ORDER] as TaskType[];
     const rows = buildActivityRows([stat('prune', 0, 1), stat('water', 0, 1)]);
 
     const positions = rows.slice(0, 2).map((r) => declared.indexOf(r.type));

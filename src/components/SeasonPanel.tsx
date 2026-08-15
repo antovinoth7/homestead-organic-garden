@@ -19,7 +19,10 @@ import { getCurrentSeason, shortenSeasonLabel } from '@/utils/seasonHelpers';
 import { getPlantingCandidates } from '@/utils/plantCareDefaults';
 import { getWhatToPlantNow, KKSeasonId } from '@/utils/plantingNow';
 import { formatDaysToHarvest } from '@/utils/growSpecFormat';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
+import { GardenIcon } from '@/components/GardenIcon';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
+import type { VisualIconKey } from '@/types/visual.types';
 import type { SeasonalFrequency } from '@/config/organicInputs/seasonalAdaptations';
 
 // Enable LayoutAnimation on Android only for the old architecture.
@@ -40,20 +43,6 @@ if (Platform.OS === 'android' && !isNewArchitectureEnabled) {
 const MAX_SUGGESTIONS = 8;
 /** Rows shown before the grower taps "All N crops". */
 const SOWING_PREVIEW_ROWS = 3;
-
-/** Fallback tier when a variety has no entry in the catalog emoji map. */
-const TYPE_EMOJI: Record<string, string> = {
-  vegetable: '🥕',
-  herb: '🌿',
-  flower: '🌼',
-  fruit_tree: '🌳',
-  timber_tree: '🪵',
-  coconut_tree: '🥥',
-  shrub: '🌱',
-  spinach: '🥬',
-};
-
-const GENERIC_EMOJI = '🌱';
 
 interface Props {
   /** Current-season care cadences; the rhythm rows are hidden when null. */
@@ -84,9 +73,9 @@ export const SeasonPanel = React.memo(function SeasonPanel({
       rhythm === null
         ? []
         : [
-            { key: 'water', label: '💧 Water', value: rhythm.waterInterval },
-            { key: 'mulch', label: '🍂 Mulch', value: rhythm.mulchCheck },
-            { key: 'jeevamrutha', label: '🧪 Jeevamrutha', value: rhythm.jeevamruthaInterval },
+            { key: 'water', iconKey: 'task.water' as VisualIconKey, label: 'Water', value: rhythm.waterInterval },
+            { key: 'mulch', iconKey: 'task.mulch' as VisualIconKey, label: 'Mulch', value: rhythm.mulchCheck },
+            { key: 'jeevamrutha', iconKey: 'task.fertilise' as VisualIconKey, label: 'Jeevamrutha', value: rhythm.jeevamruthaInterval },
           ],
     [rhythm]
   );
@@ -101,10 +90,11 @@ export const SeasonPanel = React.memo(function SeasonPanel({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {month.icon} {month.label} · {shortenSeasonLabel(seasonLabel)}
-        </Text>
-        <Text style={styles.headerSubtitle}>{month.highlight}</Text>
+        <GardenIcon name={month.iconKey} size={20} color={theme.primary} />
+        <View style={styles.headerBody}>
+          <Text style={styles.headerTitle}>{month.label} · {shortenSeasonLabel(seasonLabel)}</Text>
+          <Text style={styles.headerSubtitle}>{month.highlight}</Text>
+        </View>
       </View>
 
       <View style={styles.body}>
@@ -115,7 +105,10 @@ export const SeasonPanel = React.memo(function SeasonPanel({
             <View style={styles.divider} />
             {rhythmRows.map((row) => (
               <View key={row.key} style={styles.rhythmRow}>
-                <Text style={styles.rhythmLabel}>{row.label}</Text>
+                <View style={styles.rhythmLabelRow}>
+                  <GardenIcon name={row.iconKey} size={16} color={theme.textSecondary} />
+                  <Text style={styles.rhythmLabel}>{row.label}</Text>
+                </View>
                 <Text style={styles.rhythmValue}>{row.value}</Text>
               </View>
             ))}
@@ -130,14 +123,16 @@ export const SeasonPanel = React.memo(function SeasonPanel({
             <Text style={styles.sowingTitle}>Sow now</Text>
 
             {visibleCrops.map((crop) => {
-              const emoji = getPlantEmoji(crop.variety);
-              const icon =
-                emoji === GENERIC_EMOJI ? TYPE_EMOJI[crop.plantType] ?? GENERIC_EMOJI : emoji;
               // Empty when the care profile carries no harvest range.
               const days = formatDaysToHarvest(crop.daysToHarvest);
               return (
                 <View key={`${crop.plantType}:${crop.variety}`} style={styles.sowingRow}>
-                  <Text style={styles.sowingEmoji}>{icon}</Text>
+                  <ReferenceThumb
+                    source={getPlantImage(crop.variety)}
+                    fallbackIcon="general.plant"
+                    variant="row"
+                    accessibilityLabel={`${crop.variety} reference image`}
+                  />
                   <View style={styles.sowingRowBody}>
                     <Text style={styles.sowingName} numberOfLines={1}>
                       {crop.variety}

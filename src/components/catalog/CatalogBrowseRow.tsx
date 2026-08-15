@@ -5,7 +5,6 @@ import { useTheme } from '@/theme';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
-import { getPlantEmoji } from '@/utils/plantHelpers';
 import type { PlantType } from '@/types/database.types';
 
 interface Props {
@@ -42,7 +41,6 @@ function CatalogBrowseRowComponent({
         <View style={styles.plantThumbWrap}>
           <ReferenceThumb
             source={getPlantImage(plantName)}
-            emoji={getPlantEmoji(plantName)}
             variant="row"
             recyclingKey={`${plantType}:${plantName}`}
           />

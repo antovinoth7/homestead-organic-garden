@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import FloatingLabelInput from '../FloatingLabelInput';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getPestByName } from '@/config/pests';
@@ -19,10 +20,10 @@ import {
   getGroupedDiseases,
   getDefaultGroupedPests,
   getDefaultGroupedDiseases,
-  getPestDiseaseEmoji,
   getGroupedTreatments,
-  getTreatmentEffortDot,
 } from '../../utils/plantHelpers';
+import { TREATMENT_ICON_KEYS } from '@/config/iconRegistry';
+import type { VisualIconKey } from '@/types/visual.types';
 import {
   AFFECTED_PARTS,
   PEST_SEVERITY_OPTIONS,
@@ -65,11 +66,27 @@ const KIND_OPTIONS: {
 const EFFECTIVENESS_OPTIONS: {
   value: TreatmentEffectiveness;
   label: string;
+  iconKey: VisualIconKey;
   activeStyle: 'effChipEffectiveActive' | 'effChipPartialActive' | 'effChipIneffectiveActive';
 }[] = [
-  { value: 'effective', label: '✅ Effective', activeStyle: 'effChipEffectiveActive' },
-  { value: 'partially_effective', label: '⚠️ Partially', activeStyle: 'effChipPartialActive' },
-  { value: 'ineffective', label: '❌ Ineffective', activeStyle: 'effChipIneffectiveActive' },
+  {
+    value: 'effective',
+    label: 'Effective',
+    iconKey: 'general.success',
+    activeStyle: 'effChipEffectiveActive',
+  },
+  {
+    value: 'partially_effective',
+    label: 'Partially',
+    iconKey: 'general.partial',
+    activeStyle: 'effChipPartialActive',
+  },
+  {
+    value: 'ineffective',
+    label: 'Ineffective',
+    iconKey: 'general.error',
+    activeStyle: 'effChipIneffectiveActive',
+  },
 ];
 
 export function JournalPestDiseaseSection({
@@ -159,9 +176,14 @@ export function JournalPestDiseaseSection({
           <View style={styles.suggestionGroupContainer}>
             {groups.map((group) => (
               <View key={group.category} style={styles.suggestionGroup}>
-                <Text style={styles.suggestionGroupLabel}>
-                  {group.emoji} {group.category}
-                </Text>
+                <View style={styles.groupLabelRow}>
+                  <GardenIcon
+                    name={value.kind === 'pest' ? 'general.pest' : 'general.disease'}
+                    size={14}
+                    color={theme.textSecondary}
+                  />
+                  <Text style={styles.suggestionGroupLabel}>{group.category}</Text>
+                </View>
                 <View style={styles.suggestionGroupChips}>
                   {group.items.map((item) => {
                     const entry =
@@ -180,7 +202,7 @@ export function JournalPestDiseaseSection({
                       >
                         <ReferenceThumb
                           source={chipImage}
-                          emoji={getPestDiseaseEmoji(item, value.kind)}
+                          fallbackIcon={value.kind === 'pest' ? 'general.pest' : 'general.disease'}
                           variant="chip"
                         />
                         <Text
@@ -285,13 +307,18 @@ export function JournalPestDiseaseSection({
       {treatmentGroups.length > 0 && (
         <>
           <Text style={styles.label}>Recommended Treatments</Text>
-          <Text style={styles.helperText}>🟢 Easy 🟡 Moderate 🔴 Advanced</Text>
+          <Text style={styles.helperText}>Effort: Easy · Moderate · Advanced</Text>
           <View style={styles.treatmentGroupContainer}>
             {treatmentGroups.map((group) => (
               <View key={group.method} style={styles.treatmentGroup}>
-                <Text style={styles.treatmentGroupLabel}>
-                  {group.emoji} {group.label}
-                </Text>
+                <View style={styles.groupLabelRow}>
+                  <GardenIcon
+                    name={TREATMENT_ICON_KEYS[group.method]}
+                    size={14}
+                    color={theme.textSecondary}
+                  />
+                  <Text style={styles.treatmentGroupLabel}>{group.label}</Text>
+                </View>
                 <View style={styles.treatmentGroupChips}>
                   {group.items.map((item) => {
                     const active = value.treatment === item.name;
@@ -304,14 +331,26 @@ export function JournalPestDiseaseSection({
                           onChange({ treatment: active ? '' : item.name });
                         }}
                       >
-                        <Text
-                          style={[
-                            styles.treatmentChipText,
-                            active && styles.treatmentChipTextActive,
-                          ]}
-                        >
-                          {getTreatmentEffortDot(item.effort)} {item.name}
-                        </Text>
+                        <View style={styles.treatmentChipContent}>
+                          <View
+                            style={[
+                              styles.effortDot,
+                              item.effort === 'easy'
+                                ? styles.effortEasy
+                                : item.effort === 'moderate'
+                                  ? styles.effortModerate
+                                  : styles.effortAdvanced,
+                            ]}
+                          />
+                          <Text
+                            style={[
+                              styles.treatmentChipText,
+                              active && styles.treatmentChipTextActive,
+                            ]}
+                          >
+                            {item.name}
+                          </Text>
+                        </View>
                       </TouchableOpacity>
                     );
                   })}
@@ -326,8 +365,13 @@ export function JournalPestDiseaseSection({
               onChange({ treatment: '' });
             }}
           >
+            <GardenIcon
+              name="general.edit"
+              size={14}
+              color={showCustomInput ? theme.primary : theme.textSecondary}
+            />
             <Text style={[styles.treatmentChipText, showCustomInput && styles.treatmentChipTextActive]}>
-              ✏️ Custom treatment...
+              Custom treatment...
             </Text>
           </TouchableOpacity>
         </>
@@ -359,6 +403,11 @@ export function JournalPestDiseaseSection({
                     onChange({ treatmentEffectiveness: active ? null : opt.value })
                   }
                 >
+                  <GardenIcon
+                    name={opt.iconKey}
+                    size={15}
+                    color={active ? theme.textInverse : theme.textSecondary}
+                  />
                   <Text
                     style={[styles.affectedPartChipText, active && styles.effChipTextActive]}
                   >

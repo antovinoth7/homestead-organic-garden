@@ -23,7 +23,7 @@ Re-run it after catalog changes or after an ingest to refresh completion counts.
 
 ## Workflow
 
-Partial coverage is safe: each UI surface falls back to the catalog emoji when no bundled image exists.
+Partial coverage is safe: each UI surface falls back to a themed semantic icon when no bundled image exists. Catalog `emoji` fields remain data-compatible but are not used by the primary UI.
 
 1. Run `npm run reference:manifest`.
 2. Generate or collect the image described by a missing prompt in `assets-src/PROMPTS.md`.
@@ -35,7 +35,7 @@ The ingest accepts `.png`, `.jpg`, `.jpeg`, and `.webp` at any resolution. It sl
 
 ## Size Budget
 
-The ingest converts each source to a 400 x 300 cover-cropped WebP, stepping quality from 80 down to 45 until it fits within 50 KB. At full coverage, 176 images add at most about 8.8 MB to the app bundle.
+The repository currently bundles 225 WebP assets: 141 plants, 36 pests, 36 diseases, and 12 organic inputs. The ingest converts each source to a 400 x 300 cover-cropped WebP, stepping quality from 80 down to 45 until it fits within 50 KB, so the current set adds at most about 11.25 MB to the app bundle.
 
 The constants live in `scripts/reference/ingest-images.js`. `sharp` is a build-time dev dependency and does not ship to the device.
 
@@ -58,6 +58,7 @@ Render sites:
 | Catalog plant hero | full width x 250; tappable fullscreen preview (shares `ReferenceHero`) |
 | Organic-input list cards | 44 x 44 |
 | Organic-input hero | full width x 250; tappable fullscreen preview |
+| Bed preview pins and crop cards | compact 20–44 px thumbnails with a leaf-icon fallback |
 
 Every full-width hero upscales the bundled 400 x 300 source roughly 3x on a phone. If that
 softness becomes a problem, raise the ingest output size for all of them together rather than

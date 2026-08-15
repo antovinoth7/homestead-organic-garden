@@ -284,7 +284,7 @@ export function useTodayBrief(): UseTodayBriefResult {
           today,
           condition: description.id,
           conditionLabel: description.label,
-          conditionEmoji: description.emoji,
+          conditionIconKey: description.iconKey,
           fetched_at: fetchedAt,
           stale: fetchedAt ? Date.now() - new Date(fetchedAt).getTime() > WEATHER_FRESH_MS : false,
           // Covers revalidation, not just the cold fetch: the overlay's stale

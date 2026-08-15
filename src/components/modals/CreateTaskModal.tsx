@@ -14,15 +14,15 @@ import { createStyles } from '../../styles/calendarStyles';
 import { useTheme } from '../../theme';
 
 const TASK_TYPE_ITEMS: DropdownItem[] = [
-  { label: '💧 Water', value: 'water' },
-  { label: '🌱 Fertilize', value: 'fertilise' },
-  { label: '✂️ Prune', value: 'prune' },
-  { label: '🪴 Repot', value: 'repot' },
-  { label: '🧴 Spray (Pesticide/Neem)', value: 'spray' },
-  { label: '🍂 Mulch', value: 'mulch' },
-  { label: '🌾 Weeding', value: 'weeding' },
-  { label: '🌱 Transplanting', value: 'transplanting' },
-  { label: '⛏️ Cultivating', value: 'cultivating' },
+  { label: 'Water', value: 'water' },
+  { label: 'Fertilize', value: 'fertilise' },
+  { label: 'Prune', value: 'prune' },
+  { label: 'Repot', value: 'repot' },
+  { label: 'Spray (Pesticide/Neem)', value: 'spray' },
+  { label: 'Mulch', value: 'mulch' },
+  { label: 'Weeding', value: 'weeding' },
+  { label: 'Transplanting', value: 'transplanting' },
+  { label: 'Cultivating', value: 'cultivating' },
 ];
 
 interface CreateTaskModalProps {
@@ -262,39 +262,54 @@ export default function CreateTaskModal({
               style={[styles.timeButton, preferredTime === 'morning' && styles.timeButtonActive]}
               onPress={() => setPreferredTime(preferredTime === 'morning' ? null : 'morning')}
             >
+              <Ionicons
+                name="sunny-outline"
+                size={16}
+                color={preferredTime === 'morning' ? theme.primary : theme.textSecondary}
+              />
               <Text
                 style={[
                   styles.timeButtonText,
                   preferredTime === 'morning' && styles.timeButtonTextActive,
                 ]}
               >
-                🌅 Morning
+                Morning
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.timeButton, preferredTime === 'afternoon' && styles.timeButtonActive]}
               onPress={() => setPreferredTime(preferredTime === 'afternoon' ? null : 'afternoon')}
             >
+              <Ionicons
+                name="sunny"
+                size={16}
+                color={preferredTime === 'afternoon' ? theme.primary : theme.textSecondary}
+              />
               <Text
                 style={[
                   styles.timeButtonText,
                   preferredTime === 'afternoon' && styles.timeButtonTextActive,
                 ]}
               >
-                ☀️ Afternoon
+                Afternoon
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.timeButton, preferredTime === 'evening' && styles.timeButtonActive]}
               onPress={() => setPreferredTime(preferredTime === 'evening' ? null : 'evening')}
             >
+              <Ionicons
+                name="moon-outline"
+                size={16}
+                color={preferredTime === 'evening' ? theme.primary : theme.textSecondary}
+              />
               <Text
                 style={[
                   styles.timeButtonText,
                   preferredTime === 'evening' && styles.timeButtonTextActive,
                 ]}
               >
-                🌙 Evening
+                Evening
               </Text>
             </TouchableOpacity>
           </View>
@@ -305,20 +320,30 @@ export default function CreateTaskModal({
               style={[styles.toggleButton, !isOneTimeTask && styles.toggleButtonActive]}
               onPress={() => setIsOneTimeTask(false)}
             >
+              <Ionicons
+                name="repeat-outline"
+                size={16}
+                color={!isOneTimeTask ? theme.primary : theme.textSecondary}
+              />
               <Text
                 style={[styles.toggleButtonText, !isOneTimeTask && styles.toggleButtonTextActive]}
               >
-                🔄 Repeating
+                Repeating
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.toggleButton, isOneTimeTask && styles.toggleButtonActive]}
               onPress={() => setIsOneTimeTask(true)}
             >
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={16}
+                color={isOneTimeTask ? theme.primary : theme.textSecondary}
+              />
               <Text
                 style={[styles.toggleButtonText, isOneTimeTask && styles.toggleButtonTextActive]}
               >
-                ✓ One-Time
+                One-Time
               </Text>
             </TouchableOpacity>
           </View>
@@ -383,7 +408,10 @@ export default function CreateTaskModal({
 
               {frequencyDays && parseInt(frequencyDays) > 0 && (
                 <View style={styles.preview}>
-                  <Text style={styles.previewTitle}>📅 Schedule Preview</Text>
+                  <View style={styles.previewTitleRow}>
+                    <Ionicons name="calendar-outline" size={16} color={theme.primary} />
+                    <Text style={styles.previewTitle}>Schedule Preview</Text>
+                  </View>
                   <Text style={styles.previewText}>
                     • First task:{' '}
                     {startDate.toLocaleDateString('en-US', {
@@ -411,7 +439,10 @@ export default function CreateTaskModal({
 
           {isOneTimeTask && (
             <View style={styles.preview}>
-              <Text style={styles.previewTitle}>📅 One-Time Task</Text>
+              <View style={styles.previewTitleRow}>
+                <Ionicons name="calendar-outline" size={16} color={theme.primary} />
+                <Text style={styles.previewTitle}>One-Time Task</Text>
+              </View>
               <Text style={styles.previewText}>
                 • Due:{' '}
                 {startDate.toLocaleDateString('en-US', {

@@ -42,9 +42,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    emoji: {
-      fontSize: 32,
-    },
     missingImageBadge: {
       position: 'absolute',
       top: 2,

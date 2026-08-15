@@ -2,17 +2,6 @@ import type { BedType } from '@/types/database.types';
 
 /** Single source of truth for how each bed type is labelled across the app. */
 
-/** Emoji glyph per bed type — used in cards, filters, and the wizard header. */
-export const BED_TYPE_EMOJI: Record<BedType, string> = {
-  leafy: '🥬',
-  fruiting: '🍅',
-  spice: '🌿',
-  root_legume: '🥕',
-  climber_trellis: '🌱',
-  three_sisters: '🌽',
-  medicinal_guild: '🌾',
-};
-
 /** Full display name — used in headers and filter chips. */
 export const BED_TYPE_NAME: Record<BedType, string> = {
   leafy: 'Leafy Greens',
@@ -36,10 +25,9 @@ export const BED_TYPE_SHORT: Record<BedType, string> = {
 };
 
 /**
- * Build the bed wizard header title, e.g. "🥬 Leafy Greens - Create" /
- * "🍅 Veggie Bed - Edit". Keeps the emoji + type + mode wording in one place.
+ * Build the bed wizard header title, e.g. "Leafy Greens - Create".
  */
 export function bedTypeTitle(bedType: BedType, mode: 'create' | 'edit'): string {
   const action = mode === 'edit' ? 'Edit' : 'Create';
-  return `${BED_TYPE_EMOJI[bedType]} ${BED_TYPE_NAME[bedType]} - ${action}`;
+  return `${BED_TYPE_NAME[bedType]} - ${action}`;
 }

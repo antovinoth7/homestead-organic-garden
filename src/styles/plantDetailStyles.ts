@@ -115,6 +115,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       marginBottom: 12,
     },
+    sectionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+    },
     notesText: {
       fontSize: 16,
       color: theme.textSecondary,

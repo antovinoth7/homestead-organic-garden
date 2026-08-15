@@ -1,10 +1,12 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useTheme } from '@/theme';
 import { BedWithCoverage } from '@/hooks/useBedData';
-import { bedExpectsLegumes, BED_TYPE_EMOJI } from '@/config/beds';
+import { bedExpectsLegumes } from '@/config/beds';
+import { BED_TYPE_ICON_KEYS } from '@/config/iconRegistry';
 import { LOW_LEGUME_THRESHOLD } from '@/utils/filterAndSortBeds';
 import { getBedOccupancy } from '@/utils/bedOccupancy';
 import {
@@ -29,10 +31,6 @@ interface Props {
   onSwipeableOpen?: (ref: Swipeable) => void;
 }
 
-// Re-exported from the shared bed-type metadata so existing importers
-// (BedsQuickScroll, BedFilterSheet) keep working from one source of truth.
-export { BED_TYPE_EMOJI };
-
 const LIFECYCLE_ICON: Record<BedLifecycle, keyof typeof Ionicons.glyphMap> = {
   empty: 'add-circle-outline',
   growing: 'leaf',
@@ -52,7 +50,6 @@ export const BedCard = React.memo(function BedCard({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const swipeableRef = useRef<Swipeable>(null);
 
-  const emoji = BED_TYPE_EMOJI[bed.type] ?? '🌿';
   const showLegume = bedExpectsLegumes(bed.type);
   const lowLegume = showLegume && bed.legume_coverage_pct < LOW_LEGUME_THRESHOLD;
 
@@ -148,7 +145,7 @@ export const BedCard = React.memo(function BedCard({
       <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.7}>
         <View style={[styles.cardStripe, { backgroundColor: stripeColor }]} />
         <View style={styles.emojiTile}>
-          <Text style={styles.emojiTileText}>{emoji}</Text>
+          <GardenIcon name={BED_TYPE_ICON_KEYS[bed.type]} size={28} color={theme.primary} />
         </View>
         <View style={styles.cardContent}>
           <View style={styles.cardTitleRow}>

@@ -8,6 +8,8 @@ import type { Theme } from '../theme/colors';
 import { summarizeHarvests, groupHarvestsBySeason, groupHarvestsByTree } from '../utils/harvestStats';
 import HarvestYieldChart from './HarvestYieldChart';
 import { DetailCard } from './plantDetail/DetailCard';
+import { GardenIcon } from '@/components/GardenIcon';
+import { QUALITY_ICON_KEYS } from '@/config/iconRegistry';
 
 interface HarvestHistorySectionProps {
   plantType: PlantType;
@@ -136,15 +138,12 @@ export default function HarvestHistorySection({
               </View>
               <View style={styles.harvestRight}>
                 {entry.harvest_quality && (
-                  <Text style={styles.qualityBadge}>
-                    {entry.harvest_quality === 'excellent'
-                      ? '🌟'
-                      : entry.harvest_quality === 'good'
-                      ? '👍'
-                      : entry.harvest_quality === 'fair'
-                      ? '👌'
-                      : '👎'}
-                  </Text>
+                  <GardenIcon
+                    name={QUALITY_ICON_KEYS[entry.harvest_quality]}
+                    size={22}
+                    color={theme.primary}
+                    accessibilityLabel={`${entry.harvest_quality} harvest quality`}
+                  />
                 )}
               </View>
             </View>

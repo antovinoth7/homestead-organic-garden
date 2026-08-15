@@ -73,6 +73,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 13,
       color: theme.textSecondary,
     },
+    rhythmLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+    },
     rhythmValue: {
       fontSize: 13,
       fontWeight: '600',
@@ -91,9 +96,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 10,
       paddingVertical: 6,
-    },
-    sowingEmoji: {
-      fontSize: 18,
     },
     sowingRowBody: {
       flex: 1,

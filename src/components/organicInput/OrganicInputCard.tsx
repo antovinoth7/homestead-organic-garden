@@ -3,6 +3,7 @@ import type { ImageStyle } from 'react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/organicInputListStyles';
 import { getCategoryLabel } from '@/config/organicInputs';
@@ -41,7 +42,7 @@ export function OrganicInputCard({ entry, onPress }: Props): React.JSX.Element {
             recyclingKey={entry.id}
           />
         ) : (
-          <Text style={styles.cardTileEmoji}>{entry.emoji}</Text>
+          <GardenIcon name="general.plant" size={24} color={theme.primary} />
         )}
       </View>
 

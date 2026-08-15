@@ -20,17 +20,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     fieldError: {
       borderColor: theme.error,
     },
-    emojiCircle: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
-      backgroundColor: theme.backgroundTertiary,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-    },
-    emoji: {
-      fontSize: 19,
-    },
     iconCircle: {
       width: 38,
       height: 38,

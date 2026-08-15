@@ -10,15 +10,15 @@
 
 import type { GrowthStage, Plant } from '@/types/database.types';
 import type { BedWithCoverage } from '@/hooks/useBedData';
-import { getPlantEmoji, STAGE_ORDER } from '@/utils/plantHelpers';
+import { STAGE_ORDER } from '@/utils/plantHelpers';
 import { LIFECYCLE_LABEL, type BedStatus } from '@/utils/bedStatus';
 
 /** Pins that fit across the mini grid tile before it reads as clutter. */
 export const MAX_PREVIEW_PINS = 3;
 
 export interface BedPreview {
-  /** Plant emoji for the first MAX_PREVIEW_PINS plants, in bed display order. */
-  emojis: string[];
+  /** Plant names for the first MAX_PREVIEW_PINS thumbnails, in bed display order. */
+  plantNames: string[];
   /** The stage most of the bed is in; null when no plant has a recorded stage. */
   dominantStage: GrowthStage | null;
 }
@@ -67,7 +67,7 @@ function pickDominantStage(plants: Plant[]): GrowthStage | null {
  * Build the grid pins and stage badge for one bed from its active plants.
  *
  * Duplicate emoji are kept: a spice bed of three chillies should render
- * 🌶️🌶️🌶️, which is what the bed actually looks like.
+ * repeated identical markers, which is what the bed actually looks like.
  */
 export function buildBedPreview(activePlants: Plant[]): BedPreview {
   const ordered = [...activePlants].sort((a, b) => {
@@ -77,7 +77,7 @@ export function buildBedPreview(activePlants: Plant[]): BedPreview {
   });
 
   return {
-    emojis: ordered.slice(0, MAX_PREVIEW_PINS).map((plant) => getPlantEmoji(plant.name)),
+    plantNames: ordered.slice(0, MAX_PREVIEW_PINS).map((plant) => plant.name),
     dominantStage: pickDominantStage(activePlants),
   };
 }

@@ -23,7 +23,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles, ROW_TILE_STEP } from '@/styles/bedRowLayoutStyles';
 import { computeTargetIndex } from '@/utils/dragRowMath';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
+import { GardenIcon } from '@/components/GardenIcon';
+import { BED_LAYER_ICON_KEYS } from '@/config/iconRegistry';
 import type { BedLayer, BedType, EntryResolution } from '@/types/database.types';
 import { bedExpectsLegumes } from '@/config/beds';
 import type { RowLayoutResult, BedRow, RowPlant } from '@/utils/rowLayoutEngine';
@@ -63,14 +66,6 @@ interface Props {
   onOpenPlant?: (plantId: string) => void;
   bedType?: BedType;
 }
-
-const LAYER_ICON: Record<BedLayer, string> = {
-  canopy: '🌳',
-  climber: '🌿',
-  understory: '🌱',
-  root: '🥕',
-  ground_cover: '🌸',
-};
 
 const BENEFIT_LABEL: Record<string, string> = {
   nematode: 'nematode',
@@ -147,13 +142,18 @@ function PlantTile({
         isCompanion ? null : { borderColor: layerBorderColor },
       ]}
     >
-      <Text style={styles.plantTileEmoji}>{getPlantEmoji(plant.name)}</Text>
+      <ReferenceThumb
+        source={getPlantImage(plant.name)}
+        fallbackIcon="general.plant"
+        variant="chip"
+        accessibilityLabel={`${plant.name} reference image`}
+      />
       <Text style={styles.plantTileName} numberOfLines={2}>
         {plant.name}
       </Text>
       <Text style={styles.plantTileSpacing}>
         {isCompanion
-          ? `★ ${plant.spacingCm}cm`
+          ? `Companion · ${plant.spacingCm}cm`
           : plant.daysToHarvest !== undefined
             ? `${plant.spacingCm}cm · Day ${plant.daysToHarvest}`
             : `${plant.spacingCm}cm`}
@@ -305,7 +305,6 @@ function RowCard({
 
   const borderColor = theme.layerColors[row.layer].color;
   const bgColor = theme.layerColors[row.layer].bg;
-  const icon = LAYER_ICON[row.layer];
   const displayName = getRowDisplayName(row.layer, row.isStaggered);
   const hasNFixer = row.plants.some((p) => p.isNFixer);
   const isGndCover = row.layer === 'ground_cover';
@@ -340,7 +339,7 @@ function RowCard({
           <View style={[styles.rowNumCircle, { backgroundColor: borderColor }]}>
             <Text style={styles.rowNumText}>{row.rowIndex}</Text>
           </View>
-          <Text style={styles.rowIcon}>{icon}</Text>
+          <GardenIcon name={BED_LAYER_ICON_KEYS[row.layer]} size={20} color={borderColor} />
           <Text style={styles.rowNameText} numberOfLines={1}>
             {displayName}
           </Text>
@@ -557,7 +556,11 @@ function AvailableLayersSection({
               onPress={() => onAddToRow(ghost.layer)}
               activeOpacity={0.7}
             >
-              <Text style={styles.availableLayerItemIcon}>{LAYER_ICON[ghost.layer]}</Text>
+              <GardenIcon
+                name={BED_LAYER_ICON_KEYS[ghost.layer]}
+                size={20}
+                color={theme.layerColors[ghost.layer].color}
+              />
               <View style={styles.availableLayerItemTextBlock}>
                 <Text style={styles.availableLayerItemName}>
                   {getRowDisplayName(ghost.layer, false)}
@@ -742,7 +745,7 @@ function Legend(): React.JSX.Element {
       </View>
       <View style={styles.legendItem}>
         <View style={styles.legendSwatchCompanion} />
-        <Text style={styles.legendText}>★ Companion</Text>
+        <Text style={styles.legendText}>Companion</Text>
       </View>
       <View style={styles.legendItem}>
         <View style={styles.legendSwatchGround} />
@@ -826,7 +829,6 @@ export function GhostRowCard({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const borderColor = theme.layerColors[ghost.layer].color;
   const bgColor = theme.layerColors[ghost.layer].bg;
-  const icon = LAYER_ICON[ghost.layer];
   const displayName = getRowDisplayName(ghost.layer, false);
 
   return (
@@ -834,7 +836,7 @@ export function GhostRowCard({
       <View style={[styles.rowAccentStripe, { backgroundColor: borderColor }]} />
       <View style={[styles.rowHeader, { borderBottomColor: borderColor }]}>
         <View style={styles.rowHeaderTop}>
-          <Text style={styles.rowIcon}>{icon}</Text>
+          <GardenIcon name={BED_LAYER_ICON_KEYS[ghost.layer]} size={20} color={borderColor} />
           <Text style={styles.rowNameText} numberOfLines={1}>
             {displayName}
           </Text>

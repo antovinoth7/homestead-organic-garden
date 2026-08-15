@@ -23,6 +23,7 @@ import {
   TaskTemplate,
   TaskType,
 } from '@/types/database.types';
+import type { VisualIconKey } from '@/types/visual.types';
 // Type-only: erased at compile time, so this adds no runtime edge into
 // taskSchedulingLogic → taskConstants → @expo/vector-icons.
 import type { PlantLastCareField } from '@/services/taskSchedulingLogic';
@@ -52,14 +53,15 @@ export const ATTENTION_MIN_DAYS_OVERDUE = 1;
  * Declared locally rather than imported from `taskConstants`, which pulls in
  * `@expo/vector-icons` — this module is contractually RN-free.
  */
-const TASK_ALERT_SHAPE: Partial<Record<TaskType, { type: FarmAlertType; verb: string; icon: string }>> =
-  {
-    water: { type: 'water_needed', verb: 'Watering', icon: '💧' },
-    fertilise: { type: 'fertilise_due', verb: 'Fertilising', icon: '🌿' },
-    prune: { type: 'prune_due', verb: 'Pruning', icon: '✂️' },
-    harvest: { type: 'harvest_due', verb: 'Harvest', icon: '🧺' },
-    harvest_leaves: { type: 'harvest_due', verb: 'Leaf harvest', icon: '🧺' },
-  };
+const TASK_ALERT_SHAPE: Partial<
+  Record<TaskType, { type: FarmAlertType; verb: string; iconKey: VisualIconKey }>
+> = {
+  water: { type: 'water_needed', verb: 'Watering', iconKey: 'alert.water_needed' },
+  fertilise: { type: 'fertilise_due', verb: 'Fertilising', iconKey: 'alert.fertilise_due' },
+  prune: { type: 'prune_due', verb: 'Pruning', iconKey: 'alert.prune_due' },
+  harvest: { type: 'harvest_due', verb: 'Harvest', iconKey: 'alert.harvest_due' },
+  harvest_leaves: { type: 'harvest_due', verb: 'Leaf harvest', iconKey: 'alert.harvest_due' },
+};
 
 /** Task types whose template supersedes the field-derived harvest-readiness nudge. */
 const HARVEST_TASK_TYPES: ReadonlySet<TaskType> = new Set<TaskType>(['harvest', 'harvest_leaves']);
@@ -215,7 +217,7 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
       title: plant?.name ?? (template.bed_id ? bedNames?.[template.bed_id] ?? 'Bed' : 'Farm'),
       message: `${shape.verb} overdue by ${daysOverdue} day${plural(daysOverdue)}`,
       severity: daysOverdue >= Math.max(2, halfCycle) ? 'critical' : 'warning',
-      icon: shape.icon,
+      iconKey: shape.iconKey,
       daysOverdue,
       created_at: nowIso,
     });
@@ -231,7 +233,7 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
         title: plant.name,
         message: 'Marked sick — needs care',
         severity: 'critical',
-        icon: '🤒',
+        iconKey: 'alert.health_sick',
         daysOverdue: 0,
         created_at: nowIso,
       });
@@ -275,7 +277,7 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
             ? 'Ready to harvest today'
             : `Harvest overdue by ${toHarvest} day${plural(toHarvest)}`,
         severity: 'warning',
-        icon: '🧺',
+        iconKey: 'alert.harvest_due',
         daysOverdue: toHarvest,
         created_at: nowIso,
       });
@@ -296,7 +298,7 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
         title: pest.issue,
         message: pest.tip,
         severity: 'info',
-        icon: pest.type === 'disease' ? '🦠' : '🐛',
+        iconKey: 'alert.pest_spotted',
         daysOverdue: 0,
         created_at: nowIso,
       });
@@ -314,7 +316,7 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
         title: bedLabel,
         message: 'Same-family repeat — rotate this bed',
         severity: 'critical',
-        icon: '🔄',
+        iconKey: 'alert.rotation_due',
         daysOverdue: 0,
         created_at: nowIso,
       });
@@ -337,7 +339,7 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
           ? `Sow ${gm.name} in ${emptyOrRestingBedCount} empty bed${plural(emptyOrRestingBedCount)}`
           : `Sow ${gm.name} green manure in empty beds`,
       severity: 'info',
-      icon: '🌱',
+      iconKey: 'alert.bed_resting_end',
       daysOverdue: 0,
       created_at: nowIso,
     });
@@ -353,7 +355,7 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
       title: bedLabel,
       message: `Harvest gap risk (${gap.category}) — stagger clearing`,
       severity: 'warning',
-      icon: '📆',
+      iconKey: 'alert.rotation_due',
       daysOverdue: 0,
       created_at: nowIso,
     });

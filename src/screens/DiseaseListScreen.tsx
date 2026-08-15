@@ -39,6 +39,7 @@ export default function DiseaseListScreen(): React.JSX.Element {
       groups={groups}
       categoryDescriptions={CATEGORY_DESCRIPTIONS}
       getImage={getImage}
+      fallbackIcon="general.disease"
       onSelect={handleSelect}
       onBack={navigation.goBack}
     />

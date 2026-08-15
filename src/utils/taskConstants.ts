@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { TaskType } from '../types/database.types';
 
 export const TASK_DUE_TIME_HOUR = 18; // 6:00 PM
@@ -16,19 +15,19 @@ export const EARLY_COMPLETION_BLOCK_REASON: Partial<Record<TaskType, string>> = 
   spray: 'Spraying early means overuse and a shorter pre-harvest interval.',
 };
 
-export const TASK_EMOJIS: Record<TaskType, string> = {
-  water: '💧',
-  fertilise: '🌿',
-  prune: '✂️',
-  repot: '🪴',
-  spray: '💨',
-  mulch: '🍂',
-  harvest: '🧺',
-  harvest_leaves: '🍃',
-  weeding: '🌾',
-  transplanting: '🌱',
-  cultivating: '⛏️',
-};
+export const TASK_TYPE_ORDER: readonly TaskType[] = [
+  'water',
+  'fertilise',
+  'prune',
+  'repot',
+  'spray',
+  'mulch',
+  'harvest',
+  'harvest_leaves',
+  'weeding',
+  'transplanting',
+  'cultivating',
+];
 
 export const TASK_COLORS: Record<TaskType, string> = {
   water: '#2196F3',
@@ -62,20 +61,6 @@ export const TASK_COLORS_ON_DARK: Record<TaskType, string> = {
   weeding: '#C5E1A5',
   transplanting: '#80CBC4',
   cultivating: '#D7CCC8',
-};
-
-export const TASK_ICONS: Record<TaskType, keyof typeof Ionicons.glyphMap> = {
-  water: 'water',
-  fertilise: 'nutrition',
-  prune: 'cut',
-  repot: 'move',
-  spray: 'sparkles',
-  mulch: 'layers',
-  harvest: 'basket',
-  harvest_leaves: 'leaf',
-  weeding: 'trash-bin',
-  transplanting: 'swap-horizontal',
-  cultivating: 'build',
 };
 
 /**

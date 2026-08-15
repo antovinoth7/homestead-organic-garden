@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
+import { GardenIcon } from '@/components/GardenIcon';
 import { createStyles } from '@/styles/pestDiseaseDetailStyles';
 import { getCurrentRisk } from '@/utils/riskHelpers';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
@@ -12,6 +13,7 @@ import { ReferenceHero } from './ReferenceHero';
 import { RiskInGardenCard } from './RiskInGardenCard';
 import { ActionPlanCard } from './ActionPlanCard';
 import type { ReferenceEntry } from './types';
+import type { VisualIconKey } from '@/types/visual.types';
 
 const HERO_HEIGHT = 250;
 const STICKY_THRESHOLD = HERO_HEIGHT - 80;
@@ -20,6 +22,7 @@ interface Props {
   entry: ReferenceEntry;
   categoryLabel: string;
   image?: ImageSource;
+  fallbackIcon: VisualIconKey;
   onBack: () => void;
   /** Opens the create-task flow for the tapped control step. */
   onAddToTasks: () => void;
@@ -33,6 +36,7 @@ export function ReferenceDetailView({
   entry,
   categoryLabel,
   image,
+  fallbackIcon,
   onBack,
   onAddToTasks,
 }: Props): React.JSX.Element {
@@ -87,9 +91,9 @@ export function ReferenceDetailView({
         >
           <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
         </TouchableOpacity>
-        <Animated.Text style={[styles.stickyHeaderEmoji, { opacity: stickyTitleOpacity }]}>
-          {entry.emoji}
-        </Animated.Text>
+        <Animated.View style={{ opacity: stickyTitleOpacity }}>
+          <GardenIcon name={fallbackIcon} size={22} color={theme.text} />
+        </Animated.View>
         <Animated.Text
           style={[styles.stickyHeaderTitle, { opacity: stickyTitleOpacity }]}
           numberOfLines={1}
@@ -111,7 +115,7 @@ export function ReferenceDetailView({
         <ReferenceHero
           name={entry.name}
           subtitle={subtitle}
-          emoji={entry.emoji}
+          fallbackIcon={fallbackIcon}
           image={image}
           risk={risk}
           topInset={insets.top}

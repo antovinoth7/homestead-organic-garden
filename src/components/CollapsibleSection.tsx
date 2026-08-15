@@ -94,7 +94,8 @@ export default function CollapsibleSection({
                 </Text>
                 {autoFilled && (
                   <View style={styles.autoFilledBadge}>
-                    <Text style={styles.autoFilledText}>✨ Auto</Text>
+                    <Ionicons name="sparkles" size={12} color={theme.primary} />
+                    <Text style={styles.autoFilledText}>Auto</Text>
                   </View>
                 )}
                 {!hasError && sectionStatus === 'complete' && (

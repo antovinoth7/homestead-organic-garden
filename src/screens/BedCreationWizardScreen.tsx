@@ -216,7 +216,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
   const isLastInputStep = wizard.currentStep === 6;
 
   // Header shows the bed type once chosen (emoji + mode + name), e.g.
-  // "🥬 Create Leafy Greens". Falls back to a plain label on step 1.
+  // For example, "Create Leafy Greens". Falls back to a plain label on step 1.
   const selectedBedType = wizard.stepData[1]?.bed_type;
   const headerTitle = selectedBedType
     ? bedTypeTitle(selectedBedType, isEditMode ? 'edit' : 'create')

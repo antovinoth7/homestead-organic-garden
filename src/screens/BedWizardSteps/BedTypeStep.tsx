@@ -1,11 +1,14 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useTheme } from '@/theme';
+import { GardenIcon } from '@/components/GardenIcon';
 import { BedType } from '@/types/database.types';
 import { Step1Data } from '@/hooks/useBedCreationWizard';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import { getCurrentSeason } from '@/utils/seasonHelpers';
-import { BED_TYPE_NAME, BED_TYPE_EMOJI } from '@/config/beds';
+import { BED_TYPE_NAME } from '@/config/beds';
+import { BED_TYPE_ICON_KEYS } from '@/config/iconRegistry';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
   data: Partial<Step1Data>;
@@ -89,10 +92,15 @@ export function BedTypeStep({ data, onChange, locked = false }: Props): React.JS
   return (
     <ScrollView contentContainerStyle={styles.stepContainer}>
       <View style={styles.btSeasonBanner}>
+        <Ionicons
+          name={locked ? 'lock-closed-outline' : 'partly-sunny-outline'}
+          size={17}
+          color={theme.textSecondary}
+        />
         <Text style={styles.btSeasonBannerText}>
           {locked
-            ? "🔒 Bed type can't be changed after creation"
-            : `🌦 Now: ${seasonLabel} — ideal beds highlighted below`}
+            ? "Bed type can't be changed after creation"
+            : `Now: ${seasonLabel} — ideal beds highlighted below`}
         </Text>
       </View>
 
@@ -117,7 +125,13 @@ export function BedTypeStep({ data, onChange, locked = false }: Props): React.JS
                   <Text style={styles.btIdealBadgeText}>✓ Now</Text>
                 </View>
               )}
-              <Text style={styles.typeEmoji}>{BED_TYPE_EMOJI[opt.type]}</Text>
+              <View style={styles.typeIcon}>
+                <GardenIcon
+                  name={BED_TYPE_ICON_KEYS[opt.type]}
+                  size={28}
+                  color={isSelected ? theme.primary : theme.textSecondary}
+                />
+              </View>
               <Text
                 style={[styles.typeLabel, isSelected && styles.typeLabelSelected]}
                 numberOfLines={1}

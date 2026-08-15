@@ -16,10 +16,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    rowFallbackText: {
-      fontSize: 24,
-      textAlign: 'center',
-    },
     chipImage: {
       width: 20,
       height: 20,
@@ -32,10 +28,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 4,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    chipFallbackText: {
-      fontSize: 13,
-      textAlign: 'center',
     },
     heroImage: {
       width: 44,
@@ -50,9 +42,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.backgroundSecondary,
-    },
-    heroFallbackText: {
-      fontSize: 24,
-      textAlign: 'center',
     },
   });

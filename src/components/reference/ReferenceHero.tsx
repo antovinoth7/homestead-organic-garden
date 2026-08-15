@@ -3,11 +3,13 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import type { ImageStyle, LayoutChangeEvent } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/pestDiseaseDetailStyles';
 import { getRiskColor } from '@/utils/riskHelpers';
 import type { RiskLevel } from '@/types/database.types';
+import type { VisualIconKey } from '@/types/visual.types';
 
 /** Caption pill for screens that have no seasonal risk to show. */
 export interface HeroBadge {
@@ -19,7 +21,7 @@ export interface HeroBadge {
 interface Props {
   name: string;
   subtitle: string;
-  emoji: string;
+  fallbackIcon?: VisualIconKey;
   image?: ImageSource;
   /** Current-season risk; omitted when nothing is recorded for this season. */
   risk?: RiskLevel;
@@ -41,7 +43,7 @@ interface Props {
 export function ReferenceHero({
   name,
   subtitle,
-  emoji,
+  fallbackIcon = 'general.plant',
   image,
   risk,
   badge,
@@ -85,7 +87,7 @@ export function ReferenceHero({
         </TouchableOpacity>
       ) : (
         <View style={styles.heroWatermark}>
-          <Text style={styles.heroWatermarkText}>{emoji}</Text>
+          <GardenIcon name={fallbackIcon} size={132} color={theme.primary} />
         </View>
       )}
 

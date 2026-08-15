@@ -6,6 +6,7 @@
 import { WeatherForecast, LocationProfile } from '@/types/database.types';
 import { getDistrictCoordinates, DEFAULT_COORDINATES } from '@/config/zones/districtCoordinates';
 import { forecastDateKey, selectForecastDays, SHOWERS_MM } from '@/utils/weatherWords';
+import type { VisualIconKey } from '@/types/visual.types';
 
 export interface WeatherCoords {
   lat: number;
@@ -68,7 +69,7 @@ export function hasRainSoon(
 }
 
 export interface WateringAdvice {
-  emoji: string;
+  iconKey: VisualIconKey;
   text: string;
 }
 
@@ -79,8 +80,8 @@ export interface WateringAdvice {
  */
 export function wateringAdvice(rainSoon: boolean): WateringAdvice {
   return rainSoon
-    ? { emoji: '🌧️', text: 'Rain expected soon — check soil before watering' }
-    : { emoji: '☀️', text: 'No rain expected soon — keep watering' };
+    ? { iconKey: 'weather.rain', text: 'Rain expected soon — check soil before watering' }
+    : { iconKey: 'weather.clear', text: 'No rain expected soon — keep watering' };
 }
 
 /**

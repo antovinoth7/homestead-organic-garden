@@ -3,14 +3,17 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import type { ImageStyle } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/pestDiseaseListStyles';
 import { getCurrentRisk, getRiskColor } from '@/utils/riskHelpers';
 import type { ReferenceEntry } from './types';
+import type { VisualIconKey } from '@/types/visual.types';
 
 interface Props {
   entry: ReferenceEntry;
   image?: ImageSource;
+  fallbackIcon: VisualIconKey;
   onPress: (id: string) => void;
 }
 
@@ -18,7 +21,7 @@ interface Props {
  * Browse-list row: risk-tinted thumbnail tile, name + Tamil name, a clamped
  * identification snippet, and a current-season risk badge.
  */
-export function ReferenceListCard({ entry, image, onPress }: Props): React.JSX.Element {
+export function ReferenceListCard({ entry, image, fallbackIcon, onPress }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -43,7 +46,7 @@ export function ReferenceListCard({ entry, image, onPress }: Props): React.JSX.E
             recyclingKey={entry.id}
           />
         ) : (
-          <Text style={styles.cardTileEmoji}>{entry.emoji}</Text>
+          <GardenIcon name={fallbackIcon} size={24} color={theme.primary} />
         )}
       </View>
 

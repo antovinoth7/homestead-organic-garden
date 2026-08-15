@@ -9,6 +9,7 @@ import type { CatalogEditor } from '@/components/catalog/catalogEditor';
 import { sanitizeName } from '@/utils/catalogDraft';
 import { CATALOG_FIELD_HELP } from '@/utils/catalogFieldHelp';
 import { LIFECYCLE_DESCRIPTIONS, LIFECYCLE_LABELS } from '@/utils/plantLabels';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
   editor: CatalogEditor;
@@ -130,8 +131,13 @@ export function PlantInfoSection({
       {!isCreating && (
         <View style={styles.statusStrip}>
           <View style={styles.statusStripRow}>
+            <Ionicons
+              name={hasOverride ? 'settings-outline' : 'leaf-outline'}
+              size={16}
+              color={theme.primary}
+            />
             <Text style={styles.statusStripTitle}>
-              {hasOverride ? '⚙️ Custom defaults active' : '🍃 Using shared app defaults'}
+              {hasOverride ? 'Custom defaults active' : 'Using shared app defaults'}
             </Text>
           </View>
           <Text style={styles.statusStripNote}>

@@ -111,7 +111,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       marginRight: 12,
     },
-    emojiTileText: { fontSize: 24 },
     cardContent: { flex: 1 },
     cardTitleRow: {
       flexDirection: 'row',
@@ -321,6 +320,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetChipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     sheetChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 20,

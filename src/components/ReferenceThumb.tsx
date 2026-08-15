@@ -1,50 +1,58 @@
 import React, { useMemo } from 'react';
 import type { ImageStyle } from 'react-native';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/referenceThumbStyles';
+import type { VisualIconKey } from '@/types/visual.types';
 
 interface Props {
-  /** Bundled reference image; falls back to the emoji tile when undefined. */
+  /** Bundled reference image; falls back to a themed semantic icon when undefined. */
   source?: ImageSource;
-  emoji: string;
+  fallbackIcon?: VisualIconKey;
   /** row: 36×36 list rows; chip: 20×20 suggestion chips; hero: 44×44 headers. */
-  variant: 'row' | 'chip' | 'hero';
+  variant?: 'row' | 'chip' | 'hero';
+  accessibilityLabel?: string;
   /** Pass the entry id when rendered inside FlatList/SectionList rows. */
   recyclingKey?: string;
 }
 
 /**
- * Small reference-image thumbnail with emoji fallback, shared by the pest and
+ * Small reference-image thumbnail with a semantic icon fallback, shared by the pest and
  * disease lists, the plant catalog, and the PestDiseaseModal suggestion chips.
  */
-export function ReferenceThumb({ source, emoji, variant, recyclingKey }: Props): React.JSX.Element {
+export function ReferenceThumb({
+  source,
+  fallbackIcon = 'general.plant',
+  variant = 'chip',
+  accessibilityLabel,
+  recyclingKey,
+}: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const variantStyles = useMemo(
     () =>
       ({
-        row: { image: styles.rowImage, fallback: styles.rowFallback, text: styles.rowFallbackText },
+        row: { image: styles.rowImage, fallback: styles.rowFallback, iconSize: 22 },
         chip: {
           image: styles.chipImage,
           fallback: styles.chipFallback,
-          text: styles.chipFallbackText,
+          iconSize: 13,
         },
         hero: {
           image: styles.heroImage,
           fallback: styles.heroFallback,
-          text: styles.heroFallbackText,
+          iconSize: 24,
         },
       })[variant],
     [variant, styles]
   );
-
   if (!source) {
     return (
-      <View style={variantStyles.fallback}>
-        <Text style={variantStyles.text}>{emoji}</Text>
+      <View style={variantStyles.fallback} accessibilityLabel={accessibilityLabel}>
+        <GardenIcon name={fallbackIcon} size={variantStyles.iconSize} color={theme.primary} />
       </View>
     );
   }
@@ -53,6 +61,7 @@ export function ReferenceThumb({ source, emoji, variant, recyclingKey }: Props):
     <Image
       source={source}
       style={variantStyles.image as ImageStyle}
+      accessibilityLabel={accessibilityLabel}
       contentFit="cover"
       cachePolicy="memory-disk"
       recyclingKey={recyclingKey}

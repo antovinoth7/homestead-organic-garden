@@ -12,6 +12,8 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import { NeedsActionItem } from '@/types/database.types';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/needsActionListStyles';
@@ -49,7 +51,7 @@ export const NeedsActionRow = React.memo(function NeedsActionRow({
       }
     >
       <View style={[styles.icon, tone]}>
-        <Text style={styles.iconGlyph}>{alert.icon}</Text>
+        <GardenIcon name={alert.iconKey} size={20} color={theme.text} />
       </View>
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={1}>
@@ -64,7 +66,7 @@ export const NeedsActionRow = React.memo(function NeedsActionRow({
           {alert.message}
         </Text>
       </View>
-      <Text style={styles.chevron}>›</Text>
+      <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
     </TouchableOpacity>
   );
 });

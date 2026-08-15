@@ -1,15 +1,17 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { useNavigation } from '@react-navigation/native';
 import { createEnrichedSectionStyles } from '@/styles/enrichedSectionStyles';
 import { DetailCard } from '@/components/plantDetail/DetailCard';
 import { ExpandableBlock } from '@/components/plantDetail/ExpandableBlock';
 import { ExpandableText } from '@/components/plantDetail/ExpandableText';
 import { getPlantCareProfile, getPruningTechniques } from '@/utils/plantCareDefaults';
-import { getCommonPests, getCommonDiseases, getPestDiseaseEmoji } from '@/utils/plantHelpers';
+import { getCommonPests, getCommonDiseases } from '@/utils/plantHelpers';
 import { getPestByName } from '@/config/pests';
 import { getDiseaseByName } from '@/config/diseases';
+import { getDiseaseImage, getPestImage } from '@/config/referenceAssets';
 import type { PlantType, PlantCareProfiles } from '@/types/database.types';
 import type { PlantDetailScreenNavigationProp } from '@/types/navigation.types';
 import type { Theme } from '@/theme/colors';
@@ -114,7 +116,7 @@ export function DetailCareGuidanceSection({
           ))}
           {pruningInfo!.shapePruning && (
             <View style={enrichedStyles.techniqueRow}>
-              <Text style={enrichedStyles.techniqueIcon}>{'\u2702\uFE0F'}</Text>
+              <Ionicons name="cut-outline" size={18} color={theme.accent} />
               <View style={enrichedStyles.flexOne}>
                 <Text style={enrichedStyles.techniqueTitle}>
                   Shape pruning — {pruningInfo!.shapePruning.tip}
@@ -127,7 +129,7 @@ export function DetailCareGuidanceSection({
           )}
           {pruningInfo!.flowerPruning && (
             <View style={enrichedStyles.techniqueRow}>
-              <Text style={enrichedStyles.techniqueIcon}>{'\uD83C\uDF38'}</Text>
+              <Ionicons name="flower-outline" size={18} color={theme.accent} />
               <View style={enrichedStyles.flexOne}>
                 <Text style={enrichedStyles.techniqueTitle}>
                   Flower pruning — {pruningInfo!.flowerPruning.tip}
@@ -160,7 +162,11 @@ export function DetailCareGuidanceSection({
                   activeOpacity={entry ? 0.6 : 1}
                   disabled={!entry}
                 >
-                  <Text style={enrichedStyles.chipEmoji}>{getPestDiseaseEmoji(name, 'pest')}</Text>
+                  <ReferenceThumb
+                    source={entry ? getPestImage(entry.id, entry.imageAsset) : undefined}
+                    fallbackIcon="general.pest"
+                    variant="chip"
+                  />
                   <Text style={enrichedStyles.pestChipText}>{name}</Text>
                   {entry && (
                     <Ionicons name="chevron-forward" size={12} color={theme.textTertiary} />
@@ -191,9 +197,11 @@ export function DetailCareGuidanceSection({
                   activeOpacity={entry ? 0.6 : 1}
                   disabled={!entry}
                 >
-                  <Text style={enrichedStyles.chipEmoji}>
-                    {getPestDiseaseEmoji(name, 'disease')}
-                  </Text>
+                  <ReferenceThumb
+                    source={entry ? getDiseaseImage(entry.id, entry.imageAsset) : undefined}
+                    fallbackIcon="general.disease"
+                    variant="chip"
+                  />
                   <Text style={enrichedStyles.diseaseChipText}>{name}</Text>
                   {entry && (
                     <Ionicons name="chevron-forward" size={12} color={theme.textTertiary} />

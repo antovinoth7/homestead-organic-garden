@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, Animated, TouchableOpacity } from 'react-native';
 import type { ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '@/theme';
@@ -102,9 +103,9 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
         >
           <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
         </TouchableOpacity>
-        <Animated.Text style={[styles.stickyHeaderEmoji, { opacity: stickyTitleOpacity }]}>
-          {input.emoji}
-        </Animated.Text>
+        <Animated.View style={{ opacity: stickyTitleOpacity }}>
+          <GardenIcon name="general.plant" size={22} color={theme.text} />
+        </Animated.View>
         <Animated.Text
           style={[styles.stickyHeaderTitle, { opacity: stickyTitleOpacity }]}
           numberOfLines={1}
@@ -127,7 +128,6 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
           name={input.name}
           tamilName={input.tamilName}
           categoryLabel={getCategoryLabel(input.category)}
-          emoji={input.emoji}
           image={heroImage}
           topInset={insets.top}
           onBack={navigation.goBack}

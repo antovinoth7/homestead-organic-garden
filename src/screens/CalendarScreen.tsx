@@ -32,8 +32,9 @@ import {
 } from '../services/taskSchedulingLogic';
 import { TaskTemplate, TaskType } from '../types/database.types';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
+import { TASK_ICON_KEYS } from '@/config/iconRegistry';
 import {
-  TASK_EMOJIS,
   TASK_COLORS,
   TASK_LABELS,
   EARLY_COMPLETION_BLOCK_REASON,
@@ -62,6 +63,9 @@ import WeekCalendarView from '../components/calendar/WeekCalendarView';
 import MonthCalendarView from '../components/calendar/MonthCalendarView';
 import { SwipeableTaskCard } from '../components/calendar/SwipeableTaskCard';
 import { getErrorMessage } from '../utils/errorLogging';
+import type { VisualIconKey } from '@/types/visual.types';
+import { getPlantImage } from '@/config/referenceAssets';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { tapFeedback } from '../utils/haptics';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -86,6 +90,7 @@ type CalendarRow =
 
 interface CalendarSectionHeader {
   title: string;
+  iconKey?: VisualIconKey;
   count: number;
   /** Tasks driving the select-all checkbox; omitted for headers without one */
   checkboxTasks?: TaskTemplate[];
@@ -1011,7 +1016,8 @@ export default function CalendarScreen(): React.JSX.Element {
       sections.push({
         key: 'harvest-ready',
         header: {
-          title: '🧺 Harvest Ready',
+          title: 'Harvest Ready',
+          iconKey: 'task.harvest',
           count: filteredHarvestsReady.length,
           titleFlex: false,
         },
@@ -1026,7 +1032,8 @@ export default function CalendarScreen(): React.JSX.Element {
       sections.push({
         key: 'overdue',
         header: {
-          title: '⚠️ Overdue',
+          title: 'Overdue',
+          iconKey: 'general.warning',
           checkboxTasks: overdueTasks,
           count: overdueTasks.length,
           overdue: true,
@@ -1094,14 +1101,14 @@ export default function CalendarScreen(): React.JSX.Element {
         const fallbackTitle = selectedView === 'month' ? 'This Month' : 'This Week';
         const title = groupName
           ? effectiveGroupBy === 'location'
-            ? `📍 ${groupName}`
+            ? groupName
             : effectiveGroupBy === 'type'
             ? TASK_LABELS[groupName as TaskType] ||
               groupName.charAt(0).toUpperCase() + groupName.slice(1)
             : effectiveGroupBy === 'plant'
-            ? `🌿 ${groupName}`
+            ? groupName
             : effectiveGroupBy === 'bed'
-            ? `🛏 ${groupName}`
+            ? groupName
             : fallbackTitle
           : isSearching
           ? 'Search Results'
@@ -1110,6 +1117,14 @@ export default function CalendarScreen(): React.JSX.Element {
           key: `group-${groupName || 'all'}`,
           header: {
             title,
+            iconKey:
+              effectiveGroupBy === 'location'
+                ? 'general.location'
+                : effectiveGroupBy === 'plant'
+                  ? 'general.plant'
+                  : effectiveGroupBy === 'bed'
+                    ? 'general.bed'
+                    : undefined,
             checkboxTasks: nonOverdue,
             count: groupName
               ? nonOverdue.length
@@ -1270,17 +1285,23 @@ export default function CalendarScreen(): React.JSX.Element {
           <View style={styles.listRow}>
             <View style={[styles.harvestCard, harvest.isReady && styles.harvestCardReady]}>
               <View style={styles.harvestIcon}>
-                <Text style={styles.harvestEmoji}>
-                  {harvest.plant.plant_type === 'coconut_tree' ? '🥥' : '🍎'}
-                </Text>
+                <ReferenceThumb
+                  source={getPlantImage(harvest.plant.name)}
+                  fallbackIcon="general.plant"
+                  variant="row"
+                  accessibilityLabel={`${harvest.plant.name} reference image`}
+                />
               </View>
               <View style={styles.harvestInfo}>
                 <Text style={styles.harvestPlant}>{harvest.plant.name}</Text>
-                <Text style={styles.harvestDate}>
-                  {harvest.isReady
-                    ? '✅ Ready to harvest!'
-                    : `Ready in ${harvest.daysUntil} days`}
-                </Text>
+                <View style={styles.harvestStatusRow}>
+                  {harvest.isReady && (
+                    <GardenIcon name="general.success" size={14} color={theme.success} />
+                  )}
+                  <Text style={styles.harvestDate}>
+                    {harvest.isReady ? 'Ready to harvest!' : `Ready in ${harvest.daysUntil} days`}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -1288,7 +1309,7 @@ export default function CalendarScreen(): React.JSX.Element {
       }
       return <View style={styles.listRow}>{renderEmptyRow(item)}</View>;
     },
-    [styles, renderSwipeableTask, renderEmptyRow]
+    [styles, theme.success, renderSwipeableTask, renderEmptyRow]
   );
 
   const renderListSectionHeader = useCallback(
@@ -1299,6 +1320,13 @@ export default function CalendarScreen(): React.JSX.Element {
         <View style={styles.listSectionHeader}>
           <View style={styles.sectionHeaderRow}>
             {header.checkboxTasks ? renderSectionCheckbox(header.checkboxTasks) : null}
+            {header.iconKey ? (
+              <GardenIcon
+                name={header.iconKey}
+                size={17}
+                color={header.overdue ? theme.error : theme.primary}
+              />
+            ) : null}
             <Text
               style={[
                 styles.sectionTitle,
@@ -1315,7 +1343,8 @@ export default function CalendarScreen(): React.JSX.Element {
               <View style={styles.rowCenterGap8}>
                 {sessionCompletedCount > 0 && (
                   <View style={styles.weekDoneChip}>
-                    <Text style={styles.weekDoneChipText}>✓ {sessionCompletedCount} done</Text>
+                    <Ionicons name="checkmark" size={13} color={theme.success} />
+                    <Text style={styles.weekDoneChipText}>{sessionCompletedCount} done</Text>
                   </View>
                 )}
                 <Text style={styles.sectionCount}>{header.count}</Text>
@@ -1723,13 +1752,18 @@ export default function CalendarScreen(): React.JSX.Element {
                     onPress={() => setFilterOverdueOnly((prev) => !prev)}
                     activeOpacity={0.7}
                   >
+                    <GardenIcon
+                      name="general.warning"
+                      size={15}
+                      color={filterOverdueOnly ? theme.primary : theme.textSecondary}
+                    />
                     <Text
                       style={[
                         styles.sheetChipText,
                         filterOverdueOnly && styles.sheetChipTextActive,
                       ]}
                     >
-                      ⚠️ Overdue only
+                      Overdue only
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -1753,10 +1787,15 @@ export default function CalendarScreen(): React.JSX.Element {
                         }}
                         activeOpacity={0.7}
                       >
+                        <GardenIcon
+                          name={TASK_ICON_KEYS[type]}
+                          size={15}
+                          color={isActive ? theme.primary : theme.textSecondary}
+                        />
                         <Text
                           style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}
                         >
-                          {TASK_EMOJIS[type]} {TASK_LABELS[type]}
+                          {TASK_LABELS[type]}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -1884,10 +1923,10 @@ export default function CalendarScreen(): React.JSX.Element {
             const effPriority =
               detailTask.priority_level || calculateTaskPriority(detailTask, plantObj || null);
             const priorityLabels: Record<string, string> = {
-              critical: '⚠ Critical',
-              high: '↑ High',
-              medium: '• Medium',
-              low: '↓ Low',
+              critical: 'Critical',
+              high: 'High',
+              medium: 'Medium',
+              low: 'Low',
             };
             const priorityColorMap: Record<string, string> = {
               critical: theme.error,
@@ -1912,14 +1951,18 @@ export default function CalendarScreen(): React.JSX.Element {
                 >
                   <SheetHandle onClose={closeDetail} />
                   <View style={styles.taskDetailHeader}>
-                    <Text
+                    <View
                       style={[
                         styles.taskDetailEmoji,
                         { backgroundColor: TASK_COLORS[detailTask.task_type] + '18' },
                       ]}
                     >
-                      {TASK_EMOJIS[detailTask.task_type]}
-                    </Text>
+                      <GardenIcon
+                        name={TASK_ICON_KEYS[detailTask.task_type]}
+                        size={30}
+                        color={TASK_COLORS[detailTask.task_type]}
+                      />
+                    </View>
                     <View style={styles.taskDetailTitleBlock}>
                       <Text style={styles.taskDetailTitle}>
                         {TASK_LABELS[detailTask.task_type]}
@@ -1941,13 +1984,26 @@ export default function CalendarScreen(): React.JSX.Element {
                     {detailTask.preferred_time && (
                       <View style={styles.taskDetailRow}>
                         <Text style={styles.taskDetailLabel}>Preferred Time</Text>
-                        <Text style={styles.taskDetailValue}>
-                          {detailTask.preferred_time === 'morning'
-                            ? '🌅 Morning'
-                            : detailTask.preferred_time === 'afternoon'
-                            ? '☀️ Afternoon'
-                            : '🌙 Evening'}
-                        </Text>
+                        <View style={styles.taskDetailValueRow}>
+                          <Ionicons
+                            name={
+                              detailTask.preferred_time === 'morning'
+                                ? 'sunny-outline'
+                                : detailTask.preferred_time === 'afternoon'
+                                  ? 'sunny'
+                                  : 'moon-outline'
+                            }
+                            size={15}
+                            color={theme.textSecondary}
+                          />
+                          <Text style={styles.taskDetailValueInline}>
+                            {detailTask.preferred_time === 'morning'
+                              ? 'Morning'
+                              : detailTask.preferred_time === 'afternoon'
+                                ? 'Afternoon'
+                                : 'Evening'}
+                          </Text>
+                        </View>
                       </View>
                     )}
                     <View style={styles.taskDetailRow}>

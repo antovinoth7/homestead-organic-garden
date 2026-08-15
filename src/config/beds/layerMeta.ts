@@ -1,5 +1,6 @@
 import type { BedLayer } from '@/types/database.types';
 import type { Theme } from '@/theme/colors';
+import type { VisualIconKey } from '@/types/visual.types';
 
 export const LAYER_ORDER: BedLayer[] = [
   'canopy',
@@ -12,34 +13,34 @@ export const LAYER_ORDER: BedLayer[] = [
 // Theme-independent layer metadata. Layer accent/background colors live on the
 // theme (`theme.layerColors`) so they adapt to light/dark mode — see colors.ts.
 export interface LayerMetaEntry {
-  icon: string;
+  iconKey: VisualIconKey;
   title: string;
   subtitle: string;
 }
 
 export const LAYER_META: Record<BedLayer, LayerMetaEntry> = {
   canopy: {
-    icon: '🌳',
+    iconKey: 'layer.canopy',
     title: 'Tall / Shade Trees',
     subtitle: 'Largest plants — provide shade and vertical support',
   },
   climber: {
-    icon: '🌿',
+    iconKey: 'layer.climber',
     title: 'Trellis Crops',
     subtitle: 'Vines growing up a trellis or support frame',
   },
   understory: {
-    icon: '🌱',
+    iconKey: 'layer.understory',
     title: 'Main Crops',
     subtitle: 'Primary income crops at mid height',
   },
   root: {
-    icon: '🥕',
+    iconKey: 'layer.root',
     title: 'Underground Crops',
     subtitle: 'Root and tuber crops grown below ground',
   },
   ground_cover: {
-    icon: '🌸',
+    iconKey: 'layer.ground_cover',
     title: 'Border & Mulch Plants',
     subtitle: 'Companion plants at bed edges — suppress weeds and pests',
   },

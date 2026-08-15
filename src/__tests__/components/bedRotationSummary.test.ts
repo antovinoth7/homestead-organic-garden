@@ -26,7 +26,7 @@ function makeBed(type: BedType, legumePct: number): BedWithCoverage {
     plant_count: 4,
     active_plant_count: 4,
     water_overdue: false,
-    preview_emojis: [],
+    preview_plant_names: [],
     dominant_stage: null,
   };
 }

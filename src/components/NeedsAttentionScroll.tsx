@@ -18,9 +18,9 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import { FarmAlert } from '@/types/database.types';
 import { ALERT_COMPLETE_FIELD } from '@/services/alerts';
-import { SectionHeader } from '@/components/SectionHeader';
 import { useTheme } from '@/theme';
 import type { Theme } from '@/theme/colors';
 import { createStyles } from '@/styles/needsAttentionScrollStyles';
@@ -74,7 +74,10 @@ export const NeedsAttentionScroll = React.memo(function NeedsAttentionScroll({
 
   return (
     <View style={styles.section}>
-      <SectionHeader title={`⚠️ Needs Attention · ${visible.length}`} />
+      <View style={styles.sectionTitleRow}>
+        <GardenIcon name="general.warning" size={18} color={theme.warning} />
+        <Text style={styles.sectionTitle}>Needs Attention · {visible.length}</Text>
+      </View>
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -124,7 +127,7 @@ function AttentionCard({
   return (
     <TouchableOpacity style={[styles.card, cardStyle]} activeOpacity={0.75} onPress={handlePress}>
       <View style={[styles.iconBubble, bubbleStyle]}>
-        <Text style={styles.iconText}>{alert.icon}</Text>
+        <GardenIcon name={alert.iconKey} size={22} color={theme.text} />
       </View>
       <Text style={styles.title2} numberOfLines={1}>
         {alert.title}

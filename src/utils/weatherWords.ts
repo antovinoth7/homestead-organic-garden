@@ -1,11 +1,12 @@
 /** Shared weather wording and farm-timezone date helpers. */
 
 import { DailyWeather, WeatherConditionId, WeatherForecast } from '@/types/database.types';
+import type { VisualIconKey } from '@/types/visual.types';
 
 export interface DayDescription {
   id: WeatherConditionId;
   label: string;
-  emoji: string;
+  iconKey: VisualIconKey;
 }
 
 export interface VisibleForecastDays {
@@ -22,30 +23,37 @@ const HEAVY_RAIN_MM = 10;
 const HOT_C = 35;
 
 function codeDescription(code: number): DayDescription {
-  if (code === 0) return { id: 'clear', label: 'Clear', emoji: '☀️' };
-  if (code === 1) return { id: 'clear', label: 'Mostly clear', emoji: '🌤️' };
-  if (code === 2) return { id: 'partly_cloudy', label: 'Partly cloudy', emoji: '⛅' };
-  if (code === 3) return { id: 'cloudy', label: 'Overcast', emoji: '☁️' };
-  if (code === 45 || code === 48) return { id: 'fog', label: 'Fog', emoji: '🌫️' };
-  if ([51, 53, 55, 56, 57].includes(code)) return { id: 'drizzle', label: 'Drizzle', emoji: '🌦️' };
-  if ([61, 63, 66].includes(code)) return { id: 'rain', label: 'Rain', emoji: '🌧️' };
-  if (code === 65 || code === 67) return { id: 'heavy_rain', label: 'Heavy rain', emoji: '🌧️' };
-  if (code === 80 || code === 81) return { id: 'showers', label: 'Showers', emoji: '🌦️' };
-  if (code === 82) return { id: 'heavy_showers', label: 'Heavy showers', emoji: '🌧️' };
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return { id: 'snow', label: 'Snow', emoji: '🌨️' };
+  if (code === 0) return { id: 'clear', label: 'Clear', iconKey: 'weather.clear' };
+  if (code === 1) return { id: 'clear', label: 'Mostly clear', iconKey: 'weather.clear' };
+  if (code === 2)
+    return { id: 'partly_cloudy', label: 'Partly cloudy', iconKey: 'weather.partly_cloudy' };
+  if (code === 3) return { id: 'cloudy', label: 'Overcast', iconKey: 'weather.cloudy' };
+  if (code === 45 || code === 48) return { id: 'fog', label: 'Fog', iconKey: 'weather.fog' };
+  if ([51, 53, 55, 56, 57].includes(code))
+    return { id: 'drizzle', label: 'Drizzle', iconKey: 'weather.drizzle' };
+  if ([61, 63, 66].includes(code))
+    return { id: 'rain', label: 'Rain', iconKey: 'weather.rain' };
+  if (code === 65 || code === 67)
+    return { id: 'heavy_rain', label: 'Heavy rain', iconKey: 'weather.heavy_rain' };
+  if (code === 80 || code === 81)
+    return { id: 'showers', label: 'Showers', iconKey: 'weather.showers' };
+  if (code === 82)
+    return { id: 'heavy_showers', label: 'Heavy showers', iconKey: 'weather.heavy_showers' };
+  if ([71, 73, 75, 77, 85, 86].includes(code))
+    return { id: 'snow', label: 'Snow', iconKey: 'weather.snow' };
   if ([95, 96, 99].includes(code))
-    return { id: 'thunderstorm', label: 'Thunderstorm', emoji: '⛈️' };
-  return { id: 'unknown', label: 'Unknown', emoji: '☁️' };
+    return { id: 'thunderstorm', label: 'Thunderstorm', iconKey: 'weather.thunderstorm' };
+  return { id: 'unknown', label: 'Unknown', iconKey: 'weather.unknown' };
 }
 
 export function describeDay(day: DailyWeather | null | undefined): DayDescription {
-  if (!day) return { id: 'unknown', label: 'No forecast', emoji: '☁️' };
+  if (!day) return { id: 'unknown', label: 'No forecast', iconKey: 'weather.unknown' };
 
   if (day.weatherCode != null) {
     const described = codeDescription(day.weatherCode);
     // Heat is the more operationally important signal on otherwise benign days.
     if (day.tempMaxC >= HOT_C && day.weatherCode >= 0 && day.weatherCode <= 3) {
-      return { id: 'hot', label: 'Hot', emoji: '🔥' };
+      return { id: 'hot', label: 'Hot', iconKey: 'weather.hot' };
     }
     return described;
   }
@@ -53,14 +61,15 @@ export function describeDay(day: DailyWeather | null | undefined): DayDescriptio
   // Backward-compatible cache fallback. Total precipitation cannot distinguish
   // showers from steady rain, so legacy entries deliberately use generic rain.
   if (day.precipitationMm >= HEAVY_RAIN_MM)
-    return { id: 'heavy_rain', label: 'Heavy rain', emoji: '🌧️' };
-  if (day.precipitationMm >= SHOWERS_MM) return { id: 'rain', label: 'Rain', emoji: '🌧️' };
-  if (day.tempMaxC >= HOT_C) return { id: 'hot', label: 'Hot', emoji: '🔥' };
-  return { id: 'clear', label: 'Clear', emoji: '☀️' };
+    return { id: 'heavy_rain', label: 'Heavy rain', iconKey: 'weather.heavy_rain' };
+  if (day.precipitationMm >= SHOWERS_MM)
+    return { id: 'rain', label: 'Rain', iconKey: 'weather.rain' };
+  if (day.tempMaxC >= HOT_C) return { id: 'hot', label: 'Hot', iconKey: 'weather.hot' };
+  return { id: 'clear', label: 'Clear', iconKey: 'weather.clear' };
 }
 
-export function weatherEmoji(day: DailyWeather): string {
-  return describeDay(day).emoji;
+export function weatherIconKey(day: DailyWeather): VisualIconKey {
+  return describeDay(day).iconKey;
 }
 
 function dateAtNoonUtc(isoDate: string): Date {

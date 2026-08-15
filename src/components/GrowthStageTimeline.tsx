@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
+import { GROWTH_STAGE_ICON_KEYS } from '@/config/iconRegistry';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/growthStageTimelineStyles';
 import type {
@@ -28,15 +30,6 @@ const STAGE_LABELS: Record<GrowthStage, string> = {
   fruiting: 'Fruiting',
   dormant: 'Dormant',
   mature: 'Mature',
-};
-
-const STAGE_ICONS: Record<GrowthStage, string> = {
-  seedling: '🌱',
-  vegetative: '🌿',
-  flowering: '🌸',
-  fruiting: '🍅',
-  dormant: '😴',
-  mature: '🌳',
 };
 
 interface Props {
@@ -154,9 +147,14 @@ const GrowthStageTimeline: React.FC<Props> = ({
 
             {/* Content column */}
             <View style={styles.content}>
-              <Text style={labelStyle}>
-                {STAGE_ICONS[stage]} {STAGE_LABELS[stage]}
-              </Text>
+              <View style={styles.stageLabelRow}>
+                <GardenIcon
+                  name={GROWTH_STAGE_ICON_KEYS[stage]}
+                  size={16}
+                  color={isFuture ? theme.textTertiary : isCurrent ? theme.primary : theme.text}
+                />
+                <Text style={labelStyle}>{STAGE_LABELS[stage]}</Text>
+              </View>
 
               {dateLabel ? (
                 <Text style={styles.dateText}>

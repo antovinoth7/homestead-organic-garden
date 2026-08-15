@@ -5,6 +5,8 @@ import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/catalogRowStyles';
 import FieldHelp from '@/components/FieldHelp';
 import FieldErrorText from '@/components/FieldErrorText';
+import { GardenIcon } from '@/components/GardenIcon';
+import type { VisualIconKey } from '@/types/visual.types';
 
 export type CatalogRowKind = 'picker' | 'text' | 'badge';
 
@@ -26,7 +28,7 @@ interface Props {
   /** 'badge' rows only — tints the read-only pill. */
   badgeTone?: BadgeTone;
   /** Leading glyph inside a badge value. */
-  badgeIcon?: string;
+  badgeIcon?: VisualIconKey;
   disabled?: boolean;
   /** Drops the bottom hairline on the last row of a card. */
   isLast?: boolean;
@@ -100,7 +102,7 @@ export function CatalogDetailRow({
               { backgroundColor: badgeColors.bg, borderColor: badgeColors.border },
             ]}
           >
-            {badgeIcon ? <Text style={styles.chipText}>{badgeIcon}</Text> : null}
+            {badgeIcon ? <GardenIcon name={badgeIcon} size={14} color={badgeColors.fg} /> : null}
             <Text style={[styles.badgeText, { color: badgeColors.fg }]}>
               {value ?? EMPTY_VALUE}
             </Text>

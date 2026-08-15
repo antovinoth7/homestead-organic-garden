@@ -13,7 +13,7 @@
  * 3. `npm run reference:ingest` — resizes/compresses to ≤50 KB 400×300 WebP in
  *    `assets/reference/` and regenerates `referenceImages.gen.ts`.
  *
- * Every consumer falls back to the entry's emoji when no image is bundled.
+ * Every consumer falls back to a themed semantic icon when no image is bundled.
  */
 
 import type { ImageSource } from 'expo-image';
@@ -47,7 +47,7 @@ export function getDiseaseImage(id: string, imageAsset?: string): ImageSource | 
 /**
  * Returns the bundled catalog image for a plant name, or undefined if none
  * exists. Keyed by slugified plant name with alias resolution; custom user
- * plants simply resolve to undefined (emoji fallback).
+ * plants simply resolve to undefined (the UI supplies a leaf-icon fallback).
  */
 export function getPlantImage(plantName: string): ImageSource | undefined {
   return PLANT_IMAGES[resolvePlantImageKey(plantName)];

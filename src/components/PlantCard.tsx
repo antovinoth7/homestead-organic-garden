@@ -4,6 +4,8 @@ import type { ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { Plant } from '../types/database.types';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
+import { getPlantImage } from '@/config/referenceAssets';
 import { useTheme } from '../theme';
 import { getYearsOld } from '../utils/dateHelpers';
 import { getPlantWaterStatus, daysSinceLastWatered } from '../utils/plantWatering';
@@ -41,18 +43,7 @@ function PlantCard({
     };
   }, [plant.photo_url]);
 
-  const getPlantTypeIcon = (): string => {
-    const icons: Record<string, string> = {
-      vegetable: '🥬',
-      herb: '🌿',
-      flower: '🌸',
-      fruit_tree: '🥭',
-      timber_tree: '🌲',
-      coconut_tree: '🥥',
-      shrub: '🌱',
-    };
-    return icons[plant.plant_type] || '🌱';
-  };
+  const referenceImage = getPlantImage(plant.name);
 
   const getPlantTypeLabel = (): string => {
     const labels: Record<string, string> = {
@@ -192,12 +183,21 @@ function PlantCard({
               cachePolicy="memory-disk"
               priority="normal"
             />
+          ) : referenceImage ? (
+            <Image
+              source={referenceImage}
+              style={styles.image as ImageStyle}
+              contentFit="cover"
+              transition={150}
+              recyclingKey={`reference:${plant.name}`}
+              cachePolicy="memory-disk"
+            />
           ) : (
             <View style={[styles.image, styles.placeholder, { backgroundColor: getPlantTypeBg() }]}>
-              <Text style={styles.emoji}>{getPlantTypeIcon()}</Text>
+              <GardenIcon name="general.plant" size={32} color={theme.primary} />
               {plant.photo_url && imageError && (
                 <View style={styles.missingImageBadge}>
-                  <Ionicons name="camera" size={12} color="#999" />
+                  <Ionicons name="camera" size={12} color={theme.textTertiary} />
                 </View>
               )}
             </View>

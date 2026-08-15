@@ -35,15 +35,15 @@ const PEST_OPTIONS: { value: string; label: string; hint: string }[] = [
 const SUNLIGHT_RANK: Record<SunlightLevel, number> = { full_sun: 2, partial_sun: 1, shade: 0 };
 
 const SUNLIGHT_LABELS: Record<SunlightLevel, string> = {
-  full_sun: '☀️ Full Sun',
-  partial_sun: '⛅ Partial Sun',
-  shade: '🌥️ Shade',
+  full_sun: 'Full Sun',
+  partial_sun: 'Partial Sun',
+  shade: 'Shade',
 };
 
 const SUNLIGHT_OPTIONS: { value: SunlightLevel; label: string; hint: string }[] = [
-  { value: 'full_sun', label: '☀️ Full sun', hint: '6+ hrs direct' },
-  { value: 'partial_sun', label: '⛅ Partial', hint: '3–6 hrs' },
-  { value: 'shade', label: '🌥️ Shade', hint: '<3 hrs' },
+  { value: 'full_sun', label: 'Full sun', hint: '6+ hrs direct' },
+  { value: 'partial_sun', label: 'Partial', hint: '3–6 hrs' },
+  { value: 'shade', label: 'Shade', hint: '<3 hrs' },
 ];
 
 const SOIL_TYPE_OPTIONS: { value: SoilType; label: string; hint: string }[] = [
@@ -306,8 +306,9 @@ export function LandConditionsStep({
         </View>
         {sunlightMismatch && sunlightRequired && bedLabel && (
           <View style={styles.sunlightWarning}>
+            <Ionicons name="warning-outline" size={17} color={theme.warning} />
             <Text style={styles.sunlightWarningText}>
-              ⚠️ {bedLabel} grows best in {SUNLIGHT_LABELS[sunlightRequired]}.{' '}
+              {bedLabel} grows best in {SUNLIGHT_LABELS[sunlightRequired]}.{' '}
               {SUNLIGHT_LABELS[data.sunlight]} may reduce yield.
             </Text>
           </View>
@@ -332,7 +333,10 @@ export function LandConditionsStep({
         accessibilityLabel={moreOpen ? 'Collapse more soil details' : 'Expand more soil details'}
       >
         <View style={styles.lcMoreToggleLabelBlock}>
-          <Text style={styles.lcMoreToggleText}>🧱 More soil details (optional)</Text>
+          <View style={styles.inlineLabelRow}>
+            <Ionicons name="layers-outline" size={17} color={theme.text} />
+            <Text style={styles.lcMoreToggleText}>More soil details (optional)</Text>
+          </View>
           <Text style={styles.lcMoreToggleHint}>
             Slope · construction · previous crop · pests · drainage
           </Text>
@@ -414,8 +418,9 @@ export function LandConditionsStep({
 
           {solanaceaeBlocked && (
             <View style={styles.blockAlert}>
+              <Ionicons name="ban-outline" size={17} color={theme.error} />
               <Text style={styles.blockAlertText}>
-                ⛔ Solanaceae was the previous crop. This bed needs at least one season&apos;s rest
+                Solanaceae was the previous crop. This bed needs at least one season&apos;s rest
                 before planting Solanaceae again. Choose a different previous crop family to
                 continue.
               </Text>

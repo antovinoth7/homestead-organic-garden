@@ -131,14 +131,14 @@ describe('hasRainSoon', () => {
 describe('wateringAdvice', () => {
   it('tells the user to check soil when rain is coming', () => {
     expect(wateringAdvice(true)).toEqual({
-      emoji: '🌧️',
+      iconKey: 'weather.rain',
       text: 'Rain expected soon — check soil before watering',
     });
   });
 
   it('tells the user to keep watering when no rain is coming', () => {
     expect(wateringAdvice(false)).toEqual({
-      emoji: '☀️',
+      iconKey: 'weather.clear',
       text: 'No rain expected soon — keep watering',
     });
   });

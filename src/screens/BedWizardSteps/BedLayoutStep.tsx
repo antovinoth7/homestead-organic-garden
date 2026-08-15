@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { BedCapacityModal } from '@/components/modals/BedCapacityModal';
 import { BedPlantPickerSheet } from '@/components/BedPlantPickerSheet';
@@ -12,7 +13,7 @@ import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { getGuildTemplate } from '@/config/beds/guildTemplates';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
 import { getLayerColor } from '@/config/beds/layerMeta';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
 import { getPlant } from '@/services/plants';
 import { logger } from '@/utils/logger';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
@@ -276,7 +277,7 @@ export function BedLayoutStep({
       });
   }, [bedType, visibleLayers, rowLayout.rows, step3.width_m]);
 
-  // Rows containing either side of a companion conflict — feeds the map's ⚠ tags
+  // Rows containing either side of a companion conflict feed the map's warning tags.
   // so the Layout tab flags the same conflicts the Crops tab lists.
   const rowWarnings = useMemo(() => {
     const warnings: { rowIndex: number; message: string }[] = [];
@@ -330,9 +331,12 @@ export function BedLayoutStep({
       {rowLayout.companionWarnings.length > 0 && (
         <View style={styles.blCompanionWarningBanner}>
           {rowLayout.companionWarnings.map((w, i) => (
-            <Text key={i} style={styles.blCompanionWarningText}>
-              {`⚠ ${w.plantA} + ${w.plantB} — ${w.reason}`}
-            </Text>
+            <View key={i} style={styles.inlineLabelRow}>
+              <Ionicons name="warning-outline" size={16} color={theme.warning} />
+              <Text style={styles.blCompanionWarningText}>
+                {`${w.plantA} + ${w.plantB} — ${w.reason}`}
+              </Text>
+            </View>
           ))}
         </View>
       )}
@@ -343,7 +347,7 @@ export function BedLayoutStep({
             widthM={step3.width_m}
             lengthM={step3.length_m}
             rows={rowLayout.rows}
-            plantEmoji={getPlantEmoji}
+            plantImage={getPlantImage}
             layerColor={resolveLayerColor}
             walkingPathCm={rowLayout.walkingPathCm}
             edgeBufferCm={rowLayout.edgeBufferCm}
@@ -353,8 +357,9 @@ export function BedLayoutStep({
 
           {hasTrellisRow && (
             <View style={styles.blTrellisCard}>
+              <Ionicons name="construct-outline" size={18} color={theme.primary} />
               <Text style={styles.blTrellisText}>
-                🔧 Trellis required — Install bamboo poles or wire frame on the North end, min 1.5 m
+                Trellis required — Install bamboo poles or wire frame on the North end, min 1.5 m
                 height. Anchor firmly before sowing.
               </Text>
             </View>

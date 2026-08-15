@@ -8,6 +8,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       // every other block on the dashboard.
       paddingBottom: 4,
     },
+    sectionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      paddingHorizontal: 16,
+      marginBottom: 10,
+    },
+    sectionTitle: {
+      color: theme.text,
+      fontSize: 17,
+      fontWeight: '700',
+    },
     listContent: {
       paddingLeft: 16,
       // Cards carry marginRight: 10, so this tops the trailing gap up to 16.

@@ -16,6 +16,7 @@ jest.mock('react-native', () => {
   };
 });
 jest.mock('@/theme', () => ({ useTheme: () => ({}) }));
+jest.mock('@/components/GardenIcon', () => ({ GardenIcon: () => null }));
 jest.mock('@/styles/plotCardStyles', () => ({
   createStyles: () => new Proxy({}, { get: (_target, property) => String(property) }),
 }));

@@ -14,6 +14,12 @@ jest.mock('react-native', () => {
   };
 });
 jest.mock('@/theme', () => ({ useTheme: () => ({}) }));
+jest.mock('@/components/GardenIcon', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  return {
+    GardenIcon: (props: Record<string, unknown>) => React.createElement('GardenIcon', props),
+  };
+});
 jest.mock('@/styles/plotCardStyles', () => ({
   createStyles: () => new Proxy({}, { get: (_target, property) => String(property) }),
 }));
@@ -99,7 +105,8 @@ describe('PlotCard health footer', () => {
       'Ready',
       'Permanent',
     ]);
-    expect(JSON.stringify(rendered.toJSON())).toContain('\u2600\ufe0f');
+    expect(rendered.root.findByProps({ name: 'weather.clear' })).toBeDefined();
+    expect(JSON.stringify(rendered.toJSON())).not.toContain('\u2600\ufe0f');
   });
 
   it('opens the forecast from the temperature pill and carries no second chevron', () => {

@@ -25,14 +25,14 @@ const CATEGORY_ORDER: PlantType[] = [
 ];
 
 export const CATEGORY_LABELS: Record<PlantType, string> = {
-  vegetable: '🥬 Vegetable',
-  fruit_tree: '🍇 Fruit',
-  spinach: '🥬 Spinach',
-  coconut_tree: '🥥 Coconut Tree',
-  herb: '🌿 Herb',
-  flower: '🌸 Flower',
-  timber_tree: '🌲 Timber Tree',
-  shrub: '🌱 Shrub',
+  vegetable: 'Vegetable',
+  fruit_tree: 'Fruit',
+  spinach: 'Spinach',
+  coconut_tree: 'Coconut Tree',
+  herb: 'Herb',
+  flower: 'Flower',
+  timber_tree: 'Timber Tree',
+  shrub: 'Shrub',
 };
 
 /** Clean, emoji-free category names for headings (e.g. the detail hero). */
@@ -225,15 +225,6 @@ export const LOCATION_SOIL_TYPES: SoilType[] = [
 ];
 
 // ─── Form option generators (derive from labels to avoid duplication) ───────
-
-export const GROWTH_STAGE_EMOJIS: Record<GrowthStage, string> = {
-  seedling: '🌱',
-  vegetative: '🌿',
-  flowering: '🌸',
-  fruiting: '🍎',
-  mature: '🌳',
-  dormant: '💤',
-};
 
 export const CATEGORY_OPTIONS = CATEGORY_ORDER.map((value) => ({
   label: CATEGORY_LABELS[value],

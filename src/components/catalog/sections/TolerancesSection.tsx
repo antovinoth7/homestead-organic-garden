@@ -66,7 +66,7 @@ export function TolerancesSection({ editor, petToxicity }: Props): React.JSX.Ele
           label="Animal safety"
           value={petToxicity ? 'Pet Toxic' : 'Pet Safe'}
           badgeTone={petToxicity ? 'error' : 'success'}
-          badgeIcon={petToxicity ? '⚠️' : '✓'}
+          badgeIcon={petToxicity ? 'general.warning' : 'general.success'}
           helpText={CATALOG_FIELD_HELP.petToxicity}
           isLast
         />

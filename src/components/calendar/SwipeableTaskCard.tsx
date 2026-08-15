@@ -2,8 +2,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
+import { TASK_ICON_KEYS } from '@/config/iconRegistry';
 import { TaskTemplate, Plant } from '../../types/database.types';
-import { TASK_EMOJIS, TASK_COLORS, TASK_LABELS } from '../../utils/taskConstants';
+import { TASK_COLORS, TASK_LABELS } from '../../utils/taskConstants';
 import {
   isEarlyCompletionBlocked,
   isFutureTask,
@@ -221,7 +223,11 @@ function SwipeableTaskCardComponent({
                   { backgroundColor: TASK_COLORS[task.task_type] + '18' },
                 ]}
               >
-                <Text style={styles.taskIconEmoji}>{TASK_EMOJIS[task.task_type] || '📌'}</Text>
+                <GardenIcon
+                  name={TASK_ICON_KEYS[task.task_type]}
+                  size={24}
+                  color={TASK_COLORS[task.task_type]}
+                />
               </View>
               <View style={styles.taskInfo}>
                 <View style={styles.rowCenter}>
@@ -231,34 +237,51 @@ function SwipeableTaskCardComponent({
                       style={[styles.taskPriorityBadge, { backgroundColor: priorityColor + '22' }]}
                     >
                       <Text style={[styles.taskPriorityBadgeText, { color: priorityColor }]}>
-                        {effectivePriority === 'critical' ? '⚠ Critical' : '↑ High'}
+                        {effectivePriority === 'critical' ? 'Critical' : 'High'}
                       </Text>
                     </View>
                   )}
                   {rainExpected && (
                     <View style={styles.taskRainBadge}>
-                      <Text style={styles.taskRainBadgeText}>🌧️ Rain expected — check soil</Text>
+                      <GardenIcon name="weather.rain" size={12} color={theme.info} />
+                      <Text style={styles.taskRainBadgeText}>Rain expected — check soil</Text>
                     </View>
                   )}
                 </View>
                 <Text style={styles.taskPlant}>{displayName}</Text>
                 {plantDetails.location && (
-                  <Text style={styles.taskLocation}>📍 {plantDetails.location}</Text>
+                  <View style={styles.taskMetaLine}>
+                    <GardenIcon name="general.location" size={12} color={theme.textTertiary} />
+                    <Text style={styles.taskLocation}>{plantDetails.location}</Text>
+                  </View>
                 )}
                 {task.plant_id != null && bedLabel != null && (
-                  <Text style={styles.taskBed}>🪴 {bedLabel}</Text>
+                  <View style={styles.taskMetaLine}>
+                    <Ionicons name="grid-outline" size={12} color={theme.primary} />
+                    <Text style={styles.taskBed}>{bedLabel}</Text>
+                  </View>
                 )}
                 {task.preferred_time && (
-                  <Text style={styles.taskPreferredTime}>
-                    {task.preferred_time === 'morning'
-                      ? '🌅 Morning'
-                      : task.preferred_time === 'afternoon'
-                      ? '☀️ Afternoon'
-                      : '🌙 Evening'}
-                  </Text>
+                  <View style={styles.taskMetaLine}>
+                    <Ionicons
+                      name={task.preferred_time === 'evening' ? 'moon-outline' : 'sunny-outline'}
+                      size={12}
+                      color={theme.textTertiary}
+                    />
+                    <Text style={styles.taskPreferredTime}>
+                      {task.preferred_time === 'morning'
+                        ? 'Morning'
+                        : task.preferred_time === 'afternoon'
+                          ? 'Afternoon'
+                          : 'Evening'}
+                    </Text>
+                  </View>
                 )}
                 {harvestHint && (
-                  <Text style={styles.taskHarvestHint}>🧺 Est. harvest: {harvestHint}</Text>
+                  <View style={styles.taskMetaLine}>
+                    <GardenIcon name="task.harvest" size={12} color={theme.success} />
+                    <Text style={styles.taskHarvestHint}>Est. harvest: {harvestHint}</Text>
+                  </View>
                 )}
               </View>
               <View style={styles.taskRight}>

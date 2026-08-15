@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { GardenIcon } from '@/components/GardenIcon';
 import FloatingLabelInput from '../FloatingLabelInput';
 import FieldErrorText from '../FieldErrorText';
 import VoiceDictation from '@/components/VoiceDictation';
@@ -8,6 +9,8 @@ import { PlantType } from '../../types/database.types';
 import { sanitizeAlphaNumericSpaces } from '../../utils/textSanitizer';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/journalFormStyles';
+import { QUALITY_ICON_KEYS } from '@/config/iconRegistry';
+import type { VisualIconKey } from '@/types/visual.types';
 
 type HarvestQuality = 'excellent' | 'good' | 'fair' | 'poor';
 
@@ -34,11 +37,11 @@ function sanitizeAmount(text: string): string {
   return rest.length > 0 ? `${whole}.${rest.join('')}` : whole;
 }
 
-const QUALITY_OPTIONS: { value: HarvestQuality; label: string; emoji: string }[] = [
-  { value: 'excellent', label: 'Excellent', emoji: '🌟' },
-  { value: 'good', label: 'Good', emoji: '👍' },
-  { value: 'fair', label: 'Fair', emoji: '👌' },
-  { value: 'poor', label: 'Poor', emoji: '👎' },
+const QUALITY_OPTIONS: { value: HarvestQuality; label: string; iconKey: VisualIconKey }[] = [
+  { value: 'excellent', label: 'Excellent', iconKey: QUALITY_ICON_KEYS.excellent },
+  { value: 'good', label: 'Good', iconKey: QUALITY_ICON_KEYS.good },
+  { value: 'fair', label: 'Fair', iconKey: QUALITY_ICON_KEYS.fair },
+  { value: 'poor', label: 'Poor', iconKey: QUALITY_ICON_KEYS.poor },
 ];
 
 export function JournalHarvestSection({
@@ -116,7 +119,11 @@ export function JournalHarvestSection({
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
             >
-              <Text style={styles.qualityEmoji}>{quality.emoji}</Text>
+              <GardenIcon
+                name={quality.iconKey}
+                size={18}
+                color={active ? theme.textInverse : theme.textSecondary}
+              />
               <Text style={[styles.qualityChipText, active && styles.qualityButtonTextActive]}>
                 {quality.label}
               </Text>

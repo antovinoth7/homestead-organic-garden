@@ -39,7 +39,7 @@ function makeCoveredBed(overrides: Partial<BedWithCoverage> = {}): BedWithCovera
     plant_count: 3,
     active_plant_count: 3,
     water_overdue: false,
-    preview_emojis: [],
+    preview_plant_names: [],
     dominant_stage: null,
     ...overrides,
   };
@@ -47,36 +47,36 @@ function makeCoveredBed(overrides: Partial<BedWithCoverage> = {}): BedWithCovera
 
 describe('buildBedPreview — pins', () => {
   it('returns no pins for an empty bed', () => {
-    expect(buildBedPreview([])).toEqual({ emojis: [], dominantStage: null });
+    expect(buildBedPreview([])).toEqual({ plantNames: [], dominantStage: null });
   });
 
-  it('maps plant names to their catalog emoji', () => {
+  it('returns plant names for reference thumbnails', () => {
     const plants = [
       makePlant({ id: 'p1', name: 'Tomato', sort_order: 0 }),
       makePlant({ id: 'p2', name: 'Carrot', sort_order: 1 }),
     ];
-    expect(buildBedPreview(plants).emojis).toEqual(['🍅', '🥕']);
+    expect(buildBedPreview(plants).plantNames).toEqual(['Tomato', 'Carrot']);
   });
 
-  it('falls back to the generic seedling for an unknown plant name', () => {
+  it('keeps unknown plant names for the icon fallback path', () => {
     const plants = [makePlant({ id: 'p1', name: 'Zzyzx Bush', sort_order: 0 })];
-    expect(buildBedPreview(plants).emojis).toEqual(['🌱']);
+    expect(buildBedPreview(plants).plantNames).toEqual(['Zzyzx Bush']);
   });
 
-  it('keeps duplicates — three chillies should read as three chillies', () => {
+  it('keeps duplicate plant thumbnails', () => {
     const plants = [
       makePlant({ id: 'p1', name: 'Chilli', sort_order: 0 }),
       makePlant({ id: 'p2', name: 'Chilli', sort_order: 1 }),
       makePlant({ id: 'p3', name: 'Chilli', sort_order: 2 }),
     ];
-    expect(buildBedPreview(plants).emojis).toEqual(['🌶️', '🌶️', '🌶️']);
+    expect(buildBedPreview(plants).plantNames).toEqual(['Chilli', 'Chilli', 'Chilli']);
   });
 
   it(`caps the pins at MAX_PREVIEW_PINS (${MAX_PREVIEW_PINS})`, () => {
     const plants = Array.from({ length: 8 }, (_, i) =>
       makePlant({ id: `p${i}`, name: 'Tomato', sort_order: i })
     );
-    expect(buildBedPreview(plants).emojis).toHaveLength(MAX_PREVIEW_PINS);
+    expect(buildBedPreview(plants).plantNames).toHaveLength(MAX_PREVIEW_PINS);
   });
 
   it('orders by sort_order, sinking plants that have none', () => {
@@ -85,7 +85,7 @@ describe('buildBedPreview — pins', () => {
       makePlant({ id: 'p2', name: 'Tomato', sort_order: 2 }),
       makePlant({ id: 'p3', name: 'Cucumber', sort_order: 1 }),
     ];
-    expect(buildBedPreview(plants).emojis).toEqual(['🥒', '🍅', '🥕']);
+    expect(buildBedPreview(plants).plantNames).toEqual(['Cucumber', 'Tomato', 'Carrot']);
   });
 
   it('breaks equal sort_order ties by name so the row is stable', () => {
@@ -93,7 +93,7 @@ describe('buildBedPreview — pins', () => {
       makePlant({ id: 'p1', name: 'Tomato', sort_order: 0 }),
       makePlant({ id: 'p2', name: 'Carrot', sort_order: 0 }),
     ];
-    expect(buildBedPreview(plants).emojis).toEqual(['🥕', '🍅']);
+    expect(buildBedPreview(plants).plantNames).toEqual(['Carrot', 'Tomato']);
   });
 
   it('does not mutate the caller-owned plant array', () => {

@@ -5,7 +5,6 @@ import { useTheme } from '@/theme';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
-import { getPlantEmoji } from '@/utils/plantHelpers';
 import { splitAtSpan } from '@/utils/catalogSearch';
 import type { CatalogSearchResult } from '@/utils/catalogSearch';
 import { CATEGORY_FULL_LABELS } from '@/utils/plantLabels';
@@ -51,7 +50,6 @@ function CatalogSearchResultRowComponent({
         <View style={styles.plantThumbWrap}>
           <ReferenceThumb
             source={getPlantImage(result.name)}
-            emoji={getPlantEmoji(result.name)}
             variant="row"
             recyclingKey={`${result.plantType}:${result.name}`}
           />

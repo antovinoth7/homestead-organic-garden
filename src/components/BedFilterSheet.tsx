@@ -1,13 +1,15 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { SheetHandle } from '@/components/SheetHandle';
 import { createStyles } from '@/styles/bedListStyles';
 import { BedType, SunlightLevel } from '@/types/database.types';
 import { BedActiveFilters, BedSortOption } from '@/utils/filterAndSortBeds';
-import { BED_TYPE_EMOJI, BED_TYPE_NAME } from '@/config/beds';
+import { BED_TYPE_NAME } from '@/config/beds';
+import { BED_TYPE_ICON_KEYS } from '@/config/iconRegistry';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 
 export interface BedCounts {
@@ -33,12 +35,12 @@ interface Props {
 }
 
 const SORT_OPTIONS: [BedSortOption, string][] = [
-  ['newest', '🕐 Newest'],
-  ['oldest', '⌛ Oldest'],
+  ['newest', 'Newest'],
+  ['oldest', 'Oldest'],
   ['name', 'A–Z'],
-  ['area', '📐 Area'],
-  ['plants', '🌱 Plants'],
-  ['legume', '🫛 Legume'],
+  ['area', 'Area'],
+  ['plants', 'Plants'],
+  ['legume', 'Legume'],
 ];
 
 const BED_TYPE_ORDER: BedType[] = [
@@ -52,9 +54,9 @@ const BED_TYPE_ORDER: BedType[] = [
 ];
 
 const SUNLIGHT_OPTIONS: [SunlightLevel, string][] = [
-  ['full_sun', '☀️ Full Sun'],
-  ['partial_sun', '⛅ Partial'],
-  ['shade', '🌤️ Shade'],
+  ['full_sun', 'Full Sun'],
+  ['partial_sun', 'Partial'],
+  ['shade', 'Shade'],
 ];
 
 export function BedFilterSheet({
@@ -135,10 +137,15 @@ export function BedFilterSheet({
                 style={[styles.sheetChip, filters.type === val && styles.sheetChipActive]}
                 onPress={() => updateFilter('type', val)}
               >
+                <GardenIcon
+                  name={BED_TYPE_ICON_KEYS[val]}
+                  size={15}
+                  color={filters.type === val ? theme.primary : theme.textSecondary}
+                />
                 <Text
                   style={[styles.sheetChipText, filters.type === val && styles.sheetChipTextActive]}
                 >
-                  {BED_TYPE_EMOJI[val]} {BED_TYPE_NAME[val]}
+                  {BED_TYPE_NAME[val]}
                   {bedCounts.type[val] ? ` (${bedCounts.type[val]})` : ''}
                 </Text>
               </TouchableOpacity>
@@ -190,8 +197,8 @@ export function BedFilterSheet({
             {(
               [
                 ['all', 'All', 0],
-                ['raised', '🪵 Raised', bedCounts.raised],
-                ['in_ground', '🟫 In-Ground', bedCounts.inGround],
+                ['raised', 'Raised', bedCounts.raised],
+                ['in_ground', 'In-Ground', bedCounts.inGround],
               ] as const
             ).map(([val, label, count]) => (
               <TouchableOpacity
@@ -220,8 +227,8 @@ export function BedFilterSheet({
             {(
               [
                 ['all', 'All', 0],
-                ['resting', '💤 Resting', bedCounts.resting],
-                ['permanent', '📌 Permanent', bedCounts.permanent],
+                ['resting', 'Resting', bedCounts.resting],
+                ['permanent', 'Permanent', bedCounts.permanent],
               ] as const
             ).map(([val, label, count]) => (
               <TouchableOpacity
@@ -272,13 +279,18 @@ export function BedFilterSheet({
                   updateFilter('childLocation', '');
                 }}
               >
+                <Ionicons
+                  name="location-outline"
+                  size={14}
+                  color={filters.parentLocation === loc ? theme.primary : theme.textSecondary}
+                />
                 <Text
                   style={[
                     styles.sheetChipText,
                     filters.parentLocation === loc && styles.sheetChipTextActive,
                   ]}
                 >
-                  📍 {loc}
+                  {loc}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -309,13 +321,18 @@ export function BedFilterSheet({
                     ]}
                     onPress={() => updateFilter('childLocation', loc)}
                   >
+                    <Ionicons
+                      name="navigate-outline"
+                      size={14}
+                      color={filters.childLocation === loc ? theme.primary : theme.textSecondary}
+                    />
                     <Text
                       style={[
                         styles.sheetChipText,
                         filters.childLocation === loc && styles.sheetChipTextActive,
                       ]}
                     >
-                      ◉ {loc}
+                      {loc}
                     </Text>
                   </TouchableOpacity>
                 ))}

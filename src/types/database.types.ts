@@ -1,3 +1,5 @@
+import type { VisualIconKey } from '@/types/visual.types';
+
 export type SpaceType = 'pot' | 'bed' | 'ground';
 
 // ─── Farm Setup Types (Phase B3) ─────────────────────────────────────────────
@@ -316,8 +318,8 @@ export interface FarmAlert {
   /** Short action/explanation line. */
   message: string;
   severity: FarmAlertSeverity;
-  /** Emoji/icon hint for the card. */
-  icon: string;
+  /** Platform-neutral icon resolved by the UI; alerts are never persisted. */
+  iconKey: VisualIconKey;
   /** Sortable urgency — higher is more urgent. */
   daysOverdue: number;
   created_at: string;
@@ -413,7 +415,7 @@ export interface PlotWeatherBrief {
   today: DailyWeather | null;
   condition: WeatherConditionId;
   conditionLabel: string;
-  conditionEmoji: string;
+  conditionIconKey: VisualIconKey;
   fetched_at: string | null;
   /** True once the forecast is past the weather service's freshness window. */
   stale: boolean;
@@ -516,7 +518,6 @@ export type PlantNowAction = 'sow' | 'transplant';
 /** One curated crop chip in the Today screen's seasonal card. */
 export interface PlantNowRecommendation {
   key: string;
-  emoji: string;
   label: string;
   action: PlantNowAction;
 }
