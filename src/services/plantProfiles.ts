@@ -73,7 +73,12 @@ export const DEFAULT_PLANT_PROFILES: PlantProfiles = buildDefaultProfiles();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function createEmptyProfiles(): PlantProfiles {
+/**
+ * Every category present, every category empty. Callers that need a coherent
+ * `PlantProfiles` before a load resolves use this rather than casting `{}`;
+ * `getProfileEntry` still answers from `DEFAULT_PLANT_PROFILES` through it.
+ */
+export function createEmptyProfiles(): PlantProfiles {
   return PLANT_CATEGORIES.reduce((acc, type) => {
     acc[type] = {};
     return acc;

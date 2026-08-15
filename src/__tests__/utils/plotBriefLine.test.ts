@@ -108,7 +108,7 @@ describe('buildPlotBriefLine', () => {
         })
       );
 
-      expect(line.headline).toBe('12 mm on Sat — do today\'s 2 spray jobs before it.');
+      expect(line.headline).toBe('12 mm on Saturday — do today\'s 2 spray jobs before it.');
       expect(line.kind).toBe('rain');
     });
 
@@ -123,7 +123,9 @@ describe('buildPlotBriefLine', () => {
         })
       );
 
-      expect(line.headline).toBe('12 mm on Sat — do today\'s 2 rain-sensitive jobs before it.');
+      expect(line.headline).toBe(
+        '12 mm on Saturday — do today\'s 2 rain-sensitive jobs before it.'
+      );
     });
 
     it('says nothing when today is already wet — the window is shut either way', () => {
@@ -176,7 +178,7 @@ describe('buildPlotBriefLine', () => {
         })
       );
 
-      expect(line.headline).toBe('12 mm on Sat — do today\'s 1 harvest job before it.');
+      expect(line.headline).toBe('12 mm on Saturday — do today\'s 1 harvest job before it.');
     });
 
     it('yields to an overdue job — lateness outranks a forecast', () => {
@@ -234,7 +236,7 @@ describe('buildPlotBriefLine', () => {
     it.each([
       [at(2026, 7, 31), 'Worked today.'],
       [at(2026, 7, 30), 'Last worked yesterday.'],
-      [at(2026, 7, 26), 'Last worked Sun.'],
+      [at(2026, 7, 26), 'Last worked Sunday.'],
       [at(2026, 7, 24), 'Last worked a week ago.'],
       [at(2026, 7, 10), 'Last worked 3 weeks ago.'],
       [at(2026, 7, 3), 'Not worked in over a month.'],

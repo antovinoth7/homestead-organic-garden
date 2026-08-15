@@ -2,6 +2,7 @@ import { UNASSIGNED_PLOT_ID } from '../../types/database.types';
 import {
   groupByPlot,
   matchesPlotFilter,
+  matchesPlotFilterParent,
   PlotGroupInput,
   UNASSIGNED_PLOT_NAME,
 } from '../../utils/plotGrouping';
@@ -222,6 +223,40 @@ describe('matchesPlotFilter', () => {
       expect(plants.filter((p) => matchesPlotFilter(p, plotId)).map((p) => p.id)).toEqual(
         findGroup(groups, plotId)?.plants.map((p) => p.id) ?? []
       );
+    }
+  });
+});
+
+// The bed list filters with this directly: `Bed.parent_location` is its own field,
+// so there is no combined location string to parse.
+describe('matchesPlotFilterParent', () => {
+  it('compares parent names normalised', () => {
+    expect(matchesPlotFilterParent('Home farm', 'Home farm')).toBe(true);
+    expect(matchesPlotFilterParent('  home FARM ', 'Home farm')).toBe(true);
+    expect(matchesPlotFilterParent('Paddy land', 'Home farm')).toBe(false);
+  });
+
+  it('treats a missing parent as the unassigned bucket', () => {
+    expect(matchesPlotFilterParent('', UNASSIGNED_PLOT_ID)).toBe(true);
+    expect(matchesPlotFilterParent('   ', UNASSIGNED_PLOT_ID)).toBe(true);
+    expect(matchesPlotFilterParent(null, UNASSIGNED_PLOT_ID)).toBe(true);
+    expect(matchesPlotFilterParent(undefined, UNASSIGNED_PLOT_ID)).toBe(true);
+    expect(matchesPlotFilterParent('Home farm', UNASSIGNED_PLOT_ID)).toBe(false);
+    expect(matchesPlotFilterParent(null, 'Home farm')).toBe(false);
+  });
+
+  it('agrees with groupByPlot on where a bed is filed', () => {
+    const beds = [
+      makeBed({ id: 'b1', parent_location: 'Home farm' }),
+      makeBed({ id: 'b2', parent_location: 'paddy land' }),
+      makeBed({ id: 'b3', parent_location: '' }),
+    ];
+    const { groups } = groupByPlot(input({ beds }));
+
+    for (const plotId of ['Home farm', 'Paddy land', UNASSIGNED_PLOT_ID]) {
+      expect(
+        beds.filter((b) => matchesPlotFilterParent(b.parent_location, plotId)).map((b) => b.id)
+      ).toEqual(findGroup(groups, plotId)?.bedIds ?? []);
     }
   });
 });

@@ -5,6 +5,7 @@ import {
   DEFAULT_BED_FILTERS,
   BedActiveFilters,
 } from '@/utils/filterAndSortBeds';
+import { UNASSIGNED_PLOT_ID } from '@/types/database.types';
 import type { BedWithCoverage } from '@/hooks/useBedData';
 
 function makeBed(overrides?: Partial<BedWithCoverage>): BedWithCoverage {
@@ -85,17 +86,41 @@ describe('filterBeds', () => {
     ]);
   });
 
-  it('filters by status (resting / permanent)', () => {
+  it('filters by status across all four lifecycles', () => {
     const beds = [
-      makeBed({ id: 'a', is_resting: true }),
-      makeBed({ id: 'b', is_permanent: true }),
-      makeBed({ id: 'c' }),
+      makeBed({ id: 'resting', is_resting: true }),
+      makeBed({ id: 'permanent', is_permanent: true }),
+      makeBed({ id: 'ready' }),
+      makeBed({ id: 'growing', active_plant_count: 4 }),
     ];
-    expect(filterBeds(beds, filters({ status: 'resting' }), '').map((b) => b.id)).toEqual(['a']);
-    expect(filterBeds(beds, filters({ status: 'permanent' }), '').map((b) => b.id)).toEqual(['b']);
+    expect(filterBeds(beds, filters({ status: 'resting' }), '').map((b) => b.id)).toEqual([
+      'resting',
+    ]);
+    expect(filterBeds(beds, filters({ status: 'permanent' }), '').map((b) => b.id)).toEqual([
+      'permanent',
+    ]);
+    expect(filterBeds(beds, filters({ status: 'empty' }), '').map((b) => b.id)).toEqual(['ready']);
+    expect(filterBeds(beds, filters({ status: 'growing' }), '').map((b) => b.id)).toEqual([
+      'growing',
+    ]);
   });
 
-  it('filters by parent and child location (exact match)', () => {
+  it('puts a bed in exactly one status bucket, by lifecycle precedence', () => {
+    // Permanent beats resting, and a bed holding plants is growing rather than
+    // empty — the same order `getBedLifecycle` applies everywhere else, so a
+    // status count and the list it opens cannot disagree.
+    const beds = [
+      makeBed({ id: 'both', is_permanent: true, is_resting: true }),
+      makeBed({ id: 'planted', active_plant_count: 2 }),
+    ];
+    expect(filterBeds(beds, filters({ status: 'permanent' }), '').map((b) => b.id)).toEqual([
+      'both',
+    ]);
+    expect(filterBeds(beds, filters({ status: 'resting' }), '')).toEqual([]);
+    expect(filterBeds(beds, filters({ status: 'empty' }), '')).toEqual([]);
+  });
+
+  it('filters by parent and child location', () => {
     const beds = [
       makeBed({ id: 'a', parent_location: 'East', child_location: 'N' }),
       makeBed({ id: 'b', parent_location: 'East', child_location: 'S' }),
@@ -109,6 +134,23 @@ describe('filterBeds', () => {
       filterBeds(beds, filters({ parentLocation: 'East', childLocation: 'S' }), '').map(
         (b) => b.id
       )
+    ).toEqual(['b']);
+  });
+
+  it('matches the parent location the way the plot cards group by it', () => {
+    // The filter can arrive from a Today plot card, whose ids are normalised
+    // names — a casing or padding difference must not empty the list a count
+    // just opened.
+    const beds = [
+      makeBed({ id: 'a', parent_location: 'East Field' }),
+      makeBed({ id: 'b', parent_location: '' }),
+    ];
+    expect(
+      filterBeds(beds, filters({ parentLocation: ' east field ' }), '').map((b) => b.id)
+    ).toEqual(['a']);
+    // The unassigned bucket is the beds with no parent at all.
+    expect(
+      filterBeds(beds, filters({ parentLocation: UNASSIGNED_PLOT_ID }), '').map((b) => b.id)
     ).toEqual(['b']);
   });
 

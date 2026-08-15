@@ -22,17 +22,17 @@
  *
  * The inventory is two tiles side by side: plants left, beds right. Each states
  * its total — `cropCount` over the four health counts it is the sum of,
- * `bedCount` over the four lifecycles — then that total split into rows. Each
- * health row is a target that opens the plant list filtered to that status *and*
- * to this plot, so the list holds exactly the plants the row named; they run in
- * the order the plant list's filter sheet shows them. The bed rows are read-only
- * — no list is filtered by lifecycle — but the bed total is the link into the
- * Beds tab.
+ * `bedCount` over the four lifecycles — then that total split into rows. Every
+ * row on both tiles is a target that opens its list filtered to that state *and*
+ * to this plot, so the list holds exactly the records the row named; they run in
+ * the order each list's own filter sheet shows them. The totals above them are
+ * captions, not links: the counts are the facts, so they own the taps.
  */
 
 import React, { useCallback, useMemo } from 'react';
 import { StyleProp, Text, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { PlotBrief, PlotBriefLineKind } from '@/types/database.types';
+import { BedLifecycle } from '@/utils/bedStatus';
 import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/plotCardStyles';
@@ -47,6 +47,8 @@ interface Props {
   onPress: (plotId: string) => void;
   onPressWeather: (plotId: string) => void;
   onPressHealth: (plotId: string, status: PlotHealthFilter) => void;
+  onPressBedStatus: (plotId: string, lifecycle: BedLifecycle) => void;
+  /** The no-beds tile's "Add a bed" link — the only place this tile opens the tab unfiltered. */
   onPressBeds: () => void;
   /**
    * Merged over the card's own frame. `PlotCarousel` uses it to size a page and
@@ -105,14 +107,14 @@ function pillTone(
 }
 
 /**
- * "1 due", "53 overdue" — only what is non-zero, so a quiet plot states that it
+ * "1 Due", "53 Overdue" — only what is non-zero, so a quiet plot states that it
  * is quiet instead of showing a row of noughts.
  */
 function buildCounts(plot: PlotBrief): { key: string; label: string; tone: 'due' | 'overdue' }[] {
   const parts: { key: string; label: string; tone: 'due' | 'overdue' }[] = [];
-  if (plot.dueCount > 0) parts.push({ key: 'due', label: `${plot.dueCount} due`, tone: 'due' });
+  if (plot.dueCount > 0) parts.push({ key: 'due', label: `${plot.dueCount} Due`, tone: 'due' });
   if (plot.overdueCount > 0) {
-    parts.push({ key: 'overdue', label: `${plot.overdueCount} overdue`, tone: 'overdue' });
+    parts.push({ key: 'overdue', label: `${plot.overdueCount} Overdue`, tone: 'overdue' });
   }
   return parts;
 }
@@ -122,6 +124,7 @@ export const PlotCard = React.memo(function PlotCard({
   onPress,
   onPressWeather,
   onPressHealth,
+  onPressBedStatus,
   onPressBeds: handlePressBeds,
   containerStyle,
 }: Props): React.JSX.Element {
@@ -146,15 +149,35 @@ export const PlotCard = React.memo(function PlotCard({
     () => onPressHealth(plot.id, 'sick'),
     [onPressHealth, plot.id]
   );
+  const handlePressGrowing = useCallback(
+    () => onPressBedStatus(plot.id, 'growing'),
+    [onPressBedStatus, plot.id]
+  );
+  const handlePressResting = useCallback(
+    () => onPressBedStatus(plot.id, 'resting'),
+    [onPressBedStatus, plot.id]
+  );
+  const handlePressReady = useCallback(
+    () => onPressBedStatus(plot.id, 'empty'),
+    [onPressBedStatus, plot.id]
+  );
+  const handlePressPermanent = useCallback(
+    () => onPressBedStatus(plot.id, 'permanent'),
+    [onPressBedStatus, plot.id]
+  );
 
   const { weather, health, bedStatus } = plot;
   const pill = pillTone(styles, weatherTone(weather.condition));
   const counts = buildCounts(plot);
-  const countsLabel = counts.length > 0 ? counts.map((c) => c.label).join(', ') : 'nothing due';
-  // The visible unit is capitalised to match the status words under it; the
-  // spoken one stays lowercase so the label reads as a sentence.
+  const countsLabel =
+    counts.length > 0 ? counts.map((c) => c.label.toLowerCase()).join(', ') : 'nothing due';
   const bedWord = plot.bedCount === 1 ? 'Bed' : 'Beds';
-  const bedWordSpoken = plot.bedCount === 1 ? 'bed' : 'beds';
+  // Only the reader sees these — the visible rows are a number beside a word, and
+  // do not inflect. The phrase carries the noun because "ready" takes it first:
+  // "2 growing beds", but "1 bed ready to plant".
+  const bedNoun = (count: number): string => (count === 1 ? 'bed' : 'beds');
+  const bedRowLabel = (count: number, phrase: string): string =>
+    `${count} ${phrase} in ${plot.name}. Opens the bed list.`;
 
   /**
    * A status row: the dot, the count, the word. A zero mutes only its text —
@@ -236,7 +259,7 @@ export const PlotCard = React.memo(function PlotCard({
         accessibilityRole="button"
         accessibilityLabel={`${plot.name}, ${countsLabel}`}
       >
-        {counts.length === 0 && <Text style={styles.countsMuted}>Nothing due</Text>}
+        {counts.length === 0 && <Text style={[styles.pill, styles.pillNone]}>Nothing Due</Text>}
         {counts.map((part) => (
           <Text
             key={part.key}
@@ -327,25 +350,43 @@ export const PlotCard = React.memo(function PlotCard({
             </Text>
           </View>
         ) : (
-          /* Beds: the same shape again. Lifecycles come from `getBedLifecycle`,
-             so a bed reads here as it does on the bed list. */
+          /* Beds: the same shape again, rows and all. Lifecycles come from
+             `getBedLifecycle`, so a bed reads here as it does on the bed list —
+             which is what lets each row open that list filtered to its own bucket. */
           <View style={styles.tile}>
             <View style={styles.tileHead}>
               <Text style={styles.tileTotal}>{plot.bedCount}</Text>
-              <Text
-                style={[styles.tileUnit, styles.tileUnitLink]}
-                onPress={handlePressBeds}
-                accessibilityRole="button"
-                accessibilityLabel={`${plot.bedCount} ${bedWordSpoken}. Opens the beds tab.`}
-              >
-                {bedWord} ›
-              </Text>
+              <Text style={styles.tileUnit}>{bedWord}</Text>
             </View>
             <View style={styles.statusRows}>
-              {statusRow('growing', bedStatus.growing, 'Growing', styles.statusDotGrowing)}
-              {statusRow('resting', bedStatus.resting, 'Resting', styles.statusDotResting)}
-              {statusRow('ready', bedStatus.empty, 'Ready', styles.statusDotReady)}
-              {statusRow('permanent', bedStatus.permanent, 'Permanent', styles.statusDotPermanent)}
+              {statusRow('growing', bedStatus.growing, 'Growing', styles.statusDotGrowing, {
+                onPress: handlePressGrowing,
+                accessibilityLabel: bedRowLabel(
+                  bedStatus.growing,
+                  `growing ${bedNoun(bedStatus.growing)}`
+                ),
+              })}
+              {statusRow('resting', bedStatus.resting, 'Resting', styles.statusDotResting, {
+                onPress: handlePressResting,
+                accessibilityLabel: bedRowLabel(
+                  bedStatus.resting,
+                  `resting ${bedNoun(bedStatus.resting)}`
+                ),
+              })}
+              {statusRow('ready', bedStatus.empty, 'Ready', styles.statusDotReady, {
+                onPress: handlePressReady,
+                accessibilityLabel: bedRowLabel(
+                  bedStatus.empty,
+                  `${bedNoun(bedStatus.empty)} ready to plant`
+                ),
+              })}
+              {statusRow('permanent', bedStatus.permanent, 'Permanent', styles.statusDotPermanent, {
+                onPress: handlePressPermanent,
+                accessibilityLabel: bedRowLabel(
+                  bedStatus.permanent,
+                  `permanent ${bedNoun(bedStatus.permanent)}`
+                ),
+              })}
             </View>
           </View>
         )}

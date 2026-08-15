@@ -27,6 +27,8 @@ jest.mock('@/styles/referenceThumbStyles', () => ({
     chipFallback: 'chipFallback',
     heroImage: 'heroImage',
     heroFallback: 'heroFallback',
+    tileImage: 'tileImage',
+    tileFallback: 'tileFallback',
   }),
 }));
 
@@ -72,5 +74,24 @@ describe('ReferenceThumb', () => {
 
     expect(rendered.root.findAllByType('Image')).toHaveLength(1);
     expect(rendered.root.findAllByType('GardenIcon')).toHaveLength(0);
+  });
+
+  it('sizes the grid-tile variant as a full-width header image', () => {
+    let rendered!: ReturnType<typeof TestRenderer.create>;
+    TestRenderer.act(() => {
+      rendered = TestRenderer.create(<ReferenceThumb variant="tile" source={{ uri: 'plant' }} />);
+    });
+
+    expect(rendered.root.findAllByType('Image')[0]?.props.style).toBe('tileImage');
+  });
+
+  it('falls back to the semantic icon on a grid tile with no photo', () => {
+    let rendered!: ReturnType<typeof TestRenderer.create>;
+    TestRenderer.act(() => {
+      rendered = TestRenderer.create(<ReferenceThumb variant="tile" />);
+    });
+
+    expect(rendered.root.findAllByType('Image')).toHaveLength(0);
+    expect(rendered.root.findAllByType('GardenIcon')[0]?.props.name).toBe('general.plant');
   });
 });

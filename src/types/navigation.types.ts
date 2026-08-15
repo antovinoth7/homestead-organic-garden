@@ -13,6 +13,8 @@ import {
   SunlightLevel,
   TaskType,
 } from './database.types';
+// Type-only: erased at compile time, so this stays a one-way dependency on the util.
+import type { BedLifecycle } from '@/utils/bedStatus';
 
 // ─── Stack param lists ────────────────────────────────────────────────────────
 
@@ -30,7 +32,9 @@ export type AuthedStackParamList = {
 };
 
 export type BedsStackParamList = {
-  BedList: undefined;
+  // The filters are set by the Today plot card's bed counts, which open this list
+  // scoped to the lifecycle tapped and the plot it was counted for.
+  BedList: { lifecycleFilter?: BedLifecycle; plotFilter?: string } | undefined;
   BedDetail: { bedId: string };
   BedCreationWizard:
     | {
@@ -235,6 +239,7 @@ export type BedListScreenNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<BedsStackParamList, 'BedList'>,
   BottomTabNavigationProp<RootTabParamList>
 >;
+export type BedListScreenRouteProp = RouteProp<BedsStackParamList, 'BedList'>;
 
 export type BedDetailScreenNavigationProp = NativeStackNavigationProp<
   BedsStackParamList,

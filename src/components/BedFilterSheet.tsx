@@ -17,7 +17,10 @@ export interface BedCounts {
   sunlight: Record<string, number>;
   raised: number;
   inGround: number;
+  /** One per `BedLifecycle` bucket — a bed counts towards exactly one of the four. */
+  growing: number;
   resting: number;
+  empty: number;
   permanent: number;
 }
 
@@ -224,10 +227,14 @@ export function BedFilterSheet({
             <Ionicons name="time" size={14} color={theme.textSecondary} /> Status
           </Text>
           <View style={styles.sheetChipWrap}>
+            {/* The four lifecycles in the order the Today plot card's bed tile lists
+                them, so a status tapped there lands on the chip it named. */}
             {(
               [
                 ['all', 'All', 0],
+                ['growing', 'Growing', bedCounts.growing],
                 ['resting', 'Resting', bedCounts.resting],
+                ['empty', 'Ready', bedCounts.empty],
                 ['permanent', 'Permanent', bedCounts.permanent],
               ] as const
             ).map(([val, label, count]) => (

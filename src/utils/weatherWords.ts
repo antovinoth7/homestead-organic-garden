@@ -76,10 +76,15 @@ function dateAtNoonUtc(isoDate: string): Date {
   return new Date(`${isoDate}T12:00:00.000Z`);
 }
 
-export function weekdayLabel(isoDate: string): string {
+/**
+ * The day's name. Abbreviated by default, for the narrow forecast columns that
+ * are most of the callers; prose asks for `'long'` explicitly, where "Thursday"
+ * cannot be misread the way "Thu" can.
+ */
+export function weekdayLabel(isoDate: string, width: 'short' | 'long' = 'short'): string {
   const d = dateAtNoonUtc(isoDate);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+  return d.toLocaleDateString('en-US', { weekday: width, timeZone: 'UTC' });
 }
 
 export function forecastDateKey(now: Date = new Date(), timeZone = FARM_TIMEZONE): string {

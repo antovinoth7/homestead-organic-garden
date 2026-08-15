@@ -43,4 +43,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       backgroundColor: theme.backgroundSecondary,
     },
+    // Rounds itself: the grid tile carries no chrome of its own, so the photo
+    // owns its corners. Sized by ratio rather than a fixed height, so it grows
+    // with the column instead of being pinned to one device width.
+    tileImage: {
+      width: '100%',
+      aspectRatio: 4 / 3,
+      borderRadius: 14,
+      backgroundColor: theme.backgroundTertiary,
+    },
+    tileFallback: {
+      width: '100%',
+      aspectRatio: 4 / 3,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.backgroundTertiary,
+    },
   });

@@ -78,9 +78,21 @@ export interface PlotResolution {
  * blank-location bucket.
  */
 export function matchesPlotFilter(plant: Pick<Plant, 'location'>, plotFilter: string): boolean {
-  const { parent } = parseLocation(plant.location);
-  if (plotFilter === UNASSIGNED_PLOT_ID) return parent.trim().length === 0;
-  return parent.trim().length > 0 && locationKey(parent) === locationKey(plotFilter);
+  return matchesPlotFilterParent(parseLocation(plant.location).parent, plotFilter);
+}
+
+/**
+ * The same test against a parent-location name already in hand — `Bed.parent_location`
+ * is stored as its own field, so the bed list filters with this directly rather than
+ * parsing a combined location string.
+ */
+export function matchesPlotFilterParent(
+  parent: string | null | undefined,
+  plotFilter: string
+): boolean {
+  const trimmed = (parent ?? '').trim();
+  if (plotFilter === UNASSIGNED_PLOT_ID) return trimmed.length === 0;
+  return trimmed.length > 0 && locationKey(trimmed) === locationKey(plotFilter);
 }
 
 /** A plant counts towards a plot only if it counts towards the health triad. */

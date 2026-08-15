@@ -10,11 +10,19 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bed, PlantNowRecommendation, PlotBrief, TodayBrief } from '@/types/database.types';
+import {
+  Bed,
+  PlantNowRecommendation,
+  PlantProfile,
+  PlantType,
+  PlotBrief,
+  TodayBrief,
+} from '@/types/database.types';
 import { getMonthlyHighlight } from '@/config/almanac';
-import { getKanyakumariPlantingRecommendations } from '@/config/kanyakumariPlantingCalendar';
+import { getKanyakumariPlantingWindows } from '@/config/kanyakumariPlantingCalendar';
 import { getFarmAlerts, isActionable } from '@/services/alerts';
 import { getCrossBedStatus, getHarvestGapWarnings } from '@/services/beds';
+import { createEmptyProfiles, getProfileEntry } from '@/services/plantProfiles';
 import { getSeasonalCareReminder } from '@/services/tasks';
 import {
   getStoredTodayBriefSources,
@@ -62,6 +70,7 @@ const EMPTY_SOURCES: TodayBriefSources = {
   beds: [],
   locationConfig: { parentLocations: [], childLocations: [] },
   farmConfig: { families_count: 1, goals: ['self_sufficiency'] },
+  profiles: createEmptyProfiles(),
 };
 
 /**
@@ -127,7 +136,8 @@ export function useTodayBrief(): UseTodayBriefResult {
 
   // ─── Derived ───────────────────────────────────────────────────────────────
 
-  const { tasks, logs, allTemplates, plants, beds, locationConfig, farmConfig } = sources;
+  const { tasks, logs, allTemplates, plants, beds, locationConfig, farmConfig, profiles } =
+    sources;
   const district = farmConfig.district ?? null;
 
   const plantsByBedId = useMemo(() => {
@@ -311,12 +321,40 @@ export function useTodayBrief(): UseTodayBriefResult {
   const season = useMemo(() => getSeasonProgress(), []);
   const month = useMemo(() => getMonthlyHighlight(), []);
 
-  const plantNow = useMemo<PlantNowRecommendation[]>(
-    () =>
-      district?.trim().toLowerCase() === 'kanyakumari'
-        ? toPlantNowChips(getKanyakumariPlantingRecommendations())
-        : [],
-    [district]
+  // Only the district we hold a reviewed calendar for. Everywhere else the card
+  // says so rather than rendering an unexplained gap.
+  const hasPlantingCalendar = district?.trim().toLowerCase() === 'kanyakumari';
+
+  const windows = useMemo(
+    () => (hasPlantingCalendar ? getKanyakumariPlantingWindows() : null),
+    [hasPlantingCalendar]
+  );
+
+  // Bound to the loaded profiles so `sowNowChips` stays a pure util with no
+  // service import. Falls through to the default catalog for crops the grower
+  // has never customised, which is most of them.
+  const lookupProfile = useCallback(
+    (plantType: PlantType, name: string): PlantProfile | undefined =>
+      getProfileEntry(profiles, plantType, name),
+    [profiles]
+  );
+
+  const plantNow = useMemo<PlantNowRecommendation[]>(() => {
+    if (!windows) return [];
+    const closingKeys = new Set(
+      windows.closing.map((entry) => `${entry.plantType}:${entry.variety}`)
+    );
+    return toPlantNowChips(windows.current, {
+      lookup: lookupProfile,
+      closingKeys,
+    });
+  }, [windows, lookupProfile]);
+
+  // Names only — next month's crops are context for planning, not tiles to act
+  // on today, so they get one line and no artwork.
+  const openingNext = useMemo(
+    () => (windows ? [...new Set(windows.openingNext.map((entry) => entry.variety))] : []),
+    [windows]
   );
 
   const perennialCare = useMemo(
@@ -330,14 +368,18 @@ export function useTodayBrief(): UseTodayBriefResult {
   // `bed_resting_end` (the green-manure suggestion) is deliberately excluded and
   // has no fallback here — it is not wanted on this screen. `getFarmAlerts`
   // still emits it; nothing renders it, which is the intended state.
-  const seasonTip = useMemo(() => {
+  //
+  // The title travels with the message so the card can head it. An alert names
+  // the thing it is about ("Anthracnose risk"); the plant-reminder fallback has
+  // no such name, so it gets a generic one.
+  const seasonTip = useMemo<{ title: string; message: string }>(() => {
     const info = farmAlerts.find((a) => a.severity === 'info' && a.type !== 'bed_resting_end');
-    if (info) return info.message;
+    if (info) return { title: info.title, message: info.message };
     for (const plant of plants) {
       const tip = getSeasonalCareReminder(plant);
-      if (tip) return tip;
+      if (tip) return { title: 'Seasonal care', message: tip };
     }
-    return '';
+    return { title: '', message: '' };
   }, [farmAlerts, plants]);
 
   const brief = useMemo<TodayBrief>(
@@ -349,9 +391,11 @@ export function useTodayBrief(): UseTodayBriefResult {
       needsAction,
       season,
       seasonNote: month.note,
-      seasonTip,
+      seasonTip: seasonTip.message,
+      seasonTipTitle: seasonTip.title,
       district,
       plantNow,
+      openingNext,
       perennialCare,
     }),
     [
@@ -363,6 +407,7 @@ export function useTodayBrief(): UseTodayBriefResult {
       seasonTip,
       district,
       plantNow,
+      openingNext,
       perennialCare,
     ]
   );

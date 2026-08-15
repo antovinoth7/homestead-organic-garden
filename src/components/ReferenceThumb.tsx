@@ -11,8 +11,11 @@ interface Props {
   /** Bundled reference image; falls back to a themed semantic icon when undefined. */
   source?: ImageSource;
   fallbackIcon?: VisualIconKey;
-  /** row: 36×36 list rows; chip: 20×20 suggestion chips; hero: 44×44 headers. */
-  variant?: 'row' | 'chip' | 'hero';
+  /**
+   * row: 36×36 list rows; chip: 20×20 suggestion chips; hero: 44×44 headers;
+   * tile: full-width 4:3 photo for a grid tile, rounded on its own.
+   */
+  variant?: 'row' | 'chip' | 'hero' | 'tile';
   accessibilityLabel?: string;
   /** Pass the entry id when rendered inside FlatList/SectionList rows. */
   recyclingKey?: string;
@@ -45,6 +48,11 @@ export function ReferenceThumb({
           image: styles.heroImage,
           fallback: styles.heroFallback,
           iconSize: 24,
+        },
+        tile: {
+          image: styles.tileImage,
+          fallback: styles.tileFallback,
+          iconSize: 34,
         },
       })[variant],
     [variant, styles]

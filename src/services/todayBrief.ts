@@ -15,6 +15,7 @@ import {
   FarmConfig,
   LocationConfig,
   Plant,
+  PlantProfiles,
   TaskLog,
   TaskTemplate,
 } from '@/types/database.types';
@@ -22,6 +23,7 @@ import { getBeds } from '@/services/beds';
 import { getFarmConfig } from '@/services/farmCapacity';
 import { getLocationConfig } from '@/services/locations';
 import { getAllPlants, getStoredPlants } from '@/services/plants';
+import { getPlantProfiles } from '@/services/plantProfiles';
 import {
   getStoredTodayTaskLogs,
   getStoredTodayTasks,
@@ -42,6 +44,12 @@ export interface TodayBriefSources {
   beds: Bed[];
   locationConfig: LocationConfig;
   farmConfig: FarmConfig;
+  /**
+   * Catalog metadata for the season card's crop tiles — spacing and days to
+   * harvest. Cache-first and offline-backed like the rest, so it costs no
+   * Firestore read on a warm start.
+   */
+  profiles: PlantProfiles;
 }
 
 /**
@@ -76,7 +84,7 @@ function scopeToKnownPlants(
 }
 
 export async function getTodayBriefSources(): Promise<TodayBriefSources> {
-  const [rawTasks, rawLogs, rawTemplates, plants, beds, locationConfig, farmConfig] =
+  const [rawTasks, rawLogs, rawTemplates, plants, beds, locationConfig, farmConfig, profiles] =
     await Promise.all([
       getTodayTasks(),
       getTodayTaskLogs(),
@@ -85,6 +93,7 @@ export async function getTodayBriefSources(): Promise<TodayBriefSources> {
       getBeds(),
       getLocationConfig(),
       getFarmConfig(),
+      getPlantProfiles(),
     ]);
 
   const { tasks, logs, allTemplates } = scopeToKnownPlants(
@@ -93,29 +102,33 @@ export async function getTodayBriefSources(): Promise<TodayBriefSources> {
     rawLogs,
     rawTemplates
   );
-  return { tasks, logs, allTemplates, plants, beds, locationConfig, farmConfig };
+  return { tasks, logs, allTemplates, plants, beds, locationConfig, farmConfig, profiles };
 }
 
 /**
  * Cold-start paint from the local caches. Returns `null` when there is nothing
  * worth painting, so the caller can show its skeleton instead of a screen of
  * zeroes. `getBeds`/`getLocationConfig`/`getFarmConfig` already fall back to
- * AsyncStorage themselves, so they are safe to call here.
+ * AsyncStorage themselves, so they are safe to call here. `getPlantProfiles` is
+ * the same shape again — cache, then AsyncStorage, with the Firestore sync fired
+ * in the background rather than awaited.
  */
 export async function getStoredTodayBriefSources(): Promise<TodayBriefSources | null> {
-  const [rawTasks, rawLogs, plants, beds, locationConfig, farmConfig] = await Promise.all([
-    getStoredTodayTasks(),
-    getStoredTodayTaskLogs(),
-    getStoredPlants(),
-    getBeds(),
-    getLocationConfig(),
-    getFarmConfig(),
-  ]);
+  const [rawTasks, rawLogs, plants, beds, locationConfig, farmConfig, profiles] =
+    await Promise.all([
+      getStoredTodayTasks(),
+      getStoredTodayTaskLogs(),
+      getStoredPlants(),
+      getBeds(),
+      getLocationConfig(),
+      getFarmConfig(),
+      getPlantProfiles(),
+    ]);
 
   if (rawTasks.length === 0 && plants.length === 0) return null;
 
   // The overlay's job counts need every template; the cached today-tasks are the
   // best available stand-in until the revalidate lands.
   const { tasks, logs, allTemplates } = scopeToKnownPlants(plants, rawTasks, rawLogs, rawTasks);
-  return { tasks, logs, allTemplates, plants, beds, locationConfig, farmConfig };
+  return { tasks, logs, allTemplates, plants, beds, locationConfig, farmConfig, profiles };
 }

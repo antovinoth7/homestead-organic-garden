@@ -27,6 +27,7 @@ jest.mock('@/styles/plotCardStyles', () => ({
 import React from 'react';
 import { PlotCard, PlotHealthFilter } from '@/components/today/PlotCard';
 import { PlotBrief } from '@/types/database.types';
+import type { BedLifecycle } from '@/utils/bedStatus';
 import { makePlotBrief } from '../fixtures/today.fixtures';
 
 interface RenderedNode {
@@ -62,7 +63,11 @@ describe('PlotCard health footer', () => {
 
   afterAll(() => consoleErrorSpy.mockRestore());
 
-  function render(onPressHealth = jest.fn(), brief: PlotBrief = plot) {
+  function render(
+    onPressHealth = jest.fn(),
+    brief: PlotBrief = plot,
+    onPressBedStatus = jest.fn()
+  ) {
     let rendered!: RenderedTree;
     TestRenderer.act(() => {
       rendered = TestRenderer.create(
@@ -71,6 +76,7 @@ describe('PlotCard health footer', () => {
           onPress={jest.fn()}
           onPressWeather={jest.fn()}
           onPressHealth={onPressHealth}
+          onPressBedStatus={onPressBedStatus}
           onPressBeds={jest.fn()}
         />
       );
@@ -119,6 +125,7 @@ describe('PlotCard health footer', () => {
           onPress={jest.fn()}
           onPressWeather={onPressWeather}
           onPressHealth={jest.fn()}
+          onPressBedStatus={jest.fn()}
           onPressBeds={jest.fn()}
         />
       );
@@ -161,6 +168,38 @@ describe('PlotCard health footer', () => {
       makePlotBrief({ weather: { ...plot.weather, condition } })
     );
     expect(pillStyle(rendered)).toContain(toneKey);
+  });
+
+  // The tone is the array's tail, the way the weather pill's is.
+  const toneOf = (rendered: RenderedTree, label: string) => {
+    const node = rendered.root.findAll(
+      (n) => n.type === 'Text' && baseStyle(n.props.style) === 'pill' && n.props.children === label
+    )[0];
+    return Array.isArray(node?.props.style) ? node.props.style : [];
+  };
+
+  it('capitalises the counts and keeps the spoken label a sentence', () => {
+    const rendered = render(jest.fn(), makePlotBrief({ dueCount: 2, overdueCount: 5 }));
+
+    expect(hostText(rendered, 'pill')).toEqual(['2 Due', '5 Overdue']);
+    expect(toneOf(rendered, '2 Due')).toContain('pillDue');
+    expect(toneOf(rendered, '5 Overdue')).toContain('pillOverdue');
+    // Capitalising the badges must not shout in the reader. The name and the
+    // counts row both open the plot, so both carry the label.
+    expect(
+      rendered.root.findAllByProps({ accessibilityLabel: 'North Plot, 2 due, 5 overdue' })
+    ).not.toHaveLength(0);
+  });
+
+  it('badges a quiet plot rather than leaving the row bare', () => {
+    const rendered = render(jest.fn(), makePlotBrief({ dueCount: 0, overdueCount: 0 }));
+
+    expect(hostText(rendered, 'pill')).toEqual(['Nothing Due']);
+    // Same geometry as a count, neutral ground — the row keeps one shape.
+    expect(toneOf(rendered, 'Nothing Due')).toContain('pillNone');
+    expect(
+      rendered.root.findAllByProps({ accessibilityLabel: 'North Plot, nothing due' })
+    ).not.toHaveLength(0);
   });
 
   it('tags the context sentence with the rung that produced it', () => {
@@ -225,5 +264,33 @@ describe('PlotCard health footer', () => {
       rendered.root.findByProps({ accessibilityLabel }).props.onPress?.();
     });
     expect(onPressHealth).toHaveBeenCalledWith('north-plot', filter);
+  });
+
+  // The bed rows answer for their own bucket the way the health rows do. The
+  // fixture holds 2 growing, 1 resting and nothing in the other two, so this also
+  // covers a row whose count is zero and the singular the reader gets at one.
+  it.each<[string, BedLifecycle]>([
+    ['2 growing beds in North Plot. Opens the bed list.', 'growing'],
+    ['1 resting bed in North Plot. Opens the bed list.', 'resting'],
+    ['0 beds ready to plant in North Plot. Opens the bed list.', 'empty'],
+    ['0 permanent beds in North Plot. Opens the bed list.', 'permanent'],
+  ])('keeps %s wired to the matching lifecycle', (accessibilityLabel, lifecycle) => {
+    const onPressBedStatus = jest.fn();
+    const rendered = render(jest.fn(), plot, onPressBedStatus);
+    TestRenderer.act(() => {
+      rendered.root.findByProps({ accessibilityLabel }).props.onPress?.();
+    });
+    expect(onPressBedStatus).toHaveBeenCalledWith('north-plot', lifecycle);
+  });
+
+  it('leaves the bed total a caption now the rows under it are the links', () => {
+    const rendered = render();
+    // The unit says what the total counts and nothing more: no chevron, and no
+    // press handler that would compete with the four rows below it.
+    expect(hostText(rendered, 'tileUnit')).toEqual(['Plants', 'Beds']);
+    const units = rendered.root.findAll(
+      (node) => node.type === 'Text' && baseStyle(node.props.style) === 'tileUnit'
+    );
+    expect(units.every((node) => node.props.onPress === undefined)).toBe(true);
   });
 });

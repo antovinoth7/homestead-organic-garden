@@ -152,7 +152,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // than one string with a separator. They always own this row, whatever the
     // data, so one count and two produce the same card skeleton. The row packs
     // to the right, so the counts sit against the chevron that opens them and a
-    // quiet plot's "Nothing due" lands in the same place a pill would.
+    // quiet plot's "Nothing Due" pill lands where a count would.
     countsRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -176,11 +176,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.errorLight,
       color: theme.errorDark,
     },
-    // A quiet plot has nothing to badge — a grey pill would give the absence of
-    // work the same weight as work.
-    countsMuted: {
-      fontSize: 11.5,
-      fontWeight: '600',
+    // A quiet plot still gets a pill, so the row keeps one shape whatever the
+    // data. The neutral ground is what holds it below the green and the red —
+    // present, but not claiming any work is owed.
+    pillNone: {
+      backgroundColor: theme.borderLight,
       color: theme.textTertiary,
     },
     // Outside the pills: the row opens the Care Plan, not either count. The one
@@ -286,16 +286,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '500',
       color: theme.text,
     },
+    // Both totals are captions over the rows that divide them up — the rows are
+    // the tap targets, so neither unit takes a link colour.
     tileUnit: {
       fontSize: 12,
       fontWeight: '500',
       color: theme.textTertiary,
-    },
-    // The bed total's unit doubles as the link into the Beds tab, so it takes
-    // the brand colour.
-    tileUnitLink: {
-      color: theme.primary,
-      fontWeight: '600',
     },
 
     // ─── Status rows ─────────────────────────────────────────────────────────

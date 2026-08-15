@@ -25,6 +25,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { PlotBrief } from '@/types/database.types';
+import { BedLifecycle } from '@/utils/bedStatus';
 import { useTheme } from '@/theme';
 import { CARD_GAP, createStyles, plotCardWidth } from '@/styles/plotCarouselStyles';
 import { PlotCard, PlotHealthFilter } from './PlotCard';
@@ -34,6 +35,7 @@ interface Props {
   onPressPlot: (plotId: string) => void;
   onPressWeather: (plotId: string) => void;
   onPressHealth: (plotId: string, status: PlotHealthFilter) => void;
+  onPressBedStatus: (plotId: string, lifecycle: BedLifecycle) => void;
   onPressBeds: () => void;
 }
 
@@ -42,6 +44,7 @@ export const PlotCarousel = React.memo(function PlotCarousel({
   onPressPlot,
   onPressWeather,
   onPressHealth,
+  onPressBedStatus,
   onPressBeds,
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
@@ -76,6 +79,7 @@ export const PlotCarousel = React.memo(function PlotCarousel({
         onPress={onPressPlot}
         onPressWeather={onPressWeather}
         onPressHealth={onPressHealth}
+        onPressBedStatus={onPressBedStatus}
         onPressBeds={onPressBeds}
       />
     );
@@ -106,6 +110,7 @@ export const PlotCarousel = React.memo(function PlotCarousel({
             onPress={onPressPlot}
             onPressWeather={onPressWeather}
             onPressHealth={onPressHealth}
+            onPressBedStatus={onPressBedStatus}
             onPressBeds={onPressBeds}
           />
         ))}

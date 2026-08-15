@@ -515,11 +515,24 @@ export interface SeasonProgress {
 /** How a crop should be established in the current month. */
 export type PlantNowAction = 'sow' | 'transplant';
 
-/** One curated crop chip in the Today screen's seasonal card. */
+/**
+ * One curated crop tile in the Today screen's seasonal card.
+ *
+ * `label` is the catalog plant name, which is what resolves both the bundled
+ * reference photo and the catalog entry the tile opens — the tile carries no
+ * artwork of its own.
+ */
 export interface PlantNowRecommendation {
   key: string;
   label: string;
+  /** Routes the tile to its catalog entry alongside `label`. */
+  plantType: PlantType;
   action: PlantNowAction;
+  /** "25–40 days", or null when the profile does not state one. */
+  daysToHarvest: string | null;
+  spacingCm: number | null;
+  /** This is the last month the window is open. */
+  closing: boolean;
 }
 
 /** A single seasonal reminder for perennials already established on the farm. */
@@ -557,9 +570,12 @@ export interface TodayBrief {
   season: SeasonProgress;
   seasonNote: string;
   seasonTip: string;
+  /** Heads the tip so a risk reads as a risk rather than as closing fine print. */
+  seasonTipTitle: string;
   district: string | null;
   plantNow: PlantNowRecommendation[];
-  /** Total suggestions available, so the chip row can offer "All N ›". */
+  /** Crop names whose window opens next month — one line, no tiles. */
+  openingNext: string[];
   perennialCare: PerennialCareBrief | null;
 }
 

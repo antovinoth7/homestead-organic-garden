@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import type Swipeable from 'react-native-gesture-handler/Swipeable';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
@@ -31,7 +31,11 @@ import {
   BedSortOption,
   DEFAULT_BED_FILTERS,
 } from '@/utils/filterAndSortBeds';
-import type { BedListScreenNavigationProp } from '@/types/navigation.types';
+import { getBedLifecycle } from '@/utils/bedStatus';
+import type {
+  BedListScreenNavigationProp,
+  BedListScreenRouteProp,
+} from '@/types/navigation.types';
 
 const bedDeleteMessage = (activePlantCount: number): string => {
   const plantLabel = `${activePlantCount} active plant${activePlantCount === 1 ? '' : 's'}`;
@@ -45,6 +49,7 @@ export default function BedListScreen(): React.JSX.Element {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<BedListScreenNavigationProp>();
+  const route = useRoute<BedListScreenRouteProp>();
   const { beds: bedsData, loading, error, refresh } = useBedData();
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
 
@@ -121,7 +126,9 @@ export default function BedListScreen(): React.JSX.Element {
       sunlight: {},
       raised: 0,
       inGround: 0,
+      growing: 0,
       resting: 0,
+      empty: 0,
       permanent: 0,
     };
     for (const b of beds) {
@@ -129,8 +136,9 @@ export default function BedListScreen(): React.JSX.Element {
       counts.sunlight[b.sunlight] = (counts.sunlight[b.sunlight] ?? 0) + 1;
       if (b.is_raised_bed) counts.raised += 1;
       else counts.inGround += 1;
-      if (b.is_resting) counts.resting += 1;
-      if (b.is_permanent) counts.permanent += 1;
+      // Bucketed the way the status filter selects, so a chip's count is the number
+      // of rows choosing it produces.
+      counts[getBedLifecycle(b, b.active_plant_count)] += 1;
     }
     return counts;
   }, [beds]);
@@ -165,6 +173,24 @@ export default function BedListScreen(): React.JSX.Element {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowFilters((v) => !v);
   }, []);
+
+  // Arriving from a bed count on the Today plot card: the tapped lifecycle and the
+  // plot it was counted for land in this list's own filters, where they are visible
+  // and clearable, so the list holds exactly the beds the count named. Cleared from
+  // the route afterwards, or coming back to the tab would re-apply them.
+  useEffect(() => {
+    const lifecycleFilter = route.params?.lifecycleFilter;
+    const plotFilter = route.params?.plotFilter;
+    if (!lifecycleFilter && !plotFilter) return;
+
+    setFilters((prev) => ({
+      ...prev,
+      ...(lifecycleFilter && { status: lifecycleFilter }),
+      ...(plotFilter && { parentLocation: plotFilter, childLocation: '' }),
+    }));
+    setShowFilters(false);
+    navigation.setParams({ lifecycleFilter: undefined, plotFilter: undefined });
+  }, [route.params, navigation]);
 
   // Drop committed ids once the hook no longer returns them, so the set can't grow
   // unbounded. Beds still inside the undo window remain in bedsData, so they stay.

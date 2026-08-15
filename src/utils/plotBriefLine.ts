@@ -127,7 +127,7 @@ function findTodayIndex(forecast: WeatherForecast | null, now: number): number {
   return index;
 }
 
-/** Rung 2 — "12 mm on Sat — do today's 2 sprays before it." */
+/** Rung 2 — "12 mm on Saturday — do today's 2 sprays before it." */
 function rainHeadline(input: PlotBriefLineInput, now: number): string | null {
   const dueToday = input.summary?.todayTasks ?? [];
   const atRisk = dueToday.filter((t) => RAIN_SENSITIVE_TASKS.has(t.task_type));
@@ -153,7 +153,7 @@ function rainHeadline(input: PlotBriefLineInput, now: number): string | null {
   }
   if (!wet) return null;
 
-  const when = weekdayLabel(wet.date);
+  const when = weekdayLabel(wet.date, 'long');
   const mm = `${Math.round(wet.precipitationMm)} mm`;
   // A single kind of work gets named; a mixed bag stays generic rather than
   // calling a harvest day a spray day. "N spray jobs" rather than "N sprays"
@@ -228,7 +228,7 @@ function buildFreshness(input: PlotBriefLineInput, today: Date): string | null {
   if (days <= 0) return 'Worked today.';
   if (days === 1) return 'Last worked yesterday.';
   if (days < 7) {
-    const label = weekdayLabel(toLocalDateString(new Date(latest)));
+    const label = weekdayLabel(toLocalDateString(new Date(latest)), 'long');
     return label ? `Last worked ${label}.` : `Last worked ${days} days ago.`;
   }
   if (days < 28) {

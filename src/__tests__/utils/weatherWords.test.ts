@@ -116,6 +116,13 @@ describe('forecast dates', () => {
     expect(weekdayLabel('2026-07-31')).toBe('Fri');
     expect(weekdayLabel('not-a-date')).toBe('');
   });
+
+  // Prose asks for the long form; the narrow forecast columns above still get
+  // the abbreviation, which is why the default has to stay short.
+  it('spells the weekday out when asked', () => {
+    expect(weekdayLabel('2026-07-31', 'long')).toBe('Friday');
+    expect(weekdayLabel('not-a-date', 'long')).toBe('');
+  });
 });
 
 describe('weather formatting', () => {

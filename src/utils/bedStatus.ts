@@ -2,10 +2,17 @@ import type { Theme } from '@/theme/colors';
 import type { Bed } from '@/types/database.types';
 import type { BedWithCoverage } from '@/hooks/useBedData';
 import { bedExpectsLegumes } from '@/config/beds/legumeRelevance';
-import { LOW_LEGUME_THRESHOLD } from '@/utils/filterAndSortBeds';
 
 /** An active (growing) bed not watered within this many days is flagged overdue. */
 export const WATER_OVERDUE_DAYS = 3;
+
+/**
+ * Coverage threshold below which a bed is flagged as low-legume (matches the list
+ * banner). Lives here with the other domain thresholds so `filterAndSortBeds` can
+ * import this module's lifecycle helper without the two importing each other;
+ * `filterAndSortBeds` re-exports it, which is where most callers still reach it.
+ */
+export const LOW_LEGUME_THRESHOLD = 20;
 
 export type BedLifecycle = 'empty' | 'growing' | 'resting' | 'permanent';
 

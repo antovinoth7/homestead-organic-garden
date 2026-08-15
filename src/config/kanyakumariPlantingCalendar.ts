@@ -93,3 +93,43 @@ export function getKanyakumariPlantingRecommendations(
 ): readonly KanyakumariPlantingEntry[] {
   return KANYAKUMARI_PLANTING_CALENDAR[date.getMonth() + 1] ?? [];
 }
+
+/**
+ * This month's crops split by how their window is moving.
+ *
+ * A grower plans against closing windows, not against elapsed season: knowing
+ * that snake gourd cannot be sown after August is what changes this weekend's
+ * work. The calendar is month-keyed, so next month is a second lookup and the
+ * two sets differ by exactly the windows that open and close at the boundary.
+ */
+export interface PlantingWindows {
+  current: readonly KanyakumariPlantingEntry[];
+  /** In `current` but absent next month — the last month to start these. */
+  closing: readonly KanyakumariPlantingEntry[];
+  /** Absent this month, present next — worth preparing beds and seed for. */
+  openingNext: readonly KanyakumariPlantingEntry[];
+}
+
+/** The identity a crop keeps across months, so the two sets can be differenced. */
+function entryKey(entry: KanyakumariPlantingEntry): string {
+  return `${entry.plantType}:${entry.variety}`;
+}
+
+export function getKanyakumariPlantingWindows(date: Date = new Date()): PlantingWindows {
+  const month = date.getMonth() + 1;
+  // December rolls to January rather than falling off the record and reporting
+  // every winter crop as closing.
+  const nextMonth = (month % 12) + 1;
+
+  const current = KANYAKUMARI_PLANTING_CALENDAR[month] ?? [];
+  const next = KANYAKUMARI_PLANTING_CALENDAR[nextMonth] ?? [];
+
+  const currentKeys = new Set(current.map(entryKey));
+  const nextKeys = new Set(next.map(entryKey));
+
+  return {
+    current,
+    closing: current.filter((entry) => !nextKeys.has(entryKey(entry))),
+    openingNext: next.filter((entry) => !currentKeys.has(entryKey(entry))),
+  };
+}

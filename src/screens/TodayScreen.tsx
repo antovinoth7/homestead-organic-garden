@@ -34,7 +34,8 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NeedsActionItem, PlotBrief } from '@/types/database.types';
+import { NeedsActionItem, PlantType, PlotBrief } from '@/types/database.types';
+import { BedLifecycle } from '@/utils/bedStatus';
 import { TodayScreenNavigationProp, TodayScreenRouteProp } from '@/types/navigation.types';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/todayScreenStyles';
@@ -136,10 +137,28 @@ export default function TodayScreen(): React.JSX.Element {
     void reload({ forceWeather: true });
   }, [reload]);
 
-  // The bed count on a card — beds are not counted in the card's plant figures,
-  // so this is where they are answered for.
+  // The no-beds tile's "Add a bed" link — the one place a card opens the Beds tab
+  // without saying which beds it means.
   const goToBeds = useCallback(
     () => navigation.navigate('Beds', { screen: 'BedList' }),
+    [navigation]
+  );
+
+  // A season suggestion is a crop the farm does not have yet, so it has no
+  // plant record to open — the catalog entry is where its spacing, depth and
+  // days to harvest are, which is what the tile's figures are quoting from.
+  const goToCatalogEntry = useCallback(
+    (plantName: string, plantType: PlantType) => {
+      navigation.navigate('More', {
+        screen: 'CatalogPlantDetail',
+        params: { plantName, plantType },
+      });
+    },
+    [navigation]
+  );
+
+  const goToMyFarm = useCallback(
+    () => navigation.navigate('More', { screen: 'MyFarm' }),
     [navigation]
   );
 
@@ -156,6 +175,28 @@ export default function TodayScreen(): React.JSX.Element {
       });
     },
     [navigation]
+  );
+
+  // The bed counts do the same into the Beds tab: the lifecycle tapped, scoped to
+  // the plot that was tapped.
+  //
+  // With no plots configured there is one card, and it is named after the district
+  // rather than after anything a bed is filed under — scoping by its id would open
+  // an empty list, so the whole list is the honest answer there. Configured plots
+  // and the unassigned bucket both resolve against `Bed.parent_location`.
+  const plotsAreConfigured = useMemo(
+    () => brief.plots.some((plot) => plot.isConfigured),
+    [brief.plots]
+  );
+
+  const handlePressBedStatus = useCallback(
+    (plotId: string, lifecycleFilter: BedLifecycle) => {
+      navigation.navigate('Beds', {
+        screen: 'BedList',
+        params: { lifecycleFilter, ...(plotsAreConfigured && { plotFilter: plotId }) },
+      });
+    },
+    [navigation, plotsAreConfigured]
   );
 
   // ─── List parts ────────────────────────────────────────────────────────────
@@ -182,6 +223,7 @@ export default function TodayScreen(): React.JSX.Element {
             onPressPlot={handlePressPlot}
             onPressWeather={handlePressWeather}
             onPressHealth={handlePressHealth}
+            onPressBedStatus={handlePressBedStatus}
             onPressBeds={goToBeds}
           />
         </View>
@@ -206,6 +248,7 @@ export default function TodayScreen(): React.JSX.Element {
       handlePressPlot,
       handlePressWeather,
       handlePressHealth,
+      handlePressBedStatus,
       goToBeds,
     ]
   );
@@ -216,12 +259,16 @@ export default function TodayScreen(): React.JSX.Element {
         season={brief.season}
         note={brief.seasonNote}
         tip={brief.seasonTip}
+        tipTitle={brief.seasonTipTitle}
         district={brief.district}
         recommendations={brief.plantNow}
+        openingNext={brief.openingNext}
         perennialCare={brief.perennialCare}
+        onPressCrop={goToCatalogEntry}
+        onPressDistrict={goToMyFarm}
       />
     ),
-    [brief]
+    [brief, goToCatalogEntry, goToMyFarm]
   );
 
   const renderItem = useCallback(
