@@ -23,6 +23,8 @@ export interface PlantNowContext {
   lookup?: (plantType: PlantType, name: string) => PlantProfile | undefined;
   /** Keys whose window closes at the end of this month. */
   closingKeys?: ReadonlySet<string>;
+  /** The day the crop would be started. Injectable so the tests are fixed. */
+  today?: Date;
 }
 
 /**
@@ -37,11 +39,35 @@ function formatDaysToHarvest(profile: PlantProfile | undefined): string | null {
     : `${range.min}–${range.max} days`;
 }
 
+/**
+ * The month a crop started today would come good in, measured from the outer
+ * bound of its range — the figure a grower can plan a bed around without being
+ * caught short.
+ *
+ * The date is walked with the local-time `new Date(y, m, d + days)` constructor
+ * rather than millisecond arithmetic, for the same reason `seasonProgress` does:
+ * no timezone or DST shift can then push the result into a neighbouring month.
+ * The year is stated only once it differs from today's, so the common case stays
+ * three characters wide on a tile.
+ */
+function formatHarvestBy(profile: PlantProfile | undefined, today: Date): string | null {
+  const range = profile?.daysToHarvest;
+  if (!range) return null;
+
+  const landing = new Date(today.getFullYear(), today.getMonth(), today.getDate() + range.max);
+  const sameYear = landing.getFullYear() === today.getFullYear();
+  const month = landing.toLocaleDateString('en-US', {
+    month: 'short',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  });
+  return `harvest by ${month}`;
+}
+
 export function toPlantNowChips(
   suggestions: readonly PlantNowCandidate[],
   context: PlantNowContext = {}
 ): PlantNowRecommendation[] {
-  const { lookup, closingKeys } = context;
+  const { lookup, closingKeys, today = new Date() } = context;
 
   return suggestions.map((crop) => {
     const key = `${crop.plantType}:${crop.variety}`;
@@ -53,6 +79,7 @@ export function toPlantNowChips(
       plantType: crop.plantType,
       action: crop.action,
       daysToHarvest: formatDaysToHarvest(profile),
+      harvestByLabel: formatHarvestBy(profile, today),
       spacingCm: profile?.spacingCm ?? null,
       closing: closingKeys?.has(key) ?? false,
     };

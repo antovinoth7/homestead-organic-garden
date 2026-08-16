@@ -46,6 +46,7 @@ interface RenderedNode {
     style?: unknown;
     accessibilityLabel?: string;
   };
+  findAll: (predicate: (node: RenderedNode) => boolean) => RenderedNode[];
 }
 
 interface RenderedTree {
@@ -71,6 +72,8 @@ const season: SeasonProgress = {
   totalWeeks: 18,
   elapsedDays: 77,
   totalDays: 122,
+  dayOfSeason: 78,
+  daysRemaining: 44,
   elapsedFraction: 0.63,
 };
 
@@ -81,6 +84,7 @@ function crop(overrides: Partial<PlantNowRecommendation> = {}): PlantNowRecommen
     plantType: 'vegetable',
     action: 'sow',
     daysToHarvest: '25–40 days',
+    harvestByLabel: 'harvest by Sep',
     spacingCm: 15,
     closing: false,
     ...overrides,
@@ -91,6 +95,7 @@ const snakeGourd = crop({
   key: 'vegetable:Snake Gourd',
   label: 'Snake Gourd',
   daysToHarvest: '90–110 days',
+  harvestByLabel: 'harvest by Dec',
   spacingCm: 150,
   closing: true,
 });
@@ -100,15 +105,23 @@ const brinjal = crop({
   label: 'Brinjal',
   action: 'transplant',
   daysToHarvest: '60–80 days',
+  harvestByLabel: 'harvest by Nov',
   spacingCm: 60,
 });
 
+/** A full month's sow list, matching the widest the district calendar goes. */
+const fiveSows = ['Amaranthus', 'Ladies Finger', 'Ash Gourd', 'Pumpkin', 'Snake Gourd'].map((label) =>
+  crop({ key: `vegetable:${label}`, label })
+);
+
 interface Overrides {
+  season?: SeasonProgress;
   recommendations?: PlantNowRecommendation[];
   district?: string | null;
   tip?: string;
   tipTitle?: string;
   openingNext?: string[];
+  perennialCare?: { count: number; message: string } | null;
   onPressCrop?: jest.Mock;
   onPressDistrict?: jest.Mock;
 }
@@ -118,14 +131,16 @@ function render(overrides: Overrides = {}): RenderedTree {
   TestRenderer.act(() => {
     rendered = TestRenderer.create(
       <SeasonBlock
-        season={season}
+        season={overrides.season ?? season}
         note="Use raised, well-drained beds for monsoon crops."
+        monthHighlight="Mid-monsoon"
+        monthIconKey="task.water"
         tip={overrides.tip ?? ''}
         tipTitle={overrides.tipTitle ?? ''}
         district={overrides.district === undefined ? 'Kanyakumari' : overrides.district}
         recommendations={overrides.recommendations ?? [crop(), snakeGourd, brinjal]}
         openingNext={overrides.openingNext ?? []}
-        perennialCare={null}
+        perennialCare={overrides.perennialCare ?? null}
         onPressCrop={overrides.onPressCrop ?? jest.fn()}
         onPressDistrict={overrides.onPressDistrict ?? jest.fn()}
       />
@@ -159,6 +174,52 @@ beforeAll(() => {
 
 afterAll(() => consoleErrorSpy.mockRestore());
 
+describe('SeasonBlock header', () => {
+  it('states the season as the card subject, with the month beneath it', () => {
+    const rendered = render();
+    expect(hostText(rendered, 'title')).toEqual(['SW Monsoon']);
+    expect(hostText(rendered, 'subtitle')).toEqual(['Mid-monsoon · August']);
+  });
+
+  it('counts the season in days as well as weeks', () => {
+    const rendered = render();
+    expect(hostText(rendered, 'daysLeftText')).toEqual(['44 days left']);
+    expect(hostText(rendered, 'barLabel')).toEqual([
+      ['Day ', 78, ' of ', 122],
+      ['Week ', 11, ' of ', 18],
+    ]);
+  });
+
+  it('names the last day rather than counting zero days left', () => {
+    const rendered = render({
+      season: { ...season, dayOfSeason: 122, daysRemaining: 0, elapsedFraction: 1 },
+    });
+    expect(hostText(rendered, 'daysLeftText')).toEqual(['Last day']);
+  });
+
+  it('keeps the plural honest on the final full day', () => {
+    const rendered = render({ season: { ...season, daysRemaining: 1 } });
+    expect(hostText(rendered, 'daysLeftText')).toEqual(['1 day left']);
+  });
+
+  it('speaks the bar as days, not as a bare fraction', () => {
+    const rendered = render();
+    const bar = rendered.root.findAll(
+      (node) => node.type === 'View' && baseStyle(node.props.style) === 'bar'
+    );
+    expect(bar[0]?.props.accessibilityLabel).toBe(
+      'Day 78 of 122 of SW Monsoon, 44 days left'
+    );
+  });
+
+  it('badges the header with the almanac icon for the month', () => {
+    const rendered = render();
+    const icons = rendered.root.findAll((node) => node.type === 'GardenIcon');
+    expect(icons).toHaveLength(1);
+    expect((icons[0]?.props as unknown as { name: string }).name).toBe('task.water');
+  });
+});
+
 describe('SeasonBlock crop tiles', () => {
   it('gives every crop a tap target, split by how it is established', () => {
     const rendered = render();
@@ -178,26 +239,42 @@ describe('SeasonBlock crop tiles', () => {
     expect(onPressCrop).toHaveBeenCalledWith('Snake Gourd', 'vegetable');
   });
 
-  it('quotes the catalog figures on the tile', () => {
+  it('leads the figures with the time to yield and the month it lands in', () => {
     const rendered = render();
+    expect(hostText(rendered, 'tileYield')).toEqual([
+      'Yield in 25–40 days',
+      'Yield in 90–110 days',
+      'Yield in 60–80 days',
+    ]);
+    expect(hostText(rendered, 'tileHarvest')).toEqual([
+      'harvest by Sep',
+      'harvest by Dec',
+      'harvest by Nov',
+    ]);
+    // Spacing has the meta line to itself now that the yield leads.
     expect(hostText(rendered, 'tileMeta')).toEqual([
-      '25–40 days · 15 cm apart',
-      '90–110 days · 150 cm apart',
-      '60–80 days · 60 cm apart',
+      '15 cm apart',
+      '150 cm apart',
+      '60 cm apart',
     ]);
   });
 
-  it('drops the meta line rather than printing a placeholder', () => {
+  it('drops each line rather than printing a placeholder', () => {
     const rendered = render({
-      recommendations: [crop({ daysToHarvest: null, spacingCm: null })],
+      recommendations: [crop({ daysToHarvest: null, harvestByLabel: null, spacingCm: null })],
     });
+    expect(hostText(rendered, 'tileYield')).toEqual([]);
+    expect(hostText(rendered, 'tileHarvest')).toEqual([]);
     expect(hostText(rendered, 'tileMeta')).toEqual([]);
     // The tile still renders and is still pressable.
     expect(tiles(rendered)).toHaveLength(1);
   });
 
-  it('keeps whichever half of the meta the catalog does state', () => {
-    const rendered = render({ recommendations: [crop({ daysToHarvest: null })] });
+  it('keeps whichever figures the catalog does state', () => {
+    const rendered = render({
+      recommendations: [crop({ daysToHarvest: null, harvestByLabel: null })],
+    });
+    expect(hostText(rendered, 'tileYield')).toEqual([]);
     expect(hostText(rendered, 'tileMeta')).toEqual(['15 cm apart']);
   });
 
@@ -214,18 +291,31 @@ describe('SeasonBlock crop tiles', () => {
 
   it('gives a closing crop the same tile as any other', () => {
     const rendered = render();
-    // No warning tint, and no icon inside a tile — the card no longer marks a
-    // closing window visually at all.
+    // No warning tint, and no icon inside a tile — the card still does not mark
+    // a closing window visually. The only icon on the card is the header badge.
     expect(tiles(rendered).map((node) => node.props.style)).toEqual(['tile', 'tile', 'tile']);
-    expect(rendered.root.findAll((node) => node.type === 'GardenIcon')).toHaveLength(0);
+    const iconsInTiles = tiles(rendered).flatMap((tile) =>
+      tile.findAll((node) => node.type === 'GardenIcon')
+    );
+    expect(iconsInTiles).toHaveLength(0);
   });
 
   it('spells the whole tile out for a screen reader', () => {
     const rendered = render({ recommendations: [snakeGourd] });
     // The deadline survives in speech even though nothing on screen shows it.
     expect(tiles(rendered)[0]?.props.accessibilityLabel).toBe(
-      'Snake Gourd, last month to start, 90–110 days · 150 cm apart. Opens the catalog entry.'
+      'Snake Gourd, last month to start, yield in 90–110 days, harvest by Dec, 150 cm apart. Opens the catalog entry.'
     );
+  });
+});
+
+describe('SeasonBlock at the calendar\'s widest', () => {
+  it('renders every crop the month offers, in both groups', () => {
+    // July is the fullest month the district calendar holds. The card states
+    // the whole set rather than truncating it.
+    const rendered = render({ recommendations: [...fiveSows, brinjal] });
+    expect(tiles(rendered)).toHaveLength(6);
+    expect(hostText(rendered, 'plantAction')).toEqual(['Sow', 'Transplant']);
   });
 });
 
@@ -293,5 +383,17 @@ describe('SeasonBlock seasonal risk', () => {
     const rendered = render({ tip: 'Check drainage.', tipTitle: '' });
     expect(hostText(rendered, 'riskTitle')).toEqual([]);
     expect(hostText(rendered, 'riskText')).toEqual(['Check drainage.']);
+  });
+});
+
+describe('SeasonBlock perennial care', () => {
+  it('heads the reminder without counting the plants behind it', () => {
+    const rendered = render({
+      perennialCare: { count: 3, message: 'Mulch the banana circle before the rain sets in.' },
+    });
+    expect(hostText(rendered, 'perennialTitle')).toEqual(['Perennial care']);
+    expect(hostText(rendered, 'perennialText')).toEqual([
+      'Mulch the banana circle before the rain sets in.',
+    ]);
   });
 });

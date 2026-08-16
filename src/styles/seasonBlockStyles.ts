@@ -3,9 +3,16 @@
  * far through it we are, what is worth planting now, and what the weather is
  * about to do to the crops already in the ground.
  *
+ * The header is a band of its own, closed by a hairline: an icon badge, the
+ * season at title size, and the days left as a pill. It carries the card's
+ * subject, so it gets the weight the rest of the card does not — everything
+ * below it stays at label and body sizes.
+ *
  * The progress bar is one track with a green fill. Internally the fill is still
  * two flex segments rather than a measured width, so it needs no layout pass
  * and reflows with the card; the track clips them into a single rounded bar.
+ * Its day and week counts sit beneath it rather than inside it, because a 8pt
+ * bar cannot hold type and a bar with a number in it is a gauge, not a rule.
  *
  * The crop tiles carry no chrome: a rounded photo with the name set directly
  * beneath it on the card's own ground. A border around each one would be the
@@ -39,30 +46,58 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.card,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.border,
-      borderRadius: 16,
+      borderRadius: 18,
       paddingHorizontal: 15,
       paddingVertical: 14,
     },
 
+    // ─── Header band ─────────────────────────────────────────────────────────
+    header: {
+      paddingBottom: 13,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.borderLight,
+    },
     headerRow: {
       flexDirection: 'row',
-      alignItems: 'baseline',
-      gap: 8,
+      alignItems: 'center',
+      gap: 11,
+    },
+    iconBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.primaryLight,
+    },
+    headerText: {
+      flex: 1,
+      gap: 2,
     },
     title: {
-      flex: 1,
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 1.3,
-      textTransform: 'uppercase',
-      color: theme.primary,
+      fontSize: 17,
+      lineHeight: 22,
+      fontWeight: '700',
+      color: theme.text,
     },
-    week: {
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 0.9,
+    subtitle: {
+      fontSize: 12.5,
+      lineHeight: 17,
       color: theme.textTertiary,
-      textTransform: 'uppercase',
+    },
+    // `primaryDark` rather than `primary` for the text: it is the token that
+    // stays legible on `primaryLight` in both palettes, which invert it.
+    daysLeftPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
+      backgroundColor: theme.primaryLight,
+    },
+    daysLeftText: {
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.2,
+      color: theme.primaryDark,
     },
 
     // ─── Progress bar ────────────────────────────────────────────────────────
@@ -70,9 +105,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // one bar filling up rather than as two pills side by side.
     bar: {
       flexDirection: 'row',
-      height: 5,
-      marginTop: 9,
-      borderRadius: 3,
+      height: 8,
+      marginTop: 14,
+      borderRadius: 4,
       overflow: 'hidden',
       backgroundColor: theme.borderLight,
     },
@@ -82,12 +117,30 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     barRemaining: {
       backgroundColor: theme.borderLight,
     },
+    barLabels: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 7,
+    },
+    barLabel: {
+      fontSize: 11.5,
+      fontWeight: '600',
+      letterSpacing: 0.3,
+      color: theme.textTertiary,
+    },
 
     note: {
       fontSize: 14,
       lineHeight: 21,
       color: theme.textSecondary,
       marginTop: 10,
+    },
+
+    // Splits the card into bands so the suggestions do not run on from the note.
+    sectionRule: {
+      marginTop: 15,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.borderLight,
     },
 
     // ─── Plant now ───────────────────────────────────────────────────────────
@@ -97,7 +150,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       letterSpacing: 1.1,
       textTransform: 'uppercase',
       color: theme.textTertiary,
-      marginTop: 15,
+      marginTop: 13,
     },
 
     plantGroup: {
@@ -140,11 +193,25 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       color: theme.text,
     },
+    // The figure that decides whether the crop fits the bed and the season that
+    // is left, so it outranks the spacing it used to share a line with.
+    tileYield: {
+      fontSize: 12.5,
+      lineHeight: 17,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    tileHarvest: {
+      fontSize: 11.5,
+      lineHeight: 16,
+      color: theme.textTertiary,
+    },
     tileMeta: {
       fontSize: 12,
       lineHeight: 17,
       color: theme.textSecondary,
     },
+
     openingNext: {
       fontSize: 12.5,
       lineHeight: 18,

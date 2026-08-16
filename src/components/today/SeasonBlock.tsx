@@ -7,9 +7,14 @@
  * Every crop is a tap target into its catalog entry: a name alone is not a
  * decision, and the spacing and days-to-harvest that make it one already live
  * there. The tile is the crop's photo — the fastest way to recognise one — with
- * the name set beneath it and no border of its own, plus whatever the catalog
- * states about how long the crop occupies the ground and how much room it
- * needs.
+ * the name set beneath it and no border of its own, plus what the catalog states
+ * about how long the crop occupies the ground, the month that lands in, and how
+ * much room it needs.
+ *
+ * The header states the season as the card's subject rather than as a caption:
+ * how far through it we are in days, and how many are left. "Day 77 of 122" and
+ * "45 days left" are the same fact from both ends, and growers plan against the
+ * second one.
  *
  * What the season is doing to the crops already planted is stated after the
  * suggestions rather than buried in them, because it qualifies them.
@@ -30,12 +35,17 @@ import {
   PlantType,
   SeasonProgress,
 } from '@/types/database.types';
+import type { VisualIconKey } from '@/types/visual.types';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/seasonBlockStyles';
 
 interface Props {
   season: SeasonProgress;
   note: string;
+  /** This month's almanac headline, e.g. "Mid-monsoon". Subtitles the season. */
+  monthHighlight: string;
+  /** The almanac's icon for this month, shown in the header badge. */
+  monthIconKey: VisualIconKey;
   tip: string;
   tipTitle: string;
   district: string | null;
@@ -61,6 +71,16 @@ const ACTION_TITLE: Record<PlantNowRecommendation['action'], string> = {
   transplant: 'Transplant',
 };
 
+/**
+ * `daysRemaining` counts the days after today, so the last day of a season is 0
+ * rather than 1 and has to be named instead of counted.
+ */
+function daysLeftLabel(daysRemaining: number): string {
+  if (daysRemaining <= 0) return 'Last day';
+  if (daysRemaining === 1) return '1 day left';
+  return `${daysRemaining} days left`;
+}
+
 interface CropTileProps {
   item: PlantNowRecommendation;
   onPress: (plantName: string, plantType: PlantType) => void;
@@ -73,6 +93,11 @@ interface CropTileProps {
  * rather than as fragments and an image. The deadline is spoken even though
  * nothing on screen marks it: losing a visual cue is no reason to lose the
  * fact.
+ *
+ * The time to yield leads the figures because it is the one that decides
+ * whether the crop fits the bed and the season that is left; spacing follows it.
+ * Each line is dropped rather than placeheld when the catalog is silent, so a
+ * profile-less crop is still a name and a photo and still opens its entry.
  */
 const CropTile = React.memo(function CropTile({
   item,
@@ -84,18 +109,15 @@ const CropTile = React.memo(function CropTile({
     [onPress, item.label, item.plantType]
   );
 
-  // "25–40 days · 15 cm apart" — whichever halves the catalog actually states.
-  const meta = [
-    item.daysToHarvest,
-    item.spacingCm !== null ? `${item.spacingCm} cm apart` : null,
-  ]
-    .filter((part): part is string => part !== null)
-    .join(' · ');
+  const yieldLine = item.daysToHarvest !== null ? `Yield in ${item.daysToHarvest}` : null;
+  const spacing = item.spacingCm !== null ? `${item.spacingCm} cm apart` : null;
 
   const spoken = [
     item.label,
     item.closing ? 'last month to start' : null,
-    meta.length > 0 ? meta : null,
+    item.daysToHarvest !== null ? `yield in ${item.daysToHarvest}` : null,
+    item.harvestByLabel,
+    spacing,
   ]
     .filter((part): part is string => part !== null)
     .join(', ');
@@ -113,9 +135,19 @@ const CropTile = React.memo(function CropTile({
         <Text style={styles.tileName} numberOfLines={2}>
           {item.label}
         </Text>
-        {meta.length > 0 && (
+        {yieldLine !== null && (
+          <Text style={styles.tileYield} numberOfLines={1}>
+            {yieldLine}
+          </Text>
+        )}
+        {item.harvestByLabel !== null && (
+          <Text style={styles.tileHarvest} numberOfLines={1}>
+            {item.harvestByLabel}
+          </Text>
+        )}
+        {spacing !== null && (
           <Text style={styles.tileMeta} numberOfLines={1}>
-            {meta}
+            {spacing}
           </Text>
         )}
       </View>
@@ -126,6 +158,8 @@ const CropTile = React.memo(function CropTile({
 export const SeasonBlock = React.memo(function SeasonBlock({
   season,
   note,
+  monthHighlight,
+  monthIconKey,
   tip,
   tipTitle,
   district,
@@ -143,6 +177,10 @@ export const SeasonBlock = React.memo(function SeasonBlock({
   const transplanted = recommendations.filter(
     (recommendation) => recommendation.action === 'transplant'
   );
+
+  const subtitle = [monthHighlight, season.monthLabel]
+    .filter((part) => part.length > 0)
+    .join(' · ');
 
   const renderGroup = (
     action: PlantNowRecommendation['action'],
@@ -164,25 +202,51 @@ export const SeasonBlock = React.memo(function SeasonBlock({
 
   return (
     <View style={styles.card}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>
-          {season.monthLabel} - {season.seasonName}
-        </Text>
-        <Text style={styles.week}>
-          Week {season.week} of {season.totalWeeks}
-        </Text>
+      <View style={styles.header}>
+        <View style={styles.headerRow}>
+          <View style={styles.iconBadge}>
+            <GardenIcon name={monthIconKey} size={20} color={theme.primary} />
+          </View>
+          <View style={styles.headerText}>
+            <Text style={styles.title} numberOfLines={1}>
+              {season.seasonName}
+            </Text>
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          </View>
+          <View style={styles.daysLeftPill}>
+            <Text style={styles.daysLeftText}>{daysLeftLabel(season.daysRemaining)}</Text>
+          </View>
+        </View>
+
+        <View
+          style={styles.bar}
+          accessibilityRole="progressbar"
+          accessibilityLabel={`Day ${season.dayOfSeason} of ${season.totalDays} of ${season.seasonName}, ${daysLeftLabel(season.daysRemaining).toLowerCase()}`}
+        >
+          <View style={[styles.barElapsed, { flex: Math.max(elapsed, 0.02) }]} />
+          <View style={[styles.barRemaining, { flex: Math.max(1 - elapsed, 0.02) }]} />
+        </View>
+
+        <View style={styles.barLabels}>
+          <Text style={styles.barLabel}>
+            Day {season.dayOfSeason} of {season.totalDays}
+          </Text>
+          <Text style={styles.barLabel}>
+            Week {season.week} of {season.totalWeeks}
+          </Text>
+        </View>
       </View>
 
-      <View
-        style={styles.bar}
-        accessibilityRole="progressbar"
-        accessibilityLabel={`Week ${season.week} of ${season.totalWeeks} of ${season.seasonName}`}
-      >
-        <View style={[styles.barElapsed, { flex: Math.max(elapsed, 0.02) }]} />
-        <View style={[styles.barRemaining, { flex: Math.max(1 - elapsed, 0.02) }]} />
-      </View>
-
-      {note.length > 0 && <Text style={styles.note}>{note}</Text>}
+      {/* The header band closes with a hairline of its own, so the rule is only
+          earned once there is a note between the two. */}
+      {note.length > 0 && (
+        <>
+          <Text style={styles.note}>{note}</Text>
+          <View style={styles.sectionRule} />
+        </>
+      )}
 
       {recommendations.length > 0 ? (
         <>

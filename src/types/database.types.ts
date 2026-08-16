@@ -508,6 +508,10 @@ export interface SeasonProgress {
   totalWeeks: number;
   elapsedDays: number;
   totalDays: number;
+  /** 1-based day within the season — `elapsedDays` as the card states it. */
+  dayOfSeason: number;
+  /** Days left after today. 0 on the season's last day. */
+  daysRemaining: number;
   /** 0–1. Drives the two-segment progress bar. */
   elapsedFraction: number;
 }
@@ -530,6 +534,11 @@ export interface PlantNowRecommendation {
   action: PlantNowAction;
   /** "25–40 days", or null when the profile does not state one. */
   daysToHarvest: string | null;
+  /**
+   * When starting the crop today would come good: "harvest by Sep", or
+   * "harvest by Jan 2027" once it lands in another year. Null without a range.
+   */
+  harvestByLabel: string | null;
   spacingCm: number | null;
   /** This is the last month the window is open. */
   closing: boolean;
@@ -569,6 +578,10 @@ export interface TodayBrief {
   needsAction: NeedsActionItem[];
   season: SeasonProgress;
   seasonNote: string;
+  /** This month's almanac headline, e.g. "Mid-monsoon". Subtitles the season. */
+  seasonHighlight: string;
+  /** The almanac's icon for this month, shown in the season header's badge. */
+  seasonIconKey: VisualIconKey;
   seasonTip: string;
   /** Heads the tip so a risk reads as a risk rather than as closing fine print. */
   seasonTipTitle: string;

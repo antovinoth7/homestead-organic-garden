@@ -25,11 +25,31 @@ describe('getSeasonProgress — the Kanyakumari zone', () => {
     expect(getSeasonProgress(at(2026, 10, 1)).week).toBe(1);
   });
 
+  it('opens on day 1 with the whole span still to run', () => {
+    const progress = getSeasonProgress(at(2026, 6, 1));
+    expect(progress.dayOfSeason).toBe(1);
+    expect(progress.daysRemaining).toBe(121);
+  });
+
   it('reaches the last week on the season\'s final day', () => {
     const progress = getSeasonProgress(at(2026, 9, 30));
     expect(progress.seasonId).toBe('sw_monsoon');
     expect(progress.week).toBe(progress.totalWeeks);
     expect(progress.elapsedDays).toBe(progress.totalDays - 1);
+  });
+
+  it('leaves nothing remaining on the final day, without overrunning the span', () => {
+    const progress = getSeasonProgress(at(2026, 9, 30));
+    expect(progress.dayOfSeason).toBe(progress.totalDays);
+    expect(progress.daysRemaining).toBe(0);
+  });
+
+  it('counts the day and the days left as the same fact from both ends', () => {
+    // Mid-August, the case the Today card quotes.
+    const progress = getSeasonProgress(at(2026, 8, 16));
+    expect(progress.dayOfSeason).toBe(77);
+    expect(progress.daysRemaining).toBe(45);
+    expect(progress.dayOfSeason + progress.daysRemaining).toBe(progress.totalDays);
   });
 
   it('advances a week every seven days', () => {
@@ -95,5 +115,12 @@ describe('getSeasonProgress — a season wrapping the new year', () => {
     const progress = getSeasonProgress(at(2027, 2, 28), wrappingZone);
     expect(progress.week).toBe(progress.totalWeeks);
     expect(progress.elapsedDays).toBe(progress.totalDays - 1);
+    expect(progress.daysRemaining).toBe(0);
+  });
+
+  it('counts January against the run that started in November', () => {
+    const progress = getSeasonProgress(at(2027, 1, 1), wrappingZone);
+    expect(progress.dayOfSeason).toBe(62);
+    expect(progress.dayOfSeason + progress.daysRemaining).toBe(progress.totalDays);
   });
 });

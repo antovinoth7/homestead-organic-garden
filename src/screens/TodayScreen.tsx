@@ -258,6 +258,8 @@ export default function TodayScreen(): React.JSX.Element {
       <SeasonBlock
         season={brief.season}
         note={brief.seasonNote}
+        monthHighlight={brief.seasonHighlight}
+        monthIconKey={brief.seasonIconKey}
         tip={brief.seasonTip}
         tipTitle={brief.seasonTipTitle}
         district={brief.district}

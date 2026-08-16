@@ -50,6 +50,8 @@ export function getSeasonProgress(
       totalWeeks: 1,
       elapsedDays: 0,
       totalDays: 1,
+      dayOfSeason: 1,
+      daysRemaining: 0,
       elapsedFraction: 0,
     };
   }
@@ -78,6 +80,10 @@ export function getSeasonProgress(
     totalWeeks,
     elapsedDays,
     totalDays,
+    // `elapsedDays` is clamped to `totalDays - 1`, so the last day of a season
+    // reads "Day 122 of 122" with nothing remaining rather than overrunning.
+    dayOfSeason: elapsedDays + 1,
+    daysRemaining: totalDays - elapsedDays - 1,
     elapsedFraction: Math.min(1, Math.max(0, (elapsedDays + 1) / totalDays)),
   };
 }
