@@ -52,6 +52,36 @@ export const ALERT_ICON_KEYS: Record<FarmAlertType, VisualIconKey> = {
   health_stressed: 'alert.health_stressed',
 };
 
+/**
+ * What each agro-climatic season looks like, for the Today season header's badge.
+ *
+ * Keyed by `SeasonDefinition.id`, which zones declare themselves and the type system
+ * leaves as an open `string`, so this is a lookup with a fallback rather than an
+ * exhaustive `Record` over a union. Every shipped zone draws from the same four ids
+ * (`IMD_SEASONS` in `config/zones/tamilNaduZones`, mirrored in `highRainfall`).
+ *
+ * Both monsoons share the rain cloud on purpose: `weather.heavy_rain` resolves to the
+ * same Ionicon as `weather.rain`, so splitting them would draw a distinction nothing
+ * renders, and the season's name sits beside the badge already.
+ *
+ * A watering icon must never appear here. It is what the app uses for the watering
+ * task and the water-needed alert, and in a monsoon the water problem is excess.
+ */
+export const SEASON_ICON_KEYS: Record<string, VisualIconKey> = {
+  cool_dry: 'weather.clear',
+  summer: 'weather.hot',
+  sw_monsoon: 'weather.rain',
+  ne_monsoon: 'weather.rain',
+};
+
+/**
+ * Unreachable for every shipped zone — only a zone declaring its own season ids can
+ * miss, so the fallback is a defence, not a claim about that season's weather.
+ */
+export function getSeasonIconKey(seasonId: string): VisualIconKey {
+  return SEASON_ICON_KEYS[seasonId] ?? 'weather.clear';
+}
+
 export const WEATHER_ICON_KEYS: Record<WeatherConditionId, VisualIconKey> = {
   clear: 'weather.clear',
   partly_cloudy: 'weather.partly_cloudy',

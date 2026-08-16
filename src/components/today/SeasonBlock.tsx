@@ -28,6 +28,30 @@
  * "45 days left" are the same fact from both ends, and growers plan against the
  * second one.
  *
+ * The one caption under that title names the zone, because the zone is the only
+ * thing in the header the rest of the screen does not already say — and it is
+ * what selects the advisory printed two lines below. The calendar month and the
+ * almanac's headline for it both stood here once and were removed: the month is
+ * in the hero date, and the headline was, in every one of the twelve months,
+ * either the season name again or the advisory compressed to three words.
+ *
+ * The badge is keyed to the season for the same reason, having previously been
+ * keyed to the calendar month: it would turn over on the 1st under a title that
+ * had not changed, and mid-monsoon it drew the watering icon above a note that
+ * says to postpone sowing while water is standing.
+ *
+ * Next month's crops close the planting section as a labelled block rather than
+ * as a trailing sentence. They are still context and not work — no photos, no
+ * tap targets, one line of names — but set as bare tertiary type under two
+ * photo tiles they read as debris left over from the grid rather than as
+ * something the card meant to say. The card already owns a recipe for context
+ * that closes a section, the one perennial care uses: a rule, an uppercase
+ * label, and a line of body text. This is that recipe, and it names the month
+ * rather than saying "next month", because the calendar knows which month it
+ * counted and a grower buying seed is working to a name. The label is worded
+ * as the "Plant now in …" heading is, so the section reads as the same
+ * instruction moved to a later date rather than as a different kind of fact.
+ *
  * What the season is doing to the crops already planted is stated after the
  * suggestions rather than buried in them, because it qualifies them.
  *
@@ -41,6 +65,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { GardenIcon } from '@/components/GardenIcon';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getPlantImage } from '@/config/referenceAssets';
+import { formatSpacingFigure } from '@/utils/growSpecFormat';
 import {
   PerennialCareBrief,
   PlantNowRecommendation,
@@ -55,10 +80,8 @@ import { createStyles } from '@/styles/seasonBlockStyles';
 interface Props {
   season: SeasonProgress;
   note: string;
-  /** This month's almanac headline, e.g. "Mid-monsoon". Subtitles the season. */
-  monthHighlight: string;
-  /** The almanac's icon for this month, shown in the header badge. */
-  monthIconKey: VisualIconKey;
+  /** The season's own icon, shown in the header badge. See `getSeasonIconKey`. */
+  seasonIconKey: VisualIconKey;
   tip: string;
   tipTitle: string;
   district: string | null;
@@ -67,6 +90,8 @@ interface Props {
   recommendations: PlantNowRecommendation[];
   /** Crop names whose window opens next month — context, not tiles. */
   openingNext: string[];
+  /** The month those windows open in, e.g. "September". */
+  openingNextLabel: string;
   perennialCare: PerennialCareBrief | null;
   onPressCrop: (plantName: string, plantType: PlantType) => void;
   onPressDistrict: () => void;
@@ -111,11 +136,17 @@ interface CropTileProps {
  *
  * The time to yield leads the meta line because it is the figure that decides
  * whether the crop fits the bed and the season that is left; the spacing follows
- * it. Spacing prefers the catalog's centimetres over the calendar's sentence —
- * "15 cm" is what fits beside the days on a half-width card — and falls back to
- * the sentence only for the crops with no catalog profile. The whole line is
- * dropped rather than placeheld when both are silent, so a profile-less crop is
- * still a name and a photo, and still opens its entry.
+ * it, marked with an arrow rather than spelled "apart". The word cost six of the
+ * eighteen or so characters the card has room for, which is what used to push
+ * the line into an ellipsis; the mark says the same thing in one and keeps the
+ * figure from being read as a height. `formatSpacingFigure` owns both the mark
+ * and the choice of number.
+ *
+ * Where a crop's spacing is a sentence with two pitches in it, only the first —
+ * the distance between plants — reaches the card. The row pitch is still spoken
+ * below and still stated in full by the entry this tile opens. The whole line is
+ * dropped rather than placeheld when both figures are silent, so a profile-less
+ * crop is still a name and a photo, and still opens its entry.
  */
 const CropTile = React.memo(function CropTile({
   item,
@@ -127,7 +158,7 @@ const CropTile = React.memo(function CropTile({
     [onPress, item.label, item.plantType]
   );
 
-  const spacing = item.spacingCm !== null ? `${item.spacingCm} cm` : item.spacingLabel;
+  const spacing = formatSpacingFigure(item.spacingCm, item.spacingLabel);
   const meta = [item.daysToHarvest, spacing]
     .filter((part): part is string => part !== null)
     .join(' · ');
@@ -172,8 +203,7 @@ const CropTile = React.memo(function CropTile({
 export const SeasonBlock = React.memo(function SeasonBlock({
   season,
   note,
-  monthHighlight,
-  monthIconKey,
+  seasonIconKey,
   tip,
   tipTitle,
   district,
@@ -181,6 +211,7 @@ export const SeasonBlock = React.memo(function SeasonBlock({
   plantingState,
   recommendations,
   openingNext,
+  openingNextLabel,
   perennialCare,
   onPressCrop,
   onPressDistrict,
@@ -194,9 +225,14 @@ export const SeasonBlock = React.memo(function SeasonBlock({
     (recommendation) => recommendation.action === 'transplant'
   );
 
-  const subtitle = [monthHighlight, season.monthLabel, zoneLabel]
-    .filter((part): part is string => typeof part === 'string' && part.length > 0)
-    .join(' · ');
+  /** Withheld rather than blanked: an unset district leaves no caption to write. */
+  const subtitle = zoneLabel ?? '';
+
+  // Echoes the "Plant now in …" heading above it, so the two read as the same
+  // instruction at two dates rather than as two different kinds of fact. The
+  // fallback is unreachable in practice — no month label means no zone, and no
+  // zone means no crops to list — but it keeps the heading off "Plant in ".
+  const openingNextTitle = openingNextLabel ? `Plant in ${openingNextLabel}` : 'Plant next month';
 
   const renderGroup = (
     action: PlantNowRecommendation['action'],
@@ -221,15 +257,17 @@ export const SeasonBlock = React.memo(function SeasonBlock({
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <View style={styles.iconBadge}>
-            <GardenIcon name={monthIconKey} size={20} color={theme.primary} />
+            <GardenIcon name={seasonIconKey} size={20} color={theme.primary} />
           </View>
           <View style={styles.headerText}>
             <Text style={styles.title} numberOfLines={1}>
               {season.seasonName}
             </Text>
-            <Text style={styles.subtitle} numberOfLines={1}>
-              {subtitle}
-            </Text>
+            {subtitle.length > 0 && (
+              <Text style={styles.subtitle} numberOfLines={1}>
+                {subtitle}
+              </Text>
+            )}
           </View>
           <View style={styles.daysLeftPill}>
             <Text style={styles.daysLeftText}>{daysLeftLabel(season.daysRemaining)}</Text>
@@ -274,7 +312,14 @@ export const SeasonBlock = React.memo(function SeasonBlock({
           {renderGroup('transplant', transplanted)}
 
           {openingNext.length > 0 && (
-            <Text style={styles.openingNext}>Opens next month: {openingNext.join(' · ')}</Text>
+            <View
+              style={styles.openingNext}
+              accessible
+              accessibilityLabel={`${openingNextTitle}: ${openingNext.join(', ')}`}
+            >
+              <Text style={styles.openingNextTitle}>{openingNextTitle}</Text>
+              <Text style={styles.openingNextCrops}>{openingNext.join(' · ')}</Text>
+            </View>
           )}
         </>
       ) : (

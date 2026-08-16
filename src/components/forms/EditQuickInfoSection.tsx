@@ -65,8 +65,10 @@ export function EditQuickInfoSection({
   const height = formatRange(profile.heightCm, 'cm');
   if (height) stats.push({ icon: 'resize-outline', label: 'Height', value: height });
 
+  // Matches the read-only Growing Profile grid: horizontal for a distance, and
+  // never the bed icon.
   const spacing = formatNumber(profile.spacingCm, 'cm');
-  if (spacing) stats.push({ icon: 'grid-outline', label: 'Spacing', value: spacing });
+  if (spacing) stats.push({ icon: 'swap-horizontal-outline', label: 'Spacing', value: spacing });
 
   const depth = formatNumber(profile.plantingDepthCm, 'cm');
   if (depth) stats.push({ icon: 'arrow-down-outline', label: 'Planting Depth', value: depth });

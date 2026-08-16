@@ -169,6 +169,12 @@ export interface TamilNaduPlantingWindows {
   current: TamilNaduPlantingRule[];
   closing: TamilNaduPlantingRule[];
   openingNext: TamilNaduPlantingRule[];
+  /**
+   * The month `openingNext` opens in, 1-12. Always set, including when the
+   * review has lapsed and the list is empty, so callers can name the month
+   * without recomputing the wrap from December to January.
+   */
+  openingNextMonth: number;
   evidence: AgronomyEvidence[];
 }
 
@@ -227,12 +233,20 @@ export function getTamilNaduPlantingWindows(
   const evidence = evidenceIds
     .map((id) => TODAY_AGRONOMY_EVIDENCE[id])
     .filter((entry): entry is AgronomyEvidence => entry !== undefined);
-  if (zoneRules.some((rule) => rule.evidenceIds.some((id) => !isEvidenceCurrent(id, date)))) {
-    return { state: 'review_expired', current: [], closing: [], openingNext: [], evidence };
-  }
-
   const month = date.getMonth() + 1;
   const nextMonth = (month % 12) + 1;
+
+  if (zoneRules.some((rule) => rule.evidenceIds.some((id) => !isEvidenceCurrent(id, date)))) {
+    return {
+      state: 'review_expired',
+      current: [],
+      closing: [],
+      openingNext: [],
+      openingNextMonth: nextMonth,
+      evidence,
+    };
+  }
+
   const current = zoneRules.filter((rule) => rule.months.includes(month));
   const next = zoneRules.filter((rule) => rule.months.includes(nextMonth));
   const currentKeys = new Set(current.map(ruleKey));
@@ -243,6 +257,7 @@ export function getTamilNaduPlantingWindows(
     current,
     closing: current.filter((rule) => !nextKeys.has(ruleKey(rule))),
     openingNext: next.filter((rule) => !currentKeys.has(ruleKey(rule))),
+    openingNextMonth: nextMonth,
     evidence,
   };
 }

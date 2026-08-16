@@ -258,8 +258,7 @@ export default function TodayScreen(): React.JSX.Element {
       <SeasonBlock
         season={brief.season}
         note={brief.seasonNote}
-        monthHighlight={brief.seasonHighlight}
-        monthIconKey={brief.seasonIconKey}
+        seasonIconKey={brief.seasonIconKey}
         tip={brief.seasonTip}
         tipTitle={brief.seasonTipTitle}
         district={brief.district}
@@ -267,6 +266,7 @@ export default function TodayScreen(): React.JSX.Element {
         plantingState={brief.plantingState}
         recommendations={brief.plantNow}
         openingNext={brief.openingNext}
+        openingNextLabel={brief.openingNextLabel}
         perennialCare={brief.perennialCare}
         onPressCrop={goToCatalogEntry}
         onPressDistrict={goToMyFarm}

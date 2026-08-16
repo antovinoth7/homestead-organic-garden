@@ -214,11 +214,28 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
     },
 
+    // Next month is context, not work, so it takes the same shape as perennial
+    // care — rule, label, one line of body — rather than the fine-print tier it
+    // used to sit in, where a tertiary sentence under two photo tiles read as
+    // debris. The rule stays neutral: the green one marks perennial care alone.
     openingNext: {
-      fontSize: 12.5,
-      lineHeight: 18,
+      marginTop: 15,
+      paddingTop: 12,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.borderLight,
+    },
+    openingNextTitle: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 1.1,
+      textTransform: 'uppercase',
       color: theme.textTertiary,
-      marginTop: 12,
+    },
+    openingNextCrops: {
+      fontSize: 13.5,
+      lineHeight: 20,
+      color: theme.textSecondary,
+      marginTop: 5,
     },
 
     // ─── Empty state ─────────────────────────────────────────────────────────

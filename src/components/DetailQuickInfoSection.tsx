@@ -65,8 +65,11 @@ export function DetailQuickInfoSection({
   const height = formatRange(profile.heightCm, 'cm');
   if (height) stats.push({ icon: 'resize-outline', label: 'Height', value: height });
 
+  // Horizontal, to sit beside the depth figure's vertical arrow and to match the
+  // mark the Today tiles use. Not `grid-outline`: that is the app's bed icon
+  // everywhere else, and spacing is a distance, not a place.
   const spacing = formatNumber(profile.spacingCm, 'cm');
-  if (spacing) stats.push({ icon: 'grid-outline', label: 'Spacing', value: spacing });
+  if (spacing) stats.push({ icon: 'swap-horizontal-outline', label: 'Spacing', value: spacing });
 
   const depth = formatNumber(profile.plantingDepthCm, 'cm');
   if (depth) stats.push({ icon: 'arrow-down-outline', label: 'Planting Depth', value: depth });

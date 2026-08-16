@@ -62,6 +62,8 @@ describe('Tamil Nadu Today planting rules', () => {
       'Palak',
       'Turnip',
     ]);
+    // Named, not just counted: the card says "Plant in September".
+    expect(windows.openingNextMonth).toBe(9);
   });
 
   it('rolls December into January without falsely closing tomato or radish', () => {
@@ -77,6 +79,8 @@ describe('Tamil Nadu Today planting rules', () => {
     expect(windows.current).toEqual([]);
     expect(windows.closing).toEqual([]);
     expect(windows.openingNext).toEqual([]);
+    // The month survives the withholding — it is calendar arithmetic, not guidance.
+    expect(windows.openingNextMonth).toBe(9);
   });
 
   it('gives every rule traceable evidence, conditions, and review metadata', () => {

@@ -19,6 +19,7 @@ import {
   TodayBrief,
 } from '@/types/database.types';
 import { getMonthlyHighlight } from '@/config/almanac';
+import { getSeasonIconKey } from '@/config/iconRegistry';
 import { getTamilNaduPlantingWindows } from '@/config/tamilNaduPlantingCalendar';
 import { getTodaySeasonalAdvisory } from '@/config/todaySeasonalAdvisories';
 import {
@@ -41,6 +42,7 @@ import { getErrorMessage } from '@/utils/errorLogging';
 import { locationKey } from '@/utils/locationHelpers';
 import { buildNeedsActionItems } from '@/utils/needsActionItems';
 import { filterPotAndGround, getPlantHealthSummary } from '@/utils/plantHealth';
+import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { isPlantArchived } from '@/utils/plantHelpers';
 import { getPerennialCareBrief } from '@/utils/perennialCare';
 import { countBedLifecycles } from '@/utils/plotBedCounts';
@@ -351,9 +353,25 @@ export function useTodayBrief(): UseTodayBriefResult {
   // Bound to the loaded profiles so `sowNowChips` stays a pure util with no
   // service import. Falls through to the default catalog for crops the grower
   // has never customised, which is most of them.
+  //
+  // Spacing needs the second fallback. A `PlantProfile` holds the grower's care
+  // *overrides* — the type says as much — and the bundled care profiles are the
+  // base those fall back to, but `getProfileEntry` answers with the override
+  // alone: `DEFAULT_PLANT_PROFILES` is built from the catalog's names and
+  // varieties and carries no `spacingCm` at all. Without this the tile's
+  // centimetres never resolved for anyone, and every crop fell through to the
+  // calendar's sentence, which is too long for a half-width card.
+  //
+  // Only spacing is merged. `daysToHarvest` needs no help: the calendar rule
+  // always states `maturityDays`, and that already wins inside `toPlantNowChips`.
   const lookupProfile = useCallback(
-    (plantType: PlantType, name: string): PlantProfile | undefined =>
-      getProfileEntry(profiles, plantType, name),
+    (plantType: PlantType, name: string): PlantProfile | undefined => {
+      const stored = getProfileEntry(profiles, plantType, name);
+      if (stored?.spacingCm !== undefined) return stored;
+      const spacingCm = getPlantCareProfile(name, plantType)?.spacingCm;
+      if (spacingCm === undefined) return stored;
+      return { ...(stored ?? { plantType, name }), spacingCm };
+    },
     [profiles]
   );
 
@@ -369,9 +387,22 @@ export function useTodayBrief(): UseTodayBriefResult {
   }, [windows, lookupProfile]);
 
   // Names only — next month's crops are context for planning, not tiles to act
-  // on today, so they get one line and no artwork.
+  // on today, so they get a labelled line and no artwork.
   const openingNext = useMemo(
     () => (windows ? [...new Set(windows.openingNext.map((entry) => entry.plantName))] : []),
+    [windows]
+  );
+
+  // The month itself, so the card can name it rather than say "next month" —
+  // the calendar knows which month it counted, and a grower buying seed wants
+  // the name. A fixed year: only the month name is being formatted.
+  const openingNextLabel = useMemo(
+    () =>
+      windows
+        ? new Date(2000, windows.openingNextMonth - 1, 1).toLocaleDateString('en-GB', {
+            month: 'long',
+          })
+        : '',
     [windows]
   );
 
@@ -413,8 +444,8 @@ export function useTodayBrief(): UseTodayBriefResult {
       needsAction,
       season,
       seasonNote: month.note,
-      seasonHighlight: month.highlight,
-      seasonIconKey: month.iconKey,
+      // The advisory stays month-and-zone keyed; only the badge was wrongly monthly.
+      seasonIconKey: getSeasonIconKey(season.seasonId),
       seasonTip: seasonTip.message,
       seasonTipTitle: seasonTip.title,
       district,
@@ -422,6 +453,7 @@ export function useTodayBrief(): UseTodayBriefResult {
       plantingState,
       plantNow,
       openingNext,
+      openingNextLabel,
       perennialCare,
     }),
     [
@@ -430,14 +462,13 @@ export function useTodayBrief(): UseTodayBriefResult {
       plotBriefs,
       season,
       month.note,
-      month.highlight,
-      month.iconKey,
       seasonTip,
       district,
       activeZone,
       plantingState,
       plantNow,
       openingNext,
+      openingNextLabel,
       perennialCare,
     ]
   );

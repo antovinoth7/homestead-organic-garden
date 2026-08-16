@@ -9,11 +9,9 @@ describe('almanac', () => {
     }
   });
 
-  it('every entry has highlight, note and icon', () => {
+  it('every entry has a note', () => {
     for (const entry of ALMANAC) {
-      expect(entry.highlight.length).toBeGreaterThan(0);
       expect(entry.note.length).toBeGreaterThan(0);
-      expect(entry.iconKey.length).toBeGreaterThan(0);
     }
   });
 

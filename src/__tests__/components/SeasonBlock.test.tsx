@@ -126,9 +126,11 @@ interface Overrides {
   season?: SeasonProgress;
   recommendations?: PlantNowRecommendation[];
   district?: string | null;
+  zoneLabel?: string | null;
   tip?: string;
   tipTitle?: string;
   openingNext?: string[];
+  openingNextLabel?: string;
   perennialCare?: {
     count: number;
     message: string;
@@ -147,15 +149,15 @@ function render(overrides: Overrides = {}): RenderedTree {
       <SeasonBlock
         season={overrides.season ?? season}
         note="Use raised, well-drained beds for monsoon crops."
-        monthHighlight="Mid-monsoon"
-        monthIconKey="task.water"
+        seasonIconKey="weather.rain"
         tip={overrides.tip ?? ''}
         tipTitle={overrides.tipTitle ?? ''}
         district={overrides.district === undefined ? 'Kanyakumari' : overrides.district}
-        zoneLabel="High Rainfall Zone"
+        zoneLabel={overrides.zoneLabel === undefined ? 'High Rainfall Zone' : overrides.zoneLabel}
         plantingState={overrides.plantingState ?? 'available'}
         recommendations={overrides.recommendations ?? [crop(), snakeGourd, brinjal]}
         openingNext={overrides.openingNext ?? []}
+        openingNextLabel={overrides.openingNextLabel ?? 'September'}
         perennialCare={overrides.perennialCare ?? null}
         onPressCrop={overrides.onPressCrop ?? jest.fn()}
         onPressDistrict={overrides.onPressDistrict ?? jest.fn()}
@@ -191,12 +193,18 @@ beforeAll(() => {
 afterAll(() => consoleErrorSpy.mockRestore());
 
 describe('SeasonBlock header', () => {
-  it('states the season as the card subject, with the month beneath it', () => {
+  it('states the season as the card subject, captioned by the zone', () => {
     const rendered = render();
     expect(hostText(rendered, 'title')).toEqual(['SW Monsoon']);
-    expect(hostText(rendered, 'subtitle')).toEqual([
-      'Mid-monsoon · August · High Rainfall Zone',
-    ]);
+    expect(hostText(rendered, 'subtitle')).toEqual(['High Rainfall Zone']);
+  });
+
+  // Blanking the caption would leave its line height behind as a gap under the
+  // title, which reads as a rendering fault rather than as an unset district.
+  it('withholds the caption entirely when no zone is resolved', () => {
+    const rendered = render({ zoneLabel: null });
+    expect(hostText(rendered, 'title')).toEqual(['SW Monsoon']);
+    expect(hostText(rendered, 'subtitle')).toEqual([]);
   });
 
   it('counts the season in days as well as weeks', () => {
@@ -230,11 +238,11 @@ describe('SeasonBlock header', () => {
     );
   });
 
-  it('badges the header with the almanac icon for the month', () => {
+  it("badges the header with the season's own icon", () => {
     const rendered = render();
     const icons = rendered.root.findAll((node) => node.type === 'GardenIcon');
     expect(icons).toHaveLength(1);
-    expect((icons[0]?.props as unknown as { name: string }).name).toBe('task.water');
+    expect((icons[0]?.props as unknown as { name: string }).name).toBe('weather.rain');
   });
 });
 
@@ -260,9 +268,9 @@ describe('SeasonBlock crop tiles', () => {
   it('states the two figures that size a bed on one line, and nothing else', () => {
     const rendered = render();
     expect(hostText(rendered, 'tileMeta')).toEqual([
-      '25–40 days · 15 cm',
-      '90–110 days · 150 cm',
-      '60–80 days · 60 cm',
+      '25–40 days · ⇄15 cm',
+      '90–110 days · ⇄150 cm',
+      '60–80 days · ⇄60 cm',
     ]);
     // The card header already names the month and season, and the harvest
     // month is what the days say counted forward. Neither is on the card, on
@@ -294,16 +302,28 @@ describe('SeasonBlock crop tiles', () => {
     const rendered = render({
       recommendations: [crop({ daysToHarvest: null, harvestByLabel: null })],
     });
-    expect(hostText(rendered, 'tileMeta')).toEqual(['15 cm']);
+    expect(hostText(rendered, 'tileMeta')).toEqual(['⇄15 cm']);
   });
 
-  it('falls back to the calendar phrasing when the catalog states no spacing', () => {
+  it('compacts the calendar phrasing to its leading measurement', () => {
     const rendered = render({
       recommendations: [crop({ spacingCm: null, spacingLabel: '1.5–2 m apart with a trellis' })],
     });
-    expect(hostText(rendered, 'tileMeta')).toEqual([
-      '25–40 days · 1.5–2 m apart with a trellis',
-    ]);
+    expect(hostText(rendered, 'tileMeta')).toEqual(['25–40 days · ⇄1.5–2 m']);
+  });
+
+  it('shows one pitch where the calendar states two, and speaks both', () => {
+    const rendered = render({
+      recommendations: [
+        crop({ spacingCm: null, spacingLabel: '15 cm apart in rows 45 cm apart' }),
+      ],
+    });
+    // The card carries the distance between plants; the row pitch would not fit
+    // beside it, so it stays in the spoken label and in the catalog entry.
+    expect(hostText(rendered, 'tileMeta')).toEqual(['25–40 days · ⇄15 cm']);
+    expect(tiles(rendered)[0]?.props.accessibilityLabel).toContain(
+      '15 cm apart in rows 45 cm apart'
+    );
   });
 
 
@@ -349,12 +369,30 @@ describe('SeasonBlock at the calendar\'s widest', () => {
 });
 
 describe('SeasonBlock next month', () => {
-  it('states next month as a line, not as tiles', () => {
+  it('names the month it means, as a labelled line and not as tiles', () => {
     const rendered = render({ openingNext: ['Fenugreek', 'Palak'] });
-    expect(hostText(rendered, 'openingNext')).toEqual([
-      ['Opens next month: ', 'Fenugreek · Palak'],
-    ]);
+    // Worded as the "Plant now in …" heading is, one date later.
+    expect(hostText(rendered, 'openingNextTitle')).toEqual(['Plant in September']);
+    expect(hostText(rendered, 'openingNextCrops')).toEqual(['Fenugreek · Palak']);
+    // Still context: next month's crops never become cards of their own.
     expect(tiles(rendered)).toHaveLength(3);
+  });
+
+  it('falls back to "next month" when the calendar names no month', () => {
+    const rendered = render({ openingNext: ['Fenugreek'], openingNextLabel: '' });
+    expect(hostText(rendered, 'openingNextTitle')).toEqual(['Plant next month']);
+  });
+
+  it('stays inside the planting section rather than closing an empty month', () => {
+    // Nothing is plantable, so the card explains the gap and stops there — a
+    // next-month line under that copy would answer a question it did not raise.
+    const rendered = render({
+      plantingState: 'no_current_window',
+      recommendations: [],
+      openingNext: ['Fenugreek', 'Palak'],
+    });
+    expect(hostText(rendered, 'openingNextTitle')).toEqual([]);
+    expect(hostText(rendered, 'openingNextCrops')).toEqual([]);
   });
 });
 

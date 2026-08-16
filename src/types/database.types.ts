@@ -596,9 +596,7 @@ export interface TodayBrief {
   needsAction: NeedsActionItem[];
   season: SeasonProgress;
   seasonNote: string;
-  /** This month's almanac headline, e.g. "Mid-monsoon". Subtitles the season. */
-  seasonHighlight: string;
-  /** The almanac's icon for this month, shown in the season header's badge. */
+  /** The season's icon, shown in the season header's badge. See `getSeasonIconKey`. */
   seasonIconKey: VisualIconKey;
   seasonTip: string;
   /** Heads the tip so a risk reads as a risk rather than as closing fine print. */
@@ -609,6 +607,8 @@ export interface TodayBrief {
   plantNow: PlantNowRecommendation[];
   /** Crop names whose window opens next month — one line, no tiles. */
   openingNext: string[];
+  /** The month those windows open in, e.g. "September". Empty when no zone resolves. */
+  openingNextLabel: string;
   perennialCare: PerennialCareBrief | null;
 }
 
