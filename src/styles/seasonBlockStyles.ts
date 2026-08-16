@@ -14,10 +14,10 @@
  * Its day and week counts sit beneath it rather than inside it, because a 8pt
  * bar cannot hold type and a bar with a number in it is a gauge, not a rule.
  *
- * The crop tiles carry no chrome: a rounded photo with the name set directly
- * beneath it on the card's own ground. A border around each one would be the
- * third box in a stack that already has the card and the photo, and the photo
- * is a strong enough tap target without it.
+ * Each crop tile is a card of its own: photo flush to its top edge, then the
+ * name and one line of figures on the card's own ground. The edge is what makes
+ * the pair read as one crop — without it, two columns of photo-name-figures run
+ * together into a single column of loose text at the seam.
  *
  * They are a two-column wrap sized by `TILE_BASIS` rather than `flex: 1`, so a
  * lone tile in a group keeps the column width instead of stretching across the
@@ -169,46 +169,48 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       marginTop: 2,
     },
-
-    // Wider than the old bordered grid: without edges to separate them, the
-    // tiles need the air the borders used to imply.
     tileGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 12,
       marginTop: 11,
     },
-    // Just a column of the grid — the photo brings its own corners.
+    // `overflow: 'hidden'` is what lets the photo meet the card's top edge: the
+    // image rounds its own top corners, and this clips anything the radius
+    // leaves over.
     tile: {
       flexBasis: TILE_BASIS,
       flexGrow: 0,
+      backgroundColor: theme.card,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.borderLight,
+      borderRadius: 14,
+      overflow: 'hidden',
+      elevation: 1,
     },
+    // Tighter than a flat inset: with a square photo above it, the padding
+    // should not compete with the picture for the tile's height. The extra
+    // point at the foot keeps the meta line off the card's bottom radius.
     tileBody: {
       gap: 2,
-      paddingTop: 7,
+      paddingHorizontal: 10,
+      paddingTop: 9,
+      paddingBottom: 11,
     },
+    // One line: with only two lines of type under the photo, a name that
+    // wrapped on one card and not its neighbour would leave the row ragged.
     tileName: {
-      fontSize: 13.5,
+      fontSize: 13,
       lineHeight: 18,
       fontWeight: '600',
       color: theme.text,
     },
-    // The figure that decides whether the crop fits the bed and the season that
-    // is left, so it outranks the spacing it used to share a line with.
-    tileYield: {
-      fontSize: 12.5,
-      lineHeight: 17,
-      fontWeight: '600',
-      color: theme.text,
-    },
-    tileHarvest: {
+    // Days to harvest and spacing on one line. At the narrowest phone the body
+    // is about 101pt wide — `(320 − 62) × 47% − 20` — which "25–40 days · 15 cm"
+    // clears at this size.
+    tileMeta: {
       fontSize: 11.5,
       lineHeight: 16,
-      color: theme.textTertiary,
-    },
-    tileMeta: {
-      fontSize: 12,
-      lineHeight: 17,
       color: theme.textSecondary,
     },
 

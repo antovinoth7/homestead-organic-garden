@@ -10,12 +10,24 @@
  * profiles and passes `getProfileEntry` bound to them.
  */
 
-import { PlantNowRecommendation, PlantProfile, PlantType } from '@/types/database.types';
+import {
+  NumericRange,
+  PlantNowRecommendation,
+  PlantProfile,
+  PlantType,
+} from '@/types/database.types';
 
 export interface PlantNowCandidate {
   plantType: PlantType;
-  variety: string;
+  variety?: string;
+  plantName?: string;
   action: PlantNowRecommendation['action'];
+  maturityDays?: NumericRange;
+  spacingLabel?: string;
+  windowLabel?: string;
+  conditions?: string[];
+  evidenceIds?: string[];
+  reviewedOn?: string;
 }
 
 export interface PlantNowContext {
@@ -31,8 +43,7 @@ export interface PlantNowContext {
  * "25–40 days", or "40 days" when the profile states a single figure. Returns
  * null rather than a placeholder so the tile can drop the line entirely.
  */
-function formatDaysToHarvest(profile: PlantProfile | undefined): string | null {
-  const range = profile?.daysToHarvest;
+function formatDaysToHarvest(range: NumericRange | undefined): string | null {
   if (!range) return null;
   return range.min === range.max
     ? `${range.max} days`
@@ -50,8 +61,7 @@ function formatDaysToHarvest(profile: PlantProfile | undefined): string | null {
  * The year is stated only once it differs from today's, so the common case stays
  * three characters wide on a tile.
  */
-function formatHarvestBy(profile: PlantProfile | undefined, today: Date): string | null {
-  const range = profile?.daysToHarvest;
+function formatHarvestBy(range: NumericRange | undefined, today: Date): string | null {
   if (!range) return null;
 
   const landing = new Date(today.getFullYear(), today.getMonth(), today.getDate() + range.max);
@@ -70,17 +80,25 @@ export function toPlantNowChips(
   const { lookup, closingKeys, today = new Date() } = context;
 
   return suggestions.map((crop) => {
-    const key = `${crop.plantType}:${crop.variety}`;
-    const profile = lookup?.(crop.plantType, crop.variety);
+    const name = crop.plantName ?? crop.variety ?? '';
+    const key = `${crop.plantType}:${name}`;
+    const profile = lookup?.(crop.plantType, name);
+    const maturityDays = crop.maturityDays ?? profile?.daysToHarvest;
 
     return {
       key,
-      label: crop.variety,
+      label: name,
       plantType: crop.plantType,
       action: crop.action,
-      daysToHarvest: formatDaysToHarvest(profile),
-      harvestByLabel: formatHarvestBy(profile, today),
+      daysToHarvest: formatDaysToHarvest(maturityDays),
+      harvestByLabel: formatHarvestBy(maturityDays, today),
       spacingCm: profile?.spacingCm ?? null,
+      spacingLabel:
+        crop.spacingLabel ?? (profile?.spacingCm ? `${profile.spacingCm} cm apart` : null),
+      windowLabel: crop.windowLabel ?? 'Monthly home-garden window',
+      conditions: crop.conditions ?? [],
+      evidenceIds: crop.evidenceIds ?? [],
+      reviewedOn: crop.reviewedOn ?? '',
       closing: closingKeys?.has(key) ?? false,
     };
   });

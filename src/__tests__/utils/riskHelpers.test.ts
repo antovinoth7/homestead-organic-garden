@@ -72,22 +72,22 @@ describe('getSeasonRiskBars', () => {
   it('returns one bar per zone season in calendar order', () => {
     const bars = getSeasonRiskBars(SAMPLE, APRIL);
     expect(bars.map((b) => b.seasonId)).toEqual([
+      'cool_dry',
       'summer',
       'sw_monsoon',
       'ne_monsoon',
-      'cool_dry',
     ]);
     expect(bars.map((b) => b.monthLabel)).toEqual([
+      'JAN–FEB',
       'MAR–MAY',
       'JUN–SEP',
       'OCT–DEC',
-      'JAN–FEB',
     ]);
   });
 
   it('reports each season length so bars can be sized proportionally', () => {
     const bars = getSeasonRiskBars(SAMPLE, APRIL);
-    expect(bars.map((b) => b.monthCount)).toEqual([3, 4, 3, 2]);
+    expect(bars.map((b) => b.monthCount)).toEqual([2, 3, 4, 3]);
     expect(bars.reduce((sum, b) => sum + b.monthCount, 0)).toBe(12);
   });
 
@@ -99,7 +99,7 @@ describe('getSeasonRiskBars', () => {
 
   it('leaves the level undefined for seasons with no recorded risk', () => {
     const bars = getSeasonRiskBars(SAMPLE, APRIL);
-    expect(bars.map((b) => b.level)).toEqual(['high', 'low', undefined, 'moderate']);
+    expect(bars.map((b) => b.level)).toEqual(['moderate', 'high', 'low', undefined]);
   });
 
   it('flags exactly one bar as the current season', () => {
@@ -130,7 +130,7 @@ describe('getPeakRisk', () => {
 
 describe('season id lookups', () => {
   it('resolves labels and names from the zone definition', () => {
-    expect(getSeasonLabelById('summer')).toBe('Summer (Mar–May)');
+    expect(getSeasonLabelById('summer')).toBe('Pre-monsoon (Mar–May)');
     expect(getSeasonNameById('sw_monsoon')).toBe('SW Monsoon');
   });
 

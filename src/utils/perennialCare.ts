@@ -1,4 +1,6 @@
 import type { PerennialCareBrief, Plant, PlantLifecycle } from '@/types/database.types';
+import type { AgroClimaticZoneId } from '@/config/zones';
+import { TODAY_AGRONOMY_EVIDENCE } from '@/config/tamilNaduPlantingCalendar';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { deriveInstanceLifecycle, isPlantArchived } from '@/utils/plantHelpers';
 
@@ -18,17 +20,25 @@ export function isActivePerennial(plant: Plant): boolean {
 
 export function getPerennialCareBrief(
   plants: Plant[],
-  seasonId: string
+  seasonId: string,
+  zoneId?: AgroClimaticZoneId | null,
+  date: Date = new Date()
 ): PerennialCareBrief | null {
   const count = plants.filter(isActivePerennial).length;
-  if (count === 0) return null;
+  if (count === 0 || !zoneId) return null;
 
+  const evidenceIds = ['tnau_kitchen_garden', 'tnau_zone_crop_planning'];
+  const evidenceIsCurrent = evidenceIds.every((id) => {
+    const evidence = TODAY_AGRONOMY_EVIDENCE[id];
+    return evidence && date <= new Date(`${evidence.validUntil}T23:59:59`);
+  });
+  if (!evidenceIsCurrent) return null;
+
+  const wetZone = ['north_eastern', 'cauvery_delta', 'high_rainfall'].includes(zoneId);
   const message =
-    seasonId === 'summer'
-      ? 'Refresh mulch and water only after checking soil moisture.'
-      : seasonId === 'cool_dry'
-        ? 'Inspect mulch and plan maintenance before the next rains.'
-        : 'Check drainage around root zones and remove damaged growth.';
+    (seasonId === 'sw_monsoon' || seasonId === 'ne_monsoon') && wetZone
+      ? 'Check drainage around perennial root zones after persistent rain; remove only clearly damaged growth.'
+      : 'Check root-zone moisture before watering and keep the soil covered with organic mulch.';
 
-  return { count, message };
+  return { count, message, evidenceIds, reviewedOn: '2026-08-16' };
 }

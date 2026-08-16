@@ -1426,8 +1426,12 @@ export const calculateTaskPriority = (
  * Get seasonal care reminder for plant
  * (Simplified version - seasonal care profiles removed)
  */
-export const getSeasonalCareReminder = (plant: Plant): string | null => {
-  const season = getCurrentSeason();
+export const getSeasonalCareReminder = (
+  plant: Plant,
+  zone?: import('@/config/zones').AgroClimaticZone
+): string | null => {
+  if (!zone) return null;
+  const season = getCurrentSeason(undefined, zone);
 
   // Provide season-specific advice for Kanyakumari conditions
   if ((season === 'sw_monsoon' || season === 'ne_monsoon') && plant.space_type === 'pot') {

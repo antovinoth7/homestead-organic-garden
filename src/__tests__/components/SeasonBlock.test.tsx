@@ -45,6 +45,7 @@ interface RenderedNode {
     children?: unknown;
     style?: unknown;
     accessibilityLabel?: string;
+    accessibilityRole?: string;
   };
   findAll: (predicate: (node: RenderedNode) => boolean) => RenderedNode[];
 }
@@ -86,6 +87,11 @@ function crop(overrides: Partial<PlantNowRecommendation> = {}): PlantNowRecommen
     daysToHarvest: '25–40 days',
     harvestByLabel: 'harvest by Sep',
     spacingCm: 15,
+    spacingLabel: '15 cm apart',
+    windowLabel: 'July–August window',
+    conditions: ['Use a well-drained home-garden bed.'],
+    evidenceIds: ['tnau_home_garden'],
+    reviewedOn: '2026-08-16',
     closing: false,
     ...overrides,
   };
@@ -97,6 +103,7 @@ const snakeGourd = crop({
   daysToHarvest: '90–110 days',
   harvestByLabel: 'harvest by Dec',
   spacingCm: 150,
+  spacingLabel: '150 cm apart',
   closing: true,
 });
 
@@ -107,6 +114,7 @@ const brinjal = crop({
   daysToHarvest: '60–80 days',
   harvestByLabel: 'harvest by Nov',
   spacingCm: 60,
+  spacingLabel: '60 cm apart',
 });
 
 /** A full month's sow list, matching the widest the district calendar goes. */
@@ -121,9 +129,15 @@ interface Overrides {
   tip?: string;
   tipTitle?: string;
   openingNext?: string[];
-  perennialCare?: { count: number; message: string } | null;
+  perennialCare?: {
+    count: number;
+    message: string;
+    evidenceIds: string[];
+    reviewedOn: string;
+  } | null;
   onPressCrop?: jest.Mock;
   onPressDistrict?: jest.Mock;
+  plantingState?: 'available' | 'no_current_window' | 'missing_district' | 'unsupported_district' | 'review_expired';
 }
 
 function render(overrides: Overrides = {}): RenderedTree {
@@ -138,6 +152,8 @@ function render(overrides: Overrides = {}): RenderedTree {
         tip={overrides.tip ?? ''}
         tipTitle={overrides.tipTitle ?? ''}
         district={overrides.district === undefined ? 'Kanyakumari' : overrides.district}
+        zoneLabel="High Rainfall Zone"
+        plantingState={overrides.plantingState ?? 'available'}
         recommendations={overrides.recommendations ?? [crop(), snakeGourd, brinjal]}
         openingNext={overrides.openingNext ?? []}
         perennialCare={overrides.perennialCare ?? null}
@@ -178,7 +194,9 @@ describe('SeasonBlock header', () => {
   it('states the season as the card subject, with the month beneath it', () => {
     const rendered = render();
     expect(hostText(rendered, 'title')).toEqual(['SW Monsoon']);
-    expect(hostText(rendered, 'subtitle')).toEqual(['Mid-monsoon · August']);
+    expect(hostText(rendered, 'subtitle')).toEqual([
+      'Mid-monsoon · August · High Rainfall Zone',
+    ]);
   });
 
   it('counts the season in days as well as weeks', () => {
@@ -239,44 +257,55 @@ describe('SeasonBlock crop tiles', () => {
     expect(onPressCrop).toHaveBeenCalledWith('Snake Gourd', 'vegetable');
   });
 
-  it('leads the figures with the time to yield and the month it lands in', () => {
+  it('states the two figures that size a bed on one line, and nothing else', () => {
     const rendered = render();
-    expect(hostText(rendered, 'tileYield')).toEqual([
-      'Yield in 25–40 days',
-      'Yield in 90–110 days',
-      'Yield in 60–80 days',
-    ]);
-    expect(hostText(rendered, 'tileHarvest')).toEqual([
-      'harvest by Sep',
-      'harvest by Dec',
-      'harvest by Nov',
-    ]);
-    // Spacing has the meta line to itself now that the yield leads.
     expect(hostText(rendered, 'tileMeta')).toEqual([
-      '15 cm apart',
-      '150 cm apart',
-      '60 cm apart',
+      '25–40 days · 15 cm',
+      '90–110 days · 150 cm',
+      '60–80 days · 60 cm',
     ]);
+    // The card header already names the month and season, and the harvest
+    // month is what the days say counted forward. Neither is on the card, on
+    // the tile or above the group.
+    expect(hostText(rendered, 'tileHarvest')).toEqual([]);
+    expect(hostText(rendered, 'tileWindow')).toEqual([]);
+    expect(hostText(rendered, 'tileCondition')).toEqual([]);
+    expect(hostText(rendered, 'plantWindow')).toEqual([]);
   });
 
-  it('drops each line rather than printing a placeholder', () => {
+  it('drops the figures line rather than printing a placeholder', () => {
     const rendered = render({
-      recommendations: [crop({ daysToHarvest: null, harvestByLabel: null, spacingCm: null })],
+      recommendations: [
+        crop({
+          daysToHarvest: null,
+          harvestByLabel: null,
+          spacingCm: null,
+          spacingLabel: null,
+        }),
+      ],
     });
-    expect(hostText(rendered, 'tileYield')).toEqual([]);
-    expect(hostText(rendered, 'tileHarvest')).toEqual([]);
     expect(hostText(rendered, 'tileMeta')).toEqual([]);
-    // The tile still renders and is still pressable.
+    // The tile is still a name and a photo, and is still pressable.
     expect(tiles(rendered)).toHaveLength(1);
+    expect(hostText(rendered, 'tileName')).toEqual(['Amaranthus']);
   });
 
   it('keeps whichever figures the catalog does state', () => {
     const rendered = render({
       recommendations: [crop({ daysToHarvest: null, harvestByLabel: null })],
     });
-    expect(hostText(rendered, 'tileYield')).toEqual([]);
-    expect(hostText(rendered, 'tileMeta')).toEqual(['15 cm apart']);
+    expect(hostText(rendered, 'tileMeta')).toEqual(['15 cm']);
   });
+
+  it('falls back to the calendar phrasing when the catalog states no spacing', () => {
+    const rendered = render({
+      recommendations: [crop({ spacingCm: null, spacingLabel: '1.5–2 m apart with a trellis' })],
+    });
+    expect(hostText(rendered, 'tileMeta')).toEqual([
+      '25–40 days · 1.5–2 m apart with a trellis',
+    ]);
+  });
+
 
   it('leads every tile with the crop photo at grid size', () => {
     const rendered = render();
@@ -304,7 +333,7 @@ describe('SeasonBlock crop tiles', () => {
     const rendered = render({ recommendations: [snakeGourd] });
     // The deadline survives in speech even though nothing on screen shows it.
     expect(tiles(rendered)[0]?.props.accessibilityLabel).toBe(
-      'Snake Gourd, last month to start, yield in 90–110 days, harvest by Dec, 150 cm apart. Opens the catalog entry.'
+      'Snake Gourd, last month to start, yield in 90–110 days, harvest by Dec, 150 cm apart, July–August window, Use a well-drained home-garden bed. Opens the catalog entry.'
     );
   });
 });
@@ -340,18 +369,27 @@ describe('SeasonBlock bed space', () => {
 
 describe('SeasonBlock without a planting calendar', () => {
   it('explains the gap instead of dropping the section silently', () => {
-    const rendered = render({ recommendations: [], district: 'Coimbatore' });
+    const rendered = render({
+      recommendations: [],
+      district: 'Coimbatore',
+      plantingState: 'no_current_window',
+    });
     expect(hostText(rendered, 'emptyText')).toEqual([
-      'Planting suggestions are only set up for Kanyakumari, and this farm is in Coimbatore.',
+      'No reviewed home-garden crop window is open in Coimbatore this month.',
     ]);
     expect(tiles(rendered)).toHaveLength(0);
   });
 
   it('asks for a district when none is set, and routes there', () => {
     const onPressDistrict = jest.fn();
-    const rendered = render({ recommendations: [], district: null, onPressDistrict });
+    const rendered = render({
+      recommendations: [],
+      district: null,
+      plantingState: 'missing_district',
+      onPressDistrict,
+    });
     expect(hostText(rendered, 'emptyText')).toEqual([
-      'Planting suggestions need to know which district this farm is in.',
+      'Planting suggestions need to know which Tamil Nadu district this farm is in.',
     ]);
     const link = rendered.root.findAll(
       (node) =>
@@ -359,6 +397,41 @@ describe('SeasonBlock without a planting calendar', () => {
     );
     TestRenderer.act(() => link[0]?.props.onPress?.());
     expect(onPressDistrict).toHaveBeenCalled();
+  });
+
+  it('explains when the source review has expired', () => {
+    const rendered = render({
+      recommendations: [],
+      plantingState: 'review_expired',
+    });
+    expect(hostText(rendered, 'emptyText')).toEqual([
+      'Planting guidance is hidden until its TNAU source review is renewed.',
+    ]);
+  });
+});
+
+describe('SeasonBlock evidence', () => {
+  // The citations live in `TODAY_AGRONOMY_EVIDENCE` and in
+  // `docs/tamil-nadu-reference-audit.md`, and the catalog entry each tile opens
+  // states them. The daily card prints none of it — four lines of fine print
+  // under the crops was the same fact a tap away from where it belongs.
+  it('prints no source attribution on the card', () => {
+    const rendered = render();
+    expect(hostText(rendered, 'sourceMeta')).toEqual([]);
+    expect(hostText(rendered, 'sourceLink')).toEqual([]);
+    expect(rendered.root.findAll((node) => node.props.accessibilityRole === 'link')).toEqual([]);
+  });
+
+  // The review dates still govern the card even though they are not printed.
+  it('still withholds guidance when the source review has lapsed', () => {
+    const rendered = render({
+      recommendations: [],
+      plantingState: 'review_expired',
+    });
+    expect(tiles(rendered)).toHaveLength(0);
+    expect(hostText(rendered, 'emptyText')).toEqual([
+      'Planting guidance is hidden until its TNAU source review is renewed.',
+    ]);
   });
 });
 
@@ -389,7 +462,12 @@ describe('SeasonBlock seasonal risk', () => {
 describe('SeasonBlock perennial care', () => {
   it('heads the reminder without counting the plants behind it', () => {
     const rendered = render({
-      perennialCare: { count: 3, message: 'Mulch the banana circle before the rain sets in.' },
+      perennialCare: {
+        count: 3,
+        message: 'Mulch the banana circle before the rain sets in.',
+        evidenceIds: ['tnau_kitchen_garden'],
+        reviewedOn: '2026-08-16',
+      },
     });
     expect(hostText(rendered, 'perennialTitle')).toEqual(['Perennial care']);
     expect(hostText(rendered, 'perennialText')).toEqual([

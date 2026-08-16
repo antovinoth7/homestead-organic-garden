@@ -49,6 +49,9 @@ describe('getSeasonProgress — the Kanyakumari zone', () => {
     const progress = getSeasonProgress(at(2026, 8, 16));
     expect(progress.dayOfSeason).toBe(77);
     expect(progress.daysRemaining).toBe(45);
+    expect(progress.week).toBe(11);
+    expect(progress.totalWeeks).toBe(18);
+    expect(progress.seasonName).toBe('SW Monsoon');
     expect(progress.dayOfSeason + progress.daysRemaining).toBe(progress.totalDays);
   });
 

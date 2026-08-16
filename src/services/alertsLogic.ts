@@ -28,7 +28,6 @@ import type { VisualIconKey } from '@/types/visual.types';
 // taskSchedulingLogic → taskConstants → @expo/vector-icons.
 import type { PlantLastCareField } from '@/services/taskSchedulingLogic';
 import { isPlantArchived } from '@/utils/plantHelpers';
-import { getSeasonalPestAlerts } from '@/utils/seasonHelpers';
 import { getGreenManureForMonth } from '@/config/beds';
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -279,27 +278,6 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
         severity: 'warning',
         iconKey: 'alert.harvest_due',
         daysOverdue: toHarvest,
-        created_at: nowIso,
-      });
-    }
-  }
-
-  // Season-aware pest alerts — deduped per plant type so the dashboard isn't noisy.
-  const seenPlantTypes = new Set<string>();
-  for (const plant of activePlants) {
-    if (seenPlantTypes.has(plant.plant_type)) continue;
-    seenPlantTypes.add(plant.plant_type);
-    const pestAlerts = getSeasonalPestAlerts(plant.plant_type);
-    for (const pest of pestAlerts) {
-      alerts.push({
-        id: `pest_${plant.plant_type}_${pest.issue}`,
-        type: 'pest_spotted',
-        plantId: plant.id,
-        title: pest.issue,
-        message: pest.tip,
-        severity: 'info',
-        iconKey: 'alert.pest_spotted',
-        daysOverdue: 0,
         created_at: nowIso,
       });
     }

@@ -19,11 +19,16 @@ import {
   TodayBrief,
 } from '@/types/database.types';
 import { getMonthlyHighlight } from '@/config/almanac';
-import { getKanyakumariPlantingWindows } from '@/config/kanyakumariPlantingCalendar';
+import { getTamilNaduPlantingWindows } from '@/config/tamilNaduPlantingCalendar';
+import { getTodaySeasonalAdvisory } from '@/config/todaySeasonalAdvisories';
+import {
+  AgroClimaticZoneId,
+  resolveActiveZone,
+  TAMIL_NADU_METEOROLOGICAL_ZONE,
+} from '@/config/zones';
 import { getFarmAlerts, isActionable } from '@/services/alerts';
 import { getCrossBedStatus, getHarvestGapWarnings } from '@/services/beds';
 import { createEmptyProfiles, getProfileEntry } from '@/services/plantProfiles';
-import { getSeasonalCareReminder } from '@/services/tasks';
 import {
   getStoredTodayBriefSources,
   getTodayBriefSources,
@@ -143,6 +148,10 @@ export function useTodayBrief(): UseTodayBriefResult {
   const { tasks, logs, allTemplates, plants, beds, locationConfig, farmConfig, profiles } =
     sources;
   const district = farmConfig.district ?? null;
+  const activeZone = useMemo(
+    () => resolveActiveZone(farmConfig),
+    [farmConfig]
+  );
 
   const plantsByBedId = useMemo(() => {
     const map: Record<string, typeof plants> = {};
@@ -322,16 +331,21 @@ export function useTodayBrief(): UseTodayBriefResult {
   ]);
 
   const totals = useMemo(() => summarizeTodayTasks(tasks, logs), [tasks, logs]);
-  const season = useMemo(() => getSeasonProgress(), []);
-  const month = useMemo(() => getMonthlyHighlight(), []);
-
-  // Only the district we hold a reviewed calendar for. Everywhere else the card
-  // says so rather than rendering an unexplained gap.
-  const hasPlantingCalendar = district?.trim().toLowerCase() === 'kanyakumari';
+  const season = useMemo(
+    () => getSeasonProgress(new Date(), activeZone ?? TAMIL_NADU_METEOROLOGICAL_ZONE),
+    [activeZone]
+  );
+  const month = useMemo(
+    () => getMonthlyHighlight(new Date(), activeZone, season.seasonId),
+    [activeZone, season.seasonId]
+  );
 
   const windows = useMemo(
-    () => (hasPlantingCalendar ? getKanyakumariPlantingWindows() : null),
-    [hasPlantingCalendar]
+    () =>
+      activeZone
+        ? getTamilNaduPlantingWindows(activeZone.id as AgroClimaticZoneId)
+        : null,
+    [activeZone]
   );
 
   // Bound to the loaded profiles so `sowNowChips` stays a pure util with no
@@ -346,7 +360,7 @@ export function useTodayBrief(): UseTodayBriefResult {
   const plantNow = useMemo<PlantNowRecommendation[]>(() => {
     if (!windows) return [];
     const closingKeys = new Set(
-      windows.closing.map((entry) => `${entry.plantType}:${entry.variety}`)
+      windows.closing.map((entry) => `${entry.plantType}:${entry.plantName}`)
     );
     return toPlantNowChips(windows.current, {
       lookup: lookupProfile,
@@ -357,34 +371,38 @@ export function useTodayBrief(): UseTodayBriefResult {
   // Names only — next month's crops are context for planning, not tiles to act
   // on today, so they get one line and no artwork.
   const openingNext = useMemo(
-    () => (windows ? [...new Set(windows.openingNext.map((entry) => entry.variety))] : []),
+    () => (windows ? [...new Set(windows.openingNext.map((entry) => entry.plantName))] : []),
     [windows]
   );
 
   const perennialCare = useMemo(
-    () => getPerennialCareBrief(plants, season.seasonId),
-    [plants, season.seasonId]
+    () =>
+      getPerennialCareBrief(
+        plants,
+        season.seasonId,
+        activeZone?.id as AgroClimaticZoneId | undefined
+      ),
+    [plants, season.seasonId, activeZone]
   );
 
-  // One closing line: prefer an informational alert (e.g. a seasonal pest note),
-  // else a season-specific care reminder from the first plant that has one.
-  //
-  // `bed_resting_end` (the green-manure suggestion) is deliberately excluded and
-  // has no fallback here — it is not wanted on this screen. `getFarmAlerts`
-  // still emits it; nothing renders it, which is the intended state.
-  //
-  // The title travels with the message so the card can head it. An alert names
-  // the thing it is about ("Anthracnose risk"); the plant-reminder fallback has
-  // no such name, so it gets a generic one.
+  // Seasonal possibilities are a separate, non-diagnostic stream. They only
+  // render after zone, season, and an active host crop all match a reviewed rule.
   const seasonTip = useMemo<{ title: string; message: string }>(() => {
-    const info = farmAlerts.find((a) => a.severity === 'info' && a.type !== 'bed_resting_end');
-    if (info) return { title: info.title, message: info.message };
-    for (const plant of plants) {
-      const tip = getSeasonalCareReminder(plant);
-      if (tip) return { title: 'Seasonal care', message: tip };
-    }
+    if (!activeZone) return { title: '', message: '' };
+    const advisory = getTodaySeasonalAdvisory(
+      plants,
+      activeZone.id as AgroClimaticZoneId,
+      season.seasonId
+    );
+    if (advisory) return { title: advisory.title, message: advisory.message };
     return { title: '', message: '' };
-  }, [farmAlerts, plants]);
+  }, [activeZone, plants, season.seasonId]);
+
+  const plantingState = !district
+    ? 'missing_district'
+    : !activeZone
+      ? 'unsupported_district'
+      : (windows?.state ?? 'no_current_window');
 
   const brief = useMemo<TodayBrief>(
     () => ({
@@ -400,6 +418,8 @@ export function useTodayBrief(): UseTodayBriefResult {
       seasonTip: seasonTip.message,
       seasonTipTitle: seasonTip.title,
       district,
+      zoneLabel: activeZone?.name ?? null,
+      plantingState,
       plantNow,
       openingNext,
       perennialCare,
@@ -414,6 +434,8 @@ export function useTodayBrief(): UseTodayBriefResult {
       month.iconKey,
       seasonTip,
       district,
+      activeZone,
+      plantingState,
       plantNow,
       openingNext,
       perennialCare,

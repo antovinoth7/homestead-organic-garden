@@ -115,3 +115,46 @@ operationalising the guide:
 
 Because recommendations and registrations change, source title, URL, access date, crop,
 formulation, dose, and jurisdiction should be stored with every future treatment-level update.
+
+## Today seasonal guidance audit — 16 August 2026
+
+This audit is separate from the treatment reference above. It covers only the seasonal footer
+assembled by `TodayScreen` and the catalog profiles linked from its crop tiles.
+
+- All 38 saved Tamil Nadu districts resolve to one of the eight TNAU operational advisory zones.
+  An unresolved district receives setup guidance; it never inherits Kanyakumari.
+- The header uses IMD meteorological seasons. For 16 August 2026 it reports SW Monsoon, day 77
+  of 122, week 11 of 18, with 45 days remaining.
+- The planting registry uses only home-garden start windows stated in the reviewed TNAU material.
+  August crops are Amaranthus (direct sow), Brinjal (transplant), Chilli (transplant), Cluster
+  Beans (direct sow), and Radish (direct sow). Crop windows and pattam labels remain distinct
+  from the meteorological season.
+- Each rule stores its geographic scope, establishment action, conditions, evidence IDs, review
+  date, and action-specific maturity. Rules are withheld after the evidence review expires.
+- Linked Today crop profiles carry source scope and review information. User overrides are
+  labelled user-supplied, and bundled images are labelled illustrative rather than diagnostic.
+- Seasonal risk is non-diagnostic and requires a zone/season/active-host match. It is not an
+  observed-pest alert and contains no treatment rate.
+
+### Reviewed inputs
+
+The table below mirrors `TODAY_AGRONOMY_EVIDENCE` in `src/config/tamilNaduPlantingCalendar.ts`,
+which remains the source of truth: `validUntil` is what withholds expired guidance at runtime, so
+the registry cannot be replaced by this document. The Today season card does not print these
+citations — they are recorded here and shown in the app on the catalog plant detail screen, which
+every Today crop tile opens. `src/__tests__/policy/agronomyEvidenceDocs.test.ts` fails if the two
+drift apart.
+
+All four are published by Tamil Nadu Agricultural University, accessed and reviewed on
+2026-08-16, and valid until 2027-08-16.
+
+| `id` | Title | URL | Published | Scope |
+| --- | --- | --- | --- | --- |
+| `tnau_zone_crop_planning` | Tamil Nadu agrometeorological advisory zone bulletin | <https://agritech.tnau.ac.in/agrometeorologicaladvisory/pdf/State%20comp%20AAS%20Bltn%20dtd.%2011.02.25.pdf> | 2025-02-11 | Tamil Nadu agrometeorological advisory zones |
+| `tnau_home_garden` | Home and roof garden crop selection and raising | <https://agritech.tnau.ac.in/horticulture/horti_Landscaping_types%20of%20garden.html> | undated | Tamil Nadu home and roof gardens |
+| `tnau_kitchen_garden` | Kitchen gardening | <https://agritech.tnau.ac.in/horticulture/horti_Landscaping_kitchengarden.html> | undated | Tamil Nadu kitchen gardens |
+| `tnau_horticulture_guide` | Crop Production Guide — Horticulture | <https://www.agritech.tnau.ac.in/pdf/HORTICULTURE.pdf> | undated | Tamil Nadu horticultural crops |
+
+The code records this as `source_reviewed`, not as an agronomist's approval. A Tamil Nadu
+agronomist or TNAU/KVK-equivalent reviewer must still sign off before the content is represented
+as expert-approved or guaranteed for production use.

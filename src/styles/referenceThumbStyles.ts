@@ -43,19 +43,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       backgroundColor: theme.backgroundSecondary,
     },
-    // Rounds itself: the grid tile carries no chrome of its own, so the photo
-    // owns its corners. Sized by ratio rather than a fixed height, so it grows
-    // with the column instead of being pinned to one device width.
+    // Top corners only: the photo sits flush against the top edge of its tile
+    // card, which owns the bottom two. Sized by ratio rather than a fixed
+    // height, so it grows with the column instead of being pinned to one device
+    // width.
+    //
+    // Square: the photo leads the tile rather than capping it. The bundled
+    // sources are 400 x 300, so this renders their centre 300 x 300 and crops
+    // the sides — acceptable for centred crop subjects, and the reason not to
+    // push the ratio past 1.
     tileImage: {
       width: '100%',
-      aspectRatio: 4 / 3,
-      borderRadius: 14,
+      aspectRatio: 1,
+      borderTopLeftRadius: 14,
+      borderTopRightRadius: 14,
       backgroundColor: theme.backgroundTertiary,
     },
     tileFallback: {
       width: '100%',
-      aspectRatio: 4 / 3,
-      borderRadius: 14,
+      aspectRatio: 1,
+      borderTopLeftRadius: 14,
+      borderTopRightRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.backgroundTertiary,

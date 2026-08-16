@@ -21,13 +21,22 @@ function dueDaysAgo(days: number): string {
   return d.toISOString();
 }
 
-// Pest alerts depend on the live season config; ignore them for deterministic
-// assertions about plant-condition / bed alerts.
+// Retained for fixtures that construct a pest alert directly. Today no longer
+// turns a seasonal possibility into an observed-pest FarmAlert.
 function withoutPest(alerts: FarmAlert[]): FarmAlert[] {
   return alerts.filter((a) => a.type !== 'pest_spotted');
 }
 
 describe('getFarmAlerts', () => {
+  it('never reports a seasonal possibility as an observed pest', () => {
+    const alerts = getFarmAlerts({
+      plants: [makePlant({ id: 'healthy', plant_type: 'vegetable', health_status: 'healthy' })],
+      now: new Date('2026-08-16T12:00:00.000Z').getTime(),
+    });
+
+    expect(alerts.some((alert) => alert.type === 'pest_spotted')).toBe(false);
+  });
+
   it('emits a critical alert for sick plants', () => {
     const alerts = withoutPest(
       getFarmAlerts({

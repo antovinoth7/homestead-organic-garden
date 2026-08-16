@@ -20,16 +20,12 @@ describe('getKanyakumariPlantingWindows', () => {
 
   it('closes the crops August has that September does not', () => {
     const { closing } = getKanyakumariPlantingWindows(on(7));
-    // September drops the whole monsoon set for short-duration greens.
-    expect(varieties(closing)).toEqual(
-      expect.arrayContaining(['Snake Gourd', 'Pumpkin', 'Ash Gourd', 'Ladies Finger']),
-    );
-    expect(varieties(closing)).toContain('Amaranthus');
+    expect(varieties(closing)).toEqual(['Amaranthus', 'Brinjal', 'Chilli', 'Cluster Beans']);
   });
 
   it('opens the crops September has that August does not', () => {
     const { openingNext } = getKanyakumariPlantingWindows(on(7));
-    expect(varieties(openingNext)).toEqual(['Fenugreek', 'Palak', 'Turnip', 'Beans']);
+    expect(varieties(openingNext)).toEqual(['Fenugreek', 'Palak', 'Turnip']);
   });
 
   it('keeps a crop out of both lists when its window spans the boundary', () => {

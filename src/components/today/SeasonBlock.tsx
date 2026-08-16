@@ -4,12 +4,24 @@
  * The crop groups deliberately consume a small, source-reviewed district
  * calendar. They never enumerate the user's whole plant catalogue.
  *
+ * The citations behind that calendar are not printed here. They are recorded in
+ * `TODAY_AGRONOMY_EVIDENCE` and mirrored in `docs/tamil-nadu-reference-audit.md`,
+ * and the catalog entry every tile opens states them in full — four lines of
+ * fine print on the daily screen said the same thing a tap away from where it
+ * belongs. The review dates still govern this card: guidance is withheld once
+ * its source review lapses, which is what `review_expired` says below.
+ *
  * Every crop is a tap target into its catalog entry: a name alone is not a
  * decision, and the spacing and days-to-harvest that make it one already live
- * there. The tile is the crop's photo — the fastest way to recognise one — with
- * the name set beneath it and no border of its own, plus what the catalog states
- * about how long the crop occupies the ground, the month that lands in, and how
- * much room it needs.
+ * there. The tile is a card — the crop's photo, the fastest way to recognise
+ * one, over its name and the two figures that decide whether it fits a bed.
+ *
+ * Two figures and no more. The window the crop opens in is what the card's own
+ * header already establishes, month and season both; the harvest month is
+ * days-to-harvest counted forward, so the figure says it already; and the
+ * growing conditions are a paragraph the catalog entry is better placed to
+ * hold. All three are still spoken by the tile's label — losing a line is no
+ * reason to lose a fact.
  *
  * The header states the season as the card's subject rather than as a caption:
  * how far through it we are in days, and how many are left. "Day 77 of 122" and
@@ -32,6 +44,7 @@ import { getPlantImage } from '@/config/referenceAssets';
 import {
   PerennialCareBrief,
   PlantNowRecommendation,
+  PlantingRecommendationState,
   PlantType,
   SeasonProgress,
 } from '@/types/database.types';
@@ -49,6 +62,8 @@ interface Props {
   tip: string;
   tipTitle: string;
   district: string | null;
+  zoneLabel: string | null;
+  plantingState: PlantingRecommendationState;
   recommendations: PlantNowRecommendation[];
   /** Crop names whose window opens next month — context, not tiles. */
   openingNext: string[];
@@ -90,14 +105,17 @@ interface CropTileProps {
 /**
  * One crop. The photo is decorative — the tile speaks as a single label, so a
  * screen reader hears the crop, its figures and its deadline as one sentence
- * rather than as fragments and an image. The deadline is spoken even though
- * nothing on screen marks it: losing a visual cue is no reason to lose the
- * fact.
+ * rather than as fragments and an image. The window, the harvest month and the
+ * conditions are spoken even though nothing on screen marks them: they left the
+ * card for density, not because they stopped being true.
  *
- * The time to yield leads the figures because it is the one that decides
- * whether the crop fits the bed and the season that is left; spacing follows it.
- * Each line is dropped rather than placeheld when the catalog is silent, so a
- * profile-less crop is still a name and a photo and still opens its entry.
+ * The time to yield leads the meta line because it is the figure that decides
+ * whether the crop fits the bed and the season that is left; the spacing follows
+ * it. Spacing prefers the catalog's centimetres over the calendar's sentence —
+ * "15 cm" is what fits beside the days on a half-width card — and falls back to
+ * the sentence only for the crops with no catalog profile. The whole line is
+ * dropped rather than placeheld when both are silent, so a profile-less crop is
+ * still a name and a photo, and still opens its entry.
  */
 const CropTile = React.memo(function CropTile({
   item,
@@ -109,15 +127,21 @@ const CropTile = React.memo(function CropTile({
     [onPress, item.label, item.plantType]
   );
 
-  const yieldLine = item.daysToHarvest !== null ? `Yield in ${item.daysToHarvest}` : null;
-  const spacing = item.spacingCm !== null ? `${item.spacingCm} cm apart` : null;
+  const spacing = item.spacingCm !== null ? `${item.spacingCm} cm` : item.spacingLabel;
+  const meta = [item.daysToHarvest, spacing]
+    .filter((part): part is string => part !== null)
+    .join(' · ');
 
   const spoken = [
     item.label,
     item.closing ? 'last month to start' : null,
     item.daysToHarvest !== null ? `yield in ${item.daysToHarvest}` : null,
     item.harvestByLabel,
-    spacing,
+    // The spoken form keeps the catalog's full phrasing — "150 cm apart" is a
+    // sentence, where the card's "150 cm" is a column of figures.
+    item.spacingLabel,
+    item.windowLabel,
+    item.conditions.map((condition) => condition.replace(/[.\s]+$/, '')).join('. '),
   ]
     .filter((part): part is string => part !== null)
     .join(', ');
@@ -132,22 +156,12 @@ const CropTile = React.memo(function CropTile({
     >
       <ReferenceThumb source={getPlantImage(item.label)} variant="tile" recyclingKey={item.key} />
       <View style={styles.tileBody}>
-        <Text style={styles.tileName} numberOfLines={2}>
+        <Text style={styles.tileName} numberOfLines={1}>
           {item.label}
         </Text>
-        {yieldLine !== null && (
-          <Text style={styles.tileYield} numberOfLines={1}>
-            {yieldLine}
-          </Text>
-        )}
-        {item.harvestByLabel !== null && (
-          <Text style={styles.tileHarvest} numberOfLines={1}>
-            {item.harvestByLabel}
-          </Text>
-        )}
-        {spacing !== null && (
+        {meta.length > 0 && (
           <Text style={styles.tileMeta} numberOfLines={1}>
-            {spacing}
+            {meta}
           </Text>
         )}
       </View>
@@ -163,6 +177,8 @@ export const SeasonBlock = React.memo(function SeasonBlock({
   tip,
   tipTitle,
   district,
+  zoneLabel,
+  plantingState,
   recommendations,
   openingNext,
   perennialCare,
@@ -178,8 +194,8 @@ export const SeasonBlock = React.memo(function SeasonBlock({
     (recommendation) => recommendation.action === 'transplant'
   );
 
-  const subtitle = [monthHighlight, season.monthLabel]
-    .filter((part) => part.length > 0)
+  const subtitle = [monthHighlight, season.monthLabel, zoneLabel]
+    .filter((part): part is string => typeof part === 'string' && part.length > 0)
     .join(' · ');
 
   const renderGroup = (
@@ -248,7 +264,7 @@ export const SeasonBlock = React.memo(function SeasonBlock({
         </>
       )}
 
-      {recommendations.length > 0 ? (
+      {plantingState === 'available' && recommendations.length > 0 ? (
         <>
           <Text style={styles.sowTitle}>
             {district ? `Plant now in ${district}` : 'Plant now'}
@@ -265,19 +281,25 @@ export const SeasonBlock = React.memo(function SeasonBlock({
         <>
           <Text style={styles.sowTitle}>Plant now</Text>
           <Text style={styles.emptyText}>
-            {district
-              ? `Planting suggestions are only set up for Kanyakumari, and this farm is in ${district}.`
-              : 'Planting suggestions need to know which district this farm is in.'}
+            {plantingState === 'missing_district'
+              ? 'Planting suggestions need to know which Tamil Nadu district this farm is in.'
+              : plantingState === 'unsupported_district'
+                ? `${district ?? 'This location'} is not in the reviewed Tamil Nadu district registry.`
+                : plantingState === 'review_expired'
+                  ? 'Planting guidance is hidden until its TNAU source review is renewed.'
+                  : `No reviewed home-garden crop window is open in ${district ?? 'this district'} this month.`}
           </Text>
-          <TouchableOpacity
-            onPress={onPressDistrict}
-            activeOpacity={0.7}
-            hitSlop={LINK_HIT_SLOP}
-            accessibilityRole="button"
-            accessibilityLabel="Set your district. Opens my farm."
-          >
-            <Text style={styles.emptyLink}>Set your district ›</Text>
-          </TouchableOpacity>
+          {(plantingState === 'missing_district' || plantingState === 'unsupported_district') && (
+            <TouchableOpacity
+              onPress={onPressDistrict}
+              activeOpacity={0.7}
+              hitSlop={LINK_HIT_SLOP}
+              accessibilityRole="button"
+              accessibilityLabel="Set your district. Opens my farm."
+            >
+              <Text style={styles.emptyLink}>Set your district ›</Text>
+            </TouchableOpacity>
+          )}
         </>
       )}
 

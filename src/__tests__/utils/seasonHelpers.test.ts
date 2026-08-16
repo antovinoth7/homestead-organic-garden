@@ -74,9 +74,9 @@ describe('seasonHelpers', () => {
   });
 
   describe('getSeasonLabel', () => {
-    it('returns human-readable label for summer', () => {
+    it('returns the IMD pre-monsoon label for March to May', () => {
       const label = getSeasonLabel(new Date(2026, 3, 1));
-      expect(label).toContain('Summer');
+      expect(label).toContain('Pre-monsoon');
       expect(label).toContain('Mar');
     });
 

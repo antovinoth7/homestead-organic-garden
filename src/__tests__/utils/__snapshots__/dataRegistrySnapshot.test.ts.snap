@@ -4343,19 +4343,47 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   },
   "spinach:Palak": {
     "profile": {
+      "daysToHarvest": {
+        "max": 55,
+        "min": 50,
+      },
+      "description": "Cool-season leafy vegetable best harvested while leaves are tender and before heat encourages bolting.",
+      "droughtTolerance": "low",
+      "feedingIntensity": "medium",
       "fertilisingFrequencyDays": 21,
-      "growthStageDurations": {
-        "mature": 10,
-        "seedling": 10,
-        "vegetative": 20,
+      "germinationDays": {
+        "max": 14,
+        "min": 7,
+      },
+      "germinationTempC": {
+        "max": 25,
+        "min": 10,
+      },
+      "growingSeason": "September–October",
+      "heatTolerance": "low",
+      "heightCm": {
+        "max": 30,
+        "min": 20,
       },
       "initialGrowthStage": "seedling",
+      "lifecycle": "annual",
+      "petToxicity": false,
+      "plantingDepthCm": 1.5,
       "preferredFertiliser": "compost",
       "pruningFrequencyDays": 14,
+      "scientificName": "Spinacia oleracea",
+      "soilPhRange": {
+        "max": 7.5,
+        "min": 6,
+      },
       "soilType": "garden_soil",
+      "spacingCm": 10,
       "sunlight": "partial_sun",
+      "tamilName": "பாலக் கீரை",
+      "taxonomicFamily": "Amaranthaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 2,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -4832,7 +4860,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Amaranthus": {
     "profile": {
       "daysToHarvest": {
-        "max": 40,
+        "max": 30,
         "min": 25,
       },
       "description": "Quick-growing leafy green rich in iron, popular as keerai in Tamil cuisine",
@@ -4847,7 +4875,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 30,
         "min": 20,
       },
-      "growingSeason": "Year Round",
+      "growingSeason": "February–March and July–August",
       "growthStageDurations": {
         "mature": 10,
         "seedling": 10,
@@ -4875,6 +4903,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "taxonomicFamily": "Amaranthaceae",
       "waterRequirement": "high",
       "wateringFrequencyDays": 1,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -5058,8 +5087,8 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Beetroot": {
     "profile": {
       "daysToHarvest": {
-        "max": 70,
-        "min": 55,
+        "max": 100,
+        "min": 90,
       },
       "description": "Jewel-red root vegetable with earthy sweetness, rich in folate and iron",
       "droughtTolerance": "low",
@@ -5073,7 +5102,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 25,
         "min": 15,
       },
-      "growingSeason": "Cool Dry (Oct–Feb)",
+      "growingSeason": "October–December",
       "growthStageDurations": {
         "mature": 14,
         "seedling": 14,
@@ -5101,6 +5130,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "taxonomicFamily": "Amaranthaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 2,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -5113,8 +5143,8 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Bitter Gourd": {
     "profile": {
       "daysToHarvest": {
-        "max": 70,
-        "min": 50,
+        "max": 60,
+        "min": 55,
       },
       "description": "Warty-skinned climbing cucurbit prized for its medicinal bitter flavour",
       "droughtTolerance": "low",
@@ -5128,7 +5158,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 25,
       },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
+      "growingSeason": "February–March",
       "growthStageDurations": {
         "flowering": 12,
         "fruiting": 16,
@@ -5152,12 +5182,13 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "min": 6,
       },
       "soilType": "garden_soil",
-      "spacingCm": 60,
+      "spacingCm": 150,
       "sunlight": "full_sun",
       "tamilName": "பாகற்காய்",
       "taxonomicFamily": "Cucurbitaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 2,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "flowerPruning": {
@@ -5287,8 +5318,8 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Brinjal": {
     "profile": {
       "daysToHarvest": {
-        "max": 90,
-        "min": 70,
+        "max": 60,
+        "min": 45,
       },
       "description": "Versatile tropical nightshade yielding glossy purple fruit for curries and grills",
       "droughtTolerance": "low",
@@ -5302,7 +5333,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 30,
         "min": 22,
       },
-      "growingSeason": "Year Round",
+      "growingSeason": "January–February and July–August",
       "growthStageDurations": {
         "flowering": 15,
         "fruiting": 24,
@@ -5332,6 +5363,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "taxonomicFamily": "Solanaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 2,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "shapePruning": {
@@ -5513,8 +5545,8 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Chilli": {
     "profile": {
       "daysToHarvest": {
-        "max": 95,
-        "min": 75,
+        "max": 60,
+        "min": 50,
       },
       "description": "Pungent hot pepper central to South Indian spice blends and daily cooking",
       "droughtTolerance": "medium",
@@ -5528,7 +5560,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 30,
         "min": 22,
       },
-      "growingSeason": "Year Round",
+      "growingSeason": "January–February and July–August",
       "growthStageDurations": {
         "flowering": 14,
         "fruiting": 20,
@@ -5552,12 +5584,13 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "min": 6,
       },
       "soilType": "garden_soil",
-      "spacingCm": 45,
+      "spacingCm": 60,
       "sunlight": "full_sun",
       "tamilName": "மிளகாய்",
       "taxonomicFamily": "Solanaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 2,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "shapePruning": {
@@ -5574,8 +5607,8 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Cluster Beans": {
     "profile": {
       "daysToHarvest": {
-        "max": 65,
-        "min": 45,
+        "max": 35,
+        "min": 30,
       },
       "description": "Heat-tolerant legume yielding slender pods and nitrogen-fixing roots",
       "droughtTolerance": "high",
@@ -5589,7 +5622,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 25,
       },
-      "growingSeason": "Summer (Mar–May)",
+      "growingSeason": "July–August",
       "growthStageDurations": {
         "flowering": 10,
         "fruiting": 15,
@@ -5612,12 +5645,13 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "min": 7,
       },
       "soilType": "garden_soil",
-      "spacingCm": 20,
+      "spacingCm": 15,
       "sunlight": "full_sun",
       "tamilName": "கொத்தவரை",
       "taxonomicFamily": "Fabaceae",
       "waterRequirement": "low",
       "wateringFrequencyDays": 3,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -5686,7 +5720,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
     "profile": {
       "daysToHarvest": {
         "max": 65,
-        "min": 45,
+        "min": 60,
       },
       "description": "Heat-tolerant nitrogen-fixing legume yielding protein-rich pods and beans",
       "droughtTolerance": "high",
@@ -5700,7 +5734,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 22,
       },
-      "growingSeason": "Year Round",
+      "growingSeason": "January–February",
       "growthStageDurations": {
         "flowering": 12,
         "fruiting": 14,
@@ -5724,12 +5758,13 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "min": 5.5,
       },
       "soilType": "garden_soil",
-      "spacingCm": 30,
+      "spacingCm": 45,
       "sunlight": "full_sun",
       "tamilName": "காராமணி",
       "taxonomicFamily": "Fabaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 2,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -5742,10 +5777,10 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Cucumber": {
     "profile": {
       "daysToHarvest": {
-        "max": 60,
-        "min": 50,
+        "max": 50,
+        "min": 45,
       },
-      "description": "Fast-growing warm-season vine producing crisp, refreshing fruits. Thrives in Kanyakumari's tropical heat with consistent moisture and trellis support.",
+      "description": "Warm-season climbing vegetable grown for crisp fruits; provide support, even moisture, and free drainage.",
       "droughtTolerance": "low",
       "feedingIntensity": "medium",
       "fertilisingFrequencyDays": 14,
@@ -5757,7 +5792,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 30,
         "min": 20,
       },
-      "growingSeason": "Summer (Mar-May)",
+      "growingSeason": "February–March",
       "growthStageDurations": {
         "flowering": 12,
         "fruiting": 14,
@@ -5786,6 +5821,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "taxonomicFamily": "Cucurbitaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 2,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "flowerPruning": {
@@ -5974,8 +6010,8 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Fenugreek": {
     "profile": {
       "daysToHarvest": {
-        "max": 35,
-        "min": 25,
+        "max": 50,
+        "min": 45,
       },
       "description": "Aromatic annual legume grown for its iron-rich leaves and distinctive seeds",
       "droughtTolerance": "medium",
@@ -5989,7 +6025,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 28,
         "min": 18,
       },
-      "growingSeason": "Year Round",
+      "growingSeason": "September–December",
       "growthStageDurations": {
         "mature": 8,
         "seedling": 7,
@@ -6017,6 +6053,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "taxonomicFamily": "Fabaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 1,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -6271,8 +6308,8 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Ladies Finger": {
     "profile": {
       "daysToHarvest": {
-        "max": 70,
-        "min": 50,
+        "max": 35,
+        "min": 30,
       },
       "description": "Heat-loving mucilaginous pod vegetable essential in South Indian cooking",
       "droughtTolerance": "medium",
@@ -6286,7 +6323,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 25,
       },
-      "growingSeason": "Summer (Mar–May)",
+      "growingSeason": "June–July",
       "growthStageDurations": {
         "flowering": 10,
         "fruiting": 15,
@@ -6316,6 +6353,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "taxonomicFamily": "Malvaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 2,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -6694,10 +6732,10 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Onion": {
     "profile": {
       "daysToHarvest": {
-        "max": 110,
-        "min": 90,
+        "max": 80,
+        "min": 75,
       },
-      "description": "Essential kitchen staple grown as a bulb crop. Requires well-drained soil and full sun during the cool dry season in Kanyakumari for proper bulb development.",
+      "description": "Bulb vegetable for sunny, well-drained beds; transplant healthy seedlings without burying the neck.",
       "droughtTolerance": "medium",
       "feedingIntensity": "medium",
       "fertilisingFrequencyDays": 21,
@@ -6709,7 +6747,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 25,
         "min": 18,
       },
-      "growingSeason": "Cool Dry (Jan-Feb)",
+      "growingSeason": "June–July and October–November",
       "growthStageDurations": {
         "mature": 35,
         "seedling": 20,
@@ -6731,12 +6769,13 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "min": 6,
       },
       "soilType": "garden_soil",
-      "spacingCm": 12,
+      "spacingCm": 10,
       "sunlight": "full_sun",
       "tamilName": "வெங்காயம்",
       "taxonomicFamily": "Amaryllidaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 3,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -7089,10 +7128,10 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Radish": {
     "profile": {
       "daysToHarvest": {
-        "max": 35,
+        "max": 30,
         "min": 25,
       },
-      "description": "One of the fastest-maturing root vegetables. Excellent beginner crop for Kanyakumari gardens, thriving in the cool dry season with loose, well-drained soil.",
+      "description": "Fast root vegetable for loose, stone-free soil; steady moisture reduces tough or split roots.",
       "droughtTolerance": "low",
       "feedingIntensity": "light",
       "fertilisingFrequencyDays": 14,
@@ -7104,7 +7143,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 25,
         "min": 15,
       },
-      "growingSeason": "Cool Dry (Jan-Feb)",
+      "growingSeason": "Year-round in a managed home garden",
       "growthStageDurations": {
         "mature": 8,
         "seedling": 7,
@@ -7126,12 +7165,13 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "min": 6,
       },
       "soilType": "garden_soil",
-      "spacingCm": 8,
+      "spacingCm": 10,
       "sunlight": "full_sun",
       "tamilName": "முள்ளங்கி",
       "taxonomicFamily": "Brassicaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 2,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -7617,7 +7657,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   "vegetable:Tomato": {
     "profile": {
       "daysToHarvest": {
-        "max": 90,
+        "max": 65,
         "min": 60,
       },
       "description": "Prolific warm-season fruit used fresh, in sambar, rasam, and chutneys",
@@ -7632,7 +7672,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 30,
         "min": 20,
       },
-      "growingSeason": "Year Round",
+      "growingSeason": "December–January and June–July",
       "growthStageDurations": {
         "flowering": 14,
         "fruiting": 20,
@@ -7678,20 +7718,46 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   },
   "vegetable:Turnip": {
     "profile": {
-      "fertilisingFrequencyDays": 14,
-      "growthStageDurations": {
-        "flowering": 15,
-        "fruiting": 22,
-        "seedling": 18,
-        "vegetative": 25,
+      "daysToHarvest": {
+        "max": 45,
+        "min": 40,
+      },
+      "description": "Cool-season brassica grown for its swollen root and edible leaves in loose, well-drained soil.",
+      "droughtTolerance": "low",
+      "feedingIntensity": "medium",
+      "fertilisingFrequencyDays": 21,
+      "germinationDays": {
+        "max": 10,
+        "min": 3,
+      },
+      "germinationTempC": {
+        "max": 30,
+        "min": 10,
+      },
+      "growingSeason": "September–October",
+      "heatTolerance": "low",
+      "heightCm": {
+        "max": 45,
+        "min": 25,
       },
       "initialGrowthStage": "seedling",
+      "lifecycle": "biennial",
+      "petToxicity": false,
+      "plantingDepthCm": 1.5,
       "preferredFertiliser": "compost",
-      "pruningFrequencyDays": 21,
+      "scientificName": "Brassica rapa subsp. rapa",
+      "soilPhRange": {
+        "max": 7.5,
+        "min": 5.5,
+      },
       "soilType": "garden_soil",
+      "spacingCm": 10,
       "sunlight": "full_sun",
+      "tamilName": "டர்னிப்",
+      "taxonomicFamily": "Brassicaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 2,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [

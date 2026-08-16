@@ -263,6 +263,8 @@ export default function TodayScreen(): React.JSX.Element {
         tip={brief.seasonTip}
         tipTitle={brief.seasonTipTitle}
         district={brief.district}
+        zoneLabel={brief.zoneLabel}
+        plantingState={brief.plantingState}
         recommendations={brief.plantNow}
         openingNext={brief.openingNext}
         perennialCare={brief.perennialCare}

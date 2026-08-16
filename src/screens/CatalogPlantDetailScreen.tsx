@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '@/theme';
 import { getPlantImage } from '@/config/referenceAssets';
+import { getTodayCropEvidence } from '@/config/tamilNaduPlantingCalendar';
 import { createStyles } from '@/styles/catalogPlantDetailStyles';
 import CollapsibleSection from '@/components/CollapsibleSection';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
@@ -96,6 +98,23 @@ const TABS: readonly SegmentedTab<CatalogTabKey>[] = [
 const HERO_HEIGHT = 250;
 /** Where the sticky bar starts taking over from the hero's own controls. */
 const STICKY_THRESHOLD = HERO_HEIGHT - 80;
+
+interface EvidenceLinkProps {
+  title: string;
+  url: string;
+  styles: ReturnType<typeof createStyles>;
+}
+
+function EvidenceLink({ title, url, styles }: EvidenceLinkProps): React.JSX.Element {
+  const handlePress = useCallback(() => {
+    void Linking.openURL(url);
+  }, [url]);
+  return (
+    <TouchableOpacity onPress={handlePress} accessibilityRole="link" activeOpacity={0.7}>
+      <Text style={styles.evidenceLink}>{title} ›</Text>
+    </TouchableOpacity>
+  );
+}
 
 const ALL_EXPANDED: Record<CatalogSectionKey, boolean> = {
   plantInfo: true,
@@ -294,6 +313,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const baseProfile = useMemo(
     () => getPlantCareProfile(lookupName, plantType),
     [lookupName, plantType]
+  );
+  const todayEvidence = useMemo(
+    () => getTodayCropEvidence(plantType, lookupName),
+    [plantType, lookupName]
   );
 
   const pestChips = useMemo<CatalogChip[]>(
@@ -617,6 +640,26 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         <View style={styles.inFlowTabBar} onLayout={handleTabBarLayout}>
           {tabBar}
         </View>
+
+        {todayEvidence.length > 0 && (
+          <View style={styles.evidenceCard}>
+            <View style={styles.evidenceTitleRow}>
+              <Ionicons name="shield-checkmark-outline" size={17} color={theme.primary} />
+              <Text style={styles.evidenceTitle}>Tamil Nadu guidance</Text>
+            </View>
+            <Text style={styles.evidenceText}>
+              {hasOverride
+                ? 'This entry includes your saved edits. The sources below support the app defaults, not user-supplied changes.'
+                : `Source-reviewed for Tamil Nadu home gardens · reviewed ${todayEvidence[0]?.reviewedOn}.`}
+            </Text>
+            <Text style={styles.evidenceText}>
+              The crop image is illustrative and must not be used to diagnose a plant problem.
+            </Text>
+            {todayEvidence.map((source) => (
+              <EvidenceLink key={source.id} title={source.title} url={source.url} styles={styles} />
+            ))}
+          </View>
+        )}
 
         {/* ── Basics ── */}
         <View onLayout={registerSection('basics')}>

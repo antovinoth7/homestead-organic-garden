@@ -540,14 +540,32 @@ export interface PlantNowRecommendation {
    */
   harvestByLabel: string | null;
   spacingCm: number | null;
+  /** Source-qualified spacing; preferred over the legacy single value. */
+  spacingLabel: string | null;
+  /** Source-defined crop window or pattam, e.g. "Aadi pattam · Jun–Jul". */
+  windowLabel: string;
+  /** Conditions that keep the calendar entry from becoming an unconditional promise. */
+  conditions: string[];
+  /** Stable ids into the bundled agronomy evidence registry. */
+  evidenceIds: string[];
+  reviewedOn: string;
   /** This is the last month the window is open. */
   closing: boolean;
 }
+
+export type PlantingRecommendationState =
+  | 'available'
+  | 'no_current_window'
+  | 'missing_district'
+  | 'unsupported_district'
+  | 'review_expired';
 
 /** A single seasonal reminder for perennials already established on the farm. */
 export interface PerennialCareBrief {
   count: number;
   message: string;
+  evidenceIds: string[];
+  reviewedOn: string;
 }
 
 /**
@@ -586,6 +604,8 @@ export interface TodayBrief {
   /** Heads the tip so a risk reads as a risk rather than as closing fine print. */
   seasonTipTitle: string;
   district: string | null;
+  zoneLabel: string | null;
+  plantingState: PlantingRecommendationState;
   plantNow: PlantNowRecommendation[];
   /** Crop names whose window opens next month — one line, no tiles. */
   openingNext: string[];

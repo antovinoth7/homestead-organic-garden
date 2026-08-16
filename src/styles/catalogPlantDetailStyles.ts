@@ -115,6 +115,36 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     heroBleed: {
       marginHorizontal: -16,
     },
+    evidenceCard: {
+      padding: 13,
+      borderRadius: 12,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.successBorder,
+      backgroundColor: theme.successLight,
+      gap: 5,
+    },
+    evidenceTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+    },
+    evidenceTitle: {
+      fontSize: 13.5,
+      lineHeight: 18,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    evidenceText: {
+      fontSize: 12.5,
+      lineHeight: 18,
+      color: theme.textSecondary,
+    },
+    evidenceLink: {
+      fontSize: 12.5,
+      lineHeight: 18,
+      fontWeight: '600',
+      color: theme.primary,
+    },
     fieldGroup: {
       marginBottom: 8,
     },

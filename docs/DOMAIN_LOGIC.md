@@ -1,20 +1,29 @@
 # Domain Logic
 
-The app is intentionally tailored to Kanyakumari / South Tamil Nadu gardening conditions. Preserve this regional logic unless a change is explicitly requested.
+The Today seasonal experience supports all 38 Tamil Nadu districts. Other older features may still carry Kanyakumari-specific defaults; do not let those defaults enter Today guidance.
 
 ## Agro-Climatic Zone System
 
 Season logic, watering multipliers, and pest alerts are parameterized by zone config rather than hardcoded.
 
 - **Zone definitions**: `src/config/zones/` — each zone exports an `AgroClimaticZone` object.
-- **Default zone**: `HIGH_RAINFALL_ZONE` (Kanyakumari). All existing functions default to this zone for backward compatibility.
+- **Legacy default zone**: `HIGH_RAINFALL_ZONE` (Kanyakumari) remains for backward compatibility outside Today.
 - **Zone registry**: `src/config/zones/index.ts` — `getZoneById(id)`, `getZoneByDistrict(district)`, `DEFAULT_ZONE`.
-- **Consumer pattern**: Functions in `seasonHelpers.ts` accept an optional `zone?: AgroClimaticZone` param. Pass explicitly when the user's zone is known; omit to use the default.
+- **Today consumer pattern**: Resolve the saved district with `resolveActiveZone()` and pass the result explicitly. An unknown or missing district must display setup guidance, never use the legacy default.
 - **Adding a new zone**: Create a new file in `src/config/zones/`, register it in `src/config/zones/index.ts`.
 
 ### Season Model
 
-`HIGH_RAINFALL_ZONE` (default) uses a four-season model: `summer`, `sw_monsoon`, `ne_monsoon`, `cool_dry`.
+Every Tamil Nadu zone uses the IMD meteorological boundaries: Winter (`cool_dry`, Jan–Feb), Pre-monsoon (`summer`, Mar–May), SW Monsoon (Jun–Sep), and NE Monsoon (Oct–Dec). Crop pattam/window labels are separate planting-rule metadata and are not season names.
+
+### Today planting and advisory model
+
+- `tamilNaduPlantingCalendar.ts` is the source-reviewed rule registry. Rules carry zone scope, establishment action, window, conditions, maturity measured from that action, evidence IDs, and review date.
+- Evidence expires closed: Today hides recommendations when the review date has lapsed.
+- Citations live in `TODAY_AGRONOMY_EVIDENCE` and are mirrored in `docs/tamil-nadu-reference-audit.md`. In the app they surface on the catalog plant detail screen, which every Today crop tile opens; the Today card itself prints no source line.
+- `todaySeasonalAdvisories.ts` contains non-diagnostic risk rules. A rule must match the resolved zone, current season, and an active host crop.
+- Seasonal possibilities never enter `FarmAlert` as `pest_spotted`; that stream is reserved for actual observations.
+- Missing values remain omitted. Images are illustrative and are never diagnostic evidence.
 
 ---
 

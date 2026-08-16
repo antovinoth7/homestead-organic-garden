@@ -27,3 +27,13 @@ export interface AgroClimaticZone {
   soilTypes: string[];
   irrigationDominant: string;
 }
+
+export type AgroClimaticZoneId =
+  | 'north_eastern'
+  | 'north_western'
+  | 'western'
+  | 'cauvery_delta'
+  | 'southern'
+  | 'south'
+  | 'high_rainfall'
+  | 'hilly';

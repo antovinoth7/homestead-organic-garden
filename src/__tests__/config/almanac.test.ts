@@ -1,4 +1,5 @@
 import { ALMANAC, getMonthlyHighlight } from '@/config/almanac';
+import { getZoneByDistrict } from '@/config/zones';
 
 describe('almanac', () => {
   it('has a dense entry for every month 1–12', () => {
@@ -20,5 +21,18 @@ describe('almanac', () => {
     expect(getMonthlyHighlight(new Date('2026-06-15')).month).toBe(6);
     expect(getMonthlyHighlight(new Date('2026-01-01')).month).toBe(1);
     expect(getMonthlyHighlight(new Date('2026-12-31')).month).toBe(12);
+  });
+
+  it('uses the resolved zone and season for the monthly note', () => {
+    const date = new Date(2026, 7, 16);
+    const western = getMonthlyHighlight(date, getZoneByDistrict('Coimbatore'), 'sw_monsoon');
+    const highRainfall = getMonthlyHighlight(
+      date,
+      getZoneByDistrict('Kanyakumari'),
+      'sw_monsoon'
+    );
+
+    expect(western.note).not.toBe(highRainfall.note);
+    expect(highRainfall.note).toContain('drainage');
   });
 });
