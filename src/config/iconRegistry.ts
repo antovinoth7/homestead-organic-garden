@@ -4,6 +4,7 @@ import type {
   BedType,
   FarmAlertType,
   GrowthStage,
+  PlantType,
   TaskType,
   WeatherConditionId,
 } from '@/types/database.types';
@@ -12,9 +13,17 @@ import type { TreatmentMethod } from '@/utils/plantHelpers';
 
 export type IoniconName = keyof typeof Ionicons.glyphMap;
 
+export type CustomPlantIconType =
+  | 'vegetable'
+  | 'spinach'
+  | 'coconut_tree'
+  | 'timber_tree'
+  | 'shrub';
+
 export type IconDefinition =
   | { kind: 'ionicon'; name: IoniconName }
-  | { kind: 'bed'; bedType: BedType };
+  | { kind: 'bed'; bedType: BedType }
+  | { kind: 'plant'; plantType: CustomPlantIconType };
 
 export const TASK_ICON_KEYS: Record<TaskType, VisualIconKey> = {
   water: 'task.water',
@@ -66,6 +75,17 @@ export const GROWTH_STAGE_ICON_KEYS: Record<GrowthStage, VisualIconKey> = {
   fruiting: 'growth.fruiting',
   dormant: 'growth.dormant',
   mature: 'growth.mature',
+};
+
+export const PLANT_TYPE_ICON_KEYS: Record<PlantType, VisualIconKey> = {
+  vegetable: 'plant.vegetable',
+  spinach: 'plant.spinach',
+  fruit_tree: 'plant.fruit_tree',
+  coconut_tree: 'plant.coconut_tree',
+  herb: 'plant.herb',
+  timber_tree: 'plant.timber_tree',
+  flower: 'plant.flower',
+  shrub: 'plant.shrub',
 };
 
 export const BED_TYPE_ICON_KEYS: Record<BedType, VisualIconKey> = {
@@ -143,6 +163,14 @@ export const ICON_REGISTRY: Record<VisualIconKey, IconDefinition> = {
   'growth.fruiting': { kind: 'ionicon', name: 'nutrition' },
   'growth.dormant': { kind: 'ionicon', name: 'moon' },
   'growth.mature': { kind: 'ionicon', name: 'leaf' },
+  'plant.vegetable': { kind: 'plant', plantType: 'vegetable' },
+  'plant.spinach': { kind: 'plant', plantType: 'spinach' },
+  'plant.fruit_tree': { kind: 'ionicon', name: 'nutrition-outline' },
+  'plant.coconut_tree': { kind: 'plant', plantType: 'coconut_tree' },
+  'plant.herb': { kind: 'ionicon', name: 'leaf-outline' },
+  'plant.timber_tree': { kind: 'plant', plantType: 'timber_tree' },
+  'plant.flower': { kind: 'ionicon', name: 'flower-outline' },
+  'plant.shrub': { kind: 'plant', plantType: 'shrub' },
   'bed.leafy': { kind: 'bed', bedType: 'leafy' },
   'bed.fruiting': { kind: 'bed', bedType: 'fruiting' },
   'bed.spice': { kind: 'bed', bedType: 'spice' },

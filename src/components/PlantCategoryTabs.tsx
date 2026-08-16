@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { GardenIcon } from '@/components/GardenIcon';
+import { PLANT_TYPE_ICON_KEYS } from '@/config/iconRegistry';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
 import { PLANT_CATEGORIES } from '@/services/plantProfiles';
@@ -37,6 +39,11 @@ export function PlantCategoryTabs({
             onPress={() => onCategoryChange(category)}
             activeOpacity={0.7}
           >
+            <GardenIcon
+              name={PLANT_TYPE_ICON_KEYS[category]}
+              size={14}
+              color={isActive ? theme.primary : theme.textSecondary}
+            />
             <Text style={[styles.categoryPillText, isActive && styles.categoryPillTextActive]}>
               {CATEGORY_LABELS[category]}
             </Text>

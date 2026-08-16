@@ -2,7 +2,7 @@
  * Platform-neutral keys for functional UI artwork.
  *
  * Domain/service code may depend on these strings without importing React
- * Native. The UI resolves them to Ionicons or the small custom bed SVG set.
+ * Native. The UI resolves them to Ionicons or small custom garden SVGs.
  */
 export type VisualIconKey =
   | 'task.water'
@@ -45,6 +45,14 @@ export type VisualIconKey =
   | 'growth.fruiting'
   | 'growth.dormant'
   | 'growth.mature'
+  | 'plant.vegetable'
+  | 'plant.spinach'
+  | 'plant.fruit_tree'
+  | 'plant.coconut_tree'
+  | 'plant.herb'
+  | 'plant.timber_tree'
+  | 'plant.flower'
+  | 'plant.shrub'
   | 'bed.leafy'
   | 'bed.fruiting'
   | 'bed.spice'

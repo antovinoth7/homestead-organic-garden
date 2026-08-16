@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from './GardenIcon';
+import { PLANT_TYPE_ICON_KEYS } from '../config/iconRegistry';
 import { useTheme } from '../theme';
 import { SheetHandle } from './SheetHandle';
 import { createStyles } from '../styles/plantsStyles';
-import { HealthStatus, UNASSIGNED_PLOT_ID } from '../types/database.types';
+import { HealthStatus, PlantType, UNASSIGNED_PLOT_ID } from '../types/database.types';
 import { UNASSIGNED_PLOT_NAME } from '../utils/plotGrouping';
 import type { ActiveFilters, PlantFacetCounts } from '../utils/plantFilters';
 import { TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
@@ -15,6 +17,17 @@ import type { StatusTone } from '../utils/plantLabels';
 type SortOption = 'name' | 'newest' | 'oldest' | 'health' | 'age';
 
 const HEALTH_STATUSES: HealthStatus[] = ['healthy', 'stressed', 'recovering', 'sick'];
+
+const PLANT_TYPE_OPTIONS: readonly { value: PlantType; label: string }[] = [
+  { value: 'vegetable', label: 'Vegetable' },
+  { value: 'spinach', label: 'Spinach' },
+  { value: 'fruit_tree', label: 'Fruit' },
+  { value: 'coconut_tree', label: 'Coconut' },
+  { value: 'herb', label: 'Herb' },
+  { value: 'timber_tree', label: 'Timber' },
+  { value: 'flower', label: 'Flower' },
+  { value: 'shrub', label: 'Shrub' },
+];
 
 const SORT_OPTIONS: readonly {
   value: SortOption;
@@ -157,37 +170,41 @@ export function PlantFilterSheet({
             <Ionicons name="apps" size={14} color={theme.textSecondary} /> Plant Type
           </Text>
           <View style={styles.sheetChipWrap}>
-            {(
-              [
-                ['all', 'All'],
-                ['vegetable', 'Vegetable'],
-                ['fruit_tree', 'Fruit'],
-                ['coconut_tree', 'Coconut'],
-                ['herb', 'Herb'],
-                ['timber_tree', 'Timber'],
-                ['flower', 'Flower'],
-                ['shrub', 'Shrub'],
-              ] as const
-            ).map(([val, label]) => (
-              <TouchableOpacity
-                key={val}
-                style={[styles.sheetChip, filters.type === val && styles.sheetChipActive]}
-                onPress={() => updateFilter('type', val)}
+            <TouchableOpacity
+              testID="plant-type-filter-all"
+              style={[styles.sheetChip, filters.type === 'all' && styles.sheetChipActive]}
+              onPress={() => updateFilter('type', 'all')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: filters.type === 'all' }}
+            >
+              <Text
+                style={[styles.sheetChipText, filters.type === 'all' && styles.sheetChipTextActive]}
               >
-                {val !== 'all' && (
-                  <Ionicons
-                    name="leaf-outline"
-                    size={14}
-                    color={filters.type === val ? theme.primary : theme.textSecondary}
-                  />
-                )}
+                All
+              </Text>
+            </TouchableOpacity>
+            {PLANT_TYPE_OPTIONS.map(({ value, label }) => (
+              <TouchableOpacity
+                key={value}
+                testID={`plant-type-filter-${value}`}
+                style={[styles.sheetChip, filters.type === value && styles.sheetChipActive]}
+                onPress={() => updateFilter('type', value)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: filters.type === value }}
+              >
+                <GardenIcon
+                  name={PLANT_TYPE_ICON_KEYS[value]}
+                  size={14}
+                  color={filters.type === value ? theme.primary : theme.textSecondary}
+                />
                 <Text
-                  style={[styles.sheetChipText, filters.type === val && styles.sheetChipTextActive]}
+                  style={[
+                    styles.sheetChipText,
+                    filters.type === value && styles.sheetChipTextActive,
+                  ]}
                 >
                   {label}
-                  {val !== 'all' && (
-                    <FacetCount count={plantCounts.type[val] ?? 0} styles={styles} />
-                  )}
+                  <FacetCount count={plantCounts.type[value] ?? 0} styles={styles} />
                 </Text>
               </TouchableOpacity>
             ))}
@@ -323,7 +340,7 @@ export function PlantFilterSheet({
               ] as const
             ).map(([val, label, drops]) => {
               const isActive = filters.water === val;
-              const count = val !== 'all' ? (plantCounts.water[val] ?? 0) : null;
+              const count = val !== 'all' ? plantCounts.water[val] ?? 0 : null;
               return (
                 <TouchableOpacity
                   key={val}
