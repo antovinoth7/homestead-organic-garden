@@ -104,10 +104,18 @@ Rules for new write functions:
 
 ### `src/services/backup.ts`
 
-- Supports images-only ZIP export/import.
-- Does not currently support data-only or full data-plus-images backups.
-- Do not reintroduce `exportBackup`, `importBackup`, or full ZIP flows unless the feature is intentionally rebuilt.
-- When importing images, matching is filename-based.
+Two flows, both ZIP-based:
+
+- **Images-only** — `exportImagesOnly()` / `importImagesOnly()`. Photos plus a small manifest; data is untouched.
+- **Complete backup** — `exportFullBackup()` / `importFullBackup()`. All user data as `backup.json` plus every referenced photo. Restore rehydrates AsyncStorage first, then pushes collections to Firestore under their original doc ids. Destructive on the target device, so callers must confirm before invoking.
+
+Notes:
+
+- When importing images, matching is filename-based (`relinkImportedImages` is shared by both import flows so the matching logic never diverges).
+- All four entry points accept an optional `BackupProgressCallback` (`src/utils/zipHelper.ts`) and emit `collecting → resolving → packing → compressing → saving` on export, `extracting → saving` on restore. `SettingsScreen` renders these as button labels; a backup over a large photo set otherwise looks hung.
+- **Binary I/O must stay on the modern `expo-file-system` `File` API** (`bytes()` / `write()`). The legacy base64 reader is a fallback only, for URIs the modern API cannot open (Android `content://` MediaLibrary assets). Converting whole archives through base64 strings in JS previously made a large backup take minutes.
+- Photo entries are added to the ZIP with `level: 0` (store). JPEG/PNG data does not deflate further, so compressing it is pure CPU cost on the blocking `zipSync` call.
+- Image reads run through a bounded-concurrency pool (`IMAGE_READ_CONCURRENCY`), not `Promise.all` — unbounded parallelism would hold hundreds of whole photos in memory at once.
 
 ---
 

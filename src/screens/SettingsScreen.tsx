@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -8,6 +8,7 @@ import {
   exportFullBackup,
   importFullBackup,
 } from '@/services/backup';
+import type { BackupProgress } from '@/utils/zipHelper';
 import { useTheme, useThemeMode } from '@/theme';
 import {
   useFocusEffect,
@@ -39,6 +40,26 @@ const THEME_OPTIONS: {
   },
 ];
 
+const formatProgress = (progress: BackupProgress): string => {
+  const { phase, current, total } = progress;
+  const counter = typeof current === 'number' && total ? ` ${current}/${total}` : '';
+
+  switch (phase) {
+    case 'collecting':
+      return 'Gathering your data…';
+    case 'resolving':
+      return 'Finding photos…';
+    case 'packing':
+      return `Packing photos${counter}…`;
+    case 'compressing':
+      return 'Building archive…';
+    case 'extracting':
+      return `Restoring photos${counter}…`;
+    case 'saving':
+      return 'Saving…';
+  }
+};
+
 export default function SettingsScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
@@ -50,7 +71,24 @@ export default function SettingsScreen(): React.JSX.Element {
     'export' | 'import' | 'cache' | 'full-export' | 'full-restore' | null
   >(null);
   const [imageStorageSize, setImageStorageSize] = useState(0);
+  const [progressLabel, setProgressLabel] = useState<string | null>(null);
+  const lastProgressLabel = useRef<string | null>(null);
   const loading = loadingAction !== null;
+
+  // Backup emits one progress event per photo. Only re-render when the visible
+  // text actually changes, so a 300-photo archive does not trigger 300 renders.
+  const handleProgress = useCallback((progress: BackupProgress) => {
+    const label = formatProgress(progress);
+    if (label === lastProgressLabel.current) return;
+    lastProgressLabel.current = label;
+    setProgressLabel(label);
+  }, []);
+
+  const finishAction = useCallback(() => {
+    setLoadingAction(null);
+    lastProgressLabel.current = null;
+    setProgressLabel(null);
+  }, []);
 
   const loadStats = React.useCallback(async () => {
     try {
@@ -90,7 +128,7 @@ export default function SettingsScreen(): React.JSX.Element {
           onPress: async () => {
             try {
               setLoadingAction('full-export');
-              await exportFullBackup();
+              await exportFullBackup(handleProgress);
               Alert.alert(
                 'Backup Created',
                 'Your complete backup was saved. Store it on Google Drive or share it to keep it safe.',
@@ -99,7 +137,7 @@ export default function SettingsScreen(): React.JSX.Element {
             } catch (error: unknown) {
               Alert.alert('Export Failed', getErrorMessage(error));
             } finally {
-              setLoadingAction(null);
+              finishAction();
             }
           },
         },
@@ -119,7 +157,7 @@ export default function SettingsScreen(): React.JSX.Element {
           onPress: async () => {
             try {
               setLoadingAction('full-restore');
-              const summary = await importFullBackup();
+              const summary = await importFullBackup(handleProgress);
               Alert.alert(
                 'Restore Complete',
                 `Restored ${summary.plants} plants, ${summary.beds} beds, ${summary.journal} journal entries and ${summary.images} photos.`,
@@ -130,7 +168,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 Alert.alert('Restore Failed', getErrorMessage(error));
               }
             } finally {
-              setLoadingAction(null);
+              finishAction();
             }
           },
         },
@@ -149,7 +187,7 @@ export default function SettingsScreen(): React.JSX.Element {
           onPress: async () => {
             try {
               setLoadingAction('export');
-              await exportImagesOnly();
+              await exportImagesOnly(handleProgress);
               Alert.alert(
                 'Images Exported',
                 'Your garden images have been exported as a ZIP file. This contains only photos, no data.',
@@ -158,7 +196,7 @@ export default function SettingsScreen(): React.JSX.Element {
             } catch (error: unknown) {
               Alert.alert('Export Failed', getErrorMessage(error));
             } finally {
-              setLoadingAction(null);
+              finishAction();
             }
           },
         },
@@ -177,7 +215,7 @@ export default function SettingsScreen(): React.JSX.Element {
           onPress: async () => {
             try {
               setLoadingAction('import');
-              const count = await importImagesOnly();
+              const count = await importImagesOnly(handleProgress);
               Alert.alert(
                 'Images Imported',
                 `Successfully imported ${count} image(s). Your data remains unchanged.`,
@@ -188,7 +226,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 Alert.alert('Import Failed', getErrorMessage(error));
               }
             } finally {
-              setLoadingAction(null);
+              finishAction();
             }
           },
         },
@@ -315,7 +353,12 @@ export default function SettingsScreen(): React.JSX.Element {
             disabled={loading}
           >
             {loadingAction === 'full-export' ? (
-              <ActivityIndicator color={theme.textInverse} />
+              <View style={styles.backupProgressRow}>
+                <ActivityIndicator color={theme.textInverse} />
+                {progressLabel ? (
+                  <Text style={styles.backupProgressText}>{progressLabel}</Text>
+                ) : null}
+              </View>
             ) : (
               <>
                 <Ionicons name="archive-outline" size={20} color="#fff" />
@@ -330,7 +373,14 @@ export default function SettingsScreen(): React.JSX.Element {
             disabled={loading}
           >
             {loadingAction === 'full-restore' ? (
-              <ActivityIndicator color={theme.success} />
+              <View style={styles.backupProgressRow}>
+                <ActivityIndicator color={theme.success} />
+                {progressLabel ? (
+                  <Text style={[styles.backupProgressText, styles.backupProgressTextSuccess]}>
+                    {progressLabel}
+                  </Text>
+                ) : null}
+              </View>
             ) : (
               <>
                 <Ionicons name="cloud-upload-outline" size={20} color={theme.success} />
@@ -363,7 +413,12 @@ export default function SettingsScreen(): React.JSX.Element {
             disabled={loading}
           >
             {loadingAction === 'export' ? (
-              <ActivityIndicator color={theme.textInverse} />
+              <View style={styles.backupProgressRow}>
+                <ActivityIndicator color={theme.textInverse} />
+                {progressLabel ? (
+                  <Text style={styles.backupProgressText}>{progressLabel}</Text>
+                ) : null}
+              </View>
             ) : (
               <>
                 <Ionicons name="images-outline" size={20} color="#fff" />
@@ -378,7 +433,14 @@ export default function SettingsScreen(): React.JSX.Element {
             disabled={loading}
           >
             {loadingAction === 'import' ? (
-              <ActivityIndicator color={theme.success} />
+              <View style={styles.backupProgressRow}>
+                <ActivityIndicator color={theme.success} />
+                {progressLabel ? (
+                  <Text style={[styles.backupProgressText, styles.backupProgressTextSuccess]}>
+                    {progressLabel}
+                  </Text>
+                ) : null}
+              </View>
             ) : (
               <>
                 <Ionicons name="image-outline" size={20} color={theme.success} />

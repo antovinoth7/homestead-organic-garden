@@ -145,6 +145,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     backupButtonTextSuccess: {
       color: theme.primary,
     },
+    backupProgressRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    backupProgressText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textInverse,
+    },
+    backupProgressTextSuccess: {
+      color: theme.primary,
+    },
     themeLabel: {
       fontSize: 16,
       fontWeight: '600',

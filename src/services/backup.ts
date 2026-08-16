@@ -27,7 +27,12 @@ import { db, auth, refreshAuthToken } from '../lib/firebase';
 import { LATEST_SCHEMA_VERSION } from '../migrations';
 import { invalidateAll } from '../lib/dataCache';
 import { withTimeoutAndRetry, FIRESTORE_WRITE_TIMEOUT_MS } from '../utils/firestoreTimeout';
-import { createZipWithImages, extractZipWithImages, ZipImageFile } from '../utils/zipHelper';
+import {
+  createZipWithImages,
+  extractZipWithImages,
+  BackupProgressCallback,
+  ZipImageFile,
+} from '../utils/zipHelper';
 import {
   FullBackupData,
   RestoreSummary,
@@ -215,15 +220,17 @@ export const getImagesOnlyStorageSize = async (): Promise<number> => {
  * This creates an images-only archive for backup or transfer
  * @returns The file URI of the created images ZIP
  */
-export const exportImagesOnly = async (): Promise<string> => {
+export const exportImagesOnly = async (onProgress?: BackupProgressCallback): Promise<string> => {
   try {
     logger.info('Starting images-only export...');
 
+    onProgress?.({ phase: 'collecting' });
     const [plants, journal] = await withTimeoutAndRetry(
       () => Promise.all([getAllPlantsForBackup(), getJournalEntries()]),
       { timeoutMs: 30000 }
     );
 
+    onProgress?.({ phase: 'resolving' });
     const imageFilenames = collectReferencedImageFilenames(plants, journal);
     const imageFiles = await resolveImageFilesFromFilenames(imageFilenames);
 
@@ -239,7 +246,7 @@ export const exportImagesOnly = async (): Promise<string> => {
       note: 'This is an images-only backup. Import this on another device to restore photos.',
     };
 
-    const zipUri = await createZipWithImages(manifest, imageFiles);
+    const zipUri = await createZipWithImages(manifest, imageFiles, { onProgress });
 
     logger.info('Images-only backup created: ' + zipUri);
 
@@ -263,7 +270,7 @@ export const exportImagesOnly = async (): Promise<string> => {
  * This restores photos without affecting any data
  * @returns Number of images imported
  */
-export const importImagesOnly = async (): Promise<number> => {
+export const importImagesOnly = async (onProgress?: BackupProgressCallback): Promise<number> => {
   try {
     logger.info('Starting images-only import...');
 
@@ -282,7 +289,9 @@ export const importImagesOnly = async (): Promise<number> => {
 
     const IMAGES_DIR = Platform.OS === 'web' ? '' : `${FileSystem.documentDirectory}garden_images/`;
 
-    const { imageUris } = await extractZipWithImages(result.assets[0]!.uri, IMAGES_DIR);
+    const { imageUris } = await extractZipWithImages(result.assets[0]!.uri, IMAGES_DIR, {
+      onProgress,
+    });
     const getImportedImageUri = buildImageUriLookup(imageUris);
     const importVersion = Date.now().toString();
 
@@ -442,10 +451,11 @@ const restoreCollectionToFirestore = async (
  * images as a single ZIP. Data also lives in Firestore; this is a portable,
  * user-owned archive for transfer and account migration.
  */
-export const exportFullBackup = async (): Promise<string> => {
+export const exportFullBackup = async (onProgress?: BackupProgressCallback): Promise<string> => {
   try {
     logger.info('Starting full backup export...');
 
+    onProgress?.({ phase: 'collecting' });
     const data = await withTimeoutAndRetry<FullBackupData>(
       async () => {
         const [plants, beds, taskTemplates, taskLogs, journal, locations, plantProfiles, farmConfig] =
@@ -464,6 +474,7 @@ export const exportFullBackup = async (): Promise<string> => {
       { timeoutMs: 30000 }
     );
 
+    onProgress?.({ phase: 'resolving' });
     const imageFilenames = collectReferencedImageFilenames(data.plants, data.journal);
     const imageFiles = await resolveImageFilesFromFilenames(imageFilenames);
 
@@ -471,7 +482,8 @@ export const exportFullBackup = async (): Promise<string> => {
 
     const zipUri = await createZipWithImages(
       manifest as unknown as Record<string, unknown>,
-      imageFiles
+      imageFiles,
+      { onProgress }
     );
 
     logger.info('Full backup created: ' + zipUri);
@@ -496,7 +508,9 @@ export const exportFullBackup = async (): Promise<string> => {
  * under the current account, then re-links imported photos. Destructive on this
  * device — callers must confirm before invoking.
  */
-export const importFullBackup = async (): Promise<RestoreSummary> => {
+export const importFullBackup = async (
+  onProgress?: BackupProgressCallback
+): Promise<RestoreSummary> => {
   try {
     logger.info('Starting full backup restore...');
 
@@ -513,8 +527,11 @@ export const importFullBackup = async (): Promise<RestoreSummary> => {
     }
 
     const IMAGES_DIR = Platform.OS === 'web' ? '' : `${FileSystem.documentDirectory}garden_images/`;
-    const { jsonData, imageUris } = await extractZipWithImages(result.assets[0]!.uri, IMAGES_DIR);
+    const { jsonData, imageUris } = await extractZipWithImages(result.assets[0]!.uri, IMAGES_DIR, {
+      onProgress,
+    });
 
+    onProgress?.({ phase: 'saving' });
     const manifest = validateFullBackupManifest(jsonData, LATEST_SCHEMA_VERSION);
 
     const uid = auth.currentUser?.uid;
