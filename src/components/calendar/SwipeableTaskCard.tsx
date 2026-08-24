@@ -7,6 +7,7 @@ import { TASK_ICON_KEYS } from '@/config/iconRegistry';
 import { TaskTemplate, Plant } from '../../types/database.types';
 import { TASK_COLORS, TASK_LABELS } from '../../utils/taskConstants';
 import {
+  calendarDaysOverdue,
   isEarlyCompletionBlocked,
   isFutureTask,
   isSkipBlocked,
@@ -14,6 +15,8 @@ import {
 import { calculateTaskPriority } from '../../services/tasks';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/calendarStyles';
+import { formatFarmDate } from '@/utils/farmDate';
+import type { TaskWeatherAdvisory } from '@/utils/taskWeatherAdvisory';
 
 interface PlantDetails {
   name: string;
@@ -39,7 +42,7 @@ interface Props {
   styles: ReturnType<typeof createStyles>;
   bedMap?: Map<string, string>;
   /** Watering tasks: rain predicted on the due date — prompt a soil check. */
-  rainExpected?: boolean;
+  weatherAdvisory?: TaskWeatherAdvisory | null;
   /** Harvest tasks: formatted estimated harvest date hint (e.g. "Aug 12"). */
   harvestHint?: string | null;
 }
@@ -58,7 +61,7 @@ function SwipeableTaskCardComponent({
   onDetail,
   styles,
   bedMap,
-  rainExpected,
+  weatherAdvisory,
   harvestHint,
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
@@ -67,9 +70,7 @@ function SwipeableTaskCardComponent({
 
   const plantDetails = getPlantDetails(task.plant_id);
   const dueDate = new Date(task.next_due_at);
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const isOverdue = dueDate < todayStart;
+  const isOverdue = calendarDaysOverdue(task) !== null;
   // Not due yet. For most types completing early is allowed but reschedules from
   // today, so the swipe action says so and the screen confirms. For water /
   // fertilise / spray it is refused outright — the Done affordance is replaced
@@ -82,6 +83,7 @@ function SwipeableTaskCardComponent({
 
   const plantObj = task.plant_id ? plantMap.get(task.plant_id) : undefined;
   const effectivePriority = task.priority_level || calculateTaskPriority(task, plantObj || null);
+  const taskLabel = TASK_LABELS[task.task_type];
 
   // Bed-level tasks have no plant — surface the bed name as the label so the
   // farmer can tell *where* to act instead of a generic "General".
@@ -231,7 +233,7 @@ function SwipeableTaskCardComponent({
               </View>
               <View style={styles.taskInfo}>
                 <View style={styles.rowCenter}>
-                  <Text style={styles.taskTitle}>{TASK_LABELS[task.task_type]}</Text>
+                  <Text style={styles.taskTitle}>{taskLabel}</Text>
                   {priorityColor && (
                     <View
                       style={[styles.taskPriorityBadge, { backgroundColor: priorityColor + '22' }]}
@@ -241,10 +243,10 @@ function SwipeableTaskCardComponent({
                       </Text>
                     </View>
                   )}
-                  {rainExpected && (
+                  {weatherAdvisory && (
                     <View style={styles.taskRainBadge}>
-                      <GardenIcon name="weather.rain" size={12} color={theme.info} />
-                      <Text style={styles.taskRainBadgeText}>Rain expected — check soil</Text>
+                      <GardenIcon name={weatherAdvisory.iconKey} size={12} color={theme.info} />
+                      <Text style={styles.taskRainBadgeText}>{weatherAdvisory.text}</Text>
                     </View>
                   )}
                 </View>
@@ -272,15 +274,15 @@ function SwipeableTaskCardComponent({
                       {task.preferred_time === 'morning'
                         ? 'Morning'
                         : task.preferred_time === 'afternoon'
-                          ? 'Afternoon'
-                          : 'Evening'}
+                        ? 'Afternoon'
+                        : 'Evening'}
                     </Text>
                   </View>
                 )}
                 {harvestHint && (
                   <View style={styles.taskMetaLine}>
                     <GardenIcon name="task.harvest" size={12} color={theme.success} />
-                    <Text style={styles.taskHarvestHint}>Est. harvest: {harvestHint}</Text>
+                    <Text style={styles.taskHarvestHint}>{harvestHint}</Text>
                   </View>
                 )}
               </View>
@@ -288,10 +290,13 @@ function SwipeableTaskCardComponent({
                 <Text style={[styles.taskTime, isOverdue && styles.taskTimeOverdue]}>
                   {isOverdue
                     ? 'Overdue'
-                    : dueDate.toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                    : formatFarmDate(
+                        dueDate,
+                        {
+                          month: 'short',
+                          day: 'numeric',
+                        }
+                      )}
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -303,7 +308,12 @@ function SwipeableTaskCardComponent({
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   activeOpacity={0.6}
                   accessibilityRole="button"
-                  accessibilityState={{ disabled: isBlocked, selected: isSelected }}
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={
+                    isBlocked
+                      ? `Explain early completion for ${taskLabel}`
+                      : `${isSelected ? 'Deselect' : 'Select'} ${taskLabel}`
+                  }
                 >
                   <Ionicons
                     name={

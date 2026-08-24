@@ -1,5 +1,11 @@
 import type { Plant, TaskTemplate, TaskType } from '@/types/database.types';
 import { EARLY_COMPLETION_BLOCK_REASON, TASK_DUE_TIME_HOUR } from '@/utils/taskConstants';
+import {
+  addDaysToDateKey,
+  calendarDaysBetweenKeys,
+  farmDateKey,
+  farmDateTimeFromKey,
+} from '@/utils/farmDate';
 
 /**
  * Pure care-task scheduling logic (no Firestore) — extracted from `tasks.ts`
@@ -45,14 +51,15 @@ export const computeNextDueAt = (
     parseDateValue(plant.created_at) ||
     now;
 
-  const nextDueAt = new Date(base);
-  nextDueAt.setDate(nextDueAt.getDate() + frequency);
-  nextDueAt.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0);
+  const baseKey = farmDateKey(base) ?? farmDateKey(now);
+  const nextKey = baseKey ? addDaysToDateKey(baseKey, frequency) : null;
+  const nextDueAt = nextKey ? farmDateTimeFromKey(nextKey, TASK_DUE_TIME_HOUR) : null;
 
   // Cap at today so a plant already past its cycle shows "due today" instead
   // of overdue by the plant's whole age.
-  const todayDue = new Date(now);
-  todayDue.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0);
+  const todayKey = farmDateKey(now);
+  const todayDue = todayKey ? farmDateTimeFromKey(todayKey, TASK_DUE_TIME_HOUR) : null;
+  if (!nextDueAt || !todayDue) return now.toISOString();
   if (nextDueAt < todayDue) return todayDue.toISOString();
 
   return nextDueAt.toISOString();
@@ -74,19 +81,33 @@ export const skipBaseDate = (task: TaskTemplate, now: Date = new Date()): Date =
  * drift the schedule to whatever time of day the user happened to tap.
  */
 export const computeSkipDate = (task: TaskTemplate, days: number, now: Date = new Date()): Date => {
-  const next = skipBaseDate(task, now);
-  next.setDate(next.getDate() + days);
-  next.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0);
-  return next;
+  const baseKey = farmDateKey(skipBaseDate(task, now)) ?? farmDateKey(now);
+  const nextKey = baseKey ? addDaysToDateKey(baseKey, days) : null;
+  return (nextKey ? farmDateTimeFromKey(nextKey, TASK_DUE_TIME_HOUR) : null) ?? new Date(now);
+};
+
+/**
+ * Whole calendar days a task is past due, or null when it isn't overdue —
+ * including when it came due today, which is on time, not late.
+ *
+ * Both sides are floored to local midnight first. Due dates are stamped at
+ * `TASK_DUE_TIME_HOUR` (6 PM), so subtracting raw timestamps and flooring the
+ * result reports a task due yesterday evening as 0 days late — the schedule's
+ * time-of-day convention silently eating the most common overdue case. Counting
+ * calendar days is also what a farmer means by "two days late".
+ */
+export const calendarDaysOverdue = (task: TaskTemplate, now: Date = new Date()): number | null => {
+  const dueKey = farmDateKey(task.next_due_at);
+  const todayKey = farmDateKey(now);
+  if (!dueKey || !todayKey || dueKey >= todayKey) return null;
+  return calendarDaysBetweenKeys(dueKey, todayKey);
 };
 
 /** True when the task is due after today — i.e. the work isn't expected yet. */
 export const isFutureTask = (task: TaskTemplate, now: Date = new Date()): boolean => {
-  const due = parseDateValue(task.next_due_at);
-  if (!due) return false;
-  const endOfToday = new Date(now);
-  endOfToday.setHours(23, 59, 59, 999);
-  return due > endOfToday;
+  const dueKey = farmDateKey(task.next_due_at);
+  const todayKey = farmDateKey(now);
+  return dueKey !== null && todayKey !== null && dueKey > todayKey;
 };
 
 /**

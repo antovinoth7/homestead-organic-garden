@@ -29,6 +29,7 @@ export function getZoneById(zoneId: string): AgroClimaticZone | null {
 }
 
 export { TAMIL_NADU_DISTRICTS, DEFAULT_DISTRICT } from './districts';
+export { setActiveZone, getActiveZone } from './activeZone';
 
 /**
  * Resolve the agro-climatic zone for the user's saved farm config.

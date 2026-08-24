@@ -15,9 +15,12 @@ import {
   JournalEntry,
   TaskLog,
 } from '../types/database.types';
+import { computeHarvestsReady, type HarvestReadyItem } from '../utils/harvestStats';
 import { isNetworkAvailable } from '../utils/networkState';
 import { resolveTaskBedId, isBedLevelOrphanTask } from '../utils/taskBed';
 import { logger } from '../utils/logger';
+import { addDaysToDateKey, calendarDateKey, farmDateKey, farmToday } from '@/utils/farmDate';
+import { getErrorMessage } from '@/utils/errorLogging';
 
 type GroupBy = 'none' | 'location' | 'type' | 'plant' | 'bed';
 
@@ -28,18 +31,17 @@ export interface BedSegmentCounts {
   other: number;
 }
 
-export interface HarvestReadyItem {
-  plant: Plant;
-  nextDate: Date;
-  daysUntil: number;
-  isReady: boolean;
-}
+// Re-exported so the Care Plan keeps importing it from the hook it renders from.
+export type { HarvestReadyItem };
 
 export interface UseCalendarDataReturn {
   tasks: TaskTemplate[];
   plants: Plant[];
   initialLoading: boolean;
   refreshing: boolean;
+  error: string | null;
+  isStale: boolean;
+  lastUpdatedAt: string | null;
   isMountedRef: React.MutableRefObject<boolean>;
   loadData: (options?: { force?: boolean }) => Promise<void>;
   handleRefresh: () => Promise<void>;
@@ -97,6 +99,9 @@ export function useCalendarData({
   const [orphanBedTaskIds, setOrphanBedTaskIds] = useState<Set<string>>(new Set());
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isStale, setIsStale] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
 
   const isMountedRef = useRef(true);
   const lastLoadTimeRef = useRef(0);
@@ -104,6 +109,7 @@ export function useCalendarData({
   // needs to run once per session — re-running it on every reload (e.g. after
   // each task completion) burns reads and delays the refresh with no benefit.
   const orphanHealDoneRef = useRef(false);
+  const hasLoadedDataRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -144,6 +150,11 @@ export function useCalendarData({
       setPlants(plantsData);
       setTodayLogs(todayLogsData);
       setHarvestEntries(journalData.filter((e) => e.entry_type === JournalEntryType.Harvest));
+      hasLoadedDataRef.current = true;
+      setError(null);
+      const loadedOffline = !isNetworkAvailable();
+      setIsStale(loadedOffline);
+      if (!loadedOffline) setLastUpdatedAt(new Date().toISOString());
 
       if (orphanPlantIds.length > 0 && isNetworkAvailable() && !orphanHealDoneRef.current) {
         const confirmedOrphans = (
@@ -194,6 +205,8 @@ export function useCalendarData({
     } catch (error) {
       if (!isMountedRef.current) return;
       logger.error('Failed to load calendar data', error as Error);
+      setError(getErrorMessage(error));
+      setIsStale(hasLoadedDataRef.current);
     } finally {
       if (isMountedRef.current) {
         setInitialLoading(false);
@@ -346,9 +359,11 @@ export function useCalendarData({
       result = result.filter((t) => filterTaskTypes.has(t.task_type));
     }
     if (filterOverdueOnly) {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      result = result.filter((t) => t.next_due_at && new Date(t.next_due_at) < todayStart);
+      const todayKey = farmDateKey(new Date());
+      result = result.filter((task) => {
+        const dueKey = farmDateKey(task.next_due_at);
+        return dueKey !== null && todayKey !== null && dueKey < todayKey;
+      });
     }
     return result;
   }, [searchFilteredTasks, filterTaskTypes, filterOverdueOnly]);
@@ -358,33 +373,28 @@ export function useCalendarData({
   // When searching, the view isn't windowed, so count all matches (mirrors tasksForDisplay).
   const windowTasks = useMemo(() => {
     if (isSearching) return preSegmentTasks;
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const todayKey = farmDateKey(new Date());
+    if (!todayKey) return [];
 
-    let inWindow: (due: Date) => boolean;
+    let inWindow: (dueKey: string) => boolean;
     if (selectedView === 'week') {
-      const weekStart = new Date(currentWeekStart);
-      weekStart.setHours(0, 0, 0, 0);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 7);
-      weekEnd.setHours(0, 0, 0, 0);
-      inWindow = (due) => {
-        const d = new Date(due);
-        d.setHours(0, 0, 0, 0);
-        return d >= weekStart && d < weekEnd;
-      };
+      const weekStartKey = calendarDateKey(currentWeekStart);
+      const weekEndKey = weekStartKey ? addDaysToDateKey(weekStartKey, 7) : null;
+      inWindow = (dueKey) =>
+        weekStartKey !== null &&
+        weekEndKey !== null &&
+        dueKey >= weekStartKey &&
+        dueKey < weekEndKey;
     } else {
-      const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      monthStart.setHours(0, 0, 0, 0);
-      const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-      monthEnd.setHours(23, 59, 59, 999);
-      inWindow = (due) => due >= monthStart && due <= monthEnd;
+      const monthPrefix = `${currentMonth.getFullYear()}-${String(
+        currentMonth.getMonth() + 1
+      ).padStart(2, '0')}`;
+      inWindow = (dueKey) => dueKey.startsWith(monthPrefix);
     }
 
     return preSegmentTasks.filter((t) => {
-      if (!t.next_due_at) return false;
-      const due = new Date(t.next_due_at);
-      return due < todayStart || inWindow(due);
+      const dueKey = farmDateKey(t.next_due_at);
+      return dueKey !== null && (dueKey < todayKey || inWindow(dueKey));
     });
   }, [isSearching, preSegmentTasks, selectedView, currentWeekStart, currentMonth]);
 
@@ -417,7 +427,8 @@ export function useCalendarData({
     const map = new Map<string, TaskTemplate[]>();
     for (const task of filteredTasks) {
       if (!task.next_due_at) continue;
-      const key = new Date(task.next_due_at).toDateString();
+      const key = farmDateKey(task.next_due_at);
+      if (!key) continue;
       const arr = map.get(key);
       if (arr) {
         arr.push(task);
@@ -434,7 +445,8 @@ export function useCalendarData({
     const map = new Map<string, TaskTemplate[]>();
     for (const task of searchFilteredTasks) {
       if (!task.next_due_at) continue;
-      const key = new Date(task.next_due_at).toDateString();
+      const key = farmDateKey(task.next_due_at);
+      if (!key) continue;
       const arr = map.get(key);
       if (arr) {
         arr.push(task);
@@ -447,59 +459,31 @@ export function useCalendarData({
 
   const getTasksForDate = React.useCallback(
     (date: Date) => {
-      return tasksByDateKey.get(date.toDateString()) || [];
+      const key = calendarDateKey(date);
+      return key ? tasksByDateKey.get(key) || [] : [];
     },
     [tasksByDateKey]
   );
 
   const getRawTasksForDate = React.useCallback(
     (date: Date) => {
-      return rawTasksByDateKey.get(date.toDateString()) || [];
+      const key = calendarDateKey(date);
+      return key ? rawTasksByDateKey.get(key) || [] : [];
     },
     [rawTasksByDateKey]
   );
 
-  const getHarvestsReady = React.useCallback(() => {
-    if (!plants || plants.length === 0 || !harvestEntries) return [];
-    const fruitTrees = plants.filter(
-      (p) => p.plant_type === 'fruit_tree' || p.plant_type === 'coconut_tree'
-    );
-
-    return fruitTrees
-      .map((plant) => {
-        const plantHarvests = harvestEntries.filter((e) => e.plant_id === plant.id);
-        if (plantHarvests.length === 0) return null;
-
-        const lastHarvest = plantHarvests[0]!;
-        const lastDate = new Date(lastHarvest.created_at);
-        const nextDate = new Date(lastDate);
-
-        if (plant.plant_type === 'coconut_tree') {
-          nextDate.setMonth(nextDate.getMonth() + 2);
-        } else {
-          nextDate.setMonth(nextDate.getMonth() + 6);
-        }
-
-        const daysUntil = Math.ceil(
-          (nextDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        return {
-          plant,
-          nextDate,
-          daysUntil,
-          isReady: daysUntil <= 7 && daysUntil >= 0,
-        };
-      })
-      .filter((item): item is HarvestReadyItem => item !== null);
-  }, [plants, harvestEntries]);
-
-  const harvestsReady = useMemo(() => getHarvestsReady(), [getHarvestsReady]);
+  const harvestsReady = useMemo(
+    () => computeHarvestsReady(plants, harvestEntries, new Date(), visibleTasks),
+    [plants, harvestEntries, visibleTasks]
+  );
 
   const overdueTasks = useMemo(() => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    return filteredTasks.filter((t) => t.next_due_at && new Date(t.next_due_at) < todayStart);
+    const todayKey = farmDateKey(new Date());
+    return filteredTasks.filter((task) => {
+      const dueKey = farmDateKey(task.next_due_at);
+      return dueKey !== null && todayKey !== null && dueKey < todayKey;
+    });
   }, [filteredTasks]);
 
   const filteredHarvestsReady = useMemo(
@@ -520,39 +504,38 @@ export function useCalendarData({
   const todayTasks = useMemo(() => {
     if (isSearching) return [];
     if (!filteredTasks || filteredTasks.length === 0) return [];
-    const today = new Date();
+    const todayKey = calendarDateKey(farmToday());
     return filteredTasks.filter((task) => {
       if (!task || !task.next_due_at) return false;
-      const dueDate = new Date(task.next_due_at);
-      return dueDate.toDateString() === today.toDateString();
+      return farmDateKey(task.next_due_at) === todayKey;
     });
   }, [isSearching, filteredTasks]);
 
   const weekTasks = useMemo(() => {
     if (selectedView === 'week') {
       if (!filteredTasks || filteredTasks.length === 0) return [];
-      const weekStart = new Date(currentWeekStart);
-      weekStart.setHours(0, 0, 0, 0);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 7);
-      weekEnd.setHours(0, 0, 0, 0);
+      const weekStartKey = calendarDateKey(currentWeekStart);
+      const weekEndKey = weekStartKey ? addDaysToDateKey(weekStartKey, 7) : null;
 
       return filteredTasks.filter((task) => {
         if (!task || !task.next_due_at) return false;
-        const dueDate = new Date(task.next_due_at);
-        dueDate.setHours(0, 0, 0, 0);
-        return dueDate >= weekStart && dueDate < weekEnd;
+        const dueKey = farmDateKey(task.next_due_at);
+        return (
+          dueKey !== null &&
+          weekStartKey !== null &&
+          weekEndKey !== null &&
+          dueKey >= weekStartKey &&
+          dueKey < weekEndKey
+        );
       });
     } else {
-      // month
-      const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      monthStart.setHours(0, 0, 0, 0);
-      const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-      monthEnd.setHours(23, 59, 59, 999);
+      const monthPrefix = `${currentMonth.getFullYear()}-${String(
+        currentMonth.getMonth() + 1
+      ).padStart(2, '0')}`;
 
       return filteredTasks.filter((task) => {
-        const dueDate = new Date(task.next_due_at);
-        return dueDate >= monthStart && dueDate <= monthEnd;
+        const dueKey = farmDateKey(task.next_due_at);
+        return dueKey !== null && dueKey.startsWith(monthPrefix);
       });
     }
   }, [selectedView, filteredTasks, currentWeekStart, currentMonth]);
@@ -560,10 +543,10 @@ export function useCalendarData({
   const tasksForDisplay = useMemo(() => {
     if (isSearching) return filteredTasks;
     if (!selectedDate) return weekTasks;
-    const selectedKey = selectedDate.toDateString();
+    const selectedKey = calendarDateKey(selectedDate);
     return weekTasks.filter((t) => {
       if (!t.next_due_at) return true;
-      return new Date(t.next_due_at).toDateString() !== selectedKey;
+      return farmDateKey(t.next_due_at) !== selectedKey;
     });
   }, [isSearching, filteredTasks, weekTasks, selectedDate]);
 
@@ -575,6 +558,9 @@ export function useCalendarData({
     plants,
     initialLoading,
     refreshing,
+    error,
+    isStale,
+    lastUpdatedAt,
     isMountedRef,
     // Data operations
     loadData,

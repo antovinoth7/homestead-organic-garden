@@ -38,6 +38,7 @@ interface OpenMeteoResponse {
     temperature_2m_min?: unknown;
     precipitation_sum?: unknown;
     precipitation_probability_max?: unknown;
+    wind_speed_10m_max?: unknown;
   };
 }
 
@@ -51,7 +52,7 @@ function buildUrl(lat: number, lng: number): string {
     latitude: String(lat),
     longitude: String(lng),
     daily:
-      'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max',
+      'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max',
     timezone: FARM_TIMEZONE,
     forecast_days: '7',
   });
@@ -86,9 +87,7 @@ function asOptionalNumberArray(value: unknown, length: number, name: string): (n
   if (!Array.isArray(value) || value.length !== length) {
     throw new Error(`Open-Meteo ${name} length does not match daily.time`);
   }
-  return value.map((item) =>
-    typeof item === 'number' && Number.isFinite(item) ? item : null
-  );
+  return value.map((item) => (typeof item === 'number' && Number.isFinite(item) ? item : null));
 }
 
 export function parseOpenMeteoForecast(value: unknown): WeatherForecast {
@@ -124,6 +123,10 @@ export function parseOpenMeteoForecast(value: unknown): WeatherForecast {
     length,
     'precipitation_probability_max'
   );
+  const windSpeeds =
+    json.daily?.wind_speed_10m_max == null
+      ? Array<number | null>(length).fill(null)
+      : asOptionalNumberArray(json.daily.wind_speed_10m_max, length, 'wind_speed_10m_max');
 
   const daily: DailyWeather[] = times.map((date, i) => {
     const rawCode = codes[i] ?? null;
@@ -131,6 +134,7 @@ export function parseOpenMeteoForecast(value: unknown): WeatherForecast {
     const tempMinC = minTemps[i]!;
     const precipitationMm = precipitation[i]!;
     const rawProbability = probabilities[i] ?? null;
+    const rawWindSpeed = windSpeeds[i] ?? null;
     // An out-of-range code is as uninformative as a missing one — fall back to
     // the precipitation-derived wording rather than discarding the whole day.
     const weatherCode =
@@ -141,6 +145,7 @@ export function parseOpenMeteoForecast(value: unknown): WeatherForecast {
       rawProbability !== null && rawProbability >= 0 && rawProbability <= 100
         ? rawProbability
         : null;
+    const windSpeedMaxKph = rawWindSpeed !== null && rawWindSpeed >= 0 ? rawWindSpeed : null;
     if (
       tempMaxC < -100 ||
       tempMaxC > 70 ||
@@ -160,6 +165,7 @@ export function parseOpenMeteoForecast(value: unknown): WeatherForecast {
       precipitationMm,
       weatherCode,
       precipitationProbabilityPct,
+      windSpeedMaxKph,
     };
   });
 
@@ -226,6 +232,12 @@ export function normalizeCachedForecast(value: unknown): WeatherForecast | null 
       day.precipitationProbabilityPct <= 100
         ? day.precipitationProbabilityPct
         : null;
+    const windSpeedMaxKph =
+      typeof day.windSpeedMaxKph === 'number' &&
+      Number.isFinite(day.windSpeedMaxKph) &&
+      day.windSpeedMaxKph >= 0
+        ? day.windSpeedMaxKph
+        : null;
     daily.push({
       date: day.date,
       tempMaxC: day.tempMaxC,
@@ -233,6 +245,7 @@ export function normalizeCachedForecast(value: unknown): WeatherForecast | null 
       precipitationMm: day.precipitationMm,
       weatherCode,
       precipitationProbabilityPct,
+      windSpeedMaxKph,
     });
   }
 
@@ -285,6 +298,31 @@ export function getCachedForecast(
   return normalizeCachedForecast(peekCached<unknown>(cacheKey(lat, lng)));
 }
 
+/**
+ * Coordinates of the most recent forecast the app resolved. Watering schedules
+ * are computed synchronously deep in the task layer, which has no route to the
+ * async location config — so rather than resolve coordinates a second way,
+ * remember the ones the UI already asked for.
+ *
+ * Today and the Care Plan both fetch on mount, so this ends up holding exactly
+ * the coordinates behind the rain badge: the scheduler and the badge cannot
+ * disagree about whether rain is coming.
+ */
+let primaryCoords: { lat: number; lng: number } | null = null;
+
+/**
+ * The farm's current forecast, or null when none is cached yet.
+ *
+ * One farm-level forecast, not one per plot — the same simplification the Care
+ * Plan already makes for its rain markers, and rain is a district-scale signal.
+ * Null is a normal answer: offline, or before anything has fetched. Callers must
+ * carry on without it rather than treat it as "no rain".
+ */
+export function getPrimaryForecast(): WeatherForecast | null {
+  if (!primaryCoords) return null;
+  return getCachedForecast(primaryCoords.lat, primaryCoords.lng);
+}
+
 export async function getWeatherForecast(
   lat: number = KANYAKUMARI_LAT,
   lng: number = KANYAKUMARI_LNG,
@@ -293,6 +331,7 @@ export async function getWeatherForecast(
   if (!isValidWeatherCoordinates(lat, lng)) {
     throw new RangeError('Weather coordinates are outside valid latitude/longitude bounds');
   }
+  primaryCoords = { lat, lng };
   const key = cacheKey(lat, lng);
   const cached = normalizeCachedForecast(peekCached<unknown>(key));
   if (

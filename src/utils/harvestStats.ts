@@ -6,8 +6,79 @@
  * collection. These helpers summarize and bucket those entries for the
  * `HarvestHistorySection` stats + `HarvestYieldChart`.
  */
-import { JournalEntry } from '@/types/database.types';
+import { JournalEntry, Plant, TaskTemplate } from '@/types/database.types';
 import { getCurrentSeason } from '@/utils/seasonHelpers';
+import { calendarDaysBetweenKeys, farmDateKey } from '@/utils/farmDate';
+
+/** Within this many days of a supported date, a crop needs a harvest check. */
+export const READY_WITHIN_DAYS = 7;
+/** How far ahead the Harvest Ready section looks before an entry is just noise. */
+export const HARVEST_HORIZON_DAYS = 30;
+
+export interface HarvestReadyItem {
+  plant: Plant;
+  nextDate: Date;
+  daysUntil: number;
+  isReady: boolean;
+  source: 'farmer_date' | 'scheduled_task';
+}
+
+/**
+ * Crops whose next harvest check is due or nearly due. A supported date must
+ * come from the farmer's expected date or an enabled harvest task; journal
+ * history alone never invents a generic crop cycle.
+ *
+ * `daysUntil` may be negative: a harvest window that opened in the past has not
+ * closed, so those count as ready rather than falling through to a "ready in
+ * N days" branch that would then render a negative countdown.
+ */
+export function computeHarvestsReady(
+  plants: Plant[],
+  harvestEntries: JournalEntry[],
+  now: Date = new Date(),
+  tasks: TaskTemplate[] = []
+): HarvestReadyItem[] {
+  if (plants.length === 0) return [];
+
+  const items: HarvestReadyItem[] = [];
+  for (const plant of plants) {
+    const scheduled = tasks
+      .filter(
+        (task) =>
+          task.enabled &&
+          task.plant_id === plant.id &&
+          (task.task_type === 'harvest' || task.task_type === 'harvest_leaves') &&
+          farmDateKey(task.next_due_at) !== null
+      )
+      .sort((a, b) => a.next_due_at.localeCompare(b.next_due_at))[0];
+    const rawDate = scheduled?.next_due_at ?? plant.expected_harvest_date;
+    const source = scheduled ? 'scheduled_task' : 'farmer_date';
+    if (!rawDate) continue;
+
+    // Take the newest entry explicitly rather than trusting the caller's sort —
+    // an out-of-order list would otherwise silently predict from an old harvest.
+    const nextDate = new Date(rawDate);
+    const nextKey = farmDateKey(nextDate);
+    const todayKey = farmDateKey(now);
+    if (!nextKey || !todayKey || Number.isNaN(nextDate.getTime())) continue;
+
+    if (!scheduled) {
+      const harvestedAfterDate = harvestEntries.some(
+        (entry) => entry.plant_id === plant.id && (farmDateKey(entry.created_at) ?? '') >= nextKey
+      );
+      if (harvestedAfterDate) continue;
+    }
+
+    const daysUntil = calendarDaysBetweenKeys(todayKey, nextKey);
+    if (daysUntil === null) continue;
+    // "Harvest Ready" is a do-it-now section; a tree six months out belongs on
+    // the plant record, not here.
+    if (daysUntil > HARVEST_HORIZON_DAYS) continue;
+
+    items.push({ plant, nextDate, daysUntil, isReady: daysUntil <= READY_WITHIN_DAYS, source });
+  }
+  return items;
+}
 
 export interface HarvestSummary {
   count: number;

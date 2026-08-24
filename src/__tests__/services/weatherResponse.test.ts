@@ -28,6 +28,7 @@ const validResponse = () => ({
     temperature_2m_min: [24.8, 24.9],
     precipitation_sum: [0.9, 0.1],
     precipitation_probability_max: [60, 20],
+    wind_speed_10m_max: [18, 24],
   },
 });
 
@@ -39,6 +40,7 @@ describe('parseOpenMeteoForecast', () => {
       date: '2026-08-09',
       weatherCode: 51,
       precipitationProbabilityPct: 60,
+      windSpeedMaxKph: 18,
       precipitationMm: 0.9,
     });
   });
@@ -157,7 +159,7 @@ describe('getWeatherForecast cache policy', () => {
     expect(requested.searchParams.get('forecast_days')).toBe('7');
     expect(requested.searchParams.get('timezone')).toBe('Asia/Kolkata');
     expect(requested.searchParams.get('daily')).toBe(
-      'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max'
+      'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max'
     );
   });
 
@@ -179,7 +181,6 @@ describe('getWeatherForecast cache policy', () => {
     await expect(getWeatherForecast(91, 77)).rejects.toThrow(RangeError);
     expect(fetchMock).not.toHaveBeenCalled();
   });
-
 });
 
 // The key gained two decimals of precision, orphaning every entry a previous

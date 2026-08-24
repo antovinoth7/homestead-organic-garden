@@ -343,8 +343,8 @@ export default function SettingsScreen(): React.JSX.Element {
           <Text style={styles.sectionTitle}>Complete Backup</Text>
           <Text style={styles.sectionDescription}>
             Save everything — plants, beds, tasks, journal, settings and photos — in one ZIP you can
-            keep on Drive or share. Your data also syncs to the cloud; this is a portable archive you
-            own and can restore on any device.
+            keep on Drive or share. Your data also syncs to the cloud; this is a portable archive
+            you own and can restore on any device.
           </Text>
 
           <TouchableOpacity

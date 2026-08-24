@@ -12,6 +12,13 @@ import { getErrorMessage } from '../../utils/errorLogging';
 import { sanitizeNumberText } from '../../utils/plantFormConstants';
 import { createStyles } from '../../styles/calendarStyles';
 import { useTheme } from '../../theme';
+import {
+  addCalendarDays,
+  calendarDateKey,
+  farmDateTimeFromKey,
+  farmToday,
+  formatFarmDate,
+} from '@/utils/farmDate';
 
 const TASK_TYPE_ITEMS: DropdownItem[] = [
   { label: 'Water', value: 'water' },
@@ -61,7 +68,7 @@ export default function CreateTaskModal({
   const [selectedBed, setSelectedBed] = useState('');
   const [frequencyDays, setFrequencyDays] = useState('7');
   const [isOneTimeTask, setIsOneTimeTask] = useState(false);
-  const [startDate, setStartDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(farmToday());
   const [preferredTime, setPreferredTime] = useState<'morning' | 'afternoon' | 'evening' | null>(
     null
   );
@@ -69,9 +76,13 @@ export default function CreateTaskModal({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (visible && initialStartDate) {
-      setStartDate(initialStartDate);
-    }
+    if (!visible) return;
+    const today = farmToday();
+    const initialKey = initialStartDate ? calendarDateKey(initialStartDate) : null;
+    const todayKey = calendarDateKey(today);
+    setStartDate(
+      initialKey && todayKey && initialKey >= todayKey ? initialStartDate ?? today : today
+    );
   }, [visible, initialStartDate]);
 
   useEffect(() => {
@@ -99,7 +110,7 @@ export default function CreateTaskModal({
     setSelectedBed('');
     setFrequencyDays('7');
     setIsOneTimeTask(false);
-    setStartDate(new Date());
+    setStartDate(farmToday());
     setPreferredTime(null);
   };
 
@@ -123,23 +134,13 @@ export default function CreateTaskModal({
 
     setLoading(true);
     try {
-      const dueDate = new Date(startDate);
-
-      if (preferredTime === 'morning') {
-        dueDate.setHours(8, 0, 0, 0);
-      } else if (preferredTime === 'afternoon') {
-        dueDate.setHours(14, 0, 0, 0);
-      } else if (preferredTime === 'evening') {
-        dueDate.setHours(18, 0, 0, 0);
-      }
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const dueDay = new Date(dueDate);
-      dueDay.setHours(0, 0, 0, 0);
-      if (dueDay < today) {
-        dueDate.setDate(dueDate.getDate() + 1);
-      }
+      const selectedKey = calendarDateKey(startDate);
+      const todayKey = calendarDateKey(farmToday());
+      if (!selectedKey || !todayKey) throw new Error('Invalid task date');
+      const dueKey = selectedKey < todayKey ? todayKey : selectedKey;
+      const dueHour = preferredTime === 'morning' ? 8 : preferredTime === 'afternoon' ? 14 : 18;
+      const dueDate = farmDateTimeFromKey(dueKey, dueHour);
+      if (!dueDate) throw new Error('Invalid task date');
 
       await createTaskTemplate({
         task_type: taskType,
@@ -236,7 +237,7 @@ export default function CreateTaskModal({
           <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
             <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
             <Text style={styles.dateButtonText}>
-              {startDate.toLocaleDateString('en-US', {
+              {formatFarmDate(startDate, {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
@@ -247,6 +248,7 @@ export default function CreateTaskModal({
           {showDatePicker && (
             <DateTimePicker
               value={startDate}
+              minimumDate={farmToday()}
               mode="date"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={(event, selectedDate) => {
@@ -414,7 +416,7 @@ export default function CreateTaskModal({
                   </View>
                   <Text style={styles.previewText}>
                     • First task:{' '}
-                    {startDate.toLocaleDateString('en-US', {
+                    {formatFarmDate(startDate, {
                       month: 'short',
                       day: 'numeric',
                     })}
@@ -422,9 +424,7 @@ export default function CreateTaskModal({
                   </Text>
                   <Text style={styles.previewText}>
                     • Next task:{' '}
-                    {new Date(
-                      startDate.getTime() + parseInt(frequencyDays) * 24 * 60 * 60 * 1000
-                    ).toLocaleDateString('en-US', {
+                    {formatFarmDate(addCalendarDays(startDate, parseInt(frequencyDays)), {
                       month: 'short',
                       day: 'numeric',
                     })}
@@ -445,7 +445,7 @@ export default function CreateTaskModal({
               </View>
               <Text style={styles.previewText}>
                 • Due:{' '}
-                {startDate.toLocaleDateString('en-US', {
+                {formatFarmDate(startDate, {
                   month: 'short',
                   day: 'numeric',
                 })}

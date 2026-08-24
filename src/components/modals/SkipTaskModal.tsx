@@ -7,6 +7,7 @@ import { TaskTemplate } from '../../types/database.types';
 import { computeSkipDate } from '../../services/taskSchedulingLogic';
 import { createStyles } from '../../styles/calendarStyles';
 import { useTheme } from '../../theme';
+import { formatFarmDate } from '@/utils/farmDate';
 
 const SKIP_DAY_OPTIONS = [
   { days: 1, label: 'Tomorrow' },
@@ -14,10 +15,11 @@ const SKIP_DAY_OPTIONS = [
   { days: 7, label: '7 Days' },
 ] as const;
 
-const SKIP_REASON_PRESETS = ['Weather', 'Already done', 'Not needed', 'Too busy'] as const;
+const SKIP_REASON_PRESETS = ['Weather', 'Not needed', 'Too busy'] as const;
 
 interface SkipTaskModalProps {
   visible: boolean;
+  mode?: 'skip' | 'reschedule';
   /** Single-task skip. Null when skipping a multi-select batch. */
   task: TaskTemplate | null;
   /** Number of tasks being skipped — 1 for the single-task path. */
@@ -37,6 +39,7 @@ interface SkipTaskModalProps {
 
 export default function SkipTaskModal({
   visible,
+  mode = 'skip',
   task,
   taskCount,
   excludedCount = 0,
@@ -54,7 +57,7 @@ export default function SkipTaskModal({
 
   // Only meaningful for a single task — a batch has one new date per task.
   const previewDate = task
-    ? computeSkipDate(task, skipDays).toLocaleDateString('en-US', {
+    ? formatFarmDate(computeSkipDate(task, skipDays), {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
@@ -81,7 +84,13 @@ export default function SkipTaskModal({
         </TouchableOpacity>
         <View style={styles.modalTitleWrap}>
           <Text style={styles.modalTitle} numberOfLines={1}>
-            {taskCount > 1 ? `Skip ${taskCount} Tasks` : 'Skip Task'}
+            {mode === 'reschedule'
+              ? taskCount > 1
+                ? `Reschedule ${taskCount} Tasks`
+                : 'Reschedule Task'
+              : taskCount > 1
+              ? `Skip ${taskCount} Tasks`
+              : 'Skip Task'}
           </Text>
         </View>
         <TouchableOpacity
@@ -91,7 +100,7 @@ export default function SkipTaskModal({
           activeOpacity={0.85}
         >
           <Text style={[styles.modalSaveText, isSkipping && styles.modalSaveTextDisabled]}>
-            {isSkipping ? 'Skipping...' : 'Skip'}
+            {isSkipping ? 'Saving...' : mode === 'reschedule' ? 'Reschedule' : 'Skip'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -103,7 +112,9 @@ export default function SkipTaskModal({
         contentContainerStyle={{ paddingBottom: Math.max(bottomInset, 12) }}
       >
         <View style={styles.modalBody}>
-          <Text style={styles.skipModalSubtext}>Postpone by:</Text>
+          <Text style={styles.skipModalSubtext}>
+            {mode === 'reschedule' ? 'Move the due date by:' : 'Postpone by:'}
+          </Text>
           <View style={styles.skipDaysRow}>
             {SKIP_DAY_OPTIONS.map(({ days, label }) => (
               <TouchableOpacity
@@ -126,9 +137,7 @@ export default function SkipTaskModal({
           </View>
 
           {previewDate && (
-            <Text style={styles.skipPreviewText}>
-              Rescheduled to {previewDate}, 6:00 PM
-            </Text>
+            <Text style={styles.skipPreviewText}>Rescheduled to {previewDate}, 6:00 PM</Text>
           )}
 
           {excludedCount > 0 && (
@@ -140,7 +149,9 @@ export default function SkipTaskModal({
           <VoiceDictation value={skipReason} onChangeText={onChangeReason} />
           <TextInput
             style={styles.skipModalInput}
-            placeholder="Reason (optional)"
+            placeholder={
+              mode === 'reschedule' ? 'Reason for rescheduling (optional)' : 'Reason (optional)'
+            }
             value={skipReason}
             onChangeText={onChangeReason}
             placeholderTextColor={theme.textTertiary}
