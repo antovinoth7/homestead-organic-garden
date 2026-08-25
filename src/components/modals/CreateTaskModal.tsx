@@ -150,6 +150,7 @@ export default function CreateTaskModal({
         next_due_at: dueDate.toISOString(),
         enabled: true,
         preferred_time: preferredTime,
+        source: 'manual',
       });
       Alert.alert('Success', 'Task created successfully!');
       resetForm();

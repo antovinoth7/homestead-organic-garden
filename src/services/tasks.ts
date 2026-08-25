@@ -53,6 +53,7 @@ import {
   isEarlyCompletionBlocked,
   isFutureTask,
   isSkipBlocked,
+  isSyncOwnedTemplate,
 } from './taskSchedulingLogic';
 import {
   addDaysToDateKey,
@@ -1281,7 +1282,12 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
   }
 
   const existingTasks = await getTaskTemplates();
-  const plantTasks = existingTasks.filter((task) => task.plant_id === plant.id);
+  // Only templates sync owns. A manually-created task for this plant is left
+  // completely alone — not re-dated, not disabled as a "duplicate" — so the
+  // farmer's own schedule survives every plant save. See isSyncOwnedTemplate.
+  const plantTasks = existingTasks.filter(
+    (task) => task.plant_id === plant.id && isSyncOwnedTemplate(task)
+  );
   const plantCreatedAt = parseDateValue(plant.created_at);
 
   for (const item of desiredFrequencies) {
@@ -1380,6 +1386,7 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
       next_due_at: nextDueAt,
       enabled: true,
       preferred_time: null,
+      source: 'auto',
     });
     result.created.push(taskType);
   }

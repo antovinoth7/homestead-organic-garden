@@ -37,6 +37,22 @@ export const getLastCareDate = (plant: Plant, taskType: TaskType): string | null
   return field ? plant[field] : null;
 };
 
+/**
+ * Whether `syncCareTasksForPlant` may reshape this template.
+ *
+ * Sync gathers a plant's templates by `plant_id` and treats every one of them
+ * as its own: it collapses "duplicates" by disabling all but the newest, and
+ * rewrites `frequency_days` / `next_due_at` from the plant's care profile. A
+ * task the farmer created by hand looks exactly like a duplicate to that logic,
+ * so without this guard adding a manual water task and then saving the plant
+ * silently reverted the manual cadence and switched the profile-driven task off.
+ *
+ * A missing `source` counts as auto — see the field's comment on why that is the
+ * backwards-compatible default.
+ */
+export const isSyncOwnedTemplate = (template: Pick<TaskTemplate, 'source'>): boolean =>
+  (template.source ?? 'auto') === 'auto';
+
 export const computeNextDueAt = (
   plant: Plant,
   taskType: TaskType,

@@ -373,6 +373,7 @@ export default function JournalFormScreen(): React.JSX.Element {
                     next_due_at: dueDate.toISOString(),
                     enabled: true,
                     preferred_time: null,
+                    source: 'manual',
                   });
                   Alert.alert('Done', 'Spray task created!');
                 } catch {

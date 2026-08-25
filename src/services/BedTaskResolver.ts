@@ -132,6 +132,7 @@ export async function syncBedTasks(bed: Bed, plants: Plant[]): Promise<void> {
         task_subtype: spec.task_subtype,
         frequency_days: spec.frequency_days,
         preferred_time: null,
+        source: 'auto',
         enabled: true,
         next_due_at: now.toISOString(),
         priority_level: 'medium',

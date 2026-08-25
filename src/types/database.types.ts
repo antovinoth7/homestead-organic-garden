@@ -909,6 +909,19 @@ export interface TaskTemplate {
   last_skipped_at?: string | null;
   last_skip_reason?: string | null;
   skip_count?: number | null;
+  /**
+   * Who owns this template's schedule.
+   *
+   * `auto` templates are derived from the plant's care profile and are
+   * reconciled — created, re-dated, disabled — by `syncCareTasksForPlant` on
+   * every plant save. `manual` templates were created deliberately from the
+   * Care Plan (or a journal prompt) and sync must never reshape them.
+   *
+   * Absent means `auto`: every template written before this field existed was
+   * already being managed by sync, so the fallback keeps existing data
+   * behaving exactly as it does now. Read it through `isSyncOwnedTemplate()`.
+   */
+  source?: 'auto' | 'manual' | null;
   created_at: string;
 }
 
