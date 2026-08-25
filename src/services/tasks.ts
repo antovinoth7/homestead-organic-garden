@@ -34,12 +34,8 @@ import {
   dedup,
   CACHE_KEYS,
 } from '../lib/dataCache';
-import {
-  TASK_DUE_TIME_HOUR,
-  TASK_LABELS,
-  EARLY_COMPLETION_BLOCK_REASON,
-} from '../utils/taskConstants';
-import { getCurrentSeason, getWateringFrequencyMultiplier } from '../utils/seasonHelpers';
+import { TASK_LABELS, EARLY_COMPLETION_BLOCK_REASON } from '../utils/taskConstants';
+import { getCurrentSeason } from '../utils/seasonHelpers';
 import { getCoconutAgeInfo, getEffectiveGrowthStage, isPlantArchived } from '../utils/plantHelpers';
 import { getEffectiveWateringIntervalDays } from '../utils/plantWatering';
 import { getPlantCareProfile } from '../utils/plantCareDefaults';
@@ -54,6 +50,7 @@ import {
   isFutureTask,
   isSkipBlocked,
   isSyncOwnedTemplate,
+  computeScheduleAfterCompletion,
 } from './taskSchedulingLogic';
 import {
   addDaysToDateKey,
@@ -545,23 +542,16 @@ const buildTaskDoneOps = (
   const doneAtIso = doneAt.toISOString();
   const frequencyDays = Number.isFinite(template.frequency_days) ? template.frequency_days : 0;
 
-  // The farm zone may set the baseline cycle, but a forecast is advisory: an
-  // unverified rain prediction must never silently extend the authoritative due
-  // date. The UI presents rain/wind context and lets the farmer reschedule after
-  // checking the local soil and crop.
-  let effectiveDays = frequencyDays;
-  let wateringMultiplier: number | null = null;
-  if (template.task_type === 'water' && template.plant_id && frequencyDays > 0) {
-    const waterPlant = cachedPlants.find((p) => p.id === template.plant_id);
-    if (waterPlant) {
-      wateringMultiplier = getWateringFrequencyMultiplier(waterPlant.space_type, undefined, doneAt);
-      effectiveDays = Math.max(1, Math.round(frequencyDays * wateringMultiplier));
-    }
-  }
-
-  const doneKey = farmDateKey(doneAt);
-  const nextKey = doneKey ? addDaysToDateKey(doneKey, effectiveDays) : null;
-  const nextDueAt = nextKey ? farmDateTimeFromKey(nextKey, TASK_DUE_TIME_HOUR) : null;
+  // Scheduling lives in taskSchedulingLogic so it can be unit-tested without a
+  // Firestore emulator; this function only turns the result into batch writes.
+  const waterPlant = template.plant_id
+    ? cachedPlants.find((p) => p.id === template.plant_id) ?? null
+    : null;
+  const { nextDueAt, wateringMultiplier } = computeScheduleAfterCompletion(
+    template,
+    waterPlant,
+    doneAt
+  );
   const completedEarly = isFutureTask(template, doneAt);
   const completionReason = options?.completionReason?.trim() || null;
   const farmDetails = options?.farmDetails;
