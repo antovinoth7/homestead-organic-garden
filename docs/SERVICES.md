@@ -112,7 +112,8 @@ Rules for new write functions:
 
 - Supports multiple images through `photo_filenames` and `photo_urls`.
 - Still carries the legacy single `photo_url` field for backward compatibility.
-- `getJournalMetadata()` fetches entries without resolving images, used by `CalendarScreen` for lightweight reads.
+- `getJournalMetadata()` fetches entries without resolving images — every entry, so use it only where the whole journal is needed.
+- `getHarvestJournalMetadata()` is the narrow read behind the Care Plan's Harvest Ready section: `where('entry_type','==','harvest')` server-side, so a farm with years of observations and pest notes no longer pays a document read per non-harvest entry on every Care Plan load. Two equality filters and **no `orderBy`** — that pair needs no composite index; sorting is done in memory. It derives from the `JOURNAL_METADATA`/`JOURNAL_ENTRIES` caches when either is fresh, and its own `JOURNAL_HARVESTS` key is invalidated alongside them on every journal mutation. `isHarvestJournalEntry()` (`utils/harvestStats.ts`) is the one definition shared by the query's offline fallback, so server-side and client-side filtering cannot diverge.
 
 ### `src/services/backup.ts`
 

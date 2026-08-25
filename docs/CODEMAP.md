@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-08-25 — src/: 628 files, 115,712 lines.
+> Snapshot: 2026-08-25 — src/: 628 files, 115,839 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -111,7 +111,7 @@
 - plantCatalog.localSuitability.test.ts (93)
 - preMonsoonTasks.test.ts (83)
 
-### src/__tests__/utils/ — 72 files, 9,405 lines
+### src/__tests__/utils/ — 72 files, 9,438 lines
 
 - rowLayoutEngine.test.ts (523)
 - growthStage.test.ts (371)
@@ -127,6 +127,7 @@
 - plantFilters.test.ts (197)
 - bedPreview.test.ts (190)
 - catalogDraft.test.ts (190)
+- harvestStats.test.ts (187)
 - quickStartPlanner.test.ts (186)
 - bedStatus.test.ts (183)
 - catalogSummaries.test.ts (178)
@@ -135,7 +136,6 @@
 - catalogSearch.test.ts (159)
 - needsActionItems.test.ts (156)
 - diseases.test.ts (155)
-- harvestStats.test.ts (154)
 - plantHistory.test.ts (153)
 - pests.test.ts (148)
 - riskHelpers.test.ts (142)
@@ -315,9 +315,9 @@
 - FormSectionCard.tsx (49)
 - EditBeneficialsSection.tsx (35)
 
-### src/components/modals/ — 11 files, 2,014 lines
+### src/components/modals/ — 11 files, 2,011 lines
 
-- CreateTaskModal.tsx (521)
+- CreateTaskModal.tsx (518)
 - PlotEditModal.tsx (415)
 - TaskCompletionModal.tsx (221)
 - SkipTaskModal.tsx (186)
@@ -442,12 +442,12 @@
 - types.ts (40)
 - activeZone.ts (26)
 
-### src/hooks/ — 32 files, 6,483 lines
+### src/hooks/ — 32 files, 6,484 lines
 
 - usePlantFormState.ts (1202) ⚠️ large — Grep/search inside, do not read whole
 - useBedCreationWizard.ts (937) ⚠️ large — Grep/search inside, do not read whole
 - useLocationManager.ts (567)
-- useCalendarData.ts (542)
+- useCalendarData.ts (543)
 - useTodayBrief.ts (522)
 - useCatalogEntryForm.ts (497)
 - useVoiceInput.ts (218)
@@ -477,11 +477,11 @@
 - useOfflineStatus.ts (31)
 - useKeyboardVisible.ts (25)
 
-### src/lib/ — 6 files, 1,509 lines
+### src/lib/ — 6 files, 1,510 lines
 
 - imageStorage.ts (873) ⚠️ large — Grep/search inside, do not read whole
 - offlineQueue.ts (169)
-- dataCache.ts (165)
+- dataCache.ts (166)
 - firebase.ts (146)
 - storage.ts (109)
 - offlineWrite.ts (47)
@@ -543,14 +543,14 @@
 - BedConfirmStep.tsx (226)
 - BedTypeStep.tsx (154)
 
-### src/services/ — 19 files, 7,889 lines
+### src/services/ — 19 files, 7,970 lines
 
 - tasks.ts (1592) ⚠️ large — Grep/search inside, do not read whole
 - plants.ts (1140) ⚠️ large — Grep/search inside, do not read whole
 - plantCatalog.ts (879) ⚠️ large — Grep/search inside, do not read whole
 - backup.ts (609)
 - plantProfiles.ts (558)
-- journal.ts (430)
+- journal.ts (511)
 - weather.ts (384)
 - alertsLogic.ts (373)
 - plantCareProfiles.ts (307)
@@ -673,7 +673,7 @@
 - visual.types.ts (90)
 - offline.types.ts (49)
 
-### src/utils/ — 81 files, 10,745 lines
+### src/utils/ — 81 files, 10,759 lines
 
 - plantHelpers.ts (1958) ⚠️ large — Grep/search inside, do not read whole
 - rowLayoutEngine.ts (660)
@@ -690,11 +690,11 @@
 - plantWatering.ts (171)
 - errorTracker.ts (168)
 - journalEntryOptions.ts (167)
+- harvestStats.ts (166)
 - logger.ts (161)
 - firestoreTimeout.ts (159)
 - bedStatus.ts (156)
 - taskSummary.ts (156)
-- harvestStats.ts (152)
 - catalogSearch.ts (137)
 - riskHelpers.ts (132)
 - catalogValidation.ts (131)
@@ -785,7 +785,7 @@
 - archive/ROADMAP_ARCHIVE.md (1861)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (800)
+- CODEMAP.md (801)
 - COMPONENTS.md (66)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (53)
@@ -794,7 +794,7 @@
 - IMPLEMENTATION_ROADMAP.md (349)
 - REFERENCE_IMAGES.md (72)
 - SCHEMA_MIGRATIONS.md (50)
-- SERVICES.md (206)
+- SERVICES.md (207)
 - tamil-nadu-reference-audit.md (161)
 - TESTING.md (33)
 - TODAY_SCREEN_RECOMMENDATION.md (629)

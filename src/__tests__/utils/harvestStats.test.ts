@@ -3,13 +3,46 @@ import {
   groupHarvestsBySeason,
   groupHarvestsByTree,
   computeHarvestsReady,
+  isHarvestJournalEntry,
 } from '@/utils/harvestStats';
 import type { JournalEntry } from '@/types/database.types';
+import { JournalEntryType } from '@/types/database.types';
 import { makeJournalEntry } from '../fixtures/journal.fixtures';
 import { makePlant } from '../fixtures/plant.fixtures';
 import { makeTaskTemplate } from '../fixtures/task.fixtures';
 
 describe('harvestStats', () => {
+  describe('isHarvestJournalEntry', () => {
+    it('accepts a harvest entry', () => {
+      expect(
+        isHarvestJournalEntry(makeJournalEntry({ entry_type: JournalEntryType.Harvest }))
+      ).toBe(true);
+    });
+
+    it('rejects other entry types', () => {
+      for (const type of [
+        JournalEntryType.Observation,
+        JournalEntryType.PestDisease,
+        JournalEntryType.Issue,
+        JournalEntryType.Milestone,
+        JournalEntryType.Other,
+      ]) {
+        expect(isHarvestJournalEntry(makeJournalEntry({ entry_type: type }))).toBe(false);
+      }
+    });
+
+    it('rejects an entry with no entry_type at all', () => {
+      // This pins the claim that moving the harvest filter server-side changes
+      // nothing: a Firestore `where('entry_type','==',...)` never matches a
+      // document missing the field, and neither does this predicate. A legacy
+      // document without the field was already excluded client-side.
+      expect(isHarvestJournalEntry({} as JournalEntry)).toBe(false);
+      expect(isHarvestJournalEntry({ entry_type: undefined } as unknown as JournalEntry)).toBe(
+        false
+      );
+    });
+  });
+
   describe('summarizeHarvests', () => {
     it('returns zeros and a default unit for no entries', () => {
       const s = summarizeHarvests([]);

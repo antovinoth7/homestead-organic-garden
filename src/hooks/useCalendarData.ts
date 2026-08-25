@@ -2,14 +2,8 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { getTaskTemplates, getTodayTaskLogs } from '../services/tasks';
 import { getAllPlants } from '../services/plants';
 import { getBeds } from '../services/beds';
-import { getJournalMetadata } from '../services/journal';
-import {
-  TaskTemplate,
-  Plant,
-  JournalEntryType,
-  JournalEntry,
-  TaskLog,
-} from '../types/database.types';
+import { getHarvestJournalMetadata } from '../services/journal';
+import { TaskTemplate, Plant, JournalEntry, TaskLog } from '../types/database.types';
 import { computeHarvestsReady, type HarvestReadyItem } from '../utils/harvestStats';
 import { isNetworkAvailable } from '../utils/networkState';
 import { resolveTaskBedId, isBedLevelOrphanTask } from '../utils/taskBed';
@@ -116,12 +110,22 @@ export function useCalendarData({
     lastLoadTimeRef.current = now;
 
     try {
-      const [tasksData, plantsData, journalData, todayLogsData] = await Promise.all([
-        getTaskTemplates(),
-        getAllPlants(),
-        getJournalMetadata(),
-        getTodayTaskLogs(),
-      ]);
+      // Beds ride along in the same round trip rather than waiting for the other
+      // four: nothing here depends on them, only the orphan filter below does.
+      // The catch keeps a bed failure from rejecting the whole load and blanking
+      // the task list — it degrades to "no orphan hiding", as it did when this
+      // was a separate try/catch.
+      const [tasksData, plantsData, harvestEntriesData, todayLogsData, bedsData] =
+        await Promise.all([
+          getTaskTemplates(),
+          getAllPlants(),
+          getHarvestJournalMetadata(),
+          getTodayTaskLogs(),
+          getBeds().catch((error) => {
+            logger.warn('Failed to load beds for orphan filtering', error as Error);
+            return null;
+          }),
+        ]);
 
       if (!isMountedRef.current) return;
 
@@ -133,7 +137,7 @@ export function useCalendarData({
       setTasks(filteredTasks);
       setPlants(plantsData);
       setTodayLogs(todayLogsData);
-      setHarvestEntries(journalData.filter((e) => e.entry_type === JournalEntryType.Harvest));
+      setHarvestEntries(harvestEntriesData);
       hasLoadedDataRef.current = true;
       setError(null);
       const loadedOffline = !isNetworkAvailable();
@@ -146,15 +150,12 @@ export function useCalendarData({
       // this hook previously hard-deleted those tasks (and their logs) from
       // Firestore on nothing more than that. Real deletion belongs to the bed
       // cascade in `beds.ts`, which knows a bed was actually removed.
-      try {
-        const liveBedIds = new Set((await getBeds()).map((bed) => bed.id));
-        if (!isMountedRef.current) return;
+      if (bedsData) {
+        const liveBedIds = new Set(bedsData.map((bed) => bed.id));
         const orphanBedTasks = filteredTasks.filter((task) =>
           isBedLevelOrphanTask(task, liveBedIds)
         );
         setOrphanBedTaskIds(new Set(orphanBedTasks.map((task) => task.id)));
-      } catch (error) {
-        logger.warn('Failed to resolve orphaned bed tasks', error as Error);
       }
     } catch (error) {
       if (!isMountedRef.current) return;

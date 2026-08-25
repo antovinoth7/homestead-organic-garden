@@ -6,9 +6,23 @@
  * collection. These helpers summarize and bucket those entries for the
  * `HarvestHistorySection` stats + `HarvestYieldChart`.
  */
-import { JournalEntry, Plant, TaskTemplate } from '@/types/database.types';
+import { JournalEntry, JournalEntryType, Plant, TaskTemplate } from '@/types/database.types';
 import { getCurrentSeason } from '@/utils/seasonHelpers';
 import { calendarDaysBetweenKeys, farmDateKey } from '@/utils/farmDate';
+
+/**
+ * Whether a journal entry records a harvest.
+ *
+ * The single definition shared by the Firestore query that fetches harvest
+ * entries and the AsyncStorage fallback that filters them locally, so the two
+ * can never disagree about what counts. Note an entry with no `entry_type` is
+ * not a harvest — which is also how a Firestore `where('entry_type','==',...)`
+ * behaves, since an equality filter never matches a document missing the field.
+ * The server-side and client-side filters therefore return the same rows.
+ */
+export function isHarvestJournalEntry(entry: Pick<JournalEntry, 'entry_type'>): boolean {
+  return entry.entry_type === JournalEntryType.Harvest;
+}
 
 /** Within this many days of a supported date, a crop needs a harvest check. */
 export const READY_WITHIN_DAYS = 7;
