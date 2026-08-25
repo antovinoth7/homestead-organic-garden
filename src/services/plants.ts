@@ -11,7 +11,6 @@ import { db, auth, refreshAuthToken } from '../lib/firebase';
 import {
   collection,
   doc,
-  documentId,
   getDocs,
   getDoc,
   setDoc,
@@ -380,23 +379,6 @@ export const getArchivedPlants = async (): Promise<Plant[]> => {
     const cachedPlants = await getData<Plant>(KEYS.PLANTS);
     return cachedPlants.filter((plant) => plant.is_deleted);
   }
-};
-
-export const plantExists = async (id: string): Promise<boolean> => {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-
-  const q = query(
-    collection(db, PLANTS_COLLECTION),
-    where('user_id', '==', user.uid),
-    where(documentId(), '==', id)
-  );
-
-  const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-
-  return !snapshot.empty;
 };
 
 export const createPlant = async (

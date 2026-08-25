@@ -1341,7 +1341,14 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
         updates.next_due_at = nextDueAt;
       }
       if (!existing.enabled) {
+        // Re-enabling always means the schedule is resuming after a pause — a
+        // restored plant, or a care type switched back on — so the stored due
+        // date is stale by however long the gap was. Re-base it, or a plant
+        // restored after three months returns showing three months of overdue
+        // work nobody was expected to do. `computeNextDueAt` caps at today, so
+        // the task comes back due today rather than backdated.
         updates.enabled = true;
+        updates.next_due_at = nextDueAt;
       }
       const existingDueDate = parseDateValue(existing.next_due_at);
       if (!existingDueDate) {

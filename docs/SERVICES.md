@@ -86,14 +86,24 @@ Rules for new write functions:
 - Uses paginated reads.
 - Soft-deletes plants with `is_deleted` and `deleted_at`.
 - Resolves image filenames to local URIs before returning plants.
-- Cascades plant deletion into tasks via `deleteTasksForPlantIds()`.
+- Deletion cascades into tasks along two different paths, and the difference matters:
+  - **Soft delete** (`deletePlant`, `deletePlantsForBed`) calls `disableTasksForPlantIds()`. Templates
+    and their logs are kept, just disabled, because the plant is restorable. `restorePlant` /
+    `restorePlantsForBed` then re-sync via `syncCareTasksForPlant()`, which re-enables the templates
+    and re-bases `next_due_at` so a long-deleted plant returns due today, not months overdue.
+  - **Permanent delete** (`permanentlyDeletePlant`, `permanentlyDeletePlantsForBed`) calls
+    `deleteTasksForPlantIds()`, which removes the templates **and** their completion history.
+  - Never hard-delete tasks from a reversible action, and never on a negative read (an id merely
+    absent from a list) — doing that once emptied `task_templates` silently.
 
 ### `src/services/tasks.ts`
 
 - Avoids extra Firestore composite index requirements by filtering and sorting in memory in some queries.
 - `markTaskDone()` writes a task log, updates `next_due_at`, and also updates plant last-care fields.
 - Recurring task due times are normalized to 6:00 PM.
-- `syncCareTasksForPlant()` auto-generates water, fertilise, prune, and coconut harvest (age-derived) tasks from plant settings.
+- `syncCareTasksForPlant()` auto-generates water, fertilise, prune, and coconut harvest (age-derived) tasks from plant settings. It is the single owner of scheduling — re-derive templates through it rather than computing due dates at a call site.
+- `rebuildCareTasksForAllPlants()` fans out over `syncCareTasksForPlant()` for every plant, sequentially (parallel would race its per-plant template reads against each other's writes). Backs Settings → App Maintenance → **Rebuild Care Schedule**, and the bulk restore path. Additive: it creates and updates, never deletes. Deliberately not wired to startup.
+- `disableTasksForPlantIds()` is the reversible counterpart to `deleteTasksForPlantIds()` — one template read plus chunked batched writes, used by soft delete and archiving. `disableTasksForPlant()` delegates to it.
 - The full `TaskType` union is `water | fertilise | prune | repot | spray | mulch | harvest`. Repot, spray, and mulch are user-created; sync does not auto-generate them.
 
 ### `src/services/journal.ts`
