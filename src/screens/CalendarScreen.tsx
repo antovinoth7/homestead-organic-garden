@@ -150,16 +150,6 @@ const GROUP_OPTIONS: {
   { value: 'plant', label: 'Plant', icon: 'leaf-outline' },
 ];
 
-const CHECK_FIRST_TASK_TYPES = new Set<TaskType>([
-  'water',
-  'spray',
-  'fertilise',
-  'harvest',
-  'harvest_leaves',
-  'cultivating',
-  'transplanting',
-]);
-
 const sanitizeDecimalText = (value: string): string => {
   const cleaned = value.replace(/[^0-9.]/g, '');
   const [whole = '', ...fractionParts] = cleaned.split('.');
@@ -1225,7 +1215,7 @@ export default function CalendarScreen(): React.JSX.Element {
       sections.push({
         key: 'harvest-ready',
         header: {
-          title: 'Check first · Harvest',
+          title: 'Harvest Ready',
           iconKey: 'task.harvest',
           count: filteredHarvestsReady.length,
           titleFlex: false,
@@ -1241,7 +1231,7 @@ export default function CalendarScreen(): React.JSX.Element {
       sections.push({
         key: 'overdue',
         header: {
-          title: 'Do now · Overdue',
+          title: 'Overdue',
           iconKey: 'general.warning',
           checkboxTasks: overdueTasks,
           count: overdueTasks.length,
@@ -1253,31 +1243,16 @@ export default function CalendarScreen(): React.JSX.Element {
 
     // Today's Tasks — hidden when today is already the selected date
     if (todayTasks.length > 0 && !selectedIsToday) {
-      const checkFirst = todayTasks.filter((task) => CHECK_FIRST_TASK_TYPES.has(task.task_type));
-      const doNow = todayTasks.filter((task) => !CHECK_FIRST_TASK_TYPES.has(task.task_type));
-      if (doNow.length > 0) {
-        sections.push({
-          key: 'today-do-now',
-          header: {
-            title: 'Do now · Today',
-            checkboxTasks: doNow,
-            count: doNow.length,
-            showDoneChip: true,
-          },
-          data: taskRows('today-do-now', doNow),
-        });
-      }
-      if (checkFirst.length > 0) {
-        sections.push({
-          key: 'today-check-first',
-          header: {
-            title: 'Check first · Today',
-            checkboxTasks: checkFirst,
-            count: checkFirst.length,
-          },
-          data: taskRows('today-check-first', checkFirst),
-        });
-      }
+      sections.push({
+        key: 'today',
+        header: {
+          title: 'Today',
+          checkboxTasks: todayTasks,
+          count: todayTasks.length,
+          showDoneChip: true,
+        },
+        data: taskRows('today', todayTasks),
+      });
     }
 
     const upcomingEmpty = (): void => {
@@ -1305,7 +1280,7 @@ export default function CalendarScreen(): React.JSX.Element {
           sections.push({
             key: `day-${dateKey}`,
             header: {
-              title: isToday ? `Do now · ${label}` : `Later · ${label}`,
+              title: label,
               checkboxTasks: dayTasks ?? [],
               count: (dayTasks ?? []).length,
             },
@@ -1322,7 +1297,7 @@ export default function CalendarScreen(): React.JSX.Element {
       for (const groupName of Object.keys(groupedTasks)) {
         const nonOverdue = (groupedTasks[groupName] ?? []).filter((t) => !overdueIdSet.has(t.id));
         if (nonOverdue.length === 0) continue;
-        const fallbackTitle = selectedView === 'month' ? 'Later · This Month' : 'Later · This Week';
+        const fallbackTitle = selectedView === 'month' ? 'This Month' : 'This Week';
         const title = groupName
           ? effectiveGroupBy === 'location'
             ? groupName
