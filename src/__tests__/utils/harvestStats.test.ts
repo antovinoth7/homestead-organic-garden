@@ -182,5 +182,92 @@ describe('harvestStats', () => {
         )
       ).toEqual([]);
     });
+
+    // The lookups below moved out of the per-plant loop into one-pass Maps.
+    // These pin the edges that shape did not previously exercise.
+    it('picks the earliest of several harvest tasks for one plant', () => {
+      const plant = makePlant({ id: 'okra-1', plant_type: 'vegetable' });
+      const items = computeHarvestsReady([plant], [], NOW, [
+        makeTaskTemplate({
+          id: 'late',
+          plant_id: plant.id,
+          task_type: 'harvest',
+          next_due_at: '2026-09-10T12:30:00.000Z',
+        }),
+        makeTaskTemplate({
+          id: 'early',
+          plant_id: plant.id,
+          task_type: 'harvest_leaves',
+          next_due_at: '2026-08-24T12:30:00.000Z',
+        }),
+      ]);
+      expect(items).toHaveLength(1);
+      expect(items[0]?.source).toBe('scheduled_task');
+      expect(items[0]?.daysUntil).toBe(2);
+    });
+
+    it('ignores a harvest task with no due date rather than throwing', () => {
+      const plant = makePlant({
+        id: 'brinjal-1',
+        plant_type: 'vegetable',
+        expected_harvest_date: '2026-08-25T12:30:00.000Z',
+      });
+      const items = computeHarvestsReady([plant], [], NOW, [
+        makeTaskTemplate({
+          id: 'broken',
+          plant_id: plant.id,
+          task_type: 'harvest',
+          next_due_at: null as unknown as string,
+        }),
+      ]);
+      // Falls back to the farmer's date instead of being suppressed or crashing.
+      expect(items).toHaveLength(1);
+      expect(items[0]?.source).toBe('farmer_date');
+    });
+
+    it('does not let another plant’s harvest suppress this one', () => {
+      const plant = makePlant({
+        id: 'chilli-1',
+        plant_type: 'vegetable',
+        expected_harvest_date: '2026-08-25T12:30:00.000Z',
+      });
+      const items = computeHarvestsReady(
+        [plant],
+        [harvestedOn('someone-else', new Date('2026-08-26T06:30:00.000Z'))],
+        NOW
+      );
+      expect(items).toHaveLength(1);
+    });
+
+    it('does not let an unparseable harvest date suppress a farmer date', () => {
+      const plant = makePlant({
+        id: 'beans-1',
+        plant_type: 'vegetable',
+        expected_harvest_date: '2026-08-25T12:30:00.000Z',
+      });
+      const items = computeHarvestsReady(
+        [plant],
+        [makeJournalEntry({ id: 'bad', plant_id: plant.id, created_at: 'not-a-date' })],
+        NOW
+      );
+      expect(items).toHaveLength(1);
+    });
+
+    it('suppresses using the newest harvest even when entries are out of order', () => {
+      const plant = makePlant({
+        id: 'gourd-1',
+        plant_type: 'vegetable',
+        expected_harvest_date: '2026-08-25T12:30:00.000Z',
+      });
+      const items = computeHarvestsReady(
+        [plant],
+        [
+          harvestedOn(plant.id, new Date('2026-08-26T06:30:00.000Z'), 'newest'),
+          harvestedOn(plant.id, new Date('2026-07-01T06:30:00.000Z'), 'oldest'),
+        ],
+        NOW
+      );
+      expect(items).toEqual([]);
+    });
   });
 });

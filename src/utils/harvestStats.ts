@@ -54,33 +54,68 @@ export function computeHarvestsReady(
 ): HarvestReadyItem[] {
   if (plants.length === 0) return [];
 
+  const todayKey = farmDateKey(now);
+  if (!todayKey) return [];
+
+  // Both lookups below were previously full scans inside the plant loop, which
+  // made this O(plants × tasks) and O(plants × harvestEntries) — the latter with
+  // an Intl call in its inner loop. One pass each, up front, instead.
+
+  // Earliest valid enabled harvest task per plant.
+  //
+  // The emptiness check on `next_due_at` is deliberate and is a small behaviour
+  // fix, not just a move: `farmDateKey` alone does not reject a missing date,
+  // because `new Date(null)` is the epoch rather than an invalid date. A task
+  // with no due date therefore used to pass this filter, claim `source:
+  // 'scheduled_task'` while silently falling back to the farmer's date, and
+  // throw on `null.localeCompare` as soon as the plant had a second harvest
+  // task. Now it is skipped, which is what the filter always meant.
+  const scheduledByPlant = new Map<string, TaskTemplate>();
+  for (const task of tasks) {
+    if (!task.enabled || !task.plant_id || !task.next_due_at) continue;
+    if (task.task_type !== 'harvest' && task.task_type !== 'harvest_leaves') continue;
+    if (farmDateKey(task.next_due_at) === null) continue;
+    const current = scheduledByPlant.get(task.plant_id);
+    if (!current || task.next_due_at.localeCompare(current.next_due_at) < 0) {
+      scheduledByPlant.set(task.plant_id, task);
+    }
+  }
+
+  // Latest harvest date key per plant. Asking "is the newest harvest on or after
+  // the expected date" is equivalent to the old "does any harvest fall on or
+  // after it": if the maximum qualifies some entry does, and if it doesn't none
+  // do. Entries with an unparseable date or no plant never matched before and
+  // are skipped here for the same result.
+  const latestHarvestKeyByPlant = new Map<string, string>();
+  for (const entry of harvestEntries) {
+    if (!entry.plant_id) continue;
+    const key = farmDateKey(entry.created_at);
+    if (key === null) continue;
+    const current = latestHarvestKeyByPlant.get(entry.plant_id);
+    if (current === undefined || key > current) {
+      latestHarvestKeyByPlant.set(entry.plant_id, key);
+    }
+  }
+
   const items: HarvestReadyItem[] = [];
   for (const plant of plants) {
-    const scheduled = tasks
-      .filter(
-        (task) =>
-          task.enabled &&
-          task.plant_id === plant.id &&
-          (task.task_type === 'harvest' || task.task_type === 'harvest_leaves') &&
-          farmDateKey(task.next_due_at) !== null
-      )
-      .sort((a, b) => a.next_due_at.localeCompare(b.next_due_at))[0];
+    const scheduled = scheduledByPlant.get(plant.id);
     const rawDate = scheduled?.next_due_at ?? plant.expected_harvest_date;
     const source = scheduled ? 'scheduled_task' : 'farmer_date';
     if (!rawDate) continue;
 
-    // Take the newest entry explicitly rather than trusting the caller's sort —
-    // an out-of-order list would otherwise silently predict from an old harvest.
     const nextDate = new Date(rawDate);
-    const nextKey = farmDateKey(nextDate);
-    const todayKey = farmDateKey(now);
-    if (!nextKey || !todayKey || Number.isNaN(nextDate.getTime())) continue;
+    // Keyed from the raw string, not the Date: farmDateKey only caches string
+    // inputs, and this is the one call in here that runs per plant.
+    const nextKey = farmDateKey(rawDate);
+    if (!nextKey || Number.isNaN(nextDate.getTime())) continue;
 
     if (!scheduled) {
-      const harvestedAfterDate = harvestEntries.some(
-        (entry) => entry.plant_id === plant.id && (farmDateKey(entry.created_at) ?? '') >= nextKey
-      );
-      if (harvestedAfterDate) continue;
+      // Compare against the newest harvest explicitly rather than trusting the
+      // caller's sort — an out-of-order list would otherwise silently predict
+      // from an old harvest.
+      const latestHarvestKey = latestHarvestKeyByPlant.get(plant.id);
+      if (latestHarvestKey !== undefined && latestHarvestKey >= nextKey) continue;
     }
 
     const daysUntil = calendarDaysBetweenKeys(todayKey, nextKey);

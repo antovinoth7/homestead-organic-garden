@@ -28,11 +28,44 @@ function partsToKey(parts: Intl.DateTimeFormatPart[]): string | null {
   return year && month && day ? `${year}-${month}-${day}` : null;
 }
 
-/** Calendar date of a timestamp in the farm's Tamil Nadu timezone. */
-export function farmDateKey(value: Date | string | number): string | null {
+function computeDateKey(value: Date | string | number): string | null {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return partsToKey(keyFormatter.formatToParts(date));
+}
+
+/**
+ * Cache of already-resolved date keys, for string inputs only.
+ *
+ * `Intl.DateTimeFormat.formatToParts` costs microseconds — orders of magnitude
+ * more than a Map lookup — and the Care Plan's memo chain calls this six to
+ * eight times per task, re-running on every filter, week and segment change.
+ * The dominant argument by far is a task's `next_due_at`, so caching strings
+ * covers the hot path.
+ *
+ * Caching is permanently safe here: the formatter is pinned to `Asia/Kolkata`
+ * and India has no DST, so a given input string maps to the same key forever.
+ * `Date` arguments deliberately bypass the cache — "now" must stay live, and a
+ * fresh Date could never hit a cache anyway.
+ */
+const dateKeyCache = new Map<string, string | null>();
+const DATE_KEY_CACHE_LIMIT = 4096;
+
+/** Calendar date of a timestamp in the farm's Tamil Nadu timezone. */
+export function farmDateKey(value: Date | string | number): string | null {
+  if (typeof value !== 'string') return computeDateKey(value);
+
+  const cached = dateKeyCache.get(value);
+  // `undefined` means "not seen"; a stored `null` is a real cached answer for a
+  // malformed input, and must not be recomputed on every call.
+  if (cached !== undefined) return cached;
+
+  const key = computeDateKey(value);
+  // Cleared wholesale rather than evicted one by one: the limit is far above
+  // what a session touches, so this effectively never runs.
+  if (dateKeyCache.size >= DATE_KEY_CACHE_LIMIT) dateKeyCache.clear();
+  dateKeyCache.set(value, key);
+  return key;
 }
 
 /** Calendar date selected by the user. Date objects from calendar cells are wall dates. */
