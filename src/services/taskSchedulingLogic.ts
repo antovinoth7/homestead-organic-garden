@@ -152,6 +152,27 @@ export const computeScheduleAfterCompletion = (
 };
 
 /**
+ * An enabled template already covering the same work on the same target, or
+ * null when there is none.
+ *
+ * Manual and auto templates deliberately coexist, so a second task of a type is
+ * legitimate — this backs a confirmation, not a block, so that a duplicate is
+ * something the farmer chose rather than something they ended up with. Both
+ * sides are normalised to null so an absent field and an explicit null match.
+ */
+export const findDuplicateTemplate = (
+  templates: readonly TaskTemplate[],
+  candidate: Pick<TaskTemplate, 'task_type' | 'plant_id' | 'bed_id'>
+): TaskTemplate | null =>
+  templates.find(
+    (template) =>
+      template.enabled &&
+      template.task_type === candidate.task_type &&
+      (template.plant_id ?? null) === (candidate.plant_id ?? null) &&
+      (template.bed_id ?? null) === (candidate.bed_id ?? null)
+  ) ?? null;
+
+/**
  * Base date for a skip: whichever is later, now or the task's own due date.
  * Skipping means "not yet" — so it may only ever push a task later, never pull
  * a future task back towards today.

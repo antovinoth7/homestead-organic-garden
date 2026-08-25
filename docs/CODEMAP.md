@@ -1,21 +1,21 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-08-25 — src/: 627 files, 115,285 lines.
+> Snapshot: 2026-08-25 — src/: 628 files, 115,712 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
 ## Large files (search, don't read whole)
 
-- src/screens/CalendarScreen.tsx (2543)
+- src/screens/CalendarScreen.tsx (2519)
 - src/utils/plantHelpers.ts (1958)
 - src/styles/bedCreationWizardStyles.ts (1906)
-- src/styles/calendarStyles.ts (1766)
+- src/styles/calendarStyles.ts (1776)
 - src/styles/plantFormStyles.ts (1719)
-- src/services/tasks.ts (1595)
+- src/services/tasks.ts (1592)
 - src/hooks/usePlantFormState.ts (1202)
 - src/services/plants.ts (1140)
-- src/types/database.types.ts (1055)
+- src/types/database.types.ts (1068)
 - src/screens/CatalogPlantDetailScreen.tsx (1013)
 - src/components/BedRowLayout.tsx (984)
 - src/hooks/useBedCreationWizard.ts (937)
@@ -98,9 +98,10 @@
 - noFunctionalEmoji.test.ts (54)
 - agronomyEvidenceDocs.test.ts (44)
 
-### src/__tests__/services/ — 9 files, 1,751 lines
+### src/__tests__/services/ — 10 files, 2,005 lines
 
 - alerts.test.ts (533)
+- manualTaskScheduling.test.ts (254)
 - weatherResponse.test.ts (206)
 - weather.test.ts (204)
 - offlineSync.test.ts (202)
@@ -259,9 +260,9 @@
 - PlantNotesSection.tsx (33)
 - FieldErrorText.tsx (29)
 
-### src/components/calendar/ — 3 files, 616 lines
+### src/components/calendar/ — 3 files, 624 lines
 
-- SwipeableTaskCard.tsx (343)
+- SwipeableTaskCard.tsx (351)
 - MonthCalendarView.tsx (148)
 - WeekCalendarView.tsx (125)
 
@@ -314,9 +315,9 @@
 - FormSectionCard.tsx (49)
 - EditBeneficialsSection.tsx (35)
 
-### src/components/modals/ — 11 files, 1,955 lines
+### src/components/modals/ — 11 files, 2,014 lines
 
-- CreateTaskModal.tsx (462)
+- CreateTaskModal.tsx (521)
 - PlotEditModal.tsx (415)
 - TaskCompletionModal.tsx (221)
 - SkipTaskModal.tsx (186)
@@ -502,12 +503,12 @@
 
 - AppNavigator.tsx (197)
 
-### src/screens/ — 28 files, 11,183 lines
+### src/screens/ — 28 files, 11,160 lines
 
-- CalendarScreen.tsx (2543) ⚠️ large — Grep/search inside, do not read whole
+- CalendarScreen.tsx (2519) ⚠️ large — Grep/search inside, do not read whole
 - CatalogPlantDetailScreen.tsx (1013) ⚠️ large — Grep/search inside, do not read whole
 - PlantsScreen.tsx (827) ⚠️ large — Grep/search inside, do not read whole
-- JournalFormScreen.tsx (710)
+- JournalFormScreen.tsx (711)
 - JournalScreen.tsx (566)
 - SettingsScreen.tsx (563)
 - BedListScreen.tsx (542)
@@ -542,9 +543,9 @@
 - BedConfirmStep.tsx (226)
 - BedTypeStep.tsx (154)
 
-### src/services/ — 19 files, 7,783 lines
+### src/services/ — 19 files, 7,889 lines
 
-- tasks.ts (1595) ⚠️ large — Grep/search inside, do not read whole
+- tasks.ts (1592) ⚠️ large — Grep/search inside, do not read whole
 - plants.ts (1140) ⚠️ large — Grep/search inside, do not read whole
 - plantCatalog.ts (879) ⚠️ large — Grep/search inside, do not read whole
 - backup.ts (609)
@@ -554,20 +555,20 @@
 - alertsLogic.ts (373)
 - plantCareProfiles.ts (307)
 - farmCapacity.ts (248)
+- taskSchedulingLogic.ts (236)
 - beds.ts (228)
 - locations.ts (197)
-- BedTaskResolver.ts (181)
+- BedTaskResolver.ts (182)
 - offlineSync.ts (156)
 - todayBrief.ts (135)
-- taskSchedulingLogic.ts (128)
 - bedLogic.ts (116)
 - weatherLogic.ts (100)
 - alerts.ts (19)
 
-### src/styles/ — 93 files, 19,867 lines
+### src/styles/ — 93 files, 19,877 lines
 
 - bedCreationWizardStyles.ts (1906) ⚠️ large — Grep/search inside, do not read whole
-- calendarStyles.ts (1766) ⚠️ large — Grep/search inside, do not read whole
+- calendarStyles.ts (1776) ⚠️ large — Grep/search inside, do not read whole
 - plantFormStyles.ts (1719) ⚠️ large — Grep/search inside, do not read whole
 - plantDetailStyles.ts (687)
 - bedRowLayoutStyles.ts (633)
@@ -665,9 +666,9 @@
 - colors.ts (230)
 - index.tsx (89)
 
-### src/types/ — 4 files, 1,460 lines
+### src/types/ — 4 files, 1,473 lines
 
-- database.types.ts (1055) ⚠️ large — Grep/search inside, do not read whole
+- database.types.ts (1068) ⚠️ large — Grep/search inside, do not read whole
 - navigation.types.ts (266)
 - visual.types.ts (90)
 - offline.types.ts (49)
@@ -784,7 +785,7 @@
 - archive/ROADMAP_ARCHIVE.md (1861)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (778)
+- CODEMAP.md (800)
 - COMPONENTS.md (66)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (53)
@@ -793,7 +794,7 @@
 - IMPLEMENTATION_ROADMAP.md (349)
 - REFERENCE_IMAGES.md (72)
 - SCHEMA_MIGRATIONS.md (50)
-- SERVICES.md (204)
+- SERVICES.md (206)
 - tamil-nadu-reference-audit.md (161)
 - TESTING.md (33)
 - TODAY_SCREEN_RECOMMENDATION.md (629)

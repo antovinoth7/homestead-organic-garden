@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -7,7 +7,8 @@ import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
 import type { DropdownItem } from '../ThemedDropdown';
 import { createTaskTemplate } from '../../services/tasks';
-import { Plant, TaskType, Bed } from '../../types/database.types';
+import { Plant, TaskType, Bed, TaskTemplate } from '../../types/database.types';
+import { findDuplicateTemplate } from '@/services/taskSchedulingLogic';
 import { getErrorMessage } from '../../utils/errorLogging';
 import { sanitizeNumberText } from '../../utils/plantFormConstants';
 import { createStyles } from '../../styles/calendarStyles';
@@ -36,10 +37,12 @@ interface CreateTaskModalProps {
   visible: boolean;
   plants: Plant[];
   beds: Bed[];
+  /** Templates already on the Care Plan, used to warn about a duplicate. */
+  existingTasks: TaskTemplate[];
   styles: ReturnType<typeof createStyles>;
   bottomInset: number;
   initialStartDate?: Date;
-  /** Preselect this plant (or its bed) when the modal opens. */
+  /** Preselect this plant when the modal opens. */
   initialPlantId?: string;
   /** Preselect the task type when the modal opens. Defaults to `water`. */
   initialTaskType?: TaskType;
@@ -51,6 +54,7 @@ export default function CreateTaskModal({
   visible,
   plants,
   beds,
+  existingTasks,
   styles,
   bottomInset,
   initialStartDate,
@@ -60,9 +64,20 @@ export default function CreateTaskModal({
   onCreated,
 }: CreateTaskModalProps): React.JSX.Element {
   const theme = useTheme();
-  // Plants assigned to a bed are tasked via the Bed dropdown, so keep the plant
-  // dropdown to standalone (pot / unassigned) plants only.
-  const standalonePlants = useMemo(() => plants.filter((p) => !p.bed_id), [plants]);
+  // Every plant can take its own task, bed-assigned ones included — a bed task
+  // covers the whole bed, which is not always what one plant needs. Show the
+  // bed in the label so the two dropdowns can't be confused for each other.
+  const bedNamesById = useMemo(() => new Map(beds.map((bed) => [bed.id, bed.name])), [beds]);
+  const plantItems = useMemo<DropdownItem[]>(
+    () => [
+      { label: 'No Plant', value: '' },
+      ...plants.map((plant) => {
+        const bedName = plant.bed_id ? bedNamesById.get(plant.bed_id) : undefined;
+        return { label: bedName ? `${plant.name} · ${bedName}` : plant.name, value: plant.id };
+      }),
+    ],
+    [plants, bedNamesById]
+  );
   const [taskType, setTaskType] = useState<TaskType>('water');
   const [selectedPlant, setSelectedPlant] = useState('');
   const [selectedBed, setSelectedBed] = useState('');
@@ -91,18 +106,28 @@ export default function CreateTaskModal({
     }
   }, [visible, initialTaskType]);
 
-  // Preselect the deep-linked plant when the modal opens. Bed-assigned plants
-  // are tasked via the Bed dropdown, so prefill the bed for those instead.
+  // Preselect the deep-linked plant when the modal opens. Always the plant
+  // itself: substituting its bed silently retargeted the task at every other
+  // plant in that bed, with nothing on screen saying so.
   useEffect(() => {
     if (!visible || !initialPlantId) return;
     const plant = plants.find((p) => p.id === initialPlantId);
     if (!plant) return;
-    if (plant.bed_id) {
-      setSelectedBed(plant.bed_id);
-    } else {
-      setSelectedPlant(plant.id);
-    }
+    setSelectedPlant(plant.id);
+    setSelectedBed('');
   }, [visible, initialPlantId, plants]);
+
+  // A task belongs to one plant or one bed, never both: a plant-level task
+  // carrying a bed_id would be swept up by the bed deletion cascade.
+  const handleSelectPlant = useCallback((plantId: string): void => {
+    setSelectedPlant(plantId);
+    if (plantId) setSelectedBed('');
+  }, []);
+
+  const handleSelectBed = useCallback((bedId: string): void => {
+    setSelectedBed(bedId);
+    if (bedId) setSelectedPlant('');
+  }, []);
 
   const resetForm = (): void => {
     setTaskType('water');
@@ -123,7 +148,7 @@ export default function CreateTaskModal({
     setFrequencyDays(days.toString());
   };
 
-  const handleCreateTask = async (): Promise<void> => {
+  const handleCreateTask = (): void => {
     if (!isOneTimeTask) {
       const frequency = parseInt(frequencyDays);
       if (isNaN(frequency) || frequency < 1) {
@@ -132,6 +157,33 @@ export default function CreateTaskModal({
       }
     }
 
+    // A second task of the same type on the same target is allowed — a manual
+    // task deliberately sits alongside the plant's own schedule — so confirm
+    // rather than block, and only when one already exists.
+    const duplicate = findDuplicateTemplate(existingTasks, {
+      task_type: taskType,
+      plant_id: selectedPlant || null,
+      bed_id: selectedBed || null,
+    });
+    if (!duplicate) {
+      void submitTask();
+      return;
+    }
+
+    const typeLabel = TASK_TYPE_ITEMS.find((item) => item.value === taskType)?.label ?? 'task';
+    Alert.alert(
+      'Already Scheduled',
+      `A ${typeLabel.toLowerCase()} task is already active for this ${
+        selectedPlant ? 'plant' : selectedBed ? 'bed' : 'garden'
+      }. Add another one?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Create Anyway', onPress: () => void submitTask() },
+      ]
+    );
+  };
+
+  const submitTask = async (): Promise<void> => {
     setLoading(true);
     try {
       const selectedKey = calendarDateKey(startDate);
@@ -210,14 +262,13 @@ export default function CreateTaskModal({
             placeholder="Task Type"
           />
 
+          <Text style={styles.label}>Applies To</Text>
+
           <ThemedDropdown
-            items={[
-              { label: 'General Task', value: '' },
-              ...standalonePlants.map((p) => ({ label: p.name, value: p.id })),
-            ]}
+            items={plantItems}
             selectedValue={selectedPlant}
-            onValueChange={setSelectedPlant}
-            label="Plant (Optional)"
+            onValueChange={handleSelectPlant}
+            label="One Plant"
             placeholder="Plant"
             searchable
           />
@@ -228,11 +279,15 @@ export default function CreateTaskModal({
               ...beds.map((b) => ({ label: b.name, value: b.id })),
             ]}
             selectedValue={selectedBed}
-            onValueChange={setSelectedBed}
-            label="Bed (Optional)"
+            onValueChange={handleSelectBed}
+            label="Or a Whole Bed"
             placeholder="Bed"
             searchable
           />
+
+          <Text style={styles.helperText}>
+            Leave both blank for a general task that isn&apos;t tied to a plant or bed.
+          </Text>
 
           <Text style={styles.label}>Start Date</Text>
           <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>

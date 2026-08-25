@@ -279,6 +279,14 @@ function SwipeableTaskCardComponent({
                     </Text>
                   </View>
                 )}
+                {task.source === 'manual' && (
+                  // A manual task can sit beside the plant's own schedule, so
+                  // one plant may list the same care type twice. Mark which one
+                  // the farmer added by hand.
+                  <View style={styles.taskMetaLine}>
+                    <Text style={styles.taskCustomBadge}>Custom</Text>
+                  </View>
+                )}
                 {harvestHint && (
                   <View style={styles.taskMetaLine}>
                     <GardenIcon name="task.harvest" size={12} color={theme.success} />

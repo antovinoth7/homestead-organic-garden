@@ -1412,6 +1412,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 11,
       color: theme.textTertiary,
     },
+    taskCustomBadge: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      backgroundColor: theme.background,
+      borderRadius: 4,
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      overflow: 'hidden',
+    },
     previewTitleRow: {
       flexDirection: 'row',
       alignItems: 'center',

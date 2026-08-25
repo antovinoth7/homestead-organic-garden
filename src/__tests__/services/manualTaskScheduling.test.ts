@@ -2,6 +2,7 @@ import {
   computeScheduleAfterCompletion,
   computeSkipDate,
   dueHourForTemplate,
+  findDuplicateTemplate,
   isSyncOwnedTemplate,
 } from '@/services/taskSchedulingLogic';
 import { TASK_DUE_TIME_HOUR } from '@/utils/taskConstants';
@@ -161,5 +162,92 @@ describe('computeSkipDate', () => {
       next_due_at: '2026-03-15T02:30:00.000Z',
     });
     expect(farmHour(computeSkipDate(template, 3, DONE_AT))).toBe(TASK_DUE_TIME_HOUR);
+  });
+});
+
+describe('findDuplicateTemplate', () => {
+  const waterOnPlant = makeTaskTemplate({
+    id: 'water-plant',
+    task_type: 'water',
+    plant_id: 'plant-1',
+    bed_id: null,
+  });
+  const waterOnBed = makeTaskTemplate({
+    id: 'water-bed',
+    task_type: 'water',
+    plant_id: null,
+    bed_id: 'bed-1',
+  });
+
+  it('finds an existing task of the same type on the same plant', () => {
+    expect(
+      findDuplicateTemplate([waterOnPlant], {
+        task_type: 'water',
+        plant_id: 'plant-1',
+        bed_id: null,
+      })?.id
+    ).toBe('water-plant');
+  });
+
+  it('finds an existing task of the same type on the same bed', () => {
+    expect(
+      findDuplicateTemplate([waterOnBed], { task_type: 'water', plant_id: null, bed_id: 'bed-1' })
+        ?.id
+    ).toBe('water-bed');
+  });
+
+  it('does not treat a plant task as a duplicate of a bed task', () => {
+    expect(
+      findDuplicateTemplate([waterOnPlant], {
+        task_type: 'water',
+        plant_id: null,
+        bed_id: 'bed-1',
+      })
+    ).toBeNull();
+  });
+
+  it('does not match a different task type', () => {
+    expect(
+      findDuplicateTemplate([waterOnPlant], {
+        task_type: 'prune',
+        plant_id: 'plant-1',
+        bed_id: null,
+      })
+    ).toBeNull();
+  });
+
+  it('does not match a different plant', () => {
+    expect(
+      findDuplicateTemplate([waterOnPlant], {
+        task_type: 'water',
+        plant_id: 'plant-2',
+        bed_id: null,
+      })
+    ).toBeNull();
+  });
+
+  it('ignores disabled templates', () => {
+    // A disabled task is off the Care Plan, so it is not something the farmer
+    // would recognise as already scheduled.
+    expect(
+      findDuplicateTemplate([{ ...waterOnPlant, enabled: false }], {
+        task_type: 'water',
+        plant_id: 'plant-1',
+        bed_id: null,
+      })
+    ).toBeNull();
+  });
+
+  it('matches a general task with neither plant nor bed', () => {
+    const general = makeTaskTemplate({ id: 'general', task_type: 'mulch', plant_id: null });
+    expect(
+      findDuplicateTemplate([general], { task_type: 'mulch', plant_id: null, bed_id: null })?.id
+    ).toBe('general');
+  });
+
+  it('returns null for an empty list', () => {
+    expect(
+      findDuplicateTemplate([], { task_type: 'water', plant_id: 'plant-1', bed_id: null })
+    ).toBeNull();
   });
 });
