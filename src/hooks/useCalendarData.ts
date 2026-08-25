@@ -1,11 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import {
-  getTaskTemplates,
-  deleteTasksForPlantIds,
-  deleteTasksForBedIds,
-  getTodayTaskLogs,
-} from '../services/tasks';
-import { getAllPlants, plantExists } from '../services/plants';
+import { getTaskTemplates, getTodayTaskLogs } from '../services/tasks';
+import { getAllPlants } from '../services/plants';
 import { getBeds } from '../services/beds';
 import { getJournalMetadata } from '../services/journal';
 import {
@@ -105,10 +100,6 @@ export function useCalendarData({
 
   const isMountedRef = useRef(true);
   const lastLoadTimeRef = useRef(0);
-  // Orphan self-heal (per-plant plantExists() round-trips + hard deletes) only
-  // needs to run once per session — re-running it on every reload (e.g. after
-  // each task completion) burns reads and delays the refresh with no benefit.
-  const orphanHealDoneRef = useRef(false);
   const hasLoadedDataRef = useRef(false);
 
   useEffect(() => {
@@ -138,13 +129,6 @@ export function useCalendarData({
       const filteredTasks = tasksData.filter(
         (task) => task.enabled && (!task.plant_id || plantIds.has(task.plant_id))
       );
-      const orphanPlantIds = Array.from(
-        new Set(
-          tasksData
-            .filter((task) => task.plant_id && !plantIds.has(task.plant_id))
-            .map((task) => task.plant_id as string)
-        )
-      );
 
       setTasks(filteredTasks);
       setPlants(plantsData);
@@ -156,32 +140,12 @@ export function useCalendarData({
       setIsStale(loadedOffline);
       if (!loadedOffline) setLastUpdatedAt(new Date().toISOString());
 
-      if (orphanPlantIds.length > 0 && isNetworkAvailable() && !orphanHealDoneRef.current) {
-        const confirmedOrphans = (
-          await Promise.all(
-            orphanPlantIds.map(async (plantId) => {
-              try {
-                const exists = await plantExists(plantId);
-                return exists ? null : plantId;
-              } catch (error) {
-                const errorCode = (error as { code?: string })?.code;
-                if (errorCode !== 'permission-denied' && errorCode !== 'unauthenticated') {
-                  logger.warn(`Failed to verify plant ${plantId}:`, error as Error);
-                }
-                return null;
-              }
-            })
-          )
-        ).filter((plantId): plantId is string => Boolean(plantId));
-
-        if (confirmedOrphans.length > 0) {
-          await deleteTasksForPlantIds(confirmedOrphans);
-        }
-      }
-
-      // Bed-level tasks whose bed was deleted (getBeds excludes is_deleted beds)
-      // are orphans: hide them now and self-heal by deleting them. Guarded so a
-      // transient beds fetch failure never hides live bed tasks.
+      // Bed-level tasks whose bed is missing from `getBeds()` are hidden, never
+      // deleted. Absence from a read is not evidence the bed was deleted: a
+      // cached, partial, or filtered bed list makes live beds look gone, and
+      // this hook previously hard-deleted those tasks (and their logs) from
+      // Firestore on nothing more than that. Real deletion belongs to the bed
+      // cascade in `beds.ts`, which knows a bed was actually removed.
       try {
         const liveBedIds = new Set((await getBeds()).map((bed) => bed.id));
         if (!isMountedRef.current) return;
@@ -189,19 +153,9 @@ export function useCalendarData({
           isBedLevelOrphanTask(task, liveBedIds)
         );
         setOrphanBedTaskIds(new Set(orphanBedTasks.map((task) => task.id)));
-
-        if (orphanBedTasks.length > 0 && isNetworkAvailable() && !orphanHealDoneRef.current) {
-          const orphanBedIds = Array.from(
-            new Set(orphanBedTasks.map((task) => task.bed_id as string))
-          );
-          await deleteTasksForBedIds(orphanBedIds);
-        }
       } catch (error) {
         logger.warn('Failed to resolve orphaned bed tasks', error as Error);
       }
-
-      // First online pass done — skip the orphan round-trips on later reloads.
-      if (isNetworkAvailable()) orphanHealDoneRef.current = true;
     } catch (error) {
       if (!isMountedRef.current) return;
       logger.error('Failed to load calendar data', error as Error);

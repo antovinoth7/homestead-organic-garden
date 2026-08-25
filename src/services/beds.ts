@@ -49,18 +49,19 @@ export async function getBeds(): Promise<Bed[]> {
     await refreshAuthToken();
 
     try {
-      const q = query(
-        collection(db, BEDS_COLLECTION),
-        where('user_id', '==', user.uid),
-        where('is_deleted', '==', false)
-      );
+      // Soft deletes are filtered client-side, never with `where('is_deleted','==',false)`.
+      // A Firestore equality filter does not match documents where the field is
+      // absent, so a bed written without the flag would be silently omitted here
+      // while being perfectly alive — and callers treat "missing from this list"
+      // as "deleted". `normalizeBed` already defaults the flag on read.
+      const q = query(collection(db, BEDS_COLLECTION), where('user_id', '==', user.uid));
       const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
         timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
       });
 
-      const beds = snapshot.docs.map((d) =>
-        normalizeBed(d.id, d.data() as Record<string, unknown>)
-      );
+      const beds = snapshot.docs
+        .map((d) => normalizeBed(d.id, d.data() as Record<string, unknown>))
+        .filter((bed) => bed.is_deleted !== true);
       await setData(KEYS.BEDS, beds);
       return beds;
     } catch (error) {

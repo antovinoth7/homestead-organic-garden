@@ -426,7 +426,13 @@ export const deleteTasksForBedIds = async (bedIds: string[]): Promise<void> => {
   const tasks = await getTaskTemplates();
   const logs = await getTaskLogs();
 
-  const tasksToDelete = tasks.filter((task) => task.bed_id != null && bedIdSet.has(task.bed_id));
+  // Bed-level only (`plant_id == null`), matching `isBedLevelOrphanTask`. Without
+  // that clause this deleted every task carrying the bed_id, so one stale
+  // bed task could take out a whole bed's plant schedule — detection was narrow
+  // while deletion was wide. Plant tasks go through `deleteTasksForPlantIds`.
+  const tasksToDelete = tasks.filter(
+    (task) => task.plant_id == null && task.bed_id != null && bedIdSet.has(task.bed_id)
+  );
   if (tasksToDelete.length === 0) return;
 
   const deletedTaskIds = new Set(tasksToDelete.map((task) => task.id));
@@ -1212,78 +1218,6 @@ export const getStoredTodayTaskLogs = async (): Promise<TaskLog[]> => {
   return stored.filter((log) => farmDateKey(log.done_at) === todayKey);
 };
 
-/**
- * Generate recurring tasks from plant care schedules
- * This will create task templates for plants that have care schedules configured
- */
-const _generateRecurringTasksFromPlants = async (plants: Plant[]): Promise<void> => {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-
-  // Get existing task templates to avoid duplicates
-  const existingTasks = await getTaskTemplates();
-
-  for (const plant of plants) {
-    if (!plant.care_schedule || !plant.care_schedule.auto_generate_tasks) continue;
-
-    const schedule = plant.care_schedule;
-
-    // Generate water task
-    if (schedule.water_frequency_days && schedule.water_frequency_days > 0) {
-      const existingWaterTask = existingTasks.find(
-        (t) => t.plant_id === plant.id && t.task_type === 'water'
-      );
-
-      if (!existingWaterTask) {
-        await createTaskTemplate({
-          plant_id: plant.id,
-          task_type: 'water',
-          frequency_days: schedule.water_frequency_days,
-          next_due_at: computeNextDueAt(plant, 'water', schedule.water_frequency_days),
-          enabled: true,
-          preferred_time: null,
-        });
-      }
-    }
-
-    // Generate fertilise task
-    if (schedule.fertilise_frequency_days && schedule.fertilise_frequency_days > 0) {
-      const existingFertiliseTask = existingTasks.find(
-        (t) => t.plant_id === plant.id && t.task_type === 'fertilise'
-      );
-
-      if (!existingFertiliseTask) {
-        await createTaskTemplate({
-          plant_id: plant.id,
-          task_type: 'fertilise',
-          frequency_days: schedule.fertilise_frequency_days,
-          next_due_at: computeNextDueAt(plant, 'fertilise', schedule.fertilise_frequency_days),
-          enabled: true,
-          preferred_time: null,
-        });
-      }
-    }
-
-    // Generate prune task
-    if (schedule.prune_frequency_days && schedule.prune_frequency_days > 0) {
-      const existingPruneTask = existingTasks.find(
-        (t) => t.plant_id === plant.id && t.task_type === 'prune'
-      );
-
-      if (!existingPruneTask) {
-        await createTaskTemplate({
-          plant_id: plant.id,
-          task_type: 'prune',
-          frequency_days: schedule.prune_frequency_days,
-          next_due_at: computeNextDueAt(plant, 'prune', schedule.prune_frequency_days),
-          enabled: true,
-          preferred_time: null,
-        });
-      }
-    }
-  }
-};
-
 export interface SyncCareTasksResult {
   created: TaskType[];
   updated: TaskType[];
@@ -1442,6 +1376,63 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
     });
     result.created.push(taskType);
   }
+
+  return result;
+};
+
+export interface RebuildCareTasksResult {
+  plantsProcessed: number;
+  created: number;
+  updated: number;
+  failed: number;
+}
+
+/**
+ * Rebuild every plant's care templates from its care profile and last-care dates.
+ *
+ * Templates are derived data, so a plant whose templates were lost can have them
+ * regenerated without a backup. This is a thin fan-out over `syncCareTasksForPlant`
+ * rather than a second scheduling implementation, so the rebuilt due dates match
+ * exactly what a normal plant save would produce.
+ *
+ * Deliberately not wired to app startup: an automatic writer that reshapes task
+ * data without the farmer asking is what made a silent loss hard to notice in the
+ * first place. Call it from an explicit user action.
+ */
+export const rebuildCareTasksForAllPlants = async (
+  plants: Plant[],
+  onProgress?: (done: number, total: number) => void
+): Promise<RebuildCareTasksResult> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const result: RebuildCareTasksResult = {
+    plantsProcessed: 0,
+    created: 0,
+    updated: 0,
+    failed: 0,
+  };
+
+  // Sequential on purpose: `syncCareTasksForPlant` reads the full template list
+  // per plant, and running them in parallel would race those reads against each
+  // other's writes and re-create duplicates it is meant to reconcile.
+  for (const plant of plants) {
+    try {
+      const synced = await syncCareTasksForPlant(plant);
+      result.created += synced.created.length;
+      result.updated += synced.updated.length;
+    } catch (error) {
+      result.failed += 1;
+      logger.warn(`Failed to rebuild care tasks for plant ${plant.id}`, error as Error);
+    }
+    result.plantsProcessed += 1;
+    onProgress?.(result.plantsProcessed, plants.length);
+  }
+
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+  logger.info(
+    `Care task rebuild: ${result.created} created, ${result.updated} updated, ${result.failed} failed across ${result.plantsProcessed} plants`
+  );
 
   return result;
 };
