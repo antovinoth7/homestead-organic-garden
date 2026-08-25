@@ -614,6 +614,16 @@ export const updatePlantVariety = async (id: string, plantVariety: string): Prom
   await patchCachedPlant(id, { plant_variety: plantVariety });
 };
 
+/**
+ * Soft-delete a plant — the record stays restorable from Archived Plants.
+ *
+ * Its care tasks are **disabled, not deleted**. A reversible action must not
+ * destroy data: this previously cascaded to `deleteTasksForPlantIds`, which
+ * removed the templates and their whole completion history, so a restore
+ * returned a plant with no schedule and no record of past work. `restorePlant`
+ * re-derives the schedule via `syncCareTasksForPlant`. The hard cascade belongs
+ * to `permanentlyDeletePlant`, where the loss is the point.
+ */
 export const deletePlant = async (id: string): Promise<void> => {
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
@@ -636,12 +646,12 @@ export const deletePlant = async (id: string): Promise<void> => {
   const filtered = cachedPlants.filter((p) => p.id !== id);
   await setData(KEYS.PLANTS, filtered);
 
-  // Cascade: delete orphaned tasks and logs for this plant
+  // Reversible: silence the tasks, keep the templates and their history.
   try {
-    const { deleteTasksForPlantIds } = await import('./tasks');
-    await deleteTasksForPlantIds([id]);
+    const { disableTasksForPlantIds } = await import('./tasks');
+    await disableTasksForPlantIds([id]);
   } catch (error) {
-    logger.warn('Failed to cascade-delete tasks for plant', error as Error);
+    logger.warn('Failed to disable tasks for soft-deleted plant', error as Error);
   }
 };
 
@@ -746,12 +756,12 @@ export const deletePlantsForBed = async (plants: Plant[]): Promise<void> => {
     cachedPlants.filter((p) => !idSet.has(p.id))
   );
 
-  // Cascade: delete orphaned tasks and logs for all plants at once.
+  // Reversible (see `deletePlant`): silence the tasks, keep templates and history.
   try {
-    const { deleteTasksForPlantIds } = await import('./tasks');
-    await deleteTasksForPlantIds(ids);
+    const { disableTasksForPlantIds } = await import('./tasks');
+    await disableTasksForPlantIds(ids);
   } catch (error) {
-    logger.warn('Failed to cascade-delete tasks for bed plants', error as Error);
+    logger.warn('Failed to disable tasks for soft-deleted bed plants', error as Error);
   }
 };
 
@@ -810,6 +820,17 @@ export const restorePlant = async (id: string): Promise<Plant> => {
   }
   await setData(KEYS.PLANTS, cachedPlants);
 
+  // Bring the care schedule back. Sync rather than a blunt re-enable: the plant's
+  // own care settings stay the source of truth for which task types belong on it,
+  // and `computeNextDueAt` re-bases the due dates so a plant restored after a long
+  // gap does not return showing weeks of overdue work it never missed.
+  try {
+    const { syncCareTasksForPlant } = await import('./tasks');
+    await syncCareTasksForPlant(restored);
+  } catch (error) {
+    logger.warn('Failed to restore care tasks for plant', error as Error);
+  }
+
   return restored;
 };
 
@@ -863,6 +884,17 @@ export const restorePlantsForBed = async (plants: Plant[]): Promise<void> => {
       idSet.has(p.id) ? { ...p, is_deleted: false, deleted_at: null } : p
     )
   );
+
+  // Bring each plant's care schedule back — same reasoning as `restorePlant`.
+  // `rebuildCareTasksForAllPlants` is the sequential fan-out over the same sync.
+  try {
+    const { rebuildCareTasksForAllPlants } = await import('./tasks');
+    await rebuildCareTasksForAllPlants(
+      plants.map((p) => ({ ...p, is_deleted: false, deleted_at: null }))
+    );
+  } catch (error) {
+    logger.warn('Failed to restore care tasks for bed plants', error as Error);
+  }
 };
 
 /**

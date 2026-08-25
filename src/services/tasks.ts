@@ -1514,18 +1514,67 @@ export const getSeasonalCareReminder = (
 };
 
 /**
+ * Disable (but do not delete) every task template for the given plants.
+ *
+ * The reversible counterpart to `deleteTasksForPlantIds`: used when a plant is
+ * archived or soft-deleted, so its tasks go quiet while the templates and their
+ * completion history survive for a later restore. Reads templates once and
+ * commits chunked batches, so soft-deleting a whole bed costs one pass rather
+ * than one write per template.
+ */
+export const disableTasksForPlantIds = async (plantIds: string[]): Promise<void> => {
+  const uniquePlantIds = Array.from(
+    new Set(plantIds.filter((plantId) => plantId && plantId.trim() !== ''))
+  );
+  if (uniquePlantIds.length === 0) return;
+
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const plantIdSet = new Set(uniquePlantIds);
+  const templates = await getTaskTemplates();
+  const toDisable = templates.filter(
+    (task) => task.plant_id && plantIdSet.has(task.plant_id) && task.enabled
+  );
+  if (toDisable.length === 0) return;
+
+  const MAX_PER_BATCH = 500;
+  for (let i = 0; i < toDisable.length; i += MAX_PER_BATCH) {
+    const chunk = toDisable.slice(i, i + MAX_PER_BATCH);
+    const batch = writeBatch(db);
+    for (const task of chunk) {
+      batch.update(doc(db, TASKS_COLLECTION, task.id), { enabled: false });
+    }
+    await writeOrQueue(
+      chunk.map((task) => ({
+        collection: TASKS_COLLECTION,
+        docId: task.id,
+        op: 'update' as const,
+        payload: { enabled: false },
+      })),
+      () => batch.commit()
+    );
+  }
+
+  const disabledIds = new Set(toDisable.map((task) => task.id));
+  const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+  if (cachedTasks.length > 0) {
+    await setData(
+      KEYS.TASKS,
+      cachedTasks.map((task) => (disabledIds.has(task.id) ? { ...task, enabled: false } : task))
+    );
+  }
+
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+};
+
+/**
  * Disable (but do not delete) all task templates for a given plant.
  * Called when a plant is archived after final harvest — tasks go quiet
  * while the record is preserved for rotation history.
  */
 export const disableTasksForPlant = async (plantId: string): Promise<void> => {
-  const templates = await getTaskTemplates();
-  const plantTemplates = templates.filter((t) => t.plant_id === plantId && t.enabled);
-  if (plantTemplates.length === 0) return;
-
-  await Promise.all(plantTemplates.map((t) => updateTaskTemplate(t.id, { enabled: false })));
-
-  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+  await disableTasksForPlantIds([plantId]);
 };
 
 // ─── Pre-Monsoon Batch Tasks ─────────────────────────────────────────────────

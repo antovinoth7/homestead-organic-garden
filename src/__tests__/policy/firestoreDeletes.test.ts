@@ -75,6 +75,50 @@ describe('Firestore hard-delete policy', () => {
     expect(violations).toEqual([]);
   });
 
+  // Permanent delete removes the templates and the completion history; soft
+  // delete keeps both, because the plant can be restored. Asserting on source
+  // text is crude, but the service functions need a Firestore emulator to
+  // exercise and this pins the distinction against an accidental revert.
+  describe('plant deletion cascades', () => {
+    const plantsSource = withoutComments(
+      readFileSync(join(SOURCE_ROOT, 'services/plants.ts'), 'utf8')
+    );
+
+    /** Body of a top-level `export const <name> = async (...) => { … }`. */
+    function functionBody(name: string): string {
+      const start = plantsSource.indexOf(`export const ${name} =`);
+      if (start === -1) throw new Error(`${name} not found in services/plants.ts`);
+      const next = plantsSource.indexOf('\nexport const ', start + 1);
+      return plantsSource.slice(start, next === -1 ? undefined : next);
+    }
+
+    it.each(['deletePlant', 'deletePlantsForBed'])(
+      'soft delete (%s) disables tasks rather than deleting them',
+      (name) => {
+        const body = functionBody(name);
+        expect(body).toContain('disableTasksForPlantIds');
+        expect(body).not.toContain('deleteTasksForPlantIds');
+      }
+    );
+
+    it.each(['permanentlyDeletePlant', 'permanentlyDeletePlantsForBed'])(
+      'permanent delete (%s) cascades templates and history',
+      (name) => {
+        expect(functionBody(name)).toContain('deleteTasksForPlantIds');
+      }
+    );
+
+    it.each(['restorePlant', 'restorePlantsForBed'])(
+      'restore (%s) brings the care schedule back',
+      (name) => {
+        const body = functionBody(name);
+        expect(
+          body.includes('syncCareTasksForPlant') || body.includes('rebuildCareTasksForAllPlants')
+        ).toBe(true);
+      }
+    );
+  });
+
   it('keeps hooks and screens free of deletion cascades', () => {
     // The regression that motivated this policy lived in a hook, where a delete
     // ran on every screen load. Deletion belongs in the service layer, reached
