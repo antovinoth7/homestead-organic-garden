@@ -51,6 +51,7 @@ import {
   isSkipBlocked,
   isSyncOwnedTemplate,
   computeScheduleAfterCompletion,
+  resolveCareInterval,
 } from './taskSchedulingLogic';
 import {
   addDaysToDateKey,
@@ -1232,17 +1233,17 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
   }[] = [
     {
       taskType: 'water',
-      frequency: plant.watering_frequency_days,
+      frequency: resolveCareInterval(plant, 'watering'),
       enabled: plant.watering_enabled !== false,
     },
     {
       taskType: 'fertilise',
-      frequency: plant.fertilising_frequency_days,
+      frequency: resolveCareInterval(plant, 'fertilising'),
       enabled: plant.fertilising_enabled !== false,
     },
     {
       taskType: 'prune',
-      frequency: plant.pruning_frequency_days,
+      frequency: resolveCareInterval(plant, 'pruning'),
       enabled: plant.pruning_enabled !== false,
     },
   ];
@@ -1293,9 +1294,9 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
     // care type is turned off.
     const matching = plantTasks.filter((task) => task.task_type === taskType);
 
-    // Care type off (or no valid interval): disable every existing template so
+    // Care type switched off by the farmer: disable every existing template so
     // none linger on the Care Plan / detail screen and no reminders fire.
-    if (!enabled || frequency === null) {
+    if (!enabled) {
       let changed = false;
       for (const task of matching) {
         if (task.enabled) {
@@ -1306,6 +1307,13 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
       if (changed) result.updated.push(taskType);
       continue;
     }
+
+    // No interval could be resolved — not even a plant-type default, so the
+    // plant type is unrecognised. That is "unknown", not "switched off": leave
+    // whatever templates exist exactly as they are rather than disabling work
+    // the farmer is doing. Absence is not evidence (see CLAUDE.md), and this is
+    // the one branch a recovery action must never take.
+    if (frequency === null) continue;
 
     // Apply the farm zone's season multiplier for water tasks. frequencyDays
     // stored remains the user-configured base so the user's intent is preserved

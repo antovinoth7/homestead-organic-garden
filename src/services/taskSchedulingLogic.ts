@@ -1,5 +1,6 @@
 import type { Plant, TaskTemplate, TaskType } from '@/types/database.types';
 import { EARLY_COMPLETION_BLOCK_REASON, TASK_DUE_TIME_HOUR } from '@/utils/taskConstants';
+import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { getWateringFrequencyMultiplier } from '@/utils/seasonHelpers';
 import {
   addDaysToDateKey,
@@ -53,6 +54,57 @@ export const getLastCareDate = (plant: Plant, taskType: TaskType): string | null
  */
 export const isSyncOwnedTemplate = (template: Pick<TaskTemplate, 'source'>): boolean =>
   (template.source ?? 'auto') === 'auto';
+
+export type CareIntervalField = 'watering' | 'fertilising' | 'pruning';
+
+const CARE_INTERVAL_PLANT_FIELD: Record<CareIntervalField, keyof Plant> = {
+  watering: 'watering_frequency_days',
+  fertilising: 'fertilising_frequency_days',
+  pruning: 'pruning_frequency_days',
+};
+
+const CARE_INTERVAL_PROFILE_FIELD: Record<
+  CareIntervalField,
+  'wateringFrequencyDays' | 'fertilisingFrequencyDays' | 'pruningFrequencyDays'
+> = {
+  watering: 'wateringFrequencyDays',
+  fertilising: 'fertilisingFrequencyDays',
+  pruning: 'pruningFrequencyDays',
+};
+
+/**
+ * How often a care type should recur for this plant: the plant's own interval
+ * when it has one, otherwise the default for its plant type.
+ *
+ * The plant document is not guaranteed to carry an interval. The add-plant
+ * form only prefills the three frequency fields when its auto-suggest fires,
+ * and that needs a variety to be chosen — so a plant saved without one, or
+ * restored from a backup written before the fields existed, stores `null` for
+ * all three. `syncCareTasksForPlant` then had nothing to schedule from and
+ * created no tasks at all, which is what left Rebuild Care Schedule reporting
+ * "0 created" with no way to recover a wiped Care Plan.
+ *
+ * Falling back to `getPlantCareProfile` uses the exact source the add-plant
+ * form prefills from, so a rebuilt schedule matches what creating the plant
+ * would have produced. The farmer's own care-profile overrides are not applied
+ * — they live in a settings document the service layer does not load — so this
+ * resolves to the built-in defaults, which is the right baseline for a
+ * recovery action.
+ *
+ * Returns null only when the plant type is unrecognised. That means "unknown",
+ * never "switched off": the on/off decision belongs to `*_enabled`, which the
+ * caller checks separately and which always wins over a default.
+ */
+export const resolveCareInterval = (plant: Plant, field: CareIntervalField): number | null => {
+  const own = plant[CARE_INTERVAL_PLANT_FIELD[field]];
+  if (typeof own === 'number' && Number.isFinite(own) && own > 0) return own;
+
+  const profile = getPlantCareProfile(plant.plant_variety ?? '', plant.plant_type);
+  const fallback = profile?.[CARE_INTERVAL_PROFILE_FIELD[field]];
+  return typeof fallback === 'number' && Number.isFinite(fallback) && fallback > 0
+    ? fallback
+    : null;
+};
 
 export const computeNextDueAt = (
   plant: Plant,

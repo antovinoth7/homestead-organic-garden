@@ -4,7 +4,10 @@ import {
   dueHourForTemplate,
   findDuplicateTemplate,
   isSyncOwnedTemplate,
+  resolveCareInterval,
 } from '@/services/taskSchedulingLogic';
+import { DEFAULT_PROFILES_BY_TYPE } from '@/utils/plantCareDefaults/typeDefaults';
+import type { PlantType } from '@/types/database.types';
 import { TASK_DUE_TIME_HOUR } from '@/utils/taskConstants';
 import { farmDateKey } from '@/utils/farmDate';
 import { makePlant } from '../fixtures/plant.fixtures';
@@ -249,5 +252,65 @@ describe('findDuplicateTemplate', () => {
     expect(
       findDuplicateTemplate([], { task_type: 'water', plant_id: 'plant-1', bed_id: null })
     ).toBeNull();
+  });
+});
+
+describe('resolveCareInterval', () => {
+  it("uses the plant's own interval ahead of the type default", () => {
+    const plant = makePlant({ plant_type: 'vegetable', watering_frequency_days: 9 });
+    expect(DEFAULT_PROFILES_BY_TYPE.vegetable.wateringFrequencyDays).not.toBe(9);
+    expect(resolveCareInterval(plant, 'watering')).toBe(9);
+  });
+
+  it.each([
+    ['null', null],
+    ['zero', 0],
+    ['negative', -3],
+    ['NaN', Number.NaN],
+  ])('falls back to the type default when the plant stores %s', (_label, stored) => {
+    // The add-plant form only prefills the frequency fields when its
+    // auto-suggest fires, which needs a variety — so a plant saved without one
+    // stores null and used to produce no tasks at all.
+    const plant = makePlant({ plant_type: 'vegetable', watering_frequency_days: stored });
+    expect(resolveCareInterval(plant, 'watering')).toBe(
+      DEFAULT_PROFILES_BY_TYPE.vegetable.wateringFrequencyDays
+    );
+  });
+
+  it('falls back when the field is absent entirely', () => {
+    expect(resolveCareInterval(makePlant({ plant_type: 'herb' }), 'fertilising')).toBe(
+      DEFAULT_PROFILES_BY_TYPE.herb.fertilisingFrequencyDays
+    );
+  });
+
+  it('resolves pruning too, not just watering and feeding', () => {
+    expect(resolveCareInterval(makePlant({ plant_type: 'fruit_tree' }), 'pruning')).toBe(
+      DEFAULT_PROFILES_BY_TYPE.fruit_tree.pruningFrequencyDays
+    );
+  });
+
+  it('returns null for an unrecognised plant type rather than inventing an interval', () => {
+    const plant = makePlant({ plant_type: 'not_a_plant_type' as PlantType });
+    expect(resolveCareInterval(plant, 'watering')).toBeNull();
+  });
+
+  it.each(Object.keys(DEFAULT_PROFILES_BY_TYPE) as PlantType[])(
+    'agrees with the add-plant form defaults for %s',
+    (plantType) => {
+      // The rebuild must produce the same schedule creating the plant would
+      // have — both read getPlantCareProfile, so pin that they stay in step.
+      const plant = makePlant({ plant_type: plantType });
+      const profile = DEFAULT_PROFILES_BY_TYPE[plantType];
+      expect(resolveCareInterval(plant, 'watering')).toBe(profile.wateringFrequencyDays);
+      expect(resolveCareInterval(plant, 'fertilising')).toBe(profile.fertilisingFrequencyDays);
+      expect(resolveCareInterval(plant, 'pruning')).toBe(profile.pruningFrequencyDays);
+    }
+  );
+
+  it('resolves for a known variety, which inherits its type defaults', () => {
+    const plant = makePlant({ plant_type: 'vegetable', plant_variety: 'Tomato' });
+    expect(resolveCareInterval(plant, 'watering')).toBe(
+      DEFAULT_PROFILES_BY_TYPE.vegetable.wateringFrequencyDays
+    );
   });
 });

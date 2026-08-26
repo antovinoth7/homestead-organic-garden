@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-08-25 — src/: 628 files, 115,839 lines.
+> Snapshot: 2026-08-26 — src/: 628 files, 116,141 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -12,7 +12,7 @@
 - src/styles/bedCreationWizardStyles.ts (1906)
 - src/styles/calendarStyles.ts (1776)
 - src/styles/plantFormStyles.ts (1719)
-- src/services/tasks.ts (1592)
+- src/services/tasks.ts (1600)
 - src/hooks/usePlantFormState.ts (1202)
 - src/services/plants.ts (1140)
 - src/types/database.types.ts (1068)
@@ -98,10 +98,10 @@
 - noFunctionalEmoji.test.ts (54)
 - agronomyEvidenceDocs.test.ts (44)
 
-### src/__tests__/services/ — 10 files, 2,005 lines
+### src/__tests__/services/ — 10 files, 2,068 lines
 
 - alerts.test.ts (533)
-- manualTaskScheduling.test.ts (254)
+- manualTaskScheduling.test.ts (317)
 - weatherResponse.test.ts (206)
 - weather.test.ts (204)
 - offlineSync.test.ts (202)
@@ -111,13 +111,14 @@
 - plantCatalog.localSuitability.test.ts (93)
 - preMonsoonTasks.test.ts (83)
 
-### src/__tests__/utils/ — 72 files, 9,438 lines
+### src/__tests__/utils/ — 72 files, 9,565 lines
 
 - rowLayoutEngine.test.ts (523)
 - growthStage.test.ts (371)
 - rowLayoutEngine.bedTypes.test.ts (343)
 - zipHelper.test.ts (301)
 - plotBriefLine.test.ts (291)
+- harvestStats.test.ts (274)
 - plotGrouping.test.ts (263)
 - upcomingJobs.test.ts (242)
 - filterAndSortBeds.test.ts (228)
@@ -127,7 +128,6 @@
 - plantFilters.test.ts (197)
 - bedPreview.test.ts (190)
 - catalogDraft.test.ts (190)
-- harvestStats.test.ts (187)
 - quickStartPlanner.test.ts (186)
 - bedStatus.test.ts (183)
 - catalogSummaries.test.ts (178)
@@ -164,6 +164,7 @@
 - backupManifest.test.ts (74)
 - plantCareDefaultsA2.test.ts (72)
 - plantEntryMapper.test.ts (72)
+- farmDate.test.ts (69)
 - taskBed.test.ts (69)
 - locationHelpers.test.ts (68)
 - imageCompression.test.ts (67)
@@ -180,7 +181,6 @@
 - referencePlantCoverage.test.ts (41)
 - landCents.test.ts (38)
 - dataRegistrySnapshot.test.ts (33)
-- farmDate.test.ts (29)
 - cropFamilyFromName.test.ts (26)
 - seasonLabel.test.ts (26)
 - svgArc.test.ts (26)
@@ -543,19 +543,19 @@
 - BedConfirmStep.tsx (226)
 - BedTypeStep.tsx (154)
 
-### src/services/ — 19 files, 7,970 lines
+### src/services/ — 19 files, 8,014 lines
 
-- tasks.ts (1592) ⚠️ large — Grep/search inside, do not read whole
+- tasks.ts (1600) ⚠️ large — Grep/search inside, do not read whole
 - plants.ts (1140) ⚠️ large — Grep/search inside, do not read whole
 - plantCatalog.ts (879) ⚠️ large — Grep/search inside, do not read whole
 - backup.ts (609)
 - plantProfiles.ts (558)
-- journal.ts (511)
+- journal.ts (499)
 - weather.ts (384)
 - alertsLogic.ts (373)
 - plantCareProfiles.ts (307)
+- taskSchedulingLogic.ts (284)
 - farmCapacity.ts (248)
-- taskSchedulingLogic.ts (236)
 - beds.ts (228)
 - locations.ts (197)
 - BedTaskResolver.ts (182)
@@ -673,7 +673,7 @@
 - visual.types.ts (90)
 - offline.types.ts (49)
 
-### src/utils/ — 81 files, 10,759 lines
+### src/utils/ — 81 files, 10,827 lines
 
 - plantHelpers.ts (1958) ⚠️ large — Grep/search inside, do not read whole
 - rowLayoutEngine.ts (660)
@@ -686,15 +686,16 @@
 - plotGrouping.ts (228)
 - weatherWords.ts (223)
 - plantFilters.ts (210)
+- harvestStats.ts (201)
 - quickStartPlanner.ts (180)
 - plantWatering.ts (171)
 - errorTracker.ts (168)
 - journalEntryOptions.ts (167)
-- harvestStats.ts (166)
 - logger.ts (161)
 - firestoreTimeout.ts (159)
 - bedStatus.ts (156)
 - taskSummary.ts (156)
+- farmDate.ts (139)
 - catalogSearch.ts (137)
 - riskHelpers.ts (132)
 - catalogValidation.ts (131)
@@ -706,7 +707,6 @@
 - filterAndSortBeds.ts (109)
 - wateringForecast.ts (109)
 - plantNameGenerator.ts (107)
-- farmDate.ts (106)
 - sowNowChips.ts (106)
 - backupManifest.ts (103)
 - bedPreview.ts (101)
@@ -794,7 +794,7 @@
 - IMPLEMENTATION_ROADMAP.md (349)
 - REFERENCE_IMAGES.md (72)
 - SCHEMA_MIGRATIONS.md (50)
-- SERVICES.md (207)
+- SERVICES.md (208)
 - tamil-nadu-reference-audit.md (161)
 - TESTING.md (33)
 - TODAY_SCREEN_RECOMMENDATION.md (629)
