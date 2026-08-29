@@ -128,6 +128,15 @@ export default function TodayScreen(): React.JSX.Element {
   );
 
   const handlePressPlot = useCallback(() => goToCarePlan(), [goToCarePlan]);
+
+  // The card's overdue figure names a section the Care Plan already renders, so
+  // it opens the plan *there* rather than at the top. Filters are still reset —
+  // the plan is not narrowed, the rest of it just sits below the section. The
+  // count is per-plot and the plan is farm-wide, so the plot id is not carried.
+  const handlePressOverdue = useCallback(
+    () => navigation.navigate('Care Plan', { resetFilters: true, scrollTo: 'overdue' }),
+    [navigation]
+  );
   const handlePressWeather = useCallback((plotId: string) => setForecastPlotId(plotId), []);
   const closeForecast = useCallback(() => setForecastPlotId(null), []);
   const retryForecast = useCallback(() => {
@@ -221,6 +230,7 @@ export default function TodayScreen(): React.JSX.Element {
           <PlotCarousel
             plots={brief.plots}
             onPressPlot={handlePressPlot}
+            onPressOverdue={handlePressOverdue}
             onPressWeather={handlePressWeather}
             onPressHealth={handlePressHealth}
             onPressBedStatus={handlePressBedStatus}
@@ -246,6 +256,7 @@ export default function TodayScreen(): React.JSX.Element {
       goToNeedsAction,
       handleSectionLayout,
       handlePressPlot,
+      handlePressOverdue,
       handlePressWeather,
       handlePressHealth,
       handlePressBedStatus,

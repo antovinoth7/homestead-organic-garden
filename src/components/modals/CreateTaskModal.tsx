@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -7,11 +7,19 @@ import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
 import type { DropdownItem } from '../ThemedDropdown';
 import { createTaskTemplate } from '../../services/tasks';
-import { Plant, TaskType, Bed } from '../../types/database.types';
+import { Plant, TaskType, Bed, TaskTemplate } from '../../types/database.types';
+import { findDuplicateTemplate } from '@/services/taskSchedulingLogic';
 import { getErrorMessage } from '../../utils/errorLogging';
 import { sanitizeNumberText } from '../../utils/plantFormConstants';
 import { createStyles } from '../../styles/calendarStyles';
 import { useTheme } from '../../theme';
+import {
+  addCalendarDays,
+  calendarDateKey,
+  farmDateTimeFromKey,
+  farmToday,
+  formatFarmDate,
+} from '@/utils/farmDate';
 
 const TASK_TYPE_ITEMS: DropdownItem[] = [
   { label: 'Water', value: 'water' },
@@ -29,10 +37,12 @@ interface CreateTaskModalProps {
   visible: boolean;
   plants: Plant[];
   beds: Bed[];
+  /** Templates already on the Care Plan, used to warn about a duplicate. */
+  existingTasks: TaskTemplate[];
   styles: ReturnType<typeof createStyles>;
   bottomInset: number;
   initialStartDate?: Date;
-  /** Preselect this plant (or its bed) when the modal opens. */
+  /** Preselect this plant when the modal opens. */
   initialPlantId?: string;
   /** Preselect the task type when the modal opens. Defaults to `water`. */
   initialTaskType?: TaskType;
@@ -44,6 +54,7 @@ export default function CreateTaskModal({
   visible,
   plants,
   beds,
+  existingTasks,
   styles,
   bottomInset,
   initialStartDate,
@@ -53,15 +64,26 @@ export default function CreateTaskModal({
   onCreated,
 }: CreateTaskModalProps): React.JSX.Element {
   const theme = useTheme();
-  // Plants assigned to a bed are tasked via the Bed dropdown, so keep the plant
-  // dropdown to standalone (pot / unassigned) plants only.
-  const standalonePlants = useMemo(() => plants.filter((p) => !p.bed_id), [plants]);
+  // Every plant can take its own task, bed-assigned ones included — a bed task
+  // covers the whole bed, which is not always what one plant needs. Show the
+  // bed in the label so the two dropdowns can't be confused for each other.
+  const bedNamesById = useMemo(() => new Map(beds.map((bed) => [bed.id, bed.name])), [beds]);
+  const plantItems = useMemo<DropdownItem[]>(
+    () => [
+      { label: 'No Plant', value: '' },
+      ...plants.map((plant) => {
+        const bedName = plant.bed_id ? bedNamesById.get(plant.bed_id) : undefined;
+        return { label: bedName ? `${plant.name} · ${bedName}` : plant.name, value: plant.id };
+      }),
+    ],
+    [plants, bedNamesById]
+  );
   const [taskType, setTaskType] = useState<TaskType>('water');
   const [selectedPlant, setSelectedPlant] = useState('');
   const [selectedBed, setSelectedBed] = useState('');
   const [frequencyDays, setFrequencyDays] = useState('7');
   const [isOneTimeTask, setIsOneTimeTask] = useState(false);
-  const [startDate, setStartDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(farmToday());
   const [preferredTime, setPreferredTime] = useState<'morning' | 'afternoon' | 'evening' | null>(
     null
   );
@@ -69,9 +91,13 @@ export default function CreateTaskModal({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (visible && initialStartDate) {
-      setStartDate(initialStartDate);
-    }
+    if (!visible) return;
+    const today = farmToday();
+    const initialKey = initialStartDate ? calendarDateKey(initialStartDate) : null;
+    const todayKey = calendarDateKey(today);
+    setStartDate(
+      initialKey && todayKey && initialKey >= todayKey ? initialStartDate ?? today : today
+    );
   }, [visible, initialStartDate]);
 
   useEffect(() => {
@@ -80,18 +106,28 @@ export default function CreateTaskModal({
     }
   }, [visible, initialTaskType]);
 
-  // Preselect the deep-linked plant when the modal opens. Bed-assigned plants
-  // are tasked via the Bed dropdown, so prefill the bed for those instead.
+  // Preselect the deep-linked plant when the modal opens. Always the plant
+  // itself: substituting its bed silently retargeted the task at every other
+  // plant in that bed, with nothing on screen saying so.
   useEffect(() => {
     if (!visible || !initialPlantId) return;
     const plant = plants.find((p) => p.id === initialPlantId);
     if (!plant) return;
-    if (plant.bed_id) {
-      setSelectedBed(plant.bed_id);
-    } else {
-      setSelectedPlant(plant.id);
-    }
+    setSelectedPlant(plant.id);
+    setSelectedBed('');
   }, [visible, initialPlantId, plants]);
+
+  // A task belongs to one plant or one bed, never both: a plant-level task
+  // carrying a bed_id would be swept up by the bed deletion cascade.
+  const handleSelectPlant = useCallback((plantId: string): void => {
+    setSelectedPlant(plantId);
+    if (plantId) setSelectedBed('');
+  }, []);
+
+  const handleSelectBed = useCallback((bedId: string): void => {
+    setSelectedBed(bedId);
+    if (bedId) setSelectedPlant('');
+  }, []);
 
   const resetForm = (): void => {
     setTaskType('water');
@@ -99,7 +135,7 @@ export default function CreateTaskModal({
     setSelectedBed('');
     setFrequencyDays('7');
     setIsOneTimeTask(false);
-    setStartDate(new Date());
+    setStartDate(farmToday());
     setPreferredTime(null);
   };
 
@@ -112,7 +148,7 @@ export default function CreateTaskModal({
     setFrequencyDays(days.toString());
   };
 
-  const handleCreateTask = async (): Promise<void> => {
+  const handleCreateTask = (): void => {
     if (!isOneTimeTask) {
       const frequency = parseInt(frequencyDays);
       if (isNaN(frequency) || frequency < 1) {
@@ -121,25 +157,42 @@ export default function CreateTaskModal({
       }
     }
 
+    // A second task of the same type on the same target is allowed — a manual
+    // task deliberately sits alongside the plant's own schedule — so confirm
+    // rather than block, and only when one already exists.
+    const duplicate = findDuplicateTemplate(existingTasks, {
+      task_type: taskType,
+      plant_id: selectedPlant || null,
+      bed_id: selectedBed || null,
+    });
+    if (!duplicate) {
+      void submitTask();
+      return;
+    }
+
+    const typeLabel = TASK_TYPE_ITEMS.find((item) => item.value === taskType)?.label ?? 'task';
+    Alert.alert(
+      'Already Scheduled',
+      `A ${typeLabel.toLowerCase()} task is already active for this ${
+        selectedPlant ? 'plant' : selectedBed ? 'bed' : 'garden'
+      }. Add another one?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Create Anyway', onPress: () => void submitTask() },
+      ]
+    );
+  };
+
+  const submitTask = async (): Promise<void> => {
     setLoading(true);
     try {
-      const dueDate = new Date(startDate);
-
-      if (preferredTime === 'morning') {
-        dueDate.setHours(8, 0, 0, 0);
-      } else if (preferredTime === 'afternoon') {
-        dueDate.setHours(14, 0, 0, 0);
-      } else if (preferredTime === 'evening') {
-        dueDate.setHours(18, 0, 0, 0);
-      }
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const dueDay = new Date(dueDate);
-      dueDay.setHours(0, 0, 0, 0);
-      if (dueDay < today) {
-        dueDate.setDate(dueDate.getDate() + 1);
-      }
+      const selectedKey = calendarDateKey(startDate);
+      const todayKey = calendarDateKey(farmToday());
+      if (!selectedKey || !todayKey) throw new Error('Invalid task date');
+      const dueKey = selectedKey < todayKey ? todayKey : selectedKey;
+      const dueHour = preferredTime === 'morning' ? 8 : preferredTime === 'afternoon' ? 14 : 18;
+      const dueDate = farmDateTimeFromKey(dueKey, dueHour);
+      if (!dueDate) throw new Error('Invalid task date');
 
       await createTaskTemplate({
         task_type: taskType,
@@ -149,6 +202,7 @@ export default function CreateTaskModal({
         next_due_at: dueDate.toISOString(),
         enabled: true,
         preferred_time: preferredTime,
+        source: 'manual',
       });
       Alert.alert('Success', 'Task created successfully!');
       resetForm();
@@ -208,14 +262,13 @@ export default function CreateTaskModal({
             placeholder="Task Type"
           />
 
+          <Text style={styles.label}>Applies To</Text>
+
           <ThemedDropdown
-            items={[
-              { label: 'General Task', value: '' },
-              ...standalonePlants.map((p) => ({ label: p.name, value: p.id })),
-            ]}
+            items={plantItems}
             selectedValue={selectedPlant}
-            onValueChange={setSelectedPlant}
-            label="Plant (Optional)"
+            onValueChange={handleSelectPlant}
+            label="One Plant"
             placeholder="Plant"
             searchable
           />
@@ -226,17 +279,21 @@ export default function CreateTaskModal({
               ...beds.map((b) => ({ label: b.name, value: b.id })),
             ]}
             selectedValue={selectedBed}
-            onValueChange={setSelectedBed}
-            label="Bed (Optional)"
+            onValueChange={handleSelectBed}
+            label="Or a Whole Bed"
             placeholder="Bed"
             searchable
           />
+
+          <Text style={styles.helperText}>
+            Leave both blank for a general task that isn&apos;t tied to a plant or bed.
+          </Text>
 
           <Text style={styles.label}>Start Date</Text>
           <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
             <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
             <Text style={styles.dateButtonText}>
-              {startDate.toLocaleDateString('en-US', {
+              {formatFarmDate(startDate, {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
@@ -247,6 +304,7 @@ export default function CreateTaskModal({
           {showDatePicker && (
             <DateTimePicker
               value={startDate}
+              minimumDate={farmToday()}
               mode="date"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={(event, selectedDate) => {
@@ -414,7 +472,7 @@ export default function CreateTaskModal({
                   </View>
                   <Text style={styles.previewText}>
                     • First task:{' '}
-                    {startDate.toLocaleDateString('en-US', {
+                    {formatFarmDate(startDate, {
                       month: 'short',
                       day: 'numeric',
                     })}
@@ -422,9 +480,7 @@ export default function CreateTaskModal({
                   </Text>
                   <Text style={styles.previewText}>
                     • Next task:{' '}
-                    {new Date(
-                      startDate.getTime() + parseInt(frequencyDays) * 24 * 60 * 60 * 1000
-                    ).toLocaleDateString('en-US', {
+                    {formatFarmDate(addCalendarDays(startDate, parseInt(frequencyDays)), {
                       month: 'short',
                       day: 'numeric',
                     })}
@@ -445,7 +501,7 @@ export default function CreateTaskModal({
               </View>
               <Text style={styles.previewText}>
                 • Due:{' '}
-                {startDate.toLocaleDateString('en-US', {
+                {formatFarmDate(startDate, {
                   month: 'short',
                   day: 'numeric',
                 })}

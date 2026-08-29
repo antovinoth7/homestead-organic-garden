@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   SectionList,
   TouchableOpacity,
   Pressable,
@@ -17,27 +16,33 @@ import {
   UIManager,
   LayoutChangeEvent,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import {
   markTaskDone,
   markTasksDone,
   skipTaskTemplate,
+  updateTaskTemplate,
   calculateTaskPriority,
 } from '../services/tasks';
 import {
+  calendarDaysOverdue,
+  computeSkipDate,
   isEarlyCompletionBlocked,
   isFutureTask,
   isSkipBlocked,
 } from '../services/taskSchedulingLogic';
-import { TaskTemplate, TaskType } from '../types/database.types';
+import { JournalEntryType, TaskTemplate, TaskType, WeatherForecast } from '../types/database.types';
 import { Ionicons } from '@expo/vector-icons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { TASK_ICON_KEYS } from '@/config/iconRegistry';
 import {
   TASK_COLORS,
   TASK_LABELS,
+  TASK_PRIORITY_LABELS,
   EARLY_COMPLETION_BLOCK_REASON,
+  taskPriorityColor,
 } from '../utils/taskConstants';
 import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
 import { CalendarScreenRouteProp, CalendarScreenNavigationProp } from '../types/navigation.types';
@@ -49,11 +54,12 @@ import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { useCalendarData, HarvestReadyItem } from '../hooks/useCalendarData';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { useBedOptions } from '@/hooks/useBedOptions';
-import { useWeather } from '@/hooks/useWeather';
 import { useWeatherLocations } from '@/hooks/useWeatherLocations';
-import { DEFAULT_COORDINATES } from '@/config/zones/districtCoordinates';
-import { isRainPredictedOnDate } from '../services/weather';
+import { useWeatherByPlot } from '@/hooks/useWeatherByPlot';
 import { calculateExpectedHarvestDate } from '../utils/plantHelpers';
+import { getDaysToHarvestRange, isTreeLikePlant } from '@/utils/timelineHarvest';
+import { hasVarietyCareProfile } from '@/utils/plantCareDefaults';
+import { describeWateringCycle } from '../utils/plantWatering';
 import CreateTaskModal from '../components/modals/CreateTaskModal';
 import TaskCompletionModal from '../components/modals/TaskCompletionModal';
 import SkipTaskModal from '../components/modals/SkipTaskModal';
@@ -63,10 +69,33 @@ import WeekCalendarView from '../components/calendar/WeekCalendarView';
 import MonthCalendarView from '../components/calendar/MonthCalendarView';
 import { SwipeableTaskCard } from '../components/calendar/SwipeableTaskCard';
 import { getErrorMessage } from '../utils/errorLogging';
+import { logger } from '../utils/logger';
 import type { VisualIconKey } from '@/types/visual.types';
 import { getPlantImage } from '@/config/referenceAssets';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { tapFeedback } from '../utils/haptics';
+import {
+  addCalendarDays,
+  addDaysToDateKey,
+  calendarDateFromKey,
+  calendarDateKey,
+  farmDateKey,
+  farmToday,
+  formatFarmDate,
+} from '@/utils/farmDate';
+import CareTaskFilterSheet, { type CareGroupByOption } from '@/components/CareTaskFilterSheet';
+import {
+  countActiveCareFilters,
+  emptyCareTaskFilters,
+  taskTimeOfDay,
+  toggleSetValue,
+  type CareTaskFilters,
+  type TaskDueStatus,
+  type TaskPriority,
+  type TaskSortOption,
+  type TaskTimeOfDay,
+} from '@/utils/careTaskFilters';
+import { getTaskWeatherAdvisory, resolveTaskForecast } from '@/utils/taskWeatherAdvisory';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -77,6 +106,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 // instead of mounting every SwipeableTaskCard at once.
 
 type CalendarEmptyVariant =
+  | 'loadError'
   | 'selectedDateFiltered'
   | 'selectedDateNone'
   | 'searchNone'
@@ -86,7 +116,15 @@ type CalendarEmptyVariant =
 type CalendarRow =
   | { key: string; kind: 'task'; task: TaskTemplate }
   | { key: string; kind: 'harvest'; item: HarvestReadyItem }
-  | { key: string; kind: 'empty'; variant: CalendarEmptyVariant; rawCount?: number; isToday?: boolean };
+  /** Disclosure row heading the look-ahead harvests; `fromDays`/`toDays` are its span. */
+  | { key: string; kind: 'harvestSoonToggle'; count: number; fromDays: number; toDays: number }
+  | {
+      key: string;
+      kind: 'empty';
+      variant: CalendarEmptyVariant;
+      rawCount?: number;
+      isToday?: boolean;
+    };
 
 interface CalendarSectionHeader {
   title: string;
@@ -107,6 +145,46 @@ interface CalendarListSection {
 }
 
 /**
+ * A section another screen can send the plan to. The value is a section `key`
+ * from `listSections`, so a new destination costs one member here and nothing
+ * else — see the Today plot card's overdue count, which is the only caller.
+ */
+type CarePlanScrollTarget = 'overdue';
+
+/**
+ * How long a requested section is waited for before the request is dropped. The
+ * plan may simply not have that section — a farm with no overdue work at all —
+ * and a request left armed would jump the list minutes later.
+ */
+const SCROLL_TARGET_WAIT_MS = 4000;
+
+/**
+ * A section scroll in flight. `attempts` counts the times React Native has told
+ * us the target was past its measured window (see `handleScrollToIndexFailed`);
+ * `segmentSwitched` makes following the work into the other segment a one-time
+ * move, so a request can never bounce between the two.
+ */
+interface ScrollRequest {
+  target: CarePlanScrollTarget;
+  /** When this was armed — the wait is bounded from here, not from each retry. */
+  since: number;
+  attempts: number;
+  segmentSwitched: boolean;
+}
+
+/** Retries past `scrollToLocation`'s measured window before giving up. */
+const SCROLL_MAX_ATTEMPTS = 4;
+
+/** Breathing room between a measuring nudge and the retry that follows it. */
+const SCROLL_RETRY_DELAY_MS = 120;
+
+/** How long a scroll is given to land before the request is considered done. */
+const SCROLL_SETTLE_MS = 600;
+
+/** The scope chips sit ~28px tall to match the Plants screen — this restores a 44px tap target. */
+const SEGMENT_CHIP_HIT_SLOP = { top: 8, bottom: 8, left: 0, right: 0 };
+
+/**
  * The "Not due yet" dialog covers three situations, all sharing one surface:
  * `blocked` (water / fertilise / spray, where early completion is refused
  * outright), `confirmEarly` (every other type, where it is allowed but
@@ -123,16 +201,16 @@ type NotDueDialog = {
   completeTargets?: TaskTemplate[];
 } | null;
 
-const GROUP_OPTIONS: {
-  value: 'none' | 'location' | 'type' | 'plant';
-  label: string;
-  icon: string;
-}[] = [
-  { value: 'none', label: 'No Grouping', icon: 'list' },
-  { value: 'location', label: 'Location', icon: 'location' },
-  { value: 'type', label: 'Type', icon: 'apps' },
-  { value: 'plant', label: 'Plant', icon: 'leaf-outline' },
-];
+const sanitizeDecimalText = (value: string): string => {
+  const cleaned = value.replace(/[^0-9.]/g, '');
+  const [whole = '', ...fractionParts] = cleaned.split('.');
+  return fractionParts.length > 0 ? `${whole}.${fractionParts.join('')}` : whole;
+};
+
+const optionalNumber = (value: string): number | undefined => {
+  const parsed = Number(value);
+  return value.trim() !== '' && Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+};
 
 export default function CalendarScreen(): React.JSX.Element {
   const route = useRoute<CalendarScreenRouteProp>();
@@ -140,13 +218,25 @@ export default function CalendarScreen(): React.JSX.Element {
   const theme = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
   const scrollViewRef = useRef<SectionList<CalendarRow, CalendarListSection>>(null);
+  // A section the plan was asked to open at, held until that section exists.
+  // The request lives in a ref because callbacks read it (`scrollToTop` parks
+  // itself while one is in flight, the retry handler advances it) and a ref
+  // keeps their identity; the counter beside it is what makes the effect run,
+  // since a ref set during focus would otherwise sit there unread.
+  const scrollRequestRef = useRef<ScrollRequest | null>(null);
+  const [scrollArm, setScrollArm] = useState(0);
+  /** The scheduled attempt, so a re-render can't schedule a second. */
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Releases the request once the scroll has settled — see `scrollToSection`. */
+  const scrollSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [skipBulkTasks, setSkipBulkTasks] = useState<TaskTemplate[] | null>(null);
   const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
   const [selectedView, setSelectedView] = useState<'week' | 'month'>('week');
-  const [currentWeekStart, setCurrentWeekStart] = useState(getStartOfWeek(new Date()));
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentWeekStart, setCurrentWeekStart] = useState(getStartOfWeek(farmToday()));
+  const [currentMonth, setCurrentMonth] = useState(farmToday());
   const [showModal, setShowModal] = useState(false);
   const [createTaskInitialDate, setCreateTaskInitialDate] = useState<Date | undefined>(undefined);
   // Set when a plant deep-links here to create a task (from Plant Detail Quick Actions).
@@ -161,14 +251,22 @@ export default function CalendarScreen(): React.JSX.Element {
   const [selectedTask, setSelectedTask] = useState<TaskTemplate | null>(null);
   const [taskNotes, setTaskNotes] = useState('');
   const [productUsed, setProductUsed] = useState('');
+  const [completionReason, setCompletionReason] = useState('');
+  const [inputQuantity, setInputQuantity] = useState('');
+  const [inputUnit, setInputUnit] = useState('');
+  const [treatedArea, setTreatedArea] = useState('');
+  const [areaUnit, setAreaUnit] = useState('');
+  const [labourMinutes, setLabourMinutes] = useState('');
   const [isCompletingTask, setIsCompletingTask] = useState(false);
   const [isCompletingAll, setIsCompletingAll] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [groupBy, setGroupBy] = useState<'none' | 'location' | 'type' | 'plant'>('none');
+  const [groupBy, setGroupBy] = useState<CareGroupByOption>('none');
+  const [sortBy, setSortBy] = useState<TaskSortOption>('due');
   const [showGroupMenu, setShowGroupMenu] = useState(false);
-  const [filterTaskTypes, setFilterTaskTypes] = useState<Set<string>>(new Set());
-  const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
+  // Every dimension the plan is narrowed by, in one object — the sheet and the
+  // hook read the same shape, so neither can drift from the other.
+  const [filters, setFilters] = useState<CareTaskFilters>(emptyCareTaskFilters);
   const { beds: bedList } = useBedOptions();
   const bedMap = useMemo(() => new Map(bedList.map((b) => [b.id, b.name])), [bedList]);
   const [bedSegment, setBedSegment] = useState<'bed' | 'other'>('other');
@@ -178,9 +276,12 @@ export default function CalendarScreen(): React.JSX.Element {
   // than costing a second fetch. One forecast covers the whole calendar; a farm
   // with several parent locations gets its first one.
   const { plots: weatherPlots } = useWeatherLocations();
-  const farmCoords = weatherPlots[0] ?? DEFAULT_COORDINATES;
-  const { forecast } = useWeather(farmCoords.lat, farmCoords.lng);
+  const { byPlotName: weatherByPlotName } = useWeatherByPlot(weatherPlots);
   // The Beds segment forces bed grouping; otherwise the View Options group menu applies.
+  // Plot names for the task -> plot join. Same source the weather card uses, so
+  // the Care Plan's location headers and chips name plots identically.
+  const parentLocations = useMemo(() => weatherPlots.map((plot) => plot.name), [weatherPlots]);
+  const fallbackPlotName = weatherPlots[0]?.name ?? 'My Farm';
   const effectiveGroupBy = bedSegment === 'bed' ? 'bed' : groupBy;
   const [searchQuery, setSearchQuery] = useState('');
   const [searchActive, setSearchActive] = useState(false);
@@ -193,6 +294,11 @@ export default function CalendarScreen(): React.JSX.Element {
   const [showSwipeHint, setShowSwipeHint] = useState(false);
   const [sessionCompletedCount, setSessionCompletedCount] = useState(0);
   const [skipDays, setSkipDays] = useState(1);
+  const [scheduleMode, setScheduleMode] = useState<'skip' | 'reschedule'>('skip');
+  // Look-ahead harvests start folded away. Deliberately not reset on focus:
+  // re-collapsing it under the farmer every time they return to the tab would
+  // be more surprising than remembering that they opened it.
+  const [harvestSoonExpanded, setHarvestSoonExpanded] = useState(false);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [detailTask, setDetailTask] = useState<TaskTemplate | null>(null);
   const [notDueDialog, setNotDueDialog] = useState<NotDueDialog>(null);
@@ -213,22 +319,32 @@ export default function CalendarScreen(): React.JSX.Element {
     sanitizeAlphaNumericSpaces(value).trim().toLowerCase();
   const normalizedSearchQuery = normalizeSearchText(searchQuery);
 
+  const taskLabel = useCallback((type: TaskType): string => TASK_LABELS[type], []);
+  const compactTodayAction = screenWidth < 390;
+
   const {
     tasks,
     plants,
     initialLoading,
     refreshing,
+    error: loadError,
+    isStale,
+    lastUpdatedAt,
     isMountedRef,
     loadData,
     handleRefresh,
     plantMap,
     filteredTasks,
-    filteredHarvestsReady,
+    harvestsReadyNow,
+    harvestsSoon,
     todayTasks,
     weekTasks,
     tasksForDisplay,
     groupedTasks,
     segmentCounts,
+    overdueSegmentCounts,
+    facetCounts,
+    plotResolution,
     overdueTasks,
     isSearching,
     getTasksForDate,
@@ -242,11 +358,19 @@ export default function CalendarScreen(): React.JSX.Element {
     currentMonth,
     selectedDate,
     groupBy: effectiveGroupBy,
-    filterTaskTypes,
-    filterOverdueOnly,
+    sortBy,
+    filters,
     bedSegment,
-    bedNames: bedMap,
+    beds: bedList,
+    parentLocations,
+    fallbackPlotName,
   });
+
+  const getForecastForTask = useCallback(
+    (task: TaskTemplate): WeatherForecast | null =>
+      resolveTaskForecast(task, weatherByPlotName, plotResolution.resolveTaskPlotId),
+    [weatherByPlotName, plotResolution]
+  );
 
   // One-shot after first load: the default "Pots & Ground" segment hides
   // bed-plant tasks, so when it's empty but Beds has tasks, start on Beds.
@@ -254,7 +378,15 @@ export default function CalendarScreen(): React.JSX.Element {
   const segmentAutoSelectDone = useRef(false);
   const selectSegment = useCallback((value: 'bed' | 'other') => {
     segmentAutoSelectDone.current = true;
+    setSelectedTaskIds(new Set());
     setBedSegment(value);
+    // Bed filters only mean anything in the Beds segment: no Pots & Ground task
+    // has a bed, so carrying one over empties the list — and the chips that would
+    // clear it are hidden outside that segment, leaving Clear All (which also
+    // discards the farmer's other filters) as the only way back.
+    if (value !== 'bed') {
+      setFilters((prev) => (prev.bedIds.size > 0 ? { ...prev, bedIds: new Set() } : prev));
+    }
   }, []);
   useEffect(() => {
     if (segmentAutoSelectDone.current || initialLoading) return;
@@ -264,48 +396,131 @@ export default function CalendarScreen(): React.JSX.Element {
     }
   }, [initialLoading, segmentCounts]);
 
-  const isFilterActive = filterTaskTypes.size > 0 || filterOverdueOnly;
+  const activeFilterCount = countActiveCareFilters(filters);
+  const isFilterActive = activeFilterCount > 0;
 
   const clearFilters = useCallback(() => {
-    setFilterTaskTypes(new Set());
-    setFilterOverdueOnly(false);
+    setSelectedTaskIds(new Set());
+    setFilters(emptyCareTaskFilters());
   }, []);
+
+  const handleToggleDueStatus = useCallback((status: TaskDueStatus) => {
+    setFilters((prev) => ({ ...prev, dueStatuses: toggleSetValue(prev.dueStatuses, status) }));
+  }, []);
+
+  const handleToggleTaskType = useCallback((type: TaskType) => {
+    setFilters((prev) => ({ ...prev, taskTypes: toggleSetValue(prev.taskTypes, type) }));
+  }, []);
+
+  const handleTogglePlot = useCallback((plotId: string) => {
+    setFilters((prev) => ({ ...prev, plotIds: toggleSetValue(prev.plotIds, plotId) }));
+  }, []);
+
+  const handleToggleBed = useCallback((bedId: string) => {
+    setFilters((prev) => ({ ...prev, bedIds: toggleSetValue(prev.bedIds, bedId) }));
+  }, []);
+
+  const handleTogglePriority = useCallback((priority: TaskPriority) => {
+    setFilters((prev) => ({ ...prev, priorities: toggleSetValue(prev.priorities, priority) }));
+  }, []);
+
+  const handleToggleTime = useCallback((time: TaskTimeOfDay) => {
+    setFilters((prev) => ({ ...prev, times: toggleSetValue(prev.times, time) }));
+  }, []);
+
+  const handleChangeGroupBy = useCallback((value: CareGroupByOption) => {
+    setGroupBy(value);
+    setShowGroupMenu(false);
+  }, []);
+
+  const handleClearAll = useCallback(() => {
+    setSelectedTaskIds(new Set());
+    setFilters(emptyCareTaskFilters());
+    setGroupBy('none');
+    setSortBy('due');
+  }, []);
+
+  // Only beds that actually carry a task are worth a chip, and only in the Beds
+  // segment — the Pots & Ground segment has no bed tasks at all, so the section
+  // would be an empty promise there.
+  const bedFilterOptions = useMemo(() => {
+    if (bedSegment !== 'bed') return [];
+    return bedList
+      .filter((bed) => (facetCounts.bedIds[bed.id] ?? 0) > 0 || filters.bedIds.has(bed.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [bedSegment, bedList, facetCounts, filters.bedIds]);
+
+  // Every synced template is created with a null `preferred_time`, so on most
+  // farms nothing names a time and the section would only ever offer "Any time".
+  const showTimeFilter = useMemo(
+    () => tasks.some((task) => taskTimeOfDay(task) !== 'unset'),
+    [tasks]
+  );
+
+  useEffect(() => {
+    setSelectedTaskIds(new Set());
+  }, [
+    selectedView,
+    currentWeekStart,
+    currentMonth,
+    selectedDate,
+    bedSegment,
+    groupBy,
+    sortBy,
+    normalizedSearchQuery,
+    filters,
+  ]);
+
+  useEffect(() => {
+    const visibleIds = new Set(
+      [...tasksForDisplay, ...overdueTasks, ...todayTasks].map((task) => task.id)
+    );
+    setSelectedTaskIds((previous) => {
+      const next = new Set([...previous].filter((id) => visibleIds.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [tasksForDisplay, overdueTasks, todayTasks]);
 
   const overdueIdSet = React.useMemo(() => new Set(overdueTasks.map((t) => t.id)), [overdueTasks]);
 
   const dayGroupedTasks = React.useMemo(() => {
     if (effectiveGroupBy !== 'none' || isSearching || selectedView !== 'week') return null;
-    const todayStr = new Date().toDateString();
+    const todayKey = calendarDateKey(farmToday());
     const grouped: Record<string, TaskTemplate[]> = {};
     for (const task of tasksForDisplay) {
       if (!task.next_due_at || overdueIdSet.has(task.id)) continue;
-      const key = new Date(task.next_due_at).toDateString();
+      const key = farmDateKey(task.next_due_at);
+      if (!key) continue;
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(task);
     }
-    const sortedKeys = Object.keys(grouped).sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime()
-    );
-    return sortedKeys.map((key) => {
-      const date = new Date(key);
-      const isToday = key === todayStr;
-      return {
-        dateKey: key,
-        label: isToday
-          ? 'Today'
-          : date.toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'short',
-              day: 'numeric',
-            }),
-        tasks: grouped[key],
-        isToday,
-      };
+    const sortedKeys = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+    return sortedKeys.flatMap((key) => {
+      const date = calendarDateFromKey(key);
+      if (!date) return [];
+      const isToday = key === todayKey;
+      return [
+        {
+          dateKey: key,
+          label: isToday
+            ? 'Today'
+            : formatFarmDate(
+                date,
+                {
+                  weekday: 'long',
+                  month: 'short',
+                  day: 'numeric',
+                }
+              ),
+          tasks: grouped[key],
+          isToday,
+        },
+      ];
     });
   }, [effectiveGroupBy, isSearching, selectedView, tasksForDisplay, overdueIdSet]);
 
   const setTodayView = React.useCallback(() => {
-    const today = new Date();
+    const today = farmToday();
     setSelectedDate(null);
     setCurrentWeekStart(getStartOfWeek(today));
     setCurrentMonth(today);
@@ -412,7 +627,12 @@ export default function CalendarScreen(): React.JSX.Element {
     [headerHeight, insets.bottom]
   );
 
+  // Parks itself while a section scroll is in flight. Arming one changes the
+  // route params, which re-runs the focus effect below — and that effect opens
+  // by returning to the top, which would undo the scroll it just asked for.
+  // Reads the ref rather than state so this keeps its identity either way.
   const scrollToTop = useCallback((animated: boolean) => {
+    if (scrollRequestRef.current !== null) return;
     scrollViewRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated });
   }, []);
 
@@ -427,19 +647,39 @@ export default function CalendarScreen(): React.JSX.Element {
     React.useCallback(() => {
       scrollToTop(false);
       resetTabBar();
-      const today = new Date();
+      const today = farmToday();
       setSelectedDate(today);
       setCurrentWeekStart(getStartOfWeek(today));
       setCurrentMonth(today);
       setSessionCompletedCount(0);
+      setSelectedTaskIds(new Set());
       if (route.params?.resetFilters) {
-        setFilterTaskTypes(new Set());
-        setFilterOverdueOnly(false);
+        setFilters(emptyCareTaskFilters());
         setGroupBy('none');
+        setSortBy('due');
       } else if (route.params?.filterOverdue) {
-        setFilterOverdueOnly(true);
+        setFilters({ ...emptyCareTaskFilters(), dueStatuses: new Set(['overdue']) });
+      }
+      // Armed here, fired by the scroll effect once the section is in the model.
+      // Consumed like the other one-shots so returning to the tab later — from
+      // the tab bar, or back out of a task — does not scroll the plan again.
+      if (route.params?.scrollTo) {
+        const target = route.params.scrollTo;
+        scrollRequestRef.current = {
+          target,
+          since: Date.now(),
+          attempts: 0,
+          segmentSwitched: false,
+        };
+        setScrollArm((count) => count + 1);
+        navigation.setParams({ scrollTo: undefined });
+        logger.debug('Care plan asked to open at a section', {
+          tags: ['calendar', 'scroll'],
+          metadata: { target },
+        });
       }
       if (route.params?.openCreateTask) {
+        setCreateTaskInitialDate(undefined);
         setCreateTaskPrefillPlantId(route.params.prefillPlantId);
         setCreateTaskPrefillType(route.params.prefillTaskType);
         setShowModal(true);
@@ -451,6 +691,7 @@ export default function CalendarScreen(): React.JSX.Element {
         });
       }
       void loadData(); // debounced — skips if loaded recently
+      return () => setSelectedTaskIds(new Set());
     }, [loadData, resetTabBar, route, navigation, scrollToTop])
   );
 
@@ -458,12 +699,18 @@ export default function CalendarScreen(): React.JSX.Element {
     setSelectedTask(task);
     setTaskNotes('');
     setProductUsed('');
+    setCompletionReason('');
+    setInputQuantity('');
+    setInputUnit('');
+    setTreatedArea('');
+    setAreaUnit('');
+    setLabourMinutes('');
     setShowNotesModal(true);
   }, []);
 
   const formatDueDate = useCallback(
     (task: TaskTemplate): string =>
-      new Date(task.next_due_at).toLocaleDateString('en-US', {
+      formatFarmDate(new Date(task.next_due_at), {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
@@ -471,11 +718,10 @@ export default function CalendarScreen(): React.JSX.Element {
     []
   );
 
-  // Water / fertilise / spray can't be completed ahead of schedule at all —
-  // doing the work early is harmful, not merely off-schedule. Explain, and point
-  // at skip, which is the right tool if the date itself looks wrong.
-  // Bed-level tasks have no plant, so fall back to the bed name — same label the
-  // card shows, rather than a bare "General".
+  // What the task is *about*, for every surface that names its subject: the
+  // plant, or for bed-level tasks (which have no plant) the bed. Without the bed
+  // fallback these read a bare "General" while the card right behind them says
+  // "Bed 3" — so the sheets, the detail view and the dialogs all share this.
   const taskSubjectLabel = useCallback(
     (task: TaskTemplate): string => {
       const bedLabel = task.bed_id != null ? bedMap.get(task.bed_id) : undefined;
@@ -513,13 +759,32 @@ export default function CalendarScreen(): React.JSX.Element {
 
   const confirmTaskComplete = async (): Promise<void> => {
     if (!selectedTask || isCompletingTask) return;
+    const completingEarly = isFutureTask(selectedTask);
+    if (completingEarly && !completionReason.trim()) {
+      Alert.alert(
+        'Field reason required',
+        'Describe why this work was needed before the planned date.'
+      );
+      return;
+    }
 
     setIsCompletingTask(true);
     try {
       const didMark = await markTaskDone(
         selectedTask,
         taskNotes || undefined,
-        productUsed || undefined
+        productUsed || undefined,
+        {
+          allowEarlyCompletion: completingEarly,
+          completionReason: completionReason || undefined,
+          farmDetails: {
+            inputQuantity: optionalNumber(inputQuantity),
+            inputUnit: inputUnit || undefined,
+            treatedArea: optionalNumber(treatedArea),
+            areaUnit: areaUnit || undefined,
+            labourMinutes: optionalNumber(labourMinutes),
+          },
+        }
       );
       if (!didMark) {
         Alert.alert('Already Completed', 'This task is already marked as done for today.');
@@ -536,6 +801,27 @@ export default function CalendarScreen(): React.JSX.Element {
       setProductUsed('');
       setSessionCompletedCount((prev) => prev + 1);
       loadData({ force: true });
+      // Completing a harvest task records the schedule but no yield, so on its
+      // own it loses what was actually picked. Hand straight over to the journal
+      // harvest form — the same one the "Log harvest" card opens — so there is
+      // one place yield is stored rather than two. Deferred a frame: this sheet
+      // is an RN Modal, and navigating out from under it is unreliable on
+      // Android until it has unmounted.
+      if (
+        (selectedTask.task_type === 'harvest' || selectedTask.task_type === 'harvest_leaves') &&
+        selectedTask.plant_id
+      ) {
+        const plantId = selectedTask.plant_id;
+        requestAnimationFrame(() => {
+          navigation.navigate('Journal', {
+            screen: 'JournalForm',
+            params: {
+              initialEntryType: JournalEntryType.Harvest,
+              initialPlantId: plantId,
+            },
+          });
+        });
+      }
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error));
     } finally {
@@ -576,7 +862,6 @@ export default function CalendarScreen(): React.JSX.Element {
       try {
         // One batched commit + single cache write — no per-task re-render storm.
         const { succeeded, failed } = await markTasksDone(selected, {
-          skipAlreadyDoneCheck: true,
           onProgress: (done) => {
             if (isMountedRef.current) setCompletedCount(done);
           },
@@ -634,13 +919,14 @@ export default function CalendarScreen(): React.JSX.Element {
     // whole batch rather than per card.
     const future = selected.filter((t) => isFutureTask(t));
     if (future.length > 0) {
+      const dueNow = selected.filter((task) => !isFutureTask(task));
       // `tasks` is the not-yet-due subset so Skip touches only those, while
       // Mark done still applies to the whole completable selection.
       setNotDueDialog({
         kind: 'confirmEarly',
         tasks: future,
         selectedTotal: selected.length,
-        completeTargets: selected,
+        completeTargets: dueNow,
       });
       return;
     }
@@ -653,25 +939,34 @@ export default function CalendarScreen(): React.JSX.Element {
   // A lone task takes the single path so the sheet can still show its preview.
   // It is also the gate: a not-yet-due task has nothing to defer, so it never
   // reaches the sheet. A mixed batch skips what it can and reports the rest.
-  const openSkipForTasks = useCallback((targets: TaskTemplate[]) => {
-    if (targets.length === 0) return;
-    const eligible = targets.filter((t) => !isSkipBlocked(t));
-    if (eligible.length === 0) {
-      setNotDueDialog({
-        kind: 'skipBlocked',
-        tasks: targets,
-        ...(targets.length > 1 ? { selectedTotal: targets.length } : {}),
-      });
-      return;
-    }
-    const single = eligible.length === 1 ? eligible[0] ?? null : null;
-    setSkipTask(single);
-    setSkipBulkTasks(single ? null : eligible);
-    setSkipExcludedCount(targets.length - eligible.length);
-    setSkipReason('');
-    setSkipDays(1);
-    setShowSkipModal(true);
-  }, []);
+  const openSkipForTasks = useCallback(
+    (targets: TaskTemplate[], mode: 'skip' | 'reschedule' = 'skip') => {
+      if (targets.length === 0) return;
+      const eligible = mode === 'reschedule' ? targets : targets.filter((t) => !isSkipBlocked(t));
+      if (eligible.length === 0) {
+        setNotDueDialog({
+          kind: 'skipBlocked',
+          tasks: targets,
+          ...(targets.length > 1 ? { selectedTotal: targets.length } : {}),
+        });
+        return;
+      }
+      const single = eligible.length === 1 ? eligible[0] ?? null : null;
+      setSkipTask(single);
+      setSkipBulkTasks(single ? null : eligible);
+      setSkipExcludedCount(targets.length - eligible.length);
+      setSkipReason('');
+      setSkipDays(1);
+      setScheduleMode(mode);
+      setShowSkipModal(true);
+    },
+    []
+  );
+
+  const openRescheduleForTasks = useCallback(
+    (targets: TaskTemplate[]) => openSkipForTasks(targets, 'reschedule'),
+    [openSkipForTasks]
+  );
 
   const handleBulkSkip = useCallback(() => {
     openSkipForTasks(tasks.filter((t) => selectedTaskIds.has(t.id)));
@@ -709,34 +1004,57 @@ export default function CalendarScreen(): React.JSX.Element {
     const message =
       kind === 'blocked'
         ? bulk
-          ? 'None of the selected tasks can be completed early.'
-          : EARLY_COMPLETION_BLOCK_REASON[first.task_type] ?? ''
+          ? 'These safety-sensitive tasks need an individual field reason before early work is logged.'
+          : `${
+              EARLY_COMPLETION_BLOCK_REASON[first.task_type] ?? ''
+            } Reschedule, or log the actual work with a field reason.`
         : kind === 'skipBlocked'
         ? bulk
-          ? "None of the selected tasks are due yet, so there's nothing to skip."
-          : 'Only tasks that are due can be skipped.'
+          ? 'These tasks are not due yet. Reschedule them instead of recording a skip.'
+          : 'This task is not due yet. Reschedule it instead of recording a skip.'
         : bulk
-        ? 'Marking them done today will reschedule them from today.'
-        : 'Marking it done today will reschedule the next one from today.';
+        ? 'Future tasks require individual review. Tasks already due can still be completed together.'
+        : 'Logging it today will rebase the next cycle from today. Add the field reason first.';
 
-    const dismiss = { label: 'Got it', onPress: () => setNotDueDialog(null) };
+    const rescheduleAction: AlertDialogAction = {
+      label: 'Reschedule',
+      icon: 'calendar-outline',
+      onPress: () => closeNotDueThen(() => openRescheduleForTasks(subjects)),
+    };
+    const cancelAction: AlertDialogAction = {
+      label: 'Cancel',
+      onPress: () => setNotDueDialog(null),
+    };
 
-    const actions: AlertDialogAction[] =
-      kind === 'confirmEarly'
-        ? [
-            {
-              label: 'Mark done',
-              icon: 'checkmark-circle-outline',
-              variant: 'primary',
-              onPress: () =>
-                closeNotDueThen(() => {
-                  if (completeTargets) void completeSelected(completeTargets);
-                  else openCompletionSheet(first);
-                }),
-            },
-            { label: 'Cancel', onPress: () => setNotDueDialog(null) },
-          ]
-        : [dismiss];
+    let actions: AlertDialogAction[];
+    if (bulk && kind === 'confirmEarly') {
+      actions = [
+        ...(completeTargets && completeTargets.length > 0
+          ? [
+              {
+                label: `Complete ${completeTargets.length} due`,
+                icon: 'checkmark-circle-outline' as keyof typeof Ionicons.glyphMap,
+                variant: 'primary' as const,
+                onPress: () => closeNotDueThen(() => void completeSelected(completeTargets)),
+              },
+            ]
+          : [rescheduleAction]),
+        cancelAction,
+      ];
+    } else if (kind === 'confirmEarly' || kind === 'blocked') {
+      actions = [
+        {
+          label: 'Log actual work',
+          icon: 'checkmark-circle-outline',
+          variant: 'primary',
+          onPress: () => closeNotDueThen(() => openCompletionSheet(first)),
+        },
+        rescheduleAction,
+        cancelAction,
+      ];
+    } else {
+      actions = [rescheduleAction, cancelAction];
+    }
 
     return {
       title: 'Not due yet',
@@ -753,6 +1071,7 @@ export default function CalendarScreen(): React.JSX.Element {
     formatDueDate,
     closeNotDueThen,
     openCompletionSheet,
+    openRescheduleForTasks,
     completeSelected,
   ]);
 
@@ -792,9 +1111,15 @@ export default function CalendarScreen(): React.JSX.Element {
       const state = getSectionState(selectable);
       return (
         <TouchableOpacity
+          style={styles.sectionSelectButton}
           onPress={() => toggleSectionSelection(selectable)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           activeOpacity={0.7}
+          accessibilityRole="checkbox"
+          accessibilityState={{
+            checked: state === 'all' ? true : state === 'none' ? false : 'mixed',
+          }}
+          accessibilityLabel={`Select ${selectable.length} tasks in this section`}
         >
           <Ionicons
             name={
@@ -833,6 +1158,7 @@ export default function CalendarScreen(): React.JSX.Element {
     setSkipTask(null);
     setSkipBulkTasks(null);
     setSkipExcludedCount(0);
+    setScheduleMode('skip');
   }, []);
 
   const handleConfirmSkip = useCallback(async (): Promise<void> => {
@@ -842,7 +1168,17 @@ export default function CalendarScreen(): React.JSX.Element {
     try {
       // Persists the reason on each template so the "why" outlives this sheet
       // and can be shown on the task detail view.
-      await Promise.all(targets.map((task) => skipTaskTemplate(task, skipDays, skipReason)));
+      if (scheduleMode === 'reschedule') {
+        await Promise.all(
+          targets.map((task) =>
+            updateTaskTemplate(task.id, {
+              next_due_at: computeSkipDate(task, skipDays).toISOString(),
+            })
+          )
+        );
+      } else {
+        await Promise.all(targets.map((task) => skipTaskTemplate(task, skipDays, skipReason)));
+      }
       // Drop just the skipped ids rather than the whole selection: a skip can
       // now target a subset (the not-yet-due ones), and the rest stay selected.
       setSelectedTaskIds((prev) => {
@@ -858,7 +1194,16 @@ export default function CalendarScreen(): React.JSX.Element {
     } finally {
       setSkippingTask(false);
     }
-  }, [skipBulkTasks, skipTask, skippingTask, skipDays, skipReason, closeSkipModal, loadData]);
+  }, [
+    skipBulkTasks,
+    skipTask,
+    skippingTask,
+    skipDays,
+    skipReason,
+    scheduleMode,
+    closeSkipModal,
+    loadData,
+  ]);
 
   const handleDetailComplete = useCallback(() => {
     if (!detailTask) return;
@@ -871,8 +1216,9 @@ export default function CalendarScreen(): React.JSX.Element {
     if (!detailTask) return;
     setShowTaskDetail(false);
     setDetailTask(null);
-    handleOpenSkipModal(detailTask);
-  }, [detailTask, handleOpenSkipModal]);
+    if (isFutureTask(detailTask)) openRescheduleForTasks([detailTask]);
+    else handleOpenSkipModal(detailTask);
+  }, [detailTask, handleOpenSkipModal, openRescheduleForTasks]);
 
   const handleShowDetail = useCallback((task: TaskTemplate) => {
     setDetailTask(task);
@@ -880,21 +1226,64 @@ export default function CalendarScreen(): React.JSX.Element {
   }, []);
 
   // Estimated harvest date for harvest tasks, from enriched (A2) care data.
+  //
+  // Only ever states a date it can support. The farmer's own expected date wins;
+  // failing that an estimate is shown solely where the crop's own maturity data
+  // exists. It used to fall through to `calculateExpectedHarvestDate` for
+  // everything, which resolves care profiles with a type-level fallback — so an
+  // unrecognised fruit tree was given a confident "Estimated" date derived from
+  // the whole category's `yearsToFirstHarvest: 4`.
+  //
+  // Note the estimate is a plain day count from planting: it never consults the
+  // farm's district, zone or sowing window, so the same crop predicts the same
+  // date across Tamil Nadu. See the note in `harvestStats.ts`.
   const computeHarvestHint = useCallback(
     (task: TaskTemplate): string | null => {
       if (task.task_type !== 'harvest' && task.task_type !== 'harvest_leaves') return null;
       if (!task.plant_id) return null;
       const plant = plantMap.get(task.plant_id);
       if (!plant) return null;
-      const iso = calculateExpectedHarvestDate(
-        plant.plant_variety,
-        plant.planting_date,
-        plant.plant_type
-      );
-      if (!iso) return null;
-      const d = new Date(iso);
-      if (Number.isNaN(d.getTime())) return null;
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (plant.expected_harvest_date) {
+        const farmerDate = new Date(plant.expected_harvest_date);
+        if (!Number.isNaN(farmerDate.getTime())) {
+          return `Expected: ${formatFarmDate(farmerDate, {
+            month: 'short',
+            day: 'numeric',
+          })}`;
+        }
+      }
+      if (!plant.planting_date) return null;
+      const day = (date: Date): string => formatFarmDate(date, { month: 'short', day: 'numeric' });
+
+      // Trees measure years to *first* harvest, and their catalog `daysToHarvest`
+      // is a recurring picking interval rather than a sow-to-harvest duration
+      // (see `isTreeLikePlant`), so the range below would be meaningless for them.
+      if (isTreeLikePlant(plant)) {
+        if (!hasVarietyCareProfile(plant.plant_variety, plant.plant_type)) return null;
+        const iso = calculateExpectedHarvestDate(
+          plant.plant_variety,
+          plant.planting_date,
+          plant.plant_type
+        );
+        if (!iso) return null;
+        const treeDate = new Date(iso);
+        return Number.isNaN(treeDate.getTime()) ? null : `Estimated: ${day(treeDate)}`;
+      }
+
+      // `known: false` is the generic 55–75 day band standing in for a crop we
+      // have no maturity data on — a window, not a fact, so it stays unsaid.
+      const range = getDaysToHarvestRange(plant);
+      if (!range.known) return null;
+      const plantedKey = farmDateKey(plant.planting_date);
+      if (!plantedKey) return null;
+      const fromKey = addDaysToDateKey(plantedKey, range.min);
+      const toKey = addDaysToDateKey(plantedKey, range.max);
+      const from = fromKey ? calendarDateFromKey(fromKey) : null;
+      const to = toKey ? calendarDateFromKey(toKey) : null;
+      if (!from || !to) return null;
+      return range.min === range.max
+        ? `Estimated: ${day(from)}`
+        : `Estimated: ${day(from)} – ${day(to)}`;
     },
     [plantMap]
   );
@@ -916,11 +1305,11 @@ export default function CalendarScreen(): React.JSX.Element {
         onDetail={handleShowDetail}
         styles={styles}
         bedMap={bedMap}
-        rainExpected={
-          task.task_type === 'water' &&
-          !!task.next_due_at &&
-          isRainPredictedOnDate(forecast, new Date(task.next_due_at))
-        }
+        weatherAdvisory={getTaskWeatherAdvisory(
+          task.task_type,
+          getForecastForTask(task),
+          new Date(task.next_due_at)
+        )}
         harvestHint={computeHarvestHint(task)}
       />
     ),
@@ -936,7 +1325,7 @@ export default function CalendarScreen(): React.JSX.Element {
       handleBlockedSkip,
       toggleTaskSelection,
       handleShowDetail,
-      forecast,
+      getForecastForTask,
       computeHarvestHint,
     ]
   );
@@ -946,8 +1335,17 @@ export default function CalendarScreen(): React.JSX.Element {
   // → overdue → today → day-grouped week view / grouped views / empty states.
   const listSections = useMemo((): CalendarListSection[] => {
     const sections: CalendarListSection[] = [];
-    const todayStr = new Date().toDateString();
-    const selectedIsToday = !!selectedDate && selectedDate.toDateString() === todayStr;
+    if (loadError && tasks.length === 0 && !initialLoading) {
+      return [
+        {
+          key: 'load-error',
+          header: null,
+          data: [{ key: 'load-error', kind: 'empty', variant: 'loadError' }],
+        },
+      ];
+    }
+    const todayKey = calendarDateKey(farmToday());
+    const selectedIsToday = !!selectedDate && calendarDateKey(selectedDate) === todayKey;
     const taskRows = (prefix: string, sectionTasks: TaskTemplate[]): CalendarRow[] =>
       sectionTasks.map((task) => ({ key: `${prefix}-${task.id}`, kind: 'task' as const, task }));
 
@@ -963,11 +1361,14 @@ export default function CalendarScreen(): React.JSX.Element {
           header: {
             title: selectedIsToday
               ? 'Today'
-              : selectedDate.toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                }),
+              : formatFarmDate(
+                  selectedDate,
+                  {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  }
+                ),
             checkboxTasks: selectedDateTasks,
             count: selectedDateTasks.length,
           },
@@ -1011,19 +1412,24 @@ export default function CalendarScreen(): React.JSX.Element {
       });
     }
 
-    // Harvest Ready
-    if (filteredHarvestsReady.length > 0) {
+    // Harvest check: only explicit farmer dates or enabled harvest tasks, and
+    // only the ones actually due or overdue. Everything still ahead moves to the
+    // "Harvest soon" disclosure below Today — a crop 12 days out has no business
+    // outranking work that is late today.
+    if (harvestsReadyNow.length > 0) {
       sections.push({
         key: 'harvest-ready',
         header: {
           title: 'Harvest Ready',
           iconKey: 'task.harvest',
-          count: filteredHarvestsReady.length,
+          count: harvestsReadyNow.length,
           titleFlex: false,
         },
-        data: filteredHarvestsReady
-          .filter((item): item is HarvestReadyItem => !!item)
-          .map((item) => ({ key: `harvest-${item.plant.id}`, kind: 'harvest' as const, item })),
+        data: harvestsReadyNow.map((item) => ({
+          key: `harvest-${item.plant.id}`,
+          kind: 'harvest' as const,
+          item,
+        })),
       });
     }
 
@@ -1056,6 +1462,38 @@ export default function CalendarScreen(): React.JSX.Element {
       });
     }
 
+    // Harvest look-ahead — below the due work, folded away behind one row. The
+    // list arrives sorted, so its first and last entries are the day span.
+    if (harvestsSoon.length > 0) {
+      const first = harvestsSoon[0];
+      const last = harvestsSoon[harvestsSoon.length - 1];
+      if (first && last) {
+        sections.push({
+          key: 'harvest-soon',
+          header: null,
+          data: [
+            {
+              key: 'harvest-soon-toggle',
+              kind: 'harvestSoonToggle' as const,
+              count: harvestsSoon.length,
+              fromDays: first.daysUntil,
+              toDays: last.daysUntil,
+            },
+            // Keyed apart from the pinned section's `harvest-<id>`: a
+            // cut-and-come-again crop can legitimately appear in neither, either
+            // or — after a re-render — the other.
+            ...(harvestSoonExpanded
+              ? harvestsSoon.map((item) => ({
+                  key: `harvest-soon-${item.plant.id}`,
+                  kind: 'harvest' as const,
+                  item,
+                }))
+              : []),
+          ],
+        });
+      }
+    }
+
     const upcomingEmpty = (): void => {
       if (!isSearching && todayTasks.length === 0 && overdueTasks.length === 0 && !initialLoading) {
         sections.push({
@@ -1076,7 +1514,7 @@ export default function CalendarScreen(): React.JSX.Element {
     if (dayGroupedTasks) {
       if (dayGroupedTasks.length > 0) {
         for (const { dateKey, label, tasks: dayTasks } of dayGroupedTasks) {
-          const isToday = dateKey === todayStr;
+          const isToday = dateKey === todayKey;
           if (isToday && todayTasks.length > 0 && !selectedIsToday) continue;
           sections.push({
             key: `day-${dateKey}`,
@@ -1103,7 +1541,7 @@ export default function CalendarScreen(): React.JSX.Element {
           ? effectiveGroupBy === 'location'
             ? groupName
             : effectiveGroupBy === 'type'
-            ? TASK_LABELS[groupName as TaskType] ||
+            ? taskLabel(groupName as TaskType) ||
               groupName.charAt(0).toUpperCase() + groupName.slice(1)
             : effectiveGroupBy === 'plant'
             ? groupName
@@ -1121,10 +1559,10 @@ export default function CalendarScreen(): React.JSX.Element {
               effectiveGroupBy === 'location'
                 ? 'general.location'
                 : effectiveGroupBy === 'plant'
-                  ? 'general.plant'
-                  : effectiveGroupBy === 'bed'
-                    ? 'general.bed'
-                    : undefined,
+                ? 'general.plant'
+                : effectiveGroupBy === 'bed'
+                ? 'general.bed'
+                : undefined,
             checkboxTasks: nonOverdue,
             count: groupName
               ? nonOverdue.length
@@ -1162,7 +1600,9 @@ export default function CalendarScreen(): React.JSX.Element {
     isFilterActive,
     initialLoading,
     filteredTasks,
-    filteredHarvestsReady,
+    harvestsReadyNow,
+    harvestsSoon,
+    harvestSoonExpanded,
     overdueTasks,
     todayTasks,
     dayGroupedTasks,
@@ -1172,11 +1612,203 @@ export default function CalendarScreen(): React.JSX.Element {
     selectedView,
     tasksForDisplay,
     weekTasks,
+    loadError,
+    tasks.length,
+    taskLabel,
   ]);
+
+  // ─── Opening the plan at a section ─────────────────────────────────────────
+  // Another screen can ask for one by name (the Today card's overdue count), and
+  // the work of getting there is all in the waiting: the sections are built from
+  // data that lands after the navigation, and React Native will not scroll to a
+  // row it has not measured.
+  //
+  // `scrollToLocation`, not a measured offset: a section header is rendered
+  // inside a virtualized cell, so its own `onLayout` y is relative to that cell
+  // and says nothing about where it sits in the list.
+  //
+  // The offset is the collapsed strip, not `headerHeight`. The floating header
+  // is driven by `Animated.diffClamp` over the scroll delta, so any scroll
+  // longer than `collapseRange` folds it away entirely — reserving its full
+  // height would land the section under a header that is no longer there.
+
+  // The current section model, for the scroll timers to resolve an index
+  // against when they fire rather than from the render that scheduled them —
+  // between the two the sections can be rebuilt and the index move.
+  const listSectionsRef = useRef<CalendarListSection[]>([]);
+  useEffect(() => {
+    listSectionsRef.current = listSections;
+  }, [listSections]);
+
+  const scrollToSection = useCallback((sectionIndex: number) => {
+    logger.debug('Care plan scrolling to section', {
+      tags: ['calendar', 'scroll'],
+      metadata: { sectionIndex, attempt: scrollRequestRef.current?.attempts ?? 0 },
+    });
+    scrollViewRef.current?.scrollToLocation({
+      sectionIndex,
+      itemIndex: 0, // the section header itself
+      viewOffset: COLLAPSED_STRIP_HEIGHT,
+      animated: true,
+    });
+    // React Native reports a refusal synchronously from that call, so by now a
+    // failed attempt has already queued its retry. If nothing is queued the
+    // scroll stands, and the request is let go once it has visibly settled —
+    // which is also what un-parks `scrollToTop`.
+    if (scrollSettleTimerRef.current !== null) clearTimeout(scrollSettleTimerRef.current);
+    scrollSettleTimerRef.current = setTimeout(() => {
+      scrollSettleTimerRef.current = null;
+      if (scrollTimerRef.current === null) scrollRequestRef.current = null;
+    }, SCROLL_SETTLE_MS);
+  }, []);
+
+  /** One attempt at the pending request's section, if it still has one. */
+  const attemptSectionScroll = useCallback(() => {
+    const request = scrollRequestRef.current;
+    if (request === null) return;
+    const sectionIndex = listSectionsRef.current.findIndex(
+      (section) => section.key === request.target
+    );
+    if (sectionIndex >= 0) scrollToSection(sectionIndex);
+  }, [scrollToSection]);
+
+  // Re-checked each time the model is rebuilt, until the section turns up or the
+  // request expires — the watchdog covers a plan the section never appears in at
+  // all, so a rebuild minutes later can't jump the list under the farmer.
+  useEffect(() => {
+    const request = scrollRequestRef.current;
+    // `headerHeight` is the list's own top padding; before it is measured there
+    // is nothing laid out to scroll to yet.
+    if (request === null || headerHeight === 0) return;
+    const sectionIndex = listSections.findIndex((section) => section.key === request.target);
+
+    if (sectionIndex < 0) {
+      // The Overdue section only ever holds the open segment's share of the late
+      // work, while the count that sent us here is the whole farm's. When the
+      // work is all on the other side of that split, follow it over rather than
+      // leaving the farmer on a plan that shows none of what they tapped.
+      // `selectSegment` disarms the auto-select and drops bed filters on the way.
+      if (
+        request.target === 'overdue' &&
+        !request.segmentSwitched &&
+        overdueSegmentCounts[bedSegment] === 0
+      ) {
+        const other = bedSegment === 'bed' ? 'other' : 'bed';
+        if (overdueSegmentCounts[other] > 0) {
+          request.segmentSwitched = true;
+          logger.debug('Care plan following overdue work into the other segment', {
+            tags: ['calendar', 'scroll'],
+            metadata: { from: bedSegment, to: other, counts: overdueSegmentCounts },
+          });
+          selectSegment(other);
+          return;
+        }
+      }
+      // The deadline is from when this was armed, not from this rebuild, so a
+      // run of rebuilds can't keep the wait alive indefinitely.
+      const remaining = SCROLL_TARGET_WAIT_MS - (Date.now() - request.since);
+      if (remaining <= 0) {
+        logger.debug('Care plan gave up waiting for a section', {
+          tags: ['calendar', 'scroll'],
+          metadata: { target: request.target },
+        });
+        scrollRequestRef.current = null;
+        return;
+      }
+      const giveUp = setTimeout(() => {
+        if (scrollRequestRef.current !== null) {
+          logger.debug('Care plan gave up waiting for a section', {
+            tags: ['calendar', 'scroll'],
+            metadata: { target: request.target },
+          });
+        }
+        scrollRequestRef.current = null;
+      }, remaining);
+      return () => clearTimeout(giveUp);
+    }
+
+    // Deliberately not cancelled on cleanup, and scheduled at most once: focus
+    // hands the list a burst of re-renders (a fresh selected date, a new
+    // selection set, then the data landing), each of which rebuilds
+    // `listSections` and re-runs this effect. Cancelling on every one of those
+    // is how the scroll got swallowed before it ever reached the list.
+    if (scrollTimerRef.current !== null) return;
+    scrollTimerRef.current = setTimeout(() => {
+      scrollTimerRef.current = null;
+      attemptSectionScroll();
+    }, SCROLL_RETRY_DELAY_MS);
+  }, [
+    scrollArm,
+    listSections,
+    headerHeight,
+    bedSegment,
+    overdueSegmentCounts,
+    selectSegment,
+    attemptSectionScroll,
+  ]);
+
+  // Only the unmount case: a pending attempt must not fire into a dead list.
+  useEffect(
+    () => () => {
+      if (scrollTimerRef.current !== null) clearTimeout(scrollTimerRef.current);
+      if (scrollSettleTimerRef.current !== null) clearTimeout(scrollSettleTimerRef.current);
+    },
+    []
+  );
+
+  // React Native refuses `scrollToLocation` when the target sits past the cells
+  // it has actually measured, and there is no `getItemLayout` to answer from —
+  // the rows here are variable height (advisories, harvest hints, empty states),
+  // so there cannot be one. The way through is to scroll roughly there, which
+  // renders and measures those cells, then ask again from a better position.
+  const handleScrollToIndexFailed = useCallback(
+    (info: { index: number; highestMeasuredFrameIndex: number; averageItemLength: number }) => {
+      const request = scrollRequestRef.current;
+      if (request === null) return;
+      if (request.attempts >= SCROLL_MAX_ATTEMPTS) {
+        logger.warn('Care plan could not scroll to the requested section', undefined, {
+          tags: ['calendar', 'scroll'],
+          metadata: { ...info, attempts: request.attempts },
+        });
+        scrollRequestRef.current = null;
+        return;
+      }
+      request.attempts += 1;
+      logger.debug('Care plan section past the measured window — nudging and retrying', {
+        tags: ['calendar', 'scroll'],
+        metadata: { ...info, attempt: request.attempts },
+      });
+      // Approximate on purpose: this only has to bring the target into the
+      // rendered window. The retry below is what lands it exactly.
+      scrollViewRef.current?.getScrollResponder()?.scrollTo({
+        y: Math.max(0, info.averageItemLength * info.index - COLLAPSED_STRIP_HEIGHT),
+        animated: false,
+      });
+      if (scrollTimerRef.current !== null) clearTimeout(scrollTimerRef.current);
+      scrollTimerRef.current = setTimeout(() => {
+        scrollTimerRef.current = null;
+        attemptSectionScroll();
+      }, SCROLL_RETRY_DELAY_MS);
+    },
+    [attemptSectionScroll]
+  );
 
   const renderEmptyRow = useCallback(
     (row: Extract<CalendarRow, { kind: 'empty' }>): React.JSX.Element => {
       switch (row.variant) {
+        case 'loadError':
+          return (
+            <View style={styles.emptyState}>
+              <Ionicons name="cloud-offline-outline" size={48} color={theme.error} />
+              <Text style={styles.emptyStateText}>Couldn’t load the care plan</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Your tasks were not confirmed, so this is not an “all caught up” state.
+              </Text>
+              <TouchableOpacity style={styles.clearSearchButton} onPress={handleRefresh}>
+                <Text style={styles.clearSearchText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
+          );
         // The two per-day variants use the compact row: they sit inside an
         // otherwise populated list, so a full-height empty card crowds it out.
         case 'selectedDateFiltered':
@@ -1263,7 +1895,13 @@ export default function CalendarScreen(): React.JSX.Element {
                   ? 'Nothing due today or the rest of this month'
                   : 'Nothing due today or the rest of this week'}
               </Text>
-              <TouchableOpacity style={styles.addTaskButton} onPress={() => setShowModal(true)}>
+              <TouchableOpacity
+                style={styles.addTaskButton}
+                onPress={() => {
+                  setCreateTaskInitialDate(undefined);
+                  setShowModal(true);
+                }}
+              >
                 <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
                 <Text style={styles.addTaskButtonText}>Create Task</Text>
               </TouchableOpacity>
@@ -1271,13 +1909,55 @@ export default function CalendarScreen(): React.JSX.Element {
           );
       }
     },
-    [styles, theme, clearFilters, selectedDate, selectedView, tasks.length, searchQuery]
+    [
+      styles,
+      theme,
+      clearFilters,
+      selectedDate,
+      selectedView,
+      tasks.length,
+      searchQuery,
+      handleRefresh,
+    ]
   );
+
+  const toggleHarvestSoon = useCallback(() => {
+    tapFeedback();
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setHarvestSoonExpanded((prev) => !prev);
+  }, []);
 
   const renderListItem = useCallback(
     ({ item }: { item: CalendarRow }): React.JSX.Element | null => {
       if (item.kind === 'task') {
         return <View style={styles.listRow}>{renderSwipeableTask(item.task)}</View>;
+      }
+      if (item.kind === 'harvestSoonToggle') {
+        const { count, fromDays, toDays } = item;
+        const span = fromDays === toDays ? `in ${fromDays} days` : `in ${fromDays}–${toDays} days`;
+        const summary = `Harvest soon · ${count} crop${count === 1 ? '' : 's'}`;
+        return (
+          <View style={styles.listRow}>
+            <TouchableOpacity
+              style={styles.harvestSoonToggle}
+              onPress={toggleHarvestSoon}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: harvestSoonExpanded }}
+              accessibilityLabel={`${summary}, ${span}`}
+              accessibilityHint={harvestSoonExpanded ? 'Hides the list' : 'Shows the list'}
+            >
+              <GardenIcon name="task.harvest" size={17} color={theme.textSecondary} />
+              <Text style={styles.harvestSoonToggleText}>{summary}</Text>
+              <Text style={styles.harvestSoonToggleMeta}>{span}</Text>
+              <Ionicons
+                name={harvestSoonExpanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={theme.textTertiary}
+              />
+            </TouchableOpacity>
+          </View>
+        );
       }
       if (item.kind === 'harvest') {
         const harvest = item.item;
@@ -1299,17 +1979,50 @@ export default function CalendarScreen(): React.JSX.Element {
                     <GardenIcon name="general.success" size={14} color={theme.success} />
                   )}
                   <Text style={styles.harvestDate}>
-                    {harvest.isReady ? 'Ready to harvest!' : `Ready in ${harvest.daysUntil} days`}
+                    {harvest.isReady
+                      ? harvest.daysUntil < 0
+                        ? `Harvest check overdue by ${Math.abs(harvest.daysUntil)} days`
+                        : 'Harvest check due'
+                      : `Check in ${harvest.daysUntil} days`}
                   </Text>
                 </View>
+                <Text style={styles.harvestSource}>
+                  {harvest.source === 'farmer_date'
+                    ? 'Farmer-entered date'
+                    : 'Scheduled harvest task'}
+                </Text>
               </View>
+              <TouchableOpacity
+                style={styles.harvestLogButton}
+                onPress={() =>
+                  navigation.navigate('Journal', {
+                    screen: 'JournalForm',
+                    params: {
+                      initialEntryType: JournalEntryType.Harvest,
+                      initialPlantId: harvest.plant.id,
+                    },
+                  })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={`Log harvest for ${harvest.plant.name}`}
+              >
+                <Text style={styles.harvestLogButtonText}>Log harvest</Text>
+              </TouchableOpacity>
             </View>
           </View>
         );
       }
       return <View style={styles.listRow}>{renderEmptyRow(item)}</View>;
     },
-    [styles, theme.success, renderSwipeableTask, renderEmptyRow]
+    [
+      styles,
+      theme,
+      renderSwipeableTask,
+      renderEmptyRow,
+      navigation,
+      harvestSoonExpanded,
+      toggleHarvestSoon,
+    ]
   );
 
   const renderListSectionHeader = useCallback(
@@ -1373,17 +2086,33 @@ export default function CalendarScreen(): React.JSX.Element {
 
   const listKeyExtractor = useCallback((row: CalendarRow): string => row.key, []);
 
+  // Switching week ↔ month re-anchors the incoming view on whatever day is
+  // selected. Without this, picking a late-month date then switching to week
+  // leaves the strip on today's week while the list below is still headed by a
+  // date the strip doesn't contain.
+  const toggleView = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    const anchor = selectedDate ?? farmToday();
+    setCurrentWeekStart(getStartOfWeek(anchor));
+    setCurrentMonth(anchor);
+    setSelectedView((prev) => (prev === 'week' ? 'month' : 'week'));
+  }, [selectedDate]);
+
+  // "Today" is an escape hatch, so it has to appear whenever the farmer is
+  // looking at anything else — a selected day other than today counts, even
+  // when the surrounding week or month happens to be the current one.
   const isViewingToday = React.useMemo(() => {
-    const today = new Date();
+    const today = farmToday();
+    if (selectedDate && calendarDateKey(selectedDate) !== calendarDateKey(today)) return false;
     if (selectedView === 'week') {
       const todayWeekStart = getStartOfWeek(today);
-      return currentWeekStart.toDateString() === todayWeekStart.toDateString();
+      return calendarDateKey(currentWeekStart) === calendarDateKey(todayWeekStart);
     }
     return (
       currentMonth.getMonth() === today.getMonth() &&
       currentMonth.getFullYear() === today.getFullYear()
     );
-  }, [selectedView, currentWeekStart, currentMonth]);
+  }, [selectedView, currentWeekStart, currentMonth, selectedDate]);
 
   return (
     <GestureHandlerRootView style={styles.flexOne}>
@@ -1422,35 +2151,62 @@ export default function CalendarScreen(): React.JSX.Element {
               </View>
             ) : (
               <>
-                <Text style={styles.headerTitle}>Care Plan</Text>
+                <Text
+                  style={styles.headerTitle}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
+                >
+                  Care Plan
+                </Text>
                 <View style={styles.headerActions}>
                   <TouchableOpacity
                     style={styles.searchIconBtn}
                     onPress={() => setSearchActive(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Search care-plan tasks"
                   >
                     <Ionicons name="search" size={20} color={theme.textInverse} />
                     {searchQuery.trim() !== '' && <View style={styles.searchActiveDot} />}
                   </TouchableOpacity>
                   {!isViewingToday && (
-                    <TouchableOpacity style={styles.todayButton} onPress={setTodayView}>
-                      <Text style={styles.todayButtonText}>Today</Text>
+                    <TouchableOpacity
+                      style={compactTodayAction ? styles.todayIconButton : styles.todayButton}
+                      onPress={setTodayView}
+                      accessibilityRole="button"
+                      accessibilityLabel="Today"
+                    >
+                      {compactTodayAction ? (
+                        <Ionicons name="today-outline" size={20} color={theme.warning} />
+                      ) : (
+                        <Text style={styles.todayButtonText}>
+                          Today
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
-                    style={styles.viewToggle}
-                    onPress={() => {
-                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                      setSelectedView(selectedView === 'week' ? 'month' : 'week');
-                    }}
+                    style={styles.viewToggleHitTarget}
+                    onPress={toggleView}
+                    hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      selectedView === 'week'
+                        ? 'Week view. Switch to Month'
+                        : 'Month view. Switch to Week'
+                    }
                   >
-                    <Ionicons
-                      name={selectedView === 'week' ? 'list' : 'calendar'}
-                      size={18}
-                      color={theme.textInverse}
-                    />
-                    <Text style={styles.viewToggleText}>
-                      {selectedView === 'week' ? 'Week' : 'Month'}
-                    </Text>
+                    <View style={styles.viewToggle}>
+                      <Ionicons
+                        name={selectedView === 'week' ? 'list' : 'calendar'}
+                        size={18}
+                        color={theme.textInverse}
+                      />
+                      <Text style={styles.viewToggleText} numberOfLines={1}>
+                        {selectedView === 'week' ? 'Week' : 'Month'}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -1459,17 +2215,18 @@ export default function CalendarScreen(): React.JSX.Element {
                         styles.groupMenuButtonActive,
                     ]}
                     onPress={() => setShowGroupMenu(!showGroupMenu)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Care-plan filters"
+                    accessibilityState={{ expanded: showGroupMenu }}
                   >
                     <Ionicons
                       name="funnel"
                       size={20}
                       color={isFilterActive ? theme.primary : theme.textInverse}
                     />
-                    {(filterTaskTypes.size > 0 || filterOverdueOnly) && !showGroupMenu && (
+                    {activeFilterCount > 0 && !showGroupMenu && (
                       <View style={styles.filterBadge}>
-                        <Text style={styles.filterBadgeText}>
-                          {filterTaskTypes.size + (filterOverdueOnly ? 1 : 0)}
-                        </Text>
+                        <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -1492,6 +2249,7 @@ export default function CalendarScreen(): React.JSX.Element {
             renderSectionHeader={renderListSectionHeader}
             renderSectionFooter={renderListSectionFooter}
             stickySectionHeadersEnabled={false}
+            onScrollToIndexFailed={handleScrollToIndexFailed}
             contentContainerStyle={listContentStyle}
             onScroll={handleContentScroll}
             scrollEventThrottle={16}
@@ -1511,61 +2269,108 @@ export default function CalendarScreen(): React.JSX.Element {
             removeClippedSubviews={true}
             updateCellsBatchingPeriod={50}
             ListHeaderComponent={
-            <>
-          {/* Swipe Hint Banner */}
-          {showSwipeHint && (
-            <View style={styles.swipeHintBanner}>
-              <View style={styles.swipeHintBannerContent}>
-                <Ionicons name="swap-horizontal-outline" size={18} color={theme.primary} />
-                <Text style={styles.swipeHintBannerText}>
-                  Swipe cards left to skip, right to complete
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={dismissSwipeHint}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="close" size={18} color={theme.textTertiary} />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* All / Beds / Pots & Ground segmented control */}
-          <View style={styles.segmentRow}>
-            {(
-              [
-                ['other', 'Pots & Ground', 'cube-outline', segmentCounts.other],
-                ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
-              ] as const
-            ).map(([value, label, icon, count]) => {
-              const active = bedSegment === value;
-              return (
-                <TouchableOpacity
-                  key={value}
-                  style={[styles.segmentChip, active && styles.segmentChipActive]}
-                  onPress={() => selectSegment(value)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={`${label} tasks, ${count}`}
-                >
-                  <Ionicons
-                    name={icon}
-                    size={14}
-                    color={active ? theme.primary : theme.textSecondary}
-                  />
-                  <Text style={[styles.segmentChipText, active && styles.segmentChipTextActive]}>
-                    {label}
-                  </Text>
-                  <View style={[styles.segmentBadge, active && styles.segmentBadgeActive]}>
-                    <Text style={[styles.segmentBadgeText, active && styles.segmentBadgeTextActive]}>
-                      {count}
-                    </Text>
+              <>
+                {(isStale || (loadError && tasks.length > 0)) && (
+                  <View style={styles.staleBanner} accessibilityRole="alert">
+                    <Ionicons name="cloud-offline-outline" size={18} color={theme.warning} />
+                    <View style={styles.staleBannerBody}>
+                      <Text style={styles.staleBannerTitle}>Showing saved care-plan data</Text>
+                      <Text style={styles.staleBannerText}>
+                        {lastUpdatedAt
+                          ? `Last updated ${formatFarmDate(
+                              new Date(lastUpdatedAt),
+                              {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              }
+                            )}`
+                          : 'Live data is temporarily unavailable'}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.staleBannerRetry}
+                      onPress={handleRefresh}
+                      accessibilityRole="button"
+                      accessibilityLabel="Retry care plan refresh"
+                    >
+                      <Text style={styles.staleBannerRetryText}>Retry</Text>
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-            </>
+                )}
+                {/* Swipe Hint Banner */}
+                {showSwipeHint && (
+                  <View style={styles.swipeHintBanner}>
+                    <View style={styles.swipeHintBannerContent}>
+                      <Ionicons name="swap-horizontal-outline" size={18} color={theme.primary} />
+                      <Text style={styles.swipeHintBannerText}>
+                        Swipe cards left to skip, right to complete
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={dismissSwipeHint}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="close" size={18} color={theme.textTertiary} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* All / Beds / Pots & Ground segmented control */}
+                <View style={styles.segmentRow}>
+                  {(
+                    [
+                      [
+                        'other',
+                        'Pots & Ground',
+                        'cube-outline',
+                        segmentCounts.other,
+                      ],
+                      [
+                        'bed',
+                        'Beds',
+                        'grid-outline',
+                        segmentCounts.bed,
+                      ],
+                    ] as const
+                  ).map(([value, label, icon, count]) => {
+                    const active = bedSegment === value;
+                    return (
+                      <TouchableOpacity
+                        key={value}
+                        style={[styles.segmentChip, active && styles.segmentChipActive]}
+                        onPress={() => selectSegment(value)}
+                        hitSlop={SEGMENT_CHIP_HIT_SLOP}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                        accessibilityLabel={`${label} tasks, ${count}`}
+                      >
+                        <Ionicons
+                          name={icon}
+                          size={14}
+                          color={active ? theme.primary : theme.textSecondary}
+                        />
+                        <Text
+                          style={[styles.segmentChipText, active && styles.segmentChipTextActive]}
+                        >
+                          {label}
+                        </Text>
+                        <View style={[styles.segmentBadge, active && styles.segmentBadgeActive]}>
+                          <Text
+                            style={[
+                              styles.segmentBadgeText,
+                              active && styles.segmentBadgeTextActive,
+                            ]}
+                          >
+                            {count}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
             }
           />
 
@@ -1619,19 +2424,29 @@ export default function CalendarScreen(): React.JSX.Element {
               >
                 <Text style={styles.collapsedStripText}>
                   {selectedDate
-                    ? selectedDate.toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      })
+                    ? formatFarmDate(
+                        selectedDate,
+                        {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                        }
+                      )
                     : selectedView === 'week'
-                    ? `${currentWeekStart.toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })} – ${new Date(
-                        currentWeekStart.getTime() + 6 * 86400000
-                      ).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-                    : currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    ? `${formatFarmDate(
+                        currentWeekStart,
+                        {
+                          month: 'short',
+                          day: 'numeric',
+                        }
+                      )} – ${formatFarmDate(
+                        addCalendarDays(currentWeekStart, 6),
+                        {
+                          month: 'short',
+                          day: 'numeric',
+                        }
+                      )}`
+                    : formatFarmDate(currentMonth, { month: 'long', year: 'numeric' })}
                 </Text>
                 {selectedDate && (
                   <Text style={styles.collapsedStripCount}>
@@ -1707,129 +2522,35 @@ export default function CalendarScreen(): React.JSX.Element {
         )}
 
         {/* Floating Action Button */}
-        <AnimatedFAB onPress={() => setShowModal(true)} />
+        <AnimatedFAB
+          onPress={() => {
+            setCreateTaskInitialDate(undefined);
+            setShowModal(true);
+          }}
+        />
 
         {/* View Options Bottom Sheet */}
         {showGroupMenu && (
-          <View style={[StyleSheet.absoluteFill, styles.sheetOverlay]}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowGroupMenu(false)} />
-            <View
-              style={[
-                styles.sheetContainer,
-                { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) },
-              ]}
-            >
-              <SheetHandle onClose={() => setShowGroupMenu(false)} />
-
-              <View style={styles.sheetHeader}>
-                <Text style={styles.sheetTitle}>View Options</Text>
-                {(groupBy !== 'none' || filterTaskTypes.size > 0 || filterOverdueOnly) && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setGroupBy('none');
-                      setFilterTaskTypes(new Set());
-                      setFilterOverdueOnly(false);
-                    }}
-                    style={styles.sheetClearBtn}
-                  >
-                    <Text style={styles.sheetClearText}>Clear All</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                style={styles.sheetScroll}
-                contentContainerStyle={styles.sheetScrollContent}
-                bounces={false}
-                nestedScrollEnabled
-              >
-                {/* Filter Section */}
-                <Text style={styles.sheetSectionTitle}>Filter</Text>
-                <View style={styles.sheetChipWrap}>
-                  <TouchableOpacity
-                    style={[styles.sheetChip, filterOverdueOnly && styles.sheetChipActive]}
-                    onPress={() => setFilterOverdueOnly((prev) => !prev)}
-                    activeOpacity={0.7}
-                  >
-                    <GardenIcon
-                      name="general.warning"
-                      size={15}
-                      color={filterOverdueOnly ? theme.primary : theme.textSecondary}
-                    />
-                    <Text
-                      style={[
-                        styles.sheetChipText,
-                        filterOverdueOnly && styles.sheetChipTextActive,
-                      ]}
-                    >
-                      Overdue only
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={[styles.sheetChipWrap, styles.chipWrapMarginTop]}>
-                  {(Object.keys(TASK_LABELS) as TaskType[]).map((type) => {
-                    const isActive = filterTaskTypes.has(type);
-                    return (
-                      <TouchableOpacity
-                        key={type}
-                        style={[styles.sheetChip, isActive && styles.sheetChipActive]}
-                        onPress={() => {
-                          setFilterTaskTypes((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(type)) {
-                              next.delete(type);
-                            } else {
-                              next.add(type);
-                            }
-                            return next;
-                          });
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <GardenIcon
-                          name={TASK_ICON_KEYS[type]}
-                          size={15}
-                          color={isActive ? theme.primary : theme.textSecondary}
-                        />
-                        <Text
-                          style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}
-                        >
-                          {TASK_LABELS[type]}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {/* Group By Section */}
-                <Text style={[styles.sheetSectionTitle, styles.sheetSectionTitleMarginTop]}>
-                  Group By
-                </Text>
-                <View style={styles.sheetChipWrap}>
-                  {GROUP_OPTIONS.map((option) => {
-                    const isActive = groupBy === option.value;
-                    return (
-                      <TouchableOpacity
-                        key={option.value}
-                        style={[styles.sheetChip, isActive && styles.sheetChipActive]}
-                        onPress={() => {
-                          setGroupBy(option.value);
-                          setShowGroupMenu(false);
-                        }}
-                      >
-                        <Text
-                          style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}
-                        >
-                          {option.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </ScrollView>
-            </View>
-          </View>
+          <CareTaskFilterSheet
+            filters={filters}
+            facetCounts={facetCounts}
+            groupBy={groupBy}
+            sortBy={sortBy}
+            plotGroups={plotResolution.groups}
+            beds={bedFilterOptions}
+            showTimeFilter={showTimeFilter}
+            hasActiveFilters={isFilterActive || groupBy !== 'none' || sortBy !== 'due'}
+            onToggleTaskType={handleToggleTaskType}
+            onToggleDueStatus={handleToggleDueStatus}
+            onTogglePlot={handleTogglePlot}
+            onToggleBed={handleToggleBed}
+            onTogglePriority={handleTogglePriority}
+            onToggleTime={handleToggleTime}
+            onChangeGroupBy={handleChangeGroupBy}
+            onChangeSortBy={setSortBy}
+            onClearAll={handleClearAll}
+            onClose={() => setShowGroupMenu(false)}
+          />
         )}
 
         {/* Create Task Modal */}
@@ -1837,6 +2558,7 @@ export default function CalendarScreen(): React.JSX.Element {
           visible={showModal}
           plants={plants}
           beds={bedList}
+          existingTasks={tasks}
           styles={styles}
           bottomInset={insets.bottom}
           initialStartDate={createTaskInitialDate}
@@ -1844,11 +2566,13 @@ export default function CalendarScreen(): React.JSX.Element {
           initialTaskType={createTaskPrefillType}
           onClose={() => {
             setShowModal(false);
+            setCreateTaskInitialDate(undefined);
             setCreateTaskPrefillPlantId(undefined);
             setCreateTaskPrefillType(undefined);
           }}
           onCreated={() => {
             setShowModal(false);
+            setCreateTaskInitialDate(undefined);
             setCreateTaskPrefillPlantId(undefined);
             setCreateTaskPrefillType(undefined);
             loadData({ force: true });
@@ -1897,13 +2621,30 @@ export default function CalendarScreen(): React.JSX.Element {
           task={selectedTask}
           taskNotes={taskNotes}
           productUsed={productUsed}
+          earlyCompletion={selectedTask ? isFutureTask(selectedTask) : false}
+          completionReason={completionReason}
+          inputQuantity={inputQuantity}
+          inputUnit={inputUnit}
+          treatedArea={treatedArea}
+          areaUnit={areaUnit}
+          labourMinutes={labourMinutes}
           isCompleting={isCompletingTask}
-          plantName={selectedTask ? getPlantDetails(selectedTask.plant_id).name : ''}
+          plantName={selectedTask ? taskSubjectLabel(selectedTask) : ''}
           styles={styles}
           bottomInset={insets.bottom}
           onChangeNotes={(text) => setTaskNotes(sanitizeAlphaNumericSpaces(text))}
           onChangeProduct={(text) => setProductUsed(sanitizeAlphaNumericSpaces(text))}
-          onClose={() => setShowNotesModal(false)}
+          onChangeCompletionReason={(text) => setCompletionReason(sanitizeAlphaNumericSpaces(text))}
+          onChangeInputQuantity={(text) => setInputQuantity(sanitizeDecimalText(text))}
+          onChangeInputUnit={(text) => setInputUnit(sanitizeAlphaNumericSpaces(text))}
+          onChangeTreatedArea={(text) => setTreatedArea(sanitizeDecimalText(text))}
+          onChangeAreaUnit={(text) => setAreaUnit(sanitizeAlphaNumericSpaces(text))}
+          onChangeLabourMinutes={(text) => setLabourMinutes(text.replace(/[^0-9]/g, ''))}
+          onClose={() => {
+            setShowNotesModal(false);
+            setSelectedTask(null);
+            setCompletionReason('');
+          }}
           onConfirm={confirmTaskComplete}
         />
 
@@ -1913,29 +2654,18 @@ export default function CalendarScreen(): React.JSX.Element {
           (() => {
             const dp = getPlantDetails(detailTask.plant_id);
             const dueDateObj = new Date(detailTask.next_due_at);
-            const todayS = new Date();
-            todayS.setHours(0, 0, 0, 0);
-            const isOverdueDetail = dueDateObj < todayS;
-            const daysOverdue = isOverdueDetail
-              ? Math.floor((todayS.getTime() - dueDateObj.getTime()) / 86400000)
-              : null;
+            const daysOverdue = calendarDaysOverdue(detailTask);
+            const isOverdueDetail = daysOverdue !== null;
             const plantObj = detailTask.plant_id ? plantMap.get(detailTask.plant_id) : undefined;
             const effPriority =
               detailTask.priority_level || calculateTaskPriority(detailTask, plantObj || null);
-            const priorityLabels: Record<string, string> = {
-              critical: 'Critical',
-              high: 'High',
-              medium: 'Medium',
-              low: 'Low',
-            };
-            const priorityColorMap: Record<string, string> = {
-              critical: theme.error,
-              high: theme.warning,
-              medium: theme.info,
-              low: theme.border,
-            };
             const detailBlocked = isEarlyCompletionBlocked(detailTask);
             const detailSkipBlocked = isSkipBlocked(detailTask);
+            const wateringCycle = describeWateringCycle(
+              plantObj,
+              detailTask.task_type,
+              detailTask.frequency_days
+            );
             const closeDetail = (): void => {
               setShowTaskDetail(false);
               setDetailTask(null);
@@ -1968,7 +2698,7 @@ export default function CalendarScreen(): React.JSX.Element {
                         {TASK_LABELS[detailTask.task_type]}
                       </Text>
                       <Text style={styles.taskDetailSubtitle}>
-                        {dp.name}
+                        {taskSubjectLabel(detailTask)}
                         {dp.location ? ` · ${dp.location}` : ''}
                       </Text>
                     </View>
@@ -1976,10 +2706,25 @@ export default function CalendarScreen(): React.JSX.Element {
                   <View style={styles.taskDetailBody}>
                     <View style={styles.taskDetailRow}>
                       <Text style={styles.taskDetailLabel}>Frequency</Text>
-                      <Text style={styles.taskDetailValue}>
-                        Every {detailTask.frequency_days} day
-                        {detailTask.frequency_days !== 1 ? 's' : ''}
-                      </Text>
+                      <View style={styles.taskDetailValueBlock}>
+                        <Text style={styles.taskDetailValueInline}>
+                          Every {detailTask.frequency_days} day
+                          {detailTask.frequency_days !== 1 ? 's' : ''}
+                        </Text>
+                        {/* Water tasks rarely run at the bare base interval — the
+                            season and the forecast stretch or shorten it — so
+                            print what this cycle actually is and why. */}
+                        {wateringCycle && (
+                          <View style={styles.taskMetaLine}>
+                            <GardenIcon
+                              name={wateringCycle.iconKey}
+                              size={12}
+                              color={theme.textTertiary}
+                            />
+                            <Text style={styles.taskDetailValueNote}>{wateringCycle.text}</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                     {detailTask.preferred_time && (
                       <View style={styles.taskDetailRow}>
@@ -1990,8 +2735,8 @@ export default function CalendarScreen(): React.JSX.Element {
                               detailTask.preferred_time === 'morning'
                                 ? 'sunny-outline'
                                 : detailTask.preferred_time === 'afternoon'
-                                  ? 'sunny'
-                                  : 'moon-outline'
+                                ? 'sunny'
+                                : 'moon-outline'
                             }
                             size={15}
                             color={theme.textSecondary}
@@ -2000,8 +2745,8 @@ export default function CalendarScreen(): React.JSX.Element {
                             {detailTask.preferred_time === 'morning'
                               ? 'Morning'
                               : detailTask.preferred_time === 'afternoon'
-                                ? 'Afternoon'
-                                : 'Evening'}
+                              ? 'Afternoon'
+                              : 'Evening'}
                           </Text>
                         </View>
                       </View>
@@ -2011,23 +2756,27 @@ export default function CalendarScreen(): React.JSX.Element {
                       <Text
                         style={[styles.taskDetailValue, isOverdueDetail && { color: theme.error }]}
                       >
-                        {isOverdueDetail
-                          ? daysOverdue === 0
-                            ? 'Today'
-                            : `${daysOverdue}d overdue`
-                          : dueDateObj.toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
+                        {daysOverdue !== null
+                          ? `${daysOverdue}d overdue`
+                          : formatFarmDate(
+                              dueDateObj,
+                              {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                              }
+                            )}
                       </Text>
                     </View>
                     <View style={styles.taskDetailRow}>
                       <Text style={styles.taskDetailLabel}>Priority</Text>
                       <Text
-                        style={[styles.taskDetailValue, { color: priorityColorMap[effPriority] }]}
+                        style={[
+                          styles.taskDetailValue,
+                          { color: taskPriorityColor(theme, effPriority) },
+                        ]}
                       >
-                        {priorityLabels[effPriority]}
+                        {TASK_PRIORITY_LABELS[effPriority]}
                       </Text>
                     </View>
                     {detailTask.last_skipped_at && (
@@ -2037,10 +2786,13 @@ export default function CalendarScreen(): React.JSX.Element {
                           {(detailTask.skip_count ?? 0) > 1 ? ` ×${detailTask.skip_count}` : ''}
                         </Text>
                         <Text style={[styles.taskDetailValue, styles.taskDetailValueSkip]}>
-                          {new Date(detailTask.last_skipped_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
+                          {formatFarmDate(
+                            new Date(detailTask.last_skipped_at),
+                            {
+                              month: 'short',
+                              day: 'numeric',
+                            }
+                          )}
                           {detailTask.last_skip_reason ? ` · ${detailTask.last_skip_reason}` : ''}
                         </Text>
                       </View>
@@ -2056,51 +2808,23 @@ export default function CalendarScreen(): React.JSX.Element {
                   </View>
                   <View style={styles.taskDetailActions}>
                     <TouchableOpacity
-                      style={[
-                        styles.taskDetailActionBtn,
-                        detailBlocked
-                          ? styles.taskDetailActionBtnDisabled
-                          : { backgroundColor: theme.success },
-                      ]}
+                      style={[styles.taskDetailActionBtn, { backgroundColor: theme.success }]}
                       onPress={handleDetailComplete}
-                      disabled={detailBlocked}
                     >
-                      <Ionicons
-                        name={detailBlocked ? 'ban-outline' : 'checkmark'}
-                        size={16}
-                        color={detailBlocked ? theme.textTertiary : theme.textInverse}
-                      />
-                      <Text
-                        style={[
-                          styles.taskDetailActionBtnText,
-                          detailBlocked && styles.taskDetailActionBtnTextDisabled,
-                        ]}
-                      >
-                        Done
-                      </Text>
+                      <Ionicons name="checkmark" size={16} color={theme.textInverse} />
+                      <Text style={styles.taskDetailActionBtnText}>Done</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[
-                        styles.taskDetailActionBtn,
-                        detailSkipBlocked
-                          ? styles.taskDetailActionBtnDisabled
-                          : { backgroundColor: theme.warning },
-                      ]}
+                      style={[styles.taskDetailActionBtn, { backgroundColor: theme.warning }]}
                       onPress={handleDetailSkip}
-                      disabled={detailSkipBlocked}
                     >
                       <Ionicons
-                        name={detailSkipBlocked ? 'ban-outline' : 'play-skip-forward'}
+                        name={detailSkipBlocked ? 'calendar-outline' : 'play-skip-forward'}
                         size={16}
-                        color={detailSkipBlocked ? theme.textTertiary : theme.textInverse}
+                        color={theme.textInverse}
                       />
-                      <Text
-                        style={[
-                          styles.taskDetailActionBtnText,
-                          detailSkipBlocked && styles.taskDetailActionBtnTextDisabled,
-                        ]}
-                      >
-                        Skip
+                      <Text style={styles.taskDetailActionBtnText}>
+                        {detailSkipBlocked ? 'Reschedule' : 'Skip'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -2111,6 +2835,7 @@ export default function CalendarScreen(): React.JSX.Element {
 
         <SkipTaskModal
           visible={showSkipModal}
+          mode={scheduleMode}
           task={skipTask}
           taskCount={skipBulkTasks?.length ?? 1}
           excludedCount={skipExcludedCount}

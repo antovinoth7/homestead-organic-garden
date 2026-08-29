@@ -7,7 +7,7 @@
  */
 
 import { PlantType, SpaceType } from '@/types/database.types';
-import { AgroClimaticZone, DEFAULT_ZONE, SeasonalPestAlert } from '@/config/zones';
+import { AgroClimaticZone, DEFAULT_ZONE, SeasonalPestAlert, getActiveZone } from '@/config/zones';
 
 export type KKSeason = string;
 
@@ -51,12 +51,27 @@ export function shortenSeasonLabel(label: string): string {
   return label.replace(/\s*\([^)]*\)\s*$/, '');
 }
 
+/**
+ * Watering interval scaling for the plant's space type in the current season.
+ *
+ * Unlike the season functions above — TN zones all share the IMD season
+ * boundaries, so their answers don't depend on the zone — the multipliers are
+ * genuinely zone-specific: semi-arid Coimbatore must not be watered on
+ * high-rainfall Kanyakumari's cadence. So when no zone is passed this falls back
+ * to the farm's resolved zone before the legacy default, which now only applies
+ * to a farm whose district was never set.
+ *
+ * `date` selects the season to read. Callers that ask about a plant's existing
+ * schedule must pass the date that schedule was set on, not today — evaluating
+ * "now" is what made every plant flip overdue at a season boundary.
+ */
 export function getWateringFrequencyMultiplier(
   spaceType: SpaceType,
-  zone?: AgroClimaticZone
+  zone?: AgroClimaticZone,
+  date?: Date
 ): number {
-  const z = zone ?? DEFAULT_ZONE;
-  const seasonId = getCurrentSeason(undefined, z);
+  const z = zone ?? getActiveZone() ?? DEFAULT_ZONE;
+  const seasonId = getCurrentSeason(date, z);
   const multipliers = z.wateringMultipliers[seasonId];
   if (!multipliers) return 1.0;
   return multipliers[spaceType] ?? 1.0;

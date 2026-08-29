@@ -7,6 +7,7 @@ import {
   getSeasonalPestAlerts,
 } from '../../utils/seasonHelpers';
 import { HIGH_RAINFALL_ZONE } from '../../config/zones/highRainfall';
+import { resolveActiveZone, setActiveZone } from '../../config/zones';
 import { AgroClimaticZone } from '../../config/zones/types';
 
 describe('seasonHelpers', () => {
@@ -106,6 +107,37 @@ describe('seasonHelpers', () => {
       const multiplier = getWateringFrequencyMultiplier('bed');
       expect(multiplier).toBe(1.0);
       jest.useRealTimers();
+    });
+
+    describe('with a farm zone primed', () => {
+      // NE monsoon, when the zones disagree most: Kanyakumari triples the gap
+      // between waterings because the rain does the work; an inland district
+      // gets no such rain and must not inherit that assumption.
+      beforeEach(() => jest.useFakeTimers({ now: new Date(2026, 10, 15) }));
+      afterEach(() => {
+        setActiveZone(null);
+        jest.useRealTimers();
+      });
+
+      it('does not apply Kanyakumari rainfall scaling to an inland district', () => {
+        setActiveZone(resolveActiveZone({ district: 'Coimbatore' }));
+        expect(getWateringFrequencyMultiplier('ground')).toBe(1.0);
+      });
+
+      it('still applies the reviewed scaling for Kanyakumari itself', () => {
+        setActiveZone(resolveActiveZone({ district: 'Kanyakumari' }));
+        expect(getWateringFrequencyMultiplier('ground')).toBe(3.0);
+      });
+
+      it('falls back to the legacy default when the district was never set', () => {
+        setActiveZone(resolveActiveZone({}));
+        expect(getWateringFrequencyMultiplier('ground')).toBe(3.0);
+      });
+
+      it('lets an explicit zone argument win over the primed zone', () => {
+        setActiveZone(resolveActiveZone({ district: 'Coimbatore' }));
+        expect(getWateringFrequencyMultiplier('ground', HIGH_RAINFALL_ZONE)).toBe(3.0);
+      });
     });
   });
 

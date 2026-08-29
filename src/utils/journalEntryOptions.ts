@@ -22,31 +22,13 @@ export function normalizeHarvestUnit(unit: string | null | undefined): string {
   return unit;
 }
 
-/** Weight units contribute to the kg total; count units (pcs/bunches) do not. */
-export function isWeightUnit(unit: string | null | undefined): boolean {
-  return unit === 'kg' || unit === 'g' || unit === 'lbs';
-}
-
 /**
- * Convert a harvest quantity to kilograms. Returns null for count-based units
- * (pcs, pieces, bunches) so they are never summed into a weight total.
+ * Unit conversion lives in `harvestStats.ts`, which is contractually free of
+ * React-Native imports so `alertsLogic.ts` can share its harvest rules. This
+ * module imports `@expo/vector-icons`, so the dependency can only run one way —
+ * re-exported here for the call sites that already reach for it.
  */
-export function harvestWeightKg(
-  quantity: number | null | undefined,
-  unit: string | null | undefined
-): number | null {
-  if (quantity == null || Number.isNaN(quantity)) return null;
-  switch (unit) {
-    case 'kg':
-      return quantity;
-    case 'g':
-      return quantity / 1000;
-    case 'lbs':
-      return quantity * 0.453592;
-    default:
-      return null;
-  }
-}
+export { isWeightUnit, harvestWeightKg } from './harvestStats';
 
 // ─── Pest / disease ──────────────────────────────────────────────────────────
 export const AFFECTED_PARTS: readonly string[] = [

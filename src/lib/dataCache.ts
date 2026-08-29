@@ -158,6 +158,7 @@ export const CACHE_KEYS = {
   TODAY_TASK_LOGS: 'todayTaskLogs',
   JOURNAL_ENTRIES: 'journalEntries',
   JOURNAL_METADATA: 'journalMetadata',
+  JOURNAL_HARVESTS: 'journalHarvests',
   BEDS: 'beds',
   LOCATIONS: 'locations',
   WEATHER: 'weather',

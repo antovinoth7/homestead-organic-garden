@@ -34,13 +34,8 @@ import {
   dedup,
   CACHE_KEYS,
 } from '../lib/dataCache';
-import {
-  TASK_DUE_TIME_HOUR,
-  MS_PER_DAY,
-  TASK_LABELS,
-  EARLY_COMPLETION_BLOCK_REASON,
-} from '../utils/taskConstants';
-import { getCurrentSeason, getWateringFrequencyMultiplier } from '../utils/seasonHelpers';
+import { TASK_LABELS, EARLY_COMPLETION_BLOCK_REASON } from '../utils/taskConstants';
+import { getCurrentSeason } from '../utils/seasonHelpers';
 import { getCoconutAgeInfo, getEffectiveGrowthStage, isPlantArchived } from '../utils/plantHelpers';
 import { getEffectiveWateringIntervalDays } from '../utils/plantWatering';
 import { getPlantCareProfile } from '../utils/plantCareDefaults';
@@ -50,21 +45,44 @@ import {
   getLastCareDate,
   computeNextDueAt,
   computeSkipDate,
+  calendarDaysOverdue,
   isEarlyCompletionBlocked,
+  isFutureTask,
   isSkipBlocked,
-  type PlantLastCareField,
+  isSyncOwnedTemplate,
+  computeScheduleAfterCompletion,
+  resolveCareInterval,
 } from './taskSchedulingLogic';
+import {
+  addDaysToDateKey,
+  farmDateKey,
+  farmDateTimeFromKey,
+  formatFarmDate,
+} from '@/utils/farmDate';
 
 const TASKS_COLLECTION = 'task_templates';
 const TASK_LOGS_COLLECTION = 'task_logs';
 const PLANTS_COLLECTION = 'plants';
 /** Cache-key namespace for per-plant task logs; cleared via `invalidatePrefix`. */
 const PLANT_TASK_LOGS_CACHE_PREFIX = 'taskLogs:plant:';
-type MarkTaskDoneOptions = {
+export interface TaskFarmDetails {
+  inputQuantity?: number;
+  inputUnit?: string;
+  treatedArea?: number;
+  areaUnit?: string;
+  labourMinutes?: number;
+}
+
+export interface MarkTaskDoneOptions {
   skipAlreadyDoneCheck?: boolean;
+  /** Explicit acknowledgement required when the work is recorded before its due date. */
+  allowEarlyCompletion?: boolean;
+  /** Required for early water/fertilise/spray records. */
+  completionReason?: string;
+  farmDetails?: TaskFarmDetails;
   /** Called after each batch chunk commits, with the running completed count. */
   onProgress?: (done: number, total: number) => void;
-};
+}
 
 /**
  * Get all task templates with offline-first approach
@@ -289,7 +307,7 @@ export const updateTaskTemplate = async (
 };
 
 const formatDueLabel = (template: TaskTemplate): string =>
-  new Date(template.next_due_at).toLocaleDateString('en-US', {
+  formatFarmDate(new Date(template.next_due_at), {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -397,9 +415,7 @@ export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> 
  * `bed_id`). Plant-level tasks for the bed are handled by the plant cascade.
  */
 export const deleteTasksForBedIds = async (bedIds: string[]): Promise<void> => {
-  const uniqueBedIds = Array.from(
-    new Set(bedIds.filter((bedId) => bedId && bedId.trim() !== ''))
-  );
+  const uniqueBedIds = Array.from(new Set(bedIds.filter((bedId) => bedId && bedId.trim() !== '')));
   if (uniqueBedIds.length === 0) return;
 
   const user = auth.currentUser;
@@ -409,7 +425,13 @@ export const deleteTasksForBedIds = async (bedIds: string[]): Promise<void> => {
   const tasks = await getTaskTemplates();
   const logs = await getTaskLogs();
 
-  const tasksToDelete = tasks.filter((task) => task.bed_id != null && bedIdSet.has(task.bed_id));
+  // Bed-level only (`plant_id == null`), matching `isBedLevelOrphanTask`. Without
+  // that clause this deleted every task carrying the bed_id, so one stale
+  // bed task could take out a whole bed's plant schedule — detection was narrow
+  // while deletion was wide. Plant tasks go through `deleteTasksForPlantIds`.
+  const tasksToDelete = tasks.filter(
+    (task) => task.plant_id == null && task.bed_id != null && bedIdSet.has(task.bed_id)
+  );
   if (tasksToDelete.length === 0) return;
 
   const deletedTaskIds = new Set(tasksToDelete.map((task) => task.id));
@@ -490,12 +512,12 @@ interface TaskDoneOps {
     ref: DocumentReference;
     data: { next_due_at?: Timestamp; enabled?: boolean };
   } | null;
-  plantUpdate: { ref: DocumentReference; data: Record<string, string> } | null;
+  plantUpdate: { ref: DocumentReference; data: PlantWriteData } | null;
   cache: {
     newTaskLog: TaskLog;
     taskId: string;
     taskPatch: Partial<Pick<TaskTemplate, 'enabled' | 'next_due_at'>> | null;
-    plantPatch: { plantId: string; field: PlantLastCareField; value: string } | null;
+    plantPatch: { plantId: string; data: Partial<Plant> } | null;
   };
   sideEffects: {
     bedStamp: { bedId: string; field: BedDateField; value: string } | null;
@@ -503,34 +525,37 @@ interface TaskDoneOps {
   };
 }
 
+/**
+ * Fields a completion writes back to the plant doc. Wider than the last-care
+ * date alone: a water completion also records the multiplier it applied.
+ */
+type PlantWriteData = Record<string, string | number | null>;
+
 const buildTaskDoneOps = (
   template: TaskTemplate,
   userId: string,
   cachedPlants: Plant[],
   notes?: string,
-  productUsed?: string
+  productUsed?: string,
+  options?: MarkTaskDoneOptions
 ): TaskDoneOps => {
   const doneAt = new Date();
   const doneAtIso = doneAt.toISOString();
   const frequencyDays = Number.isFinite(template.frequency_days) ? template.frequency_days : 0;
 
-  // For water tasks, apply Kanyakumari season-aware multiplier so next due
-  // date reflects actual rainfall / heat conditions.
-  let effectiveDays = frequencyDays;
-  if (template.task_type === 'water' && template.plant_id && frequencyDays > 0) {
-    const waterPlant = cachedPlants.find((p) => p.id === template.plant_id);
-    if (waterPlant) {
-      effectiveDays = Math.max(
-        1,
-        Math.round(frequencyDays * getWateringFrequencyMultiplier(waterPlant.space_type))
-      );
-    }
-  }
-
-  // Calculate next due date at 6 PM (18:00) instead of using completion time
-  const nextDueAt = new Date(doneAt);
-  nextDueAt.setDate(nextDueAt.getDate() + effectiveDays);
-  nextDueAt.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0); // Always set to 6:00 PM
+  // Scheduling lives in taskSchedulingLogic so it can be unit-tested without a
+  // Firestore emulator; this function only turns the result into batch writes.
+  const waterPlant = template.plant_id
+    ? cachedPlants.find((p) => p.id === template.plant_id) ?? null
+    : null;
+  const { nextDueAt, wateringMultiplier } = computeScheduleAfterCompletion(
+    template,
+    waterPlant,
+    doneAt
+  );
+  const completedEarly = isFutureTask(template, doneAt);
+  const completionReason = options?.completionReason?.trim() || null;
+  const farmDetails = options?.farmDetails;
 
   // Insert task log with optional notes
   const logRef = doc(collection(db, TASK_LOGS_COLLECTION));
@@ -542,6 +567,13 @@ const buildTaskDoneOps = (
     done_at: Timestamp.fromDate(doneAt),
     notes: notes || null,
     product_used: productUsed || null,
+    completed_early: completedEarly,
+    completion_reason: completionReason,
+    input_quantity: farmDetails?.inputQuantity ?? null,
+    input_unit: farmDetails?.inputUnit?.trim() || null,
+    treated_area: farmDetails?.treatedArea ?? null,
+    area_unit: farmDetails?.areaUnit?.trim() || null,
+    labour_minutes: farmDetails?.labourMinutes ?? null,
     created_at: Timestamp.now(),
   };
 
@@ -552,14 +584,27 @@ const buildTaskDoneOps = (
     templateUpdates.enabled = false;
     templateUpdates.next_due_at = Timestamp.fromDate(doneAt);
     nextDueAtIso = doneAtIso;
-  } else if (!Number.isNaN(nextDueAt.getTime())) {
+  } else if (nextDueAt && !Number.isNaN(nextDueAt.getTime())) {
     templateUpdates.next_due_at = Timestamp.fromDate(nextDueAt);
     nextDueAtIso = nextDueAt.toISOString();
   }
   const hasTemplateUpdate = Object.keys(templateUpdates).length > 0;
 
-  // Determine plant last-care update
+  // Determine plant last-care update. A water completion also stamps the
+  // multiplier it used, so the overdue math can read the decision back instead
+  // of re-deriving it from a season (and a forecast) that have since moved on.
   const plantLastCareField = TASK_TYPE_TO_PLANT_LAST_CARE_FIELD[template.task_type];
+  const plantCareUpdate: Partial<Plant> | null = plantLastCareField
+    ? {
+        [plantLastCareField]: doneAtIso,
+        ...(wateringMultiplier !== null
+          ? {
+              last_watering_multiplier: wateringMultiplier,
+              last_watering_adjustment: null,
+            }
+          : {}),
+      }
+    : null;
 
   const newTaskLog: TaskLog = {
     id: logRef.id,
@@ -570,6 +615,13 @@ const buildTaskDoneOps = (
     done_at: doneAtIso,
     notes: notes || null,
     product_used: productUsed || null,
+    completed_early: completedEarly,
+    completion_reason: completionReason,
+    input_quantity: farmDetails?.inputQuantity ?? null,
+    input_unit: farmDetails?.inputUnit?.trim() || null,
+    treated_area: farmDetails?.treatedArea ?? null,
+    area_unit: farmDetails?.areaUnit?.trim() || null,
+    labour_minutes: farmDetails?.labourMinutes ?? null,
     created_at: doneAtIso,
   };
 
@@ -594,10 +646,10 @@ const buildTaskDoneOps = (
       ? { ref: doc(db, TASKS_COLLECTION, template.id), data: templateUpdates }
       : null,
     plantUpdate:
-      template.plant_id && plantLastCareField
+      template.plant_id && plantCareUpdate
         ? {
             ref: doc(db, PLANTS_COLLECTION, template.plant_id),
-            data: { [plantLastCareField]: doneAtIso },
+            data: plantCareUpdate as PlantWriteData,
           }
         : null,
     cache: {
@@ -612,8 +664,8 @@ const buildTaskDoneOps = (
           }
         : null,
       plantPatch:
-        template.plant_id && plantLastCareField
-          ? { plantId: template.plant_id, field: plantLastCareField, value: doneAtIso }
+        template.plant_id && plantCareUpdate
+          ? { plantId: template.plant_id, data: plantCareUpdate }
           : null,
     },
     sideEffects: {
@@ -694,7 +746,7 @@ const applyTaskDoneCacheDeltas = async (opsList: TaskDoneOps[]): Promise<void> =
     for (const o of plantPatches) {
       const p = o.cache.plantPatch!;
       const idx = next.findIndex((pl) => pl.id === p.plantId);
-      if (idx !== -1) next[idx] = { ...next[idx]!, [p.field]: p.value };
+      if (idx !== -1) next[idx] = { ...next[idx]!, ...p.data };
     }
     return next;
   };
@@ -805,23 +857,34 @@ export const markTaskDone = async (
   // Water / fertilise / spray can't be logged before they are due — doing the
   // work early is harmful and would re-base the season-adjusted cycle on today.
   // The Care Plan blocks this in the UI; this makes it impossible to bypass.
-  if (isEarlyCompletionBlocked(template)) {
-    throw new Error(earlyCompletionBlockedMessage(template));
+  const completingEarly = isFutureTask(template);
+  if (completingEarly && !options?.allowEarlyCompletion) {
+    throw new Error(
+      `${formatDueLabel(template)} is the planned date. Confirm before logging early work.`
+    );
+  }
+  if (completingEarly && !options?.completionReason?.trim()) {
+    const safetyContext = isEarlyCompletionBlocked(template)
+      ? `${earlyCompletionBlockedMessage(template)} `
+      : '';
+    throw new Error(`${safetyContext}Add the field reason to log early work.`);
   }
 
   const frequencyDays = Number.isFinite(template.frequency_days) ? template.frequency_days : 0;
 
   if (!options?.skipAlreadyDoneCheck) {
     const doneAt = new Date();
-    const startOfDay = new Date(doneAt);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(doneAt);
-    endOfDay.setHours(23, 59, 59, 999);
+    const todayKey = farmDateKey(doneAt);
+    const tomorrowKey = todayKey ? addDaysToDateKey(todayKey, 1) : null;
+    const startOfDay = todayKey ? farmDateTimeFromKey(todayKey, 0) : null;
+    const endOfDay = tomorrowKey ? farmDateTimeFromKey(tomorrowKey, 0) : null;
 
     const existingLogs = await getTaskLogs(template.id);
     const alreadyDoneToday = existingLogs.some((log) => {
       const logDate = new Date(log.done_at);
-      return logDate >= startOfDay && logDate <= endOfDay;
+      return (
+        startOfDay !== null && endOfDay !== null && logDate >= startOfDay && logDate < endOfDay
+      );
     });
 
     if (alreadyDoneToday) {
@@ -841,7 +904,7 @@ export const markTaskDone = async (
   }
 
   const cachedPlants = await getData<Plant>(KEYS.PLANTS);
-  const ops = buildTaskDoneOps(template, user.uid, cachedPlants, notes, productUsed);
+  const ops = buildTaskDoneOps(template, user.uid, cachedPlants, notes, productUsed, options);
 
   // Atomic batch: create log + update template + update plant in one commit
   const batch = writeBatch(db);
@@ -878,19 +941,26 @@ export const markTasksDone = async (
   // Same early-completion rule as markTaskDone. Blocked tasks are dropped here
   // rather than aborting the batch, so one bad selection can't sink the rest;
   // they surface in the returned `failed` count.
-  const owned = templates.filter(
-    (t) => t.user_id === user.uid && !isEarlyCompletionBlocked(t)
-  );
-  if (owned.length === 0) return { succeeded: 0, failed: templates.length };
+  const owned = templates.filter((template) => template.user_id === user.uid);
+  const eligible = owned.filter((template) => {
+    if (!isFutureTask(template)) return true;
+    if (!options?.allowEarlyCompletion) return false;
+    return Boolean(options.completionReason?.trim());
+  });
+  if (eligible.length === 0) return { succeeded: 0, failed: templates.length };
 
-  if (!options?.skipAlreadyDoneCheck) {
-    const results = await Promise.allSettled(owned.map((t) => markTaskDone(t)));
-    const succeeded = results.filter((r) => r.status === 'fulfilled' && r.value === true).length;
-    return { succeeded, failed: templates.length - succeeded };
-  }
+  // One fresh bounded read preserves duplicate protection without one history
+  // query per selected task.
+  invalidate(CACHE_KEYS.TODAY_TASK_LOGS);
+  const todayLogs = await getTodayTaskLogs();
+  const completedTodayIds = new Set(todayLogs.map((log) => log.template_id));
+  const pending = eligible.filter((template) => !completedTodayIds.has(template.id));
+  if (pending.length === 0) return { succeeded: 0, failed: templates.length };
 
   const cachedPlants = await getData<Plant>(KEYS.PLANTS);
-  const opsList = owned.map((t) => buildTaskDoneOps(t, user.uid, cachedPlants));
+  const opsList = pending.map((template) =>
+    buildTaskDoneOps(template, user.uid, cachedPlants, undefined, undefined, options)
+  );
 
   let committed = 0;
   for (let i = 0; i < opsList.length; i += MAX_TASKS_PER_BATCH) {
@@ -898,7 +968,7 @@ export const markTasksDone = async (
     const batch = writeBatch(db);
     // Merge plant updates within the chunk so we never write the same plant doc twice.
     const plantRefs = new Map<string, DocumentReference>();
-    const plantData = new Map<string, Record<string, string>>();
+    const plantData = new Map<string, PlantWriteData>();
     for (const ops of chunk) {
       batch.set(ops.log.ref, ops.log.data);
       if (ops.templateUpdate) batch.update(ops.templateUpdate.ref, ops.templateUpdate.data);
@@ -917,7 +987,7 @@ export const markTasksDone = async (
       // and the mutations replay on reconnect.
       await writeOrQueue(taskDoneMutations(chunk), () => batch.commit());
       committed += chunk.length;
-      options?.onProgress?.(committed, owned.length);
+      options?.onProgress?.(committed, pending.length);
     } catch (err) {
       logger.error('markTasksDone: batch commit failed', err as Error);
       // Persist whatever committed before the failure, then report the rest as failed.
@@ -1068,17 +1138,18 @@ export const getTodayTaskLogs = async (): Promise<TaskLog[]> => {
   const cached = getCached<TaskLog[]>(CACHE_KEYS.TODAY_TASK_LOGS);
   if (cached) return cached;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(today);
-  todayEnd.setHours(23, 59, 59, 999);
+  const todayKey = farmDateKey(new Date());
+  const tomorrowKey = todayKey ? addDaysToDateKey(todayKey, 1) : null;
+  const today = todayKey ? farmDateTimeFromKey(todayKey, 0) : null;
+  const todayEnd = tomorrowKey ? farmDateTimeFromKey(tomorrowKey, 0) : null;
+  if (!today || !todayEnd) return [];
 
   try {
     const q = query(
       collection(db, TASK_LOGS_COLLECTION),
       where('user_id', '==', user.uid),
       where('done_at', '>=', Timestamp.fromDate(today)),
-      where('done_at', '<=', Timestamp.fromDate(todayEnd))
+      where('done_at', '<', Timestamp.fromDate(todayEnd))
     );
 
     const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
@@ -1101,7 +1172,7 @@ export const getTodayTaskLogs = async (): Promise<TaskLog[]> => {
     const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
     return cachedLogs.filter((log) => {
       const logDate = new Date(log.done_at);
-      return logDate >= today && logDate <= todayEnd;
+      return logDate >= today && logDate < todayEnd;
     });
   }
 };
@@ -1115,12 +1186,12 @@ export const getStoredTodayTasks = async (): Promise<TaskTemplate[]> => {
   const cached = getCached<TaskTemplate[]>(CACHE_KEYS.TODAY_TASKS);
   if (cached) return cached;
 
-  const now = new Date();
-  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const todayKey = farmDateKey(new Date());
   const stored = await getData<TaskTemplate>(KEYS.TASKS);
   const filtered = stored.filter((task) => {
     if (!task.enabled || !task.next_due_at) return false;
-    return new Date(task.next_due_at) <= todayEnd;
+    const dueKey = farmDateKey(task.next_due_at);
+    return dueKey !== null && todayKey !== null && dueKey <= todayKey;
   });
   filtered.sort((a, b) => a.next_due_at.localeCompare(b.next_due_at));
   return filtered;
@@ -1134,87 +1205,9 @@ export const getStoredTodayTaskLogs = async (): Promise<TaskLog[]> => {
   const cached = getCached<TaskLog[]>(CACHE_KEYS.TODAY_TASK_LOGS);
   if (cached) return cached;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(today);
-  todayEnd.setHours(23, 59, 59, 999);
+  const todayKey = farmDateKey(new Date());
   const stored = await getData<TaskLog>(KEYS.TASK_LOGS);
-  return stored.filter((log) => {
-    const logDate = new Date(log.done_at);
-    return logDate >= today && logDate <= todayEnd;
-  });
-};
-
-/**
- * Generate recurring tasks from plant care schedules
- * This will create task templates for plants that have care schedules configured
- */
-const _generateRecurringTasksFromPlants = async (plants: Plant[]): Promise<void> => {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-
-  // Get existing task templates to avoid duplicates
-  const existingTasks = await getTaskTemplates();
-
-  for (const plant of plants) {
-    if (!plant.care_schedule || !plant.care_schedule.auto_generate_tasks) continue;
-
-    const schedule = plant.care_schedule;
-
-    // Generate water task
-    if (schedule.water_frequency_days && schedule.water_frequency_days > 0) {
-      const existingWaterTask = existingTasks.find(
-        (t) => t.plant_id === plant.id && t.task_type === 'water'
-      );
-
-      if (!existingWaterTask) {
-        await createTaskTemplate({
-          plant_id: plant.id,
-          task_type: 'water',
-          frequency_days: schedule.water_frequency_days,
-          next_due_at: computeNextDueAt(plant, 'water', schedule.water_frequency_days),
-          enabled: true,
-          preferred_time: null,
-        });
-      }
-    }
-
-    // Generate fertilise task
-    if (schedule.fertilise_frequency_days && schedule.fertilise_frequency_days > 0) {
-      const existingFertiliseTask = existingTasks.find(
-        (t) => t.plant_id === plant.id && t.task_type === 'fertilise'
-      );
-
-      if (!existingFertiliseTask) {
-        await createTaskTemplate({
-          plant_id: plant.id,
-          task_type: 'fertilise',
-          frequency_days: schedule.fertilise_frequency_days,
-          next_due_at: computeNextDueAt(plant, 'fertilise', schedule.fertilise_frequency_days),
-          enabled: true,
-          preferred_time: null,
-        });
-      }
-    }
-
-    // Generate prune task
-    if (schedule.prune_frequency_days && schedule.prune_frequency_days > 0) {
-      const existingPruneTask = existingTasks.find(
-        (t) => t.plant_id === plant.id && t.task_type === 'prune'
-      );
-
-      if (!existingPruneTask) {
-        await createTaskTemplate({
-          plant_id: plant.id,
-          task_type: 'prune',
-          frequency_days: schedule.prune_frequency_days,
-          next_due_at: computeNextDueAt(plant, 'prune', schedule.prune_frequency_days),
-          enabled: true,
-          preferred_time: null,
-        });
-      }
-    }
-  }
+  return stored.filter((log) => farmDateKey(log.done_at) === todayKey);
 };
 
 export interface SyncCareTasksResult {
@@ -1240,17 +1233,17 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
   }[] = [
     {
       taskType: 'water',
-      frequency: plant.watering_frequency_days,
+      frequency: resolveCareInterval(plant, 'watering'),
       enabled: plant.watering_enabled !== false,
     },
     {
       taskType: 'fertilise',
-      frequency: plant.fertilising_frequency_days,
+      frequency: resolveCareInterval(plant, 'fertilising'),
       enabled: plant.fertilising_enabled !== false,
     },
     {
       taskType: 'prune',
-      frequency: plant.pruning_frequency_days,
+      frequency: resolveCareInterval(plant, 'pruning'),
       enabled: plant.pruning_enabled !== false,
     },
   ];
@@ -1280,7 +1273,12 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
   }
 
   const existingTasks = await getTaskTemplates();
-  const plantTasks = existingTasks.filter((task) => task.plant_id === plant.id);
+  // Only templates sync owns. A manually-created task for this plant is left
+  // completely alone — not re-dated, not disabled as a "duplicate" — so the
+  // farmer's own schedule survives every plant save. See isSyncOwnedTemplate.
+  const plantTasks = existingTasks.filter(
+    (task) => task.plant_id === plant.id && isSyncOwnedTemplate(task)
+  );
   const plantCreatedAt = parseDateValue(plant.created_at);
 
   for (const item of desiredFrequencies) {
@@ -1296,9 +1294,9 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
     // care type is turned off.
     const matching = plantTasks.filter((task) => task.task_type === taskType);
 
-    // Care type off (or no valid interval): disable every existing template so
+    // Care type switched off by the farmer: disable every existing template so
     // none linger on the Care Plan / detail screen and no reminders fire.
-    if (!enabled || frequency === null) {
+    if (!enabled) {
       let changed = false;
       for (const task of matching) {
         if (task.enabled) {
@@ -1310,14 +1308,22 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
       continue;
     }
 
-    // Apply Kanyakumari season-aware multiplier for water tasks.
-    // frequencyDays stored remains the user-configured base so the user's
-    // intent is preserved across seasons; only next_due_at is adjusted. The
-    // shared helper keeps this in step with the listing/alerts overdue math.
+    // No interval could be resolved — not even a plant-type default, so the
+    // plant type is unrecognised. That is "unknown", not "switched off": leave
+    // whatever templates exist exactly as they are rather than disabling work
+    // the farmer is doing. Absence is not evidence (see CLAUDE.md), and this is
+    // the one branch a recovery action must never take.
+    if (frequency === null) continue;
+
+    // Apply the farm zone's season multiplier for water tasks. frequencyDays
+    // stored remains the user-configured base so the user's intent is preserved
+    // across seasons; only next_due_at is adjusted. The shared helper keeps this
+    // in step with the listing/alerts overdue math — and, because that helper
+    // now prefers the multiplier recorded at the last watering, a plant keeps
+    // the cadence it was actually put on rather than being re-derived into a
+    // different one the moment the calendar crosses a season.
     const effectiveFrequency =
-      taskType === 'water'
-        ? getEffectiveWateringIntervalDays(plant) ?? frequency
-        : frequency;
+      taskType === 'water' ? getEffectiveWateringIntervalDays(plant) ?? frequency : frequency;
     const nextDueAt = computeNextDueAt(plant, taskType, effectiveFrequency);
 
     // Keep the first template as canonical and disable any duplicates so only
@@ -1339,7 +1345,14 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
         updates.next_due_at = nextDueAt;
       }
       if (!existing.enabled) {
+        // Re-enabling always means the schedule is resuming after a pause — a
+        // restored plant, or a care type switched back on — so the stored due
+        // date is stale by however long the gap was. Re-base it, or a plant
+        // restored after three months returns showing three months of overdue
+        // work nobody was expected to do. `computeNextDueAt` caps at today, so
+        // the task comes back due today rather than backdated.
         updates.enabled = true;
+        updates.next_due_at = nextDueAt;
       }
       const existingDueDate = parseDateValue(existing.next_due_at);
       if (!existingDueDate) {
@@ -1371,9 +1384,67 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
       next_due_at: nextDueAt,
       enabled: true,
       preferred_time: null,
+      source: 'auto',
     });
     result.created.push(taskType);
   }
+
+  return result;
+};
+
+export interface RebuildCareTasksResult {
+  plantsProcessed: number;
+  created: number;
+  updated: number;
+  failed: number;
+}
+
+/**
+ * Rebuild every plant's care templates from its care profile and last-care dates.
+ *
+ * Templates are derived data, so a plant whose templates were lost can have them
+ * regenerated without a backup. This is a thin fan-out over `syncCareTasksForPlant`
+ * rather than a second scheduling implementation, so the rebuilt due dates match
+ * exactly what a normal plant save would produce.
+ *
+ * Deliberately not wired to app startup: an automatic writer that reshapes task
+ * data without the farmer asking is what made a silent loss hard to notice in the
+ * first place. Call it from an explicit user action.
+ */
+export const rebuildCareTasksForAllPlants = async (
+  plants: Plant[],
+  onProgress?: (done: number, total: number) => void
+): Promise<RebuildCareTasksResult> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const result: RebuildCareTasksResult = {
+    plantsProcessed: 0,
+    created: 0,
+    updated: 0,
+    failed: 0,
+  };
+
+  // Sequential on purpose: `syncCareTasksForPlant` reads the full template list
+  // per plant, and running them in parallel would race those reads against each
+  // other's writes and re-create duplicates it is meant to reconcile.
+  for (const plant of plants) {
+    try {
+      const synced = await syncCareTasksForPlant(plant);
+      result.created += synced.created.length;
+      result.updated += synced.updated.length;
+    } catch (error) {
+      result.failed += 1;
+      logger.warn(`Failed to rebuild care tasks for plant ${plant.id}`, error as Error);
+    }
+    result.plantsProcessed += 1;
+    onProgress?.(result.plantsProcessed, plants.length);
+  }
+
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+  logger.info(
+    `Care task rebuild: ${result.created} created, ${result.updated} updated, ${result.failed} failed across ${result.plantsProcessed} plants`
+  );
 
   return result;
 };
@@ -1385,32 +1456,31 @@ export const calculateTaskPriority = (
   task: TaskTemplate,
   plant: Plant | null
 ): 'critical' | 'high' | 'medium' | 'low' => {
-  if (!plant) {
-    return 'medium';
-  }
-
-  // Critical if plant is sick or stressed
-  if (plant.health_status === 'sick' || plant.health_status === 'stressed') {
-    return 'critical';
-  }
+  const daysOverdue = calendarDaysOverdue(task);
+  if (daysOverdue !== null && daysOverdue > 2) return 'critical';
+  if (daysOverdue !== null) return 'high';
+  if (!plant) return 'medium';
 
   // Compute effective growth stage (B.4 auto-progression)
   const profile = getPlantCareProfile(plant.plant_variety ?? '', plant.plant_type);
   const effectiveStage = getEffectiveGrowthStage(plant, profile).stage;
 
-  // High priority for flowering/fruiting stages
-  if (effectiveStage === 'flowering' || effectiveStage === 'fruiting') {
+  // Health and crop stage only raise actions that are plausibly relevant. A
+  // stressed plant does not make pruning/repotting/fertilising automatically
+  // critical; the farmer still checks the observed cause first.
+  if (
+    (plant.health_status === 'sick' || plant.health_status === 'stressed') &&
+    (task.task_type === 'water' || task.task_type === 'spray')
+  ) {
     return 'high';
   }
 
-  // Check if task is overdue
-  const dueDate = new Date(task.next_due_at);
-  const now = new Date();
-  const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / MS_PER_DAY);
-
-  if (daysOverdue > 2) {
-    return 'critical';
-  } else if (daysOverdue > 0) {
+  if (
+    (effectiveStage === 'flowering' || effectiveStage === 'fruiting') &&
+    (task.task_type === 'harvest' ||
+      task.task_type === 'harvest_leaves' ||
+      task.task_type === 'water')
+  ) {
     return 'high';
   }
 
@@ -1456,18 +1526,67 @@ export const getSeasonalCareReminder = (
 };
 
 /**
+ * Disable (but do not delete) every task template for the given plants.
+ *
+ * The reversible counterpart to `deleteTasksForPlantIds`: used when a plant is
+ * archived or soft-deleted, so its tasks go quiet while the templates and their
+ * completion history survive for a later restore. Reads templates once and
+ * commits chunked batches, so soft-deleting a whole bed costs one pass rather
+ * than one write per template.
+ */
+export const disableTasksForPlantIds = async (plantIds: string[]): Promise<void> => {
+  const uniquePlantIds = Array.from(
+    new Set(plantIds.filter((plantId) => plantId && plantId.trim() !== ''))
+  );
+  if (uniquePlantIds.length === 0) return;
+
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const plantIdSet = new Set(uniquePlantIds);
+  const templates = await getTaskTemplates();
+  const toDisable = templates.filter(
+    (task) => task.plant_id && plantIdSet.has(task.plant_id) && task.enabled
+  );
+  if (toDisable.length === 0) return;
+
+  const MAX_PER_BATCH = 500;
+  for (let i = 0; i < toDisable.length; i += MAX_PER_BATCH) {
+    const chunk = toDisable.slice(i, i + MAX_PER_BATCH);
+    const batch = writeBatch(db);
+    for (const task of chunk) {
+      batch.update(doc(db, TASKS_COLLECTION, task.id), { enabled: false });
+    }
+    await writeOrQueue(
+      chunk.map((task) => ({
+        collection: TASKS_COLLECTION,
+        docId: task.id,
+        op: 'update' as const,
+        payload: { enabled: false },
+      })),
+      () => batch.commit()
+    );
+  }
+
+  const disabledIds = new Set(toDisable.map((task) => task.id));
+  const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
+  if (cachedTasks.length > 0) {
+    await setData(
+      KEYS.TASKS,
+      cachedTasks.map((task) => (disabledIds.has(task.id) ? { ...task, enabled: false } : task))
+    );
+  }
+
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+};
+
+/**
  * Disable (but do not delete) all task templates for a given plant.
  * Called when a plant is archived after final harvest — tasks go quiet
  * while the record is preserved for rotation history.
  */
 export const disableTasksForPlant = async (plantId: string): Promise<void> => {
-  const templates = await getTaskTemplates();
-  const plantTemplates = templates.filter((t) => t.plant_id === plantId && t.enabled);
-  if (plantTemplates.length === 0) return;
-
-  await Promise.all(plantTemplates.map((t) => updateTaskTemplate(t.id, { enabled: false })));
-
-  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+  await disableTasksForPlantIds([plantId]);
 };
 
 // ─── Pre-Monsoon Batch Tasks ─────────────────────────────────────────────────

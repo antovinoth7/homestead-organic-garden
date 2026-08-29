@@ -2,6 +2,8 @@
 import {
   resolveActiveZone,
   getZoneByDistrict,
+  setActiveZone,
+  getActiveZone,
   DEFAULT_ZONE,
   TAMIL_NADU_DISTRICTS,
   DEFAULT_DISTRICT,
@@ -55,6 +57,25 @@ describe('zones config', () => {
       expect(
         resolveActiveZone({ district: 'Coimbatore', zone_id: 'high_rainfall' })?.id
       ).toBe('western');
+    });
+  });
+
+  describe('active zone holder', () => {
+    afterEach(() => setActiveZone(null));
+
+    it('starts unprimed so callers keep their own fallback', () => {
+      expect(getActiveZone()).toBeNull();
+    });
+
+    it('round-trips the resolved zone', () => {
+      setActiveZone(resolveActiveZone({ district: 'Coimbatore' }));
+      expect(getActiveZone()?.id).toBe('western');
+    });
+
+    it('follows a district change rather than pinning the first answer', () => {
+      setActiveZone(resolveActiveZone({ district: 'Coimbatore' }));
+      setActiveZone(resolveActiveZone({ district: 'Chennai' }));
+      expect(getActiveZone()?.id).toBe('north_eastern');
     });
   });
 });

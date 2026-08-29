@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Dimensions, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 
 /**
@@ -36,13 +36,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
     },
     headerTitle: {
+      flex: 1,
+      flexShrink: 1,
+      marginRight: 8,
       fontSize: 22,
       fontWeight: '700',
       color: theme.text,
     },
     searchIconBtn: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: 20,
       backgroundColor: theme.primary,
       alignItems: 'center',
@@ -64,8 +67,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 8,
     },
     searchBackBtn: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: 20,
       backgroundColor: theme.primary,
       alignItems: 'center',
@@ -93,6 +96,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
+      flexShrink: 0,
+    },
+    viewToggleHitTarget: {
+      minHeight: 44,
+      justifyContent: 'center',
     },
     viewToggle: {
       flexDirection: 'row',
@@ -109,6 +117,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textInverse,
     },
     todayButton: {
+      minHeight: 44,
+      justifyContent: 'center',
       paddingVertical: 6,
       paddingHorizontal: 12,
       borderRadius: 16,
@@ -121,9 +131,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.warning,
     },
+    todayIconButton: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 22,
+      backgroundColor: theme.warning + '20',
+      borderWidth: 1,
+      borderColor: theme.warning,
+    },
     groupMenuButton: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: 20,
       backgroundColor: theme.primary,
       alignItems: 'center',
@@ -189,6 +209,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetScroll: {
       paddingHorizontal: 20,
+      // The View Options sheet now carries location, priority, time-of-day and
+      // bed sections on top of the task types, so it has to stop growing before
+      // it swallows the screen. Same cap the Plants filter sheet uses.
+      maxHeight: Dimensions.get('window').height * 0.55,
     },
     sheetScrollContent: {
       paddingBottom: 20,
@@ -213,6 +237,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 5,
       paddingHorizontal: 14,
       paddingVertical: 8,
+      minHeight: 44,
       borderRadius: 20,
       backgroundColor: theme.backgroundSecondary,
       borderWidth: 1,
@@ -231,6 +256,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.primary,
       fontWeight: '600',
     },
+    /** A facet count of zero — still shown, but visibly inert. */
+    sheetChipCountZero: {
+      color: theme.textTertiary,
+    },
     weekView: {
       backgroundColor: theme.card,
       marginHorizontal: 12,
@@ -243,7 +272,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       elevation: 3,
     },
     weekNavBtn: {
-      width: 28,
+      width: 44,
       height: 52,
       alignItems: 'center',
       justifyContent: 'center',
@@ -257,6 +286,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     weekDay: {
       flex: 1,
+      minHeight: 52,
       alignItems: 'center',
       paddingVertical: 6,
       paddingHorizontal: 2,
@@ -445,18 +475,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // SectionList equivalents of `section` (header top / row sides / footer bottom)
     listSectionHeader: {
       paddingHorizontal: 16,
-      paddingTop: 10,
+      paddingTop: 8,
     },
     listRow: {
       paddingHorizontal: 16,
     },
     listSectionFooter: {
-      height: 8,
+      height: 6,
     },
     sectionHeaderRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 10,
+      marginBottom: 8,
       gap: 8,
     },
     sectionTitle: {
@@ -730,8 +760,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskCard: {
       flexDirection: 'row',
       backgroundColor: theme.card,
-      borderRadius: 16,
-      marginBottom: 12,
+      borderRadius: 14,
+      marginBottom: 8,
       overflow: 'hidden',
       borderWidth: 1.5,
       borderColor: theme.border,
@@ -746,23 +776,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.errorLight,
     },
     taskColorBar: {
-      width: 5,
+      width: 4,
     },
     taskContent: {
       flex: 1,
-      padding: 16,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
     },
     taskHeader: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     taskIconContainer: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: 12,
+      marginRight: 10,
     },
     taskIconEmoji: {
       fontSize: 22,
@@ -771,13 +802,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
     },
     taskTitle: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '600',
       color: theme.text,
-      marginBottom: 2,
+      marginBottom: 1,
     },
     taskPlant: {
-      fontSize: 14,
+      fontSize: 13,
       color: theme.textSecondary,
     },
     taskLocation: {
@@ -804,8 +835,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       alignItems: 'center',
       width: 100,
-      borderRadius: 16,
-      marginBottom: 12,
+      borderRadius: 14,
+      marginBottom: 8,
     },
     // Same box as swipeAction, but neutral — it explains rather than commits.
     swipeBlockedAction: {
@@ -813,8 +844,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       alignItems: 'center',
       width: 100,
-      borderRadius: 16,
-      marginBottom: 12,
+      borderRadius: 14,
+      marginBottom: 8,
     },
     swipeActionContent: {
       alignItems: 'center',
@@ -870,6 +901,30 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       shadowColor: theme.success,
       shadowOpacity: 0.15,
     },
+    // Disclosure row for harvests that are still ahead. Deliberately quieter
+    // than `harvestCard` — it heads a look-ahead, not work that is due.
+    harvestSoonToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      minHeight: 44,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border + '40',
+      marginBottom: 12,
+    },
+    harvestSoonToggleText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    harvestSoonToggleMeta: {
+      fontSize: 12,
+      color: theme.textTertiary,
+    },
     harvestIcon: {
       marginRight: 16,
     },
@@ -909,8 +964,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomColor: theme.borderLight,
     },
     modalCloseButton: {
-      width: 36,
-      height: 36,
+      width: 44,
+      height: 44,
       borderRadius: 18,
       backgroundColor: theme.primary,
       alignItems: 'center',
@@ -927,6 +982,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 8,
     },
     modalSaveButton: {
+      minHeight: 44,
+      justifyContent: 'center',
       backgroundColor: theme.primary,
       paddingHorizontal: 16,
       paddingVertical: 8,
@@ -1115,20 +1172,122 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.textSecondary,
     },
+    monthNavBtn: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    staleBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginHorizontal: 16,
+      marginBottom: 10,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.warning + '60',
+      backgroundColor: theme.warning + '12',
+    },
+    staleBannerBody: {
+      flex: 1,
+    },
+    staleBannerTitle: {
+      color: theme.text,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    staleBannerText: {
+      color: theme.textSecondary,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    staleBannerRetry: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    staleBannerRetryText: {
+      color: theme.warning,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    harvestSource: {
+      marginTop: 3,
+      fontSize: 11,
+      color: theme.textTertiary,
+    },
+    harvestLogButton: {
+      minHeight: 44,
+      justifyContent: 'center',
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      backgroundColor: theme.success + '18',
+    },
+    harvestLogButtonText: {
+      color: theme.success,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    earlyCompletionNotice: {
+      minHeight: 48,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: theme.warningLight,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 16,
+    },
+    earlyCompletionNoticeText: {
+      flex: 1,
+      fontSize: 13,
+      lineHeight: 18,
+      color: theme.text,
+    },
+    farmDetailsToggle: {
+      minHeight: 48,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 12,
+      marginTop: 8,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    farmDetailsToggleText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    farmDetailsFields: {
+      marginTop: 12,
+      gap: 4,
+    },
+    farmDetailsRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    farmDetailsField: {
+      flex: 1,
+    },
     notesInput: {
       minHeight: 80,
     },
     // Swipe left action (Skip) — a single action, so it owns the full reveal.
     swipeLeftActions: {
       flexDirection: 'row',
-      marginBottom: 12,
+      marginBottom: 8,
     },
     swipeSkipAction: {
       backgroundColor: theme.warning,
       justifyContent: 'center',
       alignItems: 'center',
       width: 80,
-      borderRadius: 16,
+      borderRadius: 14,
     },
     // Skip Modal (Calendar)
     skipModalSubtext: {
@@ -1205,9 +1364,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskCheckbox: {
       alignItems: 'center',
       justifyContent: 'center',
-      marginTop: 6,
-      width: 28,
-      height: 28,
+      marginTop: 2,
+      width: 32,
+      height: 32,
     },
     taskCheckboxSelected: {},
     // Not selectable — the task can't be completed early. Still tappable, so it
@@ -1243,8 +1402,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.border,
     },
     selectionBarCancel: {
-      width: 32,
-      height: 32,
+      width: 44,
+      height: 44,
       borderRadius: 16,
       backgroundColor: theme.backgroundSecondary,
       alignItems: 'center',
@@ -1256,6 +1415,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       backgroundColor: theme.primary,
       paddingVertical: 10,
+      minHeight: 44,
       paddingHorizontal: 18,
       borderRadius: 999,
     },
@@ -1284,6 +1444,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskPreferredTime: {
       fontSize: 11,
       color: theme.textTertiary,
+    },
+    taskCustomBadge: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      backgroundColor: theme.background,
+      borderRadius: 4,
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      overflow: 'hidden',
     },
     previewTitleRow: {
       flexDirection: 'row',
@@ -1422,6 +1592,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       fontWeight: '600',
     },
+    // Stacks the value over its explanatory note, both right-aligned against the
+    // row's label. Carries the flex and left margin itself, so the value inside
+    // uses `taskDetailValueInline` (no flex of its own) rather than
+    // `taskDetailValue`, whose `flex: 1` would stretch inside this column.
+    taskDetailValueBlock: {
+      flex: 1,
+      marginLeft: 16,
+      alignItems: 'flex-end',
+      gap: 3,
+    },
+    taskDetailValueNote: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      fontWeight: '500',
+    },
     taskDetailActions: {
       flexDirection: 'row',
       gap: 10,
@@ -1456,6 +1641,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 6,
       paddingVertical: 8,
+      minHeight: 44,
       paddingHorizontal: 14,
       borderRadius: 999,
       backgroundColor: theme.backgroundSecondary,
@@ -1472,6 +1658,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     skipDayChip: {
       flex: 1,
+      minHeight: 44,
       paddingVertical: 10,
       borderRadius: 10,
       alignItems: 'center',
@@ -1561,7 +1748,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       alignSelf: 'stretch',
       gap: 2,
-      marginHorizontal: 12,
+      marginHorizontal: 16,
       marginBottom: 8,
       padding: 2,
       borderRadius: 14,
@@ -1570,6 +1757,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.backgroundSecondary,
       overflow: 'hidden',
     },
+    // Height comes from the padding + the 18px badge, same as plantsStyles — the
+    // chips carry a vertical hitSlop so the tap target stays ~44px.
     segmentChip: {
       flex: 1,
       flexDirection: 'row',
@@ -1590,6 +1779,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     segmentChipTextActive: {
       color: theme.primary,
+    },
+    sectionSelectButton: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     segmentBadge: {
       minWidth: 18,

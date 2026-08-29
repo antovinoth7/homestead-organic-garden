@@ -6,15 +6,17 @@ import {
   skipBaseDate,
 } from '@/services/taskSchedulingLogic';
 import { TASK_DUE_TIME_HOUR } from '@/utils/taskConstants';
+import { farmDateTimeFromKey } from '@/utils/farmDate';
 import type { TaskTemplate, TaskType } from '@/types/database.types';
 import { makeTaskTemplate } from '../fixtures/task.fixtures';
 
 // Fixed "now": 15 March 2026, 09:00 local time — before the 18:00 due hour, so
 // a task due today is still ahead of `now` on the clock.
-const NOW = new Date(2026, 2, 15, 9, 0, 0, 0);
+const NOW = new Date('2026-03-15T03:30:00.000Z');
 
 function localDue(year: number, monthIndex: number, day: number): string {
-  return new Date(year, monthIndex, day, TASK_DUE_TIME_HOUR, 0, 0, 0).toISOString();
+  const key = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return farmDateTimeFromKey(key, TASK_DUE_TIME_HOUR)?.toISOString() ?? '';
 }
 
 const dueToday = makeTaskTemplate({ next_due_at: localDue(2026, 2, 15) });
@@ -48,10 +50,9 @@ describe('computeSkipDate', () => {
   });
 
   it('normalises to the 18:00 due hour regardless of the time of day it is tapped', () => {
-    const lateEvening = new Date(2026, 2, 15, 23, 30, 0, 0);
+    const lateEvening = new Date('2026-03-15T18:00:00.000Z');
     const result = new Date(computeSkipDate(overdue, 1, lateEvening));
-    expect(result.getHours()).toBe(TASK_DUE_TIME_HOUR);
-    expect(result.getMinutes()).toBe(0);
+    expect(result.toISOString()).toBe(localDue(2026, 2, 16));
   });
 });
 
@@ -70,7 +71,7 @@ describe('isFutureTask', () => {
 
   it('is true from the first moment of tomorrow', () => {
     const tomorrowMidnight = makeTaskTemplate({
-      next_due_at: new Date(2026, 2, 16, 0, 0, 0, 0).toISOString(),
+      next_due_at: '2026-03-15T18:30:00.000Z',
     });
     expect(isFutureTask(tomorrowMidnight, NOW)).toBe(true);
   });
@@ -87,7 +88,7 @@ describe('isSkipBlocked', () => {
 
   it('refuses from the first moment of tomorrow', () => {
     const tomorrowMidnight = makeTaskTemplate({
-      next_due_at: new Date(2026, 2, 16, 0, 0, 0, 0).toISOString(),
+      next_due_at: '2026-03-15T18:30:00.000Z',
     });
     expect(isSkipBlocked(tomorrowMidnight, NOW)).toBe(true);
   });

@@ -6,6 +6,7 @@ import { logError } from '@/utils/errorLogging';
 import { getData, setData, KEYS } from '@/lib/storage';
 import { getCached, setCached, invalidate } from '@/lib/dataCache';
 import { sumLandCents } from '@/utils/landCents';
+import { resolveActiveZone, setActiveZone } from '@/config/zones';
 import type { FarmConfig, Bed, BedType, LocationProfile } from '@/types/database.types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -151,16 +152,28 @@ const DEFAULT_FARM_CONFIG: FarmConfig = {
   goals: ['self_sufficiency'],
 };
 
+/**
+ * Publish the config's agro-climatic zone so the synchronous scheduling helpers
+ * can reach it (see `src/config/zones/activeZone.ts`). Every resolved config
+ * passes through here, so the zone can never lag behind the saved district.
+ * `DEFAULT_FARM_CONFIG` deliberately does not — it carries no district, and
+ * clearing the zone would only replace a real answer with a fallback.
+ */
+function rememberZone(config: FarmConfig): FarmConfig {
+  setActiveZone(resolveActiveZone(config));
+  return config;
+}
+
 export async function getFarmConfig(): Promise<FarmConfig> {
   // 1. In-memory cache
   const cached = getCached<FarmConfig>(CACHE_KEY_FARM_CONFIG);
-  if (cached) return cached;
+  if (cached) return rememberZone(cached);
 
   // 2. AsyncStorage
   const stored = await getData<FarmConfig>(KEYS.FARM_CONFIG);
   if (stored.length > 0 && stored[0]) {
     setCached(CACHE_KEY_FARM_CONFIG, stored[0]);
-    return stored[0];
+    return rememberZone(stored[0]);
   }
 
   // 3. Firestore
@@ -181,7 +194,7 @@ export async function getFarmConfig(): Promise<FarmConfig> {
       if (remote) {
         setCached(CACHE_KEY_FARM_CONFIG, remote);
         await setData(KEYS.FARM_CONFIG, [remote]);
-        return remote;
+        return rememberZone(remote);
       }
     }
   } catch (error) {
@@ -198,6 +211,9 @@ export async function saveFarmConfig(config: FarmConfig): Promise<FarmConfig> {
   setCached(CACHE_KEY_FARM_CONFIG, withTimestamp);
   await setData(KEYS.FARM_CONFIG, [withTimestamp]);
   invalidate(CACHE_KEY_FARM_CONFIG);
+  // Changing the district must take effect on watering cadence immediately,
+  // not on the next app launch.
+  rememberZone(withTimestamp);
 
   // Write to Firestore
   const user = auth.currentUser;

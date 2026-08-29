@@ -35,7 +35,7 @@
 
 ## Components by Domain
 
-- **Plant detail sections** (`PlantDetailScreen`): `PlantKeyInfoSection`, `CareScheduleSection`, `GrowthStageSection` (+ `GrowthStageTimeline`, `PinGrowthStageModal`), `HarvestInfoSection`, `HarvestHistorySection` (+ `HarvestYieldChart`, `HarvestWeightInput`), `CompanionPlantingSection`, `CoconutSection`, `PestDiseaseHistorySection`, `PlantNotesSection`, `PlantTasksSection`, `DetailSection`, `PlantInfoRow`
+- **Plant detail sections** (`PlantDetailScreen`): `PlantKeyInfoSection`, `CareScheduleSection`, `GrowthStageSection` (+ `GrowthStageTimeline`, `PinGrowthStageModal`), `HarvestInfoSection`, `HarvestHistorySection` (+ `HarvestYieldChart`), `CompanionPlantingSection`, `CoconutSection`, `PestDiseaseHistorySection`, `PlantNotesSection`, `PlantTasksSection`, `DetailSection`, `PlantInfoRow`
 - **Catalog detail sections** (`CatalogPlantDetailScreen`): `DetailQuickInfoSection`, `DetailNutritionSection`, `DetailCareGuidanceSection`, `PlantCatalogList`, `PlantCategoryTabs`
 - **Plant forms** (`src/components/forms/`): `PlantAddWizard` + `WizardStep1/2/3`; `PlantEditForm` + `Edit*Section` (BasicInfo, Location, CareSchedule, Coconut, QuickInfo, Nutrition, Relationships, CareGuidance, Safety, Beneficials)
 - **Beds**: `BedCard`, `BedTopDownMap`, `BedLayerStack`, `BedRowLayout`, `BedSuccessionTimeline`, `BedZoneIllustration`, `BedRotationView`, `RotationStatusCard`, `BedContextSection`, `BedFilterSheet`, `BedPlantPickerSheet`, `DraggablePlantRow`, `ClearBedCta`, `PlantEntryResolverSheet`

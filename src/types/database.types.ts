@@ -100,6 +100,12 @@ export type SoilType =
   | 'custom';
 export type WaterRequirement = 'low' | 'medium' | 'high';
 export type HealthStatus = 'healthy' | 'stressed' | 'recovering' | 'sick';
+/**
+ * Why the forecast moved a watering interval away from its seasonal baseline.
+ * `rain` — rain is coming that the season did not assume, so wait longer.
+ * `dry` — the season assumed rain that is not falling, so do not wait as long.
+ */
+export type WateringAdjustment = 'rain' | 'dry';
 export type IssueSeverity = 'low' | 'medium' | 'high' | 'severe';
 // ─── Journal pest/disease + milestone + harvest vocab ────────────────────────
 export type PestDiseaseKind = 'pest' | 'disease';
@@ -338,6 +344,8 @@ export interface DailyWeather {
   weatherCode: number | null;
   /** Maximum daily precipitation probability (0-100). Null for legacy/unavailable data. */
   precipitationProbabilityPct: number | null;
+  /** Maximum 10 m wind speed for the day (km/h). Null for legacy/unavailable data. */
+  windSpeedMaxKph?: number | null;
 }
 
 export interface WeatherForecast {
@@ -817,6 +825,16 @@ export interface Plant {
   last_harvest_date?: string | null;
   // Health & Tracking
   last_watered_date?: string | null;
+  /**
+   * The zone/season multiplier actually applied when this plant was last
+   * watered, after any forecast damping. Recorded rather than recomputed
+   * because the forecast that informed it rolls out of the 7-day window — see
+   * `getEffectiveWateringIntervalDays`. A multiplier rather than a day count so
+   * it still composes if the base `watering_frequency_days` is edited later.
+   */
+  last_watering_multiplier?: number | null;
+  /** Why the forecast moved the last watering interval, for display. */
+  last_watering_adjustment?: WateringAdjustment | null;
   last_fertilised_date?: string | null;
   health_status?: HealthStatus | null;
   // Pest & Disease History
@@ -891,6 +909,19 @@ export interface TaskTemplate {
   last_skipped_at?: string | null;
   last_skip_reason?: string | null;
   skip_count?: number | null;
+  /**
+   * Who owns this template's schedule.
+   *
+   * `auto` templates are derived from the plant's care profile and are
+   * reconciled — created, re-dated, disabled — by `syncCareTasksForPlant` on
+   * every plant save. `manual` templates were created deliberately from the
+   * Care Plan (or a journal prompt) and sync must never reshape them.
+   *
+   * Absent means `auto`: every template written before this field existed was
+   * already being managed by sync, so the fallback keeps existing data
+   * behaving exactly as it does now. Read it through `isSyncOwnedTemplate()`.
+   */
+  source?: 'auto' | 'manual' | null;
   created_at: string;
 }
 
@@ -903,7 +934,13 @@ export interface TaskLog {
   done_at: string;
   product_used?: string | null;
   notes?: string | null;
-  harvest_weight_kg?: number | null;
+  completed_early?: boolean;
+  completion_reason?: string | null;
+  input_quantity?: number | null;
+  input_unit?: string | null;
+  treated_area?: number | null;
+  area_unit?: string | null;
+  labour_minutes?: number | null;
   created_at: string;
 }
 

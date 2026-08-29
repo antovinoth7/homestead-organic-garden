@@ -89,6 +89,30 @@ export function getPlantingCandidates(): PlantingCandidate[] {
   });
 }
 
+/**
+ * Whether this exact variety has its own profile, as opposed to falling back to
+ * `DEFAULT_PROFILES_BY_TYPE`.
+ *
+ * `getPlantCareProfile` deliberately degrades to the type default, which is
+ * right for care cadences but wrong for anything presented as a fact about the
+ * crop: the `fruit_tree` default carries `yearsToFirstHarvest: 4`, so every
+ * unrecognised tree would otherwise be given a confident harvest date that is
+ * really a guess about the whole category. Callers that would state a date use
+ * this to stay silent instead.
+ */
+export function hasVarietyCareProfile(
+  plantVariety: string | null | undefined,
+  plantType?: PlantType | null,
+  overrides?: Partial<PlantCareProfiles>
+): boolean {
+  if (!plantVariety) return false;
+  if (plantType) {
+    if (overrides?.[plantType]?.[plantVariety]) return true;
+    return Boolean(PLANT_CARE_PROFILES[buildProfileKey(plantType, plantVariety)]);
+  }
+  return Boolean(findProfileByVariety(plantVariety));
+}
+
 export function hasPlantCareProfile(
   plantVariety: string,
   plantType?: PlantType,

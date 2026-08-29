@@ -17,6 +17,7 @@ import { migrateImagesToMediaLibrary } from './src/lib/imageStorage';
 import { runPendingMigrations } from './src/migrations';
 import { subscribeToNetworkChanges } from './src/utils/networkState';
 import { flushOfflineQueue } from './src/services/offlineSync';
+import { getFarmConfig } from './src/services/farmCapacity';
 import { clearAllData } from './src/lib/storage';
 import { setQueueOwner } from './src/lib/offlineQueue';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -251,6 +252,17 @@ const AppRoot = (): React.JSX.Element | null => {
     // Initialize app lifecycle management for memory cleanup
     const cleanupLifecycle = initAppLifecycle();
 
+    // Reading the farm config is enough to publish the zone — `getFarmConfig`
+    // stores it on every resolved config. Cached, so this is a cheap no-op read.
+    const primeActiveZone = (): void => {
+      getFarmConfig().catch((error) => {
+        logger.warn(
+          'Failed to resolve active agro-climatic zone',
+          error instanceof Error ? error : new Error(String(error))
+        );
+      });
+    };
+
     // Run image migration once on Android
     const runImageMigration = async (): Promise<void> => {
       if (Platform.OS !== 'android') return;
@@ -361,6 +373,11 @@ const AppRoot = (): React.JSX.Element | null => {
               );
             });
             runImageMigration();
+            // Resolve the farm's agro-climatic zone up front: watering cadence
+            // is computed synchronously deep in the scheduling helpers, and the
+            // Care Plan can be the first screen opened, so waiting for Today to
+            // mount would schedule that session against the legacy default zone.
+            primeActiveZone();
           }
         });
       },

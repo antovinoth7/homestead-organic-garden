@@ -8,6 +8,8 @@ import {
   exportFullBackup,
   importFullBackup,
 } from '@/services/backup';
+import { rebuildCareTasksForAllPlants } from '@/services/tasks';
+import { getAllPlants } from '@/services/plants';
 import type { BackupProgress } from '@/utils/zipHelper';
 import { useTheme, useThemeMode } from '@/theme';
 import {
@@ -68,7 +70,7 @@ export default function SettingsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
   const [loadingAction, setLoadingAction] = useState<
-    'export' | 'import' | 'cache' | 'full-export' | 'full-restore' | null
+    'export' | 'import' | 'cache' | 'full-export' | 'full-restore' | 'rebuild-tasks' | null
   >(null);
   const [imageStorageSize, setImageStorageSize] = useState(0);
   const [progressLabel, setProgressLabel] = useState<string | null>(null);
@@ -115,6 +117,48 @@ export default function SettingsScreen(): React.JSX.Element {
     if (bytes === 0) return '0 MB';
     const mb = bytes / (1024 * 1024);
     return mb.toFixed(2) + ' MB';
+  };
+
+  /**
+   * Recreate care tasks from each plant's own schedule. Purely additive — it
+   * creates what is missing and corrects due dates, and never deletes a task —
+   * so it is safe to run when the Care Plan looks emptier than it should.
+   */
+  const handleRebuildCareTasks = async (): Promise<void> => {
+    Alert.alert(
+      'Rebuild Care Schedule',
+      'Recreates watering, fertilising and harvest tasks from each plant’s care settings.\n\nNothing is deleted. Tasks you already have are kept and their due dates refreshed. Completion history is not restored.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Rebuild',
+          onPress: async () => {
+            setLoadingAction('rebuild-tasks');
+            setProgressLabel('Reading plants…');
+            try {
+              const plants = await getAllPlants();
+              if (plants.length === 0) {
+                Alert.alert('No Plants', 'Add a plant first — care tasks come from your plants.');
+                return;
+              }
+              const result = await rebuildCareTasksForAllPlants(plants, (done, total) => {
+                setProgressLabel(`Rebuilding ${done}/${total} plants…`);
+              });
+              Alert.alert(
+                'Care Schedule Rebuilt',
+                `${result.created} task${result.created === 1 ? '' : 's'} created, ${result.updated} updated across ${result.plantsProcessed} plant${result.plantsProcessed === 1 ? '' : 's'}.` +
+                  (result.failed > 0 ? `\n\n${result.failed} plant(s) could not be rebuilt.` : '')
+              );
+            } catch (error) {
+              logger.error('Failed to rebuild care tasks', error as Error);
+              Alert.alert('Rebuild Failed', getErrorMessage(error));
+            } finally {
+              finishAction();
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleExportFullBackup = async (): Promise<void> => {
@@ -343,8 +387,8 @@ export default function SettingsScreen(): React.JSX.Element {
           <Text style={styles.sectionTitle}>Complete Backup</Text>
           <Text style={styles.sectionDescription}>
             Save everything — plants, beds, tasks, journal, settings and photos — in one ZIP you can
-            keep on Drive or share. Your data also syncs to the cloud; this is a portable archive you
-            own and can restore on any device.
+            keep on Drive or share. Your data also syncs to the cloud; this is a portable archive
+            you own and can restore on any device.
           </Text>
 
           <TouchableOpacity
@@ -471,6 +515,30 @@ export default function SettingsScreen(): React.JSX.Element {
             <Text style={styles.helpText}>
               Clears temporary data to improve performance. Your plants, tasks, and journal entries
               are not affected.
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.infoItem}
+              onPress={handleRebuildCareTasks}
+              disabled={loading}
+            >
+              {loadingAction === 'rebuild-tasks' ? (
+                <ActivityIndicator color={theme.primary} />
+              ) : (
+                <Ionicons name="refresh-outline" size={20} color={theme.primary} />
+              )}
+              <Text style={styles.infoText}>
+                {loadingAction === 'rebuild-tasks' && progressLabel
+                  ? progressLabel
+                  : 'Rebuild Care Schedule'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.helpText}>
+              Recreates watering, fertilising and harvest tasks from each plant&apos;s care settings.
+              Use this if the Care Plan looks emptier than it should. Nothing is deleted — existing
+              tasks are kept and their due dates refreshed.
             </Text>
           </View>
         </View>

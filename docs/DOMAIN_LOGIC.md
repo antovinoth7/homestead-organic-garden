@@ -50,3 +50,50 @@ Every Tamil Nadu zone uses the IMD meteorological boundaries: Winter (`cool_dry`
 `src/utils/seasonHelpers.ts` functions accept an optional `zone?: AgroClimaticZone` param. They default to `DEFAULT_ZONE` for backward compatibility.
 
 Watering frequencies, seasonal pest alerts, and reminders are all zone-aware.
+
+---
+
+## Harvest Readiness
+
+Two surfaces prompt a harvest, and they now share one rule. `isHarvestSatisfied`
+in `src/utils/harvestStats.ts` is the single definition of "already harvested",
+called by both `computeHarvestsReady` (the Care Plan's Harvest Ready section)
+and `alertsLogic.ts` (the Today screen's `harvest_due` card). Each caller keeps
+its own day arithmetic — the alerts path measures from device-local midnight,
+the Care Plan from farm-timezone date keys — so the shared helper takes day
+offsets rather than dates.
+
+A harvest reaches both surfaces from either write path: the journal entry the
+farmer logs, or `last_harvest_date` stamped when a harvest task is completed.
+Creating a harvest journal entry also stamps the plant and closes any
+already-due harvest task through `markTaskDone` (`applyHarvestSideEffects` in
+`src/services/journal.ts`), so recording a harvest one way is not invisible to
+the other.
+
+### Regional scope — a known gap
+
+**Harvest dates are zone-blind.** Neither `calculateExpectedHarvestDate`
+(`plantHelpers.ts`) nor `getDaysToHarvestRange` (`timelineHarvest.ts`) receives a
+district, zone, or sowing window, so the same crop predicts the same harvest date
+in the Nilgiris and in Kanyakumari. The readiness constants —
+`READY_WITHIN_DAYS` (7), `HARVEST_HORIZON_DAYS` (30),
+`CUT_AND_COME_AGAIN_INTERVAL_DAYS` (14), the `harvest_leaves` cadence in
+`tasks.ts` (14), and the 55–75 day fallback range — are fixed values with no
+agronomic citation and no zone parameterisation.
+
+`TAMIL_NADU_PLANTING_RULES` (`src/config/tamilNaduPlantingCalendar.ts`) already
+holds source-reviewed `maturityDays` per crop **per establishment window**,
+anchored to sowing or transplanting and carrying evidence ids with an expiry —
+and no harvest code consults it. Note the two are not interchangeable as they
+stand: a planting rule's maturity is measured from its own action (Brinjal
+transplant, 45–60 days), while a care profile's `daysToHarvest` is not
+anchored to one. Reconciling them is tracked as **G5** in
+`docs/IMPLEMENTATION_ROADMAP.md`.
+
+What *is* regionally grounded: `getCoconutAgeInfo` (`plantHelpers.ts`) follows
+TNAU age stages and supplies the coconut harvest cadence, and
+`getDefaultHarvestSeason` returns Tamil Nadu season strings.
+
+Until that gap is closed, harvest date estimates are presented only where the
+crop's own maturity data exists — an unrecognised variety shows no estimate
+rather than one inherited from its plant type.

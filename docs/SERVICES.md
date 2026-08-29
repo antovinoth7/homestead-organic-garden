@@ -86,21 +86,35 @@ Rules for new write functions:
 - Uses paginated reads.
 - Soft-deletes plants with `is_deleted` and `deleted_at`.
 - Resolves image filenames to local URIs before returning plants.
-- Cascades plant deletion into tasks via `deleteTasksForPlantIds()`.
+- Deletion cascades into tasks along two different paths, and the difference matters:
+  - **Soft delete** (`deletePlant`, `deletePlantsForBed`) calls `disableTasksForPlantIds()`. Templates
+    and their logs are kept, just disabled, because the plant is restorable. `restorePlant` /
+    `restorePlantsForBed` then re-sync via `syncCareTasksForPlant()`, which re-enables the templates
+    and re-bases `next_due_at` so a long-deleted plant returns due today, not months overdue.
+  - **Permanent delete** (`permanentlyDeletePlant`, `permanentlyDeletePlantsForBed`) calls
+    `deleteTasksForPlantIds()`, which removes the templates **and** their completion history.
+  - Never hard-delete tasks from a reversible action, and never on a negative read (an id merely
+    absent from a list) — doing that once emptied `task_templates` silently.
 
 ### `src/services/tasks.ts`
 
 - Avoids extra Firestore composite index requirements by filtering and sorting in memory in some queries.
 - `markTaskDone()` writes a task log, updates `next_due_at`, and also updates plant last-care fields.
 - Recurring task due times are normalized to 6:00 PM.
-- `syncCareTasksForPlant()` auto-generates water, fertilise, prune, and coconut harvest (age-derived) tasks from plant settings.
-- The full `TaskType` union is `water | fertilise | prune | repot | spray | mulch | harvest`. Repot, spray, and mulch are user-created; sync does not auto-generate them.
+- `syncCareTasksForPlant()` auto-generates water, fertilise, prune, and coconut harvest (age-derived) tasks from plant settings. It owns scheduling for the templates it generates — re-derive those through it rather than computing due dates at a call site.
+- **Care intervals fall back to the plant-type defaults.** A plant document is not guaranteed to carry `watering_frequency_days` / `fertilising_frequency_days` / `pruning_frequency_days` — the add-plant form only prefills them when its auto-suggest fires, which needs a variety. `resolveCareInterval(plant, field)` (`taskSchedulingLogic.ts`) prefers the plant's own value and otherwise reads `getPlantCareProfile()`, the same source the form prefills from, so a rebuilt schedule matches what creating the plant would have produced. It returns `null` only for an unrecognised `plant_type`, and that means *unknown*, never *off*: `*_enabled === false` is the only thing that switches a care type off, and a `null` interval leaves existing templates untouched rather than disabling them.
+- **Template ownership** — `TaskTemplate.source` is `'auto'` (generated from the plant's care profile) or `'manual'` (created deliberately from the Care Plan or a journal prompt); **absent means `'auto'`**, so templates predating the field keep their current behaviour and no migration is needed. `syncCareTasksForPlant()` filters its working set through `isSyncOwnedTemplate()` and never touches a manual template — it will not re-date one, and will not disable one as a "duplicate". The two coexist by design: a plant may legitimately carry both an auto and a manual water task, and the Care Plan marks the manual one with a **Custom** badge. Stamp `source` at every creation site.
+- **Post-completion scheduling lives in `taskSchedulingLogic.ts`**, not at the call site: `computeScheduleAfterCompletion()` returns where a completed task lands (applying the zone/season watering multiplier to plant-level *and* bed-level water tasks) and `dueHourForTemplate()` maps `preferred_time` to a farm wall-clock hour so a morning task stays in the morning across completions and skips. `CreateTaskModal` still picks the *first* due date from the farmer's chosen start date — that is explicit intent, and `frequency_days` remains the un-multiplied base cadence exactly as the auto path stores it.
+- `rebuildCareTasksForAllPlants()` fans out over `syncCareTasksForPlant()` for every plant, sequentially (parallel would race its per-plant template reads against each other's writes). Backs Settings → App Maintenance → **Rebuild Care Schedule**, and the bulk restore path. Additive: it creates and updates, never deletes. Deliberately not wired to startup.
+- `disableTasksForPlantIds()` is the reversible counterpart to `deleteTasksForPlantIds()` — one template read plus chunked batched writes, used by soft delete and archiving. `disableTasksForPlant()` delegates to it.
+- The full `TaskType` union is `water | fertilise | prune | repot | spray | mulch | harvest | harvest_leaves | weeding | transplanting | cultivating`. Sync auto-generates only water, fertilise, prune, coconut `harvest`, and perennial `harvest_leaves`; the rest are user-created.
 
 ### `src/services/journal.ts`
 
 - Supports multiple images through `photo_filenames` and `photo_urls`.
 - Still carries the legacy single `photo_url` field for backward compatibility.
-- `getJournalMetadata()` fetches entries without resolving images, used by `CalendarScreen` for lightweight reads.
+- `getJournalMetadata()` fetches entries without resolving images — every entry, so use it only where the whole journal is needed.
+- `getHarvestJournalMetadata()` is the narrow read behind the Care Plan's Harvest Ready section: `where('entry_type','==','harvest')` server-side, so a farm with years of observations and pest notes no longer pays a document read per non-harvest entry on every Care Plan load. Two equality filters and **no `orderBy`** — that pair needs no composite index; sorting is done in memory. It derives from the `JOURNAL_METADATA`/`JOURNAL_ENTRIES` caches when either is fresh, and its own `JOURNAL_HARVESTS` key is invalidated alongside them on every journal mutation. `isHarvestJournalEntry()` (`utils/harvestStats.ts`) is the one definition shared by the query's offline fallback, so server-side and client-side filtering cannot diverge.
 
 ### `src/services/backup.ts`
 

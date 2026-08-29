@@ -255,6 +255,7 @@ The overall coverage number is not representative of the application because `je
 - **Severity:** Medium
 - **Locations:** `src/services/plants.ts:76`, `src/services/plants.ts:534-558`, `src/services/tasks.ts:226-262`, `src/services/journal.ts:211-262`, `src/hooks/useCalendarData.ts:150`, `src/services/plants.ts:389-397`.
 - **Why it matters:** Common edits perform ownership read → write → reread, and orphan healing issues one query per missing plant in unbounded parallelism. Bulk operations multiply those reads and latency hops.
+- **Partially resolved:** the orphan-healing half is gone. `useCalendarData` no longer runs per-plant `plantExists()` round-trips or hard-deletes on a Care Plan load — it only hides orphaned rows — so that read amplification and its `plants.ts` helper have been removed. The ownership read → write → reread amplification on normal edits still stands.
 - **Recommended remediation:** Use immutable-owner rules plus trusted UID-scoped local records, optimistic merges, and chunked ID queries; reread only server-derived fields.
 
 ### M-06 — Several user-sized lists do not virtualize and one picker defeats virtualization

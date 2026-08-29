@@ -1,5 +1,14 @@
 import type { Plant, TaskTemplate, TaskType } from '@/types/database.types';
 import { EARLY_COMPLETION_BLOCK_REASON, TASK_DUE_TIME_HOUR } from '@/utils/taskConstants';
+import { getPlantCareProfile } from '@/utils/plantCareDefaults';
+import { getWateringFrequencyMultiplier } from '@/utils/seasonHelpers';
+import {
+  addDaysToDateKey,
+  calendarDaysBetweenKeys,
+  farmDateKey,
+  farmDateTimeFromKey,
+} from '@/utils/farmDate';
+import { HARVEST_TASK_TYPES } from '@/utils/harvestStats';
 
 /**
  * Pure care-task scheduling logic (no Firestore) — extracted from `tasks.ts`
@@ -31,6 +40,73 @@ export const getLastCareDate = (plant: Plant, taskType: TaskType): string | null
   return field ? plant[field] : null;
 };
 
+/**
+ * Whether `syncCareTasksForPlant` may reshape this template.
+ *
+ * Sync gathers a plant's templates by `plant_id` and treats every one of them
+ * as its own: it collapses "duplicates" by disabling all but the newest, and
+ * rewrites `frequency_days` / `next_due_at` from the plant's care profile. A
+ * task the farmer created by hand looks exactly like a duplicate to that logic,
+ * so without this guard adding a manual water task and then saving the plant
+ * silently reverted the manual cadence and switched the profile-driven task off.
+ *
+ * A missing `source` counts as auto — see the field's comment on why that is the
+ * backwards-compatible default.
+ */
+export const isSyncOwnedTemplate = (template: Pick<TaskTemplate, 'source'>): boolean =>
+  (template.source ?? 'auto') === 'auto';
+
+export type CareIntervalField = 'watering' | 'fertilising' | 'pruning';
+
+const CARE_INTERVAL_PLANT_FIELD: Record<CareIntervalField, keyof Plant> = {
+  watering: 'watering_frequency_days',
+  fertilising: 'fertilising_frequency_days',
+  pruning: 'pruning_frequency_days',
+};
+
+const CARE_INTERVAL_PROFILE_FIELD: Record<
+  CareIntervalField,
+  'wateringFrequencyDays' | 'fertilisingFrequencyDays' | 'pruningFrequencyDays'
+> = {
+  watering: 'wateringFrequencyDays',
+  fertilising: 'fertilisingFrequencyDays',
+  pruning: 'pruningFrequencyDays',
+};
+
+/**
+ * How often a care type should recur for this plant: the plant's own interval
+ * when it has one, otherwise the default for its plant type.
+ *
+ * The plant document is not guaranteed to carry an interval. The add-plant
+ * form only prefills the three frequency fields when its auto-suggest fires,
+ * and that needs a variety to be chosen — so a plant saved without one, or
+ * restored from a backup written before the fields existed, stores `null` for
+ * all three. `syncCareTasksForPlant` then had nothing to schedule from and
+ * created no tasks at all, which is what left Rebuild Care Schedule reporting
+ * "0 created" with no way to recover a wiped Care Plan.
+ *
+ * Falling back to `getPlantCareProfile` uses the exact source the add-plant
+ * form prefills from, so a rebuilt schedule matches what creating the plant
+ * would have produced. The farmer's own care-profile overrides are not applied
+ * — they live in a settings document the service layer does not load — so this
+ * resolves to the built-in defaults, which is the right baseline for a
+ * recovery action.
+ *
+ * Returns null only when the plant type is unrecognised. That means "unknown",
+ * never "switched off": the on/off decision belongs to `*_enabled`, which the
+ * caller checks separately and which always wins over a default.
+ */
+export const resolveCareInterval = (plant: Plant, field: CareIntervalField): number | null => {
+  const own = plant[CARE_INTERVAL_PLANT_FIELD[field]];
+  if (typeof own === 'number' && Number.isFinite(own) && own > 0) return own;
+
+  const profile = getPlantCareProfile(plant.plant_variety ?? '', plant.plant_type);
+  const fallback = profile?.[CARE_INTERVAL_PROFILE_FIELD[field]];
+  return typeof fallback === 'number' && Number.isFinite(fallback) && fallback > 0
+    ? fallback
+    : null;
+};
+
 export const computeNextDueAt = (
   plant: Plant,
   taskType: TaskType,
@@ -45,18 +121,109 @@ export const computeNextDueAt = (
     parseDateValue(plant.created_at) ||
     now;
 
-  const nextDueAt = new Date(base);
-  nextDueAt.setDate(nextDueAt.getDate() + frequency);
-  nextDueAt.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0);
+  const baseKey = farmDateKey(base) ?? farmDateKey(now);
+  const nextKey = baseKey ? addDaysToDateKey(baseKey, frequency) : null;
+  const nextDueAt = nextKey ? farmDateTimeFromKey(nextKey, TASK_DUE_TIME_HOUR) : null;
 
   // Cap at today so a plant already past its cycle shows "due today" instead
   // of overdue by the plant's whole age.
-  const todayDue = new Date(now);
-  todayDue.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0);
+  const todayKey = farmDateKey(now);
+  const todayDue = todayKey ? farmDateTimeFromKey(todayKey, TASK_DUE_TIME_HOUR) : null;
+  if (!nextDueAt || !todayDue) return now.toISOString();
   if (nextDueAt < todayDue) return todayDue.toISOString();
 
   return nextDueAt.toISOString();
 };
+
+/**
+ * The hour a template's due dates are stamped at, in farm wall-clock time.
+ *
+ * `preferred_time` is the farmer's choice of when in the day to do the work, so
+ * it has to survive every reschedule. Completion and skip both re-derive the
+ * due date from scratch, and both used to hard-code `TASK_DUE_TIME_HOUR` — so a
+ * task created for the morning silently moved to 6 PM the first time it was
+ * completed, while its card went on reading "Morning".
+ */
+export const dueHourForTemplate = (template: Pick<TaskTemplate, 'preferred_time'>): number => {
+  if (template.preferred_time === 'morning') return 8;
+  if (template.preferred_time === 'afternoon') return 14;
+  return TASK_DUE_TIME_HOUR;
+};
+
+export interface CompletionSchedule {
+  /**
+   * When the task next comes due, or null if the date maths failed. A one-off
+   * (frequency 0) lands on the completion day; the caller disables it instead
+   * of scheduling it again.
+   */
+  nextDueAt: Date | null;
+  /** Days actually applied, after any seasonal adjustment. */
+  effectiveDays: number;
+  /** The multiplier used, recorded on the plant so the overdue math can read it back. */
+  wateringMultiplier: number | null;
+}
+
+/**
+ * Where a task lands after it is completed.
+ *
+ * The farm zone sets the baseline cycle, but a forecast is advisory: an
+ * unverified rain prediction must never silently extend the authoritative due
+ * date. The UI presents rain/wind context and lets the farmer reschedule after
+ * checking the local soil and crop.
+ *
+ * `plant` is the template's plant, or null for a bed-level or general task.
+ * Watering is seasonally adjusted either way — a bed waters on the same cadence
+ * as the plants in it, and gating the multiplier on `plant_id` (as this did
+ * before it moved here) left bed watering tasks recurring at their raw interval
+ * all year.
+ */
+export const computeScheduleAfterCompletion = (
+  template: Pick<TaskTemplate, 'task_type' | 'frequency_days' | 'preferred_time' | 'bed_id'>,
+  plant: Plant | null,
+  doneAt: Date = new Date()
+): CompletionSchedule => {
+  const frequencyDays = Number.isFinite(template.frequency_days) ? template.frequency_days : 0;
+
+  let effectiveDays = frequencyDays;
+  let wateringMultiplier: number | null = null;
+  if (template.task_type === 'water' && frequencyDays > 0) {
+    // A bed-level water task has no plant to read a space type from; a bed is
+    // one, so use it directly. A general task (neither plant nor bed) keeps the
+    // raw interval — there is no growing space to season-adjust for.
+    const spaceType = plant?.space_type ?? (template.bed_id ? 'bed' : null);
+    if (spaceType) {
+      wateringMultiplier = getWateringFrequencyMultiplier(spaceType, undefined, doneAt);
+      effectiveDays = Math.max(1, Math.round(frequencyDays * wateringMultiplier));
+    }
+  }
+
+  const doneKey = farmDateKey(doneAt);
+  const nextKey = doneKey ? addDaysToDateKey(doneKey, effectiveDays) : null;
+  const nextDueAt = nextKey ? farmDateTimeFromKey(nextKey, dueHourForTemplate(template)) : null;
+
+  return { nextDueAt, effectiveDays, wateringMultiplier };
+};
+
+/**
+ * An enabled template already covering the same work on the same target, or
+ * null when there is none.
+ *
+ * Manual and auto templates deliberately coexist, so a second task of a type is
+ * legitimate — this backs a confirmation, not a block, so that a duplicate is
+ * something the farmer chose rather than something they ended up with. Both
+ * sides are normalised to null so an absent field and an explicit null match.
+ */
+export const findDuplicateTemplate = (
+  templates: readonly TaskTemplate[],
+  candidate: Pick<TaskTemplate, 'task_type' | 'plant_id' | 'bed_id'>
+): TaskTemplate | null =>
+  templates.find(
+    (template) =>
+      template.enabled &&
+      template.task_type === candidate.task_type &&
+      (template.plant_id ?? null) === (candidate.plant_id ?? null) &&
+      (template.bed_id ?? null) === (candidate.bed_id ?? null)
+  ) ?? null;
 
 /**
  * Base date for a skip: whichever is later, now or the task's own due date.
@@ -69,24 +236,39 @@ export const skipBaseDate = (task: TaskTemplate, now: Date = new Date()): Date =
 };
 
 /**
- * Skipping by N days lands on the app's 6 PM due-time convention, matching what
- * completing a task produces (see `buildTaskDoneOps`), so repeated skips don't
- * drift the schedule to whatever time of day the user happened to tap.
+ * Skipping by N days lands on the task's own due hour, matching what completing
+ * it produces (see `computeScheduleAfterCompletion`), so repeated skips don't
+ * drift the schedule to whatever time of day the user happened to tap — or off
+ * the morning slot the farmer chose.
  */
 export const computeSkipDate = (task: TaskTemplate, days: number, now: Date = new Date()): Date => {
-  const next = skipBaseDate(task, now);
-  next.setDate(next.getDate() + days);
-  next.setHours(TASK_DUE_TIME_HOUR, 0, 0, 0);
-  return next;
+  const baseKey = farmDateKey(skipBaseDate(task, now)) ?? farmDateKey(now);
+  const nextKey = baseKey ? addDaysToDateKey(baseKey, days) : null;
+  return (nextKey ? farmDateTimeFromKey(nextKey, dueHourForTemplate(task)) : null) ?? new Date(now);
+};
+
+/**
+ * Whole calendar days a task is past due, or null when it isn't overdue —
+ * including when it came due today, which is on time, not late.
+ *
+ * Both sides are floored to local midnight first. Due dates are stamped at
+ * `TASK_DUE_TIME_HOUR` (6 PM), so subtracting raw timestamps and flooring the
+ * result reports a task due yesterday evening as 0 days late — the schedule's
+ * time-of-day convention silently eating the most common overdue case. Counting
+ * calendar days is also what a farmer means by "two days late".
+ */
+export const calendarDaysOverdue = (task: TaskTemplate, now: Date = new Date()): number | null => {
+  const dueKey = farmDateKey(task.next_due_at);
+  const todayKey = farmDateKey(now);
+  if (!dueKey || !todayKey || dueKey >= todayKey) return null;
+  return calendarDaysBetweenKeys(dueKey, todayKey);
 };
 
 /** True when the task is due after today — i.e. the work isn't expected yet. */
 export const isFutureTask = (task: TaskTemplate, now: Date = new Date()): boolean => {
-  const due = parseDateValue(task.next_due_at);
-  if (!due) return false;
-  const endOfToday = new Date(now);
-  endOfToday.setHours(23, 59, 59, 999);
-  return due > endOfToday;
+  const dueKey = farmDateKey(task.next_due_at);
+  const todayKey = farmDateKey(now);
+  return dueKey !== null && todayKey !== null && dueKey > todayKey;
 };
 
 /**
@@ -104,3 +286,30 @@ export const isEarlyCompletionBlocked = (task: TaskTemplate, now: Date = new Dat
  */
 export const isSkipBlocked = (task: TaskTemplate, now: Date = new Date()): boolean =>
   isFutureTask(task, now);
+
+/**
+ * The harvest tasks a logged harvest should close for a plant.
+ *
+ * Logging a harvest in the journal used to leave the schedule untouched, so the
+ * task it belonged to stayed overdue and the Today screen kept asking for work
+ * the farmer had already done. This picks what to complete.
+ *
+ * Future tasks are excluded deliberately: completing one early rebases its whole
+ * cycle onto today, which is exactly what `isFutureTask` guards against
+ * everywhere else. A harvest logged before the crop was due records the yield
+ * without silently rescheduling the rest of the season.
+ */
+export const selectDueHarvestTasks = (
+  templates: TaskTemplate[],
+  plantId: string,
+  harvestedAt: string | Date
+): TaskTemplate[] => {
+  const harvestKey = farmDateKey(harvestedAt);
+  if (!harvestKey) return [];
+  return templates.filter((task) => {
+    if (!task.enabled || task.plant_id !== plantId || !task.next_due_at) return false;
+    if (!HARVEST_TASK_TYPES.has(task.task_type)) return false;
+    const dueKey = farmDateKey(task.next_due_at);
+    return dueKey !== null && dueKey <= harvestKey;
+  });
+};
