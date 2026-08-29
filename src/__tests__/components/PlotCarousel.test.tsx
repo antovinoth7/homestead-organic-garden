@@ -76,6 +76,7 @@ describe('PlotCarousel', () => {
         <PlotCarousel
           plots={plots}
           onPressPlot={jest.fn()}
+          onPressOverdue={jest.fn()}
           onPressWeather={jest.fn()}
           onPressHealth={jest.fn()}
           onPressBedStatus={jest.fn()}

@@ -35,10 +35,15 @@ export default function HarvestHistorySection({
   const theme = useTheme() as Theme;
   const localStyles = useMemo(() => createLocalStyles(theme), [theme]);
   const summary = useMemo(() => summarizeHarvests(harvestEntries), [harvestEntries]);
-  const seasonYield = useMemo(() => groupHarvestsBySeason(harvestEntries), [harvestEntries]);
+  // Every total on this card is built on the same basis, so the stat, the chart
+  // and the per-tree rows can never be adding up different kinds of unit.
+  const seasonYield = useMemo(
+    () => groupHarvestsBySeason(harvestEntries, summary.unit),
+    [harvestEntries, summary.unit]
+  );
   const treeYields = useMemo(
-    () => (plantType === 'coconut_tree' ? groupHarvestsByTree(harvestEntries) : []),
-    [harvestEntries, plantType]
+    () => (plantType === 'coconut_tree' ? groupHarvestsByTree(harvestEntries, summary.unit) : []),
+    [harvestEntries, plantType, summary.unit]
   );
   if (plantType !== 'fruit_tree' && plantType !== 'coconut_tree') {
     return null;
@@ -66,7 +71,12 @@ export default function HarvestHistorySection({
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{summary.total.toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Total {summary.unit}</Text>
+              {/* Says what was left out rather than folding kilograms and
+                  counts into one meaningless number, as this once did. */}
+              <Text style={styles.statLabel}>
+                Total {summary.unit}
+                {summary.excludedCount > 0 ? ` · ${summary.excludedCount} other` : ''}
+              </Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{summary.average.toFixed(1)}</Text>
@@ -75,6 +85,11 @@ export default function HarvestHistorySection({
             {plantType === 'coconut_tree' &&
               harvestEntries.length > 0 &&
               (() => {
+                // FIXME: this fixed 2-month cycle is invented here and contradicts
+                // `getCoconutAgeInfo`, which derives the real climbing interval from
+                // the tree's age (45 days pre-bearing, 30 at peak, 40 when old).
+                // Reconcile when this card is mounted — it needs the planting date,
+                // which the component is not currently given.
                 const lastHarvestDate = new Date(harvestEntries[0]!.created_at);
                 const nextHarvestDate = new Date(lastHarvestDate);
                 nextHarvestDate.setMonth(nextHarvestDate.getMonth() + 2);

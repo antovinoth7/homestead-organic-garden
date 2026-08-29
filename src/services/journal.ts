@@ -33,7 +33,49 @@ import { logger } from '../utils/logger';
 import { convertTimestamp } from '../utils/dateHelpers';
 import { getCached, setCached, invalidate, CACHE_KEYS } from '../lib/dataCache';
 import { writeOrQueue, isOfflineWriteError } from '../lib/offlineWrite';
+import { selectDueHarvestTasks } from './taskSchedulingLogic';
 const JOURNAL_COLLECTION = 'journal_entries';
+
+/**
+ * Make a logged harvest visible to everything that tracks harvests.
+ *
+ * A harvest journal entry used to record the yield and nothing else, while
+ * completing the harvest *task* recorded the schedule and nothing else. The two
+ * surfaces then disagreed permanently: the Care Plan reads journal entries, the
+ * Today screen reads `last_harvest_date`, so whichever way the farmer said "I
+ * harvested this", the other kept asking. Logging now updates both signals.
+ *
+ * Deliberately create-only. Editing an existing entry's quantity is a
+ * correction, not a second harvest, so it must not advance the cycle again.
+ *
+ * Scheduling is not reimplemented here: an actually-due harvest task is closed
+ * through `markTaskDone`, which already rebases the cycle, stamps the plant, and
+ * archives a `one_shot` crop. Best-effort throughout — a failure here must never
+ * reject the journal write the farmer just made.
+ */
+const applyHarvestSideEffects = async (entry: JournalEntry): Promise<void> => {
+  if (!isHarvestJournalEntry(entry) || !entry.plant_id) return;
+  const plantId = entry.plant_id;
+
+  // Dynamic imports keep `journal` → `plants`/`tasks` off the module graph;
+  // the same shortcut `plantCareProfiles.ts` takes to avoid an import cycle.
+  try {
+    const { updatePlant } = await import('./plants');
+    await updatePlant(plantId, { last_harvest_date: entry.created_at });
+  } catch (error) {
+    logger.warn('Failed to stamp last_harvest_date after harvest entry', error as Error);
+  }
+
+  try {
+    const { getTaskTemplates, markTaskDone } = await import('./tasks');
+    const templates = await getTaskTemplates();
+    for (const task of selectDueHarvestTasks(templates, plantId, entry.created_at)) {
+      await markTaskDone(task, 'Logged from harvest journal entry');
+    }
+  } catch (error) {
+    logger.warn('Failed to advance harvest task after harvest entry', error as Error);
+  }
+};
 
 /**
  * Get all journal entries with offline-first approach
@@ -191,6 +233,15 @@ export const createJournalEntry = async (
   await setData(KEYS.JOURNAL, cachedEntries);
 
   invalidate(CACHE_KEYS.JOURNAL_ENTRIES, CACHE_KEYS.JOURNAL_METADATA, CACHE_KEYS.JOURNAL_HARVESTS);
+
+  // Not awaited: this is best-effort bookkeeping (both halves are try/caught and
+  // the services it calls do their own cache invalidation), so making the farmer
+  // wait on a plant write, a full template fetch and N task writes would add
+  // latency to every harvest save for no benefit. The trailing catch is belt and
+  // braces against an unhandled rejection.
+  void applyHarvestSideEffects(result).catch((error) => {
+    logger.warn('Harvest side effects failed after journal entry', error as Error);
+  });
 
   return result;
 };

@@ -17,8 +17,11 @@
  * deliberately not a tap target: the name, the forecast pill and the counts row
  * already own theirs.
  *
- * Two destinations, one chevron. The forecast pill opens the plot's seven-day
- * view; the `›` on the counts row means one thing only — open the plot.
+ * The forecast pill opens the plot's seven-day view. On the counts row the `›`
+ * means one thing only — open the plot at the top of its plan — but the overdue
+ * figure is a target of its own, on the same principle as the inventory rows
+ * below: a count opens the list at the thing it just named, so tapping "53
+ * Overdue" lands on the Care Plan's Overdue section rather than above it.
  *
  * The inventory is two tiles side by side: plants left, beds right. Each states
  * its total — `cropCount` over the four health counts it is the sum of,
@@ -45,6 +48,8 @@ export type PlotHealthFilter = 'healthy' | 'stressed' | 'recovering' | 'sick';
 interface Props {
   plot: PlotBrief;
   onPress: (plotId: string) => void;
+  /** The overdue count's own target — opens the plan at its Overdue section. */
+  onPressOverdue: (plotId: string) => void;
   onPressWeather: (plotId: string) => void;
   onPressHealth: (plotId: string, status: PlotHealthFilter) => void;
   onPressBedStatus: (plotId: string, lifecycle: BedLifecycle) => void;
@@ -122,6 +127,7 @@ function buildCounts(plot: PlotBrief): { key: string; label: string; tone: 'due'
 export const PlotCard = React.memo(function PlotCard({
   plot,
   onPress,
+  onPressOverdue,
   onPressWeather,
   onPressHealth,
   onPressBedStatus,
@@ -132,6 +138,10 @@ export const PlotCard = React.memo(function PlotCard({
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const handlePress = useCallback(() => onPress(plot.id), [onPress, plot.id]);
+  const handlePressOverdue = useCallback(
+    () => onPressOverdue(plot.id),
+    [onPressOverdue, plot.id]
+  );
   const handlePressWeather = useCallback(() => onPressWeather(plot.id), [onPressWeather, plot.id]);
   const handlePressHealthy = useCallback(
     () => onPressHealth(plot.id, 'healthy'),
@@ -260,14 +270,32 @@ export const PlotCard = React.memo(function PlotCard({
         accessibilityLabel={`${plot.name}, ${countsLabel}`}
       >
         {counts.length === 0 && <Text style={[styles.pill, styles.pillNone]}>Nothing Due</Text>}
-        {counts.map((part) => (
-          <Text
-            key={part.key}
-            style={[styles.pill, part.tone === 'overdue' ? styles.pillOverdue : styles.pillDue]}
-          >
-            {part.label}
-          </Text>
-        ))}
+        {counts.map((part) => {
+          const pill = (
+            <Text
+              key={part.key}
+              style={[styles.pill, part.tone === 'overdue' ? styles.pillOverdue : styles.pillDue]}
+            >
+              {part.label}
+            </Text>
+          );
+          // The overdue figure takes its own tap inside the row: the row means
+          // "open the plot", this means "open it at the work that is late".
+          return part.tone === 'overdue' ? (
+            <TouchableOpacity
+              key={part.key}
+              hitSlop={ROW_HIT_SLOP}
+              onPress={handlePressOverdue}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${plot.overdueCount} overdue tasks in ${plot.name}. Opens the care plan at Overdue.`}
+            >
+              {pill}
+            </TouchableOpacity>
+          ) : (
+            pill
+          );
+        })}
         <Text style={styles.chevron}>›</Text>
       </TouchableOpacity>
 

@@ -24,10 +24,13 @@ import {
   TaskType,
 } from '@/types/database.types';
 import type { VisualIconKey } from '@/types/visual.types';
-// Type-only: erased at compile time, so this adds no runtime edge into
-// taskSchedulingLogic → taskConstants → @expo/vector-icons.
+// This module must stay free of React-Native imports so the alert rules can run
+// anywhere. Its dependencies below all honour that: `harvestStats` and the
+// `farmDate`/`taskConstants` it reaches are RN-free, and the icon-bearing
+// module in that neighbourhood (`journalEntryOptions.ts`) is never on this path.
 import type { PlantLastCareField } from '@/services/taskSchedulingLogic';
 import { isPlantArchived } from '@/utils/plantHelpers';
+import { HARVEST_TASK_TYPES, isHarvestSatisfied } from '@/utils/harvestStats';
 import { getGreenManureForMonth } from '@/config/beds';
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -62,16 +65,8 @@ const TASK_ALERT_SHAPE: Partial<
   harvest_leaves: { type: 'harvest_due', verb: 'Leaf harvest', iconKey: 'alert.harvest_due' },
 };
 
-/** Task types whose template supersedes the field-derived harvest-readiness nudge. */
-const HARVEST_TASK_TYPES: ReadonlySet<TaskType> = new Set<TaskType>(['harvest', 'harvest_leaves']);
-
-/**
- * Days before a cut-and-come-again crop is prompted for its next picking.
- * Mirrors the `harvest_leaves` template cadence in `tasks.ts` (currently 14) —
- * kept as a local literal rather than imported because `taskConstants.ts` pulls
- * in `@expo/vector-icons`, and this module is contractually RN-free.
- */
-const CUT_AND_COME_AGAIN_INTERVAL_DAYS = 14;
+// `HARVEST_TASK_TYPES` (imported above) is what makes a template supersede the
+// field-derived harvest-readiness nudge below.
 
 const SEVERITY_RANK: Record<FarmAlertSeverity, number> = {
   critical: 3,
@@ -251,20 +246,17 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
 
     const toHarvest = daysSince(plant.expected_harvest_date, now);
     // `daysSince` counts back from today, so a *later* date yields a *smaller*
-    // number — `sinceHarvest <= toHarvest` means harvested on/after expected.
+    // number: the gap between the two is how far the harvest fell after the
+    // expected date, which is what `isHarvestSatisfied` reads. That rule is
+    // shared with the Care Plan's Harvest Ready section — cut-and-come-again
+    // crops get no care task of their own, so it is the only thing re-arming
+    // their prompt one picking cycle on.
     const sinceHarvest = daysSince(plant.last_harvest_date, now);
-    const harvestedOnOrAfterExpected =
-      sinceHarvest !== null && toHarvest !== null && sinceHarvest <= toHarvest;
-    // Cut-and-come-again crops keep producing and — unlike perennials
-    // (`harvest_leaves`) and coconuts (`harvest`) — get no care task of their
-    // own, so the prompt re-arms one picking cycle after the last harvest.
-    // Every other mode, `null` included, stays suppressed: those either finish
-    // for the season or are re-prompted by their care task.
-    const readyAgain =
-      plant.harvest_mode === 'cut_and_come_again' &&
-      sinceHarvest !== null &&
-      sinceHarvest >= CUT_AND_COME_AGAIN_INTERVAL_DAYS;
-    const alreadyHarvested = harvestedOnOrAfterExpected && !readyAgain;
+    const alreadyHarvested = isHarvestSatisfied(
+      plant.harvest_mode,
+      sinceHarvest !== null && toHarvest !== null ? toHarvest - sinceHarvest : null,
+      sinceHarvest
+    );
     if (toHarvest !== null && toHarvest >= 0 && !alreadyHarvested) {
       alerts.push({
         id: `harvest_${plant.id}`,

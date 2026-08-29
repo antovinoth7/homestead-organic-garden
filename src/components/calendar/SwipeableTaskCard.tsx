@@ -227,7 +227,7 @@ function SwipeableTaskCardComponent({
               >
                 <GardenIcon
                   name={TASK_ICON_KEYS[task.task_type]}
-                  size={24}
+                  size={20}
                   color={TASK_COLORS[task.task_type]}
                 />
               </View>
@@ -331,7 +331,7 @@ function SwipeableTaskCardComponent({
                         ? 'checkmark-circle'
                         : 'ellipse-outline'
                     }
-                    size={22}
+                    size={20}
                     color={isSelected ? theme.primary : theme.border}
                   />
                 </TouchableOpacity>

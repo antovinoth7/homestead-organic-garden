@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Dimensions, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 
 /**
@@ -209,6 +209,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetScroll: {
       paddingHorizontal: 20,
+      // The View Options sheet now carries location, priority, time-of-day and
+      // bed sections on top of the task types, so it has to stop growing before
+      // it swallows the screen. Same cap the Plants filter sheet uses.
+      maxHeight: Dimensions.get('window').height * 0.55,
     },
     sheetScrollContent: {
       paddingBottom: 20,
@@ -251,6 +255,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sheetChipTextActive: {
       color: theme.primary,
       fontWeight: '600',
+    },
+    /** A facet count of zero — still shown, but visibly inert. */
+    sheetChipCountZero: {
+      color: theme.textTertiary,
     },
     weekView: {
       backgroundColor: theme.card,
@@ -467,18 +475,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // SectionList equivalents of `section` (header top / row sides / footer bottom)
     listSectionHeader: {
       paddingHorizontal: 16,
-      paddingTop: 10,
+      paddingTop: 8,
     },
     listRow: {
       paddingHorizontal: 16,
     },
     listSectionFooter: {
-      height: 8,
+      height: 6,
     },
     sectionHeaderRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 10,
+      marginBottom: 8,
       gap: 8,
     },
     sectionTitle: {
@@ -752,8 +760,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskCard: {
       flexDirection: 'row',
       backgroundColor: theme.card,
-      borderRadius: 16,
-      marginBottom: 12,
+      borderRadius: 14,
+      marginBottom: 8,
       overflow: 'hidden',
       borderWidth: 1.5,
       borderColor: theme.border,
@@ -768,23 +776,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.errorLight,
     },
     taskColorBar: {
-      width: 5,
+      width: 4,
     },
     taskContent: {
       flex: 1,
-      padding: 16,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
     },
     taskHeader: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     taskIconContainer: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: 12,
+      marginRight: 10,
     },
     taskIconEmoji: {
       fontSize: 22,
@@ -793,13 +802,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
     },
     taskTitle: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '600',
       color: theme.text,
-      marginBottom: 2,
+      marginBottom: 1,
     },
     taskPlant: {
-      fontSize: 14,
+      fontSize: 13,
       color: theme.textSecondary,
     },
     taskLocation: {
@@ -826,8 +835,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       alignItems: 'center',
       width: 100,
-      borderRadius: 16,
-      marginBottom: 12,
+      borderRadius: 14,
+      marginBottom: 8,
     },
     // Same box as swipeAction, but neutral — it explains rather than commits.
     swipeBlockedAction: {
@@ -835,8 +844,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       alignItems: 'center',
       width: 100,
-      borderRadius: 16,
-      marginBottom: 12,
+      borderRadius: 14,
+      marginBottom: 8,
     },
     swipeActionContent: {
       alignItems: 'center',
@@ -891,6 +900,30 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 2,
       shadowColor: theme.success,
       shadowOpacity: 0.15,
+    },
+    // Disclosure row for harvests that are still ahead. Deliberately quieter
+    // than `harvestCard` — it heads a look-ahead, not work that is due.
+    harvestSoonToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      minHeight: 44,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border + '40',
+      marginBottom: 12,
+    },
+    harvestSoonToggleText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    harvestSoonToggleMeta: {
+      fontSize: 12,
+      color: theme.textTertiary,
     },
     harvestIcon: {
       marginRight: 16,
@@ -1247,14 +1280,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // Swipe left action (Skip) — a single action, so it owns the full reveal.
     swipeLeftActions: {
       flexDirection: 'row',
-      marginBottom: 12,
+      marginBottom: 8,
     },
     swipeSkipAction: {
       backgroundColor: theme.warning,
       justifyContent: 'center',
       alignItems: 'center',
       width: 80,
-      borderRadius: 16,
+      borderRadius: 14,
     },
     // Skip Modal (Calendar)
     skipModalSubtext: {
@@ -1331,9 +1364,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskCheckbox: {
       alignItems: 'center',
       justifyContent: 'center',
-      marginTop: 6,
-      width: 44,
-      height: 44,
+      marginTop: 2,
+      width: 32,
+      height: 32,
     },
     taskCheckboxSelected: {},
     // Not selectable — the task can't be completed early. Still tappable, so it
@@ -1715,7 +1748,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       alignSelf: 'stretch',
       gap: 2,
-      marginHorizontal: 12,
+      marginHorizontal: 16,
       marginBottom: 8,
       padding: 2,
       borderRadius: 14,
@@ -1724,9 +1757,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.backgroundSecondary,
       overflow: 'hidden',
     },
+    // Height comes from the padding + the 18px badge, same as plantsStyles — the
+    // chips carry a vertical hitSlop so the tap target stays ~44px.
     segmentChip: {
       flex: 1,
-      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',

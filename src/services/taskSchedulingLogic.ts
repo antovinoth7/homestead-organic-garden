@@ -8,6 +8,7 @@ import {
   farmDateKey,
   farmDateTimeFromKey,
 } from '@/utils/farmDate';
+import { HARVEST_TASK_TYPES } from '@/utils/harvestStats';
 
 /**
  * Pure care-task scheduling logic (no Firestore) — extracted from `tasks.ts`
@@ -285,3 +286,30 @@ export const isEarlyCompletionBlocked = (task: TaskTemplate, now: Date = new Dat
  */
 export const isSkipBlocked = (task: TaskTemplate, now: Date = new Date()): boolean =>
   isFutureTask(task, now);
+
+/**
+ * The harvest tasks a logged harvest should close for a plant.
+ *
+ * Logging a harvest in the journal used to leave the schedule untouched, so the
+ * task it belonged to stayed overdue and the Today screen kept asking for work
+ * the farmer had already done. This picks what to complete.
+ *
+ * Future tasks are excluded deliberately: completing one early rebases its whole
+ * cycle onto today, which is exactly what `isFutureTask` guards against
+ * everywhere else. A harvest logged before the crop was due records the yield
+ * without silently rescheduling the rest of the season.
+ */
+export const selectDueHarvestTasks = (
+  templates: TaskTemplate[],
+  plantId: string,
+  harvestedAt: string | Date
+): TaskTemplate[] => {
+  const harvestKey = farmDateKey(harvestedAt);
+  if (!harvestKey) return [];
+  return templates.filter((task) => {
+    if (!task.enabled || task.plant_id !== plantId || !task.next_due_at) return false;
+    if (!HARVEST_TASK_TYPES.has(task.task_type)) return false;
+    const dueKey = farmDateKey(task.next_due_at);
+    return dueKey !== null && dueKey <= harvestKey;
+  });
+};

@@ -33,6 +33,7 @@ import { PlotCard, PlotHealthFilter } from './PlotCard';
 interface Props {
   plots: readonly PlotBrief[];
   onPressPlot: (plotId: string) => void;
+  onPressOverdue: (plotId: string) => void;
   onPressWeather: (plotId: string) => void;
   onPressHealth: (plotId: string, status: PlotHealthFilter) => void;
   onPressBedStatus: (plotId: string, lifecycle: BedLifecycle) => void;
@@ -42,6 +43,7 @@ interface Props {
 export const PlotCarousel = React.memo(function PlotCarousel({
   plots,
   onPressPlot,
+  onPressOverdue,
   onPressWeather,
   onPressHealth,
   onPressBedStatus,
@@ -77,6 +79,7 @@ export const PlotCarousel = React.memo(function PlotCarousel({
       <PlotCard
         plot={plots[0]!}
         onPress={onPressPlot}
+        onPressOverdue={onPressOverdue}
         onPressWeather={onPressWeather}
         onPressHealth={onPressHealth}
         onPressBedStatus={onPressBedStatus}
@@ -108,6 +111,7 @@ export const PlotCarousel = React.memo(function PlotCarousel({
             plot={plot}
             containerStyle={pageStyle}
             onPress={onPressPlot}
+            onPressOverdue={onPressOverdue}
             onPressWeather={onPressWeather}
             onPressHealth={onPressHealth}
             onPressBedStatus={onPressBedStatus}

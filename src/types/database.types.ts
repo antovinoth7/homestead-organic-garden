@@ -941,7 +941,6 @@ export interface TaskLog {
   treated_area?: number | null;
   area_unit?: string | null;
   labour_minutes?: number | null;
-  harvest_weight_kg?: number | null;
   created_at: string;
 }
 

@@ -66,14 +66,17 @@ describe('PlotCard health footer', () => {
   function render(
     onPressHealth = jest.fn(),
     brief: PlotBrief = plot,
-    onPressBedStatus = jest.fn()
+    onPressBedStatus = jest.fn(),
+    // The counts row's two targets, for the tests that tell them apart.
+    row: { onPress?: () => void; onPressOverdue?: () => void } = {}
   ) {
     let rendered!: RenderedTree;
     TestRenderer.act(() => {
       rendered = TestRenderer.create(
         <PlotCard
           plot={brief}
-          onPress={jest.fn()}
+          onPress={row.onPress ?? jest.fn()}
+          onPressOverdue={row.onPressOverdue ?? jest.fn()}
           onPressWeather={jest.fn()}
           onPressHealth={onPressHealth}
           onPressBedStatus={onPressBedStatus}
@@ -123,6 +126,7 @@ describe('PlotCard health footer', () => {
         <PlotCard
           plot={plot}
           onPress={jest.fn()}
+          onPressOverdue={jest.fn()}
           onPressWeather={onPressWeather}
           onPressHealth={jest.fn()}
           onPressBedStatus={jest.fn()}
@@ -189,6 +193,51 @@ describe('PlotCard health footer', () => {
     expect(
       rendered.root.findAllByProps({ accessibilityLabel: 'North Plot, 2 due, 5 overdue' })
     ).not.toHaveLength(0);
+  });
+
+  it('gives the overdue count its own target, inside a row that still opens the plot', () => {
+    const onPress = jest.fn();
+    const onPressOverdue = jest.fn();
+    const rendered = render(
+      jest.fn(),
+      makePlotBrief({ dueCount: 2, overdueCount: 5 }),
+      jest.fn(),
+      { onPress, onPressOverdue }
+    );
+
+    TestRenderer.act(() => {
+      rendered.root
+        .findByProps({
+          accessibilityLabel: '5 overdue tasks in North Plot. Opens the care plan at Overdue.',
+        })
+        .props.onPress?.();
+    });
+    expect(onPressOverdue).toHaveBeenCalledWith('north-plot');
+    // The nested target must not also fire the row it sits in.
+    expect(onPress).not.toHaveBeenCalled();
+
+    // Everything else on the row — the due pill, the chevron — still opens the
+    // plot at the top of its plan.
+    const row = rendered.root.findAll(
+      (node) => node.type === 'TouchableOpacity' && baseStyle(node.props.style) === 'countsRow'
+    );
+    expect(row).toHaveLength(1);
+    TestRenderer.act(() => {
+      row[0]?.props.onPress?.();
+    });
+    expect(onPress).toHaveBeenCalledWith('north-plot');
+  });
+
+  it('leaves no overdue target on a plot with nothing late', () => {
+    const rendered = render(jest.fn(), makePlotBrief({ dueCount: 2, overdueCount: 0 }));
+    expect(hostText(rendered, 'pill')).toEqual(['2 Due']);
+    expect(
+      rendered.root.findAll((node) =>
+        String(
+          (node.props as { accessibilityLabel?: string }).accessibilityLabel ?? ''
+        ).includes('Opens the care plan at Overdue')
+      )
+    ).toHaveLength(0);
   });
 
   it('badges a quiet plot rather than leaving the row bare', () => {

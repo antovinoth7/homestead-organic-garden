@@ -1,7 +1,34 @@
 import { TaskType } from '../types/database.types';
+import type { Theme } from '../theme/colors';
+import type { TaskPriority } from './careTaskFilters';
 
 export const TASK_DUE_TIME_HOUR = 18; // 6:00 PM
 export const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+};
+
+/**
+ * Priority swatch. A function rather than a constant because these are theme
+ * tokens, not fixed hex — the task detail sheet and the priority filter chips
+ * both read it so the two can never disagree about what "high" looks like.
+ */
+export const taskPriorityColor = (theme: Theme, priority: TaskPriority): string => {
+  switch (priority) {
+    case 'critical':
+      return theme.error;
+    case 'high':
+      return theme.warning;
+    case 'medium':
+      return theme.info;
+    default:
+      return theme.border;
+  }
+};
 
 /**
  * Task types where doing the work early is actively harmful rather than merely

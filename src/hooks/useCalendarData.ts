@@ -1,19 +1,34 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { getTaskTemplates, getTodayTaskLogs } from '../services/tasks';
+import { calculateTaskPriority, getTaskTemplates, getTodayTaskLogs } from '../services/tasks';
 import { getAllPlants } from '../services/plants';
 import { getBeds } from '../services/beds';
 import { getHarvestJournalMetadata } from '../services/journal';
-import { TaskTemplate, Plant, JournalEntry, TaskLog } from '../types/database.types';
+import { Bed, TaskTemplate, Plant, JournalEntry, TaskLog } from '../types/database.types';
 import { computeHarvestsReady, type HarvestReadyItem } from '../utils/harvestStats';
+import { calendarDaysOverdue } from '../services/taskSchedulingLogic';
 import { isNetworkAvailable } from '../utils/networkState';
 import { resolveTaskBedId, isBedLevelOrphanTask } from '../utils/taskBed';
 import { logger } from '../utils/logger';
 import { addDaysToDateKey, calendarDateKey, farmDateKey, farmToday } from '@/utils/farmDate';
 import { getErrorMessage } from '@/utils/errorLogging';
+import { groupByPlot, UNASSIGNED_PLOT_NAME, type PlotResolution } from '@/utils/plotGrouping';
+import {
+  countCareFacets,
+  countOverdueBySegment,
+  filterCareTasks,
+  matchesBedSegment,
+  sortCareTasks,
+  type BedSegment,
+  type CareTaskContext,
+  type CareTaskFacetCounts,
+  type CareTaskFilters,
+  type TaskPriority,
+  type TaskSortOption,
+} from '@/utils/careTaskFilters';
 
 type GroupBy = 'none' | 'location' | 'type' | 'plant' | 'bed';
 
-export type BedSegment = 'bed' | 'other';
+export type { BedSegment };
 
 export interface BedSegmentCounts {
   bed: number;
@@ -38,12 +53,30 @@ export interface UseCalendarDataReturn {
   filteredTasks: TaskTemplate[];
   overdueTasks: TaskTemplate[];
   tasksByDateKey: Map<string, TaskTemplate[]>;
-  filteredHarvestsReady: HarvestReadyItem[];
+  /** Due or overdue harvest checks — the pinned "Harvest Ready" section. */
+  harvestsReadyNow: HarvestReadyItem[];
+  /** Still ahead (8–30 days) — the collapsed "Harvest soon" row below Today. */
+  harvestsSoon: HarvestReadyItem[];
   todayTasks: TaskTemplate[];
   weekTasks: TaskTemplate[];
   tasksForDisplay: TaskTemplate[];
   groupedTasks: Record<string, TaskTemplate[]>;
   segmentCounts: BedSegmentCounts;
+  /**
+   * Overdue work either side of the segment split, counted before the segment
+   * is applied. `overdueTasks` only ever holds the active segment's share, so a
+   * caller that means to *show* the overdue work — the Today card's count opens
+   * the plan at it — needs this to tell "there is none" from "it is in the
+   * other segment".
+   */
+  overdueSegmentCounts: BedSegmentCounts;
+  /** Chip counts for the filter sheet — each category counted against the rest. */
+  facetCounts: CareTaskFacetCounts;
+  /**
+   * The task → plot join, built once here. The screen reuses it for weather
+   * placement and for the location filter's chips rather than rebuilding it.
+   */
+  plotResolution: PlotResolution;
   isSearching: boolean;
   getTasksForDate: (date: Date) => TaskTemplate[];
   getRawTasksForDate: (date: Date) => TaskTemplate[];
@@ -60,10 +93,15 @@ interface UseCalendarDataOptions {
   currentMonth: Date;
   selectedDate: Date | null;
   groupBy: GroupBy;
-  filterTaskTypes: Set<string>;
-  filterOverdueOnly: boolean;
+  sortBy?: TaskSortOption;
+  filters: CareTaskFilters;
   bedSegment?: BedSegment;
-  bedNames?: Map<string, string>;
+  /** Beds drive the plot join, the bed filter and the bed group labels. */
+  beds?: Bed[];
+  /** Configured plot names, in display order — from `useWeatherLocations`. */
+  parentLocations?: string[];
+  /** Plot name used when none are configured; must match `useWeatherLocations`. */
+  fallbackPlotName?: string;
 }
 
 export function useCalendarData({
@@ -74,10 +112,12 @@ export function useCalendarData({
   currentMonth,
   selectedDate,
   groupBy,
-  filterTaskTypes,
-  filterOverdueOnly,
+  sortBy = 'due',
+  filters,
   bedSegment = 'other',
-  bedNames,
+  beds,
+  parentLocations,
+  fallbackPlotName,
 }: UseCalendarDataOptions): UseCalendarDataReturn {
   const [tasks, setTasks] = useState<TaskTemplate[]>([]);
   const [plants, setPlants] = useState<Plant[]>([]);
@@ -209,6 +249,77 @@ export function useCalendarData({
     [plantMap]
   );
 
+  // Hoisted above the grouping/sorting helpers because the plot join, the
+  // priority map and the filter context are all built from it.
+  // Drop bed-level tasks whose bed was deleted so they never surface in the
+  // lists, calendar cells, or segment counts (they're also being self-healed).
+  const visibleTasks = useMemo(
+    () => (orphanBedTaskIds.size > 0 ? tasks.filter((t) => !orphanBedTaskIds.has(t.id)) : tasks),
+    [tasks, orphanBedTaskIds]
+  );
+
+  const bedNames = useMemo(() => new Map((beds ?? []).map((bed) => [bed.id, bed.name])), [beds]);
+
+  // What the task is *about*: the plant, or for bed-level tasks (which have no
+  // plant) the bed. Used by the plant sort and by the bed group labels.
+  const subjectLabel = React.useCallback(
+    (task: TaskTemplate): string => {
+      if (task.plant_id) return getPlantDetails(task.plant_id).name;
+      const bedId = resolveBedId(task);
+      return (bedId ? bedNames.get(bedId) : undefined) ?? 'General';
+    },
+    [getPlantDetails, resolveBedId, bedNames]
+  );
+
+  // The one task -> plot join. `groupByPlot` resolves a task through its plant's
+  // parent location, then its bed's, then the unassigned bucket — so bed-level
+  // tasks land on a real plot instead of the "General" bucket the old
+  // `Plant.location` string grouping put them in. Returned to the screen so the
+  // weather placement and the location chips share this exact resolution.
+  const plotResolution = useMemo(
+    () =>
+      groupByPlot({
+        parentLocations: parentLocations ?? [],
+        fallbackName: fallbackPlotName ?? 'My Farm',
+        plants,
+        beds: beds ?? [],
+        tasks: visibleTasks,
+        logs: [],
+        alerts: [],
+      }),
+    [parentLocations, fallbackPlotName, plants, beds, visibleTasks]
+  );
+
+  const plotNameById = useMemo(
+    () => new Map(plotResolution.groups.map((group) => [group.id, group.name])),
+    [plotResolution]
+  );
+
+  // Resolved once per task, not inside a comparator: `calculateTaskPriority`
+  // loads a care profile and computes a growth stage per call, so re-deriving it
+  // on every comparison would make the priority sort O(n log n) profile lookups.
+  const priorityByTaskId = useMemo(() => {
+    const map = new Map<string, TaskPriority>();
+    for (const task of visibleTasks) {
+      map.set(
+        task.id,
+        task.priority_level ??
+          calculateTaskPriority(task, (task.plant_id ? plantMap.get(task.plant_id) : null) ?? null)
+      );
+    }
+    return map;
+  }, [visibleTasks, plantMap]);
+
+  const careCtx = useMemo<CareTaskContext>(
+    () => ({
+      resolvePlotId: plotResolution.resolveTaskPlotId,
+      resolveBedId,
+      resolvePriority: (task) => priorityByTaskId.get(task.id) ?? 'medium',
+      subjectLabel,
+    }),
+    [plotResolution, resolveBedId, priorityByTaskId, subjectLabel]
+  );
+
   const filterTasksBySearch = React.useCallback(
     (taskList: TaskTemplate[]) => {
       if (!normalizedSearchQuery) return taskList;
@@ -232,16 +343,10 @@ export function useCalendarData({
     [normalizedSearchQuery, normalizeSearchText, getPlantDetails]
   );
 
-  const sortTasks = React.useCallback((taskList: TaskTemplate[]) => {
-    return [...taskList].sort((a, b) => {
-      const dateA = new Date(a.next_due_at).getTime();
-      const dateB = new Date(b.next_due_at).getTime();
-      if (dateA !== dateB) {
-        return dateA - dateB;
-      }
-      return a.task_type.localeCompare(b.task_type);
-    });
-  }, []);
+  const sortTasks = React.useCallback(
+    (taskList: TaskTemplate[]) => sortCareTasks(taskList, sortBy, careCtx),
+    [sortBy, careCtx]
+  );
 
   const groupTasks = React.useCallback(
     (taskList: TaskTemplate[]) => {
@@ -249,13 +354,26 @@ export function useCalendarData({
 
       if (groupBy === 'none') return { '': sorted };
 
+      // Main location only. The old key was the whole free-text
+      // "Parent - Child" string, so every direction became its own header and a
+      // farm with several sub-areas per plot fragmented into one-task sections;
+      // bed-level tasks, having no plant, all fell into a single "General".
+      // Seeded from `plotResolution.groups` so configured plots keep their
+      // configured order, unrecognised parents follow, and Unassigned is last —
+      // the same order the Today screen's plot cards use.
       if (groupBy === 'location') {
-        return sorted.reduce<Record<string, TaskTemplate[]>>((acc, task) => {
-          const location = getPlantDetails(task.plant_id).location || 'General';
-          if (!acc[location]) acc[location] = [];
-          acc[location].push(task);
-          return acc;
-        }, {});
+        const present = new Set(sorted.map((task) => plotResolution.resolveTaskPlotId(task)));
+        const acc: Record<string, TaskTemplate[]> = {};
+        for (const group of plotResolution.groups) {
+          if (present.has(group.id)) acc[group.name] = [];
+        }
+        for (const task of sorted) {
+          const name =
+            plotNameById.get(plotResolution.resolveTaskPlotId(task)) ?? UNASSIGNED_PLOT_NAME;
+          if (!acc[name]) acc[name] = [];
+          acc[name].push(task);
+        }
+        return acc;
       }
 
       if (groupBy === 'type') {
@@ -279,7 +397,7 @@ export function useCalendarData({
       if (groupBy === 'bed') {
         return sorted.reduce<Record<string, TaskTemplate[]>>((acc, task) => {
           const bedId = resolveBedId(task);
-          const label = bedId ? bedNames?.get(bedId) ?? 'Bed' : 'Unassigned';
+          const label = bedId ? bedNames.get(bedId) ?? 'Bed' : 'Unassigned';
           if (!acc[label]) acc[label] = [];
           acc[label].push(task);
           return acc;
@@ -288,17 +406,10 @@ export function useCalendarData({
 
       return { '': sorted };
     },
-    [sortTasks, getPlantDetails, groupBy, resolveBedId, bedNames]
+    [sortTasks, getPlantDetails, groupBy, resolveBedId, bedNames, plotResolution, plotNameById]
   );
 
   const isSearching = normalizedSearchQuery.length > 0;
-
-  // Drop bed-level tasks whose bed was deleted so they never surface in the
-  // lists, calendar cells, or segment counts (they're also being self-healed).
-  const visibleTasks = useMemo(
-    () => (orphanBedTaskIds.size > 0 ? tasks.filter((t) => !orphanBedTaskIds.has(t.id)) : tasks),
-    [tasks, orphanBedTaskIds]
-  );
 
   // Tasks after search only — used for raw date lookups (ignores type/overdue filters)
   const searchFilteredTasks = useMemo(
@@ -306,22 +417,37 @@ export function useCalendarData({
     [visibleTasks, filterTasksBySearch]
   );
 
+  // The one segment rule, shared by the visible list and the chip counts so a
+  // chip can never promise rows the segment will not show.
+  const matchesSegment = React.useCallback(
+    (task: TaskTemplate): boolean => matchesBedSegment(resolveBedId(task), bedSegment),
+    [resolveBedId, bedSegment]
+  );
+
   // Search + type/overdue/bed filters, before the All/Beds/Other segment is applied —
   // drives the segment counts so they reflect the active search and filters.
-  const preSegmentTasks = useMemo(() => {
-    let result = searchFilteredTasks;
-    if (filterTaskTypes.size > 0) {
-      result = result.filter((t) => filterTaskTypes.has(t.task_type));
-    }
-    if (filterOverdueOnly) {
-      const todayKey = farmDateKey(new Date());
-      result = result.filter((task) => {
-        const dueKey = farmDateKey(task.next_due_at);
-        return dueKey !== null && todayKey !== null && dueKey < todayKey;
-      });
-    }
-    return result;
-  }, [searchFilteredTasks, filterTaskTypes, filterOverdueOnly]);
+  const preSegmentTasks = useMemo(
+    () => filterCareTasks(searchFilteredTasks, filters, careCtx),
+    [searchFilteredTasks, filters, careCtx]
+  );
+
+  // Chip counts answer "how many would I get if I picked this?", so they run
+  // against the search-filtered list rather than the already-filtered one — a
+  // chip must not narrow its own count to zero.
+  //
+  // The segment *is* applied, because the two segments are separate lists rather
+  // than two views of one: counting across both made a chip read "Watering (30)"
+  // in Pots & Ground and then produce 12 rows. The week/month window stays
+  // unapplied — a filter narrows the whole plan, not just the page on screen.
+  const segmentScopedTasks = useMemo(
+    () => searchFilteredTasks.filter(matchesSegment),
+    [searchFilteredTasks, matchesSegment]
+  );
+
+  const facetCounts = useMemo(
+    () => countCareFacets(segmentScopedTasks, filters, careCtx),
+    [segmentScopedTasks, filters, careCtx]
+  );
 
   // Tasks visible in the current view = overdue OR within the current week/month window
   // (mirrors overdueTasks + weekTasks below). Drives accurate, non-misleading segment counts.
@@ -372,10 +498,10 @@ export function useCalendarData({
     return { bed, other };
   }, [windowTasks, resolveBedId, completedTodayIds]);
 
-  const filteredTasks = useMemo(() => {
-    if (bedSegment === 'bed') return preSegmentTasks.filter((t) => resolveBedId(t) != null);
-    return preSegmentTasks.filter((t) => resolveBedId(t) == null);
-  }, [preSegmentTasks, bedSegment, resolveBedId]);
+  const filteredTasks = useMemo(
+    () => preSegmentTasks.filter(matchesSegment),
+    [preSegmentTasks, matchesSegment]
+  );
 
   // Pre-build a date→tasks map so calendar cells do O(1) lookups instead of O(tasks) per cell
   const tasksByDateKey = useMemo(() => {
@@ -433,13 +559,21 @@ export function useCalendarData({
     [plants, harvestEntries, visibleTasks]
   );
 
-  const overdueTasks = useMemo(() => {
-    const todayKey = farmDateKey(new Date());
-    return filteredTasks.filter((task) => {
-      const dueKey = farmDateKey(task.next_due_at);
-      return dueKey !== null && todayKey !== null && dueKey < todayKey;
-    });
-  }, [filteredTasks]);
+  // `calendarDaysOverdue` rather than a date comparison of its own: it is the
+  // definition the rest of the schedule already uses, and the counts below have
+  // to agree with this list exactly or they would send the plan to a section
+  // that does not exist.
+  const overdueTasks = useMemo(
+    () => filteredTasks.filter((task) => calendarDaysOverdue(task) !== null),
+    [filteredTasks]
+  );
+
+  // Counted off `preSegmentTasks` — filters applied, segment not — so this says
+  // where the farm's late work is rather than what the open segment shows.
+  const overdueSegmentCounts = useMemo<BedSegmentCounts>(
+    () => countOverdueBySegment(preSegmentTasks, resolveBedId),
+    [preSegmentTasks, resolveBedId]
+  );
 
   const filteredHarvestsReady = useMemo(
     () =>
@@ -454,6 +588,20 @@ export function useCalendarData({
           })
         : harvestsReady,
     [harvestsReady, normalizedSearchQuery, normalizeSearchText]
+  );
+
+  // Split on `isReady` rather than handing the screen one list: only the ready
+  // half is due or overdue, and only that half earns a section pinned above
+  // Overdue. `computeHarvestsReady` already sorted both, so the first and last
+  // entry of `harvestsSoon` are its day range.
+  const harvestsReadyNow = useMemo(
+    () => filteredHarvestsReady.filter((item: HarvestReadyItem) => item.isReady),
+    [filteredHarvestsReady]
+  );
+
+  const harvestsSoon = useMemo(
+    () => filteredHarvestsReady.filter((item: HarvestReadyItem) => !item.isReady),
+    [filteredHarvestsReady]
   );
 
   const todayTasks = useMemo(() => {
@@ -525,12 +673,16 @@ export function useCalendarData({
     filteredTasks,
     overdueTasks,
     tasksByDateKey,
-    filteredHarvestsReady,
+    harvestsReadyNow,
+    harvestsSoon,
     todayTasks,
     weekTasks,
     tasksForDisplay,
     groupedTasks,
     segmentCounts,
+    overdueSegmentCounts,
+    facetCounts,
+    plotResolution,
     isSearching,
     // Helpers
     getTasksForDate,
