@@ -291,6 +291,144 @@ F10 (Beneficials + Custom CRUD, Phase A3 — deferred) is also archived; pull it
 
 > DO NOW / DO NEXT / DO AFTER tranches all shipped — see `docs/archive/ROADMAP_ARCHIVE.md`.
 
+### Farmer-Operations Roadmap (Proposed)
+
+The shipped product is a strong personal cultivation planner. The next product question is
+whether it should remain focused on planning a homestead garden or grow into a lightweight
+small-farm operations tool. The following proposals capture the highest-value gaps from a
+working farmer's point of view without committing them to the active delivery schedule.
+
+#### Recommended sequence
+
+| Order | Proposal                                     | Farmer value                                                     | Initial scope                                                         |
+| ----: | -------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+|     1 | Full data backup and portable export         | Protects the farm record and avoids product lock-in              | Versioned archive plus human-readable CSV exports                     |
+|     2 | Local task notifications                     | Prevents missed irrigation, treatment follow-up, and harvests    | On-device reminders, quiet hours, and per-task preferences            |
+|     3 | Input inventory and application traceability | Controls stock and creates an organic input/application register | Purchases, batches, expiry, stock adjustments, and application logs   |
+|     4 | Harvest sales and crop profitability         | Shows which crops and beds actually return value                 | Destination, buyer, price, direct costs, payment state, and summaries |
+|     5 | Tamil UI and simplified field workflows      | Makes daily use practical for more farmers and family members    | Typed i18n catalogs, bilingual display, and icon-led common actions   |
+|     6 | Soil amendment recommendations               | Turns stored test values into actions                            | Explainable crop-aware recommendations and follow-up tasks            |
+|     7 | Irrigation zones and water budgeting         | Reduces unnecessary watering and records source constraints      | Duration-first logs with optional flow/volume estimates               |
+|     8 | Family and worker collaboration              | Supports farms operated by more than one person                  | Farm membership, roles, assignment, attribution, and audit history    |
+
+#### 1. Full data backup and portable export
+
+- Extend `services/backup.ts` beyond images to plants, beds, locations, tasks and logs,
+  journal entries, farm configuration, catalog customizations, and care-profile overrides.
+- Use a versioned, validated manifest; preview record counts and conflicts before import.
+- Provide safe replace and merge modes, run migrations after validation, and create a
+  pre-import recovery backup before destructive operations.
+- Export harvest, expense, input-application, and task history as CSV so records remain usable
+  outside the app.
+
+**Done when:** a farmer can move a complete farm to a new device/account-compatible install,
+inspect the export without this app, and recover cleanly from an interrupted import.
+
+#### 2. Local task notifications
+
+- Schedule on-device reminders for due/overdue care, active pest or disease follow-up,
+  harvest windows, and rain-sensitive work; do not require a paid push backend.
+- Use stable notification identifiers so edits replace old reminders rather than duplicating
+  them, and reschedule after relevant plant, task, or settings changes.
+- Add quiet hours, lead time, category, and per-plot preferences in Settings.
+- Keep sensitive notes out of lock-screen text and provide a useful in-app fallback when
+  notification permission is denied.
+
+**Done when:** reminders remain correct after task edits, completion, app restart, timezone
+change, and periods without connectivity.
+
+#### 3. Input inventory and organic traceability
+
+- Add input items, suppliers, purchases, batch/lot and expiry data, certification notes, stock
+  adjustments, and application records.
+- Link each application to a plot/bed/plant, task or journal entry, date, dosage, operator,
+  reason, and optional evidence photo.
+- Offer “record input used” while completing spray and fertilising work, with auditable
+  corrections rather than silent edits to historical stock.
+- Show low-stock and approaching-expiry warnings and export a printable/CSV organic
+  application register.
+
+**Done when:** current stock reconciles from transactions and a farmer can produce a complete
+input-use history for any crop and season.
+
+#### 4. Harvest sales and crop profitability
+
+- Add a harvest destination: sold, home use, shared, seed, animal feed, or waste.
+- For sales, capture grade, buyer/market, unit price, gross value, transport and other direct
+  deductions, and payment status. Preserve journal harvests as the source of truth or migrate
+  them idempotently into a dedicated harvest model.
+- Summarize yield, revenue, direct cost, and estimated margin by crop, bed, and season.
+- Keep this deliberately lighter than general accounting; export transactions to CSV instead
+  of building a full financial ledger.
+
+**Done when:** a farmer can answer how much was harvested, where it went, what was paid, what
+remains outstanding, and the estimated return for a crop/bed/season.
+
+#### 5. Tamil UI and low-literacy field use
+
+- Add typed English and Tamil message catalogs and a persisted language preference.
+- Translate high-frequency field workflows first: Today, care completion, Beds, Plant Detail,
+  Journal entry, validation, alerts, and accessibility labels.
+- Retain Tamil and English crop-name search, add an optional bilingual display, and localize
+  dates, numbers, units, and voice-recognition locale.
+- Prefer icon-plus-text actions, large touch targets, short forms, and voice entry for outdoor
+  use; translation alone is not sufficient.
+
+**Done when:** the core daily loop can be completed entirely in Tamil without falling back to
+an untranslated dialog, validation message, or notification.
+
+#### 6. Soil amendment recommendations
+
+- Preserve soil-test history instead of overwriting the latest pH/NPK/drainage observation.
+- Build a pure, tested recommendation engine using soil profile, planned crop/family, bed area,
+  and season.
+- Return explainable findings, conservative organic amendment ranges, timing,
+  contraindications, confidence/limitations, and a suggested retest date.
+- Let farmers turn selected recommendations into bed-level work and record the actual input
+  applied. Do not present estimated advice as a laboratory prescription.
+
+**Done when:** each recommendation explains the observed problem, proposed action, calculation
+assumptions, and follow-up measurement.
+
+#### 7. Irrigation zones and water budgeting
+
+- Link beds to irrigation zones with source, delivery method, schedule, and optional flow rate,
+  pump, or valve identifiers.
+- Estimate need from crop requirement, bed area, growth stage, recent/forecast rain, soil
+  moisture retention, and delivery efficiency, while clearly labeling estimates.
+- Record duration, optional volume, observed soil state, skipped-because-of-rain, and
+  source-unavailable outcomes during watering completion.
+- Remain useful without meters: duration-only logging must be a first-class workflow.
+
+**Done when:** a farmer can see upcoming weekly demand and compare it with recorded irrigation
+and rainfall without being required to own a flow meter or sensor.
+
+#### 8. Optional family and worker collaboration
+
+- Introduce farm membership separately from Firebase user identity, with owner, manager, and
+  worker roles. Migrate every existing account to a single-owner farm without changing its
+  normal single-user experience.
+- Add task assignment, completion attribution, short worker notes, invitation revocation, and
+  an audit trail for important changes.
+- Restrict configuration deletion, backup restore, catalog administration, and financial
+  visibility by role; never solve collaboration by sharing one login.
+- Design Firestore authorization, offline conflicts, and multi-device tests before enabling
+  the user-facing feature.
+
+**Done when:** two devices can safely work on the same farm, each important write is attributable,
+and a removed member can no longer read or modify farm data.
+
+#### Scope guardrails
+
+1. Treat this section as **candidate scope**, not an approved commitment; validate each item
+   with farmers before assigning it to a phase.
+2. Prefer optional progressive fields and quick defaults over bookkeeping-heavy mandatory forms.
+3. Every field workflow must remain offline-capable and recover safely from partial sync.
+4. Add only the smallest financial features needed for crop decisions; do not become a general
+   accounting or payroll product.
+5. Introduce collaboration last because it changes authorization, ownership, synchronization,
+   migrations, and support expectations across the whole application.
+
 ### DO LATER (Phase G–H)
 
 1. **Tamil i18n** — only after all screens feature-complete (extracting strings from moving targets is waste)
