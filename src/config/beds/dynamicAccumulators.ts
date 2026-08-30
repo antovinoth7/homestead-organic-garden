@@ -15,7 +15,7 @@ export const DYNAMIC_ACCUMULATORS: DynamicAccumulator[] = [
     description: 'Fast-growing nitrogen-fixer. Chop stems at 45-day intervals; leaves are edible.',
   },
   {
-    name: 'Moringa',
+    name: 'Drumstick',
     tamilName: 'முருங்கை',
     chop_drop_interval_days: 90,
     nutrients_mined: ['Nitrogen', 'Phosphorus', 'Potassium', 'Calcium', 'Magnesium'],

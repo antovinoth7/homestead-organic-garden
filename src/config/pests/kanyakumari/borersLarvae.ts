@@ -523,7 +523,7 @@ export const BORER_LARVAE_PESTS: PestEntry[] = [
       },
     ],
     seasonalRisk: { sw_monsoon: 'high', ne_monsoon: 'moderate' },
-    plantsAffected: ['Drumstick', 'Castor', 'Moringa'],
+    plantsAffected: ['Drumstick', 'Castor'],
   },
   {
     id: 'black_headed_caterpillar',

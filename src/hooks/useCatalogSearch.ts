@@ -23,6 +23,8 @@ export interface UseCatalogSearchReturn {
   /** True once a non-empty query has settled — drives the results view. */
   isSearching: boolean;
   results: CatalogSearchResult[];
+  /** Matches before the display limit — the header shows "N of total". */
+  totalMatches: number;
   recentSearches: string[];
   /** Records a query as recent. Called when a search is acted on, not per keystroke. */
   commitSearch: (query: string) => void;
@@ -46,6 +48,12 @@ export function useCatalogSearch({
     return () => clearTimeout(timer);
   }, [query]);
 
+  // Recents are persisted by an effect rather than inside the state updater:
+  // React double-invokes updaters under StrictMode, so a write in there fires
+  // twice. The flag keeps the first render from clobbering stored recents
+  // with the empty initial state before the load below resolves.
+  const hydratedRef = useRef(false);
+
   // Load persisted recents once.
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -61,13 +69,21 @@ export function useCatalogSearch({
     };
   }, []);
 
+  useEffect(() => {
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      return;
+    }
+    void setData(KEYS.CATALOG_RECENT_SEARCHES, recentSearches);
+  }, [recentSearches]);
+
   // Rebuilt only when the catalog reloads — not on every keystroke.
   const index = useMemo(
     () => buildCatalogSearchIndex(profiles, plantCountsByType),
     [profiles, plantCountsByType]
   );
 
-  const results = useMemo(() => searchCatalog(index, debouncedQuery), [index, debouncedQuery]);
+  const outcome = useMemo(() => searchCatalog(index, debouncedQuery), [index, debouncedQuery]);
 
   const clearQuery = useCallback(() => {
     setQuery('');
@@ -75,24 +91,18 @@ export function useCatalogSearch({
   }, []);
 
   const commitSearch = useCallback((next: string) => {
-    setRecentSearches((prev) => {
-      const updated = pushRecentSearch(prev, next);
-      void setData(KEYS.CATALOG_RECENT_SEARCHES, updated);
-      return updated;
-    });
+    setRecentSearches((prev) => pushRecentSearch(prev, next));
   }, []);
 
-  const clearRecentSearches = useCallback(() => {
-    setRecentSearches([]);
-    void setData<string>(KEYS.CATALOG_RECENT_SEARCHES, []);
-  }, []);
+  const clearRecentSearches = useCallback(() => setRecentSearches([]), []);
 
   return {
     query,
     setQuery,
     clearQuery,
-    isSearching: query.trim().length > 0,
-    results,
+    isSearching: debouncedQuery.trim().length > 0,
+    results: outcome.results,
+    totalMatches: outcome.totalMatches,
     recentSearches,
     commitSearch,
     clearRecentSearches,

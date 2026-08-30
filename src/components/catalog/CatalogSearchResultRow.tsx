@@ -16,6 +16,10 @@ interface Props {
   isLast: boolean;
   onPress: (plantName: string, plantType: PlantType) => void;
 }
+/** "ladies finger" → "Ladies Finger" — aliases are stored as lookup keys. */
+function titleCase(value: string): string {
+  return value.replace(/w/g, (ch) => ch.toUpperCase());
+}
 
 function CatalogSearchResultRowComponent({
   result,
@@ -39,8 +43,14 @@ function CatalogSearchResultRowComponent({
 
   // Sub-line names the category and whether the plant is already growing, so a
   // cross-category result carries enough context to pick between near-duplicates.
-  const usage =
-    result.gardenCount > 0 ? `${result.gardenCount} in garden` : 'Not in garden';
+  const usage = result.gardenCount > 0 ? `${result.gardenCount} in garden` : 'Not in garden';
+
+  // An alias hit shows the canonical name, so without this the row looks
+  // unrelated to what was typed — say which other name matched.
+  const aliasNote =
+    result.matchedField === 'alias' && result.matchedAlias
+      ? titleCase(result.matchedAlias)
+      : null;
 
   return (
     <View
@@ -66,6 +76,12 @@ function CatalogSearchResultRowComponent({
                 {tamilBefore}
                 <Text style={styles.resultHighlight}>{tamilMatch}</Text>
                 {tamilAfter}
+                {' • '}
+              </>
+            ) : null}
+            {aliasNote ? (
+              <>
+                <Text style={styles.resultHighlight}>{aliasNote}</Text>
                 {' • '}
               </>
             ) : null}

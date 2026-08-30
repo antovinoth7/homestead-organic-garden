@@ -6,6 +6,9 @@ import {
   PLANT_CATEGORIES,
   getPlantProfiles,
   getPlantNamesForType,
+  getMergedProfiles,
+  getHiddenPlantNames,
+  restorePlantProfile,
 } from '@/services/plantProfiles';
 import { getAllPlants } from '@/services/plants';
 import { Plant, PlantProfiles, PlantType } from '@/types/database.types';
@@ -19,6 +22,12 @@ export interface CategoryData {
 
 export interface UsePlantCatalogManagerReturn {
   profiles: PlantProfiles;
+  /**
+   * Bundled defaults with the user's edits, additions and deletions applied.
+   * Search indexes this — `profiles` alone holds only the overrides, and is
+   * empty on an install where nothing has been edited.
+   */
+  mergedProfiles: PlantProfiles;
   plants: Plant[];
   activeCategory: PlantType;
   setActiveCategory: (category: PlantType) => void;
@@ -29,6 +38,10 @@ export interface UsePlantCatalogManagerReturn {
   allCategoryCounts: Record<PlantType, number>;
   /** Garden-plant counts keyed by category then variety name — feeds search. */
   plantCountsByType: Record<PlantType, Record<string, number>>;
+  /** Bundled entries the user deleted from the active category. */
+  hiddenPlantNames: string[];
+  /** Un-hides a deleted bundled entry, then reloads the catalog. */
+  restore: (name: string) => Promise<void>;
 }
 
 export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
@@ -93,8 +106,28 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     return result;
   }, [profiles]);
 
+  const mergedProfiles = useMemo(() => getMergedProfiles(profiles), [profiles]);
+
+  const hiddenPlantNames = useMemo(
+    () => getHiddenPlantNames(profiles)[activeCategory] ?? [],
+    [profiles, activeCategory]
+  );
+
+  const restore = useCallback(
+    async (name: string): Promise<void> => {
+      try {
+        await restorePlantProfile(activeCategory, name);
+        await reload();
+      } catch (error: unknown) {
+        Alert.alert('Error', getErrorMessage(error) ?? 'Failed to restore the plant.');
+      }
+    },
+    [activeCategory, reload]
+  );
+
   return {
     profiles,
+    mergedProfiles,
     plants,
     activeCategory,
     setActiveCategory,
@@ -103,5 +136,7 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     reload,
     allCategoryCounts,
     plantCountsByType,
+    hiddenPlantNames,
+    restore,
   };
 }

@@ -721,6 +721,13 @@ export interface PlantProfile {
   varieties?: string[];
   varietyDetails?: Record<string, VarietyDetail>;
   isUserAdded?: boolean;
+  /**
+   * Tombstone for a bundled catalog entry the user deleted. The entry stays in
+   * the stored map because DEFAULT_PLANT_PROFILES would otherwise re-inject
+   * the name on the next read; readers filter it out. User-added entries are
+   * removed outright and never carry this.
+   */
+  isDeleted?: boolean;
   // Care override fields (all optional — fall back to static defaults)
   waterRequirement?: WaterRequirement;
   wateringFrequencyDays?: number;

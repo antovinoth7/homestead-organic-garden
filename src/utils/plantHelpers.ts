@@ -8,6 +8,7 @@ import {
   PlantType,
 } from '../types/database.types';
 import { getPlantCareProfile } from './plantCareDefaults';
+import { getCanonicalPlantKey, toLookupKey } from './plantAliases';
 import { logger } from './logger';
 
 // Companion planting data
@@ -21,13 +22,11 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Cucumber: ['Beans', 'Peas', 'Radish', 'Sunflower', 'Lettuce'],
   Pepper: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold'],
   Chilli: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold', 'Turmeric'],
-  Eggplant: ['Beans', 'Peas', 'Spinach', 'Thyme', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
   Brinjal: ['Beans', 'Peas', 'Spinach', 'Thyme', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
   'Long Brinjal': ['Beans', 'Peas', 'Spinach', 'Thyme', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
   Tapioca: ['Cowpea', 'Beans', 'Marigold'],
   Drumstick: ['Brinjal', 'Chilli', 'Coriander', 'Turmeric', 'Marigold'],
   Amaranthus: ['Onion', 'Radish', 'Beans'],
-  Methi: ['Radish', 'Onion', 'Coriander'],
   Cowpea: ['Cucumber', 'Corn', 'Brinjal', 'Radish'],
   'Bitter Gourd': ['Beans', 'Radish', 'Marigold'],
   'Snake Gourd': ['Beans', 'Coriander', 'Marigold'],
@@ -35,7 +34,7 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   'Bottle Gourd': ['Beans', 'Coriander', 'Marigold'],
   Pumpkin: ['Beans', 'Corn', 'Marigold'],
   'Ash Gourd': ['Beans', 'Marigold', 'Coriander'],
-  Spinach: ['Strawberry', 'Peas', 'Beans', 'Eggplant'],
+  Spinach: ['Strawberry', 'Peas', 'Beans', 'Brinjal'],
   Radish: ['Lettuce', 'Cucumber', 'Carrot', 'Spinach'],
   Potato: ['Beans', 'Cabbage', 'Corn', 'Peas'],
   Onion: ['Carrot', 'Tomato', 'Lettuce', 'Cabbage', 'Pepper'],
@@ -50,7 +49,7 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Coriander: ['Tomato', 'Beans', 'Peas'],
   Parsley: ['Tomato', 'Carrot', 'Roses'],
   Rosemary: ['Cabbage', 'Beans', 'Carrot', 'Sage'],
-  Thyme: ['Cabbage', 'Eggplant', 'Potato', 'Strawberry'],
+  Thyme: ['Cabbage', 'Brinjal', 'Potato', 'Strawberry'],
   Oregano: ['Basil', 'Pepper', 'Cucumber'],
   Sage: ['Rosemary', 'Cabbage', 'Carrot', 'Tomato'],
   Dill: ['Lettuce', 'Cucumber', 'Cabbage', 'Onion'],
@@ -78,8 +77,7 @@ const COMPANION_PLANTS: Record<string, string[]> = {
 
   // Bed-type plants — new additions
   Fenugreek: ['Spinach', 'Radish', 'Onion', 'Coriander'],
-  'Ladies Finger': ['Basil', 'Pepper', 'Eggplant', 'Cucumber', 'Marigold', 'Cowpea'],
-  Moringa: ['Tulsi', 'Aloe Vera', 'Lemongrass'],
+  'Ladies Finger': ['Basil', 'Pepper', 'Brinjal', 'Cucumber', 'Marigold', 'Cowpea'],
   'Pasalai Keerai': ['Radish', 'Turmeric', 'Basil'],
   'French Beans': ['Carrot', 'Beetroot', 'Cucumber', 'Radish'],
   'Black Gram': ['Carrot', 'Radish', 'Coriander'],
@@ -93,11 +91,11 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Yam: ['Banana', 'Taro', 'Cowpea'],
   'Lotus Stem': ['Taro'],
   Strawberry: ['Spinach', 'Lettuce', 'Thyme', 'Marigold'],
-  Brahmi: ['Tulsi', 'Moringa', 'Lemongrass'],
+  Brahmi: ['Tulsi', 'Drumstick', 'Lemongrass'],
   Ashwagandha: ['Basil', 'Marigold'],
-  'Aloe Vera': ['Moringa', 'Lemongrass'],
+  'Aloe Vera': ['Drumstick', 'Lemongrass'],
   Agathi: ['Banana', 'Maize', 'Pigeon Pea'],
-  Cocoa: ['Banana', 'Moringa'],
+  Cocoa: ['Banana', 'Drumstick'],
   'Black Pepper': ['Cocoa', 'Banana'],
   Cardamom: ['Banana', 'Ginger', 'Turmeric'],
   Ajwain: ['Coriander', 'Basil', 'Fennel'],
@@ -152,7 +150,6 @@ const INCOMPATIBLE_PLANTS: Record<string, string[]> = {
   Groundnut: ['Onion', 'Garlic'],
   'Pigeon Pea': ['Fennel'],
   Brinjal: ['Fennel', 'Potato'],
-  Eggplant: ['Fennel', 'Potato'],
   'Long Brinjal': ['Fennel', 'Potato'],
   Chilli: ['Fennel'],
   Pepper: ['Fennel'],
@@ -223,34 +220,6 @@ export function calculateExpectedHarvestDate(
   }
 }
 
-const toLookupKey = (value: string): string => value.toLowerCase().replace(/\s+/g, ' ').trim();
-
-const PLANT_VARIETY_ALIASES: Record<string, string> = {
-  okra: 'ladies finger',
-  bhindi: 'ladies finger',
-  bhendi: 'ladies finger',
-  vendakkai: 'ladies finger',
-  eggplant: 'brinjal',
-  aubergine: 'brinjal',
-  kathirikai: 'brinjal',
-  cassava: 'tapioca',
-  maravalli: 'tapioca',
-  murungai: 'drumstick',
-  moringa: 'drumstick',
-  chili: 'chilli',
-  'chilli pepper': 'chilli',
-  'dwarf coconut': 'coconut',
-  'tall coconut': 'coconut',
-  'hybrid coconut': 'coconut',
-  'king coconut': 'coconut',
-};
-
-const getCanonicalPlantKey = (plantVariety: string | null | undefined): string | null => {
-  if (!plantVariety) return null;
-  const key = toLookupKey(plantVariety);
-  return PLANT_VARIETY_ALIASES[key] ?? key;
-};
-
 /**
  * Re-key a display-cased companion record by its normalized lookup key so that
  * lookups tolerate case, whitespace and aliases (e.g. "Okra" → "ladies finger").
@@ -267,6 +236,23 @@ const buildNormalizedCompanionMap = (
 
 const COMPANION_PLANTS_NORMALIZED = buildNormalizedCompanionMap(COMPANION_PLANTS);
 const INCOMPATIBLE_PLANTS_NORMALIZED = buildNormalizedCompanionMap(INCOMPATIBLE_PLANTS);
+/**
+ * Companion data is written once for 'Coconut', but the catalog ships the four
+ * cultivars instead. They are distinct entries with their own images and Tamil
+ * names, so they are not name aliases — only their companion lookup folds in.
+ */
+const COMPANION_NAME_FALLBACKS: Record<string, string> = {
+  'dwarf coconut': 'coconut',
+  'tall coconut': 'coconut',
+  'hybrid coconut': 'coconut',
+  'king coconut': 'coconut',
+};
+
+const companionKey = (plantVariety: string | null | undefined): string | null => {
+  const key = getCanonicalPlantKey(plantVariety);
+  return key === null ? null : COMPANION_NAME_FALLBACKS[key] ?? key;
+};
+
 
 /**
  * Get companion plant suggestions for a given plant variety. Resolves aliases
@@ -274,7 +260,7 @@ const INCOMPATIBLE_PLANTS_NORMALIZED = buildNormalizedCompanionMap(INCOMPATIBLE_
  * canonical name has data (not only exact-cased matches).
  */
 export function getCompanionSuggestions(plantVariety: string | null | undefined): string[] {
-  const key = getCanonicalPlantKey(plantVariety);
+  const key = companionKey(plantVariety);
   return key ? COMPANION_PLANTS_NORMALIZED[key] ?? [] : [];
 }
 
@@ -283,7 +269,7 @@ export function getCompanionSuggestions(plantVariety: string | null | undefined)
  * same alias/normalization resolution as {@link getCompanionSuggestions}.
  */
 export function getIncompatiblePlants(plantVariety: string | null | undefined): string[] {
-  const key = getCanonicalPlantKey(plantVariety);
+  const key = companionKey(plantVariety);
   return key ? INCOMPATIBLE_PLANTS_NORMALIZED[key] ?? [] : [];
 }
 
@@ -1484,7 +1470,6 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Cabbage: '🥬',
   Broccoli: '🥦',
   Cucumber: '🥒',
-  Eggplant: '🍆',
   Brinjal: '🍆',
   'Long Brinjal': '🍆',
   Pumpkin: '🎃',
@@ -1507,7 +1492,6 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Sage: '🌿',
   Dill: '🌿',
   Lemongrass: '🌾',
-  Methi: '🌿',
   Mango: '🥭',
   Banana: '🍌',
   Guava: '🍈',
@@ -1541,7 +1525,6 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   'Pasalai Keerai': '🥬',
   Fenugreek: '🌿',
   'Ladies Finger': '🌿',
-  Moringa: '🌿',
   Squash: '🥒',
   'Yardlong Beans': '🫘',
   Beetroot: '🫚',

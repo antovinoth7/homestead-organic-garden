@@ -67,7 +67,7 @@ export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
   ],
   three_sisters: ['Maize', 'Beans', 'Pumpkin', 'Squash', 'Cowpea', 'Yardlong Beans'],
   medicinal_guild: [
-    'Moringa',
+    'Drumstick',
     'Tulsi',
     'Aloe Vera',
     'Lemongrass',

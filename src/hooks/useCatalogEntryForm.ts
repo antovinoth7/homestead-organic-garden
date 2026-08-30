@@ -7,6 +7,8 @@ import {
   getPlantProfiles,
   savePlantProfile,
   savePlantProfiles,
+  getPlantNamesForType,
+  getProfileEntry,
 } from '@/services/plantProfiles';
 import { getAllPlants, updatePlantVariety } from '@/services/plants';
 import type {
@@ -165,9 +167,12 @@ export function useCatalogEntryForm({
     []
   );
 
-  const currentProfile = profiles[plantType]?.[initialName];
+  // Both read the merged catalog, not the raw override map: the latter is empty
+  // until the user edits something, which made every bundled entry look absent
+  // and its whole category look empty.
+  const currentProfile = getProfileEntry(profiles, plantType, initialName);
   const categoryPlants = useMemo(
-    () => Object.keys(profiles[plantType] ?? {}),
+    () => getPlantNamesForType(profiles, plantType),
     [profiles, plantType]
   );
 

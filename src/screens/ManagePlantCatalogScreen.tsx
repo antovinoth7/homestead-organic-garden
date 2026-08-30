@@ -19,9 +19,11 @@ import { CatalogSearchBar } from '@/components/catalog/CatalogSearchBar';
 import { CatalogBrowseRow } from '@/components/catalog/CatalogBrowseRow';
 import { CatalogSearchResultRow } from '@/components/catalog/CatalogSearchResultRow';
 import { RecentSearchChips } from '@/components/catalog/RecentSearchChips';
+import { HiddenPlantsSection } from '@/components/catalog/HiddenPlantsSection';
 import { usePlantCatalogManager } from '@/hooks/usePlantCatalogManager';
 import { useCatalogSearch } from '@/hooks/useCatalogSearch';
 import type { CatalogSearchResult } from '@/utils/catalogSearch';
+import { getCanonicalPlantKey } from '@/utils/plantAliases';
 import type { PlantType } from '@/types/database.types';
 
 type CatalogListItem =
@@ -35,13 +37,15 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
 
   const {
-    profiles,
     activeCategory,
     setActiveCategory,
     loading,
     categoryData,
     allCategoryCounts,
     plantCountsByType,
+    mergedProfiles,
+    hiddenPlantNames,
+    restore,
     reload,
   } = usePlantCatalogManager();
 
@@ -51,22 +55,22 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     clearQuery,
     isSearching,
     results,
+    totalMatches,
     recentSearches,
     commitSearch,
     clearRecentSearches,
-  } = useCatalogSearch({ profiles, plantCountsByType });
+  } = useCatalogSearch({ profiles: mergedProfiles, plantCountsByType });
 
   const openPlant = useCallback(
     (plantName: string, plantType: PlantType) => {
       // Search spans categories, so the row's own type wins over the active pill.
-      if (isSearching) commitSearch(query);
       moreNav.navigate('CatalogPlantDetail', {
         plantName,
         plantType,
         isCreating: false,
       });
     },
-    [moreNav, isSearching, commitSearch, query]
+    [moreNav]
   );
 
   const onAddPlant = useCallback(() => {
@@ -77,16 +81,33 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     });
   }, [moreNav, activeCategory]);
 
+  // "Okra" and "Methi" are Ladies Finger and Fenugreek. Creating a second entry
+  // for a name the catalog already knows is how the duplicates got there, so
+  // resolve the query first and open the existing plant when one matches.
   const onCreateFromQuery = useCallback(() => {
     const trimmed = query.trim();
     if (!trimmed) return;
     commitSearch(trimmed);
+
+    const canonical = getCanonicalPlantKey(trimmed);
+    const existing = results.find(
+      (result) => getCanonicalPlantKey(result.name) === canonical
+    );
+    if (existing) {
+      moreNav.navigate('CatalogPlantDetail', {
+        plantName: existing.name,
+        plantType: existing.plantType,
+        isCreating: false,
+      });
+      return;
+    }
+
     moreNav.navigate('CatalogPlantDetail', {
       plantName: trimmed,
       plantType: activeCategory,
       isCreating: true,
     });
-  }, [moreNav, query, activeCategory, commitSearch]);
+  }, [moreNav, query, activeCategory, commitSearch, results]);
 
   const onSubmitSearch = useCallback(() => commitSearch(query), [commitSearch, query]);
 
@@ -150,7 +171,9 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
           <View style={styles.sectionLabelRow}>
             <Text style={styles.sectionLabel}>Matches</Text>
             <Text style={styles.sectionLabelCount}>
-              {results.length} {results.length === 1 ? 'plant' : 'plants'}
+              {totalMatches > results.length
+                ? `${results.length} of ${totalMatches}`
+                : `${totalMatches} ${totalMatches === 1 ? 'plant' : 'plants'}`}
             </Text>
           </View>
         ) : (
@@ -169,6 +192,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       onSubmitSearch,
       isSearching,
       results.length,
+      totalMatches,
       styles,
       activeCategory,
       allCategoryCounts,
@@ -177,28 +201,36 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   );
 
   const listFooter = useMemo(() => {
-    if (!isSearching) return null;
+    // Recent searches are a way *into* a search, so they belong to the browse
+    // state; the create CTA only makes sense once a query has come up short.
+    if (!isSearching) {
+      return (
+        <>
+          <RecentSearchChips
+            queries={recentSearches}
+            onSelect={setQuery}
+            onClearAll={clearRecentSearches}
+          />
+          <HiddenPlantsSection names={hiddenPlantNames} onRestore={restore} />
+        </>
+      );
+    }
     return (
-      <>
-        <RecentSearchChips
-          queries={recentSearches}
-          onSelect={setQuery}
-          onClearAll={clearRecentSearches}
-        />
-        <TouchableOpacity style={styles.createCta} onPress={onCreateFromQuery} activeOpacity={0.8}>
-          <Ionicons name="leaf-outline" size={18} color={theme.primary} />
-          <Text style={styles.createCtaText}>
-            {results.length > 0 ? 'Not the one? ' : 'No match? '}
-            <Text style={styles.createCtaStrong}>Add “{query.trim()}” as a new plant</Text>
-          </Text>
-        </TouchableOpacity>
-      </>
+      <TouchableOpacity style={styles.createCta} onPress={onCreateFromQuery} activeOpacity={0.8}>
+        <Ionicons name="leaf-outline" size={18} color={theme.primary} />
+        <Text style={styles.createCtaText}>
+          {results.length > 0 ? 'Not the one? ' : 'No match? '}
+          <Text style={styles.createCtaStrong}>Add “{query.trim()}” as a new plant</Text>
+        </Text>
+      </TouchableOpacity>
     );
   }, [
     isSearching,
     recentSearches,
     setQuery,
     clearRecentSearches,
+    hiddenPlantNames,
+    restore,
     styles,
     onCreateFromQuery,
     theme.primary,

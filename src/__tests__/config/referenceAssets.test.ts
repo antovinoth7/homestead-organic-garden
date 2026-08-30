@@ -9,6 +9,7 @@ import {
 import {
   EXTRA_REFERENCE_PLANT_NAMES,
   getKnownReferencePlantNames,
+  resolvePlantImageKey,
 } from '@/config/referenceKeys';
 import {
   DISEASE_IMAGES,
@@ -132,8 +133,12 @@ describe('PLANT_IMAGE_ALIASES', () => {
 
   it('resolves aliased plant names to the same image slot as the canonical name', () => {
     expect(getPlantImage('Eggplant')).toBe(getPlantImage('Brinjal'));
-    expect(getPlantImage('Long Brinjal')).toBe(getPlantImage('Brinjal'));
     expect(getPlantImage('Maize')).toBe(getPlantImage('Corn'));
+  });
+
+  it('keeps Long Brinjal on its own image slot instead of sharing the Brinjal photo', () => {
+    expect(resolvePlantImageKey('Long Brinjal')).toBe('long_brinjal');
+    expect(resolvePlantImageKey('Brinjal')).toBe('brinjal');
   });
 
   it('includes all curated supplemental plants in the reference-image name set', () => {

@@ -84,7 +84,7 @@ describe('buildQuickStartPlan', () => {
     expect(spiceNames.has('Carrot')).toBe(true);
   });
 
-  it('seats the full Medicinal Guild after the Moringa row-gap fix', () => {
+  it('seats the full Medicinal Guild after the Drumstick row-gap fix', () => {
     const plan = buildQuickStartPlan(
       GUILD_TEMPLATES.medicinal_guild,
       W,
@@ -93,7 +93,7 @@ describe('buildQuickStartPlan', () => {
       'raised'
     );
     const names = new Set(plan.entries.map((e) => e.name));
-    for (const species of ['Moringa', 'Tulsi', 'Aloe Vera', 'Lemongrass', 'Tomato']) {
+    for (const species of ['Drumstick', 'Tulsi', 'Aloe Vera', 'Lemongrass', 'Tomato']) {
       expect(names.has(species)).toBe(true);
     }
     expect(plan.dropped).toHaveLength(0);

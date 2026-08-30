@@ -4,6 +4,8 @@
  * without pulling in `referenceImages.gen.ts`, whose `require('*.webp')`
  * calls only resolve under Metro.
  */
+import { getCanonicalPlantKey } from '../utils/plantAliases';
+
 
 /** Converts a display name to a stable asset key: "Aloe Vera" → "aloe_vera". */
 export function slugifyReferenceKey(name: string): string {
@@ -20,14 +22,10 @@ export function slugifyReferenceKey(name: string): string {
  * slug an image file is stored under.
  */
 export const PLANT_IMAGE_ALIASES: Record<string, string> = {
-  eggplant: 'brinjal',
-  long_brinjal: 'brinjal',
   pepper: 'chilli',
   lime: 'lemon',
   maize: 'corn',
   amaranth: 'amaranthus',
-  methi: 'fenugreek',
-  moringa: 'drumstick',
   green_peas: 'peas',
   amaranth_greens: 'amaranthus',
   palak: 'spinach',
@@ -43,7 +41,6 @@ export const EXTRA_REFERENCE_PLANT_NAMES = [
   'Cauliflower',
   'Taro',
   'Sweet Potato',
-  'Colocasia',
   'Turnip',
   'Knol Khol',
   'Green Peas',
@@ -99,8 +96,14 @@ export function getKnownReferencePlantNames(catalogNames: readonly string[]): st
   return [...new Set([...catalogNames, ...EXTRA_REFERENCE_PLANT_NAMES])];
 }
 
-/** Resolves a plant name to the canonical asset key used in PLANT_IMAGES. */
+/**
+ * Resolves a plant name to the canonical asset key used in PLANT_IMAGES.
+ *
+ * Name aliases run first so a renamed-away entry (Methi, Eggplant) lands on
+ * its canonical crop, then PLANT_IMAGE_ALIASES folds in the names that are a
+ * distinct plant but share a photo.
+ */
 export function resolvePlantImageKey(plantName: string): string {
-  const slug = slugifyReferenceKey(plantName);
+  const slug = slugifyReferenceKey(getCanonicalPlantKey(plantName) ?? plantName);
   return PLANT_IMAGE_ALIASES[slug] ?? slug;
 }

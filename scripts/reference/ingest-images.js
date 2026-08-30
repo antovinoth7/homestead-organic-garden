@@ -5,8 +5,8 @@
  * 1. Reads assets-src/manifest.json (run `npm run reference:manifest` first)
  *    to learn the valid ids per kind.
  * 2. Converts every image in assets-src/{pests,diseases,plants,organic-inputs}/ to a
- *    400×300 cover-cropped WebP ≤ 50 KB in assets/reference/<kind>/<id>.webp
- *    (quality starts at 80 and steps down by 5 to a floor of 45).
+ *    800×600 cover-cropped WebP ≤ 160 KB in assets/reference/<kind>/<id>.webp
+ *    (quality starts at 80 and steps down by 5 to a floor of 60).
  * 3. Regenerates src/config/referenceImages.gen.ts from the WebP files that
  *    exist on disk — the gen file must be committed after every run.
  *
@@ -25,11 +25,11 @@ const STAGING_DIR = path.join(ROOT, 'assets-src');
 const OUTPUT_DIR = path.join(ROOT, 'assets', 'reference');
 const GEN_FILE = path.join(ROOT, 'src', 'config', 'referenceImages.gen.ts');
 
-const MAX_BYTES = 50 * 1024;
-const WIDTH = 400;
-const HEIGHT = 300;
+const MAX_BYTES = 160 * 1024;
+const WIDTH = 800;
+const HEIGHT = 600;
 const QUALITY_START = 80;
-const QUALITY_FLOOR = 45;
+const QUALITY_FLOOR = 60;
 const QUALITY_STEP = 5;
 const MISSING_ONLY = process.argv.includes('--missing-only');
 
@@ -106,7 +106,7 @@ async function ingestKind({ dir }, validIds, summary) {
         `${dir}/${id}.webp (${(result.bytes / 1024).toFixed(1)} KB @ q${result.quality})`
       );
     } else {
-      summary.oversize.push(`${dir}/${fileName} (still > 50 KB at quality ${QUALITY_FLOOR})`);
+      summary.oversize.push(`${dir}/${fileName} (still > ${(MAX_BYTES / 1024).toFixed(0)} KB at quality ${QUALITY_FLOOR})`);
     }
   }
 }

@@ -1,5 +1,6 @@
 import { PlantCatalog, PlantCatalogCategory, PlantType } from '../types/database.types';
 import { getData, KEYS } from '../lib/storage';
+import { getCanonicalPlantKey, PLANT_NAME_ALIASES, toLookupKey } from '../utils/plantAliases';
 
 export const PLANT_CATEGORIES: PlantType[] = [
   'vegetable',
@@ -23,7 +24,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Tapioca',
         'Drumstick',
         'Amaranthus',
-        'Methi',
         'Cowpea',
         'Beans',
         'Bitter Gourd',
@@ -41,21 +41,18 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Cauliflower',
         'Carrot',
         'Potato',
-        'Eggplant',
         'Pepper',
         // Kanyakumari root vegetables & tubers
         'Taro',
         'Elephant Yam',
         'Sweet Potato',
         'Ash Plantain',
-        'Colocasia',
         // Bed-type plants — leafy greens
         'Lettuce',
         'Purslane',
         'Pasalai Keerai',
         'Fenugreek',
         'Ladies Finger',
-        'Moringa',
         // Bed-type plants — fruiting & climbing
         'Squash',
         'Yardlong Beans',
@@ -91,7 +88,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Tapioca: ['Mulluvadi', 'CO 2', 'H-165'],
         Drumstick: ['PKM 1', 'PKM 2', 'Local'],
         Amaranthus: ['Arai Keerai', 'Siru Keerai', 'Mulai Keerai'],
-        Methi: ['Kasuri', 'Pusa Early', 'Local'],
         Cowpea: ['Bush', 'Pole', 'Red Cowpea'],
         Beans: ['Bush Beans', 'Pole Beans', 'Double Beans'],
         'Bitter Gourd': ['Mithipagal', 'Long Green', 'CO 1'],
@@ -106,11 +102,10 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Radish: ['Pusa Chetki', 'White Long', 'Pink'],
         Cabbage: ['Golden Acre', 'CO 1', 'Green Ball'],
         Cauliflower: ['Pusa Snowball', 'CO 1', 'Early White'],
-        Taro: ['Seppan Kizhangu', 'White Taro', 'Local'],
+        Taro: ['Seppan Kizhangu', 'White Taro', 'Purple Stem', 'Green Stem', 'Local'],
         'Elephant Yam': ['Karunai Kizhangu', 'White Yam', 'Local'],
         'Sweet Potato': ['Orange Flesh', 'White Flesh', 'Local'],
         'Ash Plantain': ['Vazhakkai', 'Green Plantain', 'Local'],
-        Colocasia: ['Purple Stem', 'Green Stem', 'Seppan'],
         Lettuce: ['Iceberg', 'Butterhead', 'Romaine', 'Loose Leaf'],
         Beetroot: ['Detroit Dark Red', 'Crimson Globe', 'Local Red'],
         'French Beans': ['Contender', 'Bush Blue Lake', 'Local Dwarf'],
@@ -123,7 +118,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Maize: ['Hybrid Sweet', 'Country Corn', 'CO 1'],
         Fenugreek: ['Kasuri', 'Pusa Early', 'Local'],
         'Ladies Finger': ['CO 4', 'CO 5', 'Arka Anamika'],
-        Moringa: ['PKM 1', 'PKM 2', 'Local'],
         'Pasalai Keerai': ['Green Stem', 'Red Stem', 'Local'],
         Strawberry: ['Sweet Charlie', 'Festival', 'Local Hill'],
         Turnip: ['Purple Top White Globe', 'Pusa Sweti', 'Local'],
@@ -143,7 +137,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Tapioca: 'மரவள்ளிக்கிழங்கு',
         Drumstick: 'முருங்கை',
         Amaranthus: 'அரைக்கீரை',
-        Methi: 'வெந்தயக்கீரை',
         Cowpea: 'காராமணி',
         Beans: 'பீன்ஸ்',
         'Bitter Gourd': 'பாகற்காய்',
@@ -161,19 +154,16 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Cauliflower: 'காலிஃபிளவர்',
         Carrot: 'கேரட்',
         Potato: 'உருளைக்கிழங்கு',
-        Eggplant: 'கத்திரிக்காய்',
         Pepper: 'குடைமிளகாய்',
         Taro: 'சேப்பங்கிழங்கு',
         'Elephant Yam': 'கருணைக்கிழங்கு',
         'Sweet Potato': 'சர்க்கரைவள்ளிக்கிழங்கு',
         'Ash Plantain': 'நேந்திரம் வாழை',
-        Colocasia: 'சேம்பு',
         Lettuce: 'லெட்டுஸ்',
         Purslane: 'பொட்டுக்கீரை',
         'Pasalai Keerai': 'பசளைக்கீரை',
         Fenugreek: 'வெந்தயம்',
         'Ladies Finger': 'வெண்டைக்காய்',
-        Moringa: 'முருங்கை',
         Squash: 'ஸ்குவாஷ்',
         'Yardlong Beans': 'தட்டப்பயறு',
         Beetroot: 'பீட்ரூட்',
@@ -205,7 +195,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Tapioca: 'Starchy root crop grown widely in Kanyakumari for kappa and traditional dishes',
         Drumstick: 'Fast-growing tropical tree providing nutrient-dense pods, leaves, and flowers',
         Amaranthus: 'Quick-growing leafy green rich in iron, popular as keerai in Tamil cuisine',
-        Methi: 'Aromatic legume grown for its iron-rich leaves and bitter-sweet flavour',
         Cowpea: 'Heat-tolerant nitrogen-fixing legume yielding protein-rich pods and beans',
         Beans: 'Versatile climbing legume producing tender pods for stir-fries and curries',
         'Bitter Gourd': 'Warty-skinned climbing cucurbit prized for its medicinal bitter flavour',
@@ -224,13 +213,11 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Cauliflower: 'Cool-season brassica producing compact white curds',
         Carrot: 'Popular root vegetable rich in beta-carotene',
         Potato: 'Versatile tuberous crop grown worldwide',
-        Eggplant: 'Heat-loving fruiting vegetable closely related to brinjal',
         Pepper: 'Warm-season fruiting plant producing sweet or mildly hot fruits',
         Taro: 'Tropical tuber crop with edible corms and leaves',
         'Elephant Yam': 'Large tropical tuber crop valued in South Indian cuisine',
         'Sweet Potato': 'Nutritious tropical vine producing sweet tuberous roots',
         'Ash Plantain': 'Starchy cooking banana widely used in South Indian cuisine',
-        Colocasia: 'Versatile aroid grown for both corms and leaves',
         Lettuce: 'Cool-season leafy green ideal for salads and fresh garnishes',
         Purslane:
           'Succulent edible weed rich in omega-3 fatty acids; drought-tolerant ground cover',
@@ -238,7 +225,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'Malabar spinach — vigorous climbing leafy green thriving in Tamil Nadu heat',
         Fenugreek: 'Aromatic annual legume grown for its iron-rich leaves and distinctive seeds',
         'Ladies Finger': 'Heat-loving mucilaginous pod vegetable essential in South Indian cooking',
-        Moringa: 'Multipurpose tropical tree with nutrient-dense leaves, pods, and flowers',
         Squash: 'Fast-growing cucurbit producing tender fruits; ideal ground cover in polycultures',
         'Yardlong Beans':
           'Vigorous climbing legume producing metre-long tender pods; fixes nitrogen',
@@ -672,35 +658,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
 const REQUIRED_LOCAL_PLANTS: Partial<Record<PlantType, string[]>> = {
   vegetable: ['Brinjal', 'Ladies Finger', 'Chilli', 'Drumstick', 'Tapioca'],
 };
-const KNOWN_VARIETY_ALIASES: Record<string, string> = {
-  "lady's finger": 'ladies finger',
-  'ladies finger': 'ladies finger',
-  eggplant: 'brinjal',
-  aubergine: 'brinjal',
-  okra: 'ladies finger',
-  bhindi: 'ladies finger',
-  vendakkai: 'ladies finger',
-  kathirikai: 'brinjal',
-  'chilli pepper': 'chilli',
-  chili: 'chilli',
-  chilli: 'chilli',
-  maravalli: 'tapioca',
-  cassava: 'tapioca',
-  murungai: 'drumstick',
-  drumstick: 'drumstick',
-  keerai: 'amaranthus',
-  pudina: 'mint',
-  kothamalli: 'coriander',
-  karuveppilai: 'curry leaf',
-};
-
-const toLookupKey = (value: string): string => value.toLowerCase().replace(/\s+/g, ' ').trim();
-
-const getCanonicalPlantKey = (value: string): string => {
-  const key = toLookupKey(value);
-  return KNOWN_VARIETY_ALIASES[key] ?? key;
-};
-
 const hasEquivalentPlant = (plants: string[], target: string): boolean => {
   const targetKey = getCanonicalPlantKey(target);
   return plants.some((plant) => getCanonicalPlantKey(plant) === targetKey);
@@ -734,7 +691,7 @@ const normalizeVarieties = (
     const normalizedPlantName = plantName?.toString().trim();
     if (!normalizedPlantName) return;
     const plantKey = toLookupKey(normalizedPlantName);
-    const aliasKey = KNOWN_VARIETY_ALIASES[plantKey];
+    const aliasKey = PLANT_NAME_ALIASES[plantKey];
     const canonicalPlantName =
       validPlantMap.get(plantKey) ?? (aliasKey ? validPlantMap.get(aliasKey) : undefined);
     if (!canonicalPlantName) return;
@@ -767,7 +724,7 @@ const getKnownVarietiesForPlant = (
   defaultVarietyLookup: Record<string, string[]>
 ): string[] => {
   const plantKey = toLookupKey(plantName);
-  const aliasKey = KNOWN_VARIETY_ALIASES[plantKey];
+  const aliasKey = PLANT_NAME_ALIASES[plantKey];
   const defaults =
     defaultVarietyLookup[plantKey] ?? (aliasKey ? defaultVarietyLookup[aliasKey] : undefined);
   return defaults ? [...defaults] : [];

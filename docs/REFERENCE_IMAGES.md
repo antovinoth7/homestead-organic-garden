@@ -35,7 +35,7 @@ The ingest accepts `.png`, `.jpg`, `.jpeg`, and `.webp` at any resolution. It sl
 
 ## Size Budget
 
-The repository currently bundles 225 WebP assets: 141 plants, 36 pests, 36 diseases, and 12 organic inputs. The ingest converts each source to a 400 x 300 cover-cropped WebP, stepping quality from 80 down to 45 until it fits within 50 KB, so the current set adds at most about 11.25 MB to the app bundle.
+The repository currently bundles 225 WebP assets: 141 plants, 36 pests, 36 diseases, and 12 organic inputs. The ingest converts each source to an 800 x 600 cover-cropped WebP, stepping quality from 80 down to 60 until it fits within 160 KB, so the current set adds about 27 MB to the app bundle. Most assets land at q80 and well under the cap; the floor exists for the few busy images that do not.
 
 The constants live in `scripts/reference/ingest-images.js`. `sharp` is a build-time dev dependency and does not ship to the device.
 
@@ -60,9 +60,13 @@ Render sites:
 | Organic-input hero | full width x 250; tappable fullscreen preview |
 | Bed preview pins and crop cards | compact 20–44 px thumbnails with a leaf-icon fallback |
 
-Every full-width hero upscales the bundled 400 x 300 source roughly 3x on a phone. If that
-softness becomes a problem, raise the ingest output size for all of them together rather than
-shrinking one consumer.
+A full-width hero renders the 800 x 600 source at roughly 1.35x on a 1080 px phone, and the
+fullscreen preview magnifies it from there. The sources in `assets-src/` are 1448 x 1086, so
+there is headroom left: raise `WIDTH`/`HEIGHT`/`MAX_BYTES` in the ingest script and re-run it
+for all of them together rather than shrinking one consumer.
+
+Bundle size is the constraint on that headroom — this set was 400 x 300 / 50 KB / q45 and 8.3 MB
+until the softness at hero size became the more expensive problem.
 
 ## Validation and Staging
 

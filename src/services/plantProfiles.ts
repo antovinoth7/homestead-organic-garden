@@ -85,11 +85,17 @@ export function createEmptyProfiles(): PlantProfiles {
   }, {} as PlantProfiles);
 }
 
+/**
+ * The catalog as the user sees it: every bundled name plus their own additions,
+ * minus any bundled entry they deleted (which survives in the stored map as an
+ * `isDeleted` tombstone, since deleting the key alone would let the default
+ * re-appear on the next read).
+ */
 export function getPlantNamesForType(profiles: PlantProfiles, type: PlantType): string[] {
   const defaults = DEFAULT_PLANT_PROFILES[type];
   const user = profiles[type] ?? {};
-  const defaultNames = Object.keys(defaults);
-  const userAdded = Object.keys(user).filter((n) => !defaults[n]);
+  const defaultNames = Object.keys(defaults).filter((n) => !user[n]?.isDeleted);
+  const userAdded = Object.keys(user).filter((n) => !defaults[n] && !user[n]?.isDeleted);
   return [...defaultNames, ...userAdded];
 }
 
@@ -98,7 +104,42 @@ export function getProfileEntry(
   type: PlantType,
   name: string
 ): PlantProfile | undefined {
-  return profiles[type]?.[name] ?? DEFAULT_PLANT_PROFILES[type]?.[name];
+  const stored = profiles[type]?.[name];
+  if (stored?.isDeleted) return undefined;
+  return stored ?? DEFAULT_PLANT_PROFILES[type]?.[name];
+}
+
+/**
+ * The catalog flattened into one map: bundled defaults with the user's edits
+ * applied, their additions included and their deletions removed.
+ *
+ * `profiles` on its own holds only the user's overrides — on an install where
+ * nothing has been edited it is empty — so anything that has to see the whole
+ * catalog (search, duplicate checks) must go through this rather than reading
+ * the stored map directly.
+ */
+export function getMergedProfiles(profiles: PlantProfiles): PlantProfiles {
+  const merged = createEmptyProfiles();
+  for (const type of PLANT_CATEGORIES) {
+    for (const name of getPlantNamesForType(profiles, type)) {
+      const entry = getProfileEntry(profiles, type, name);
+      if (entry) merged[type][name] = entry;
+    }
+  }
+  return merged;
+}
+
+/** Bundled entries the user deleted, per category — drives the restore UI. */
+export function getHiddenPlantNames(profiles: PlantProfiles): Record<PlantType, string[]> {
+  return PLANT_CATEGORIES.reduce(
+    (acc, type) => {
+      acc[type] = Object.keys(profiles[type] ?? {}).filter(
+        (name) => profiles[type]?.[name]?.isDeleted === true
+      );
+      return acc;
+    },
+    {} as Record<PlantType, string[]>
+  );
 }
 
 // ─── Bridge helpers for unmigrated callers ────────────────────────────────────
@@ -132,6 +173,7 @@ export function toPlantCareProfilesShape(profiles: PlantProfiles): PlantCareProf
 
   for (const type of PLANT_CATEGORIES) {
     for (const [name, p] of Object.entries(profiles[type] ?? {})) {
+      if (p.isDeleted) continue;
       const override: PlantCareProfileOverride = {};
       if (p.waterRequirement !== undefined) override.waterRequirement = p.waterRequirement;
       if (p.wateringFrequencyDays !== undefined)
@@ -281,6 +323,7 @@ function normalizeEntry(raw: unknown): PlantProfile | null {
   const varieties = normalizeStrArr(r.varieties);
   if (varieties) entry.varieties = varieties;
   if (r.isUserAdded === true) entry.isUserAdded = true;
+  if (r.isDeleted === true) entry.isDeleted = true;
   if (r.varietyDetails && typeof r.varietyDetails === 'object')
     entry.varietyDetails = r.varietyDetails as Record<string, VarietyDetail>;
   if (WATER_REQS.includes(r.waterRequirement as WaterRequirement))
@@ -538,7 +581,10 @@ export async function savePlantProfile(
   data: Omit<PlantProfile, 'plantType' | 'name'>
 ): Promise<PlantProfiles> {
   const current = await getPlantProfiles();
-  const existing = current[type][name] ?? DEFAULT_PLANT_PROFILES[type]?.[name] ?? {};
+  // Re-saving a hidden entry resurrects it, so the tombstone must not be
+  // inherited — fall through to the bundled default as if it were absent.
+  const stored = current[type][name];
+  const existing = (stored?.isDeleted ? undefined : stored) ?? DEFAULT_PLANT_PROFILES[type]?.[name] ?? {};
   const updated: PlantProfiles = {
     ...current,
     [type]: {
@@ -549,8 +595,26 @@ export async function savePlantProfile(
   return savePlantProfiles(updated);
 }
 
+/**
+ * Removes a catalog entry. A user-added entry is deleted outright; a bundled
+ * one is tombstoned, because the name would otherwise be re-injected from
+ * DEFAULT_PLANT_PROFILES the next time the catalog is read.
+ */
 export async function deletePlantProfile(type: PlantType, name: string): Promise<PlantProfiles> {
   const current = await getPlantProfiles();
+  const updated = { ...current, [type]: { ...current[type] } };
+  if (DEFAULT_PLANT_PROFILES[type]?.[name]) {
+    updated[type][name] = { plantType: type, name, isDeleted: true };
+  } else {
+    delete updated[type][name];
+  }
+  return savePlantProfiles(updated);
+}
+
+/** Undoes a {@link deletePlantProfile} tombstone, restoring the bundled entry. */
+export async function restorePlantProfile(type: PlantType, name: string): Promise<PlantProfiles> {
+  const current = await getPlantProfiles();
+  if (!current[type]?.[name]?.isDeleted) return current;
   const updated = { ...current, [type]: { ...current[type] } };
   delete updated[type][name];
   return savePlantProfiles(updated);

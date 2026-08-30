@@ -5661,61 +5661,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "vegetable:Colocasia": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 270,
-        "min": 180,
-      },
-      "description": "Versatile aroid grown for both corms and leaves (colocasia leaves used in South Indian dishes). Flourishes in Kanyakumari's monsoon wet season with boggy, humus-rich conditions.",
-      "droughtTolerance": "low",
-      "feedingIntensity": "heavy",
-      "fertilisingFrequencyDays": 30,
-      "germinationDays": {
-        "max": 28,
-        "min": 14,
-      },
-      "germinationTempC": {
-        "max": 30,
-        "min": 22,
-      },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
-      "growthStageDurations": {
-        "mature": 55,
-        "seedling": 25,
-        "vegetative": 130,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 150,
-        "min": 60,
-      },
-      "initialGrowthStage": "vegetative",
-      "lifecycle": "perennial",
-      "petToxicity": true,
-      "plantingDepthCm": 8,
-      "preferredFertiliser": "cow_dung_slurry",
-      "scientificName": "Colocasia esculenta",
-      "soilPhRange": {
-        "max": 7,
-        "min": 5.5,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 45,
-      "sunlight": "partial_sun",
-      "tamilName": "சேம்பு",
-      "taxonomicFamily": "Araceae",
-      "waterRequirement": "high",
-      "wateringFrequencyDays": 1,
-    },
-    "pruning": {
-      "tips": [
-        "Remove yellowing lower leaves",
-        "Pinch tips to encourage branching",
-        "Cut diseased stems at the base",
-      ],
-    },
-  },
   "vegetable:Cowpea": {
     "profile": {
       "daysToHarvest": {
@@ -5892,63 +5837,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "tips": [
         "Cut back to 3–4 ft after fruiting season",
         "Remove weak inner branches",
-      ],
-    },
-  },
-  "vegetable:Eggplant": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 80,
-        "min": 60,
-      },
-      "description": "Heat-loving fruiting vegetable closely related to brinjal. Produces prolifically year-round in Kanyakumari's warm climate with regular feeding and pruning.",
-      "droughtTolerance": "medium",
-      "feedingIntensity": "heavy",
-      "fertilisingFrequencyDays": 14,
-      "germinationDays": {
-        "max": 14,
-        "min": 7,
-      },
-      "germinationTempC": {
-        "max": 30,
-        "min": 22,
-      },
-      "growingSeason": "Year Round",
-      "growthStageDurations": {
-        "flowering": 14,
-        "fruiting": 21,
-        "seedling": 18,
-        "vegetative": 22,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 120,
-        "min": 45,
-      },
-      "initialGrowthStage": "seedling",
-      "lifecycle": "perennial",
-      "petToxicity": true,
-      "plantingDepthCm": 1,
-      "preferredFertiliser": "compost",
-      "pruningFrequencyDays": 21,
-      "scientificName": "Solanum melongena",
-      "soilPhRange": {
-        "max": 6.8,
-        "min": 5.5,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 60,
-      "sunlight": "full_sun",
-      "tamilName": "கத்திரிக்காய்",
-      "taxonomicFamily": "Solanaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 2,
-    },
-    "pruning": {
-      "tips": [
-        "Remove yellowing lower leaves",
-        "Pinch tips to encourage branching",
-        "Cut diseased stems at the base",
       ],
     },
   },
@@ -6583,118 +6471,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "taxonomicFamily": "Poaceae",
       "waterRequirement": "high",
       "wateringFrequencyDays": 2,
-    },
-    "pruning": {
-      "tips": [
-        "Remove yellowing lower leaves",
-        "Pinch tips to encourage branching",
-        "Cut diseased stems at the base",
-      ],
-    },
-  },
-  "vegetable:Methi": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 35,
-        "min": 25,
-      },
-      "description": "Aromatic legume grown for its iron-rich leaves and bitter-sweet flavour",
-      "droughtTolerance": "medium",
-      "feedingIntensity": "light",
-      "fertilisingFrequencyDays": 14,
-      "germinationDays": {
-        "max": 5,
-        "min": 3,
-      },
-      "germinationTempC": {
-        "max": 28,
-        "min": 18,
-      },
-      "growingSeason": "Year Round",
-      "growthStageDurations": {
-        "mature": 8,
-        "seedling": 7,
-        "vegetative": 13,
-      },
-      "heatTolerance": "medium",
-      "heightCm": {
-        "max": 60,
-        "min": 30,
-      },
-      "initialGrowthStage": "seedling",
-      "lifecycle": "annual",
-      "petToxicity": false,
-      "plantingDepthCm": 1,
-      "preferredFertiliser": "compost",
-      "scientificName": "Trigonella foenum-graecum",
-      "soilPhRange": {
-        "max": 7,
-        "min": 6,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 10,
-      "sunlight": "partial_sun",
-      "tamilName": "வெந்தயக்கீரை",
-      "taxonomicFamily": "Fabaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 1,
-    },
-    "pruning": {
-      "tips": [
-        "Remove yellowing lower leaves",
-        "Pinch tips to encourage branching",
-        "Cut diseased stems at the base",
-      ],
-    },
-  },
-  "vegetable:Moringa": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 120,
-        "min": 90,
-      },
-      "description": "Multipurpose tropical tree with nutrient-dense leaves, pods, and flowers",
-      "droughtTolerance": "high",
-      "feedingIntensity": "light",
-      "fertilisingFrequencyDays": 45,
-      "germinationDays": {
-        "max": 14,
-        "min": 7,
-      },
-      "germinationTempC": {
-        "max": 35,
-        "min": 25,
-      },
-      "growingSeason": "Year Round",
-      "growthStageDurations": {
-        "flowering": 30,
-        "fruiting": 60,
-        "seedling": 30,
-        "vegetative": 60,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 1000,
-        "min": 300,
-      },
-      "initialGrowthStage": "vegetative",
-      "lifecycle": "perennial",
-      "petToxicity": false,
-      "plantingDepthCm": 5,
-      "preferredFertiliser": "vermicompost",
-      "pruningFrequencyDays": 90,
-      "scientificName": "Moringa oleifera",
-      "soilPhRange": {
-        "max": 7,
-        "min": 6,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 300,
-      "sunlight": "full_sun",
-      "tamilName": "முருங்கை",
-      "taxonomicFamily": "Moringaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 4,
     },
     "pruning": {
       "tips": [
@@ -11152,7 +10928,6 @@ exports[`data registry snapshots pest registry is unchanged 1`] = `
     "plantsAffected": [
       "Drumstick",
       "Castor",
-      "Moringa",
     ],
     "seasonalRisk": {
       "ne_monsoon": "moderate",
