@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -10,7 +10,7 @@ import {
   getHiddenPlantNames,
   restorePlantProfile,
 } from '@/services/plantProfiles';
-import { getAllPlants } from '@/services/plants';
+import { getAllPlants, getStoredPlants } from '@/services/plants';
 import { Plant, PlantProfiles, PlantType } from '@/types/database.types';
 import { getErrorMessage } from '@/utils/errorLogging';
 
@@ -32,8 +32,17 @@ export interface UsePlantCatalogManagerReturn {
   activeCategory: PlantType;
   setActiveCategory: (category: PlantType) => void;
   loading: boolean;
+  /** True while a pull-to-refresh is in flight — drives the RefreshControl. */
+  refreshing: boolean;
   categoryData: CategoryData;
-  reload: () => Promise<void>;
+  /**
+   * Re-reads the catalog. `silent` keeps the current list on screen instead of
+   * swapping it for the full-screen spinner — used for every revalidate after
+   * the first load, so returning to the screen doesn't flash.
+   */
+  reload: (options?: { silent?: boolean }) => Promise<void>;
+  /** Pull-to-refresh: revalidates silently while showing the RefreshControl. */
+  refresh: () => Promise<void>;
   /** Total catalog plant count per category — drives pill badges. */
   allCategoryCounts: Record<PlantType, number>;
   /** Garden-plant counts keyed by category then variety name — feeds search. */
@@ -48,14 +57,28 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   const [profiles, setProfiles] = useState<PlantProfiles>(DEFAULT_PLANT_PROFILES);
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeCategory, setActiveCategory] = useState<PlantType>('vegetable');
 
-  const reload = useCallback(async (): Promise<void> => {
-    setLoading(true);
+  /** False until the first load resolves, so only that one shows the spinner. */
+  const hasLoadedRef = useRef(false);
+
+  const reload = useCallback(async (options?: { silent?: boolean }): Promise<void> => {
+    if (!options?.silent) setLoading(true);
     try {
-      const [profilesData, allPlants] = await Promise.all([getPlantProfiles(), getAllPlants()]);
+      // The catalog list renders no plant photos — `plants` feeds only the
+      // per-variety count badges below. So use the image-free, offline-first
+      // reader (as useBedData does) rather than getAllPlants, which paginates
+      // Firestore a page at a time and resolves every plant's local image.
+      // Fall back to the full fetch only on a cold cache, so counts stay right.
+      const [profilesData, storedPlants] = await Promise.all([
+        getPlantProfiles(),
+        getStoredPlants(),
+      ]);
+      const allPlants = storedPlants.length > 0 ? storedPlants : await getAllPlants();
       setProfiles(profilesData);
       setPlants(allPlants);
+      hasLoadedRef.current = true;
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error) ?? 'Failed to load plant catalog.');
     } finally {
@@ -63,9 +86,21 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     }
   }, []);
 
+  const refresh = useCallback(async (): Promise<void> => {
+    setRefreshing(true);
+    try {
+      await reload({ silent: true });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [reload]);
+
   useFocusEffect(
     useCallback(() => {
-      reload();
+      // Revalidate on every focus, but only tear the list down for the spinner
+      // on the very first one — a return trip from the detail screen is usually
+      // a warm cache hit and shouldn't flash.
+      void reload({ silent: hasLoadedRef.current });
     }, [reload])
   );
 
@@ -117,7 +152,9 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     async (name: string): Promise<void> => {
       try {
         await restorePlantProfile(activeCategory, name);
-        await reload();
+        // Silent: the list is already on screen, so update it in place rather
+        // than blanking it behind the spinner.
+        await reload({ silent: true });
       } catch (error: unknown) {
         Alert.alert('Error', getErrorMessage(error) ?? 'Failed to restore the plant.');
       }
@@ -132,8 +169,10 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     activeCategory,
     setActiveCategory,
     loading,
+    refreshing,
     categoryData,
     reload,
+    refresh,
     allCategoryCounts,
     plantCountsByType,
     hiddenPlantNames,

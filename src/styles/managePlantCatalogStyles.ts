@@ -2,11 +2,30 @@ import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 import { MONO_FONT } from './typography';
 
-/** Fixed row height for the browse list, so FlatList can skip measurement. */
+/** Inner browse-row height: a 36px thumb plus 10px of padding top and bottom. */
 export const CATALOG_ROW_HEIGHT = 56;
 
-export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
-  StyleSheet.create({
+/**
+ * What `getItemLayout` must report: the inner row plus the 1px top and bottom
+ * border `listCard` draws around it. `rowDivider` is positioned absolutely so it
+ * contributes nothing. Keep this in step with `listCard.borderWidth` — if the two
+ * drift apart the browse list mis-measures and scrolling leaves gaps.
+ */
+export const CATALOG_ROW_TOTAL_HEIGHT = CATALOG_ROW_HEIGHT + 2;
+
+/**
+ * Cached per theme. Both catalog row components call `createStyles` once per row
+ * instance, so without this every row rebuilt this entire sheet — header, FAB and
+ * all. `useTheme()` returns one of two module-level constants, so the key identity
+ * is stable and the cache hits for the life of the process.
+ */
+const styleCache = new WeakMap<Theme, ReturnType<typeof StyleSheet.create>>();
+
+export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> => {
+  const cached = styleCache.get(theme);
+  if (cached) return cached;
+
+  const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.background,
@@ -157,7 +176,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       paddingHorizontal: 16,
       paddingVertical: 10,
-      minHeight: CATALOG_ROW_HEIGHT,
+      // Fixed, not minHeight: getItemLayout promises exactly this height.
+      height: CATALOG_ROW_HEIGHT,
     },
     plantThumbWrap: {
       marginRight: 10,
@@ -185,9 +205,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
     },
     rowDivider: {
+      // Absolute so the hairline paints on the card's bottom edge without adding
+      // to the row's height — CATALOG_ROW_TOTAL_HEIGHT has to stay exact.
+      position: 'absolute',
+      left: 50,
+      right: 0,
+      bottom: 0,
       height: StyleSheet.hairlineWidth,
       backgroundColor: theme.borderLight,
-      marginLeft: 50,
     },
     emptyText: {
       fontSize: 13,
@@ -302,3 +327,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       elevation: 6,
     },
   });
+
+  styleCache.set(theme, styles);
+  return styles;
+};

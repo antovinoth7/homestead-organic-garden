@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme';
-import { createStyles, CATALOG_ROW_HEIGHT } from '@/styles/managePlantCatalogStyles';
+import { createStyles, CATALOG_ROW_TOTAL_HEIGHT } from '@/styles/managePlantCatalogStyles';
 import { MoreStackParamList } from '@/types/navigation.types';
 import { PlantCategoryTabs } from '@/components/PlantCategoryTabs';
 import { CatalogSearchBar } from '@/components/catalog/CatalogSearchBar';
@@ -40,13 +40,14 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     activeCategory,
     setActiveCategory,
     loading,
+    refreshing,
     categoryData,
     allCategoryCounts,
     plantCountsByType,
     mergedProfiles,
     hiddenPlantNames,
     restore,
-    reload,
+    refresh,
   } = usePlantCatalogManager();
 
   const {
@@ -287,15 +288,15 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
               isSearching
                 ? undefined
                 : (_, index) => ({
-                    length: CATALOG_ROW_HEIGHT,
-                    offset: CATALOG_ROW_HEIGHT * index,
+                    length: CATALOG_ROW_TOTAL_HEIGHT,
+                    offset: CATALOG_ROW_TOTAL_HEIGHT * index,
                     index,
                   })
             }
             refreshControl={
               <RefreshControl
-                refreshing={false}
-                onRefresh={reload}
+                refreshing={refreshing}
+                onRefresh={refresh}
                 tintColor={theme.primary}
                 colors={[theme.primary]}
               />

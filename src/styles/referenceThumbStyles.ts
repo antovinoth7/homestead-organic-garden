@@ -1,8 +1,17 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 
-export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
-  StyleSheet.create({
+/**
+ * Cached per theme: ReferenceThumb renders inside list rows, so without this every
+ * row rebuilt the whole sheet. See the same cache in managePlantCatalogStyles.
+ */
+const styleCache = new WeakMap<Theme, ReturnType<typeof StyleSheet.create>>();
+
+export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> => {
+  const cached = styleCache.get(theme);
+  if (cached) return cached;
+
+  const styles = StyleSheet.create({
     rowImage: {
       width: 36,
       height: 36,
@@ -69,3 +78,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.backgroundTertiary,
     },
   });
+
+  styleCache.set(theme, styles);
+  return styles;
+};
