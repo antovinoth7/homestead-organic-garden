@@ -12,6 +12,11 @@ interface Props {
   plantType: PlantType;
   /** Garden plants currently using this entry; the chip hides at zero. */
   count: number;
+  /**
+   * One-line description, or a variety count where the plant has no
+   * description. The row keeps its fixed height whether or not this is set.
+   */
+  subtitle?: string;
   isFirst: boolean;
   isLast: boolean;
   onPress: (plantName: string, plantType: PlantType) => void;
@@ -21,6 +26,7 @@ function CatalogBrowseRowComponent({
   plantName,
   plantType,
   count,
+  subtitle,
   isFirst,
   isLast,
   onPress,
@@ -49,6 +55,11 @@ function CatalogBrowseRowComponent({
           <Text style={styles.plantName} numberOfLines={1}>
             {plantName}
           </Text>
+          {subtitle ? (
+            <Text style={styles.plantSubtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          ) : null}
         </View>
         {count > 0 && (
           <View style={styles.plantCountChip}>

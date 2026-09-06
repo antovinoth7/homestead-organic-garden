@@ -106,3 +106,22 @@ export function varietiesSummary(count: number): string {
     ? formatCount(count, 'saved variety', 'saved varieties')
     : 'No saved varieties';
 }
+
+/**
+ * Sub-line for a catalog browse row.
+ *
+ * Description first: it has the widest coverage in the bundled catalog and is
+ * what actually separates near-duplicates (Brinjal from Long Brinjal). Only
+ * about six in ten bundled plants carry a variety list, so leading with the
+ * variety count would leave the line blank on a large minority of rows.
+ * Returns undefined when a plant has neither — the row keeps its height.
+ */
+export function buildCatalogSubtitle(
+  description: string | undefined,
+  varietyCount: number
+): string | undefined {
+  const trimmed = description?.trim();
+  if (trimmed) return trimmed;
+  if (varietyCount > 0) return formatCount(varietyCount, 'variety', 'varieties');
+  return undefined;
+}

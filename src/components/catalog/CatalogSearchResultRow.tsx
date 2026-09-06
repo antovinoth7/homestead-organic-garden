@@ -18,7 +18,9 @@ interface Props {
 }
 /** "ladies finger" → "Ladies Finger" — aliases are stored as lookup keys. */
 function titleCase(value: string): string {
-  return value.replace(/w/g, (ch) => ch.toUpperCase());
+  // The literal here was a stray backspace byte (0x08) followed by w, which
+  // matched nothing, so alias notes rendered entirely lower-case.
+  return value.replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
 function CatalogSearchResultRowComponent({

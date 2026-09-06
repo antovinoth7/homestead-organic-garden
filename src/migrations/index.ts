@@ -12,10 +12,11 @@ import { backfillLifecycleType } from './004_backfill_lifecycle_type';
 import { repairFarmConfig } from './005_repair_farm_config';
 import { repairZoneAssignment } from './006_repair_zone_assignment';
 import { mergeDuplicatePlantNames } from './007_merge_duplicate_plant_names';
+import { recategorisePlants } from './008_recategorise_plants';
 
 const SETTINGS_COLLECTION = 'user_settings';
 
-export const LATEST_SCHEMA_VERSION = 7;
+export const LATEST_SCHEMA_VERSION = 8;
 
 const migrations: Migration[] = [
   { version: 1, name: 'backfill_district', run: backfillDistrict },
@@ -25,6 +26,7 @@ const migrations: Migration[] = [
   { version: 5, name: 'repair_farm_config', run: repairFarmConfig },
   { version: 6, name: 'repair_zone_assignment', run: repairZoneAssignment },
   { version: 7, name: 'merge_duplicate_plant_names', run: mergeDuplicatePlantNames },
+  { version: 8, name: 'recategorise_plants', run: recategorisePlants },
 ];
 
 export async function getSchemaVersion(userId: string): Promise<number> {

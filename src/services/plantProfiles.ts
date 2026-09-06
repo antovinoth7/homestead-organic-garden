@@ -27,6 +27,7 @@ import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
 import { CATEGORY_OPTIONS } from '@/utils/plantLabels';
+import { sortPlantNames } from '@/utils/plantSort';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -90,13 +91,20 @@ export function createEmptyProfiles(): PlantProfiles {
  * minus any bundled entry they deleted (which survives in the stored map as an
  * `isDeleted` tombstone, since deleting the key alone would let the default
  * re-appear on the next read).
+ *
+ * Sorted A–Z, with the user's own additions interleaved rather than appended.
+ * Unsorted this returned object-key insertion order — the array-literal order of
+ * `DEFAULT_PLANT_CATALOG`, which is a curated top 25 followed by append batches
+ * and reads as random past the first screenful. Every list surface reads through
+ * here (catalog browse, add-plant dropdown via `toPlantCatalogShape`, picker
+ * sheet), so sorting once here is what keeps them in agreement.
  */
 export function getPlantNamesForType(profiles: PlantProfiles, type: PlantType): string[] {
   const defaults = DEFAULT_PLANT_PROFILES[type];
   const user = profiles[type] ?? {};
   const defaultNames = Object.keys(defaults).filter((n) => !user[n]?.isDeleted);
   const userAdded = Object.keys(user).filter((n) => !defaults[n] && !user[n]?.isDeleted);
-  return [...defaultNames, ...userAdded];
+  return sortPlantNames([...defaultNames, ...userAdded]);
 }
 
 export function getProfileEntry(
@@ -129,12 +137,21 @@ export function getMergedProfiles(profiles: PlantProfiles): PlantProfiles {
   return merged;
 }
 
-/** Bundled entries the user deleted, per category — drives the restore UI. */
+/**
+ * Bundled entries the user deleted, per category — drives the restore UI.
+ *
+ * Cross-checked against the current defaults: a tombstone can outlive the plant
+ * it hides when a name is dropped from the catalog, and offering to restore one
+ * is a lie — `restorePlantProfile` removes the tombstone and nothing comes
+ * back, because there is no default left to un-hide.
+ */
 export function getHiddenPlantNames(profiles: PlantProfiles): Record<PlantType, string[]> {
   return PLANT_CATEGORIES.reduce(
     (acc, type) => {
       acc[type] = Object.keys(profiles[type] ?? {}).filter(
-        (name) => profiles[type]?.[name]?.isDeleted === true
+        (name) =>
+          profiles[type]?.[name]?.isDeleted === true &&
+          DEFAULT_PLANT_PROFILES[type]?.[name] !== undefined
       );
       return acc;
     },

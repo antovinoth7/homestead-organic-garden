@@ -9,7 +9,6 @@ export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
   leafy: [
     'Amaranth',
     'Spinach',
-    'Lettuce',
     'Fenugreek',
     'Coriander',
     'Mint',
@@ -65,7 +64,7 @@ export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
     'Passion Fruit',
     'Pepper',
   ],
-  three_sisters: ['Maize', 'Beans', 'Pumpkin', 'Squash', 'Cowpea', 'Yardlong Beans'],
+  three_sisters: ['Maize', 'Beans', 'Pumpkin', 'Cowpea', 'Yardlong Beans'],
   medicinal_guild: [
     'Drumstick',
     'Tulsi',

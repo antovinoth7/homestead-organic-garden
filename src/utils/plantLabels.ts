@@ -27,7 +27,7 @@ const CATEGORY_ORDER: PlantType[] = [
 export const CATEGORY_LABELS: Record<PlantType, string> = {
   vegetable: 'Vegetable',
   fruit_tree: 'Fruit',
-  spinach: 'Spinach',
+  spinach: 'Greens',
   coconut_tree: 'Coconut Tree',
   herb: 'Herb',
   flower: 'Flower',
@@ -39,7 +39,7 @@ export const CATEGORY_LABELS: Record<PlantType, string> = {
 export const CATEGORY_FULL_LABELS: Record<PlantType, string> = {
   vegetable: 'Vegetable',
   fruit_tree: 'Fruit Tree',
-  spinach: 'Spinach',
+  spinach: 'Greens',
   coconut_tree: 'Coconut Tree',
   herb: 'Herb',
   timber_tree: 'Timber Tree',
@@ -55,7 +55,7 @@ export const CATEGORY_SHORT_LABELS: Record<PlantType, string> = {
   timber_tree: 'Tmbr',
   coconut_tree: 'Coco',
   shrub: 'Shrb',
-  spinach: 'Spinach',
+  spinach: 'Greens',
 };
 
 export const WATER_REQUIREMENT_LABELS: Record<WaterRequirement, string> = {

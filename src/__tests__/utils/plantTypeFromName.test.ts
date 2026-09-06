@@ -50,8 +50,10 @@ describe('resolvePlantType — spot checks', () => {
     expect(resolvePlantType('Drumstick')).toBe('vegetable');
   });
 
-  it('resolves Amaranth → vegetable via alias', () => {
-    expect(resolvePlantType('Amaranth')).toBe('vegetable');
+  // The leafy guild template row is named "Amaranth"; the catalog row is
+  // "Amaranthus", and it lives under spinach (the "Greens" tab).
+  it('resolves Amaranth → spinach via alias', () => {
+    expect(resolvePlantType('Amaranth')).toBe('spinach');
   });
 
   it('resolves Black Gram (Urad) → vegetable via alias', () => {

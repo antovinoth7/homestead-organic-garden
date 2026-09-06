@@ -21,7 +21,7 @@ export function toLookupKey(value: string): string {
  *
  * An entry here asserts the two names are *the same catalog entry*, so the
  * canonical side must be a real name in `DEFAULT_PLANT_CATALOG`. Names that
- * merely share a photo (Palak/Spinach, Green Peas/Peas) do not belong here —
+ * merely share a photo (Palak/Spinach, Amaranth Greens/Amaranthus) do not belong here —
  * those stay in `PLANT_IMAGE_ALIASES`, which answers a different question.
  */
 export const PLANT_NAME_ALIASES: Record<string, string> = {
@@ -67,6 +67,15 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   chili: 'chilli',
   'chilli pepper': 'chilli',
   milagai: 'chilli',
+
+  // Black Pepper — note `milagu` (peppercorn) and `milagai` (chilli) above are
+  // different crops one letter apart. Lookups here are exact, so keep both.
+  milagu: 'black pepper',
+  karumilagu: 'black pepper',
+  kurumulaku: 'black pepper',
+  peppercorn: 'black pepper',
+  peppercorns: 'black pepper',
+  'piper nigrum': 'black pepper',
 
   // Amaranthus
   keerai: 'amaranthus',
@@ -115,6 +124,65 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   'senai kizhangu': 'elephant yam',
   'sweet potato kizhangu': 'sweet potato',
   sarkaraivalli: 'sweet potato',
+
+  // Betel Leaf — the vine. "Vetrilai" was only ever a variety string, so a
+  // user typing the romanised name got no match and was offered a duplicate.
+  vetrilai: 'betel leaf',
+  vettrilai: 'betel leaf',
+  'betel vine': 'betel leaf',
+  betel: 'betel leaf',
+  paan: 'betel leaf',
+  'piper betle': 'betel leaf',
+
+  // Arecanut — the nut, a different plant from Betel Leaf despite the name.
+  pakku: 'arecanut',
+  'betel nut': 'arecanut',
+  betelnut: 'arecanut',
+  supari: 'arecanut',
+  areca: 'arecanut',
+  'areca nut': 'arecanut',
+  'areca catechu': 'arecanut',
+
+  // Flowering shrubs also listed in the flower category
+  sembaruthi: 'hibiscus',
+  semparuthi: 'hibiscus',
+  kanakambaram: 'crossandra',
+  malli: 'jasmine',
+  mullai: 'jasmine',
+  malligai: 'jasmine',
+  vetchi: 'ixora',
+
+  // Tamil Nadu medicinal & hedge shrubs
+  aadathodai: 'adathodai',
+  adhatoda: 'adathodai',
+  vasaka: 'adathodai',
+  'justicia adhatoda': 'adathodai',
+  'nithya kalyani': 'nithyakalyani',
+  periwinkle: 'nithyakalyani',
+  'madagascar periwinkle': 'nithyakalyani',
+  sadabahar: 'nithyakalyani',
+  henna: 'maruthani',
+  marudhani: 'maruthani',
+  mehndi: 'maruthani',
+  'lawsonia inermis': 'maruthani',
+  avaram: 'aavaram',
+  aavarampoo: 'aavaram',
+  avarampoo: 'aavaram',
+  "tanner's cassia": 'aavaram',
+  notchi: 'nochi',
+  vitex: 'nochi',
+  'five-leaved chaste tree': 'nochi',
+  thuthuvalai: 'thoothuvalai',
+  thoodhuvalai: 'thoothuvalai',
+  'solanum trilobatum': 'thoothuvalai',
+  'arali poo': 'arali',
+  oleander: 'arali',
+  nerium: 'arali',
+  karpuravalli: 'karpooravalli',
+  omavalli: 'karpooravalli',
+  'indian borage': 'karpooravalli',
+  'mexican mint': 'karpooravalli',
+  'cuban oregano': 'karpooravalli',
 
   // Other
   thakkali: 'tomato',

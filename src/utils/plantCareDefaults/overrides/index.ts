@@ -7,6 +7,7 @@ import { HERB_OVERRIDES } from './herbs';
 import { HERB_SPICE_OVERRIDES } from './herbsSpices';
 import { INTERCROP_FRUIT_TREE_OVERRIDES } from './intercropFruitTrees';
 import { NEW_SHRUB_OVERRIDES } from './newShrubs';
+import { TAMIL_NADU_HERB_OVERRIDES, TAMIL_NADU_SHRUB_OVERRIDES } from './tamilNaduPlants';
 import { TIMBER_COCONUT_SHRUB_OVERRIDES } from './timberCoconutShrubs';
 import { VEGETABLE_OVERRIDES_1 } from './vegetables1';
 import { VEGETABLE_OVERRIDES_2 } from './vegetables2';
@@ -25,6 +26,8 @@ export const PLANT_CARE_OVERRIDES: Record<string, PlantCareProfile> = {
   ...BED_VEGETABLE_OVERRIDES,
   ...HERB_SPICE_OVERRIDES,
   ...NEW_SHRUB_OVERRIDES,
+  ...TAMIL_NADU_SHRUB_OVERRIDES,
+  ...TAMIL_NADU_HERB_OVERRIDES,
   ...INTERCROP_FRUIT_TREE_OVERRIDES,
 };
 

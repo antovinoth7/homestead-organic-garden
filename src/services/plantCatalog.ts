@@ -23,7 +23,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Chilli',
         'Tapioca',
         'Drumstick',
-        'Amaranthus',
         'Cowpea',
         'Beans',
         'Bitter Gourd',
@@ -47,14 +46,8 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Elephant Yam',
         'Sweet Potato',
         'Ash Plantain',
-        // Bed-type plants — leafy greens
-        'Lettuce',
-        'Purslane',
-        'Pasalai Keerai',
-        'Fenugreek',
         'Ladies Finger',
         // Bed-type plants — fruiting & climbing
-        'Squash',
         'Yardlong Beans',
         // Bed-type plants — root & legume
         'Beetroot',
@@ -69,7 +62,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         // Bed-type plants — aquatic
         'Lotus Stem',
         // Additional Tamil Nadu warm-season and short cool-season crops
-        'Turnip',
         'Knol Khol',
         'Green Peas',
         'Lablab Bean',
@@ -77,8 +69,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Sword Bean',
         'Watermelon',
         'Muskmelon',
-        // Companion plants
-        'Strawberry',
       ],
       varieties: {
         Brinjal: ['Long Purple', 'Round Green', 'Striped'],
@@ -87,7 +77,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Chilli: ["Bird's Eye", 'Gundu', 'Long Chilli'],
         Tapioca: ['Mulluvadi', 'CO 2', 'H-165'],
         Drumstick: ['PKM 1', 'PKM 2', 'Local'],
-        Amaranthus: ['Arai Keerai', 'Siru Keerai', 'Mulai Keerai'],
         Cowpea: ['Bush', 'Pole', 'Red Cowpea'],
         Beans: ['Bush Beans', 'Pole Beans', 'Double Beans'],
         'Bitter Gourd': ['Mithipagal', 'Long Green', 'CO 1'],
@@ -106,21 +95,15 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Elephant Yam': ['Karunai Kizhangu', 'White Yam', 'Local'],
         'Sweet Potato': ['Orange Flesh', 'White Flesh', 'Local'],
         'Ash Plantain': ['Vazhakkai', 'Green Plantain', 'Local'],
-        Lettuce: ['Iceberg', 'Butterhead', 'Romaine', 'Loose Leaf'],
         Beetroot: ['Detroit Dark Red', 'Crimson Globe', 'Local Red'],
         'French Beans': ['Contender', 'Bush Blue Lake', 'Local Dwarf'],
         'Cluster Beans': ['Pusa Navbahar', 'Goma 1', 'Local'],
         'Yardlong Beans': ['Long Green', 'Long Purple', 'Local'],
-        Squash: ['Yellow Crookneck', 'Zucchini', 'Pattypan'],
         'Black Gram': ['Vamban 6', 'CO 6', 'Local'],
         Groundnut: ['TMV 2', 'CO 3', 'Local Bunch'],
         'Pigeon Pea': ['CO 6', 'Vamban 1', 'Local'],
         Maize: ['Hybrid Sweet', 'Country Corn', 'CO 1'],
-        Fenugreek: ['Kasuri', 'Pusa Early', 'Local'],
         'Ladies Finger': ['CO 4', 'CO 5', 'Arka Anamika'],
-        'Pasalai Keerai': ['Green Stem', 'Red Stem', 'Local'],
-        Strawberry: ['Sweet Charlie', 'Festival', 'Local Hill'],
-        Turnip: ['Purple Top White Globe', 'Pusa Sweti', 'Local'],
         'Knol Khol': ['White Vienna', 'Purple Vienna', 'Local'],
         'Green Peas': ['Arkel', 'Bonneville', 'Local'],
         'Lablab Bean': ['CO 1', 'CO 2', 'Local'],
@@ -136,7 +119,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Chilli: 'மிளகாய்',
         Tapioca: 'மரவள்ளிக்கிழங்கு',
         Drumstick: 'முருங்கை',
-        Amaranthus: 'அரைக்கீரை',
         Cowpea: 'காராமணி',
         Beans: 'பீன்ஸ்',
         'Bitter Gourd': 'பாகற்காய்',
@@ -159,12 +141,7 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Elephant Yam': 'கருணைக்கிழங்கு',
         'Sweet Potato': 'சர்க்கரைவள்ளிக்கிழங்கு',
         'Ash Plantain': 'நேந்திரம் வாழை',
-        Lettuce: 'லெட்டுஸ்',
-        Purslane: 'பொட்டுக்கீரை',
-        'Pasalai Keerai': 'பசளைக்கீரை',
-        Fenugreek: 'வெந்தயம்',
         'Ladies Finger': 'வெண்டைக்காய்',
-        Squash: 'ஸ்குவாஷ்',
         'Yardlong Beans': 'தட்டப்பயறு',
         Beetroot: 'பீட்ரூட்',
         'French Beans': 'பிரெஞ்சு பீன்ஸ்',
@@ -175,8 +152,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Yam: 'கிழங்கு',
         Maize: 'மக்காச்சோளம்',
         'Lotus Stem': 'தாமரைத்தண்டு',
-        Strawberry: 'ஸ்ட்ராபெர்ரி',
-        Turnip: 'டர்னிப்',
         'Knol Khol': 'நூல்கோல்',
         'Green Peas': 'பச்சைப் பட்டாணி',
         'Lablab Bean': 'அவரைக்காய்',
@@ -194,7 +169,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Chilli: 'Pungent hot pepper central to South Indian spice blends and daily cooking',
         Tapioca: 'Starchy root crop grown widely in Kanyakumari for kappa and traditional dishes',
         Drumstick: 'Fast-growing tropical tree providing nutrient-dense pods, leaves, and flowers',
-        Amaranthus: 'Quick-growing leafy green rich in iron, popular as keerai in Tamil cuisine',
         Cowpea: 'Heat-tolerant nitrogen-fixing legume yielding protein-rich pods and beans',
         Beans: 'Versatile climbing legume producing tender pods for stir-fries and curries',
         'Bitter Gourd': 'Warty-skinned climbing cucurbit prized for its medicinal bitter flavour',
@@ -218,14 +192,7 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Elephant Yam': 'Large tropical tuber crop valued in South Indian cuisine',
         'Sweet Potato': 'Nutritious tropical vine producing sweet tuberous roots',
         'Ash Plantain': 'Starchy cooking banana widely used in South Indian cuisine',
-        Lettuce: 'Cool-season leafy green ideal for salads and fresh garnishes',
-        Purslane:
-          'Succulent edible weed rich in omega-3 fatty acids; drought-tolerant ground cover',
-        'Pasalai Keerai':
-          'Malabar spinach — vigorous climbing leafy green thriving in Tamil Nadu heat',
-        Fenugreek: 'Aromatic annual legume grown for its iron-rich leaves and distinctive seeds',
         'Ladies Finger': 'Heat-loving mucilaginous pod vegetable essential in South Indian cooking',
-        Squash: 'Fast-growing cucurbit producing tender fruits; ideal ground cover in polycultures',
         'Yardlong Beans':
           'Vigorous climbing legume producing metre-long tender pods; fixes nitrogen',
         Beetroot: 'Jewel-red root vegetable with earthy sweetness, rich in folate and iron',
@@ -241,8 +208,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Maize: 'Tall cereal grass forming the structural canopy in Three Sisters polyculture',
         'Lotus Stem':
           'Aquatic perennial with crunchy, tunnel-riddled rhizomes used in South Indian cooking',
-        Strawberry: 'Low-growing fruiting plant producing sweet red berries; companion to spinach',
-        Turnip: 'Fast cool-season root crop best scheduled for Kanyakumari’s milder months',
         'Knol Khol': 'Cool-season brassica grown for its tender swollen stem',
         'Green Peas': 'Short cool-season climbing legume suited to the mildest local months',
         'Lablab Bean': 'Heat-tolerant perennial bean widely grown as avarai in Tamil Nadu',
@@ -261,10 +226,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Tulsi',
         'Basil',
         'Dill',
-        'Parsley',
-        'Rosemary',
-        'Thyme',
-        'Oregano',
         // Kanyakumari spices grown as herbs
         'Turmeric',
         'Ginger',
@@ -275,11 +236,16 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Black Pepper',
         // Companion-rule plants
         'Fennel',
-        'Sage',
         // Medicinal guild plants
         'Brahmi',
         'Ashwagandha',
         'Aloe Vera',
+        // Tamil Nadu homestead medicinals. Filed by use, like Curry Leaf (a
+        // tree), Black Pepper (a vine) and Ashwagandha (a shrub) above.
+        'Adathodai',
+        'Nithyakalyani',
+        'Thoothuvalai',
+        'Karpooravalli',
       ],
       varieties: {
         Coriander: ['CO 4', 'CO 5', 'Local'],
@@ -294,6 +260,8 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Black Pepper': ['Panniyur 1', 'Karimunda', 'Local'],
         Brahmi: ['Water Hyssop', 'Local'],
         'Aloe Vera': ['Barbadensis', 'Local Green', 'Soap Aloe'],
+        Nithyakalyani: ['White', 'Pink', 'Local'],
+        Karpooravalli: ['Broad Leaf', 'Variegated', 'Local'],
       },
       tamilNames: {
         Coriander: 'கொத்தமல்லி',
@@ -303,10 +271,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Tulsi: 'துளசி',
         Basil: 'திருநீற்றுப்பச்சிலை',
         Dill: 'சதகுப்பை',
-        Parsley: 'பார்சிலி',
-        Rosemary: 'ரோஸ்மேரி',
-        Thyme: 'தைம்',
-        Oregano: 'ஓரிகானோ',
         Turmeric: 'மஞ்சள்',
         Ginger: 'இஞ்சி',
         'Betel Leaf': 'வெற்றிலை',
@@ -314,10 +278,13 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Cardamom: 'ஏலக்காய்',
         'Black Pepper': 'கருமிளகு',
         Fennel: 'சோம்பு',
-        Sage: 'சேஜ்',
         Brahmi: 'பிரம்மி',
         Ashwagandha: 'அஷ்வகந்தா',
         'Aloe Vera': 'கற்றாழை',
+        Adathodai: 'ஆடாதொடை',
+        Nithyakalyani: 'நித்தியகல்யாணி',
+        Thoothuvalai: 'தூதுவளை',
+        Karpooravalli: 'கற்பூரவல்லி',
       },
       descriptions: {
         Coriander: 'Fast-growing cool-season herb prized for its aromatic leaves and seeds',
@@ -327,10 +294,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Tulsi: 'Sacred herb of Indian households valued for medicinal and spiritual significance',
         Basil: 'Aromatic culinary herb used in Italian and Thai cooking',
         Dill: 'Feathery herb with a mild anise flavour, popular in pickles and rice dishes',
-        Parsley: 'Slow-germinating biennial herb used as a garnish and flavouring',
-        Rosemary: 'Woody Mediterranean perennial with needle-like leaves and a piney fragrance',
-        Thyme: 'Low-growing perennial herb with tiny aromatic leaves',
-        Oregano: 'Hardy perennial with peppery, slightly bitter leaves',
         Turmeric: 'Tropical rhizomatous herb yielding the golden spice of Indian cooking',
         Ginger: 'Pungent rhizome staple in South Indian cooking and Ayurvedic medicine',
         'Betel Leaf': 'Tropical climbing vine prized for its glossy heart-shaped leaves',
@@ -342,13 +305,20 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'Climbing spice vine trained on coconut trunks producing the king of spices',
         Fennel:
           'Tall aromatic herb with feathery leaves and anise-flavoured seeds; allelopathic — plant away from most crops',
-        Sage: 'Woody perennial herb with grey-green aromatic leaves; used in companion planting to repel pests',
         Brahmi:
           'Low-growing medicinal creeper thriving in moist, shaded spots; revered in Ayurveda for cognitive health',
         Ashwagandha:
           'Drought-tolerant medicinal shrub producing adaptogenic roots; thrives in sandy well-drained soils',
         'Aloe Vera':
           'Succulent perennial with gel-filled leaves used in medicine, skincare, and soil conditioning',
+        Adathodai:
+          'Hardy medicinal shrub of the Tamil homestead; leaves brewed for coughs and also cut as green-leaf manure',
+        Nithyakalyani:
+          'Tough evergreen flowering year-round on poor soil; self-seeds freely and needs almost no care',
+        Thoothuvalai:
+          'Scrambling prickly climber of the kitchen doorway, cooked as a cough and cold remedy',
+        Karpooravalli:
+          'Thick-leaved aromatic plant kept by the kitchen door; leaves used fresh for coughs and colds',
       },
     },
     flower: {
@@ -361,8 +331,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Crossandra',
         'Ixora',
         'Sunflower',
-        'Dahlia',
-        'Orchid',
       ],
       varieties: {
         Marigold: ['African', 'French', 'Local Orange'],
@@ -378,8 +346,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Crossandra: 'கனகாம்பரம்',
         Ixora: 'வெட்சி',
         Sunflower: 'சூரியகாந்தி',
-        Dahlia: 'டேலியா',
-        Orchid: 'ஆர்க்கிட்',
       },
       descriptions: {
         Marigold: 'Bright orange-yellow blooms that repel nematodes and attract pollinators',
@@ -392,8 +358,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Crossandra: 'Low-growing perennial bearing vibrant orange flowers for garlands',
         Ixora: 'Evergreen tropical shrub with dense clusters of tiny tubular flowers',
         Sunflower: 'Tall, cheerful annual grown for large composite flower heads',
-        Dahlia: 'Tuberous perennial producing spectacular multi-petalled blooms',
-        Orchid: 'Exotic epiphytic perennial grown for elegant long-lasting blooms',
       },
     },
     fruit_tree: {
@@ -555,94 +519,95 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'Orange tender-nut type suited climatically but less standard in Tamil Nadu than released local cultivars',
       },
     },
+    // Woody perennials grown for the plant itself. Plants grown for a leaf or
+    // flower harvest live in `herb` and `flower` — Hibiscus, Ixora, Jasmine and
+    // Crossandra were duplicated here and now sit only under `flower`.
     shrub: {
       plants: [
-        'Hibiscus',
-        'Ixora',
         'Nandiyavattai',
         'Bougainvillea',
-        'Jasmine',
-        'Crossandra',
-        'Lantana',
-        'Gardenia',
         // Medicinal & companion shrubs
         'Agathi',
         'Castor',
-        'Coleus',
+        // Tamil Nadu homestead hedge & boundary shrubs
+        'Maruthani',
+        'Aavaram',
+        'Nochi',
+        'Arali',
       ],
       varieties: {
-        Hibiscus: ['Single', 'Double', 'Red'],
-        Ixora: ['Red', 'Yellow', 'Orange'],
+        Maruthani: ['Broad Leaf', 'Country', 'Local'],
+        Arali: ['White', 'Pink', 'Red'],
       },
       tamilNames: {
-        Hibiscus: 'செம்பருத்தி',
-        Ixora: 'இட்லிப்பூ',
         Nandiyavattai: 'நந்தியாவட்டை',
         Bougainvillea: 'பூகன்வில்லியா',
-        Jasmine: 'மல்லிகை',
-        Crossandra: 'கனகாம்பரம்',
-        Lantana: 'உன்னிச்செடி',
-        Gardenia: 'கொண்டை கத்தரி',
         Agathi: 'அகத்தி',
         Castor: 'ஆமணக்கு',
-        Coleus: 'கொல்லியஸ்',
+        Maruthani: 'மருதாணி',
+        Aavaram: 'ஆவாரம்',
+        Nochi: 'நொச்சி',
+        Arali: 'அரளி',
       },
       descriptions: {
-        Hibiscus: 'Bushy hedge variety producing showy blooms year-round',
-        Ixora: 'Dense evergreen shrub bearing clusters of scarlet flowers',
         Nandiyavattai: 'Fragrant white-flowered shrub sacred in Tamil temple gardens',
         Bougainvillea: 'Vigorous thorny shrub-vine smothered in papery bracts',
-        Jasmine: 'Vigorous woody shrub producing intensely fragrant white flowers',
-        Crossandra: 'Low-growing evergreen hedge shrub bearing fan-shaped orange flowers',
-        Lantana: 'Extremely hardy flowering shrub that thrives on neglect and attracts butterflies',
-        Gardenia: 'Compact evergreen shrub with waxy, intensely fragrant white blooms',
         Agathi:
           'Fast-growing nitrogen-fixing shrub with edible leaves and flowers; dynamic accumulator for chop-and-drop',
         Castor:
           'Tall fast-growing shrub with repellent properties; pest-deterrent companion around vegetable beds',
-        Coleus: 'Ornamental shade-tolerant shrub used as living mulch in coconut intercrop systems',
+        Maruthani:
+          'The classic Tamil boundary hedge; leaves ground for henna, and it takes hard clipping',
+        Aavaram:
+          'Dryland-hardy shrub grown for its yellow aavarampoo flowers; fixes nitrogen and holds bunds together',
+        Nochi:
+          'Aromatic shrub whose leaves are layered into stored grain and steeped as a leaf-extract pest spray',
+        Arali:
+          'Temple flowering shrub, drought-hardy and long-blooming. Every part is toxic if eaten and the sap irritates skin — plant it away from children, pets and the vegetable beds',
       },
     },
     spinach: {
       plants: [
         'Palak',
-        'Malabar Spinach',
         'Water Spinach',
-        'Amaranth Greens',
         'Ponnanganni Keerai',
         'Manathakkali Keerai',
         'Mustard Greens',
         'Vallarai Keerai',
+        // Moved from `vegetable`: a keerai belongs with the other keerai.
+        'Purslane',
+        'Amaranthus',
+        'Pasalai Keerai',
+        'Fenugreek',
       ],
       varieties: {
         Palak: ['All Green', 'Pusa Palak', 'Jobner Green', 'Local'],
-        'Malabar Spinach': ['Green Stem', 'Red Stem', 'Local'],
         'Water Spinach': ['Broad Leaf', 'Narrow Leaf', 'Local'],
-        'Amaranth Greens': ['Arai Keerai', 'Siru Keerai', 'Mulai Keerai', 'CO 1'],
         'Ponnanganni Keerai': ['Green', 'Red', 'Local'],
         'Manathakkali Keerai': ['Local Green'],
         'Mustard Greens': ['Broad Leaf', 'Local'],
         'Vallarai Keerai': ['Local'],
+        Amaranthus: ['Arai Keerai', 'Siru Keerai', 'Mulai Keerai'],
+        'Pasalai Keerai': ['Green Stem', 'Red Stem', 'Local'],
+        Fenugreek: ['Kasuri', 'Pusa Early', 'Local'],
       },
       tamilNames: {
         Palak: 'பாலக் கீரை',
-        'Malabar Spinach': 'பசலைக் கீரை',
         'Water Spinach': 'நீர்க் கீரை',
-        'Amaranth Greens': 'அமராந்தஸ் கீரைகள்',
         'Ponnanganni Keerai': 'பொன்னாங்கண்ணிக் கீரை',
         'Manathakkali Keerai': 'மணத்தக்காளிக் கீரை',
         'Mustard Greens': 'கடுகுக் கீரை',
         'Vallarai Keerai': 'வல்லாரைக் கீரை',
+        Purslane: 'பொட்டுக்கீரை',
+        Amaranthus: 'அரைக்கீரை',
+        'Pasalai Keerai': 'பசளைக்கீரை',
+        Fenugreek: 'வெந்தயம்',
       },
       descriptions: {
         Palak:
           'True spinach grown as a short cool-season leafy crop during Kanyakumari’s mildest months',
-        'Malabar Spinach':
-          'Heat- and humidity-tolerant climbing leafy vegetable well suited to Kanyakumari',
         'Water Spinach':
           'Fast-growing tropical leafy vegetable for consistently moist beds; prevent escape into waterways',
-        'Amaranth Greens':
-          'Quick warm-season keerai group including arai, siru, and mulai types',
         'Ponnanganni Keerai':
           'Low-growing traditional Tamil leafy vegetable suited to moist soil and repeated harvest',
         'Manathakkali Keerai':
@@ -650,6 +615,13 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Mustard Greens': 'Peppery cool-season leaves best grown during the mild, less humid months',
         'Vallarai Keerai':
           'Moisture-loving creeping Tamil green suited to partial shade and humid home gardens',
+        Purslane:
+          'Succulent edible weed rich in omega-3 fatty acids; drought-tolerant ground cover',
+        Amaranthus: 'Quick-growing leafy green rich in iron, popular as keerai in Tamil cuisine',
+        'Pasalai Keerai':
+          'Malabar spinach — vigorous climbing leafy green thriving in Tamil Nadu heat',
+        Fenugreek:
+          'Aromatic annual legume grown for its iron-rich leaves and distinctive seeds; vendhaya keerai',
       },
     },
   },

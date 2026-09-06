@@ -18,17 +18,19 @@ import { PlantCategoryTabs } from '@/components/PlantCategoryTabs';
 import { CatalogSearchBar } from '@/components/catalog/CatalogSearchBar';
 import { CatalogBrowseRow } from '@/components/catalog/CatalogBrowseRow';
 import { CatalogSearchResultRow } from '@/components/catalog/CatalogSearchResultRow';
+import { CatalogSectionHeader } from '@/components/catalog/CatalogSectionHeader';
 import { RecentSearchChips } from '@/components/catalog/RecentSearchChips';
 import { HiddenPlantsSection } from '@/components/catalog/HiddenPlantsSection';
 import { usePlantCatalogManager } from '@/hooks/usePlantCatalogManager';
 import { useCatalogSearch } from '@/hooks/useCatalogSearch';
-import type { CatalogSearchResult } from '@/utils/catalogSearch';
 import { getCanonicalPlantKey } from '@/utils/plantAliases';
+import {
+  buildBrowseItems,
+  buildSearchItems,
+  measureCatalogItems,
+} from '@/utils/catalogListItems';
+import type { CatalogListItem } from '@/utils/catalogListItems';
 import type { PlantType } from '@/types/database.types';
-
-type CatalogListItem =
-  | { kind: 'browse'; name: string; count: number }
-  | { kind: 'result'; result: CatalogSearchResult };
 
 export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const moreNav = useNavigation<NativeStackNavigationProp<MoreStackParamList>>();
@@ -112,27 +114,34 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
 
   const onSubmitSearch = useCallback(() => commitSearch(query), [commitSearch, query]);
 
-  const data = useMemo<CatalogListItem[]>(() => {
-    if (isSearching) {
-      return results.map((result) => ({ kind: 'result' as const, result }));
-    }
-    return categoryData.plantNames.map((name) => ({
-      kind: 'browse' as const,
-      name,
-      count: categoryData.counts[name] ?? 0,
-    }));
-  }, [isSearching, results, categoryData]);
+  // Items and their pixel offsets are built together: the browse list mixes
+  // two heights, so getItemLayout needs a table rather than one multiplication.
+  const { items: data, offsets, heights } = useMemo(
+    () =>
+      measureCatalogItems(
+        isSearching
+          ? buildSearchItems(results)
+          : buildBrowseItems({
+              plantNames: categoryData.plantNames,
+              counts: categoryData.counts,
+              profilesForType: mergedProfiles[activeCategory] ?? {},
+            })
+      ),
+    [isSearching, results, categoryData, mergedProfiles, activeCategory]
+  );
 
   const renderItem = useCallback(
     ({ item, index }: { item: CatalogListItem; index: number }) => {
-      const isFirst = index === 0;
-      const isLast = index === data.length - 1;
+      if (item.kind === 'section') {
+        return <CatalogSectionHeader letter={item.letter} count={item.count} />;
+      }
       if (item.kind === 'result') {
+        // Search results are one flat card: no letter groups to break them up.
         return (
           <CatalogSearchResultRow
             result={item.result}
-            isFirst={isFirst}
-            isLast={isLast}
+            isFirst={index === 0}
+            isLast={index === data.length - 1}
             onPress={openPlant}
           />
         );
@@ -142,8 +151,9 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
           plantName={item.name}
           plantType={activeCategory}
           count={item.count}
-          isFirst={isFirst}
-          isLast={isLast}
+          subtitle={item.subtitle}
+          isFirst={item.isFirst}
+          isLast={item.isLast}
           onPress={openPlant}
         />
       );
@@ -151,13 +161,12 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     [data.length, activeCategory, openPlant]
   );
 
-  const keyExtractor = useCallback(
-    (item: CatalogListItem) =>
-      item.kind === 'browse'
-        ? `b:${item.name}`
-        : `r:${item.result.plantType}:${item.result.name}`,
-    []
-  );
+  const keyExtractor = useCallback((item: CatalogListItem) => {
+    if (item.kind === 'section') return `s:${item.letter}`;
+    return item.kind === 'browse'
+      ? `b:${item.name}`
+      : `r:${item.result.plantType}:${item.result.name}`;
+  }, []);
 
   const listHeader = useMemo(
     () => (
@@ -282,14 +291,15 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
             initialNumToRender={12}
             windowSize={7}
             removeClippedSubviews
-            // Browse rows are a fixed height; search rows carry a sub-line and
-            // are not, so the measurement fast path only applies to browsing.
+            // Browse items are fixed heights — two of them, rows and letter
+            // headers — so the fast path reads the offset table built alongside
+            // the data. Search rows wrap to an unknown height, so it stays off.
             getItemLayout={
               isSearching
                 ? undefined
                 : (_, index) => ({
-                    length: CATALOG_ROW_TOTAL_HEIGHT,
-                    offset: CATALOG_ROW_TOTAL_HEIGHT * index,
+                    length: heights[index] ?? CATALOG_ROW_TOTAL_HEIGHT,
+                    offset: offsets[index] ?? 0,
                     index,
                   })
             }

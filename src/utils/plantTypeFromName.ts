@@ -17,7 +17,7 @@ for (const category of PLANT_CATEGORIES) {
 // Curated aliases for guild-template / companion / accumulator names that don't
 // exact-match the catalog (e.g. "Amaranth" vs catalog "Amaranthus").
 const NAME_TYPE_ALIASES: Record<string, PlantType> = {
-  amaranth: 'vegetable',           // template row; catalog has "Amaranthus"
+  amaranth: 'spinach',             // template row; catalog has "Amaranthus"
   spinach: 'spinach',              // companion/row name; not listed in spinach category
   'black gram (urad)': 'vegetable',// template row includes parenthetical
   'pigeon pea (arhar)': 'vegetable',// template row includes parenthetical

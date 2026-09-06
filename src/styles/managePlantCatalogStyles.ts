@@ -1,17 +1,15 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 import { MONO_FONT } from './typography';
+import { CATALOG_ROW_HEIGHT, CATALOG_SECTION_HEADER_HEIGHT } from './catalogMetrics';
 
-/** Inner browse-row height: a 36px thumb plus 10px of padding top and bottom. */
-export const CATALOG_ROW_HEIGHT = 56;
-
-/**
- * What `getItemLayout` must report: the inner row plus the 1px top and bottom
- * border `listCard` draws around it. `rowDivider` is positioned absolutely so it
- * contributes nothing. Keep this in step with `listCard.borderWidth` — if the two
- * drift apart the browse list mis-measures and scrolling leaves gaps.
- */
-export const CATALOG_ROW_TOTAL_HEIGHT = CATALOG_ROW_HEIGHT + 2;
+// Re-exported so existing importers keep working; the numbers themselves live
+// in catalogMetrics, which the pure list-building util also reads.
+export {
+  CATALOG_ROW_HEIGHT,
+  CATALOG_ROW_TOTAL_HEIGHT,
+  CATALOG_SECTION_HEADER_HEIGHT,
+} from './catalogMetrics';
 
 /**
  * Cached per theme. Both catalog row components call `createStyles` once per row
@@ -169,7 +167,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     listCardLast: {
       borderBottomLeftRadius: 12,
       borderBottomRightRadius: 12,
-      marginBottom: 16,
+      // No marginBottom: every letter group ends on this style, and a margin
+      // here would be height getItemLayout cannot see. The gap between groups
+      // lives in catalogSectionHeader's own height instead, and the list's
+      // trailing space comes from contentContainerStyle's paddingBottom.
     },
     plantRowCompact: {
       flexDirection: 'row',
@@ -190,6 +191,34 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 15,
       fontWeight: '600',
       color: theme.text,
+    },
+    plantSubtitle: {
+      fontSize: 11.5,
+      color: theme.textTertiary,
+      marginTop: 2,
+    },
+
+    // ---- A–Z letter headers (browse mode only) ----------------------------
+    catalogSectionHeader: {
+      // Fixed height, and it carries the gap above the group it introduces —
+      // see CATALOG_SECTION_HEADER_HEIGHT.
+      height: CATALOG_SECTION_HEADER_HEIGHT,
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      paddingHorizontal: 4,
+      paddingBottom: 8,
+    },
+    catalogSectionLetter: {
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 0.6,
+      color: theme.primary,
+    },
+    catalogSectionCount: {
+      fontFamily: MONO_FONT,
+      fontSize: 11,
+      color: theme.textTertiary,
     },
     plantCountChip: {
       paddingHorizontal: 8,

@@ -62,7 +62,8 @@ High-priority Tamil Nadu additions for a later, source-backed content pass inclu
 - cucurbit fruit fly, pumpkin beetles, and downy mildew by host crop;
 - onion thrips and purple blotch;
 - turmeric/ginger shoot borer, rhizome scale, and soft rot;
-- pepper pollu beetle, quick wilt/foot rot, and slow decline;
+- black pepper pollu beetle (*Longitarsus nigripennis*), top shoot borer, scale and root
+  mealybug; quick wilt/foot rot (*Phytophthora capsici*), slow decline, and anthracnose;
 - banana scarring beetle and burrowing nematode;
 - arecanut spindle bug, fruit rot/mahali, and yellow leaf disease;
 - groundnut leaf miner, tikka leaf spots, rust, and bud-necrosis disease;
@@ -84,6 +85,342 @@ wood ash (with pH cautions), and crop-specific oil-cake guidance.
 “Organic” must not be treated as synonymous with harmless. Product registration and label
 directions, certification-standard acceptance, personal protection, re-entry/pre-harvest
 intervals, pollinator timing, water-body protection, and patch testing remain product-specific.
+
+## Black Pepper profile correction — 6 September 2026
+
+This is a catalog-profile correction, not a treatment-reference change; no pest, disease, or
+organic-input record was added. The `herb:Black Pepper` entry in
+`plantCareDefaults/overrides/herbsSpices.ts` was checked field by field:
+
+- `daysToHarvest` was the 180–270 day spike-to-ripe-berry window, but the field means
+  planting-to-first-crop, so the app promised a first harvest ~225 days after planting. A vine
+  bears from year 3 and stabilises around year 7; corrected to 1095–1460 days, with
+  `yearsToFirstHarvest: 3` and `growthStageDurations` widened to match.
+- `spacingCm` 200 → 270 (standards go in at 2.7 m × 2.7 m); `plantingDepthCm` 3 → 15 (vines are
+  established from 2–3 node rooted cuttings with two nodes buried, not surface-sown).
+- `soilType` `potting_mix` → `red_laterite`; `waterloggingTolerance: 'low'` added, since quick
+  wilt follows water standing at the collar through the southwest monsoon.
+- `wateringFrequencyDays` (2) and `feedingIntensity` (`medium`) were left alone: both are
+  defensible for a young home-garden vine and both change generated task cadence, so they need
+  their own review rather than a correction pass.
+- Confirmed correct and unchanged: *Piper nigrum*/Piperaceae, `கருமிளகு`, `partial_sun`,
+  pH 5.5–6.5, `droughtTolerance: 'low'`, 2–10 m height, `pruningFrequencyDays: 180`, and the
+  Panniyur 1 / Karimunda cultivars.
+
+Separately, the plant had no `PRUNING_INFO_BY_VARIETY` entry and inherited the generic herb
+tips, including *“Remove flower buds to extend leaf growth”* — right only for a vine's first
+two years, and crop-destroying advice on a bearing vine. It now carries pepper-specific
+guidance: tying in runner shoots, removing ground-trailing runners, topping at the head of the
+standard, the twice-yearly lopping the 180-day cadence tracks, and de-spiking qualified to
+years 1–2.
+
+**Still open:** black pepper remains absent from every pest and disease registry (see the
+high-priority list above). Nothing in this pass changes that.
+
+## Shrub category review — 6 September 2026
+
+Prompted by a reference-image gap: five catalog rows had no bundled photo, and four of them were
+shrubs. The cause was tooling, not staging — `getKnownPlantNames()` returned the keys of
+`PLANT_EMOJI_MAP` (97 names) rather than the catalog (137), so a plant nobody gave an emoji got
+neither a generated prompt nor a usable image slot. It now reads `PLANT_VARIETIES_BY_TYPE`, and
+`referenceAssets.test.ts` fails if a catalog plant ever loses its reference-image name again.
+
+Reviewing the shrub category against what a Kanyakumari homestead actually keeps found it stocked
+almost entirely with ornamentals.
+
+### Corrections
+
+- **`shrub:Coleus` scientific name** was *Plectranthus amboinicus* — that is Karpooravalli /
+  Omavalli, the thick-leaved kitchen medicinal, not the ornamental the row's own description
+  ("shade-tolerant shrub used as living mulch") describes. Corrected to *Plectranthus
+  scutellarioides*; Karpooravalli was added as its own entry.
+- **Lantana** (*Lantana camara*) is a declared invasive weed in India and is actively cleared by
+  the forest department; its foliage and unripe berries are toxic to livestock. The entry
+  previously read as an unqualified recommendation ("thrives on neglect"). Kept — removing it
+  would strand stored user profiles — but the catalog and care descriptions now say to contain it
+  in a pot or clipped hedge, deadhead before the berries ripen, and keep it away from bunds and
+  scrub.
+- **Gardenia** wants acidic, humus-rich soil and shelter; it is not a Tamil Nadu open-ground
+  hedge. Both descriptions now frame it as a sheltered container plant.
+- **Ixora's Tamil name** differed between its two category rows — `இட்லிப்பூ` under `shrub`,
+  `வெட்சி` under `flower`. Both now read `வெட்சி`. Hibiscus, Jasmine and Crossandra are also
+  dual-listed and were checked; those three already agreed.
+
+### Additions
+
+Eight Tamil Nadu homestead shrubs, each with Tamil name, cultivars where they are meaningful, a
+full care profile in `plantCareDefaults/overrides/tamilNaduShrubs.ts`, and pruning guidance:
+
+| Name | Tamil | Species | Why it belongs |
+| --- | --- | --- | --- |
+| Adathodai | ஆடாதொடை | *Justicia adhatoda* | Cough medicinal; also cut as green-leaf manure |
+| Nithyakalyani | நித்தியகல்யாணி | *Catharanthus roseus* | Year-round bloom on poor soil |
+| Maruthani | மருதாணி | *Lawsonia inermis* | Henna; the standard boundary hedge |
+| Aavaram | ஆவாரம் | *Senna auriculata* | Aavarampoo; nitrogen-fixing, holds bunds |
+| Nochi | நொச்சி | *Vitex negundo* | Grain-storage and leaf-extract pest repellent |
+| Thoothuvalai | தூதுவளை | *Solanum trilobatum* | Kitchen-doorway cough remedy |
+| Arali | அரளி | *Nerium oleander* | Temple flower; `petToxicity: true`, sap and smoke warnings |
+| Karpooravalli | கற்பூரவல்லி | *Plectranthus amboinicus* | Ubiquitous kitchen-door medicinal |
+
+`daysToHarvest` on each is planting-to-first-usable-harvest, not season length — the distinction
+the Black Pepper correction above turned on. Shrubs take the midpoint rule, so a season-length
+figure here would promise a first cutting far too early.
+
+Pruning was written per variety rather than left on the type-level default ("remove dead or weak
+inner branches"), which is useless for a shrub cut for leaf and unsafe for Arali, whose sap
+irritates skin and whose burning trimmings are toxic. This is the same failure mode as the generic
+herb tip *"Remove flower buds to extend leaf growth"* on a bearing pepper vine.
+
+Alias coverage was extended at the same time. **Betel Leaf had no aliases at all** — "Vetrilai"
+existed only as a variety string, so a user typing the romanised name found nothing and was
+offered a duplicate entry instead. Added `vetrilai`/`vettrilai`/`betel vine`/`paan`, the
+Arecanut set (`pakku`, `betel nut`, `supari`), `sembaruthi`, `kanakambaram`, `malli`/`mullai`,
+and romanised names for all eight new shrubs.
+
+**Still open:** none of the eight has any pest or disease reference entry, and neither did the
+three shrubs added in the earlier `newShrubs.ts` pass. Consistent with the position stated above,
+no generic treatment was assigned to them to raise the coverage figure. *Costus igneus* (Insulin
+Plant) is a herb-category candidate, not a shrub, and was deliberately left for a later pass.
+
+## Category relevance pass — shrub, herb and flower — 6 September 2026
+
+A follow-up to the section above, prompted by browsing the Shrub tab: it held plants that are not
+shrubs, and plants with no Tamil Nadu connection. Two rules came out of it and now decide where a
+plant is filed.
+
+**Habit does not decide the category; use does.** `herb` already held Curry Leaf (described in
+its own row as a "tree"), Black Pepper (a "vine"), Ashwagandha (a "shrub") and Brahmi (a
+"creeper"). A plant harvested for its leaves is a herb whatever its woodiness, and `shrub` is
+for woody perennials grown for the plant itself — hedges, boundaries and companions.
+
+**A transliterated Tamil name is a reliable tell.** Where the "Tamil name" is only the English
+word respelled — `கொல்லியஸ்` Coleus, `டேலியா` Dahlia, `ஆர்க்கிட்` Orchid, `ரோஸ்மேரி`
+Rosemary, `தைம்` Thyme, `ஓரிகானோ` Oregano — nobody here calls the plant that, because it is
+not grown here.
+
+### Moved from shrub to herb
+
+Adathodai, Nithyakalyani, Thoothuvalai and Karpooravalli. Karpooravalli (30–100 cm) is a succulent
+herb and Thoothuvalai a scrambling climber; neither is a shrub on any reading. All four are
+harvested for leaves or flowers. They had not shipped — they were added in the same uncommitted
+change — so no migration was needed.
+
+### Removed
+
+| Plant | Category | Reason |
+| --- | --- | --- |
+| Lantana | shrub | A declared invasive weed in India, cleared by the forest department, toxic to livestock. The previous pass added a caution, but a caution on a "plant this" row is still a recommendation. |
+| Gardenia | shrub | Exotic; wants acidic humus-rich soil and shelter. Its own profile (pH 5.0–6.0, "Mar–Sep") was already out of step with the rest of the catalog. |
+| Coleus | shrub | Ornamental *Plectranthus scutellarioides*; exotic, 30–80 cm so not a shrub either. See the Koorka note below. |
+| Parsley, Rosemary, Thyme, Oregano, Sage | herb | Mediterranean; none survives a Kanyakumari summer on the plains. |
+| Dahlia, Orchid | flower | Hill-station and commercial-glasshouse crops, not homestead plants. |
+
+**Basil and Dill were kept.** Both carry Tamil names in genuine use — `திருநீற்றுப்பச்சிலை` and
+`சதகுப்பை`, and sathakuppai keerai is a Tamil Nadu crop — which is exactly what the five removed
+herbs lack.
+
+Removed plants keep their bundled reference photos, which move to
+`EXTRA_REFERENCE_PLANT_NAMES` so the image map does not orphan them.
+
+### De-duplication: Hibiscus, Ixora, Jasmine, Crossandra
+
+Each existed as a row under **both** `flower` and `shrub`, with separate care profiles that had
+already drifted — Ixora carried `வெட்சி` on one side and `இட்லிப்பூ` on the other. `flower`
+wins: those rows came first, the reference images and alias targets already resolve there, and all
+four are grown for their blooms.
+
+These have shipped, so **migration 008** (`recategorise_shrub_flowers`, `LATEST_SCHEMA_VERSION`
+7 → 8) re-types existing garden plants from `shrub` to `flower` and moves stored catalog
+overrides across. It follows 007's shape but rewrites `plant_type` rather than `plant_variety`,
+which 007 never did. Without it, `getPlantNamesForType` would promote each user's stored override
+to a "user-added" plant and the duplicate row would survive under Shrub — the exact thing being
+removed.
+
+### Existing user plants of removed varieties are left alone
+
+No data migration deletes them. `getPlantCareProfile` degrades to the category default and never
+returns null for a valid type, so someone who planted Rosemary keeps the plant, its history and its
+tasks; only the care cadence becomes generic. Deleting their records to tidy the catalog would be
+the worse trade.
+
+A related bug was fixed in passing: `getHiddenPlantNames` filtered only on `isDeleted`, so a
+tombstone could outlive the catalog row it hid and the restore UI would offer to bring back a plant
+that no longer exists — `restorePlantProfile` then removed the tombstone and produced nothing. It
+now cross-checks the current defaults.
+
+### Guards added
+
+Nothing enforced that `PLANT_VARIETIES_BY_TYPE` — a second copy of the catalog's plant names, and
+the one the whole care registry and the reference-image tooling actually read — agreed with
+`DEFAULT_PLANT_CATALOG`. A comment added in the previous pass claimed `localSuitability` kept
+them 1:1; it did not. Two tests now do:
+
+- every catalog plant appears in `PLANT_VARIETIES_BY_TYPE` for the same category, and
+- no `PLANT_CARE_OVERRIDES` key lacks a matching catalog row. An orphan key still lands in the
+  registry through `Object.assign`, and `getPlantingCandidates()` enumerates every key — so a
+  leftover would have the dashboard suggesting a plant the catalog no longer offers.
+
+### Notes and still open
+
+- **Agathi stays in `shrub` despite being tree-scale** (300–800 cm in its own profile). It is a
+  `DYNAMIC_ACCUMULATORS` entry, a `medicinal_guild` member and named in two `rotationRules`
+  advice strings; moving it would need all three to move with it.
+- **Koorka (Chinese potato, *Plectranthus rotundifolius*) is absent from the catalog** while
+  Coleus carried the description "living mulch in coconut intercrop systems" — which describes
+  Koorka, a real Tamil Nadu coconut intercrop, not an ornamental. Worth adding as a vegetable in a
+  later pass.
+- *Costus igneus* (Insulin Plant) remains a herb-category candidate, still deferred.
+- None of the new medicinals has a pest or disease reference entry, unchanged from the section
+  above.
+
+## Vegetable category review — 6 September 2026
+
+Prompted by two questions: what separates "Peas" from "Green Peas", and whether lettuce grows here.
+
+### Peas and Green Peas were never two catalog rows
+
+Only **Green Peas** is browsable (`vegetable`, பச்சைப் பட்டாணி, Arkel/Bonneville). "Peas" survived
+only as the image filename — `PLANT_IMAGE_ALIASES` mapped `green_peas → peas` — plus leftover
+keys from the May project scaffold. Nothing was duplicated in the plant list; one crop answered to
+two names in two different layers.
+
+That split was quietly costing something. `PLANT_EMOJI_MAP.Peas` (🫛), `COMPANION_PLANTS.Peas`
+and `INCOMPATIBLE_PLANTS.Peas` were **dead code**: the browsable row is called "Green Peas" and
+matched none of them, so it showed the generic 🌱 and offered no companion or antagonist advice.
+The image is now `green_peas.webp`, the alias is gone, and the companion data is re-keyed onto the
+name that exists.
+
+Green Peas also had **no care profile at all**, so it resolved to bare vegetable defaults with no
+species, season or harvest window — while item 9 above claims these crops were added "with
+Kanyakumari season or drainage cautions". It now carries a *Pisum sativum* profile with the
+Oct–Feb window and `heatTolerance: 'low'`.
+
+### Removed as unsuited to Tamil Nadu
+
+| Plant | Reason |
+| --- | --- |
+| Lettuce | `heatTolerance: 'low'`, germinates at 15–22 °C — unreachable here, where the coolest month sits near 25–27 °C. Bolts before it heads. |
+| Strawberry | Same temperature profile, cultivar list reads `'Local Hill'`, and it is a fruit that was filed under vegetable. |
+| Squash | *Cucurbita pepo* — climatically fine but not a Tamil homestead crop; named only by transliteration (ஸ்குவாஷ்). |
+| Turnip | Cool-season and transliterated (டர்னிப்). **This reverses item 9 above**, which added it in August; the seasonal caution it shipped with is not enough to make it a homestead crop here. |
+
+Both Lettuce and Strawberry are genuinely grown in Tamil Nadu — in the Nilgiris and Kodaikanal.
+The catalog is scoped to the Kanyakumari/plains zone, so they do not belong in it.
+
+Removing Turnip also removed its September–October sowing prompt from the Tamil Nadu planting
+calendar, and Lettuce and Strawberry had to come out of the Leafy Greens guild template and the
+leafy bed's recommended list. Ponnanganni Keerai took Lettuce's ground-cover slot in the guild.
+
+### Two more one-crop-two-rows duplicates
+
+The same fault as the shrub/flower pass, this time across `vegetable` ↔ `spinach`, with identical
+cultivar lists on both sides:
+
+| Crop | Kept | Dropped |
+| --- | --- | --- |
+| *Amaranthus tricolor* | **Amaranthus** (`vegetable`, அரைக்கீரை) | Amaranth Greens (`spinach`) |
+| *Basella alba* | **Pasalai Keerai** (`vegetable`, பசளைக்கீரை) | Malabar Spinach (`spinach`, பசலை கீரை — the same name) |
+
+The vegetable rows won because they carry the care profiles; the two spinach rows had none and fell
+back to category defaults. The `keerai → amaranthus` alias already pointed at the vegetable row.
+Both dropped names stay in `EXTRA_REFERENCE_PLANT_NAMES` so anyone who already planted one keeps
+its photo.
+
+### Purslane moved to spinach
+
+பொட்டுக்கீரை is a keerai that sat in `vegetable` while every other keerai was in `spinach`. It
+joins migration 008 (renamed `recategorise_plants`, since it now covers two category pairs rather
+than shrub→flower alone).
+
+### Pepper no longer shows a Chilli photo
+
+`PLANT_IMAGE_ALIASES` mapped `pepper → chilli`, but Pepper is குடைமிளகாய் (capsicum) and Chilli is
+மிளகாய் — different crops, and that map is only for names of the *same* crop. The alias is gone, so
+Pepper now needs a bell-pepper photo of its own and appears in the missing-prompt list.
+
+### Still open
+
+- `PLANT_EMOJI_MAP` and `COMPANION_PLANTS` carry keys for plants that were never catalog rows —
+  Broccoli, Spinach, Lily, Tulip, Coconut, Elephant Foot Yam — inherited from the May scaffold.
+  They are harmless (both maps fall back) but dead. The keys this pass and the last one made dead
+  were removed; these predate both and were left alone.
+- Companion advice still names things outside the catalog (Roses, Ferns, "Most vegetables"). That
+  is deliberate — advice may reference plants the app does not offer.
+- **Koorka** (Chinese potato, *Plectranthus rotundifolius*) is still absent, as noted above.
+
+## Keerai moved into a "Greens" category — 6 September 2026
+
+The pass above resolved the Amaranthus/Amaranth Greens and Pasalai Keerai/Malabar Spinach
+duplicates by keeping the `vegetable` rows, because those carried the care profiles. That fixed
+the duplication but left two keerai filed as vegetables. Both now move to `spinach`, along with
+**Fenugreek** — வெந்தயம் is vendhaya keerai, already an alias for it, though it stays a dual-purpose
+crop grown for seed as well as leaf.
+
+The category now holds nine rows of which only Palak is actually spinach (*Spinacia oleracea*), so
+the tab is relabelled **Greens** in `plantLabels.ts`. That is display-only — the `PlantType` key
+stays `spinach`, so nothing stored on a device or in Firestore changes.
+
+Existing garden plants are re-typed by migration 008 (`recategorise_plants`), which now carries
+eight names across two category pairs. It is still unreleased, so extending it was correct; had it
+shipped, this would have needed a version 9, because `runPendingMigrations` short-circuits on a
+cached `schema_version` at or above the latest.
+
+### Two things that would have broken silently
+
+- **`direct()` in `tamilNaduPlantingCalendar.ts` defaults `plantType` to `'vegetable'`.** The two
+  Amaranthus rules and the Fenugreek rule relied on that default, so without an explicit
+  `{ plantType: 'spinach' }` the Today screen would have kept emitting sow prompts for a
+  `vegetable:Amaranthus` pair the catalog no longer has. Only the Palak rule had ever opted out.
+- **`NAME_TYPE_ALIASES` in `plantTypeFromName.ts` hardcoded `amaranth: 'vegetable'`.** The Leafy
+  Greens guild template row is literally named "Amaranth" (the catalog row is "Amaranthus"), so
+  every bed-wizard plant created from that row would have been written with the wrong
+  `plant_type` indefinitely.
+
+Amaranthus also carries a second, partial override in `todayRecommendationCrops.ts`. Had only the
+base key in `vegetables1.ts` been re-keyed, that correction would have been **silently discarded** —
+it has too few fields to satisfy the create branch in `overrides/index.ts`, and there would have
+been no key left to correct. Amaranthus would have quietly reverted to `daysToHarvest` 25–40 and
+"Year Round" instead of the TNAU 25–30 and February–March / July–August. The orphan-override guard
+does not catch this, because the discarded entry never becomes an orphan.
+
+### An improvement that comes free
+
+`TAMIL_NADU_COMMON_PESTS_DISEASES` and `PRUNING_INFO_BY_TYPE` are keyed by plant type, so all
+three crops now inherit the greens lists instead of the fruiting-vegetable ones. They lose Fruit
+Borer, Thrips, Mealybugs, Bacterial Wilt, Early Blight and Mosaic Virus and gain Flea Beetles,
+Downy Mildew and Root Rot; the pruning tips change from "pinch tips to encourage branching" to
+"harvest leaves regularly / pinch flowering tips to extend leaf harvest". Fruit borer on a leaf
+crop was meaningless and downy mildew is the real amaranth problem, so this is the right list
+arriving by the right route. Care cadence is unchanged — `getPlantCareProfile` returns a complete
+override outright, so the `spinach` type defaults never apply to these three.
+
+### Watermelon stays in `vegetable`
+
+Asked whether Watermelon belongs under Fruit. Botanically yes, but `fruit_tree` is not a label —
+the key carries tree semantics:
+
+- `calculateExpectedHarvestDate` uses `yearsToFirstHarvest × 365` for `fruit_tree` and ignores
+  `daysToHarvest`. Neither melon has `yearsToFirstHarvest`, so both would show **no harvest date**.
+- `deriveInstanceLifecycle` forces `fruit_tree` → `'permanent'` regardless of the catalog
+  lifecycle, so an 80-day annual melon would be recorded as a permanent planting that never
+  completes and never clears its bed.
+
+Pineapple and Passion Fruit sit in `fruit_tree` without being trees, but both are perennials
+carrying `yearsToFirstHarvest`. The category means *perennial fruit crop*, not *tree*. Annual
+cucurbits belong with Pumpkin and Ash Gourd, so Watermelon and Muskmelon stay put.
+
+Both did, however, have **no care profile at all** — the same gap Green Peas had — and now carry
+*Citrullus lanatus* and *Cucumis melo* profiles with a January–March window, sandy free-draining
+soil and `waterloggingTolerance: 'low'`.
+
+### Still open
+
+- `fruit_tree` would need `calculateExpectedHarvestDate` and `deriveInstanceLifecycle` to respect
+  an annual lifecycle before any annual fruit could live there. Not attempted; it changes behaviour
+  for every fruit row.
+- `transplant()` in the planting calendar does not accept a `plantType` option at all, so a
+  transplanted non-vegetable would silently take the `'vegetable'` default. No current rule hits
+  this, but the next one might.
 
 ## Validation method and limitations
 

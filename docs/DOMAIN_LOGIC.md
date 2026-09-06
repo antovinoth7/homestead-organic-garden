@@ -97,3 +97,13 @@ TNAU age stages and supplies the coconut harvest cadence, and
 Until that gap is closed, harvest date estimates are presented only where the
 crop's own maturity data exists — an unrecognised variety shows no estimate
 rather than one inherited from its plant type.
+
+**`daysToHarvest` on a perennial means planting-to-first-crop.** Because
+`calculateExpectedHarvestDate` takes the midpoint of the range for every type
+except `fruit_tree`/`coconut_tree`, a perennial herb that stores its
+season-length instead promises a first harvest years early. Black Pepper
+carried the 180–270 day spike-to-ripe-berry window and was corrected on
+6 September 2026 to 1095–1460 days, matching the Cardamom precedent
+(900–1095). The season-length figure belongs in `growthStageDurations.fruiting`.
+`yearsToFirstHarvest` is set alongside it, but is read only for fruit and
+coconut trees, so on a herb it is display-only.

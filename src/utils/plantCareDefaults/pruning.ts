@@ -203,6 +203,26 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
       'Cut back all foliage after harvest',
     ],
   },
+  // A pepper vine is trained more than it is cut, and the twice-yearly lopping
+  // of the shade standard is what its `pruningFrequencyDays: 180` tracks.
+  // De-spiking applies to years 1–2 only, so it carries that qualifier: the
+  // generic herb fallback ('Remove flower buds to extend leaf growth') would
+  // tell the owner of a bearing vine to destroy the crop.
+  [buildProfileKey('herb', 'Black Pepper')]: {
+    tips: [
+      'Tie runner shoots to the standard every 2–3 weeks',
+      'Cut off runner shoots trailing on the ground monthly',
+      'Remove dead and diseased laterals after harvest',
+    ],
+    shapePruning: {
+      tip: 'Top the vine at the head of the standard; lop the shade tree',
+      months: 'May–Jun & Sep–Oct',
+    },
+    flowerPruning: {
+      tip: 'Remove spikes to build the frame — first two years only',
+      months: 'May–Jul, years 1–2 only',
+    },
+  },
 
   // Flowers
   [buildProfileKey('flower', 'Rose')]: {
@@ -317,20 +337,47 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
     shapePruning: { tip: 'Hard prune for compact form', months: 'Jan–Feb' },
     flowerPruning: { tip: 'Tip-prune new growth for more blooms', months: 'After each flush' },
   },
-  [buildProfileKey('shrub', 'Ixora')]: {
-    tips: ['Avoid heavy cuts — slow to recover'],
-    shapePruning: { tip: 'Shape into hedge or ball form', months: 'Jan–Feb' },
-    flowerPruning: { tip: 'Light trim after each flowering cycle', months: 'After bloom' },
+
+  // Tamil Nadu medicinals and hedge shrubs. Neither type-level default fits:
+  // the shrub tip ("remove dead or weak inner branches") is useless for a plant
+  // cut for leaf and actively unsafe for Arali, and the herb tip ("remove
+  // flower buds to extend leaf growth") is wrong for Nithyakalyani, which is
+  // grown for the flowers.
+  [buildProfileKey('herb', 'Adathodai')]: {
+    tips: ['Cut leafy shoots above a node; the stump reshoots readily'],
+    shapePruning: { tip: 'Cut back to knee height to renew a leggy bush', months: 'Jan–Feb' },
   },
-  [buildProfileKey('shrub', 'Jasmine')]: {
-    tips: ['Remove dead wood and tangles'],
-    shapePruning: { tip: 'Hard prune after main flowering', months: 'Sep–Oct' },
-    flowerPruning: { tip: 'Trim spent flower clusters', months: 'After each flush' },
+  [buildProfileKey('herb', 'Nithyakalyani')]: {
+    tips: ['Pinch tips on young plants to stop it going lanky'],
+    flowerPruning: { tip: 'Shear spent blooms to limit self-seeding', months: 'Year-round' },
   },
-  [buildProfileKey('shrub', 'Hibiscus')]: {
-    tips: ['Remove inward-growing branches'],
-    shapePruning: { tip: 'Prune 1/3 of growth for compact shape', months: 'Jan–Feb' },
-    flowerPruning: { tip: 'Remove faded flowers daily', months: 'Year-round' },
+  [buildProfileKey('shrub', 'Maruthani')]: {
+    tips: ['Harvest by clipping whole leafy shoots, not single leaves'],
+    shapePruning: { tip: 'Clip the hedge to shape; it tolerates hard cuts', months: 'Feb–Mar' },
+  },
+  [buildProfileKey('shrub', 'Aavaram')]: {
+    tips: ['Pick flowers in the morning as they open', 'Cut back spent flowering wood'],
+    shapePruning: { tip: 'Cut back by a third to keep it bushy', months: 'Jan–Feb' },
+  },
+  [buildProfileKey('shrub', 'Nochi')]: {
+    tips: ['Cut leafy branches for grain storage and leaf-extract sprays'],
+    shapePruning: { tip: 'Coppice hard to keep it a shrub, not a small tree', months: 'Jan–Feb' },
+  },
+  [buildProfileKey('herb', 'Thoothuvalai')]: {
+    tips: ['Wear gloves — the stems and leaf veins are thorny', 'Trim to keep it on its support'],
+    shapePruning: { tip: 'Cut back sprawling growth after the rains', months: 'Jan–Feb' },
+  },
+  [buildProfileKey('shrub', 'Arali')]: {
+    tips: [
+      'Wear gloves and long sleeves — the milky sap irritates skin',
+      'Never burn the prunings; the smoke is toxic',
+      'Bag the trimmings for disposal rather than composting them',
+    ],
+    shapePruning: { tip: 'Thin old stems at the base to renew the bush', months: 'Jan–Feb' },
+  },
+  [buildProfileKey('herb', 'Karpooravalli')]: {
+    tips: ['Pick outer leaves and pinch tips to keep the plant compact'],
+    flowerPruning: { tip: 'Remove flower spikes to keep the leaves thick', months: 'Year-round' },
   },
 };
 

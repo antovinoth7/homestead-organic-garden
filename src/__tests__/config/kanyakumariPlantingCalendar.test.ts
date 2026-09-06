@@ -15,7 +15,7 @@ describe('Kanyakumari planting calendar', () => {
 
   it('shows the August monsoon set in reviewed order', () => {
     expect(getKanyakumariPlantingRecommendations(at(8))).toEqual([
-      { plantType: 'vegetable', variety: 'Amaranthus', action: 'sow' },
+      { plantType: 'spinach', variety: 'Amaranthus', action: 'sow' },
       { plantType: 'vegetable', variety: 'Brinjal', action: 'transplant' },
       { plantType: 'vegetable', variety: 'Chilli', action: 'transplant' },
       { plantType: 'vegetable', variety: 'Cluster Beans', action: 'sow' },
