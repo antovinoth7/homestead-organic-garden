@@ -1,17 +1,12 @@
 import { PlantCatalog, PlantCatalogCategory, PlantType } from '../types/database.types';
 import { getData, KEYS } from '../lib/storage';
 import { getCanonicalPlantKey, PLANT_NAME_ALIASES, toLookupKey } from '../utils/plantAliases';
+import { PLANT_CATEGORIES } from '../utils/plantCategories';
 
-export const PLANT_CATEGORIES: PlantType[] = [
-  'vegetable',
-  'fruit_tree',
-  'coconut_tree',
-  'herb',
-  'timber_tree',
-  'flower',
-  'shrub',
-  'spinach',
-];
+// Re-exported because most callers reach the category order through the
+// catalog service; the list itself lives in a leaf module both this file and
+// `plantLabels.ts` can import.
+export { PLANT_CATEGORIES };
 
 export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
   categories: {
@@ -246,6 +241,10 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Nithyakalyani',
         'Thoothuvalai',
         'Karpooravalli',
+        // Moved from `shrub`: both are cut for a leaf harvest, one for henna
+        // and one for the grain store and the pest spray.
+        'Maruthani',
+        'Nochi',
       ],
       varieties: {
         Coriander: ['CO 4', 'CO 5', 'Local'],
@@ -262,6 +261,7 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Aloe Vera': ['Barbadensis', 'Local Green', 'Soap Aloe'],
         Nithyakalyani: ['White', 'Pink', 'Local'],
         Karpooravalli: ['Broad Leaf', 'Variegated', 'Local'],
+        Maruthani: ['Broad Leaf', 'Country', 'Local'],
       },
       tamilNames: {
         Coriander: 'கொத்தமல்லி',
@@ -285,6 +285,8 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Nithyakalyani: 'நித்தியகல்யாணி',
         Thoothuvalai: 'தூதுவளை',
         Karpooravalli: 'கற்பூரவல்லி',
+        Maruthani: 'மருதாணி',
+        Nochi: 'நொச்சி',
       },
       descriptions: {
         Coriander: 'Fast-growing cool-season herb prized for its aromatic leaves and seeds',
@@ -319,6 +321,10 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'Scrambling prickly climber of the kitchen doorway, cooked as a cough and cold remedy',
         Karpooravalli:
           'Thick-leaved aromatic plant kept by the kitchen door; leaves used fresh for coughs and colds',
+        Maruthani:
+          'The classic Tamil boundary hedge; leaves ground for henna, and it takes hard clipping',
+        Nochi:
+          'Aromatic shrub whose leaves are layered into stored grain and steeped as a leaf-extract pest spray',
       },
     },
     flower: {
@@ -331,11 +337,17 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Crossandra',
         'Ixora',
         'Sunflower',
+        // Moved from `shrub`: woody, but grown for the bloom — nandiyavattai
+        // and arali poo for the temple, aavarampoo for the flower itself.
+        'Nandiyavattai',
+        'Aavaram',
+        'Arali',
       ],
       varieties: {
         Marigold: ['African', 'French', 'Local Orange'],
         Jasmine: ['Malli', 'Mullai', 'Jathi Malli'],
         Hibiscus: ['Red', 'Yellow', 'Double Petal'],
+        Arali: ['White', 'Pink', 'Red'],
       },
       tamilNames: {
         Marigold: 'செண்டுமல்லி',
@@ -346,6 +358,9 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Crossandra: 'கனகாம்பரம்',
         Ixora: 'வெட்சி',
         Sunflower: 'சூரியகாந்தி',
+        Nandiyavattai: 'நந்தியாவட்டை',
+        Aavaram: 'ஆவாரம்',
+        Arali: 'அரளி',
       },
       descriptions: {
         Marigold: 'Bright orange-yellow blooms that repel nematodes and attract pollinators',
@@ -358,6 +373,11 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Crossandra: 'Low-growing perennial bearing vibrant orange flowers for garlands',
         Ixora: 'Evergreen tropical shrub with dense clusters of tiny tubular flowers',
         Sunflower: 'Tall, cheerful annual grown for large composite flower heads',
+        Nandiyavattai: 'Fragrant white-flowered shrub sacred in Tamil temple gardens',
+        Aavaram:
+          'Dryland-hardy shrub grown for its yellow aavarampoo flowers; fixes nitrogen and holds bunds together',
+        Arali:
+          'Temple flowering shrub, drought-hardy and long-blooming. Every part is toxic if eaten and the sap irritates skin — plant it away from children, pets and the vegetable beds',
       },
     },
     fruit_tree: {
@@ -519,51 +539,23 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'Orange tender-nut type suited climatically but less standard in Tamil Nadu than released local cultivars',
       },
     },
-    // Woody perennials grown for the plant itself. Plants grown for a leaf or
-    // flower harvest live in `herb` and `flower` — Hibiscus, Ixora, Jasmine and
-    // Crossandra were duplicated here and now sit only under `flower`.
+    // Woody perennials grown for the plant itself — nothing is harvested off
+    // them. Anything grown for a leaf or flower harvest is filed by that
+    // harvest instead: Hibiscus, Ixora, Jasmine, Crossandra, Nandiyavattai,
+    // Aavaram and Arali under `flower`, Maruthani and Nochi under `herb`, and
+    // Agathi under `spinach` with the other keerai. That leaves the two rows
+    // where the plant itself is the point: a hedge and a trap crop.
     shrub: {
-      plants: [
-        'Nandiyavattai',
-        'Bougainvillea',
-        // Medicinal & companion shrubs
-        'Agathi',
-        'Castor',
-        // Tamil Nadu homestead hedge & boundary shrubs
-        'Maruthani',
-        'Aavaram',
-        'Nochi',
-        'Arali',
-      ],
-      varieties: {
-        Maruthani: ['Broad Leaf', 'Country', 'Local'],
-        Arali: ['White', 'Pink', 'Red'],
-      },
+      plants: ['Bougainvillea', 'Castor'],
+      varieties: {},
       tamilNames: {
-        Nandiyavattai: 'நந்தியாவட்டை',
         Bougainvillea: 'பூகன்வில்லியா',
-        Agathi: 'அகத்தி',
         Castor: 'ஆமணக்கு',
-        Maruthani: 'மருதாணி',
-        Aavaram: 'ஆவாரம்',
-        Nochi: 'நொச்சி',
-        Arali: 'அரளி',
       },
       descriptions: {
-        Nandiyavattai: 'Fragrant white-flowered shrub sacred in Tamil temple gardens',
         Bougainvillea: 'Vigorous thorny shrub-vine smothered in papery bracts',
-        Agathi:
-          'Fast-growing nitrogen-fixing shrub with edible leaves and flowers; dynamic accumulator for chop-and-drop',
         Castor:
           'Tall fast-growing shrub with repellent properties; pest-deterrent companion around vegetable beds',
-        Maruthani:
-          'The classic Tamil boundary hedge; leaves ground for henna, and it takes hard clipping',
-        Aavaram:
-          'Dryland-hardy shrub grown for its yellow aavarampoo flowers; fixes nitrogen and holds bunds together',
-        Nochi:
-          'Aromatic shrub whose leaves are layered into stored grain and steeped as a leaf-extract pest spray',
-        Arali:
-          'Temple flowering shrub, drought-hardy and long-blooming. Every part is toxic if eaten and the sap irritates skin — plant it away from children, pets and the vegetable beds',
       },
     },
     spinach: {
@@ -579,6 +571,10 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Amaranthus',
         'Pasalai Keerai',
         'Fenugreek',
+        // Moved from `shrub`: agathi keerai is a keerai, whatever the plant's
+        // habit. Its nitrogen fixing and chop-and-drop use are unchanged —
+        // `dynamicAccumulators` and the medicinal guild match it by name.
+        'Agathi',
       ],
       varieties: {
         Palak: ['All Green', 'Pusa Palak', 'Jobner Green', 'Local'],
@@ -602,6 +598,7 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Amaranthus: 'அரைக்கீரை',
         'Pasalai Keerai': 'பசளைக்கீரை',
         Fenugreek: 'வெந்தயம்',
+        Agathi: 'அகத்தி',
       },
       descriptions: {
         Palak:
@@ -622,6 +619,8 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'Malabar spinach — vigorous climbing leafy green thriving in Tamil Nadu heat',
         Fenugreek:
           'Aromatic annual legume grown for its iron-rich leaves and distinctive seeds; vendhaya keerai',
+        Agathi:
+          'Tall nitrogen-fixing legume picked over for agathi keerai and its edible flowers; also a chop-and-drop dynamic accumulator',
       },
     },
   },

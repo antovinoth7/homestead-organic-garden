@@ -262,9 +262,10 @@ them 1:1; it did not. Two tests now do:
 
 ### Notes and still open
 
-- **Agathi stays in `shrub` despite being tree-scale** (300–800 cm in its own profile). It is a
-  `DYNAMIC_ACCUMULATORS` entry, a `medicinal_guild` member and named in two `rotationRules`
-  advice strings; moving it would need all three to move with it.
+- ~~**Agathi stays in `shrub` despite being tree-scale**~~ — moved to `spinach` in the pass
+  below. The worry that its `DYNAMIC_ACCUMULATORS` entry, `medicinal_guild` membership and two
+  `rotationRules` advice strings would have to move with it was unfounded: all three match the
+  plant by name, not by category, so none of them needed touching.
 - **Koorka (Chinese potato, *Plectranthus rotundifolius*) is absent from the catalog** while
   Coleus carried the description "living mulch in coconut intercrop systems" — which describes
   Koorka, a real Tamil Nadu coconut intercrop, not an ornamental. Worth adding as a vegetable in a
@@ -495,3 +496,82 @@ All four are published by Tamil Nadu Agricultural University, accessed and revie
 The code records this as `source_reviewed`, not as an agronomist's approval. A Tamil Nadu
 agronomist or TNAU/KVK-equivalent reviewer must still sign off before the content is represented
 as expert-approved or guaranteed for production use.
+
+## Applying the rule to the rows it was written for — 9 September 2026
+
+The pass above stated the rule — *habit does not decide the category; use does* — and applied it
+to the four plants it moved out of `shrub`. It did not apply it to the eight rows it left in, and
+those rows break it. The catalog's own descriptions are the evidence:
+
+| Row | What its description says it is grown for | Filed | Now |
+| --- | --- | --- | --- |
+| Nandiyavattai | "Fragrant white-flowered shrub sacred in Tamil temple gardens" | shrub | `flower` |
+| Aavaram | "grown for its yellow aavarampoo flowers" | shrub | `flower` |
+| Arali | "Temple flowering shrub… long-blooming" | shrub | `flower` |
+| Maruthani | "leaves ground for henna" | shrub | `herb` |
+| Nochi | "leaves… layered into stored grain and steeped as a leaf-extract pest spray" | shrub | `herb` |
+| Agathi | "edible leaves and flowers" — this is agathi keerai | shrub | `spinach` |
+
+Agathi goes to `spinach` rather than `herb` because every other edible-leaf crop is there and the
+Herb tab is aromatics and medicinals — the same reasoning that put the four keerai there in the
+`vegetable` → `spinach` pass.
+
+That leaves `shrub` holding Bougainvillea and Castor: the two rows where nothing is harvested and
+the plant itself is the point. The category is kept rather than retired — removing a `PlantType`
+value is a breaking union change plus a migration for any user-added shrubs, which is not worth it
+for two rows.
+
+### Two duplicate rows had been dropped with no merge path
+
+`Malabar Spinach` and `Pasalai Keerai` are both *Basella alba* — the surviving row's own
+description says "Malabar spinach". `Amaranth Greens` and `Amaranthus` are likewise one plant.
+The relevance pass dropped one of each without adding it to `MERGED_PLANT_NAMES` or
+`PLANT_NAME_ALIASES`, so search for the dropped name returned nothing and a user whose garden
+plant sat on it was stranded on a row that no longer existed — `plantTypeFromName` then defaulted
+it to `vegetable`. Migration 007 had done exactly this job for Methi, Eggplant, Moringa and
+Colocasia; the precedent simply was not applied.
+
+### Migration 009 (`realign_catalog`, `LATEST_SCHEMA_VERSION` 8 → 9)
+
+Renames garden plants off the two dropped names, then re-types the six moved rows, then applies
+both plans to the stored catalog overrides and the AsyncStorage copy. Rename runs first: a plant
+arriving as `Malabar Spinach` has to be `Pasalai Keerai` before anything reasons about its
+category. Idempotent, like 007 and 008.
+
+007's `MERGED_PLANT_NAMES` and 008's `RECATEGORISED_PLANTS` are frozen and 009 carries its own
+maps in `catalogRealignmentLogic.ts`. An account already at schema v8 never runs those migrations
+again, so anything appended to their maps would silently never reach it. The four planning
+functions now take the map as an argument instead of closing over a module constant.
+
+### Fixed in passing
+
+- **`shrub:Nandiyavattai` was an orphaned care-override key** — the override lived in
+  `timberCoconutShrubs.ts` while every other new shrub's lived in `tamilNaduPlants.ts`, so it was
+  missed. `localSuitability`'s orphan check caught it. The only two `shrub:` override keys left
+  are Bougainvillea and Castor, which is now a check in itself.
+- **Agathi would have inherited the `spinach` pruning default**, whose third tip is "Pinch
+  flowering tips to extend leaf harvest". Agathi poo is a harvest in its own right, so that advice
+  costs the farmer a crop; Agathi and Nandiyavattai both got their own pruning entries.
+- **`resolvePlantType` never consulted `PLANT_NAME_ALIASES`**, so "Agathi Keerai" and every other
+  alias fell through to the `vegetable` default. It now falls back to the shared table after an
+  exact catalog miss.
+- **`BED_PLANT_CATALOG.leafy` recommended `Amaranth` and `Spinach`**, neither of which is a
+  catalog row, so the leafy bed offered two crops the user could not then add. Now `Amaranthus`
+  and `Palak`.
+- **The tab order and the form order were two separate lists that had drifted** — `spinach` was
+  eighth in `plantCatalog.ts` and third in `plantLabels.ts`, and the tabs read the eighth-place
+  one, so Greens was the tab you scrolled furthest to reach. Both now read
+  `src/utils/plantCategories.ts`, with Greens third.
+- **`useUserCareProfiles` did not typecheck** — its state was typed `PlantCareProfiles` while
+  `getPlantProfiles()` returns `PlantProfiles`. `npm run typecheck` was failing on the branch.
+
+### Still open
+
+- `malabar_spinach.webp` and `pasalai_keerai.webp` are now two bundled photos of one plant. Both
+  names stay in `EXTRA_REFERENCE_PLANT_NAMES` so neither WebP is orphaned; collapsing them is a
+  size-budget cleanup for a later pass (`docs/REFERENCE_IMAGES.md`).
+- Black Pepper, Cardamom and Betel Leaf sit under Herb, and Arecanut, Cocoa and Nutmeg under
+  Fruit. For a Kanyakumari farmer these are the plantation and intercrop block. A `spice`
+  category was considered and rejected for now: it means a `PlantType` union change,
+  `PlantProfiles`, labels, icons and a further migration. Aliases and row subtitles carry them
+  instead.

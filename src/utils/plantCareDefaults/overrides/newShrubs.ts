@@ -1,9 +1,15 @@
 import { PlantCareProfile } from '@/types/database.types';
 import { buildProfileKey } from '@/utils/plantCareDefaults/profileKey';
 
+/**
+ * Agathi and Castor. They no longer share a category — agathi keerai is filed
+ * under `spinach` with the other keerai — but they are still the same pair of
+ * fast-growing chop-and-drop plants this file was added for, so the profiles
+ * stay together rather than being split across two files for the sake of the
+ * name.
+ */
 export const NEW_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
-  // ── New Shrub Plants ────────────────────────────────────────────────────
-  [buildProfileKey('shrub', 'Agathi')]: {
+  [buildProfileKey('spinach', 'Agathi')]: {
     waterRequirement: 'low',
     wateringFrequencyDays: 5,
     fertilisingFrequencyDays: 30,
@@ -17,7 +23,7 @@ export const NEW_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
     lifecycle: 'perennial',
     tamilName: 'அகத்தி',
     description:
-      'Fast-growing nitrogen-fixing shrub with edible leaves and flowers; dynamic accumulator for chop-and-drop',
+      'Tall nitrogen-fixing legume picked over for agathi keerai and its edible flowers; also a chop-and-drop dynamic accumulator',
     daysToHarvest: { min: 45, max: 90 },
     heightCm: { min: 300, max: 800 },
     spacingCm: 200,

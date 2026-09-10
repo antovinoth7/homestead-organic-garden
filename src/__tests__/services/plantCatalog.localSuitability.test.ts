@@ -28,8 +28,9 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
     // Malabar Spinach and Amaranth Greens were dropped as duplicates of the
     // rows that carried the care profiles; those rows — Amaranthus and Pasalai
     // Keerai (Basella alba) — then moved here from `vegetable`, along with
-    // Purslane and Fenugreek (vendhaya keerai). Only Palak is really spinach,
-    // which is why the tab is labelled "Greens".
+    // Purslane and Fenugreek (vendhaya keerai). Agathi followed from `shrub`:
+    // agathi keerai is a keerai whatever the plant's habit. Only Palak is
+    // really spinach, which is why the tab is labelled "Greens".
     expect(spinach.plants).toEqual([
       'Palak',
       'Water Spinach',
@@ -41,6 +42,7 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
       'Amaranthus',
       'Pasalai Keerai',
       'Fenugreek',
+      'Agathi',
     ]);
     expect(spinach.plants).not.toEqual(
       expect.arrayContaining(['Hybrid Leafy', 'Local Green', 'Winter Spinach'])

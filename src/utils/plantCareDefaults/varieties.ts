@@ -78,6 +78,9 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
     'Nithyakalyani',
     'Thoothuvalai',
     'Karpooravalli',
+    // Moved from `shrub`: cut for a leaf harvest, so filed with the herbs
+    'Maruthani',
+    'Nochi',
   ],
   flower: [
     'Marigold',
@@ -88,6 +91,10 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
     'Crossandra',
     'Ixora',
     'Sunflower',
+    // Moved from `shrub`: woody, but grown for the bloom
+    'Nandiyavattai',
+    'Aavaram',
+    'Arali',
   ],
   fruit_tree: [
     'Banana',
@@ -120,16 +127,9 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
   ],
   timber_tree: ['Neem', 'Teak', 'Mahogany', 'Rosewood', 'Sandalwood', 'Bamboo', 'Wild Jack'],
   coconut_tree: ['Dwarf Coconut', 'Tall Coconut', 'Hybrid Coconut', 'King Coconut'],
-  shrub: [
-    'Nandiyavattai',
-    'Bougainvillea',
-    'Agathi',
-    'Castor',
-    'Maruthani',
-    'Aavaram',
-    'Nochi',
-    'Arali',
-  ],
+  // Only the woody perennials grown for the plant itself; everything cut for a
+  // leaf or a flower is filed under that harvest instead.
+  shrub: ['Bougainvillea', 'Castor'],
   spinach: [
     'Palak',
     'Water Spinach',
@@ -141,5 +141,7 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
     'Amaranthus',
     'Pasalai Keerai',
     'Fenugreek',
+    // Moved from `shrub`: agathi keerai is a keerai
+    'Agathi',
   ],
 };

@@ -31,21 +31,21 @@ const withVegetables = (entries: Record<string, unknown>): PlantProfiles => {
 
 describe('plannedVarietyRename', () => {
   it('moves a garden plant off a merged-away name', () => {
-    expect(plannedVarietyRename('Methi')).toBe('Fenugreek');
-    expect(plannedVarietyRename('Eggplant')).toBe('Brinjal');
-    expect(plannedVarietyRename('Moringa')).toBe('Drumstick');
-    expect(plannedVarietyRename('Colocasia')).toBe('Taro');
+    expect(plannedVarietyRename('Methi', MERGED_PLANT_NAMES)).toBe('Fenugreek');
+    expect(plannedVarietyRename('Eggplant', MERGED_PLANT_NAMES)).toBe('Brinjal');
+    expect(plannedVarietyRename('Moringa', MERGED_PLANT_NAMES)).toBe('Drumstick');
+    expect(plannedVarietyRename('Colocasia', MERGED_PLANT_NAMES)).toBe('Taro');
   });
 
   it('leaves every other name alone', () => {
-    expect(plannedVarietyRename('Tomato')).toBeNull();
-    expect(plannedVarietyRename('Fenugreek')).toBeNull();
-    expect(plannedVarietyRename('')).toBeNull();
-    expect(plannedVarietyRename(null)).toBeNull();
+    expect(plannedVarietyRename('Tomato', MERGED_PLANT_NAMES)).toBeNull();
+    expect(plannedVarietyRename('Fenugreek', MERGED_PLANT_NAMES)).toBeNull();
+    expect(plannedVarietyRename('', MERGED_PLANT_NAMES)).toBeNull();
+    expect(plannedVarietyRename(null, MERGED_PLANT_NAMES)).toBeNull();
   });
 
   it('tolerates stray whitespace on stored values', () => {
-    expect(plannedVarietyRename('  Methi ')).toBe('Fenugreek');
+    expect(plannedVarietyRename('  Methi ', MERGED_PLANT_NAMES)).toBe('Fenugreek');
   });
 
   it('keeps every surviving name out of its own key set', () => {
@@ -61,14 +61,14 @@ describe('planProfileMerge', () => {
     const profiles = withVegetables({
       Tomato: makePlantProfile({ name: 'Tomato' }),
     });
-    expect(planProfileMerge(profiles)).toBeNull();
+    expect(planProfileMerge(profiles, MERGED_PLANT_NAMES)).toBeNull();
   });
 
   it("carries the user's edits across to the surviving name", () => {
     const profiles = withVegetables({
       Methi: makePlantProfile({ name: 'Methi', wateringFrequencyDays: 4 }),
     });
-    const merged = planProfileMerge(profiles);
+    const merged = planProfileMerge(profiles, MERGED_PLANT_NAMES);
 
     expect(merged?.vegetable.Methi).toBeUndefined();
     expect(merged?.vegetable.Fenugreek).toMatchObject({
@@ -83,7 +83,7 @@ describe('planProfileMerge', () => {
       Methi: makePlantProfile({ name: 'Methi', wateringFrequencyDays: 4 }),
       Fenugreek: makePlantProfile({ name: 'Fenugreek', wateringFrequencyDays: 9 }),
     });
-    const merged = planProfileMerge(profiles);
+    const merged = planProfileMerge(profiles, MERGED_PLANT_NAMES);
 
     expect(merged?.vegetable.Methi).toBeUndefined();
     expect(merged?.vegetable.Fenugreek).toMatchObject({ wateringFrequencyDays: 9 });
@@ -93,7 +93,7 @@ describe('planProfileMerge', () => {
     const profiles = withVegetables({
       Eggplant: makePlantProfile({ name: 'Eggplant', isDeleted: true }),
     });
-    const merged = planProfileMerge(profiles);
+    const merged = planProfileMerge(profiles, MERGED_PLANT_NAMES);
 
     expect(merged?.vegetable.Eggplant).toBeUndefined();
     // Hiding "Eggplant" must not hide Brinjal, which is a different decision.
@@ -105,9 +105,9 @@ describe('planProfileMerge', () => {
       Methi: makePlantProfile({ name: 'Methi' }),
       Moringa: makePlantProfile({ name: 'Moringa' }),
     });
-    const once = planProfileMerge(profiles);
+    const once = planProfileMerge(profiles, MERGED_PLANT_NAMES);
     expect(once).not.toBeNull();
-    expect(planProfileMerge(once as PlantProfiles)).toBeNull();
+    expect(planProfileMerge(once as PlantProfiles, MERGED_PLANT_NAMES)).toBeNull();
   });
 
   it('leaves unrelated categories untouched', () => {
@@ -115,7 +115,7 @@ describe('planProfileMerge', () => {
     profiles.vegetable = { Methi: makePlantProfile({ name: 'Methi' }) };
     profiles.herb = { Basil: makePlantProfile({ plantType: 'herb', name: 'Basil' }) };
 
-    const merged = planProfileMerge(profiles);
+    const merged = planProfileMerge(profiles, MERGED_PLANT_NAMES);
     expect(merged?.herb.Basil).toMatchObject({ name: 'Basil' });
   });
 });

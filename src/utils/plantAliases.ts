@@ -21,8 +21,9 @@ export function toLookupKey(value: string): string {
  *
  * An entry here asserts the two names are *the same catalog entry*, so the
  * canonical side must be a real name in `DEFAULT_PLANT_CATALOG`. Names that
- * merely share a photo (Palak/Spinach, Amaranth Greens/Amaranthus) do not belong here —
- * those stay in `PLANT_IMAGE_ALIASES`, which answers a different question.
+ * merely share a photo (Palak and true Spinach are different crops that use
+ * one image) do not belong here — those stay in `PLANT_IMAGE_ALIASES`, which
+ * answers a different question.
  */
 export const PLANT_NAME_ALIASES: Record<string, string> = {
   // Ladies Finger
@@ -77,10 +78,30 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   peppercorns: 'black pepper',
   'piper nigrum': 'black pepper',
 
-  // Amaranthus
+  // Amaranthus. `Amaranth Greens` was a second catalog row for the same plant
+  // until the Tamil Nadu pass dropped it; migration 009 moves stored plants
+  // across and these keep the old names searchable.
   keerai: 'amaranthus',
   'thandu keerai': 'amaranthus',
   'mulai keerai': 'amaranthus',
+  'arai keerai': 'amaranthus',
+  'siru keerai': 'amaranthus',
+  amaranth: 'amaranthus',
+  'amaranth greens': 'amaranthus',
+
+  // Pasalai Keerai — likewise the survivor of the `Malabar Spinach` duplicate.
+  'malabar spinach': 'pasalai keerai',
+  'vasalai keerai': 'pasalai keerai',
+  pasali: 'pasalai keerai',
+  basella: 'pasalai keerai',
+  'basella alba': 'pasalai keerai',
+
+  // Agathi — the keerai is what it is grown for, and what it is searched for.
+  'agathi keerai': 'agathi',
+  agathikeerai: 'agathi',
+  'august tree': 'agathi',
+  sesbania: 'agathi',
+  'sesbania grandiflora': 'agathi',
 
   // Gourds
   pudalangai: 'snake gourd',
@@ -168,7 +189,13 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   avaram: 'aavaram',
   aavarampoo: 'aavaram',
   avarampoo: 'aavaram',
+  'aavaram poo': 'aavaram',
+  'avaram poo': 'aavaram',
   "tanner's cassia": 'aavaram',
+  'crape jasmine': 'nandiyavattai',
+  'crepe jasmine': 'nandiyavattai',
+  nandhiyavattai: 'nandiyavattai',
+  'tabernaemontana divaricata': 'nandiyavattai',
   notchi: 'nochi',
   vitex: 'nochi',
   'five-leaved chaste tree': 'nochi',

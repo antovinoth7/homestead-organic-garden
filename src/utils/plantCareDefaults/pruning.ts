@@ -338,11 +338,13 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
     flowerPruning: { tip: 'Tip-prune new growth for more blooms', months: 'After each flush' },
   },
 
-  // Tamil Nadu medicinals and hedge shrubs. Neither type-level default fits:
-  // the shrub tip ("remove dead or weak inner branches") is useless for a plant
-  // cut for leaf and actively unsafe for Arali, and the herb tip ("remove
-  // flower buds to extend leaf growth") is wrong for Nithyakalyani, which is
-  // grown for the flowers.
+  // Tamil Nadu medicinals, hedge and temple plants. These are woody, but each
+  // is filed under the harvest it is cut for, and neither type-level default
+  // then fits: the herb tip ("remove flower buds to extend leaf growth") is
+  // wrong for Nithyakalyani, Aavaram and Arali, which are grown for the
+  // flowers, and the flower tip is wrong for Maruthani and Nochi, which are
+  // stripped for leaf. Arali needs its own tips for a third reason — the
+  // generic advice is actively unsafe around its sap.
   [buildProfileKey('herb', 'Adathodai')]: {
     tips: ['Cut leafy shoots above a node; the stump reshoots readily'],
     shapePruning: { tip: 'Cut back to knee height to renew a leggy bush', months: 'Jan–Feb' },
@@ -351,15 +353,15 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
     tips: ['Pinch tips on young plants to stop it going lanky'],
     flowerPruning: { tip: 'Shear spent blooms to limit self-seeding', months: 'Year-round' },
   },
-  [buildProfileKey('shrub', 'Maruthani')]: {
+  [buildProfileKey('herb', 'Maruthani')]: {
     tips: ['Harvest by clipping whole leafy shoots, not single leaves'],
     shapePruning: { tip: 'Clip the hedge to shape; it tolerates hard cuts', months: 'Feb–Mar' },
   },
-  [buildProfileKey('shrub', 'Aavaram')]: {
+  [buildProfileKey('flower', 'Aavaram')]: {
     tips: ['Pick flowers in the morning as they open', 'Cut back spent flowering wood'],
     shapePruning: { tip: 'Cut back by a third to keep it bushy', months: 'Jan–Feb' },
   },
-  [buildProfileKey('shrub', 'Nochi')]: {
+  [buildProfileKey('herb', 'Nochi')]: {
     tips: ['Cut leafy branches for grain storage and leaf-extract sprays'],
     shapePruning: { tip: 'Coppice hard to keep it a shrub, not a small tree', months: 'Jan–Feb' },
   },
@@ -367,7 +369,23 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
     tips: ['Wear gloves — the stems and leaf veins are thorny', 'Trim to keep it on its support'],
     shapePruning: { tip: 'Cut back sprawling growth after the rains', months: 'Jan–Feb' },
   },
-  [buildProfileKey('shrub', 'Arali')]: {
+  [buildProfileKey('flower', 'Nandiyavattai')]: {
+    tips: ['Wear gloves — the cut stems bleed a milky sap that irritates skin'],
+    shapePruning: { tip: 'Cut back after the rains; it flowers hard on new wood', months: 'Oct–Nov' },
+  },
+  // The `spinach` default would have this pinched back at the first flower
+  // bud. Agathi poo is a harvest in its own right, so that tip is dropped.
+  [buildProfileKey('spinach', 'Agathi')]: {
+    tips: [
+      'Strip leafy side shoots for keerai; the stem reshoots from the cut',
+      'Leave the flower buds — agathi poo is picked and cooked like the leaves',
+    ],
+    shapePruning: {
+      tip: 'Pollard at shoulder height to keep the leaves and flowers in reach',
+      months: 'Jan–Feb',
+    },
+  },
+  [buildProfileKey('flower', 'Arali')]: {
     tips: [
       'Wear gloves and long sleeves — the milky sap irritates skin',
       'Never burn the prunings; the smoke is toxic',
