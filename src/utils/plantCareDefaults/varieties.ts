@@ -31,7 +31,6 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
     'Taro',
     'Elephant Yam',
     'Sweet Potato',
-    'Ash Plantain',
     // Bed-type plants
     'Yardlong Beans',
     'Beetroot',
@@ -81,6 +80,8 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
     // Moved from `shrub`: cut for a leaf harvest, so filed with the herbs
     'Maruthani',
     'Nochi',
+    // Moved from `shrub`: leaves and seed cake, both used medicinally
+    'Castor',
   ],
   flower: [
     'Marigold',
@@ -128,8 +129,8 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
   timber_tree: ['Neem', 'Teak', 'Mahogany', 'Rosewood', 'Sandalwood', 'Bamboo', 'Wild Jack'],
   coconut_tree: ['Dwarf Coconut', 'Tall Coconut', 'Hybrid Coconut', 'King Coconut'],
   // Only the woody perennials grown for the plant itself; everything cut for a
-  // leaf or a flower is filed under that harvest instead.
-  shrub: ['Bougainvillea', 'Castor'],
+  // leaf, a flower or a seed is filed under that harvest instead.
+  shrub: ['Bougainvillea'],
   spinach: [
     'Palak',
     'Water Spinach',

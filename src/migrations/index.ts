@@ -14,10 +14,11 @@ import { repairZoneAssignment } from './006_repair_zone_assignment';
 import { mergeDuplicatePlantNames } from './007_merge_duplicate_plant_names';
 import { recategorisePlants } from './008_recategorise_plants';
 import { realignCatalog } from './009_realign_catalog';
+import { mergePlantainRetypeCastor } from './010_merge_plantain_retype_castor';
 
 const SETTINGS_COLLECTION = 'user_settings';
 
-export const LATEST_SCHEMA_VERSION = 9;
+export const LATEST_SCHEMA_VERSION = 10;
 
 const migrations: Migration[] = [
   { version: 1, name: 'backfill_district', run: backfillDistrict },
@@ -29,6 +30,7 @@ const migrations: Migration[] = [
   { version: 7, name: 'merge_duplicate_plant_names', run: mergeDuplicatePlantNames },
   { version: 8, name: 'recategorise_plants', run: recategorisePlants },
   { version: 9, name: 'realign_catalog', run: realignCatalog },
+  { version: 10, name: 'merge_plantain_retype_castor', run: mergePlantainRetypeCastor },
 ];
 
 export async function getSchemaVersion(userId: string): Promise<number> {

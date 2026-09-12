@@ -2957,6 +2957,66 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
+  "herb:Castor": {
+    "profile": {
+      "daysToHarvest": {
+        "max": 120,
+        "min": 90,
+      },
+      "description": "Tall fast-growing shrub with repellent properties; pest-deterrent companion around vegetable beds",
+      "droughtTolerance": "high",
+      "feedingIntensity": "light",
+      "fertilisingFrequencyDays": 45,
+      "germinationDays": {
+        "max": 14,
+        "min": 7,
+      },
+      "germinationTempC": {
+        "max": 30,
+        "min": 20,
+      },
+      "growingSeason": "Year Round",
+      "growthStageDurations": {
+        "mature": 39,
+        "seedling": 21,
+        "vegetative": 60,
+      },
+      "heatTolerance": "high",
+      "heightCm": {
+        "max": 300,
+        "min": 100,
+      },
+      "initialGrowthStage": "vegetative",
+      "lifecycle": "perennial",
+      "petToxicity": true,
+      "plantingDepthCm": 3,
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 90,
+      "scientificName": "Ricinus communis",
+      "soilPhRange": {
+        "max": 8,
+        "min": 5,
+      },
+      "soilType": "garden_soil",
+      "spacingCm": 150,
+      "sunlight": "full_sun",
+      "tamilName": "ஆமணக்கு",
+      "taxonomicFamily": "Euphorbiaceae",
+      "waterRequirement": "low",
+      "wateringFrequencyDays": 7,
+    },
+    "pruning": {
+      "shapePruning": {
+        "months": "Jan–Feb",
+        "tip": "Cut back hard after the seed harvest to force fresh low growth",
+      },
+      "tips": [
+        "Cut leafy branches for chop-and-drop and leaf-extract sprays",
+        "Leave the flower spikes to set — the seed is what the cake is pressed from",
+        "Keep the spiny seed capsules away from children and livestock; the seed is toxic",
+      ],
+    },
+  },
   "herb:Coriander": {
     "profile": {
       "daysToHarvest": {
@@ -3830,60 +3890,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       },
       "tips": [
         "Remove green reversions at base",
-      ],
-    },
-  },
-  "shrub:Castor": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 120,
-        "min": 90,
-      },
-      "description": "Tall fast-growing shrub with repellent properties; pest-deterrent companion around vegetable beds",
-      "droughtTolerance": "high",
-      "feedingIntensity": "light",
-      "fertilisingFrequencyDays": 45,
-      "germinationDays": {
-        "max": 14,
-        "min": 7,
-      },
-      "germinationTempC": {
-        "max": 30,
-        "min": 20,
-      },
-      "growingSeason": "Year Round",
-      "growthStageDurations": {
-        "mature": 39,
-        "seedling": 21,
-        "vegetative": 60,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 300,
-        "min": 100,
-      },
-      "initialGrowthStage": "vegetative",
-      "lifecycle": "perennial",
-      "petToxicity": true,
-      "plantingDepthCm": 3,
-      "preferredFertiliser": "compost",
-      "pruningFrequencyDays": 90,
-      "scientificName": "Ricinus communis",
-      "soilPhRange": {
-        "max": 8,
-        "min": 5,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 150,
-      "sunlight": "full_sun",
-      "tamilName": "ஆமணக்கு",
-      "taxonomicFamily": "Euphorbiaceae",
-      "waterRequirement": "low",
-      "wateringFrequencyDays": 7,
-    },
-    "pruning": {
-      "tips": [
-        "Remove dead or weak inner branches",
       ],
     },
   },
@@ -4779,63 +4785,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "tamilName": "வெள்ளைப்பூசணி",
       "taxonomicFamily": "Cucurbitaceae",
       "waterRequirement": "medium",
-      "wateringFrequencyDays": 2,
-    },
-    "pruning": {
-      "tips": [
-        "Remove yellowing lower leaves",
-        "Pinch tips to encourage branching",
-        "Cut diseased stems at the base",
-      ],
-    },
-  },
-  "vegetable:Ash Plantain": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 365,
-        "min": 270,
-      },
-      "description": "Starchy cooking banana widely used in South Indian cuisine. A robust perennial producing suckers freely in Kanyakumari's humid monsoon climate with rich, moist soil.",
-      "droughtTolerance": "low",
-      "feedingIntensity": "heavy",
-      "fertilisingFrequencyDays": 30,
-      "germinationDays": {
-        "max": 28,
-        "min": 14,
-      },
-      "germinationTempC": {
-        "max": 35,
-        "min": 25,
-      },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
-      "growthStageDurations": {
-        "flowering": 30,
-        "fruiting": 60,
-        "seedling": 45,
-        "vegetative": 180,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 350,
-        "min": 200,
-      },
-      "initialGrowthStage": "vegetative",
-      "lifecycle": "perennial",
-      "petToxicity": false,
-      "plantingDepthCm": 20,
-      "preferredFertiliser": "cow_dung_slurry",
-      "pruningFrequencyDays": 60,
-      "scientificName": "Musa × paradisiaca",
-      "soilPhRange": {
-        "max": 7,
-        "min": 5.5,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 200,
-      "sunlight": "full_sun",
-      "tamilName": "நேந்திரம் வாழை",
-      "taxonomicFamily": "Musaceae",
-      "waterRequirement": "high",
       "wateringFrequencyDays": 2,
     },
     "pruning": {

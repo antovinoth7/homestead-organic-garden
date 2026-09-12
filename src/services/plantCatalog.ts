@@ -40,7 +40,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Taro',
         'Elephant Yam',
         'Sweet Potato',
-        'Ash Plantain',
         'Ladies Finger',
         // Bed-type plants — fruiting & climbing
         'Yardlong Beans',
@@ -89,7 +88,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Taro: ['Seppan Kizhangu', 'White Taro', 'Purple Stem', 'Green Stem', 'Local'],
         'Elephant Yam': ['Karunai Kizhangu', 'White Yam', 'Local'],
         'Sweet Potato': ['Orange Flesh', 'White Flesh', 'Local'],
-        'Ash Plantain': ['Vazhakkai', 'Green Plantain', 'Local'],
         Beetroot: ['Detroit Dark Red', 'Crimson Globe', 'Local Red'],
         'French Beans': ['Contender', 'Bush Blue Lake', 'Local Dwarf'],
         'Cluster Beans': ['Pusa Navbahar', 'Goma 1', 'Local'],
@@ -135,7 +133,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Taro: 'சேப்பங்கிழங்கு',
         'Elephant Yam': 'கருணைக்கிழங்கு',
         'Sweet Potato': 'சர்க்கரைவள்ளிக்கிழங்கு',
-        'Ash Plantain': 'நேந்திரம் வாழை',
         'Ladies Finger': 'வெண்டைக்காய்',
         'Yardlong Beans': 'தட்டப்பயறு',
         Beetroot: 'பீட்ரூட்',
@@ -186,7 +183,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Taro: 'Tropical tuber crop with edible corms and leaves',
         'Elephant Yam': 'Large tropical tuber crop valued in South Indian cuisine',
         'Sweet Potato': 'Nutritious tropical vine producing sweet tuberous roots',
-        'Ash Plantain': 'Starchy cooking banana widely used in South Indian cuisine',
         'Ladies Finger': 'Heat-loving mucilaginous pod vegetable essential in South Indian cooking',
         'Yardlong Beans':
           'Vigorous climbing legume producing metre-long tender pods; fixes nitrogen',
@@ -245,6 +241,10 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         // and one for the grain store and the pest spray.
         'Maruthani',
         'Nochi',
+        // Moved from `shrub`: grown for its leaves and seed cake, both used
+        // medicinally and as a pest input, so it is filed by use like the
+        // medicinals above rather than by its woody habit.
+        'Castor',
       ],
       varieties: {
         Coriander: ['CO 4', 'CO 5', 'Local'],
@@ -287,6 +287,7 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Karpooravalli: 'கற்பூரவல்லி',
         Maruthani: 'மருதாணி',
         Nochi: 'நொச்சி',
+        Castor: 'ஆமணக்கு',
       },
       descriptions: {
         Coriander: 'Fast-growing cool-season herb prized for its aromatic leaves and seeds',
@@ -325,6 +326,8 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'The classic Tamil boundary hedge; leaves ground for henna, and it takes hard clipping',
         Nochi:
           'Aromatic shrub whose leaves are layered into stored grain and steeped as a leaf-extract pest spray',
+        Castor:
+          'Tall fast-growing shrub with repellent properties; pest-deterrent companion around vegetable beds',
       },
     },
     flower: {
@@ -540,22 +543,19 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
       },
     },
     // Woody perennials grown for the plant itself — nothing is harvested off
-    // them. Anything grown for a leaf or flower harvest is filed by that
+    // them. Anything grown for a leaf, flower or seed harvest is filed by that
     // harvest instead: Hibiscus, Ixora, Jasmine, Crossandra, Nandiyavattai,
-    // Aavaram and Arali under `flower`, Maruthani and Nochi under `herb`, and
-    // Agathi under `spinach` with the other keerai. That leaves the two rows
-    // where the plant itself is the point: a hedge and a trap crop.
+    // Aavaram and Arali under `flower`, Maruthani, Nochi and Castor under
+    // `herb`, and Agathi under `spinach` with the other keerai. That leaves the
+    // one row where the plant itself is the point: an ornamental hedge.
     shrub: {
-      plants: ['Bougainvillea', 'Castor'],
+      plants: ['Bougainvillea'],
       varieties: {},
       tamilNames: {
         Bougainvillea: 'பூகன்வில்லியா',
-        Castor: 'ஆமணக்கு',
       },
       descriptions: {
         Bougainvillea: 'Vigorous thorny shrub-vine smothered in papery bracts',
-        Castor:
-          'Tall fast-growing shrub with repellent properties; pest-deterrent companion around vegetable beds',
       },
     },
     spinach: {

@@ -18,7 +18,7 @@ import type { PlantProfiles } from '@/types/database.types';
 /** Every step of migration 009, in the order the migration applies them. */
 const replan = (profiles: PlantProfiles): PlantProfiles | null => {
   const merged = planProfileMerge(profiles, MERGED_PLANT_NAMES_V9);
-  const homed = planSurvivorRelocation(merged ?? profiles);
+  const homed = planSurvivorRelocation(merged ?? profiles, MERGED_SURVIVOR_TYPE);
   const moved = planProfileRecategorisation(homed ?? merged ?? profiles, RECATEGORISED_PLANTS_V9);
   return moved ?? homed ?? merged;
 };
@@ -67,7 +67,7 @@ describe('RECATEGORISED_PLANTS_V9', () => {
     expect(plannedTypeChange('Agathi', 'shrub', RECATEGORISED_PLANTS_V9)).toBe('spinach');
   });
 
-  it('leaves the two rows the shrub category keeps', () => {
+  it('leaves the rows migration 009 did not move', () => {
     expect(plannedTypeChange('Bougainvillea', 'shrub', RECATEGORISED_PLANTS_V9)).toBeNull();
     expect(plannedTypeChange('Castor', 'shrub', RECATEGORISED_PLANTS_V9)).toBeNull();
   });
@@ -142,7 +142,7 @@ describe('the two halves applied together', () => {
 
   it('returns null when there is nothing to do', () => {
     const profiles = makePlantProfiles([
-      makePlantProfile({ plantType: 'shrub', name: 'Castor' }),
+      makePlantProfile({ plantType: 'shrub', name: 'Bougainvillea' }),
     ]);
     expect(replan(profiles)).toBeNull();
   });
@@ -184,7 +184,7 @@ describe('the two halves applied together', () => {
     const profiles = makePlantProfiles([
       makePlantProfile({ plantType: 'spinach', name: 'Amaranthus' }),
     ]);
-    expect(planSurvivorRelocation(profiles)).toBeNull();
+    expect(planSurvivorRelocation(profiles, MERGED_SURVIVOR_TYPE)).toBeNull();
   });
 
   it('names a real category for every survivor it relocates', () => {

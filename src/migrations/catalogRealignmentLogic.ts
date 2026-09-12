@@ -66,8 +66,15 @@ export const MERGED_SURVIVOR_TYPE: Record<string, PlantType> = {
 /**
  * Pulls a surviving row off any category but its own, after the merge has run.
  * Returns null when nothing moved, so the caller can skip the write.
+ *
+ * `survivorTypes` is passed in for the same reason `planProfileMerge` takes its
+ * map: `MERGED_SURVIVOR_TYPE` belongs to migration 009 and must stay frozen, so
+ * a later pass carries its own (see migration 010).
  */
-export function planSurvivorRelocation(profiles: PlantProfiles): PlantProfiles | null {
+export function planSurvivorRelocation(
+  profiles: PlantProfiles,
+  survivorTypes: Record<string, PlantType>
+): PlantProfiles | null {
   let changed = false;
   const next = {} as PlantProfiles;
 
@@ -75,7 +82,7 @@ export function planSurvivorRelocation(profiles: PlantProfiles): PlantProfiles |
     next[type] = { ...(profiles[type] ?? {}) };
   }
 
-  for (const [name, home] of Object.entries(MERGED_SURVIVOR_TYPE)) {
+  for (const [name, home] of Object.entries(survivorTypes)) {
     for (const type of Object.keys(next) as PlantType[]) {
       if (type === home) continue;
       const entry = next[type]?.[name];

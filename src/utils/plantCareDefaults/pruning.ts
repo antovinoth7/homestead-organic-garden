@@ -344,7 +344,9 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
   // wrong for Nithyakalyani, Aavaram and Arali, which are grown for the
   // flowers, and the flower tip is wrong for Maruthani and Nochi, which are
   // stripped for leaf. Arali needs its own tips for a third reason — the
-  // generic advice is actively unsafe around its sap.
+  // generic advice is actively unsafe around its sap, and Castor for a
+  // fourth — the herb tip would have the grower pinch off the spikes its
+  // seed, and so its pest cake, comes from.
   [buildProfileKey('herb', 'Adathodai')]: {
     tips: ['Cut leafy shoots above a node; the stump reshoots readily'],
     shapePruning: { tip: 'Cut back to knee height to renew a leggy bush', months: 'Jan–Feb' },
@@ -364,6 +366,17 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
   [buildProfileKey('herb', 'Nochi')]: {
     tips: ['Cut leafy branches for grain storage and leaf-extract sprays'],
     shapePruning: { tip: 'Coppice hard to keep it a shrub, not a small tree', months: 'Jan–Feb' },
+  },
+  [buildProfileKey('herb', 'Castor')]: {
+    tips: [
+      'Cut leafy branches for chop-and-drop and leaf-extract sprays',
+      'Leave the flower spikes to set — the seed is what the cake is pressed from',
+      'Keep the spiny seed capsules away from children and livestock; the seed is toxic',
+    ],
+    shapePruning: {
+      tip: 'Cut back hard after the seed harvest to force fresh low growth',
+      months: 'Jan–Feb',
+    },
   },
   [buildProfileKey('herb', 'Thoothuvalai')]: {
     tips: ['Wear gloves — the stems and leaf veins are thorny', 'Trim to keep it on its support'],

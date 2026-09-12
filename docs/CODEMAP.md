@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-10 — src/: 656 files, 121,657 lines.
+> Snapshot: 2026-09-12 — src/: 659 files, 122,086 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -84,9 +84,10 @@
 - dataCache.test.ts (153)
 - storage.test.ts (100)
 
-### src/__tests__/migrations/ — 5 files, 601 lines
+### src/__tests__/migrations/ — 6 files, 793 lines
 
 - catalogRealignmentLogic.test.ts (197)
+- catalogRealignment010Logic.test.ts (192)
 - recategorisedPlantsLogic.test.ts (155)
 - mergedPlantNamesLogic.test.ts (122)
 - 005_repair_farm_config.test.ts (76)
@@ -384,12 +385,12 @@
 - TodayHeader.tsx (82)
 - NeedsActionRow.tsx (73)
 
-### src/config/ — 8 files, 1,199 lines
+### src/config/ — 8 files, 1,201 lines
 
 - tamilNaduPlantingCalendar.ts (269)
 - referenceImages.gen.ts (248)
 - iconRegistry.ts (239)
-- referenceKeys.ts (135)
+- referenceKeys.ts (137)
 - almanac.ts (108)
 - referenceAssets.ts (78)
 - todaySeasonalAdvisories.ts (64)
@@ -500,17 +501,19 @@
 - storage.ts (109)
 - offlineWrite.ts (47)
 
-### src/migrations/ — 16 files, 1,101 lines
+### src/migrations/ — 18 files, 1,337 lines
 
-- 009_realign_catalog.ts (171)
-- index.ts (117)
+- 010_merge_plantain_retype_castor.ts (173)
+- 009_realign_catalog.ts (172)
+- index.ts (119)
 - 008_recategorise_plants.ts (104)
+- catalogRealignmentLogic.ts (103)
 - 003_consolidate_plant_profiles.ts (96)
-- catalogRealignmentLogic.ts (96)
 - recategorisedPlantsLogic.ts (92)
 - 007_merge_duplicate_plant_names.ts (90)
 - mergedPlantNamesLogic.ts (71)
 - farmConfigRepairLogic.ts (55)
+- catalogRealignment010Logic.ts (53)
 - 004_backfill_lifecycle_type.ts (49)
 - 002_seed_catalog_enrichment.ts (41)
 - 005_repair_farm_config.ts (39)
@@ -695,7 +698,7 @@
 - visual.types.ts (90)
 - offline.types.ts (49)
 
-### src/utils/ — 86 files, 11,923 lines
+### src/utils/ — 86 files, 11,936 lines
 
 - plantHelpers.ts (1956) ⚠️ large — Grep/search inside, do not read whole
 - rowLayoutEngine.ts (660)
@@ -704,8 +707,8 @@
 - careTaskFilters.ts (386)
 - catalogDraft.ts (273)
 - plotBriefLine.ts (269)
+- plantAliases.ts (267)
 - safeStorage.ts (256)
-- plantAliases.ts (254)
 - carePlanDisplay.ts (244)
 - plotGrouping.ts (228)
 - plantLabels.ts (226)
@@ -784,27 +787,27 @@
 - dragRowMath.ts (16)
 - textSanitizer.ts (14)
 
-### src/utils/plantCareDefaults/ — 5 files, 853 lines
+### src/utils/plantCareDefaults/ — 5 files, 867 lines
 
-- pruning.ts (466)
-- varieties.ts (148)
+- pruning.ts (479)
+- varieties.ts (149)
 - index.ts (136)
 - typeDefaults.ts (98)
 - profileKey.ts (5)
 
-### src/utils/plantCareDefaults/overrides/ — 13 files, 3,778 lines
+### src/utils/plantCareDefaults/overrides/ — 13 files, 3,750 lines
 
 - fruitTrees.ts (739)
 - vegetables1.ts (554)
-- vegetables2.ts (400)
 - bedVegetables.ts (391)
 - timberCoconutShrubs.ts (385)
+- vegetables2.ts (371)
 - herbs.ts (292)
 - tamilNaduPlants.ts (259)
 - flowers.ts (238)
 - herbsSpices.ts (213)
 - todayRecommendationCrops.ts (118)
-- newShrubs.ts (72)
+- newShrubs.ts (73)
 - intercropFruitTrees.ts (69)
 - index.ts (48)
 
@@ -814,7 +817,7 @@
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (813)
+- CODEMAP.md (830)
 - COMPONENTS.md (66)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (110)

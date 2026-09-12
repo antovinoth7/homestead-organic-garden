@@ -103,6 +103,19 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   sesbania: 'agathi',
   'sesbania grandiflora': 'agathi',
 
+  // Banana. `Ash Plantain` was a second catalog row for the same plant — its
+  // Tamil name was நேந்திரம் வாழை, which is Nendran, already a Banana variety.
+  // Migration 010 moves stored plants across; these keep the old names
+  // searchable, so a grower typing "vazhakkai" still lands on Banana.
+  'ash plantain': 'banana',
+  plantain: 'banana',
+  'green plantain': 'banana',
+  'cooking banana': 'banana',
+  vazhai: 'banana',
+  vazhakkai: 'banana',
+  vaazhakkai: 'banana',
+  nendran: 'banana',
+
   // Gourds
   pudalangai: 'snake gourd',
   pudalai: 'snake gourd',

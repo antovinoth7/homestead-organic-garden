@@ -2,11 +2,12 @@ import { PlantCareProfile } from '@/types/database.types';
 import { buildProfileKey } from '@/utils/plantCareDefaults/profileKey';
 
 /**
- * Agathi and Castor. They no longer share a category — agathi keerai is filed
- * under `spinach` with the other keerai — but they are still the same pair of
- * fast-growing chop-and-drop plants this file was added for, so the profiles
- * stay together rather than being split across two files for the sake of the
- * name.
+ * Agathi and Castor. Neither is filed under `shrub` any more — agathi keerai
+ * sits with the other keerai under `spinach`, and Castor moved to `herb`,
+ * filed by its medicinal and pest-input use like the other homestead
+ * medicinals. They are still the same pair of fast-growing chop-and-drop
+ * plants this file was added for, so the profiles stay together rather than
+ * being split across two files for the sake of the filename.
  */
 export const NEW_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
   [buildProfileKey('spinach', 'Agathi')]: {
@@ -38,7 +39,7 @@ export const NEW_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
     feedingIntensity: 'light',
     growthStageDurations: { seedling: 21, vegetative: 45, mature: 24 },
   },
-  [buildProfileKey('shrub', 'Castor')]: {
+  [buildProfileKey('herb', 'Castor')]: {
     waterRequirement: 'low',
     wateringFrequencyDays: 7,
     fertilisingFrequencyDays: 45,
