@@ -1,15 +1,15 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-12 — src/: 659 files, 122,086 lines.
+> Snapshot: 2026-09-12 — src/: 659 files, 121,697 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
 ## Large files (search, don't read whole)
 
 - src/screens/CalendarScreen.tsx (2869)
-- src/utils/plantHelpers.ts (1956)
 - src/styles/bedCreationWizardStyles.ts (1906)
+- src/utils/plantHelpers.ts (1843)
 - src/styles/calendarStyles.ts (1810)
 - src/styles/plantFormStyles.ts (1719)
 - src/services/tasks.ts (1600)
@@ -103,7 +103,7 @@
 - noFunctionalEmoji.test.ts (54)
 - agronomyEvidenceDocs.test.ts (44)
 
-### src/__tests__/services/ — 12 files, 2,343 lines
+### src/__tests__/services/ — 13 files, 2,373 lines
 
 - alerts.test.ts (533)
 - manualTaskScheduling.test.ts (317)
@@ -117,6 +117,7 @@
 - careTaskScheduling.test.ts (135)
 - harvestTaskSelection.test.ts (86)
 - preMonsoonTasks.test.ts (83)
+- plantCatalogShape.test.ts (30)
 
 ### src/__tests__/utils/ — 77 files, 10,891 lines
 
@@ -566,7 +567,7 @@
 - BedConfirmStep.tsx (226)
 - BedTypeStep.tsx (154)
 
-### src/services/ — 19 files, 8,098 lines
+### src/services/ — 18 files, 7,791 lines
 
 - tasks.ts (1600) ⚠️ large — Grep/search inside, do not read whole
 - plants.ts (1140) ⚠️ large — Grep/search inside, do not read whole
@@ -577,7 +578,6 @@
 - weather.ts (384)
 - alertsLogic.ts (365)
 - taskSchedulingLogic.ts (316)
-- plantCareProfiles.ts (307)
 - farmCapacity.ts (248)
 - beds.ts (228)
 - locations.ts (197)
@@ -698,16 +698,16 @@
 - visual.types.ts (90)
 - offline.types.ts (49)
 
-### src/utils/ — 86 files, 11,936 lines
+### src/utils/ — 86 files, 11,824 lines
 
-- plantHelpers.ts (1956) ⚠️ large — Grep/search inside, do not read whole
+- plantHelpers.ts (1843) ⚠️ large — Grep/search inside, do not read whole
 - rowLayoutEngine.ts (660)
 - zipHelper.ts (398)
 - harvestStats.ts (387)
 - careTaskFilters.ts (386)
 - catalogDraft.ts (273)
 - plotBriefLine.ts (269)
-- plantAliases.ts (267)
+- plantAliases.ts (268)
 - safeStorage.ts (256)
 - carePlanDisplay.ts (244)
 - plotGrouping.ts (228)
@@ -817,7 +817,7 @@
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (830)
+- CODEMAP.md (833)
 - COMPONENTS.md (66)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (110)

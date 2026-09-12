@@ -1463,132 +1463,19 @@ export function getCoconutNutrientDeficiencies(): CoconutNutrientDeficiency[] {
 }
 
 /**
- * Display-only emoji fallback for `getPlantEmoji`. It is deliberately NOT the
- * plant list the reference-image tooling works from: it drifted 40 names behind
- * the catalog, which silently denied Betel Leaf and four shrubs a prompt and an
- * image slot. `getKnownPlantNames()` reads the catalog instead.
- */
-const PLANT_EMOJI_MAP: Record<string, string> = {
-  Tomato: '🍅',
-  Chilli: '🌶️',
-  Pepper: '🌶️',
-  Carrot: '🥕',
-  Lettuce: '🥬',
-  Cabbage: '🥬',
-  Broccoli: '🥦',
-  Cucumber: '🥒',
-  Brinjal: '🍆',
-  'Long Brinjal': '🍆',
-  Pumpkin: '🎃',
-  Spinach: '🥬',
-  Radish: '🥕',
-  Potato: '🥔',
-  Onion: '🧅',
-  Garlic: '🧄',
-  Shallot: '🧅',
-  Beans: '🫘',
-  'Green Peas': '🫛',
-  Corn: '🌽',
-  Basil: '🌿',
-  Mint: '🌿',
-  Coriander: '🌿',
-  Parsley: '🌿',
-  Rosemary: '🌿',
-  Thyme: '🌿',
-  Oregano: '🌿',
-  Sage: '🌿',
-  Dill: '🌿',
-  Lemongrass: '🌾',
-  Mango: '🥭',
-  Banana: '🍌',
-  Guava: '🍈',
-  Papaya: '🍈',
-  Pomegranate: '🍎',
-  Lemon: '🍋',
-  Lime: '🍋',
-  Orange: '🍊',
-  Grape: '🍇',
-  Apple: '🍎',
-  Strawberry: '🍓',
-  Watermelon: '🍉',
-  Pineapple: '🍍',
-  Coconut: '🥥',
-  Rose: '🌹',
-  Sunflower: '🌻',
-  Marigold: '🌼',
-  Jasmine: '🌸',
-  Hibiscus: '🌺',
-  Tulip: '🌷',
-  Drumstick: '🌿',
-  Amaranthus: '🌿',
-  Cowpea: '🫘',
-  Tapioca: '🥔',
-  'Bitter Gourd': '🥒',
-  'Snake Gourd': '🥒',
-  'Ridge Gourd': '🥒',
-  'Bottle Gourd': '🥒',
-  'Ash Gourd': '🥒',
-  Purslane: '🌿',
-  'Pasalai Keerai': '🥬',
-  Fenugreek: '🌿',
-  'Ladies Finger': '🌿',
-  Squash: '🥒',
-  'Yardlong Beans': '🫘',
-  Beetroot: '🫚',
-  'French Beans': '🫘',
-  'Cluster Beans': '🫘',
-  'Black Gram': '🫘',
-  Groundnut: '🥜',
-  'Pigeon Pea': '🫘',
-  Yam: '🥔',
-  Maize: '🌽',
-  'Lotus Stem': '🌸',
-  Brahmi: '🌿',
-  Ashwagandha: '🌿',
-  'Aloe Vera': '🌵',
-  Agathi: '🌳',
-  Avocado: '🥑',
-  Bamboo: '🎋',
-  Arecanut: '🌴',
-  'Ash Plantain': '🍌',
-  Castor: '🌳',
-  Coleus: '🌿',
-  Cocoa: '🍫',
-  Nutmeg: '🌰',
-  'Black Pepper': '🌶️',
-  Cardamom: '🌿',
-  Ajwain: '🌿',
-  Fennel: '🌿',
-  Amaranth: '🌿',
-  Ginger: '🫚',
-  Turmeric: '🟡',
-  'Curry Leaf': '🍃',
-  'Elephant Yam': '🥔',
-  Tulsi: '🌿',
-  Comfrey: '🌿',
-};
-
-/**
  * Every plant name in the default catalog — the canonical name list for
  * reference-image tooling.
  *
  * Reads `PLANT_VARIETIES_BY_TYPE` rather than `DEFAULT_PLANT_CATALOG`: the two
- * are kept 1:1 by `plantCatalog.localSuitability.test.ts`, but the catalog
- * module pulls in AsyncStorage, and `scripts/reference/generate-manifest.ts`
- * imports this function under `tsx`, where that would not load.
+ * are kept 1:1 by `plantCatalog.localSuitability.test.ts`, and the leaf list
+ * keeps this function out of the service layer. AsyncStorage is not the reason
+ * — `scripts/reference/generate-manifest.ts` imports this under `tsx`, which
+ * loads `@/services/plantCatalog` and the `@/` alias without complaint. Only
+ * `@/lib/firebase` (it throws on missing env at import) and the Metro-only
+ * `require('*.webp')` calls in `referenceImages.gen.ts` actually fail there.
  */
 export function getKnownPlantNames(): string[] {
   return [...new Set(Object.values(PLANT_VARIETIES_BY_TYPE).flat())];
-}
-
-export function getPlantEmoji(name: string): string {
-  if (PLANT_EMOJI_MAP[name]) return PLANT_EMOJI_MAP[name]!;
-  const canonical = getCanonicalPlantKey(name);
-  if (canonical) {
-    const titled = canonical.charAt(0).toUpperCase() + canonical.slice(1);
-    if (PLANT_EMOJI_MAP[titled]) return PLANT_EMOJI_MAP[titled]!;
-  }
-  return '🌱';
 }
 
 // ── Growth Stage Auto-Progression (Phase B.4) ─────────────────────────

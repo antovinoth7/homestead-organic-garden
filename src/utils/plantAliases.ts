@@ -6,9 +6,10 @@
  * missing entries the others had. Catalog search, the duplicate-entry check and
  * companion lookup all need the full set, so it lives here.
  *
- * Deliberately import-free: `config/referenceKeys.ts` pulls this in, and that
- * module is loaded by `scripts/reference/*` under tsx, where the `@/` alias and
- * Metro-only `require('*.webp')` calls do not resolve.
+ * Deliberately import-free, so `config/referenceKeys.ts` can pull it in and
+ * stay loadable by `scripts/reference/*` under tsx. The `@/` alias itself
+ * resolves there; what does not is `@/lib/firebase` (it throws on missing env
+ * at import) and the Metro-only `require('*.webp')` calls.
  */
 
 /** Lowercased, whitespace-collapsed form used as the key for every lookup. */

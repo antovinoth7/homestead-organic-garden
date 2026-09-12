@@ -26,12 +26,12 @@ import {
 import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
-import { CATEGORY_OPTIONS } from '@/utils/plantLabels';
 import { sortPlantNames } from '@/utils/plantSort';
+import { PLANT_CATEGORIES } from '@/utils/plantCategories';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const PLANT_CATEGORIES: PlantType[] = CATEGORY_OPTIONS.map((opt) => opt.value);
+export { PLANT_CATEGORIES };
 
 const SETTINGS_COLLECTION = 'user_settings';
 const PLANT_PROFILES_FIELD = 'plantProfiles';

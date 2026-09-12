@@ -9,10 +9,10 @@ import { PlantType } from '@/types/database.types';
  * daily homestead crop, so third — right after the vegetables and the fruit
  * trees — is the order that survived.
  *
- * This lives in its own leaf module rather than in either of those files:
- * `plantCatalog.ts` pulls in `@/lib/storage`, and `plantLabels.ts` is imported
- * by `tsx` tooling that cannot load AsyncStorage, so neither can import the
- * other.
+ * This lives in its own leaf module rather than in either of those files so
+ * that neither has to import the other, and so the order has one home. (Not an
+ * AsyncStorage constraint: `tsx` loads `@/lib/storage` and the `@/` alias
+ * fine. Only `@/lib/firebase` and Metro-only asset requires fail under it.)
  */
 export const PLANT_CATEGORIES: PlantType[] = [
   'vegetable',
