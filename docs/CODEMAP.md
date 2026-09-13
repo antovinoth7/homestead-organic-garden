@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-13 — src/: 671 files, 122,057 lines.
+> Snapshot: 2026-09-13 — src/: 672 files, 122,150 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -15,7 +15,7 @@
 - src/services/tasks.ts (1600)
 - src/hooks/usePlantFormState.ts (1202)
 - src/services/plants.ts (1140)
-- src/types/database.types.ts (1074)
+- src/types/database.types.ts (1034)
 - src/screens/CatalogPlantDetailScreen.tsx (1013)
 - src/components/BedRowLayout.tsx (984)
 - src/hooks/useBedCreationWizard.ts (937)
@@ -103,7 +103,7 @@
 - noFunctionalEmoji.test.ts (54)
 - agronomyEvidenceDocs.test.ts (44)
 
-### src/__tests__/services/ — 13 files, 2,361 lines
+### src/__tests__/services/ — 14 files, 2,507 lines
 
 - alerts.test.ts (533)
 - manualTaskScheduling.test.ts (317)
@@ -111,6 +111,7 @@
 - weather.test.ts (204)
 - offlineSync.test.ts (202)
 - taskSkip.test.ts (154)
+- plantProfilesCareBridge.test.ts (146)
 - beds.test.ts (141)
 - plantProfilesTombstone.test.ts (137)
 - careTaskScheduling.test.ts (135)
@@ -584,11 +585,11 @@
 - BedConfirmStep.tsx (226)
 - BedTypeStep.tsx (154)
 
-### src/services/ — 18 files, 7,186 lines
+### src/services/ — 18 files, 7,173 lines
 
 - tasks.ts (1600) ⚠️ large — Grep/search inside, do not read whole
 - plants.ts (1140) ⚠️ large — Grep/search inside, do not read whole
-- plantProfiles.ts (639)
+- plantProfiles.ts (626)
 - backup.ts (609)
 - journal.ts (550)
 - weather.ts (384)
@@ -708,9 +709,9 @@
 - colors.ts (230)
 - index.tsx (89)
 
-### src/types/ — 4 files, 1,485 lines
+### src/types/ — 4 files, 1,445 lines
 
-- database.types.ts (1074) ⚠️ large — Grep/search inside, do not read whole
+- database.types.ts (1034) ⚠️ large — Grep/search inside, do not read whole
 - navigation.types.ts (272)
 - visual.types.ts (90)
 - offline.types.ts (49)
@@ -834,7 +835,7 @@
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (833)
+- CODEMAP.md (850)
 - COMPONENTS.md (66)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (110)
