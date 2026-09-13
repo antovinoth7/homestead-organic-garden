@@ -4,6 +4,7 @@ export const COCONUT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Dwarf Coconut',
     plantType: 'coconut_tree',
+    cropFamily: 'other',
     tamilName: 'குட்டைத் தென்னை',
     shortDescription: 'Early-bearing compact palms, mainly for tender nuts; choose locally tested planting material',
     varieties: ['Chowghat Orange Dwarf', 'Chowghat Green Dwarf', 'Malayan Yellow Dwarf'],
@@ -11,6 +12,7 @@ export const COCONUT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Tall Coconut',
     plantType: 'coconut_tree',
+    cropFamily: 'other',
     tamilName: 'உயரத் தென்னை',
     shortDescription: 'Long-lived palms including West Coast Tall, a strong fit for humid Kanyakumari conditions',
     varieties: ['West Coast Tall', 'East Coast Tall', 'Tiptur Tall', 'Arasampatti Tall'],
@@ -18,6 +20,7 @@ export const COCONUT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Hybrid Coconut',
     plantType: 'coconut_tree',
+    cropFamily: 'other',
     tamilName: 'கலப்பினத் தென்னை',
     shortDescription: 'Tall × Dwarf or Dwarf × Tall crosses; yield depends on certified true-to-type seedlings and management',
     varieties: ['VHC 1', 'VHC 2', 'VHC 3', 'Kerasankara', 'Chandrasankara'],
@@ -25,6 +28,7 @@ export const COCONUT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'King Coconut',
     plantType: 'coconut_tree',
+    cropFamily: 'other',
     tamilName: 'ராஜ தென்னை',
     shortDescription: 'Orange tender-nut type suited climatically but less standard in Tamil Nadu than released local cultivars',
     varieties: ['Sri Lanka King Coconut'],

@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-13 — src/: 673 files, 122,230 lines.
+> Snapshot: 2026-09-13 — src/: 673 files, 122,454 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -121,7 +121,7 @@
 - preMonsoonTasks.test.ts (83)
 - plantCatalogShape.test.ts (30)
 
-### src/__tests__/utils/ — 77 files, 10,891 lines
+### src/__tests__/utils/ — 77 files, 10,954 lines
 
 - careTaskFilters.test.ts (651)
 - rowLayoutEngine.test.ts (523)
@@ -170,6 +170,7 @@
 - plantAliases.test.ts (104)
 - journalStats.test.ts (102)
 - plantClassification.test.ts (98)
+- cropFamilyFromName.test.ts (89)
 - taskWeatherAdvisory.test.ts (87)
 - recipeQuantity.test.ts (81)
 - activityRows.test.ts (76)
@@ -195,7 +196,6 @@
 - referencePlantCoverage.test.ts (41)
 - landCents.test.ts (38)
 - dataRegistrySnapshot.test.ts (33)
-- cropFamilyFromName.test.ts (26)
 - seasonLabel.test.ts (26)
 - svgArc.test.ts (26)
 - plantCategories.test.ts (24)
@@ -449,22 +449,22 @@
 - beetlesWeevils.ts (241)
 - index.ts (25)
 
-### src/config/plantCatalog/ — 3 files, 113 lines
+### src/config/plantCatalog/ — 3 files, 119 lines
 
 - derive.ts (47)
-- types.ts (34)
+- types.ts (40)
 - index.ts (32)
 
-### src/config/plantCatalog/entries/ — 8 files, 929 lines
+### src/config/plantCatalog/entries/ — 8 files, 1,057 lines
 
-- vegetables.ts (320)
-- herbs.ts (175)
-- fruitTrees.ts (174)
-- spinach.ts (84)
-- flowers.ts (77)
-- timberTrees.ts (47)
-- coconutTrees.ts (33)
-- shrubs.ts (19)
+- vegetables.ts (365)
+- fruitTrees.ts (199)
+- herbs.ts (199)
+- spinach.ts (95)
+- flowers.ts (88)
+- timberTrees.ts (54)
+- coconutTrees.ts (37)
+- shrubs.ts (20)
 
 ### src/config/zones/ — 7 files, 627 lines
 
@@ -717,7 +717,7 @@
 - visual.types.ts (90)
 - offline.types.ts (49)
 
-### src/utils/ — 86 files, 11,838 lines
+### src/utils/ — 86 files, 11,865 lines
 
 - plantHelpers.ts (1853) ⚠️ large — Grep/search inside, do not read whole
 - rowLayoutEngine.ts (660)
@@ -778,6 +778,7 @@
 - growSpecFormat.ts (66)
 - taskWeatherAdvisory.ts (61)
 - plantTypeFromName.ts (60)
+- cropFamilyFromName.ts (53)
 - bedEditReconcile.ts (52)
 - catalogFieldHelp.ts (51)
 - plantCapacity.ts (51)
@@ -798,7 +799,6 @@
 - landCents.ts (32)
 - progressiveList.ts (32)
 - plantCategories.ts (27)
-- cropFamilyFromName.ts (26)
 - recurringTaskStatus.ts (26)
 - bedOccupancy.ts (25)
 - plantClassification.ts (25)
@@ -836,7 +836,7 @@
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (851)
+- CODEMAP.md (852)
 - COMPONENTS.md (66)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (110)

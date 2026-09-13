@@ -4,6 +4,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Banana',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'வாழை',
     shortDescription: 'Fast-growing tropical fruit producing large bunches rich in potassium',
     varieties: ['Nendran', 'Poovan', 'Rasthali', 'Robusta', 'Monthan'],
@@ -11,6 +12,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Mango',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'மாம்பழம்',
     shortDescription: 'King of fruits — long-lived tropical tree bearing sweet, aromatic drupes',
     varieties: ['Alphonso', 'Banganapalli', 'Neelum', 'Imam Pasand'],
@@ -18,6 +20,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Guava',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'கொய்யா',
     shortDescription: 'Hardy tropical tree producing vitamin-C-rich fruits year-round',
     varieties: ['Allahabad Safeda', 'Pink Guava', 'Local'],
@@ -25,6 +28,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Papaya',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'பப்பாளி',
     shortDescription: 'Fast-growing single-trunk tree bearing melon-like fruits rich in papain',
     varieties: ['Red Lady', 'CO 8', 'Local'],
@@ -32,6 +36,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Lemon',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'எலுமிச்சை',
     shortDescription: 'Evergreen citrus tree producing tangy fruits year-round',
     varieties: ['Grafted Lemon', 'Country Lemon'],
@@ -39,6 +44,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Pomegranate',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'மாதுளை',
     shortDescription: 'Drought-tolerant shrubby tree producing antioxidant-rich fruits',
     varieties: ['Bhagwa', 'Ganesh', 'Arakta'],
@@ -46,6 +52,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Jackfruit',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'பலாப்பழம்',
     shortDescription: "Massive tropical tree producing the world's largest tree-borne fruit",
     varieties: ['Palur 1', 'Palur 2', 'Local'],
@@ -53,18 +60,21 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Chikoo',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'சப்போட்டா',
     shortDescription: 'Evergreen tropical tree producing sweet, malty-flavoured fruits',
   },
   {
     name: 'Water Apple',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'நாவல்',
     shortDescription: 'Tropical evergreen tree producing crisp, mildly sweet bell-shaped fruits',
   },
   {
     name: 'Custard Apple',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'சீதாப்பழம்',
     shortDescription: 'Deciduous tropical tree bearing soft, creamy-sweet segmented fruits',
     varieties: ['Balanagar', 'Arka Sahan', 'Local'],
@@ -72,6 +82,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Amla',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'நெல்லிக்காய்',
     shortDescription: 'Hardy deciduous tree producing tart, vitamin-C-rich berries revered in Ayurveda',
     varieties: ['NA 7', 'Krishna', 'Kanchan'],
@@ -79,36 +90,42 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Orange',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'ஆரஞ்சு',
     shortDescription: 'Evergreen citrus tree producing sweet, juicy fruits',
   },
   {
     name: 'Fig',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'அத்திப்பழம்',
     shortDescription: 'Deciduous tree producing soft, sweet, fibre-rich fruits',
   },
   {
     name: 'Avocado',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'வெண்ணெய்ப்பழம்',
     shortDescription: 'Evergreen tropical tree producing nutrient-dense, high-fat fruits',
   },
   {
     name: 'Soursop',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'முள்ளு சீதா',
     shortDescription: 'Tropical evergreen tree producing large spiny fruits with creamy, tangy pulp',
   },
   {
     name: 'Mangosteen',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'மாங்குஸ்தான்',
     shortDescription: 'Ultra-tropical tree bearing prized purple fruits with sweet-tangy segments',
   },
   {
     name: 'Rambutan',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'ரம்புட்டான்',
     shortDescription: 'Tropical evergreen tree producing hairy-skinned fruits with translucent sweet flesh',
   },
@@ -116,6 +133,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Red Banana',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'செவ்வாழை',
     shortDescription: 'Striking red-skinned banana variety with creamy, slightly raspberry-flavoured flesh',
     varieties: ['Sevvaazhai', 'Karpura Chakkarakeli', 'Local Red'],
@@ -123,6 +141,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Breadfruit',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'பிரெட்ஃப்ரூட்',
     shortDescription: 'Large tropical tree producing starchy fruits used as a carbohydrate staple',
     varieties: ['Seeni Chakka', 'Yellow Skin', 'Local'],
@@ -130,6 +149,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Pineapple',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'அன்னாசி',
     shortDescription: 'Low-growing monocarpic bromeliad producing sweet, acidic tropical fruits',
     varieties: ['Kew', 'Queen', 'Mauritius'],
@@ -137,6 +157,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Passion Fruit',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'பேஷன் ஃப்ரூட்',
     shortDescription: 'Vigorous tropical vine producing aromatic, tangy-sweet fruits',
     varieties: ['Purple Passion', 'Yellow Passion', 'Local'],
@@ -144,6 +165,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Star Fruit',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'கமரகம்',
     shortDescription: 'Small tropical evergreen tree producing distinctive star-shaped waxy fruits',
     varieties: ['Sweet', 'Sour', 'Local'],
@@ -151,6 +173,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Arecanut',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'பாக்கு',
     shortDescription: 'Tall, slender tropical palm cultivated for its betel nut',
     varieties: ['Mangala', 'Sumangala', 'Local Tall'],
@@ -159,6 +182,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Cocoa',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'கொக்கோ',
     shortDescription: 'Shade-tolerant understorey tree producing pods of prized chocolate beans; intercropped with banana and coconut',
     varieties: ['Forastero', 'Criollo', 'Local Hybrid'],
@@ -166,6 +190,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Nutmeg',
     plantType: 'fruit_tree',
+    cropFamily: 'other',
     tamilName: 'ஜாதிக்காய்',
     shortDescription: 'Aromatic tropical tree yielding two spices — nutmeg seed and mace aril; 7–8 years to first harvest',
     varieties: ['Konkan Sugandha', 'Local', 'Kerala Local'],

@@ -4,6 +4,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Coriander',
     plantType: 'herb',
+    cropFamily: 'apiaceae',
     tamilName: 'கொத்தமல்லி',
     shortDescription: 'Fast-growing cool-season herb prized for its aromatic leaves and seeds',
     varieties: ['CO 4', 'CO 5', 'Local'],
@@ -11,6 +12,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Mint',
     plantType: 'herb',
+    cropFamily: 'lamiaceae',
     tamilName: 'புதினா',
     shortDescription: 'Vigorous spreading herb that thrives in moist, partially shaded spots',
     varieties: ['Peppermint', 'Spearmint', 'Country Mint'],
@@ -18,6 +20,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Curry Leaf',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'கறிவேப்பிலை',
     shortDescription: 'Essential South Indian culinary tree producing intensely aromatic leaves',
     varieties: ['Dwarf', 'Regular', 'Local'],
@@ -25,6 +28,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Lemongrass',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'எலுமிச்சைப்புல்',
     shortDescription: 'Tall aromatic grass used in teas and South-East Asian cuisine',
     varieties: ['East Indian', 'West Indian', 'Local'],
@@ -32,6 +36,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Tulsi',
     plantType: 'herb',
+    cropFamily: 'lamiaceae',
     tamilName: 'துளசி',
     shortDescription: 'Sacred herb of Indian households valued for medicinal and spiritual significance',
     varieties: ['Krishna Tulsi', 'Rama Tulsi'],
@@ -39,12 +44,14 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Basil',
     plantType: 'herb',
+    cropFamily: 'lamiaceae',
     tamilName: 'திருநீற்றுப்பச்சிலை',
     shortDescription: 'Aromatic culinary herb used in Italian and Thai cooking',
   },
   {
     name: 'Dill',
     plantType: 'herb',
+    cropFamily: 'apiaceae',
     tamilName: 'சதகுப்பை',
     shortDescription: 'Feathery herb with a mild anise flavour, popular in pickles and rice dishes',
   },
@@ -52,6 +59,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Turmeric',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'மஞ்சள்',
     shortDescription: 'Tropical rhizomatous herb yielding the golden spice of Indian cooking',
     varieties: ['Erode Local', 'Salem', 'Finger Turmeric', 'CO 1'],
@@ -59,6 +67,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Ginger',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'இஞ்சி',
     shortDescription: 'Pungent rhizome staple in South Indian cooking and Ayurvedic medicine',
     varieties: ['Maran', 'Rio-de-Janeiro', 'Nadia', 'Local'],
@@ -66,6 +75,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Betel Leaf',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'வெற்றிலை',
     shortDescription: 'Tropical climbing vine prized for its glossy heart-shaped leaves',
     varieties: ['Vetrilai', 'Kapur', 'Local'],
@@ -74,12 +84,14 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Ajwain',
     plantType: 'herb',
+    cropFamily: 'apiaceae',
     tamilName: 'ஓமம்',
     shortDescription: 'Aromatic annual herb yielding carom seeds used in South Indian tempering and digestive remedies',
   },
   {
     name: 'Cardamom',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'ஏலக்காய்',
     shortDescription: 'Shade-tolerant tropical rhizome producing the queen of spices; intercropped under forest canopy',
     varieties: ['Small Cardamom', 'Mysore', 'Malabar'],
@@ -87,6 +99,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Black Pepper',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'கருமிளகு',
     shortDescription: 'Climbing spice vine trained on coconut trunks producing the king of spices',
     varieties: ['Panniyur 1', 'Karimunda', 'Local'],
@@ -95,6 +108,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Fennel',
     plantType: 'herb',
+    cropFamily: 'apiaceae',
     tamilName: 'சோம்பு',
     shortDescription: 'Tall aromatic herb with feathery leaves and anise-flavoured seeds; allelopathic — plant away from most crops',
   },
@@ -102,6 +116,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Brahmi',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'பிரம்மி',
     shortDescription: 'Low-growing medicinal creeper thriving in moist, shaded spots; revered in Ayurveda for cognitive health',
     varieties: ['Water Hyssop', 'Local'],
@@ -109,12 +124,14 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Ashwagandha',
     plantType: 'herb',
+    cropFamily: 'solanaceae',
     tamilName: 'அஷ்வகந்தா',
     shortDescription: 'Drought-tolerant medicinal shrub producing adaptogenic roots; thrives in sandy well-drained soils',
   },
   {
     name: 'Aloe Vera',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'கற்றாழை',
     shortDescription: 'Succulent perennial with gel-filled leaves used in medicine, skincare, and soil conditioning',
     varieties: ['Barbadensis', 'Local Green', 'Soap Aloe'],
@@ -124,12 +141,14 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Adathodai',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'ஆடாதொடை',
     shortDescription: 'Hardy medicinal shrub of the Tamil homestead; leaves brewed for coughs and also cut as green-leaf manure',
   },
   {
     name: 'Nithyakalyani',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'நித்தியகல்யாணி',
     shortDescription: 'Tough evergreen flowering year-round on poor soil; self-seeds freely and needs almost no care',
     varieties: ['White', 'Pink', 'Local'],
@@ -137,12 +156,14 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Thoothuvalai',
     plantType: 'herb',
+    cropFamily: 'solanaceae',
     tamilName: 'தூதுவளை',
     shortDescription: 'Scrambling prickly climber of the kitchen doorway, cooked as a cough and cold remedy',
   },
   {
     name: 'Karpooravalli',
     plantType: 'herb',
+    cropFamily: 'lamiaceae',
     tamilName: 'கற்பூரவல்லி',
     shortDescription: 'Thick-leaved aromatic plant kept by the kitchen door; leaves used fresh for coughs and colds',
     varieties: ['Broad Leaf', 'Variegated', 'Local'],
@@ -152,6 +173,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Maruthani',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'மருதாணி',
     shortDescription: 'The classic Tamil boundary hedge; leaves ground for henna, and it takes hard clipping',
     varieties: ['Broad Leaf', 'Country', 'Local'],
@@ -159,6 +181,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Nochi',
     plantType: 'herb',
+    cropFamily: 'lamiaceae',
     tamilName: 'நொச்சி',
     shortDescription: 'Aromatic shrub whose leaves are layered into stored grain and steeped as a leaf-extract pest spray',
   },
@@ -168,6 +191,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Castor',
     plantType: 'herb',
+    cropFamily: 'other',
     tamilName: 'ஆமணக்கு',
     shortDescription: 'Tall fast-growing shrub with repellent properties; pest-deterrent companion around vegetable beds',
   },

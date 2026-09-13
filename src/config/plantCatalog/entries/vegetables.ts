@@ -4,6 +4,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Brinjal',
     plantType: 'vegetable',
+    cropFamily: 'solanaceae',
     tamilName: 'கத்தரிக்காய்',
     shortDescription: 'Versatile tropical nightshade yielding glossy purple fruit for curries and grills',
     varieties: ['Long Purple', 'Round Green', 'Striped'],
@@ -11,6 +12,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Long Brinjal',
     plantType: 'vegetable',
+    cropFamily: 'solanaceae',
     tamilName: 'நீள கத்தரிக்காய்',
     shortDescription: 'Elongated purple eggplant variety favoured in South Indian sambar and stir-fries',
     varieties: ['Long Green', 'Violet Long', 'Local'],
@@ -18,6 +20,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Tomato',
     plantType: 'vegetable',
+    cropFamily: 'solanaceae',
     tamilName: 'தக்காளி',
     shortDescription: 'Prolific warm-season fruit used fresh, in sambar, rasam, and chutneys',
     varieties: ['Country Tomato', 'Hybrid Tomato', 'Cherry Tomato'],
@@ -25,6 +28,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Chilli',
     plantType: 'vegetable',
+    cropFamily: 'solanaceae',
     tamilName: 'மிளகாய்',
     shortDescription: 'Pungent hot pepper central to South Indian spice blends and daily cooking',
     varieties: ["Bird's Eye", 'Gundu', 'Long Chilli'],
@@ -32,6 +36,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Tapioca',
     plantType: 'vegetable',
+    cropFamily: 'other',
     tamilName: 'மரவள்ளிக்கிழங்கு',
     shortDescription: 'Starchy root crop grown widely in Kanyakumari for kappa and traditional dishes',
     varieties: ['Mulluvadi', 'CO 2', 'H-165'],
@@ -39,6 +44,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Drumstick',
     plantType: 'vegetable',
+    cropFamily: 'other',
     tamilName: 'முருங்கை',
     shortDescription: 'Fast-growing tropical tree providing nutrient-dense pods, leaves, and flowers',
     varieties: ['PKM 1', 'PKM 2', 'Local'],
@@ -46,6 +52,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Cowpea',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'காராமணி',
     shortDescription: 'Heat-tolerant nitrogen-fixing legume yielding protein-rich pods and beans',
     varieties: ['Bush', 'Pole', 'Red Cowpea'],
@@ -53,6 +60,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Beans',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'பீன்ஸ்',
     shortDescription: 'Versatile climbing legume producing tender pods for stir-fries and curries',
     varieties: ['Bush Beans', 'Pole Beans', 'Double Beans'],
@@ -60,6 +68,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Bitter Gourd',
     plantType: 'vegetable',
+    cropFamily: 'cucurbit',
     tamilName: 'பாகற்காய்',
     shortDescription: 'Warty-skinned climbing cucurbit prized for its medicinal bitter flavour',
     varieties: ['Mithipagal', 'Long Green', 'CO 1'],
@@ -67,6 +76,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Snake Gourd',
     plantType: 'vegetable',
+    cropFamily: 'cucurbit',
     tamilName: 'புடலங்காய்',
     shortDescription: 'Long striped cucurbit vine producing mild-flavoured gourds for sambar',
     varieties: ['Long White', 'Striped', 'CO 2'],
@@ -74,6 +84,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Ridge Gourd',
     plantType: 'vegetable',
+    cropFamily: 'cucurbit',
     tamilName: 'பீர்க்கங்காய்',
     shortDescription: 'Ridged climbing vine bearing tender gourds widely used in kootu and poriyal',
     varieties: ['Long Ridge', 'Dark Green', 'CO 1'],
@@ -81,6 +92,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Bottle Gourd',
     plantType: 'vegetable',
+    cropFamily: 'cucurbit',
     tamilName: 'சுரைக்காய்',
     shortDescription: 'Vigorous trailing vine producing mild watery gourds for kootu and sweets',
     varieties: ['Long Bottle', 'Round Bottle', 'CO 1'],
@@ -88,6 +100,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Pumpkin',
     plantType: 'vegetable',
+    cropFamily: 'cucurbit',
     tamilName: 'பரங்கிக்காய்',
     shortDescription: 'Sprawling cucurbit yielding large sweet-fleshed fruit for kootu and aviyal',
     varieties: ['Parangikkai', 'CO 2', 'Red Pumpkin'],
@@ -95,6 +108,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Ash Gourd',
     plantType: 'vegetable',
+    cropFamily: 'cucurbit',
     tamilName: 'வெள்ளைப்பூசணி',
     shortDescription: 'Wax-coated trailing cucurbit used in petha, kootu, and traditional medicine',
     varieties: ['White Ash', 'Long Ash', 'CO 1'],
@@ -102,6 +116,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Cucumber',
     plantType: 'vegetable',
+    cropFamily: 'cucurbit',
     tamilName: 'வெள்ளரிக்காய்',
     shortDescription: 'Fast-growing warm-season vine producing crisp, refreshing fruits',
     varieties: ['Country Cucumber', 'Hybrid Green', 'Slicing'],
@@ -109,6 +124,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Radish',
     plantType: 'vegetable',
+    cropFamily: 'brassica',
     tamilName: 'முள்ளங்கி',
     shortDescription: 'One of the fastest-maturing root vegetables, excellent beginner crop',
     varieties: ['Pusa Chetki', 'White Long', 'Pink'],
@@ -116,6 +132,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Onion',
     plantType: 'vegetable',
+    cropFamily: 'allium',
     tamilName: 'வெங்காயம்',
     shortDescription: 'Essential kitchen staple grown as a bulb crop',
     varieties: ['Bellary', 'Nasik Red', 'CO Onion'],
@@ -123,6 +140,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Shallot',
     plantType: 'vegetable',
+    cropFamily: 'allium',
     tamilName: 'சின்ன வெங்காயம்',
     shortDescription: 'Small, pungent bulb onion widely used in South Indian cooking',
     varieties: ['Sambar Onion', 'Small Red', 'CO Shallot'],
@@ -130,12 +148,14 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Garlic',
     plantType: 'vegetable',
+    cropFamily: 'allium',
     tamilName: 'பூண்டு',
     shortDescription: 'Pungent bulb with potent medicinal and culinary value',
   },
   {
     name: 'Cabbage',
     plantType: 'vegetable',
+    cropFamily: 'brassica',
     tamilName: 'முட்டைக்கோஸ்',
     shortDescription: 'Cool-season brassica forming dense leafy heads',
     varieties: ['Golden Acre', 'CO 1', 'Green Ball'],
@@ -143,6 +163,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Cauliflower',
     plantType: 'vegetable',
+    cropFamily: 'brassica',
     tamilName: 'காலிஃபிளவர்',
     shortDescription: 'Cool-season brassica producing compact white curds',
     varieties: ['Pusa Snowball', 'CO 1', 'Early White'],
@@ -150,18 +171,21 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Carrot',
     plantType: 'vegetable',
+    cropFamily: 'apiaceae',
     tamilName: 'கேரட்',
     shortDescription: 'Popular root vegetable rich in beta-carotene',
   },
   {
     name: 'Potato',
     plantType: 'vegetable',
+    cropFamily: 'solanaceae',
     tamilName: 'உருளைக்கிழங்கு',
     shortDescription: 'Versatile tuberous crop grown worldwide',
   },
   {
     name: 'Pepper',
     plantType: 'vegetable',
+    cropFamily: 'solanaceae',
     tamilName: 'குடைமிளகாய்',
     shortDescription: 'Warm-season fruiting plant producing sweet or mildly hot fruits',
   },
@@ -169,6 +193,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Taro',
     plantType: 'vegetable',
+    cropFamily: 'other',
     tamilName: 'சேப்பங்கிழங்கு',
     shortDescription: 'Tropical tuber crop with edible corms and leaves',
     varieties: ['Seppan Kizhangu', 'White Taro', 'Purple Stem', 'Green Stem', 'Local'],
@@ -176,6 +201,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Elephant Yam',
     plantType: 'vegetable',
+    cropFamily: 'other',
     tamilName: 'கருணைக்கிழங்கு',
     shortDescription: 'Large tropical tuber crop valued in South Indian cuisine',
     varieties: ['Karunai Kizhangu', 'White Yam', 'Local'],
@@ -183,6 +209,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Sweet Potato',
     plantType: 'vegetable',
+    cropFamily: 'other',
     tamilName: 'சர்க்கரைவள்ளிக்கிழங்கு',
     shortDescription: 'Nutritious tropical vine producing sweet tuberous roots',
     varieties: ['Orange Flesh', 'White Flesh', 'Local'],
@@ -190,6 +217,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Ladies Finger',
     plantType: 'vegetable',
+    cropFamily: 'other',
     tamilName: 'வெண்டைக்காய்',
     shortDescription: 'Heat-loving mucilaginous pod vegetable essential in South Indian cooking',
     varieties: ['CO 4', 'CO 5', 'Arka Anamika'],
@@ -198,6 +226,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Yardlong Beans',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'தட்டப்பயறு',
     shortDescription: 'Vigorous climbing legume producing metre-long tender pods; fixes nitrogen',
     varieties: ['Long Green', 'Long Purple', 'Local'],
@@ -206,6 +235,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Beetroot',
     plantType: 'vegetable',
+    cropFamily: 'other',
     tamilName: 'பீட்ரூட்',
     shortDescription: 'Jewel-red root vegetable with earthy sweetness, rich in folate and iron',
     varieties: ['Detroit Dark Red', 'Crimson Globe', 'Local Red'],
@@ -213,6 +243,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'French Beans',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'பிரெஞ்சு பீன்ஸ்',
     shortDescription: 'Bushy or climbing legume producing tender flat pods for stir-fries and curries',
     varieties: ['Contender', 'Bush Blue Lake', 'Local Dwarf'],
@@ -220,6 +251,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Cluster Beans',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'கொத்தவரை',
     shortDescription: 'Heat-tolerant legume yielding slender pods and nitrogen-fixing roots',
     varieties: ['Pusa Navbahar', 'Goma 1', 'Local'],
@@ -227,6 +259,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Black Gram',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'உளுந்து',
     shortDescription: 'Essential South Indian pulse crop yielding protein-rich seeds for idli and dosa',
     varieties: ['Vamban 6', 'CO 6', 'Local'],
@@ -234,6 +267,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Groundnut',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'வேர்க்கடலை',
     shortDescription: 'Nitrogen-fixing oilseed legume producing underground pods rich in protein and fat',
     varieties: ['TMV 2', 'CO 3', 'Local Bunch'],
@@ -241,6 +275,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Pigeon Pea',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'தொவரம்பருப்பு',
     shortDescription: 'Perennial legume producing protein-rich toor dal; a staple of Tamil cuisine',
     varieties: ['CO 6', 'Vamban 1', 'Local'],
@@ -248,6 +283,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Yam',
     plantType: 'vegetable',
+    cropFamily: 'other',
     tamilName: 'கிழங்கு',
     shortDescription: 'Starchy tropical vine tuber with thick bark; distinct from elephant yam in texture',
   },
@@ -255,6 +291,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Maize',
     plantType: 'vegetable',
+    cropFamily: 'other',
     tamilName: 'மக்காச்சோளம்',
     shortDescription: 'Tall cereal grass forming the structural canopy in Three Sisters polyculture',
     varieties: ['Hybrid Sweet', 'Country Corn', 'CO 1'],
@@ -263,6 +300,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Lotus Stem',
     plantType: 'vegetable',
+    cropFamily: 'other',
     tamilName: 'தாமரைத்தண்டு',
     shortDescription: 'Aquatic perennial with crunchy, tunnel-riddled rhizomes used in South Indian cooking',
   },
@@ -270,6 +308,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Knol Khol',
     plantType: 'vegetable',
+    cropFamily: 'brassica',
     tamilName: 'நூல்கோல்',
     shortDescription: 'Cool-season brassica grown for its tender swollen stem',
     varieties: ['White Vienna', 'Purple Vienna', 'Local'],
@@ -277,6 +316,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Green Peas',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'பச்சைப் பட்டாணி',
     shortDescription: 'Short cool-season climbing legume suited to the mildest local months',
     varieties: ['Arkel', 'Bonneville', 'Local'],
@@ -284,6 +324,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Lablab Bean',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'அவரைக்காய்',
     shortDescription: 'Heat-tolerant perennial bean widely grown as avarai in Tamil Nadu',
     varieties: ['CO 1', 'CO 2', 'Local'],
@@ -291,6 +332,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Winged Bean',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'சிறகவரை',
     shortDescription: 'Humid-tropical climbing legume with edible pods, leaves, flowers, and tubers',
     varieties: ['AKWB 1', 'Local Green'],
@@ -298,6 +340,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Sword Bean',
     plantType: 'vegetable',
+    cropFamily: 'legume',
     tamilName: 'வாள் அவரை',
     shortDescription: 'Vigorous tropical bean suited to fences and trellises; young pods are cooked',
     varieties: ['Bush', 'Climbing', 'Local'],
@@ -305,6 +348,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Watermelon',
     plantType: 'vegetable',
+    cropFamily: 'cucurbit',
     tamilName: 'தர்பூசணி',
     shortDescription: 'Warm-season trailing cucurbit requiring drainage and a relatively dry fruiting period',
     varieties: ['Sugar Baby', 'Arka Manik', 'Local'],
@@ -312,6 +356,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Muskmelon',
     plantType: 'vegetable',
+    cropFamily: 'cucurbit',
     tamilName: 'முலாம்பழம்',
     shortDescription: 'Warm-season melon performing best with full sun, drainage, and low leaf wetness',
     varieties: ['Pusa Sharbati', 'Hara Madhu', 'Local'],

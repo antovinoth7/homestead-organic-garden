@@ -12,6 +12,7 @@ export const SHRUB_ENTRIES: PlantCatalogEntry[] = [
   {
     name: 'Bougainvillea',
     plantType: 'shrub',
+    cropFamily: 'flower',
     tamilName: 'பூகன்வில்லியா',
     shortDescription: 'Vigorous thorny shrub-vine smothered in papery bracts',
   },

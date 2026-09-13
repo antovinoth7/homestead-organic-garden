@@ -1,4 +1,4 @@
-import type { PlantType } from '@/types/database.types';
+import type { CropFamily, PlantType } from '@/types/database.types';
 
 /**
  * One bundled catalog row, whole.
@@ -18,6 +18,12 @@ export interface PlantCatalogEntry {
   /** Display name, and the key every other catalog structure is keyed by. */
   name: string;
   plantType: PlantType;
+  /**
+   * Rotation family. Required, so a new row cannot be added without one: this
+   * used to be derived by scanning guild templates, and 101 of the 128 rows
+   * answered null because no template happened to mention them.
+   */
+  cropFamily: CropFamily;
   /** Data-only until the Phase G language toggle ships. */
   tamilName: string;
   /**
