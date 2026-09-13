@@ -18,7 +18,6 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Tomato: ['Basil', 'Marigold', 'Carrot', 'Onion'],
   Carrot: ['Onion', 'Tomato'],
   Cabbage: ['Dill', 'Mint', 'Beans'],
-  Broccoli: ['Onion', 'Garlic'],
   Cucumber: ['Beans', 'Green Peas', 'Radish', 'Sunflower'],
   Pepper: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold'],
   Chilli: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold', 'Turmeric'],
@@ -55,8 +54,6 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Rose: ['Garlic', 'Chives', 'Marigold'],
   Sunflower: ['Cucumber', 'Corn'],
   Marigold: ['Tomato', 'Cabbage', 'Beans', 'Cucumber', 'Most vegetables'],
-  Lily: ['Roses', 'Peonies', 'Ferns'],
-  Tulip: ['Daffodils', 'Hyacinths'],
   Jasmine: ['Roses', 'Gardenias'],
   Hibiscus: ['Aloe', 'Succulents', 'Citrus'],
   Chrysanthemum: ['Roses', 'Asters', 'Daisies'],
@@ -248,6 +245,19 @@ const COMPANION_NAME_FALLBACKS: Record<string, string> = {
   'hybrid coconut': 'coconut',
   'king coconut': 'coconut',
 };
+
+/**
+ * Every name the companion tables are keyed by, and the names those keys are
+ * reached through when the catalog ships cultivars instead of the species.
+ * Exported for the coverage guard in `src/__tests__`, which checks that no
+ * entry is stranded on a name nothing resolves to.
+ */
+export const COMPANION_TABLE_NAMES: string[] = [
+  ...new Set([...Object.keys(COMPANION_PLANTS), ...Object.keys(INCOMPATIBLE_PLANTS)]),
+];
+export const COMPANION_FALLBACK_TARGETS: string[] = [
+  ...new Set(Object.values(COMPANION_NAME_FALLBACKS)),
+];
 
 const companionKey = (plantVariety: string | null | undefined): string | null => {
   const key = getCanonicalPlantKey(plantVariety);

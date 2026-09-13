@@ -17,8 +17,11 @@ for (const category of PLANT_CATEGORIES) {
 // Curated aliases for guild-template / companion / accumulator names that name
 // no catalog row at all, so `PLANT_NAME_ALIASES` cannot resolve them: it maps
 // one catalog row's names onto each other, and these have no row to map to.
-const NAME_TYPE_ALIASES: Record<string, PlantType> = {
-  amaranth: 'spinach',             // template row; catalog has "Amaranthus"
+//
+// Consulted before the catalog, so an entry here overrides a real row. Keep it
+// to names nothing else can resolve — `satelliteNameCoverage.test.ts` fails on
+// any entry the catalog or `PLANT_NAME_ALIASES` has since made redundant.
+export const NAME_TYPE_ALIASES: Record<string, PlantType> = {
   spinach: 'spinach',              // companion/row name; not listed in spinach category
   'black gram (urad)': 'vegetable',// template row includes parenthetical
   'pigeon pea (arhar)': 'vegetable',// template row includes parenthetical

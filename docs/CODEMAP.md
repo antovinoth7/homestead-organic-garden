@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-13 — src/: 672 files, 122,150 lines.
+> Snapshot: 2026-09-13 — src/: 673 files, 122,230 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -9,7 +9,7 @@
 
 - src/screens/CalendarScreen.tsx (2869)
 - src/styles/bedCreationWizardStyles.ts (1906)
-- src/utils/plantHelpers.ts (1843)
+- src/utils/plantHelpers.ts (1853)
 - src/styles/calendarStyles.ts (1810)
 - src/styles/plantFormStyles.ts (1719)
 - src/services/tasks.ts (1600)
@@ -40,7 +40,7 @@
 - bedSuccessionTimeline.harvest.test.ts (60)
 - DraggablePlantRow.test.ts (41)
 
-### src/__tests__/config/ — 13 files, 1,013 lines
+### src/__tests__/config/ — 14 files, 1,071 lines
 
 - referenceAssets.test.ts (164)
 - tamilNaduPlantingCalendar.test.ts (138)
@@ -51,6 +51,7 @@
 - todaySeasonalAdvisories.test.ts (71)
 - kanyakumariPlantingWindows.test.ts (63)
 - organicInputs.test.ts (63)
+- satelliteNameCoverage.test.ts (58)
 - districtCoordinates.test.ts (45)
 - organicInputs.seasonalRhythm.test.ts (45)
 - almanac.test.ts (37)
@@ -398,7 +399,7 @@
 - todaySeasonalAdvisories.ts (64)
 - kanyakumariPlantingCalendar.ts (58)
 
-### src/config/beds/ — 15 files, 1,651 lines
+### src/config/beds/ — 15 files, 1,659 lines
 
 - guildTemplates.ts (510)
 - soilPrepEngine.ts (206)
@@ -408,9 +409,9 @@
 - bedRecommendations.ts (99)
 - greenManureEngine.ts (88)
 - bedSizeEngine.ts (65)
+- companionRules.ts (57)
 - plantingSequence.ts (56)
 - layerMeta.ts (51)
-- companionRules.ts (49)
 - dynamicAccumulators.ts (44)
 - bedTypeMeta.ts (34)
 - index.ts (34)
@@ -716,16 +717,16 @@
 - visual.types.ts (90)
 - offline.types.ts (49)
 
-### src/utils/ — 86 files, 11,824 lines
+### src/utils/ — 86 files, 11,838 lines
 
-- plantHelpers.ts (1843) ⚠️ large — Grep/search inside, do not read whole
+- plantHelpers.ts (1853) ⚠️ large — Grep/search inside, do not read whole
 - rowLayoutEngine.ts (660)
 - zipHelper.ts (398)
 - harvestStats.ts (387)
 - careTaskFilters.ts (386)
 - catalogDraft.ts (273)
+- plantAliases.ts (269)
 - plotBriefLine.ts (269)
-- plantAliases.ts (268)
 - safeStorage.ts (256)
 - carePlanDisplay.ts (244)
 - plotGrouping.ts (228)
@@ -776,7 +777,7 @@
 - plantHealth.ts (67)
 - growSpecFormat.ts (66)
 - taskWeatherAdvisory.ts (61)
-- plantTypeFromName.ts (57)
+- plantTypeFromName.ts (60)
 - bedEditReconcile.ts (52)
 - catalogFieldHelp.ts (51)
 - plantCapacity.ts (51)
@@ -835,7 +836,7 @@
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (850)
+- CODEMAP.md (851)
 - COMPONENTS.md (66)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (110)

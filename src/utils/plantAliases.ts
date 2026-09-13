@@ -157,6 +157,7 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   'chinna vengayam': 'shallot',
   poondu: 'garlic',
   'senai kizhangu': 'elephant yam',
+  'elephant foot yam': 'elephant yam',
   'sweet potato kizhangu': 'sweet potato',
   sarkaraivalli: 'sweet potato',
 
