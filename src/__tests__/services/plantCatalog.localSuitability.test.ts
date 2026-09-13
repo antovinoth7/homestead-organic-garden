@@ -7,7 +7,6 @@ import {
 import { sortPlantNames } from '@/utils/plantSort';
 import { PLANT_CARE_OVERRIDES } from '@/utils/plantCareDefaults/overrides';
 import { buildProfileKey } from '@/utils/plantCareDefaults/profileKey';
-import { PLANT_VARIETIES_BY_TYPE } from '@/utils/plantCareDefaults/varieties';
 
 jest.mock('@/lib/firebase', () => ({
   db: {},
@@ -105,17 +104,6 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
       expect(built.varieties).toEqual(category.varieties);
       expect(built.tamilNames).toEqual(category.tamilNames);
       expect(built.descriptions).toEqual(category.descriptions);
-    }
-  });
-
-  // `PLANT_VARIETIES_BY_TYPE` is a second copy of the catalog's plant names,
-  // and it is the one `getKnownPlantNames()` and the whole care registry read.
-  // Nothing checked the two agreed until this test: a plant added to one and
-  // not the other silently loses its care profile or its reference image.
-  it('keeps PLANT_VARIETIES_BY_TYPE in step with the catalog', () => {
-    for (const [type, category] of Object.entries(DEFAULT_PLANT_CATALOG.categories)) {
-      const varieties = PLANT_VARIETIES_BY_TYPE[type as keyof typeof PLANT_VARIETIES_BY_TYPE];
-      expect(sortPlantNames([...varieties])).toEqual(sortPlantNames(category.plants));
     }
   });
 

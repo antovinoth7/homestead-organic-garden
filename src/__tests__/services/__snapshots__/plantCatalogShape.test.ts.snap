@@ -1011,7 +1011,6 @@ exports[`the bundled plant catalog lists every category in a stable order 1`] = 
   "vegetable": [
     "Brinjal",
     "Long Brinjal",
-    "Ladies Finger",
     "Tomato",
     "Chilli",
     "Tapioca",
@@ -1037,6 +1036,7 @@ exports[`the bundled plant catalog lists every category in a stable order 1`] = 
     "Taro",
     "Elephant Yam",
     "Sweet Potato",
+    "Ladies Finger",
     "Yardlong Beans",
     "Beetroot",
     "French Beans",

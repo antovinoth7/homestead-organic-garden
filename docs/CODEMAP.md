@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-12 — src/: 659 files, 121,697 lines.
+> Snapshot: 2026-09-13 — src/: 671 files, 122,057 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -22,7 +22,6 @@
 - src/lib/imageStorage.ts (873)
 - src/screens/BedWizardSteps/GuildTemplateStep.tsx (831)
 - src/screens/PlantsScreen.tsx (827)
-- src/services/plantCatalog.ts (807)
 
 ## src/
 
@@ -41,13 +40,14 @@
 - bedSuccessionTimeline.harvest.test.ts (60)
 - DraggablePlantRow.test.ts (41)
 
-### src/__tests__/config/ — 12 files, 942 lines
+### src/__tests__/config/ — 13 files, 1,013 lines
 
 - referenceAssets.test.ts (164)
 - tamilNaduPlantingCalendar.test.ts (138)
 - organicInputs.entries.test.ts (126)
 - zones.test.ts (82)
 - iconRegistry.test.ts (74)
+- plantCatalogEntries.test.ts (71)
 - todaySeasonalAdvisories.test.ts (71)
 - kanyakumariPlantingWindows.test.ts (63)
 - organicInputs.test.ts (63)
@@ -103,7 +103,7 @@
 - noFunctionalEmoji.test.ts (54)
 - agronomyEvidenceDocs.test.ts (44)
 
-### src/__tests__/services/ — 13 files, 2,373 lines
+### src/__tests__/services/ — 13 files, 2,361 lines
 
 - alerts.test.ts (533)
 - manualTaskScheduling.test.ts (317)
@@ -111,10 +111,10 @@
 - weather.test.ts (204)
 - offlineSync.test.ts (202)
 - taskSkip.test.ts (154)
-- plantCatalog.localSuitability.test.ts (145)
 - beds.test.ts (141)
 - plantProfilesTombstone.test.ts (137)
 - careTaskScheduling.test.ts (135)
+- plantCatalog.localSuitability.test.ts (133)
 - harvestTaskSelection.test.ts (86)
 - preMonsoonTasks.test.ts (83)
 - plantCatalogShape.test.ts (30)
@@ -447,6 +447,23 @@
 - beetlesWeevils.ts (241)
 - index.ts (25)
 
+### src/config/plantCatalog/ — 3 files, 113 lines
+
+- derive.ts (47)
+- types.ts (34)
+- index.ts (32)
+
+### src/config/plantCatalog/entries/ — 8 files, 929 lines
+
+- vegetables.ts (320)
+- herbs.ts (175)
+- fruitTrees.ts (174)
+- spinach.ts (84)
+- flowers.ts (77)
+- timberTrees.ts (47)
+- coconutTrees.ts (33)
+- shrubs.ts (19)
+
 ### src/config/zones/ — 7 files, 627 lines
 
 - highRainfall.ts (222)
@@ -567,11 +584,10 @@
 - BedConfirmStep.tsx (226)
 - BedTypeStep.tsx (154)
 
-### src/services/ — 18 files, 7,791 lines
+### src/services/ — 18 files, 7,186 lines
 
 - tasks.ts (1600) ⚠️ large — Grep/search inside, do not read whole
 - plants.ts (1140) ⚠️ large — Grep/search inside, do not read whole
-- plantCatalog.ts (807) ⚠️ large — Grep/search inside, do not read whole
 - plantProfiles.ts (639)
 - backup.ts (609)
 - journal.ts (550)
@@ -580,6 +596,7 @@
 - taskSchedulingLogic.ts (316)
 - farmCapacity.ts (248)
 - beds.ts (228)
+- plantCatalog.ts (202)
 - locations.ts (197)
 - BedTaskResolver.ts (182)
 - offlineSync.ts (156)
@@ -787,12 +804,12 @@
 - dragRowMath.ts (16)
 - textSanitizer.ts (14)
 
-### src/utils/plantCareDefaults/ — 5 files, 867 lines
+### src/utils/plantCareDefaults/ — 5 files, 731 lines
 
 - pruning.ts (479)
-- varieties.ts (149)
 - index.ts (136)
 - typeDefaults.ts (98)
+- varieties.ts (13)
 - profileKey.ts (5)
 
 ### src/utils/plantCareDefaults/overrides/ — 13 files, 3,750 lines
