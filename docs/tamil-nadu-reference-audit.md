@@ -442,12 +442,12 @@ changed category — apart from one Tamil-name correction the additions forced (
 | --- | --- | --- | --- |
 | Ivy Gourd | கோவைக்காய் | *Coccinia grandis* | Perennial pandal vine; crops for years from a cutting |
 | Turkey Berry | சுண்டைக்காய் | *Solanum torvum* | Sundakkai vathal; also the standard brinjal rootstock |
-| Koorka | கூர்க்கன் கிழங்கு | *Plectranthus rotundifolius* | Coconut intercrop tuber — see below |
+| Chinese Potato | கூர்க்கன் கிழங்கு | *Plectranthus rotundifolius* | Coconut intercrop tuber — see below |
 | Sesame | எள்ளு | *Sesamum indicum* | Gingelly oil and ellu urundai; joins the other field-crop rows |
 
-**Koorka closes a gap this document opened twice.** The shrub review flagged it as "worth adding
+**Chinese Potato closes a gap this document opened twice.** The shrub review flagged it as "worth adding
 as a vegetable in a later pass" after finding that `shrub:Coleus` carried the description "living
-mulch in coconut intercrop systems" — which describes Koorka, not an ornamental *Plectranthus
+mulch in coconut intercrop systems" — which describes koorka, not an ornamental *Plectranthus
 scutellarioides*. The category relevance pass then repeated it under "Notes and still open", and
 the vegetable review repeated it again. It is now in the catalog.
 
@@ -455,19 +455,19 @@ the vegetable review repeated it again. It is now in the catalog.
 
 | Name | Tamil | Species |
 | --- | --- | --- |
-| Pulicha Keerai | புளிச்சக்கீரை | *Hibiscus sabdariffa* |
-| Karisalankanni Keerai | கரிசலாங்கண்ணி | *Eclipta prostrata* |
-| Musumusukkai | முசுமுசுக்கை | *Mukia maderaspatana* |
+| Roselle | புளிச்சக்கீரை | *Hibiscus sabdariffa* |
+| False Daisy | கரிசலாங்கண்ணி | *Eclipta prostrata* |
+| Madras Pea Pumpkin | முசுமுசுக்கை | *Mukia maderaspatana* |
 
-Named **Pulicha Keerai**, not Gongura. Gongura is the Telugu name; every other row in the category
-uses the Tamil `* Keerai` form, and the transliteration rule from the relevance pass cuts the same
-way here. `gongura` is an alias.
+Named **Roselle**, not Gongura or Pulicha Keerai — see the naming rule below. Gongura is the Telugu
+name and புளிச்சக்கீரை the Tamil one; both are aliases, and the Tamil name is what the row displays
+alongside the English once the Phase G toggle ships.
 
 ### Spices and medicinals, filed under `herb`
 
 | Name | Tamil | Species | Note |
 | --- | --- | --- | --- |
-| Pirandai | பிரண்டை | *Cissus quadrangularis* | Thuvaiyal and pickle climber |
+| Adamant Creeper | பிரண்டை | *Cissus quadrangularis* | Thuvaiyal and pickle climber; pirandai |
 | Clove | கிராம்பு | *Syzygium aromaticum* | Kanyakumari hill spice |
 | Cinnamon | கருவாப்பட்டை | *Cinnamomum verum* | Coppiced for bark |
 | Mango Ginger | மாஇஞ்சி | *Curcuma amada* | Grown exactly like Turmeric |
@@ -487,21 +487,68 @@ ignores `daysToHarvest` entirely, and Cardamom is the closer precedent.
 | Name | Tamil | Species | Note |
 | --- | --- | --- | --- |
 | Tamarind | புளி | *Tamarindus indica* | Grafted PKM 1 bears from year 4, seedling not before 8 |
-| Naval | நாவல் | *Syzygium cumini* | Tolerates seasonally wet ground; planted on tank bunds |
+| Jamun | நாவல் | *Syzygium cumini* | Tolerates seasonally wet ground; planted on tank bunds |
 | Cashew | முந்திரி | *Anacardium occidentale* | Major Kanyakumari crop on poor sandy ground |
 | Wood Apple | விளாம்பழம் | *Limonia acidissima* | Spiny; slow |
-| Ilanthai | இலந்தை | *Ziziphus mauritiana* | Fruits on current-season growth — wants a hard annual cutback |
+| Indian Jujube | இலந்தை | *Ziziphus mauritiana* | Fruits on current-season growth — wants a hard annual cutback |
 | Palmyra | பனை | *Borassus flabellifer* | The state tree; nungu, padaneer, karupatti |
 | Sweet Lime | சாத்துக்குடி | *Citrus limetta* | |
 
 `fruit_tree` means *perennial fruit crop*, not literally a tree — the same reading that put
 Pineapple and Passion Fruit there.
 
+### Naming rule: the row name is English where a real English name exists
+
+Seven of the eighteen first landed under their Tamil names and were renamed before this pass
+shipped. The rule that settled it:
+
+**A catalog row is named in English where the plant has a genuine English common name. The Tamil
+name always survives — in `tamilName`, which is what the Phase G toggle will show, and as a search
+alias, so typing the Tamil name still finds the row.**
+
+| First named | Renamed to | Why |
+| --- | --- | --- |
+| Koorka | **Chinese Potato** | Koorka is *Malayalam* (കൂർക്ക), not Tamil — it reached the catalog because Kanyakumari borders Kerala. It was also the only non-English name among 49 vegetables. |
+| Naval | **Jamun** | நாவல் is Tamil. Jamun is the name used in Indian English, the same footing as the existing Chikoo and Amla rows. |
+| Ilanthai | **Indian Jujube** | இலந்தை is Tamil; Indian Jujube is the horticultural English name. |
+| Pirandai | **Adamant Creeper** | |
+| Pulicha Keerai | **Roselle** | |
+| Karisalankanni Keerai | **False Daisy** | |
+| Musumusukkai | **Madras Pea Pumpkin** | |
+
+The other eleven were already accurate English common names and were left alone: Ivy Gourd
+(*Coccinia grandis*), Turkey Berry (*Solanum torvum*), Sesame, Clove, Cinnamon, Mango Ginger,
+Tamarind, Cashew, Wood Apple (*Limonia acidissima*, the standard name for that species), Palmyra
+and Sweet Lime.
+
+No migration was needed. All seven rows were added on this branch and had never shipped, so no
+stored garden plant referenced them — the same reasoning the shrub→herb moves used above. That is
+precisely why this was worth doing now rather than later.
+
+**This rule is applied only to the rows this pass added, and it leaves the catalog inconsistent.**
+Roselle, False Daisy and Madras Pea Pumpkin now sit beside Ponnanganni Keerai, Manathakkali Keerai,
+Vallarai Keerai and Pasalai Keerai; Adamant Creeper beside Adathodai, Thoothuvalai, Karpooravalli,
+Maruthani and Nochi; and the fruit tab still carries Chikoo and Amla rather than Sapodilla and
+Indian Gooseberry. Roughly 22 rows are in this position.
+
+Finishing the job is a separate decision, and a more expensive one: those rows **have shipped**, so
+renaming them needs a migration on the 007 `MERGED_PLANT_NAMES` pattern to rewrite `plant_variety`
+on every stored garden plant, or a user who planted Vallarai Keerai loses the link to it.
+
+Two honest caveats on the seven:
+
+- **Madras Pea Pumpkin is the weakest of them.** *Mukia maderaspatana* has no English name in
+  everyday use — the alternatives are "Rough Bryony" and the Latin — so this is the one rename that
+  arguably makes the row less recognisable to the people who grow it, not more.
+- **Chinese Potato keeps கூர்க்கன் கிழங்கு as its Tamil name**, which is itself the Malayalam word
+  in Tamil script. It is what Kanyakumari actually says; the standard Tamil சிறுகிழங்கு is carried
+  as an alias.
+
 ### Water Apple was carrying Jamun's Tamil name
 
 `fruit_tree:Water Apple` gave its Tamil name as **நாவல்** in both the catalog and its care profile.
 நாவல் is *Syzygium cumini* — Jamun. The row's own `scientificName` is *Syzygium aqueum*: a
-different species in the same genus. Adding Naval would have put two different fruits under one
+different species in the same genus. Adding Jamun would have put two different fruits under one
 Tamil name, so the row now reads **ஜாம்பு**.
 
 Correcting the bundled value is not enough on its own. `getProfileEntry` returns `stored ?? DEFAULT`
@@ -521,15 +568,15 @@ Tamil name, so there is no `plants`-collection pass. Keyed by plant name like `M
 Three of the eighteen resolved to the type-level defaults on the first pass, and one of them was
 the failure this document already has a name for: **Mango Ginger inherited the generic herb tip
 *"Remove flower buds to extend leaf growth"*** — the same wrong-by-default advice the Black Pepper
-correction called out, this time on a crop grown for its rhizome. Koorka and Sesame were quietly
+correction called out, this time on a crop grown for its rhizome. Chinese Potato and Sesame were quietly
 inheriting "remove yellowing lower leaves" too. All three now carry their own guidance, as do the
 other fifteen.
 
 The type defaults are wrong for most of this set in the same way: "thin crowded inner branches" is
 meaningless on **Palmyra**, which has no branches and one growing point that does not regrow if
-topped, and actively harmful on **Clove**, whose crop *is* the flower buds. **Ilanthai** needs the
+topped, and actively harmful on **Clove**, whose crop *is* the flower buds. **Indian Jujube** needs the
 opposite of the fruit-tree default — a hard annual cutback, because it fruits on the current
-season's growth. **Pirandai** leads with a safety line: the raw sap irritates skin and mouth.
+season's growth. **Adamant Creeper** leads with a safety line: the raw sap irritates skin and mouth.
 
 ### Aliases
 
@@ -539,8 +586,10 @@ bare `avarai` resolved to Lablab Bean, so `avarakkai`, `avaraikkai`, `mochai` an
 now do too. `Thandu Keerai` was added to the Amaranthus variety list.
 
 Two rules in `plantAliases.test.ts` constrain this and caught a mistake during the pass: every
-alias must resolve to a real catalog row, and no alias may itself be a catalog plant name — so
-`pulicha keerai` is the row and `gongura` the alias, never the reverse.
+alias must resolve to a real catalog row, and no alias may itself be a catalog plant name. That
+second rule is what makes a rename a *flip* rather than an edit — when `Naval` became `Jamun`, the
+existing `jamun → naval` alias had to be deleted, its siblings re-pointed, and `naval` added as an
+alias in the other direction.
 
 ### Reference images
 

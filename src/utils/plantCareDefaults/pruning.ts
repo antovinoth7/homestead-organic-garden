@@ -384,7 +384,10 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
   },
   [buildProfileKey('flower', 'Nandiyavattai')]: {
     tips: ['Wear gloves — the cut stems bleed a milky sap that irritates skin'],
-    shapePruning: { tip: 'Cut back after the rains; it flowers hard on new wood', months: 'Oct–Nov' },
+    shapePruning: {
+      tip: 'Cut back after the rains; it flowers hard on new wood',
+      months: 'Oct–Nov',
+    },
   },
   // The `spinach` default would have this pinched back at the first flower
   // bud. Agathi poo is a harvest in its own right, so that tip is dropped.
@@ -441,7 +444,7 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
       'Cut the foliage back once it dies down, then lift',
     ],
   },
-  [buildProfileKey('vegetable', 'Koorka')]: {
+  [buildProfileKey('vegetable', 'Chinese Potato')]: {
     tips: [
       'Pinch running tips once to push side shoots',
       'Earth up around the base as the tubers bulk — that matters more than cutting',
@@ -455,7 +458,7 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
       'Cut and stook the plants when the lowest capsules yellow, before they shatter',
     ],
   },
-  [buildProfileKey('herb', 'Pirandai')]: {
+  [buildProfileKey('herb', 'Adamant Creeper')]: {
     tips: [
       'Wear gloves — the raw sap irritates skin and mouth',
       'Harvest by cutting tender square tips, not by stripping the vine',
@@ -489,7 +492,7 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
     ],
     shapePruning: { tip: 'Train a clear trunk for the first three years', months: 'Feb–Mar' },
   },
-  [buildProfileKey('fruit_tree', 'Naval')]: {
+  [buildProfileKey('fruit_tree', 'Jamun')]: {
     tips: [
       'Thin the canopy for airflow after fruiting',
       'Remove water shoots from the trunk and main limbs',
@@ -512,7 +515,7 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
       'Remove dead and rubbing wood only',
     ],
   },
-  [buildProfileKey('fruit_tree', 'Ilanthai')]: {
+  [buildProfileKey('fruit_tree', 'Indian Jujube')]: {
     tips: [
       'Cut back hard each year — fruit comes on the current season’s growth',
       'Leave a short framework of main limbs after the cutback',

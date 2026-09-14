@@ -210,7 +210,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
       'Tall fast-growing shrub with repellent properties; pest-deterrent companion around vegetable beds',
   },
   {
-    name: 'Pirandai',
+    name: 'Adamant Creeper',
     plantType: 'herb',
     cropFamily: 'other',
     tamilName: 'பிரண்டை',

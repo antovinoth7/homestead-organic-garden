@@ -395,7 +395,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
     varieties: ['Local'],
   },
   {
-    name: 'Koorka',
+    name: 'Chinese Potato',
     plantType: 'vegetable',
     cropFamily: 'lamiaceae',
     tamilName: 'கூர்க்கன் கிழங்கு',

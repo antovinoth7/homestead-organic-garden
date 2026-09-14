@@ -68,7 +68,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
     name: 'Water Apple',
     plantType: 'fruit_tree',
     cropFamily: 'other',
-    // Syzygium aqueum. நாவல் is S. cumini — Jamun, which is the `Naval` row.
+    // Syzygium aqueum. நாவல் is S. cumini, which is the `Jamun` row.
     tamilName: 'ஜாம்பு',
     shortDescription: 'Tropical evergreen tree producing crisp, mildly sweet bell-shaped fruits',
   },
@@ -214,7 +214,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
     varieties: ['PKM 1', 'Urigam', 'Local'],
   },
   {
-    name: 'Naval',
+    name: 'Jamun',
     plantType: 'fruit_tree',
     cropFamily: 'other',
     tamilName: 'நாவல்',
@@ -241,7 +241,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
     varieties: ['Local'],
   },
   {
-    name: 'Ilanthai',
+    name: 'Indian Jujube',
     plantType: 'fruit_tree',
     cropFamily: 'other',
     tamilName: 'இலந்தை',

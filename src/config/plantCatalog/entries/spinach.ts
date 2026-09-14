@@ -101,7 +101,7 @@ export const SPINACH_ENTRIES: PlantCatalogEntry[] = [
   },
   // Keerai a Tamil Nadu kitchen actually cooks, absent until now.
   {
-    name: 'Pulicha Keerai',
+    name: 'Roselle',
     plantType: 'spinach',
     cropFamily: 'other',
     tamilName: 'புளிச்சக்கீரை',
@@ -110,7 +110,7 @@ export const SPINACH_ENTRIES: PlantCatalogEntry[] = [
     varieties: ['Green Stem', 'Red Stem', 'Local'],
   },
   {
-    name: 'Karisalankanni Keerai',
+    name: 'False Daisy',
     plantType: 'spinach',
     cropFamily: 'other',
     tamilName: 'கரிசலாங்கண்ணி',
@@ -119,7 +119,7 @@ export const SPINACH_ENTRIES: PlantCatalogEntry[] = [
     varieties: ['Yellow Flowered', 'White Flowered', 'Local'],
   },
   {
-    name: 'Musumusukkai',
+    name: 'Madras Pea Pumpkin',
     plantType: 'spinach',
     cropFamily: 'cucurbit',
     tamilName: 'முசுமுசுக்கை',

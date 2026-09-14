@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-14 — src/: 677 files, 123,735 lines.
+> Snapshot: 2026-09-14 — src/: 677 files, 123,748 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -105,14 +105,14 @@
 - noFunctionalEmoji.test.ts (54)
 - agronomyEvidenceDocs.test.ts (44)
 
-### src/__tests__/services/ — 14 files, 2,558 lines
+### src/__tests__/services/ — 14 files, 2,555 lines
 
 - alerts.test.ts (533)
 - manualTaskScheduling.test.ts (317)
 - weatherResponse.test.ts (206)
 - weather.test.ts (204)
 - offlineSync.test.ts (202)
-- plantCatalog.localSuitability.test.ts (184)
+- plantCatalog.localSuitability.test.ts (181)
 - taskSkip.test.ts (154)
 - plantProfilesCareBridge.test.ts (146)
 - beds.test.ts (141)
@@ -720,14 +720,14 @@
 - visual.types.ts (90)
 - offline.types.ts (49)
 
-### src/utils/ — 86 files, 11,957 lines
+### src/utils/ — 86 files, 11,970 lines
 
 - plantHelpers.ts (1853) ⚠️ large — Grep/search inside, do not read whole
 - rowLayoutEngine.ts (660)
 - zipHelper.ts (398)
 - harvestStats.ts (387)
 - careTaskFilters.ts (386)
-- plantAliases.ts (361)
+- plantAliases.ts (374)
 - catalogDraft.ts (273)
 - plotBriefLine.ts (269)
 - safeStorage.ts (256)
@@ -809,9 +809,9 @@
 - dragRowMath.ts (16)
 - textSanitizer.ts (14)
 
-### src/utils/plantCareDefaults/ — 5 files, 856 lines
+### src/utils/plantCareDefaults/ — 5 files, 859 lines
 
-- pruning.ts (604)
+- pruning.ts (607)
 - index.ts (136)
 - typeDefaults.ts (98)
 - varieties.ts (13)
@@ -840,7 +840,7 @@
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (852)
+- CODEMAP.md (856)
 - COMPONENTS.md (66)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (110)
@@ -850,6 +850,6 @@
 - REFERENCE_IMAGES.md (81)
 - SCHEMA_MIGRATIONS.md (50)
 - SERVICES.md (208)
-- tamil-nadu-reference-audit.md (730)
+- tamil-nadu-reference-audit.md (779)
 - TESTING.md (33)
 - TODAY_SCREEN_RECOMMENDATION.md (629)

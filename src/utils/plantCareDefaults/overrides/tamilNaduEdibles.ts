@@ -78,7 +78,7 @@ export const TAMIL_NADU_EDIBLE_VEGETABLE_OVERRIDES: Record<string, PlantCareProf
     feedingIntensity: 'light',
     growthStageDurations: { seedling: 30, vegetative: 90, flowering: 30, fruiting: 40 },
   },
-  [buildProfileKey('vegetable', 'Koorka')]: {
+  [buildProfileKey('vegetable', 'Chinese Potato')]: {
     waterRequirement: 'medium',
     wateringFrequencyDays: 3,
     fertilisingFrequencyDays: 30,
@@ -139,7 +139,7 @@ export const TAMIL_NADU_EDIBLE_VEGETABLE_OVERRIDES: Record<string, PlantCareProf
 };
 
 export const TAMIL_NADU_EDIBLE_GREENS_OVERRIDES: Record<string, PlantCareProfile> = {
-  [buildProfileKey('spinach', 'Pulicha Keerai')]: {
+  [buildProfileKey('spinach', 'Roselle')]: {
     waterRequirement: 'medium',
     wateringFrequencyDays: 3,
     fertilisingFrequencyDays: 21,
@@ -168,7 +168,7 @@ export const TAMIL_NADU_EDIBLE_GREENS_OVERRIDES: Record<string, PlantCareProfile
     feedingIntensity: 'medium',
     growthStageDurations: { seedling: 12, vegetative: 40, flowering: 30 },
   },
-  [buildProfileKey('spinach', 'Karisalankanni Keerai')]: {
+  [buildProfileKey('spinach', 'False Daisy')]: {
     waterRequirement: 'high',
     wateringFrequencyDays: 2,
     fertilisingFrequencyDays: 30,
@@ -197,7 +197,7 @@ export const TAMIL_NADU_EDIBLE_GREENS_OVERRIDES: Record<string, PlantCareProfile
     feedingIntensity: 'light',
     growthStageDurations: { seedling: 10, vegetative: 25 },
   },
-  [buildProfileKey('spinach', 'Musumusukkai')]: {
+  [buildProfileKey('spinach', 'Madras Pea Pumpkin')]: {
     waterRequirement: 'medium',
     wateringFrequencyDays: 3,
     fertilisingFrequencyDays: 30,
@@ -235,7 +235,7 @@ export const TAMIL_NADU_EDIBLE_GREENS_OVERRIDES: Record<string, PlantCareProfile
  * a matching `yearsToFirstHarvest`, so neither promises a first-season harvest.
  */
 export const TAMIL_NADU_EDIBLE_SPICE_OVERRIDES: Record<string, PlantCareProfile> = {
-  [buildProfileKey('herb', 'Pirandai')]: {
+  [buildProfileKey('herb', 'Adamant Creeper')]: {
     waterRequirement: 'low',
     wateringFrequencyDays: 6,
     fertilisingFrequencyDays: 60,
@@ -394,7 +394,7 @@ export const TAMIL_NADU_EDIBLE_FRUIT_TREE_OVERRIDES: Record<string, PlantCarePro
     annualCycleDurations: { flowering: 60, fruiting: 210, dormant: 95 },
     floweringStartMonth: 5,
   },
-  [buildProfileKey('fruit_tree', 'Naval')]: {
+  [buildProfileKey('fruit_tree', 'Jamun')]: {
     waterRequirement: 'medium',
     wateringFrequencyDays: 7,
     fertilisingFrequencyDays: 90,
@@ -493,7 +493,7 @@ export const TAMIL_NADU_EDIBLE_FRUIT_TREE_OVERRIDES: Record<string, PlantCarePro
     annualCycleDurations: { flowering: 45, fruiting: 270, dormant: 50 },
     floweringStartMonth: 2,
   },
-  [buildProfileKey('fruit_tree', 'Ilanthai')]: {
+  [buildProfileKey('fruit_tree', 'Indian Jujube')]: {
     waterRequirement: 'low',
     wateringFrequencyDays: 10,
     fertilisingFrequencyDays: 90,

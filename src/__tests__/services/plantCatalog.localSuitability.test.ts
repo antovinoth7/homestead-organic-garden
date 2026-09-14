@@ -1,9 +1,6 @@
 import { DEFAULT_PLANT_CATALOG } from '@/services/plantCatalog';
 import { KANYAKUMARI_PLANTING_CALENDAR } from '@/config/kanyakumariPlantingCalendar';
-import {
-  DEFAULT_PLANT_PROFILES,
-  toPlantCatalogShape,
-} from '@/services/plantProfiles';
+import { DEFAULT_PLANT_PROFILES, toPlantCatalogShape } from '@/services/plantProfiles';
 import { sortPlantNames } from '@/utils/plantSort';
 import { PLANT_CARE_OVERRIDES } from '@/utils/plantCareDefaults/overrides';
 import { buildProfileKey } from '@/utils/plantCareDefaults/profileKey';
@@ -43,9 +40,9 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
       'Pasalai Keerai',
       'Fenugreek',
       'Agathi',
-      'Pulicha Keerai',
-      'Karisalankanni Keerai',
-      'Musumusukkai',
+      'Roselle',
+      'False Daisy',
+      'Madras Pea Pumpkin',
     ]);
     expect(spinach.plants).not.toEqual(
       expect.arrayContaining(['Hybrid Leafy', 'Local Green', 'Winter Spinach'])
@@ -85,19 +82,19 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
   });
 
   // The Tamil Nadu edibles pass. Ivy Gourd and Turkey Berry are the two the
-  // catalog was most conspicuously missing; Koorka had been flagged "still
-  // open" in two earlier audit passes without ever being added.
+  // catalog was most conspicuously missing; Chinese Potato (koorka) had been
+  // flagged "still open" in two earlier audit passes without ever being added.
   it('carries the Tamil Nadu edible staples with complete display metadata', () => {
     const additions: Record<string, string[]> = {
-      vegetable: ['Ivy Gourd', 'Turkey Berry', 'Koorka', 'Sesame'],
-      spinach: ['Pulicha Keerai', 'Karisalankanni Keerai', 'Musumusukkai'],
-      herb: ['Pirandai', 'Clove', 'Cinnamon', 'Mango Ginger'],
+      vegetable: ['Ivy Gourd', 'Turkey Berry', 'Chinese Potato', 'Sesame'],
+      spinach: ['Roselle', 'False Daisy', 'Madras Pea Pumpkin'],
+      herb: ['Adamant Creeper', 'Clove', 'Cinnamon', 'Mango Ginger'],
       fruit_tree: [
         'Tamarind',
-        'Naval',
+        'Jamun',
         'Cashew',
         'Wood Apple',
-        'Ilanthai',
+        'Indian Jujube',
         'Palmyra',
         'Sweet Lime',
       ],
@@ -115,14 +112,14 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
     }
   });
 
-  // நாவல் is Syzygium cumini (Jamun), which is now its own row. Water Apple is
+  // நாவல் is Syzygium cumini, which is now its own row, Jamun. Water Apple is
   // Syzygium aqueum — a different species in the same genus — and had carried
   // Jamun's name since the catalog was written. Two rows under one Tamil name
   // would send a search for நாவல் to whichever sorted first.
-  it('gives நாவல் to Naval alone, not to Water Apple', () => {
+  it('gives நாவல் to Jamun alone, not to Water Apple', () => {
     const fruit = DEFAULT_PLANT_CATALOG.categories.fruit_tree;
 
-    expect(fruit.tamilNames?.Naval).toBe('நாவல்');
+    expect(fruit.tamilNames?.Jamun).toBe('நாவல்');
     expect(fruit.tamilNames?.['Water Apple']).toBe('ஜாம்பு');
 
     const tamilNames = Object.values(DEFAULT_PLANT_CATALOG.categories).flatMap((category) =>

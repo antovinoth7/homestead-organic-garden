@@ -1562,7 +1562,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "fruit_tree:Ilanthai": {
+  "fruit_tree:Indian Jujube": {
     "profile": {
       "annualCycleDurations": {
         "dormant": 200,
@@ -1691,6 +1691,73 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "tips": [
         "Minimal pruning — remove dead branches",
         "Thin fruits if overloaded on trunk",
+      ],
+    },
+  },
+  "fruit_tree:Jamun": {
+    "profile": {
+      "annualCycleDurations": {
+        "dormant": 230,
+        "flowering": 45,
+        "fruiting": 90,
+      },
+      "daysToHarvest": {
+        "max": 2920,
+        "min": 2190,
+      },
+      "description": "Monsoon-fruiting tree bearing astringent purple berries; leaves and bark are also used medicinally. Tolerates seasonally wet ground better than most fruit trees, which is why it is planted along tank bunds.",
+      "droughtTolerance": "medium",
+      "feedingIntensity": "light",
+      "fertilisingFrequencyDays": 90,
+      "floweringStartMonth": 3,
+      "germinationDays": {
+        "max": 25,
+        "min": 10,
+      },
+      "germinationTempC": {
+        "max": 34,
+        "min": 24,
+      },
+      "growingSeason": "Year Round",
+      "growthStageDurations": {
+        "seedling": 365,
+        "vegetative": 1825,
+      },
+      "heatTolerance": "high",
+      "heightCm": {
+        "max": 2000,
+        "min": 800,
+      },
+      "initialGrowthStage": "vegetative",
+      "lifecycle": "perennial",
+      "petToxicity": false,
+      "plantingDepthCm": 30,
+      "preferredFertiliser": "cow_dung_slurry",
+      "pruningFrequencyDays": 365,
+      "scientificName": "Syzygium cumini",
+      "soilPhRange": {
+        "max": 7.5,
+        "min": 5.5,
+      },
+      "soilType": "garden_soil",
+      "spacingCm": 900,
+      "sunlight": "full_sun",
+      "tamilName": "நாவல்",
+      "taxonomicFamily": "Myrtaceae",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 7,
+      "waterloggingTolerance": "high",
+      "yearsToFirstHarvest": 6,
+    },
+    "pruning": {
+      "shapePruning": {
+        "months": "Aug–Sep",
+        "tip": "Open the centre once the framework is set",
+      },
+      "tips": [
+        "Thin the canopy for airflow after fruiting",
+        "Remove water shoots from the trunk and main limbs",
+        "Keep the head low enough to pick without climbing",
       ],
     },
   },
@@ -1890,73 +1957,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "tips": [
         "Thin crowded inner branches",
         "Remove dead or crossing wood",
-      ],
-    },
-  },
-  "fruit_tree:Naval": {
-    "profile": {
-      "annualCycleDurations": {
-        "dormant": 230,
-        "flowering": 45,
-        "fruiting": 90,
-      },
-      "daysToHarvest": {
-        "max": 2920,
-        "min": 2190,
-      },
-      "description": "Monsoon-fruiting tree bearing astringent purple berries; leaves and bark are also used medicinally. Tolerates seasonally wet ground better than most fruit trees, which is why it is planted along tank bunds.",
-      "droughtTolerance": "medium",
-      "feedingIntensity": "light",
-      "fertilisingFrequencyDays": 90,
-      "floweringStartMonth": 3,
-      "germinationDays": {
-        "max": 25,
-        "min": 10,
-      },
-      "germinationTempC": {
-        "max": 34,
-        "min": 24,
-      },
-      "growingSeason": "Year Round",
-      "growthStageDurations": {
-        "seedling": 365,
-        "vegetative": 1825,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 2000,
-        "min": 800,
-      },
-      "initialGrowthStage": "vegetative",
-      "lifecycle": "perennial",
-      "petToxicity": false,
-      "plantingDepthCm": 30,
-      "preferredFertiliser": "cow_dung_slurry",
-      "pruningFrequencyDays": 365,
-      "scientificName": "Syzygium cumini",
-      "soilPhRange": {
-        "max": 7.5,
-        "min": 5.5,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 900,
-      "sunlight": "full_sun",
-      "tamilName": "நாவல்",
-      "taxonomicFamily": "Myrtaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 7,
-      "waterloggingTolerance": "high",
-      "yearsToFirstHarvest": 6,
-    },
-    "pruning": {
-      "shapePruning": {
-        "months": "Aug–Sep",
-        "tip": "Open the centre once the framework is set",
-      },
-      "tips": [
-        "Thin the canopy for airflow after fruiting",
-        "Remove water shoots from the trunk and main limbs",
-        "Keep the head low enough to pick without climbing",
       ],
     },
   },
@@ -2894,6 +2894,62 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "Prune sparingly — growth is slow and wounds close slowly",
         "Watch for spines when working in the canopy",
         "Remove dead and rubbing wood only",
+      ],
+    },
+  },
+  "herb:Adamant Creeper": {
+    "profile": {
+      "daysToHarvest": {
+        "max": 180,
+        "min": 120,
+      },
+      "description": "Square-stemmed succulent climber grown from cuttings on a fence or tree. Tender tips are made into thuvaiyal and pickle — handle with care, since raw sap irritates skin and mouth and the tips are always cooked or salted first.",
+      "droughtTolerance": "high",
+      "feedingIntensity": "light",
+      "fertilisingFrequencyDays": 60,
+      "germinationDays": {
+        "max": 0,
+        "min": 0,
+      },
+      "germinationTempC": {
+        "max": 35,
+        "min": 24,
+      },
+      "growingSeason": "Year Round",
+      "growthStageDurations": {
+        "mature": 60,
+        "vegetative": 120,
+      },
+      "heatTolerance": "high",
+      "heightCm": {
+        "max": 500,
+        "min": 150,
+      },
+      "initialGrowthStage": "vegetative",
+      "lifecycle": "perennial",
+      "petToxicity": false,
+      "plantingDepthCm": 10,
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 120,
+      "scientificName": "Cissus quadrangularis",
+      "soilPhRange": {
+        "max": 7.5,
+        "min": 6,
+      },
+      "soilType": "sandy_loam",
+      "spacingCm": 100,
+      "sunlight": "partial_sun",
+      "tamilName": "பிரண்டை",
+      "taxonomicFamily": "Vitaceae",
+      "waterRequirement": "low",
+      "wateringFrequencyDays": 6,
+      "waterloggingTolerance": "low",
+    },
+    "pruning": {
+      "tips": [
+        "Wear gloves — the raw sap irritates skin and mouth",
+        "Harvest by cutting tender square tips, not by stripping the vine",
+        "Keep the vine off the ground so the nodes do not root everywhere",
       ],
     },
   },
@@ -4300,62 +4356,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "herb:Pirandai": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 180,
-        "min": 120,
-      },
-      "description": "Square-stemmed succulent climber grown from cuttings on a fence or tree. Tender tips are made into thuvaiyal and pickle — handle with care, since raw sap irritates skin and mouth and the tips are always cooked or salted first.",
-      "droughtTolerance": "high",
-      "feedingIntensity": "light",
-      "fertilisingFrequencyDays": 60,
-      "germinationDays": {
-        "max": 0,
-        "min": 0,
-      },
-      "germinationTempC": {
-        "max": 35,
-        "min": 24,
-      },
-      "growingSeason": "Year Round",
-      "growthStageDurations": {
-        "mature": 60,
-        "vegetative": 120,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 500,
-        "min": 150,
-      },
-      "initialGrowthStage": "vegetative",
-      "lifecycle": "perennial",
-      "petToxicity": false,
-      "plantingDepthCm": 10,
-      "preferredFertiliser": "compost",
-      "pruningFrequencyDays": 120,
-      "scientificName": "Cissus quadrangularis",
-      "soilPhRange": {
-        "max": 7.5,
-        "min": 6,
-      },
-      "soilType": "sandy_loam",
-      "spacingCm": 100,
-      "sunlight": "partial_sun",
-      "tamilName": "பிரண்டை",
-      "taxonomicFamily": "Vitaceae",
-      "waterRequirement": "low",
-      "wateringFrequencyDays": 6,
-      "waterloggingTolerance": "low",
-    },
-    "pruning": {
-      "tips": [
-        "Wear gloves — the raw sap irritates skin and mouth",
-        "Harvest by cutting tender square tips, not by stripping the vine",
-        "Keep the vine off the ground so the nodes do not root everywhere",
-      ],
-    },
-  },
   "herb:Thoothuvalai": {
     "profile": {
       "daysToHarvest": {
@@ -4709,6 +4709,61 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
+  "spinach:False Daisy": {
+    "profile": {
+      "daysToHarvest": {
+        "max": 45,
+        "min": 30,
+      },
+      "description": "Creeping marshy green cooked as keerai and long used in Siddha hair and liver preparations. Spreads from rooting nodes in a permanently damp corner; cut, never uproot.",
+      "droughtTolerance": "low",
+      "feedingIntensity": "light",
+      "fertilisingFrequencyDays": 30,
+      "germinationDays": {
+        "max": 12,
+        "min": 5,
+      },
+      "germinationTempC": {
+        "max": 32,
+        "min": 22,
+      },
+      "growingSeason": "Year Round",
+      "growthStageDurations": {
+        "seedling": 10,
+        "vegetative": 25,
+      },
+      "heatTolerance": "medium",
+      "heightCm": {
+        "max": 40,
+        "min": 15,
+      },
+      "initialGrowthStage": "seedling",
+      "lifecycle": "annual",
+      "petToxicity": false,
+      "plantingDepthCm": 1,
+      "preferredFertiliser": "compost",
+      "scientificName": "Eclipta prostrata",
+      "soilPhRange": {
+        "max": 7.5,
+        "min": 5.5,
+      },
+      "soilType": "garden_soil",
+      "spacingCm": 20,
+      "sunlight": "partial_sun",
+      "tamilName": "கரிசலாங்கண்ணி",
+      "taxonomicFamily": "Asteraceae",
+      "waterRequirement": "high",
+      "wateringFrequencyDays": 2,
+      "waterloggingTolerance": "high",
+    },
+    "pruning": {
+      "tips": [
+        "Harvest leaves regularly to encourage growth",
+        "Remove yellow or damaged leaves",
+        "Pinch flowering tips to extend leaf harvest",
+      ],
+    },
+  },
   "spinach:Fenugreek": {
     "profile": {
       "daysToHarvest": {
@@ -4765,52 +4820,53 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "spinach:Karisalankanni Keerai": {
+  "spinach:Madras Pea Pumpkin": {
     "profile": {
       "daysToHarvest": {
-        "max": 45,
-        "min": 30,
+        "max": 55,
+        "min": 40,
       },
-      "description": "Creeping marshy green cooked as keerai and long used in Siddha hair and liver preparations. Spreads from rooting nodes in a permanently damp corner; cut, never uproot.",
-      "droughtTolerance": "low",
+      "description": "Rough-leaved trailing vine of Tamil hedgerows, cooked as keerai for coughs and colds. Self-seeds along a fence or hedge and needs no support beyond it.",
+      "droughtTolerance": "medium",
       "feedingIntensity": "light",
       "fertilisingFrequencyDays": 30,
       "germinationDays": {
         "max": 12,
-        "min": 5,
+        "min": 6,
       },
       "germinationTempC": {
-        "max": 32,
-        "min": 22,
+        "max": 34,
+        "min": 24,
       },
-      "growingSeason": "Year Round",
+      "growingSeason": "Kharif (Jun–Sep)",
       "growthStageDurations": {
-        "seedling": 10,
-        "vegetative": 25,
+        "flowering": 15,
+        "seedling": 12,
+        "vegetative": 30,
       },
-      "heatTolerance": "medium",
+      "heatTolerance": "high",
       "heightCm": {
-        "max": 40,
-        "min": 15,
+        "max": 300,
+        "min": 100,
       },
       "initialGrowthStage": "seedling",
       "lifecycle": "annual",
       "petToxicity": false,
-      "plantingDepthCm": 1,
+      "plantingDepthCm": 2,
       "preferredFertiliser": "compost",
-      "scientificName": "Eclipta prostrata",
+      "scientificName": "Mukia maderaspatana",
       "soilPhRange": {
         "max": 7.5,
-        "min": 5.5,
+        "min": 6,
       },
       "soilType": "garden_soil",
-      "spacingCm": 20,
+      "spacingCm": 60,
       "sunlight": "partial_sun",
-      "tamilName": "கரிசலாங்கண்ணி",
-      "taxonomicFamily": "Asteraceae",
-      "waterRequirement": "high",
-      "wateringFrequencyDays": 2,
-      "waterloggingTolerance": "high",
+      "tamilName": "முசுமுசுக்கை",
+      "taxonomicFamily": "Cucurbitaceae",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 3,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -4859,62 +4915,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "sunlight": "partial_sun",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 2,
-    },
-    "pruning": {
-      "tips": [
-        "Harvest leaves regularly to encourage growth",
-        "Remove yellow or damaged leaves",
-        "Pinch flowering tips to extend leaf harvest",
-      ],
-    },
-  },
-  "spinach:Musumusukkai": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 55,
-        "min": 40,
-      },
-      "description": "Rough-leaved trailing vine of Tamil hedgerows, cooked as keerai for coughs and colds. Self-seeds along a fence or hedge and needs no support beyond it.",
-      "droughtTolerance": "medium",
-      "feedingIntensity": "light",
-      "fertilisingFrequencyDays": 30,
-      "germinationDays": {
-        "max": 12,
-        "min": 6,
-      },
-      "germinationTempC": {
-        "max": 34,
-        "min": 24,
-      },
-      "growingSeason": "Kharif (Jun–Sep)",
-      "growthStageDurations": {
-        "flowering": 15,
-        "seedling": 12,
-        "vegetative": 30,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 300,
-        "min": 100,
-      },
-      "initialGrowthStage": "seedling",
-      "lifecycle": "annual",
-      "petToxicity": false,
-      "plantingDepthCm": 2,
-      "preferredFertiliser": "compost",
-      "scientificName": "Mukia maderaspatana",
-      "soilPhRange": {
-        "max": 7.5,
-        "min": 6,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 60,
-      "sunlight": "partial_sun",
-      "tamilName": "முசுமுசுக்கை",
-      "taxonomicFamily": "Cucurbitaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 3,
-      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -5055,62 +5055,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "spinach:Pulicha Keerai": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 60,
-        "min": 45,
-      },
-      "description": "Sour-leaved hibiscus green for kuzhambu and thokku; known elsewhere as gongura. Pick the tender top leaves repeatedly and pinch out flower buds to keep the plant in leaf.",
-      "droughtTolerance": "medium",
-      "feedingIntensity": "medium",
-      "fertilisingFrequencyDays": 21,
-      "germinationDays": {
-        "max": 8,
-        "min": 4,
-      },
-      "germinationTempC": {
-        "max": 32,
-        "min": 24,
-      },
-      "growingSeason": "Kharif (Jun–Sep)",
-      "growthStageDurations": {
-        "flowering": 30,
-        "seedling": 12,
-        "vegetative": 40,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 200,
-        "min": 90,
-      },
-      "initialGrowthStage": "seedling",
-      "lifecycle": "annual",
-      "petToxicity": false,
-      "plantingDepthCm": 1,
-      "preferredFertiliser": "compost",
-      "scientificName": "Hibiscus sabdariffa",
-      "soilPhRange": {
-        "max": 7,
-        "min": 5.5,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 45,
-      "sunlight": "full_sun",
-      "tamilName": "புளிச்சக்கீரை",
-      "taxonomicFamily": "Malvaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 3,
-      "waterloggingTolerance": "low",
-    },
-    "pruning": {
-      "tips": [
-        "Harvest leaves regularly to encourage growth",
-        "Remove yellow or damaged leaves",
-        "Pinch flowering tips to extend leaf harvest",
-      ],
-    },
-  },
   "spinach:Purslane": {
     "profile": {
       "daysToHarvest": {
@@ -5157,6 +5101,62 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "taxonomicFamily": "Portulacaceae",
       "waterRequirement": "low",
       "wateringFrequencyDays": 3,
+    },
+    "pruning": {
+      "tips": [
+        "Harvest leaves regularly to encourage growth",
+        "Remove yellow or damaged leaves",
+        "Pinch flowering tips to extend leaf harvest",
+      ],
+    },
+  },
+  "spinach:Roselle": {
+    "profile": {
+      "daysToHarvest": {
+        "max": 60,
+        "min": 45,
+      },
+      "description": "Sour-leaved hibiscus green for kuzhambu and thokku; known elsewhere as gongura. Pick the tender top leaves repeatedly and pinch out flower buds to keep the plant in leaf.",
+      "droughtTolerance": "medium",
+      "feedingIntensity": "medium",
+      "fertilisingFrequencyDays": 21,
+      "germinationDays": {
+        "max": 8,
+        "min": 4,
+      },
+      "germinationTempC": {
+        "max": 32,
+        "min": 24,
+      },
+      "growingSeason": "Kharif (Jun–Sep)",
+      "growthStageDurations": {
+        "flowering": 30,
+        "seedling": 12,
+        "vegetative": 40,
+      },
+      "heatTolerance": "high",
+      "heightCm": {
+        "max": 200,
+        "min": 90,
+      },
+      "initialGrowthStage": "seedling",
+      "lifecycle": "annual",
+      "petToxicity": false,
+      "plantingDepthCm": 1,
+      "preferredFertiliser": "compost",
+      "scientificName": "Hibiscus sabdariffa",
+      "soilPhRange": {
+        "max": 7,
+        "min": 5.5,
+      },
+      "soilType": "garden_soil",
+      "spacingCm": 45,
+      "sunlight": "full_sun",
+      "tamilName": "புளிச்சக்கீரை",
+      "taxonomicFamily": "Malvaceae",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 3,
+      "waterloggingTolerance": "low",
     },
     "pruning": {
       "tips": [
@@ -6240,6 +6240,62 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
+  "vegetable:Chinese Potato": {
+    "profile": {
+      "daysToHarvest": {
+        "max": 180,
+        "min": 150,
+      },
+      "description": "Aromatic Kanyakumari tuber traditionally intercropped under coconut. Planted from rooted vine cuttings after the southwest monsoon and lifted in January; needs loose, free-draining soil to bulk.",
+      "droughtTolerance": "medium",
+      "feedingIntensity": "medium",
+      "fertilisingFrequencyDays": 30,
+      "germinationDays": {
+        "max": 14,
+        "min": 7,
+      },
+      "germinationTempC": {
+        "max": 32,
+        "min": 22,
+      },
+      "growingSeason": "Northeast Monsoon (Oct–Dec)",
+      "growthStageDurations": {
+        "mature": 75,
+        "seedling": 20,
+        "vegetative": 70,
+      },
+      "heatTolerance": "medium",
+      "heightCm": {
+        "max": 60,
+        "min": 30,
+      },
+      "initialGrowthStage": "seedling",
+      "lifecycle": "annual",
+      "petToxicity": false,
+      "plantingDepthCm": 5,
+      "preferredFertiliser": "cow_dung_slurry",
+      "scientificName": "Plectranthus rotundifolius",
+      "soilPhRange": {
+        "max": 7,
+        "min": 5.5,
+      },
+      "soilType": "sandy_loam",
+      "spacingCm": 30,
+      "sunlight": "partial_sun",
+      "tamilName": "கூர்க்கன் கிழங்கு",
+      "taxonomicFamily": "Lamiaceae",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 3,
+      "waterloggingTolerance": "low",
+    },
+    "pruning": {
+      "tips": [
+        "Pinch running tips once to push side shoots",
+        "Earth up around the base as the tubers bulk — that matters more than cutting",
+        "Leave the foliage alone until it yellows, then lift",
+      ],
+    },
+  },
   "vegetable:Cluster Beans": {
     "profile": {
       "daysToHarvest": {
@@ -6838,62 +6894,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "Remove yellowing lower leaves",
         "Pinch tips to encourage branching",
         "Cut diseased stems at the base",
-      ],
-    },
-  },
-  "vegetable:Koorka": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 180,
-        "min": 150,
-      },
-      "description": "Aromatic Kanyakumari tuber traditionally intercropped under coconut. Planted from rooted vine cuttings after the southwest monsoon and lifted in January; needs loose, free-draining soil to bulk.",
-      "droughtTolerance": "medium",
-      "feedingIntensity": "medium",
-      "fertilisingFrequencyDays": 30,
-      "germinationDays": {
-        "max": 14,
-        "min": 7,
-      },
-      "germinationTempC": {
-        "max": 32,
-        "min": 22,
-      },
-      "growingSeason": "Northeast Monsoon (Oct–Dec)",
-      "growthStageDurations": {
-        "mature": 75,
-        "seedling": 20,
-        "vegetative": 70,
-      },
-      "heatTolerance": "medium",
-      "heightCm": {
-        "max": 60,
-        "min": 30,
-      },
-      "initialGrowthStage": "seedling",
-      "lifecycle": "annual",
-      "petToxicity": false,
-      "plantingDepthCm": 5,
-      "preferredFertiliser": "cow_dung_slurry",
-      "scientificName": "Plectranthus rotundifolius",
-      "soilPhRange": {
-        "max": 7,
-        "min": 5.5,
-      },
-      "soilType": "sandy_loam",
-      "spacingCm": 30,
-      "sunlight": "partial_sun",
-      "tamilName": "கூர்க்கன் கிழங்கு",
-      "taxonomicFamily": "Lamiaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 3,
-      "waterloggingTolerance": "low",
-    },
-    "pruning": {
-      "tips": [
-        "Pinch running tips once to push side shoots",
-        "Earth up around the base as the tubers bulk — that matters more than cutting",
-        "Leave the foliage alone until it yellows, then lift",
       ],
     },
   },
