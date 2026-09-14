@@ -269,7 +269,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     scientificName: 'Syzygium aqueum',
     taxonomicFamily: 'Myrtaceae',
     lifecycle: 'perennial',
-    tamilName: 'நாவல்',
+    tamilName: 'ஜாம்பு',
     description:
       "Tropical evergreen tree producing crisp, mildly sweet bell-shaped fruits. Loves moisture-rich soils; thrives near water sources in Kanyakumari's coastal belt.",
     daysToHarvest: { min: 60, max: 90 },

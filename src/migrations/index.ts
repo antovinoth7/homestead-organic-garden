@@ -13,10 +13,11 @@ import { repairFarmConfig } from './005_repair_farm_config';
 import { repairZoneAssignment } from './006_repair_zone_assignment';
 import { mergeDuplicatePlantNames } from './007_merge_duplicate_plant_names';
 import { recategorisePlants } from './008_recategorise_plants';
+import { repairStaleTamilNames } from './009_repair_stale_tamil_names';
 
 const SETTINGS_COLLECTION = 'user_settings';
 
-export const LATEST_SCHEMA_VERSION = 8;
+export const LATEST_SCHEMA_VERSION = 9;
 
 const migrations: Migration[] = [
   { version: 1, name: 'backfill_district', run: backfillDistrict },
@@ -27,6 +28,7 @@ const migrations: Migration[] = [
   { version: 6, name: 'repair_zone_assignment', run: repairZoneAssignment },
   { version: 7, name: 'merge_duplicate_plant_names', run: mergeDuplicatePlantNames },
   { version: 8, name: 'recategorise_plants', run: recategorisePlants },
+  { version: 9, name: 'repair_stale_tamil_names', run: repairStaleTamilNames },
 ];
 
 export async function getSchemaVersion(userId: string): Promise<number> {

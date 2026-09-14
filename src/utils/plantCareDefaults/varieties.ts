@@ -50,6 +50,11 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
     'Sword Bean',
     'Watermelon',
     'Muskmelon',
+    // Tamil Nadu homestead staples
+    'Ivy Gourd',
+    'Turkey Berry',
+    'Koorka',
+    'Sesame',
   ],
   herb: [
     'Coriander',
@@ -78,6 +83,11 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
     'Nithyakalyani',
     'Thoothuvalai',
     'Karpooravalli',
+    'Pirandai',
+    // Kanyakumari hill spices
+    'Clove',
+    'Cinnamon',
+    'Mango Ginger',
   ],
   flower: [
     'Marigold',
@@ -117,6 +127,14 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
     // Coconut intercrop trees
     'Cocoa',
     'Nutmeg',
+    // Tamil Nadu homestead trees
+    'Tamarind',
+    'Naval',
+    'Cashew',
+    'Wood Apple',
+    'Ilanthai',
+    'Palmyra',
+    'Sweet Lime',
   ],
   timber_tree: ['Neem', 'Teak', 'Mahogany', 'Rosewood', 'Sandalwood', 'Bamboo', 'Wild Jack'],
   coconut_tree: ['Dwarf Coconut', 'Tall Coconut', 'Hybrid Coconut', 'King Coconut'],
@@ -141,5 +159,8 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
     'Amaranthus',
     'Pasalai Keerai',
     'Fenugreek',
+    'Pulicha Keerai',
+    'Karisalankanni Keerai',
+    'Musumusukkai',
   ],
 };

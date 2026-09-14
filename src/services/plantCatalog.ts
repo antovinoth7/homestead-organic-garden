@@ -69,6 +69,11 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Sword Bean',
         'Watermelon',
         'Muskmelon',
+        // Tamil Nadu homestead staples the catalog had never carried
+        'Ivy Gourd',
+        'Turkey Berry',
+        'Koorka',
+        'Sesame',
       ],
       varieties: {
         Brinjal: ['Long Purple', 'Round Green', 'Striped'],
@@ -111,6 +116,10 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Sword Bean': ['Bush', 'Climbing', 'Local'],
         Watermelon: ['Sugar Baby', 'Arka Manik', 'Local'],
         Muskmelon: ['Pusa Sharbati', 'Hara Madhu', 'Local'],
+        'Ivy Gourd': ['Sulabha', 'CO 1', 'Local Green'],
+        'Turkey Berry': ['Local'],
+        Koorka: ['Sree Dhara', 'Nidhi', 'Local'],
+        Sesame: ['TMV 7', 'CO 1', 'VRI 1'],
       },
       tamilNames: {
         Brinjal: 'கத்தரிக்காய்',
@@ -159,6 +168,10 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Sword Bean': 'வாள் அவரை',
         Watermelon: 'தர்பூசணி',
         Muskmelon: 'முலாம்பழம்',
+        'Ivy Gourd': 'கோவைக்காய்',
+        'Turkey Berry': 'சுண்டைக்காய்',
+        Koorka: 'கூர்க்கன் கிழங்கு',
+        Sesame: 'எள்ளு',
       },
       descriptions: {
         Brinjal:
@@ -215,6 +228,14 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Sword Bean': 'Vigorous tropical bean suited to fences and trellises; young pods are cooked',
         Watermelon: 'Warm-season trailing cucurbit requiring drainage and a relatively dry fruiting period',
         Muskmelon: 'Warm-season melon performing best with full sun, drainage, and low leaf wetness',
+        'Ivy Gourd':
+          'Perennial pandal vine grown from cuttings; crops for years with almost no replanting',
+        'Turkey Berry':
+          'Hardy perennial bearing clustered green berries for sundakkai vathal and kuzhambu',
+        Koorka:
+          'Aromatic Kanyakumari tuber traditionally intercropped under coconut; lifted in January',
+        Sesame:
+          'Short-duration oilseed for gingelly oil and ellu urundai; tolerates poor, dry soil',
       },
     },
     herb: {
@@ -246,6 +267,12 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Nithyakalyani',
         'Thoothuvalai',
         'Karpooravalli',
+        'Pirandai',
+        // Kanyakumari hill spices. Trees, but this is the spice tab — Curry
+        // Leaf is a tree and Black Pepper a vine for the same reason.
+        'Clove',
+        'Cinnamon',
+        'Mango Ginger',
       ],
       varieties: {
         Coriander: ['CO 4', 'CO 5', 'Local'],
@@ -262,6 +289,9 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Aloe Vera': ['Barbadensis', 'Local Green', 'Soap Aloe'],
         Nithyakalyani: ['White', 'Pink', 'Local'],
         Karpooravalli: ['Broad Leaf', 'Variegated', 'Local'],
+        Clove: ['Zanzibar', 'Local'],
+        Cinnamon: ['Sri Lankan', 'Konkan Tej', 'Local'],
+        'Mango Ginger': ['Local'],
       },
       tamilNames: {
         Coriander: 'கொத்தமல்லி',
@@ -285,6 +315,10 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Nithyakalyani: 'நித்தியகல்யாணி',
         Thoothuvalai: 'தூதுவளை',
         Karpooravalli: 'கற்பூரவல்லி',
+        Pirandai: 'பிரண்டை',
+        Clove: 'கிராம்பு',
+        Cinnamon: 'கருவாப்பட்டை',
+        'Mango Ginger': 'மாஇஞ்சி',
       },
       descriptions: {
         Coriander: 'Fast-growing cool-season herb prized for its aromatic leaves and seeds',
@@ -319,6 +353,14 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'Scrambling prickly climber of the kitchen doorway, cooked as a cough and cold remedy',
         Karpooravalli:
           'Thick-leaved aromatic plant kept by the kitchen door; leaves used fresh for coughs and colds',
+        Pirandai:
+          'Square-stemmed succulent climber; tender tips made into thuvaiyal and pickle. Handle with care — raw sap irritates skin and mouth',
+        Clove:
+          'Evergreen hill spice tree harvested for unopened flower buds; wants shade, shelter, and high humidity',
+        Cinnamon:
+          'Coppiced spice tree harvested for its inner bark; cut back hard and re-shooted rather than grown tall',
+        'Mango Ginger':
+          'Raw-mango-scented rhizome of the turmeric family, used fresh in pachadi and pickle',
       },
     },
     flower: {
@@ -389,6 +431,15 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         // Coconut intercrop trees
         'Cocoa',
         'Nutmeg',
+        // Tamil Nadu homestead trees. `fruit_tree` means perennial fruit crop,
+        // not literally a tree — Pineapple and Passion Fruit are here already.
+        'Tamarind',
+        'Naval',
+        'Cashew',
+        'Wood Apple',
+        'Ilanthai',
+        'Palmyra',
+        'Sweet Lime',
       ],
       varieties: {
         Banana: ['Nendran', 'Poovan', 'Rasthali', 'Robusta', 'Monthan'],
@@ -408,6 +459,13 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Arecanut: ['Mangala', 'Sumangala', 'Local Tall'],
         Cocoa: ['Forastero', 'Criollo', 'Local Hybrid'],
         Nutmeg: ['Konkan Sugandha', 'Local', 'Kerala Local'],
+        Tamarind: ['PKM 1', 'Urigam', 'Local'],
+        Naval: ['Local', 'Grafted'],
+        Cashew: ['VRI 3', 'Vengurla 4', 'Local'],
+        'Wood Apple': ['Local'],
+        Ilanthai: ['Gola', 'Umran', 'Local'],
+        Palmyra: ['Local'],
+        'Sweet Lime': ['Mosambi', 'Local'],
       },
       tamilNames: {
         Banana: 'வாழை',
@@ -418,7 +476,7 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Pomegranate: 'மாதுளை',
         Jackfruit: 'பலாப்பழம்',
         Chikoo: 'சப்போட்டா',
-        'Water Apple': 'நாவல்',
+        'Water Apple': 'ஜாம்பு',
         'Custard Apple': 'சீதாப்பழம்',
         Amla: 'நெல்லிக்காய்',
         Orange: 'ஆரஞ்சு',
@@ -435,6 +493,13 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Arecanut: 'பாக்கு',
         Cocoa: 'கொக்கோ',
         Nutmeg: 'ஜாதிக்காய்',
+        Tamarind: 'புளி',
+        Naval: 'நாவல்',
+        Cashew: 'முந்திரி',
+        'Wood Apple': 'விளாம்பழம்',
+        Ilanthai: 'இலந்தை',
+        Palmyra: 'பனை',
+        'Sweet Lime': 'சாத்துக்குடி',
       },
       descriptions: {
         Banana: 'Fast-growing tropical fruit producing large bunches rich in potassium',
@@ -466,6 +531,20 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'Shade-tolerant understorey tree producing pods of prized chocolate beans; intercropped with banana and coconut',
         Nutmeg:
           'Aromatic tropical tree yielding two spices — nutmeg seed and mace aril; 7–8 years to first harvest',
+        Tamarind:
+          'Long-lived shade tree of every Tamil village; pods give the souring pulp for sambar and rasam',
+        Naval:
+          'Monsoon-fruiting tree bearing astringent purple berries; leaves and bark also used medicinally',
+        Cashew:
+          'Salt- and drought-tolerant coastal tree yielding cashew nut and cashew apple; a major Kanyakumari crop',
+        'Wood Apple':
+          'Slow-growing hardy tree with woody-shelled fruit made into sherbet and chutney',
+        Ilanthai:
+          'Thorny drought-hardy tree fruiting through the cool season; eaten fresh, dried, or salted',
+        Palmyra:
+          'Tamil Nadu’s state tree, tapped for padaneer and karupatti and cut young for nungu; very long-lived',
+        'Sweet Lime':
+          'Mild low-acid citrus grown for juice; needs free-draining soil and steady, even watering',
       },
     },
     timber_tree: {
@@ -579,6 +658,10 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Amaranthus',
         'Pasalai Keerai',
         'Fenugreek',
+        // Keerai a Tamil Nadu kitchen actually cooks, absent until now
+        'Pulicha Keerai',
+        'Karisalankanni Keerai',
+        'Musumusukkai',
       ],
       varieties: {
         Palak: ['All Green', 'Pusa Palak', 'Jobner Green', 'Local'],
@@ -587,9 +670,12 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Manathakkali Keerai': ['Local Green'],
         'Mustard Greens': ['Broad Leaf', 'Local'],
         'Vallarai Keerai': ['Local'],
-        Amaranthus: ['Arai Keerai', 'Siru Keerai', 'Mulai Keerai'],
+        Amaranthus: ['Arai Keerai', 'Siru Keerai', 'Mulai Keerai', 'Thandu Keerai'],
         'Pasalai Keerai': ['Green Stem', 'Red Stem', 'Local'],
         Fenugreek: ['Kasuri', 'Pusa Early', 'Local'],
+        'Pulicha Keerai': ['Green Stem', 'Red Stem', 'Local'],
+        'Karisalankanni Keerai': ['Yellow Flowered', 'White Flowered', 'Local'],
+        Musumusukkai: ['Local'],
       },
       tamilNames: {
         Palak: 'பாலக் கீரை',
@@ -602,6 +688,9 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Amaranthus: 'அரைக்கீரை',
         'Pasalai Keerai': 'பசளைக்கீரை',
         Fenugreek: 'வெந்தயம்',
+        'Pulicha Keerai': 'புளிச்சக்கீரை',
+        'Karisalankanni Keerai': 'கரிசலாங்கண்ணி',
+        Musumusukkai: 'முசுமுசுக்கை',
       },
       descriptions: {
         Palak:
@@ -622,6 +711,12 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'Malabar spinach — vigorous climbing leafy green thriving in Tamil Nadu heat',
         Fenugreek:
           'Aromatic annual legume grown for its iron-rich leaves and distinctive seeds; vendhaya keerai',
+        'Pulicha Keerai':
+          'Sour-leaved hibiscus green for kuzhambu and thokku; known elsewhere as gongura',
+        'Karisalankanni Keerai':
+          'Creeping marshy green cooked as keerai and long used in Siddha hair and liver preparations',
+        Musumusukkai:
+          'Rough-leaved trailing vine of Tamil hedgerows, cooked as keerai for coughs and colds',
       },
     },
   },

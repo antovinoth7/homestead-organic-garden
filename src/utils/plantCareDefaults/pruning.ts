@@ -379,6 +379,131 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
     tips: ['Pick outer leaves and pinch tips to keep the plant compact'],
     flowerPruning: { tip: 'Remove flower spikes to keep the leaves thick', months: 'Year-round' },
   },
+
+  // Tamil Nadu edibles. Written per variety because the type-level defaults are
+  // wrong for most of these: the generic herb tip "remove flower buds to extend
+  // leaf growth" would cost a spice tree its crop, and "thin crowded inner
+  // branches" is meaningless on a palm that has no branches to thin.
+  [buildProfileKey('vegetable', 'Ivy Gourd')]: {
+    tips: [
+      'Train the leaders along the pandal and let laterals hang',
+      'Cut back the whole vine to a short framework after the main flush',
+      'Clear old woody growth from the pandal so light reaches new shoots',
+    ],
+    shapePruning: {
+      tip: 'Hard-prune to a 1 m framework to force new fruiting wood',
+      months: 'Feb–Mar',
+    },
+  },
+  [buildProfileKey('vegetable', 'Turkey Berry')]: {
+    tips: [
+      'Head the bush back annually to keep berries within reach',
+      'Remove old grey wood — berries come on newer shoots',
+      'Take out suckers crowding the base',
+    ],
+    shapePruning: { tip: 'Cut back to knee height after the main crop', months: 'Feb–Mar' },
+  },
+  [buildProfileKey('herb', 'Mango Ginger')]: {
+    tips: [
+      'No pruning — the crop is the rhizome, so let the leaves feed it',
+      'Remove yellowing leaves only late in the season',
+      'Cut the foliage back once it dies down, then lift',
+    ],
+  },
+  [buildProfileKey('vegetable', 'Koorka')]: {
+    tips: [
+      'Pinch running tips once to push side shoots',
+      'Earth up around the base as the tubers bulk — that matters more than cutting',
+      'Leave the foliage alone until it yellows, then lift',
+    ],
+  },
+  [buildProfileKey('vegetable', 'Sesame')]: {
+    tips: [
+      'No pruning — the crop is a short annual cut whole at maturity',
+      'Pinch the tip once at about 30 days if you want more branches',
+      'Cut and stook the plants when the lowest capsules yellow, before they shatter',
+    ],
+  },
+  [buildProfileKey('herb', 'Pirandai')]: {
+    tips: [
+      'Wear gloves — the raw sap irritates skin and mouth',
+      'Harvest by cutting tender square tips, not by stripping the vine',
+      'Keep the vine off the ground so the nodes do not root everywhere',
+    ],
+  },
+  [buildProfileKey('herb', 'Clove')]: {
+    tips: [
+      'Prune lightly — a clove tree resents hard cutting',
+      'Remove only dead, crossing, or storm-damaged wood',
+      'Never remove flower buds: they are the crop',
+    ],
+    shapePruning: { tip: 'Keep a single clear leader while young', months: 'Jun–Jul' },
+  },
+  [buildProfileKey('herb', 'Cinnamon')]: {
+    tips: [
+      'Coppice the stool to about 15 cm once the plant is established',
+      'Peel bark from straight re-shoots at pencil-to-thumb thickness',
+      'Keep four to six shoots per stool and cut the rest out',
+    ],
+    shapePruning: {
+      tip: 'Cut the stool back after the rains to force new shoots',
+      months: 'Sep–Oct',
+    },
+  },
+  [buildProfileKey('fruit_tree', 'Tamarind')]: {
+    tips: [
+      'Remove dead and crossing wood only — the canopy is the point',
+      'Lift the lower branches for clearance beneath',
+      'Avoid heavy cuts on an old tree; large wounds rot slowly',
+    ],
+    shapePruning: { tip: 'Train a clear trunk for the first three years', months: 'Feb–Mar' },
+  },
+  [buildProfileKey('fruit_tree', 'Naval')]: {
+    tips: [
+      'Thin the canopy for airflow after fruiting',
+      'Remove water shoots from the trunk and main limbs',
+      'Keep the head low enough to pick without climbing',
+    ],
+    shapePruning: { tip: 'Open the centre once the framework is set', months: 'Aug–Sep' },
+  },
+  [buildProfileKey('fruit_tree', 'Cashew')]: {
+    tips: [
+      'Remove dead wood and criss-crossing branches after harvest',
+      'Cut out shoots growing into the centre of the canopy',
+      'Keep the trunk clear to about a metre',
+    ],
+    shapePruning: { tip: 'Shape to three or four main limbs while young', months: 'Jun–Jul' },
+  },
+  [buildProfileKey('fruit_tree', 'Wood Apple')]: {
+    tips: [
+      'Prune sparingly — growth is slow and wounds close slowly',
+      'Watch for spines when working in the canopy',
+      'Remove dead and rubbing wood only',
+    ],
+  },
+  [buildProfileKey('fruit_tree', 'Ilanthai')]: {
+    tips: [
+      'Cut back hard each year — fruit comes on the current season’s growth',
+      'Leave a short framework of main limbs after the cutback',
+      'Remove suckers from the rootstock of a grafted tree',
+    ],
+    shapePruning: { tip: 'Cut back to a low framework once the crop is off', months: 'Apr–May' },
+  },
+  [buildProfileKey('fruit_tree', 'Palmyra')]: {
+    tips: [
+      'Remove only fully dried fronds — never cut green ones',
+      'Never top a palm: the single growing point does not regrow',
+      'Leave the crown alone entirely during tapping season',
+    ],
+  },
+  [buildProfileKey('fruit_tree', 'Sweet Lime')]: {
+    tips: [
+      'Remove thorny water shoots and any growth below the graft union',
+      'Open the centre so light reaches the inner fruit',
+      'Cut out dead twigs after each harvest',
+    ],
+    shapePruning: { tip: 'Keep an open vase of three or four limbs', months: 'Feb–Mar' },
+  },
 };
 
 /**

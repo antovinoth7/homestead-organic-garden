@@ -8,6 +8,7 @@ import { sortPlantNames } from '@/utils/plantSort';
 import { PLANT_CARE_OVERRIDES } from '@/utils/plantCareDefaults/overrides';
 import { buildProfileKey } from '@/utils/plantCareDefaults/profileKey';
 import { PLANT_VARIETIES_BY_TYPE } from '@/utils/plantCareDefaults/varieties';
+import type { PlantType } from '@/types/database.types';
 
 jest.mock('@/lib/firebase', () => ({
   db: {},
@@ -41,6 +42,9 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
       'Amaranthus',
       'Pasalai Keerai',
       'Fenugreek',
+      'Pulicha Keerai',
+      'Karisalankanni Keerai',
+      'Musumusukkai',
     ]);
     expect(spinach.plants).not.toEqual(
       expect.arrayContaining(['Hybrid Leafy', 'Local Green', 'Winter Spinach'])
@@ -77,6 +81,53 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
       expect(vegetables.tamilNames?.[plant]).toBeTruthy();
       expect(vegetables.descriptions?.[plant]).toBeTruthy();
     }
+  });
+
+  // The Tamil Nadu edibles pass. Ivy Gourd and Turkey Berry are the two the
+  // catalog was most conspicuously missing; Koorka had been flagged "still
+  // open" in two earlier audit passes without ever being added.
+  it('carries the Tamil Nadu edible staples with complete display metadata', () => {
+    const additions: Record<string, string[]> = {
+      vegetable: ['Ivy Gourd', 'Turkey Berry', 'Koorka', 'Sesame'],
+      spinach: ['Pulicha Keerai', 'Karisalankanni Keerai', 'Musumusukkai'],
+      herb: ['Pirandai', 'Clove', 'Cinnamon', 'Mango Ginger'],
+      fruit_tree: [
+        'Tamarind',
+        'Naval',
+        'Cashew',
+        'Wood Apple',
+        'Ilanthai',
+        'Palmyra',
+        'Sweet Lime',
+      ],
+    };
+
+    for (const [type, names] of Object.entries(additions)) {
+      const category =
+        DEFAULT_PLANT_CATALOG.categories[type as keyof typeof DEFAULT_PLANT_CATALOG.categories];
+      expect(category.plants).toEqual(expect.arrayContaining(names));
+      for (const plant of names) {
+        expect(category.tamilNames?.[plant]).toBeTruthy();
+        expect(category.descriptions?.[plant]).toBeTruthy();
+        expect(PLANT_CARE_OVERRIDES[buildProfileKey(type as PlantType, plant)]).toBeDefined();
+      }
+    }
+  });
+
+  // நாவல் is Syzygium cumini (Jamun), which is now its own row. Water Apple is
+  // Syzygium aqueum — a different species in the same genus — and had carried
+  // Jamun's name since the catalog was written. Two rows under one Tamil name
+  // would send a search for நாவல் to whichever sorted first.
+  it('gives நாவல் to Naval alone, not to Water Apple', () => {
+    const fruit = DEFAULT_PLANT_CATALOG.categories.fruit_tree;
+
+    expect(fruit.tamilNames?.Naval).toBe('நாவல்');
+    expect(fruit.tamilNames?.['Water Apple']).toBe('ஜாம்பு');
+
+    const tamilNames = Object.values(DEFAULT_PLANT_CATALOG.categories).flatMap((category) =>
+      Object.values(category.tamilNames ?? {})
+    );
+    expect(tamilNames.filter((name) => name === 'நாவல்')).toHaveLength(1);
   });
 
   it('lists named coconut cultivars and Tamil Nadu hybrids', () => {

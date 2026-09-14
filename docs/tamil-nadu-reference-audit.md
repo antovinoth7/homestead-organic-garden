@@ -8,10 +8,12 @@ Kanyakumari/high-rainfall zone.
 
 The reference is a useful **first-response garden guide**, not an exhaustive crop-protection
 manual. It currently contains 36 pest entries, 36 disease/disorder entries, and 12 organic
-inputs. Application-label cross-checking against the 145 rows in the default plant catalog
-finds at least one pest reference for 114 rows (78.6%) and at least one disease reference for
-87 rows (60.0%). A broad label such as `Vegetables` counts as coverage; therefore these figures
-measure discoverability, not proof that every listed treatment is suitable for every cultivar.
+inputs. Application-label cross-checking against the 147 rows in the default plant catalog
+finds at least one pest reference for 115 rows (78.2%) and at least one disease reference for
+83 rows (56.5%). These figures are measured from `getPlantReferenceCoverage()`; the previously
+recorded 145/114/87 had gone stale against the catalog. A broad label such as `Vegetables` counts
+as coverage; therefore these figures measure discoverability, not proof that every listed treatment
+is suitable for every cultivar.
 
 The application audit is implemented in `referencePlantCoverage.ts`. It recognises deliberate
 groups (`Vegetables`, `Fruit trees`, `Coconut`, `Flower crops`, and `Timber trees`), and separately
@@ -421,6 +423,158 @@ soil and `waterloggingTolerance: 'low'`.
 - `transplant()` in the planting calendar does not accept a `plantType` option at all, so a
   transplanted non-vegetable would silently take the `'vegetable'` default. No current rule hits
   this, but the next one might.
+
+## Tamil Nadu edible staples added — 14 September 2026
+
+Prompted by browsing the Vegetable tab: Ivy Gourd (கோவைக்காய்) and Turkey Berry (சுண்டைக்காய்)
+were both absent, and checking outward from those two found the same hole across the rest of what
+a Kanyakumari homestead eats. The catalog carried Rambutan, Mangosteen and Avocado but not
+Tamarind, and 46 vegetables without the perennial gourd that grows on half the pandals in the
+district.
+
+Eighteen plants were added. This pass is additive — nothing was removed and no existing row
+changed category — apart from one Tamil-name correction the additions forced (below).
+
+### Vegetables
+
+| Name | Tamil | Species | Why it belongs |
+| --- | --- | --- | --- |
+| Ivy Gourd | கோவைக்காய் | *Coccinia grandis* | Perennial pandal vine; crops for years from a cutting |
+| Turkey Berry | சுண்டைக்காய் | *Solanum torvum* | Sundakkai vathal; also the standard brinjal rootstock |
+| Koorka | கூர்க்கன் கிழங்கு | *Plectranthus rotundifolius* | Coconut intercrop tuber — see below |
+| Sesame | எள்ளு | *Sesamum indicum* | Gingelly oil and ellu urundai; joins the other field-crop rows |
+
+**Koorka closes a gap this document opened twice.** The shrub review flagged it as "worth adding
+as a vegetable in a later pass" after finding that `shrub:Coleus` carried the description "living
+mulch in coconut intercrop systems" — which describes Koorka, not an ornamental *Plectranthus
+scutellarioides*. The category relevance pass then repeated it under "Notes and still open", and
+the vegetable review repeated it again. It is now in the catalog.
+
+### Greens
+
+| Name | Tamil | Species |
+| --- | --- | --- |
+| Pulicha Keerai | புளிச்சக்கீரை | *Hibiscus sabdariffa* |
+| Karisalankanni Keerai | கரிசலாங்கண்ணி | *Eclipta prostrata* |
+| Musumusukkai | முசுமுசுக்கை | *Mukia maderaspatana* |
+
+Named **Pulicha Keerai**, not Gongura. Gongura is the Telugu name; every other row in the category
+uses the Tamil `* Keerai` form, and the transliteration rule from the relevance pass cuts the same
+way here. `gongura` is an alias.
+
+### Spices and medicinals, filed under `herb`
+
+| Name | Tamil | Species | Note |
+| --- | --- | --- | --- |
+| Pirandai | பிரண்டை | *Cissus quadrangularis* | Thuvaiyal and pickle climber |
+| Clove | கிராம்பு | *Syzygium aromaticum* | Kanyakumari hill spice |
+| Cinnamon | கருவாப்பட்டை | *Cinnamomum verum* | Coppiced for bark |
+| Mango Ginger | மாஇஞ்சி | *Curcuma amada* | Grown exactly like Turmeric |
+
+Clove and Cinnamon are trees, which does not decide the category — `herb` is the spice tab and
+already holds Curry Leaf (a tree), Black Pepper (a vine) and Cardamom. Both follow the **Black
+Pepper pattern**: `daysToHarvest` stated as planting-to-first-crop in days (2190–2920 for Clove,
+1095–1460 for Cinnamon) with a matching `yearsToFirstHarvest`, so neither promises a first-season
+harvest the way the uncorrected pepper profile did.
+
+*Considered and rejected:* filing them in `fruit_tree` next to Nutmeg and Cocoa, which were added
+as "coconut intercrop trees". `fruit_tree` forces `deriveInstanceLifecycle` → `permanent` and
+ignores `daysToHarvest` entirely, and Cardamom is the closer precedent.
+
+### Fruit trees
+
+| Name | Tamil | Species | Note |
+| --- | --- | --- | --- |
+| Tamarind | புளி | *Tamarindus indica* | Grafted PKM 1 bears from year 4, seedling not before 8 |
+| Naval | நாவல் | *Syzygium cumini* | Tolerates seasonally wet ground; planted on tank bunds |
+| Cashew | முந்திரி | *Anacardium occidentale* | Major Kanyakumari crop on poor sandy ground |
+| Wood Apple | விளாம்பழம் | *Limonia acidissima* | Spiny; slow |
+| Ilanthai | இலந்தை | *Ziziphus mauritiana* | Fruits on current-season growth — wants a hard annual cutback |
+| Palmyra | பனை | *Borassus flabellifer* | The state tree; nungu, padaneer, karupatti |
+| Sweet Lime | சாத்துக்குடி | *Citrus limetta* | |
+
+`fruit_tree` means *perennial fruit crop*, not literally a tree — the same reading that put
+Pineapple and Passion Fruit there.
+
+### Water Apple was carrying Jamun's Tamil name
+
+`fruit_tree:Water Apple` gave its Tamil name as **நாவல்** in both the catalog and its care profile.
+நாவல் is *Syzygium cumini* — Jamun. The row's own `scientificName` is *Syzygium aqueum*: a
+different species in the same genus. Adding Naval would have put two different fruits under one
+Tamil name, so the row now reads **ஜாம்பு**.
+
+Correcting the bundled value is not enough on its own. `getProfileEntry` returns `stored ?? DEFAULT`
+— a whole-entry replacement, never a field merge — and migration 003 wrote a full stored entry,
+Tamil name included, for every plant belonging to any user who had a stored `plantCatalog`. The
+corrected default would never have reached an existing install.
+
+**Migration 009** (`repair_stale_tamil_names`, `LATEST_SCHEMA_VERSION` 8 → 9) repairs the stored
+copy. It rewrites the field **only when the stored value still equals the stale bundled string**,
+so a name the user set themselves is never clobbered — this repairs the app's mistake, not theirs.
+Simpler than 008: a garden plant row records `plant_variety` and `plant_type`, never a Tamil name,
+so there is no `plants`-collection pass. Keyed by plant name like `MERGED_PLANT_NAMES` and
+`RECATEGORISED_PLANTS`, so the next such correction extends the map rather than adding a migration.
+
+### Pruning was written per variety, again
+
+Three of the eighteen resolved to the type-level defaults on the first pass, and one of them was
+the failure this document already has a name for: **Mango Ginger inherited the generic herb tip
+*"Remove flower buds to extend leaf growth"*** — the same wrong-by-default advice the Black Pepper
+correction called out, this time on a crop grown for its rhizome. Koorka and Sesame were quietly
+inheriting "remove yellowing lower leaves" too. All three now carry their own guidance, as do the
+other fifteen.
+
+The type defaults are wrong for most of this set in the same way: "thin crowded inner branches" is
+meaningless on **Palmyra**, which has no branches and one growing point that does not regrow if
+topped, and actively harmful on **Clove**, whose crop *is* the flower buds. **Ilanthai** needs the
+opposite of the fruit-tree default — a hard annual cutback, because it fruits on the current
+season's growth. **Pirandai** leads with a safety line: the raw sap irritates skin and mouth.
+
+### Aliases
+
+Romanised Tamil for all eighteen (`kovakkai`, `sundakkai`, `puli`, `nungu`, `jamun`, `mosambi`,
+`kirambu`, `maa inji` and the rest), plus two **pre-existing** gaps found while checking: only the
+bare `avarai` resolved to Lablab Bean, so `avarakkai`, `avaraikkai`, `mochai` and `mochakottai`
+now do too. `Thandu Keerai` was added to the Amaranthus variety list.
+
+Two rules in `plantAliases.test.ts` constrain this and caught a mistake during the pass: every
+alias must resolve to a real catalog row, and no alias may itself be a catalog plant name — so
+`pulicha keerai` is the row and `gongura` the alias, never the reverse.
+
+### Reference images
+
+Cashew ships with a photo at no bundle cost: `cashew_nut.webp` was already bundled under
+`EXTRA_REFERENCE_PLANT_NAMES` from an earlier removal, and a `cashew → cashew_nut` entry in
+`PLANT_IMAGE_ALIASES` points the new row at it. The other seventeen fall back to the themed
+semantic icon, which `docs/REFERENCE_IMAGES.md` documents as safe and which twelve existing rows
+already do. `npm run reference:manifest` now lists 29 missing prompts — the twelve that predate
+this pass plus these seventeen. The bundled asset count is unchanged at 225.
+
+### Considered and rejected
+
+| Plant | Reason |
+| --- | --- |
+| Chow Chow (Chayote) | A Kodaikanal/Nilgiris hill crop. Same case as Lettuce and Strawberry, removed in the September relevance pass, and named here only by transliteration (ஸ்கௌ ஸ்கௌ). Widely *eaten* in Tamil Nadu; not grown on the plains. |
+| Banana Stem | Vazhaithandu is a part of Banana, which is already a row — not a plant to select and grow. |
+| Agathi Keerai | `shrub:Agathi` already exists and is what the keerai comes from. A second row would recreate exactly the one-crop-two-rows duplication the shrub/flower and vegetable passes spent two migrations undoing. |
+| Sponge Gourd | *Luffa cylindrica*, a near-duplicate of the Ridge Gourd (*L. acutangula*) row that is the common Tamil Nadu crop. Not worth the ambiguity. |
+| Kodukkapuli | *Pithecellobium dulce* — a wayside and fodder tree more than a homestead fruit. |
+
+### Still open
+
+- **None of the eighteen has a pest or disease reference entry.** Consistent with the position
+  stated at the top of this document, no generic treatment was assigned to raise the coverage
+  figure. Cashew (tea mosquito bug, stem and root borer), Tamarind and the two hill spices are the
+  obvious candidates for a sourced content pass.
+- **No planting-calendar rules were added.** Every rule in `tamilNaduPlantingCalendar.ts` is gated
+  on a `TODAY_AGRONOMY_EVIDENCE` id with a `validUntil` and a TNAU citation, and
+  `agronomyEvidenceDocs.test.ts` fails if the registry and this document drift apart. Sow windows
+  for eighteen crops need a sourced review, not a guess.
+- **`Yam` (கிழங்கு) remains a vague row** alongside `Elephant Yam` (கருணைக்கிழங்கு). கிழங்கு just
+  means "tuber". Not touched here — it predates this pass and resolving it would mean deciding
+  whether it is *Dioscorea* and, if it is a duplicate, another migration.
+- `src/hooks/useUserCareProfiles.ts:46` has a pre-existing `tsc` error (`PlantCareProfiles` vs
+  `PlantProfiles`). Present on the clean tree before this pass and left alone.
 
 ## Validation method and limitations
 
