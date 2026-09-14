@@ -120,7 +120,7 @@ describe('formatSuggestionSummary', () => {
       'Amaranthus',
       'Arecanut',
       'Ash Gourd',
-      'Ash Plantain',
+      'Ashwagandha',
       'Avocado',
       'Bamboo'
     );

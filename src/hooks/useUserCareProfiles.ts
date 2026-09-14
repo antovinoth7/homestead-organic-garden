@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { PlantCareProfiles } from '@/types/database.types';
+import { PlantCareProfiles, PlantProfiles } from '@/types/database.types';
 import { getPlantProfiles, toPlantCareProfilesShape } from '@/services/plantProfiles';
 import { logError } from '@/utils/errorLogging';
 
@@ -20,7 +20,7 @@ interface UseUserCareProfilesResult {
  * defaults when a plant has no override, so callers can render while loading.
  */
 export function useUserCareProfiles(): UseUserCareProfilesResult {
-  const [profiles, setProfiles] = useState<PlantCareProfiles | null>(null);
+  const [profiles, setProfiles] = useState<PlantProfiles | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

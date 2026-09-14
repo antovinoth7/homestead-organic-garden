@@ -60,4 +60,44 @@ describe('plantAliases', () => {
       expect(getAliasesFor('Chilli')).not.toContain('milagu');
     });
   });
+
+  describe('rows that absorbed a duplicate', () => {
+    it('resolves the dropped Malabar Spinach name to Pasalai Keerai', () => {
+      expect(getCanonicalPlantKey('Malabar Spinach')).toBe('pasalai keerai');
+      expect(getCanonicalPlantKey('Basella alba')).toBe('pasalai keerai');
+      expect(isSamePlantName('Malabar Spinach', 'Pasalai Keerai')).toBe(true);
+    });
+
+    it('resolves the dropped Amaranth Greens name to Amaranthus', () => {
+      expect(getCanonicalPlantKey('Amaranth Greens')).toBe('amaranthus');
+      expect(getCanonicalPlantKey('Amaranth')).toBe('amaranthus');
+      expect(isSamePlantName('Amaranth Greens', 'Amaranthus')).toBe(true);
+    });
+
+    it('keeps the Amaranthus variety names searchable as the plant', () => {
+      expect(getCanonicalPlantKey('Arai Keerai')).toBe('amaranthus');
+      expect(getCanonicalPlantKey('Siru Keerai')).toBe('amaranthus');
+    });
+  });
+
+  describe('rows a farmer searches for by their harvest', () => {
+    it('resolves agathi keerai to the Agathi row', () => {
+      expect(getCanonicalPlantKey('Agathi Keerai')).toBe('agathi');
+      expect(getCanonicalPlantKey('Sesbania grandiflora')).toBe('agathi');
+    });
+
+    it('resolves the flower spellings of the moved shrubs', () => {
+      expect(getCanonicalPlantKey('aavarampoo')).toBe('aavaram');
+      expect(getCanonicalPlantKey('Avaram Poo')).toBe('aavaram');
+      expect(getCanonicalPlantKey('Arali Poo')).toBe('arali');
+      expect(getCanonicalPlantKey('Crape Jasmine')).toBe('nandiyavattai');
+    });
+
+    // Nandiyavattai is crape jasmine, but it is not Jasmine — different row,
+    // different crop, and malli is the one that gets sold by the kilo.
+    it('does not collapse crape jasmine into Jasmine', () => {
+      expect(isSamePlantName('Crape Jasmine', 'Jasmine')).toBe(false);
+      expect(getCanonicalPlantKey('malli')).toBe('jasmine');
+    });
+  });
 });

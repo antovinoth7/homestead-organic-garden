@@ -4,11 +4,11 @@ import { buildProfileKey } from '@/utils/plantCareDefaults/profileKey';
 /**
  * Tamil Nadu homestead shrubs and medicinals.
  *
- * Split by how the gardener uses the plant, which is how this catalog files
+ * Split by what the gardener harvests, which is how this catalog files
  * everything else: `herb` already holds Curry Leaf (a tree), Black Pepper (a
- * vine) and Ashwagandha (a shrub), so a plant harvested for its leaves belongs
- * there whatever its growth habit. `shrub` keeps the woody perennials grown
- * for the plant itself — hedges, boundaries and companions.
+ * vine) and Ashwagandha (a shrub), so Maruthani and Nochi go there for their
+ * leaves, and Aavaram and Arali go to `flower` for their blooms — every one of
+ * them woody. `shrub` is left with the perennials grown for the plant itself.
  *
  * `daysToHarvest` on these perennials means planting-to-first-usable-harvest,
  * not the length of a picking season — see `docs/DOMAIN_LOGIC.md`. Neither
@@ -16,7 +16,7 @@ import { buildProfileKey } from '@/utils/plantCareDefaults/profileKey';
  * season-length figure here would promise a first harvest far too early.
  */
 export const TAMIL_NADU_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
-  [buildProfileKey('shrub', 'Maruthani')]: {
+  [buildProfileKey('herb', 'Maruthani')]: {
     waterRequirement: 'low',
     wateringFrequencyDays: 6,
     fertilisingFrequencyDays: 90,
@@ -45,7 +45,7 @@ export const TAMIL_NADU_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
     feedingIntensity: 'light',
     growthStageDurations: { seedling: 45, vegetative: 240, flowering: 60, mature: 120 },
   },
-  [buildProfileKey('shrub', 'Aavaram')]: {
+  [buildProfileKey('flower', 'Aavaram')]: {
     waterRequirement: 'low',
     wateringFrequencyDays: 7,
     fertilisingFrequencyDays: 90,
@@ -75,7 +75,7 @@ export const TAMIL_NADU_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
     feedingIntensity: 'light',
     growthStageDurations: { seedling: 30, vegetative: 180, flowering: 75, mature: 120 },
   },
-  [buildProfileKey('shrub', 'Nochi')]: {
+  [buildProfileKey('herb', 'Nochi')]: {
     waterRequirement: 'low',
     wateringFrequencyDays: 6,
     fertilisingFrequencyDays: 90,
@@ -104,7 +104,7 @@ export const TAMIL_NADU_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
     feedingIntensity: 'light',
     growthStageDurations: { seedling: 30, vegetative: 150, flowering: 60, mature: 120 },
   },
-  [buildProfileKey('shrub', 'Arali')]: {
+  [buildProfileKey('flower', 'Arali')]: {
     waterRequirement: 'low',
     wateringFrequencyDays: 5,
     fertilisingFrequencyDays: 90,

@@ -13,7 +13,7 @@ const PLANT_PROFILES_FIELD = 'plantProfiles';
  * Repairs Tamil names that a stored profile copied from a wrong bundled value.
  *
  * Only the stored catalog overrides need touching: a garden plant row records
- * `plant_variety` and `plant_type`, never a Tamil name, so unlike migration 008
+ * `plant_variety` and `plant_type`, never a Tamil name, so unlike migrations 008 and 010
  * there is no `plants`-collection pass. Idempotent — the second run finds the
  * corrected value and writes nothing.
  */
@@ -42,5 +42,5 @@ export async function repairStaleTamilNames(userId: string): Promise<void> {
     if (localRepaired) await setData(KEYS.PLANT_PROFILES, [localRepaired]);
   }
 
-  if (repaired) logger.info('Migration 009: stale catalog Tamil names repaired');
+  if (repaired) logger.info('Migration 011: stale catalog Tamil names repaired');
 }

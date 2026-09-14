@@ -711,13 +711,20 @@ export type PlantCareProfiles = Record<PlantType, Record<string, PlantCareProfil
 
 // ─── Unified Plant Profile (replaces PlantCatalog + PlantCareProfiles) ─────────
 
-/** Single source of truth for a plant entry: catalog metadata + care override fields. */
-export interface PlantProfile {
+/**
+ * Single source of truth for a plant entry: catalog metadata + care overrides.
+ *
+ * Extends `Partial<PlantCareProfile>` rather than restating its 48 fields.
+ * They were listed out by hand, and every one of them had to be repeated a
+ * third time in `toPlantCareProfilesShape` for a user's edit to reach the care
+ * path at all — so a field added here but forgotten there was stored, shown in
+ * the edit form, and then silently dropped. All 48 are optional on a profile
+ * because it holds a user's deltas, not a whole record, which is exactly what
+ * `Partial` says.
+ */
+export interface PlantProfile extends Partial<PlantCareProfile> {
   plantType: PlantType;
   name: string;
-  // Catalog metadata
-  tamilName?: string;
-  description?: string;
   varieties?: string[];
   varietyDetails?: Record<string, VarietyDetail>;
   isUserAdded?: boolean;
@@ -728,55 +735,8 @@ export interface PlantProfile {
    * removed outright and never carry this.
    */
   isDeleted?: boolean;
-  // Care override fields (all optional — fall back to static defaults)
-  waterRequirement?: WaterRequirement;
-  wateringFrequencyDays?: number;
-  wateringEnabled?: boolean;
-  fertilisingFrequencyDays?: number;
-  fertilisingEnabled?: boolean;
-  pruningFrequencyDays?: number;
-  pruningEnabled?: boolean;
-  sunlight?: SunlightLevel;
-  soilType?: SoilType;
-  preferredFertiliser?: FertiliserType;
-  initialGrowthStage?: GrowthStage;
-  pruningTips?: string[];
-  shapePruningTip?: string;
-  shapePruningMonths?: string;
-  flowerPruningTip?: string;
-  flowerPruningMonths?: string;
-  scientificName?: string;
-  taxonomicFamily?: string;
-  lifecycle?: PlantLifecycle;
-  daysToHarvest?: NumericRange;
-  yearsToFirstHarvest?: number;
-  heightCm?: NumericRange;
-  spacingCm?: number;
-  plantingDepthCm?: number;
-  growingSeason?: string;
-  germinationDays?: NumericRange;
-  germinationTempC?: NumericRange;
-  soilPhRange?: NumericRange;
-  heatTolerance?: ToleranceLevel;
-  droughtTolerance?: ToleranceLevel;
-  waterloggingTolerance?: ToleranceLevel;
-  petToxicity?: boolean;
-  feedingIntensity?: FeedingIntensity;
-  customPests?: string[];
-  customDiseases?: string[];
-  customBeneficials?: string[];
-  growthStageDurations?: GrowthStageDurations;
-  annualCycleDurations?: AnnualCycleDurations;
-  floweringStartMonth?: number;
-  seedSource?: string;
-  isPermanent?: boolean;
-  isDynamicAccumulator?: boolean;
-  chopDropIntervalDays?: number;
-  guild?: string;
   cropFamily?: CropFamily;
   layer?: BedLayer;
-  vitamins?: string[];
-  minerals?: string[];
 }
 
 /** Top-level unified store: PlantType → plant name → PlantProfile. */

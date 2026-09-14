@@ -100,3 +100,27 @@ describe('resolvePlantType — all dynamic accumulator names resolve (not null)'
     });
   }
 });
+
+describe('resolvePlantType — names the catalog knows under another spelling', () => {
+  // Each of these used to fall through to the 'vegetable' default, which put
+  // a keerai in the wrong category on every screen that reads the type.
+  it('resolves a keerai searched for by its harvest', () => {
+    expect(resolvePlantType('Agathi Keerai')).toBe('spinach');
+    expect(resolvePlantType('Arai Keerai')).toBe('spinach');
+  });
+
+  it('resolves a garden plant still on a dropped duplicate name', () => {
+    expect(resolvePlantType('Malabar Spinach')).toBe('spinach');
+    expect(resolvePlantType('Amaranth Greens')).toBe('spinach');
+  });
+
+  it('resolves the moved shrubs to the category their harvest put them in', () => {
+    expect(resolvePlantType('Aavarampoo')).toBe('flower');
+    expect(resolvePlantType('Henna')).toBe('herb');
+    expect(resolvePlantType('Oleander')).toBe('flower');
+  });
+
+  it('still returns null for a name nothing knows', () => {
+    expect(resolvePlantType('Quinoa')).toBeNull();
+  });
+});

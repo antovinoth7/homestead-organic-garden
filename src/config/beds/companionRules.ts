@@ -21,7 +21,15 @@ const ANTAGONIST_PAIRS: { a: string; b: string; reason: string }[] = [
     b: 'Tomato',
     reason: 'Same family (Solanaceae) — share Late Blight and other diseases',
   },
-  { a: 'Basil', b: 'Sage', reason: 'Sage inhibits basil growth when planted in close proximity' },
+];
+
+/**
+ * Both halves of every antagonist pair. Exported for the coverage guard in
+ * `src/__tests__`: a pair naming a plant the catalog no longer offers can
+ * never fire, and nothing else would notice.
+ */
+export const ANTAGONIST_PAIR_NAMES: string[] = [
+  ...new Set(ANTAGONIST_PAIRS.flatMap((pair) => [pair.a, pair.b])),
 ];
 
 function normalize(name: string): string {
