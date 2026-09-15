@@ -351,6 +351,31 @@ export const PLANT_TAXONOMY: Readonly<Record<string, TaxonomyRow>> = {
 };
 
 /**
+ * Lookup key → the catalog's own spelling of the name.
+ *
+ * Care-profile keys are built from the display name (`vegetable:Tomato`), so a
+ * caller passing "tomato", "  TOMATO  " or an alias like "Okra" needs resolving
+ * to the catalog spelling first. `cropFamilyFromName` is called with names typed
+ * by the user, so this is not a nicety.
+ */
+const CANONICAL_DISPLAY_NAME: Readonly<Record<string, string>> = (() => {
+  const map: Record<string, string> = {};
+  for (const category of Object.values(DEFAULT_PLANT_CATALOG.categories)) {
+    for (const name of category.plants) {
+      const key = getCanonicalPlantKey(name);
+      if (key) map[key] = name;
+    }
+  }
+  return map;
+})();
+
+/** The catalog's spelling of a name, resolving case and aliases. */
+export function getCanonicalPlantName(plantName: string): string {
+  const key = getCanonicalPlantKey(plantName);
+  return (key && CANONICAL_DISPLAY_NAME[key]) || plantName;
+}
+
+/**
  * Rotation family for a plant, from its care profile's botanical family.
  *
  * Returns `other` when the family is unmapped or the plant has no profile —
@@ -358,7 +383,10 @@ export const PLANT_TAXONOMY: Readonly<Record<string, TaxonomyRow>> = {
  * rotated.
  */
 export function getCropFamily(plantName: string, plantType: PlantType): CropFamily {
-  const family = getPlantCareProfile(plantName, plantType)?.taxonomicFamily;
+  const family = getPlantCareProfile(
+    getCanonicalPlantName(plantName),
+    plantType
+  )?.taxonomicFamily;
   if (!family) return 'other';
   return BOTANICAL_TO_CROP_FAMILY[family] ?? 'other';
 }

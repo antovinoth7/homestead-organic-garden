@@ -14,7 +14,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     initialGrowthStage: 'vegetative',
     scientificName: 'Azadirachta indica',
     taxonomicFamily: 'Meliaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'வேம்பு',
     description:
       "Fast-growing evergreen valued for pest-repellent properties and durable timber. Thrives in Kanyakumari's heat with minimal care. Neem cake and leaf extract are staples in organic gardening.",
@@ -43,7 +43,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     initialGrowthStage: 'vegetative',
     scientificName: 'Tectona grandis',
     taxonomicFamily: 'Lamiaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'தேக்கு',
     description:
       'Premier hardwood timber tree with large deciduous leaves. Prefers well-drained laterite soils and seasonal dry spells. Young trees benefit from annual composting during monsoon.',
@@ -72,7 +72,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     initialGrowthStage: 'vegetative',
     scientificName: 'Swietenia macrophylla',
     taxonomicFamily: 'Meliaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'மகாகனி',
     description:
       "High-value tropical timber with a straight trunk and broad canopy. Grows well in Kanyakumari's warm humid climate. Requires little care once established; stake young saplings against coastal wind.",
@@ -101,7 +101,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     initialGrowthStage: 'vegetative',
     scientificName: 'Dalbergia latifolia',
     taxonomicFamily: 'Fabaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'ரோஸ்வுட்',
     description:
       'Prized hardwood with dark fragrant heartwood. A nitrogen-fixing legume that enriches surrounding soil. Slow-growing but extremely drought-hardy once established in laterite soils.',
@@ -130,7 +130,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     initialGrowthStage: 'vegetative',
     scientificName: 'Santalum album',
     taxonomicFamily: 'Santalaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'சந்தனம்',
     description:
       'Aromatic heartwood tree and hemi-parasite that needs a host plant nearby. Very slow-growing; thrives in well-drained laterite or rocky soils. Protect saplings from cattle and full afternoon sun.',
@@ -159,7 +159,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     initialGrowthStage: 'vegetative',
     scientificName: 'Bambusa bambos',
     taxonomicFamily: 'Poaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'மூங்கில்',
     description:
       "Giant clumping grass producing strong culms used for construction and crafts. Extremely fast-growing in Kanyakumari's monsoon months. Contain spread with a root barrier or trench.",
@@ -188,7 +188,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     initialGrowthStage: 'vegetative',
     scientificName: 'Artocarpus hirsutus',
     taxonomicFamily: 'Moraceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'ஐயன்பலா',
     description:
       "Large evergreen tree native to the Western Ghats, yielding durable timber and edible fruit. Thrives in Kanyakumari's laterite-rich foothills with moderate rainfall. Low maintenance once established.",
@@ -217,7 +217,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     initialGrowthStage: 'vegetative',
     scientificName: 'Cocos nucifera var. nana',
     taxonomicFamily: 'Arecaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'குட்டைத் தென்னை',
     description:
       'Compact coconut palm ideal for small plots. Bears early (3–4 years) and produces sweet tender coconuts. Needs consistent watering and bimonthly feeding with vermicompost or groundnut cake.',
@@ -246,7 +246,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     initialGrowthStage: 'vegetative',
     scientificName: 'Cocos nucifera var. typica',
     taxonomicFamily: 'Arecaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'உயரத் தென்னை',
     description:
       'Traditional tall coconut grown along the Kanyakumari coast. Hardy and long-lived, yielding copra-quality nuts. Tolerates coastal wind and salt spray; apply salt around base annually to boost production.',
@@ -275,7 +275,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     initialGrowthStage: 'vegetative',
     scientificName: 'Cocos nucifera (D × T hybrid)',
     taxonomicFamily: 'Arecaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'கலப்பினத் தென்னை',
     description:
       'Cross between Dwarf and Tall varieties combining early bearing with high copra yield. Responds well to regular feeding and irrigation. Popular choice for commercial plots in Kanyakumari district.',
@@ -304,7 +304,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     initialGrowthStage: 'vegetative',
     scientificName: 'Cocos nucifera var. aurantiaca',
     taxonomicFamily: 'Arecaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'ராஜ தென்னை',
     description:
       "Orange-skinned coconut prized for its naturally sweet water. Ornamental and functional; grows well in Kanyakumari's coastal belt. Needs steady moisture and bimonthly organic feeding.",

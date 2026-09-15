@@ -289,11 +289,11 @@ export const VEGETABLE_OVERRIDES_1: Record<string, PlantCareProfile> = {
     feedingIntensity: 'light',
     growthStageDurations: { seedling: 15, vegetative: 25, flowering: 15, fruiting: 20 },
   },
-  // Neither melon had a care profile, so both resolved to bare vegetable
-  // defaults with no species, season or harvest window. They stay in
-  // `vegetable` with the other cucurbits: `fruit_tree` would force a
-  // 'permanent' lifecycle and drop their harvest date, which reads
-  // `yearsToFirstHarvest` rather than `daysToHarvest` for that type.
+  // Both melons stay in `vegetable` with the other cucurbits, where they belong:
+  // they are warm-season trailing cucurbits grown, trellised and rotated exactly
+  // like the gourds above. (This used to also be a workaround — `fruit_tree`
+  // would force a 'permanent' lifecycle — but that rule is gone; the placement
+  // stands on its own now.)
   [buildProfileKey('vegetable', 'Watermelon')]: {
     waterRequirement: 'medium',
     wateringFrequencyDays: 3,

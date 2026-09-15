@@ -1,25 +1,25 @@
-import { GUILD_TEMPLATES } from '@/config/beds/guildTemplates';
+import { getCropFamily } from '@/config/plants/catalogTaxonomy';
+import { resolvePlantType } from '@/utils/plantTypeFromName';
 import type { CropFamily } from '@/types/database.types';
 
 /**
- * Look up the CropFamily for a plant name by scanning all guild templates'
- * plant_rows. Used when persisting wizard placeholders so the resulting Plant
- * has the family needed for rotation tracking. Returns null when no template
- * mentions the plant.
+ * The rotation family for a plant name, or null when the name is not a plant the
+ * app knows.
+ *
+ * This used to answer by scanning every guild template's `plant_rows`, so only
+ * the 31 names that happened to appear in a template resolved at all — Potato,
+ * Cabbage, Cauliflower, Knol Khol, the whole onion family, most cucurbits and
+ * every keerai returned null. Rotation reads `crop_family`, so planting Potato
+ * after Tomato (both solanaceae) raised no warning. Several template names also
+ * did not match the catalog ("Amaranth" vs "Amaranthus", "Black Gram (Urad)"),
+ * which is what `NAME_TYPE_ALIASES` in `plantTypeFromName` existed to paper over.
+ *
+ * Now it resolves through the catalog taxonomy, which derives the family from
+ * each plant's own `taxonomicFamily` — so all 129 catalog plants answer, and the
+ * alias table means "Okra" and "Methi" answer too.
  */
-function normalize(value: string): string {
-  return value.toLowerCase().replace(/\s+/g, ' ').trim();
-}
-
 export function cropFamilyFromName(name: string): CropFamily | null {
-  const target = normalize(name);
-  if (!target) return null;
-  for (const template of Object.values(GUILD_TEMPLATES)) {
-    for (const row of template.plant_rows) {
-      if (normalize(row.name) === target) {
-        return row.crop_family;
-      }
-    }
-  }
-  return null;
+  const plantType = resolvePlantType(name);
+  if (!plantType) return null;
+  return getCropFamily(name, plantType);
 }

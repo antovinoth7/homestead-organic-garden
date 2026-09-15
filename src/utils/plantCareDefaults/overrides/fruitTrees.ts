@@ -44,7 +44,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Mangifera indica',
     taxonomicFamily: 'Anacardiaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'மாம்பழம்',
     description:
       'King of fruits — long-lived tropical tree bearing sweet, aromatic drupes. Grafted saplings fruit in 3–5 years; withhold water before flowering for better yields in Kanyakumari.',
@@ -76,7 +76,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Psidium guajava',
     taxonomicFamily: 'Myrtaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'கொய்யா',
     description:
       "Hardy tropical tree producing vitamin-C-rich fruits year-round. Adapts to most soils; tip-prune regularly to encourage continuous fruiting in Kanyakumari's warm climate.",
@@ -140,7 +140,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Citrus × limon',
     taxonomicFamily: 'Rutaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'எலுமிச்சை',
     description:
       'Evergreen citrus tree producing tangy fruits year-round in tropical climates. Grafted plants fruit in 2–3 years; responds well to neem cake and micronutrient sprays in Kanyakumari.',
@@ -172,7 +172,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Punica granatum',
     taxonomicFamily: 'Lythraceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'மாதுளை',
     description:
       'Drought-tolerant shrubby tree producing antioxidant-rich fruits. Train to 3–4 main stems; select one bahar season for concentrated fruiting in Kanyakumari.',
@@ -204,7 +204,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Artocarpus heterophyllus',
     taxonomicFamily: 'Moraceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'பலாப்பழம்',
     description:
       "Massive tropical tree producing the world's largest tree-borne fruit. Low-maintenance once established; fruits directly on trunk and branches in Kanyakumari's humid climate.",
@@ -236,7 +236,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Manilkara zapota',
     taxonomicFamily: 'Sapotaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'சப்போட்டா',
     description:
       "Evergreen tropical tree producing sweet, malty-flavoured fruits. Extremely wind-resistant; ideal for Kanyakumari's coastal conditions. Grafted plants fruit in 4–5 years.",
@@ -268,7 +268,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Syzygium aqueum',
     taxonomicFamily: 'Myrtaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'நாவல்',
     description:
       "Tropical evergreen tree producing crisp, mildly sweet bell-shaped fruits. Loves moisture-rich soils; thrives near water sources in Kanyakumari's coastal belt.",
@@ -300,7 +300,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Annona squamosa',
     taxonomicFamily: 'Annonaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'சீதாப்பழம்',
     description:
       'Deciduous tropical tree bearing soft, creamy-sweet segmented fruits. Drought-tolerant once established; hand-pollination improves fruit set in Kanyakumari.',
@@ -332,7 +332,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Phyllanthus emblica',
     taxonomicFamily: 'Phyllanthaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'நெல்லிக்காய்',
     description:
       "Hardy deciduous tree producing tart, vitamin-C-rich berries revered in Ayurveda. Thrives in poor soils with minimal care; excellent for Kanyakumari's red laterite patches.",
@@ -364,7 +364,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Citrus × sinensis',
     taxonomicFamily: 'Rutaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'ஆரஞ்சு',
     description:
       "Evergreen citrus tree producing sweet, juicy fruits. Grafted on rough lemon rootstock for Kanyakumari's conditions; benefits from zinc and micronutrient sprays.",
@@ -396,7 +396,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Ficus carica',
     taxonomicFamily: 'Moraceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'அத்திப்பழம்',
     description:
       "Deciduous tree producing soft, sweet, fibre-rich fruits. Extremely heat and drought tolerant; easy to propagate from cuttings in Kanyakumari's warm climate.",
@@ -428,7 +428,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Persea americana',
     taxonomicFamily: 'Lauraceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'வெண்ணெய்ப்பழம்',
     description:
       "Evergreen tropical tree producing nutrient-dense, high-fat fruits. Needs excellent drainage and wind protection; West Indian varieties suit Kanyakumari's lowland tropics.",
@@ -460,7 +460,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Annona muricata',
     taxonomicFamily: 'Annonaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'முள்ளு சீதா',
     description:
       'Tropical evergreen tree producing large spiny fruits with creamy, tangy pulp. Related to custard apple; hand-pollination improves yields in Kanyakumari.',
@@ -492,7 +492,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Garcinia mangostana',
     taxonomicFamily: 'Clusiaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'மாங்குஸ்தான்',
     description:
       'Ultra-tropical tree bearing prized purple fruits with snow-white, sweet-tangy segments. Extremely slow to bear (6–10 years); needs deep shade when young and consistent moisture.',
@@ -524,7 +524,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Nephelium lappaceum',
     taxonomicFamily: 'Sapindaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'ரம்புட்டான்',
     description:
       "Tropical evergreen tree producing hairy-skinned fruits with translucent sweet flesh. Needs high humidity and rainfall; Kanyakumari's climate suits it well. Grafted trees fruit in 4–5 years.",
@@ -586,7 +586,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Artocarpus altilis',
     taxonomicFamily: 'Moraceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'பிரெட்ஃப்ரூட்',
     description:
       "Large tropical tree producing starchy fruits used as a carbohydrate staple. Related to jackfruit; thrives in Kanyakumari's humid coastal climate with minimal care once established.",
@@ -682,7 +682,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Averrhoa carambola',
     taxonomicFamily: 'Oxalidaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'கமரகம்',
     description:
       'Small tropical evergreen tree producing distinctive star-shaped waxy fruits. Fruits prolifically year-round in Kanyakumari; compact enough for home gardens. Avoid in renal patients.',
@@ -714,7 +714,7 @@ export const FRUIT_TREE_OVERRIDES: Record<string, PlantCareProfile> = {
     initialGrowthStage: 'vegetative',
     scientificName: 'Areca catechu',
     taxonomicFamily: 'Arecaceae',
-    lifecycle: 'perennial',
+    lifecycle: 'permanent',
     tamilName: 'பாக்கு',
     description:
       "Tall, slender tropical palm cultivated for its betel nut. Widely grown in Kanyakumari's homestead gardens; needs consistent moisture and humidity. Starts bearing in 6–7 years.",

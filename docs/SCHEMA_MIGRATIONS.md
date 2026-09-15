@@ -40,6 +40,10 @@ reference pattern, mirroring `src/utils/offlineQueueLogic.ts`.
 | 3 | `003_consolidate_plant_profiles.ts` | Consolidated per-plant profiles into one document. |
 | 4 | `004_backfill_lifecycle_type.ts` | Set `lifecycle_type` on plants missing it. |
 | 5 | `005_repair_farm_config.ts` | Copies 001's stranded top-level `district`/`zone_id` into the nested `farmConfig` object that `farmCapacity.ts` actually reads. |
+| 6 | `006_repair_zone_assignment.ts` | Repairs agro-climatic zone assignment. |
+| 7 | `007_merge_duplicate_plant_names.ts` | Merges catalog rows that were the same plant under two names (Okra/Ladies Finger, Methi/Fenugreek). |
+| 8 | `008_recategorise_plants.ts` | Re-types garden plants whose catalog category moved (shrub→flower, vegetable→spinach) and relocates their stored overrides. |
+| 9 | `009_recompute_plant_fields.ts` | Recomputes `lifecycle_type` **and** `crop_family` on every plant. Unlike 004, which only filled a missing `lifecycle_type`, this rewrites existing values: 004 used a derivation that checked `plant_type` before the catalog's own `lifecycle`, so all 36 tree-typed plants were forced to `permanent` — wrong for Banana, Red Banana, Papaya, Pineapple and Passion Fruit, which are replanted or ratooned. `crop_family` was previously written only by the bed wizard, from a guild-template scan that resolved 31 of 129 names, so rotation was blind for most plants. Pure logic in `recomputedPlantFieldsLogic.ts`; returns null for an already-correct plant, so a re-run writes nothing. |
 
 ## Known gap
 

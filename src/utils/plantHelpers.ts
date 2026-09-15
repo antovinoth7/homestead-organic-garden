@@ -1907,18 +1907,28 @@ export function getValidStagesForPlant(
 
 /**
  * Derives the bed-management lifecycle for a planted instance.
- * Tree types always map to "permanent" regardless of catalog lifecycle.
- * Herbs and shrubs default to "perennial" when lifecycle is unset.
+ *
+ * The catalog's own `lifecycle` wins: it is stated per plant, reviewed, and
+ * finer than anything the type can say. This used to be the other way round —
+ * every `fruit_tree`, `timber_tree` and `coconut_tree` was forced to
+ * `permanent` before the catalog was consulted, which threw away a correct
+ * value for 36 plants and made a banana stand or a pineapple crop
+ * indistinguishable from a mango tree. They are not: a banana is ratooned and a
+ * pineapple replanted, so they are `perennial` and earn the recurring
+ * harvest-leaves task that `permanent` plants are excluded from.
+ *
+ * The type is now only a fallback, for a plant the user added that has no care
+ * profile. A tree type still defaults to `permanent` there, since an unknown
+ * tree is far more likely to be an orchard planting than a bed crop.
  */
 export function deriveInstanceLifecycle(
   lifecycle: PlantLifecycle | undefined,
   plantType: PlantType
 ): PlantLifecycle {
+  if (lifecycle) return lifecycle;
   if (plantType === 'coconut_tree' || plantType === 'timber_tree' || plantType === 'fruit_tree') {
     return 'permanent';
   }
-  if (lifecycle === 'perennial') return 'perennial';
-  if (lifecycle === 'annual' || lifecycle === 'biennial') return lifecycle;
   if (plantType === 'herb' || plantType === 'shrub') return 'perennial';
   return 'annual';
 }

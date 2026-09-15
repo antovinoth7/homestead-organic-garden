@@ -47,6 +47,7 @@ import type { Theme } from '../theme/colors';
 import { getLocationConfig } from '../services/locations';
 import { usePlantFormData } from './usePlantFormData';
 import { plantTypeFromName } from '../utils/plantTypeFromName';
+import { cropFamilyFromName } from '../utils/cropFamilyFromName';
 import { logger } from '../utils/logger';
 import { getErrorMessage } from '../utils/errorLogging';
 import type { EdgeInsets } from 'react-native-safe-area-context';
@@ -947,6 +948,10 @@ export function usePlantFormState(): PlantFormStateReturn {
         name: finalPlantName,
         plant_type: plantType,
         plant_variety: plantVariety.trim() || null,
+        // Rotation reads `crop_family`, and only the bed-creation wizard used to
+        // set it — so every plant added from this form was invisible to the
+        // family-rotation and solanaceae checks.
+        crop_family: cropFamilyFromName(plantVariety.trim() || finalPlantName),
         space_type: spaceType,
         location: combinedLocation,
         bed_id: bedId.trim() || null,
