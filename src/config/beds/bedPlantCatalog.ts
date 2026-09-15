@@ -7,8 +7,11 @@ import { validateCompanionPair } from './companionRules';
 // Recommended plant names per bed type — matched against the app's plant catalog
 export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
   leafy: [
-    'Amaranth',
-    'Spinach',
+    // Catalog row names — `Amaranth` and `Spinach` were suggested here for a
+    // long time and neither is a row, so the bed offered crops the user could
+    // not then add.
+    'Amaranthus',
+    'Palak',
     'Fenugreek',
     'Coriander',
     'Mint',

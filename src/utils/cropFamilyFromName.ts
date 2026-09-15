@@ -1,25 +1,52 @@
-import { getCropFamily } from '@/config/plants/catalogTaxonomy';
-import { resolvePlantType } from '@/utils/plantTypeFromName';
+import { PLANT_CATALOG_ENTRIES } from '@/config/plantCatalog';
+import { GUILD_TEMPLATES } from '@/config/beds/guildTemplates';
+import { getCanonicalPlantKey, toLookupKey } from '@/utils/plantAliases';
 import type { CropFamily } from '@/types/database.types';
 
 /**
- * The rotation family for a plant name, or null when the name is not a plant the
- * app knows.
+ * Crop family for a plant name, used for rotation tracking and for the family
+ * stamped onto a `Plant` when a wizard placeholder is persisted.
  *
- * This used to answer by scanning every guild template's `plant_rows`, so only
- * the 31 names that happened to appear in a template resolved at all — Potato,
- * Cabbage, Cauliflower, Knol Khol, the whole onion family, most cucurbits and
- * every keerai returned null. Rotation reads `crop_family`, so planting Potato
- * after Tomato (both solanaceae) raised no warning. Several template names also
- * did not match the catalog ("Amaranth" vs "Amaranthus", "Black Gram (Urad)"),
- * which is what `NAME_TYPE_ALIASES` in `plantTypeFromName` existed to paper over.
+ * This used to scan guild templates only, which meant a family existed solely
+ * for the handful of plants some template happened to mention — 101 of the 128
+ * catalog rows answered null, including Onion, Garlic, Cabbage, Potato and
+ * Cucumber. The rotation filter in `bedPlantCatalog.ts` therefore did nothing
+ * for them, silently. Worse, the scan matched on the raw name, so the
+ * parenthetical template rows `Black Gram (Urad)` and `Pigeon Pea (Arhar)`
+ * never matched the catalog's `Black Gram` and `Pigeon Pea` — two of the
+ * three headline legumes had no family at all.
  *
- * Now it resolves through the catalog taxonomy, which derives the family from
- * each plant's own `taxonomicFamily` — so all 129 catalog plants answer, and the
- * alias table means "Okra" and "Methi" answer too.
+ * The catalog record is now the source. The template scan stays as a fallback
+ * for the few names that are template rows but not catalog rows.
  */
+const CATALOG_FAMILIES = new Map<string, CropFamily>();
+for (const entry of PLANT_CATALOG_ENTRIES) {
+  if (entry.cropFamily) CATALOG_FAMILIES.set(toLookupKey(entry.name), entry.cropFamily);
+}
+
+function fromGuildTemplates(target: string): CropFamily | null {
+  for (const template of Object.values(GUILD_TEMPLATES)) {
+    for (const row of template.plant_rows) {
+      if (toLookupKey(row.name) === target) return row.crop_family;
+    }
+  }
+  return null;
+}
+
 export function cropFamilyFromName(name: string): CropFamily | null {
-  const plantType = resolvePlantType(name);
-  if (!plantType) return null;
-  return getCropFamily(name, plantType);
+  const target = toLookupKey(name);
+  if (!target) return null;
+
+  const direct = CATALOG_FAMILIES.get(target);
+  if (direct !== undefined) return direct;
+
+  // Resolves alternative spellings onto the row that owns the family, so a
+  // plant stored as "Okra" answers the same as "Ladies Finger".
+  const canonical = getCanonicalPlantKey(name);
+  if (canonical) {
+    const viaAlias = CATALOG_FAMILIES.get(canonical);
+    if (viaAlias !== undefined) return viaAlias;
+  }
+
+  return fromGuildTemplates(target);
 }

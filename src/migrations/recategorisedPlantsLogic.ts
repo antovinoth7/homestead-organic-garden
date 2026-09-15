@@ -1,6 +1,12 @@
 import { CATEGORY_OPTIONS } from '@/utils/plantLabels';
 import type { PlantProfiles, PlantType } from '@/types/database.types';
 
+/** Where a catalog row sat, and where it moved to. */
+export interface PlantTypeMove {
+  from: PlantType;
+  to: PlantType;
+}
+
 /**
  * Catalog entries whose category changed, and the category they moved to.
  *
@@ -17,7 +23,7 @@ import type { PlantProfiles, PlantType } from '@/types/database.types';
  * Unlike `MERGED_PLANT_NAMES`, the name is unchanged here — it is the category
  * that moves, so this rewrites `plant_type` rather than `plant_variety`.
  */
-export const RECATEGORISED_PLANTS: Record<string, { from: PlantType; to: PlantType }> = {
+export const RECATEGORISED_PLANTS: Record<string, PlantTypeMove> = {
   Hibiscus: { from: 'shrub', to: 'flower' },
   Ixora: { from: 'shrub', to: 'flower' },
   Jasmine: { from: 'shrub', to: 'flower' },
@@ -28,13 +34,20 @@ export const RECATEGORISED_PLANTS: Record<string, { from: PlantType; to: PlantTy
   Fenugreek: { from: 'vegetable', to: 'spinach' },
 };
 
-/** The category a garden plant should move to, or null if it needs no change. */
+/**
+ * The category a garden plant should move to, or null if it needs no change.
+ *
+ * `moves` is passed in for the same reason `plannedVarietyRename` takes its
+ * map: `RECATEGORISED_PLANTS` belongs to migration 008 and must stay frozen,
+ * so migration 009's moves travel in their own map.
+ */
 export function plannedTypeChange(
   plantVariety: string | null | undefined,
-  plantType: string | null | undefined
+  plantType: string | null | undefined,
+  moves: Record<string, PlantTypeMove>
 ): PlantType | null {
   if (!plantVariety || !plantType) return null;
-  const move = RECATEGORISED_PLANTS[plantVariety.trim()];
+  const move = moves[plantVariety.trim()];
   if (!move || move.from !== plantType) return null;
   return move.to;
 }
@@ -50,7 +63,10 @@ export function plannedTypeChange(
  * exists to remove. Returns null when nothing changed, so the caller can skip
  * the write.
  */
-export function planProfileRecategorisation(profiles: PlantProfiles): PlantProfiles | null {
+export function planProfileRecategorisation(
+  profiles: PlantProfiles,
+  moves: Record<string, PlantTypeMove>
+): PlantProfiles | null {
   let changed = false;
   const next = {} as PlantProfiles;
 
@@ -58,7 +74,7 @@ export function planProfileRecategorisation(profiles: PlantProfiles): PlantProfi
     next[type] = { ...(profiles[type] ?? {}) };
   }
 
-  for (const [name, { from, to }] of Object.entries(RECATEGORISED_PLANTS)) {
+  for (const [name, { from, to }] of Object.entries(moves)) {
     const entry = next[from]?.[name];
     if (!entry) continue;
 

@@ -1,4 +1,4 @@
-import { getCropFamily } from '@/config/plants/catalogTaxonomy';
+import { cropFamilyFromName } from '@/utils/cropFamilyFromName';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { deriveInstanceLifecycle } from '@/utils/plantHelpers';
 import type { CropFamily, PlantLifecycle, PlantType } from '@/types/database.types';
@@ -41,9 +41,9 @@ const PLANT_TYPES = new Set<string>([
  * stand or a pineapple crop never got a harvest prompt.
  *
  * **`crop_family`** was only ever written by the bed-creation wizard, and even
- * there it came from scanning guild templates — so it resolved for 31 names and
- * was absent on every plant added from the normal form. Rotation reads it, which
- * is why planting Potato after Tomato raised no warning.
+ * there it came from scanning guild templates — so it resolved for a fraction of
+ * the rows and was absent on every plant added from the normal form. Rotation
+ * reads it, which is why planting Potato after Tomato raised no warning.
  *
  * Neither field is user-editable (nothing in `hooks/`, `components/forms/` or
  * `screens/` writes them), so recomputing cannot overwrite a farmer's choice.
@@ -62,8 +62,11 @@ export function recomputePlantFields(data: RecomputeInput): RecomputedFields | n
   const lifecycle = deriveInstanceLifecycle(profile?.lifecycle, typed);
   if (lifecycle !== data.lifecycle_type) changes.lifecycle_type = lifecycle;
 
-  const cropFamily = getCropFamily(variety, typed);
-  if (cropFamily !== data.crop_family) changes.crop_family = cropFamily;
+  // `cropFamilyFromName` reads the catalog row's own `cropFamily`; null means a
+  // name the app does not know, and there is nothing better to write than what
+  // is already there.
+  const cropFamily = cropFamilyFromName(variety);
+  if (cropFamily && cropFamily !== data.crop_family) changes.crop_family = cropFamily;
 
   return Object.keys(changes).length > 0 ? changes : null;
 }

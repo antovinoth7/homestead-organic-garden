@@ -26,12 +26,12 @@ import {
 import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
-import { CATEGORY_OPTIONS } from '@/utils/plantLabels';
 import { sortPlantNames } from '@/utils/plantSort';
+import { PLANT_CATEGORIES } from '@/utils/plantCategories';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const PLANT_CATEGORIES: PlantType[] = CATEGORY_OPTIONS.map((opt) => opt.value);
+export { PLANT_CATEGORIES };
 
 const SETTINGS_COLLECTION = 'user_settings';
 const PLANT_PROFILES_FIELD = 'plantProfiles';
@@ -182,6 +182,36 @@ export function toPlantCatalogShape(profiles: PlantProfiles): PlantCatalog {
   return { categories };
 }
 
+/**
+ * Copies an object without the keys whose value is `undefined`.
+ *
+ * Generic over the key so the value type is carried through: iterating with
+ * `Object.entries` would collapse every field to the union of all of them and
+ * lose the per-key relation.
+ */
+function dropUndefined<T extends object>(source: T): T {
+  const result = {} as T;
+  for (const key of Object.keys(source) as (keyof T)[]) {
+    const value = source[key];
+    if (value !== undefined) result[key] = value;
+  }
+  return result;
+}
+
+/**
+ * Narrows stored profiles to just their care-override fields.
+ *
+ * The eight profile-only keys are named and dropped; everything left is, by
+ * construction, `Partial<PlantCareProfile>` — which is what
+ * `PlantCareProfileOverride` is. This used to be 48 hand-written
+ * `if (p.x !== undefined) override.x = p.x` lines, so a newly added care field
+ * was silently dropped here until someone remembered to add a 49th. Now the
+ * failure mode is inverted: a new care field is carried automatically, and
+ * only a new *non*-care field would need a line adding.
+ *
+ * Undefined values are stripped so an override stays a delta — an explicit
+ * `undefined` would otherwise count as a key and shadow the bundled default.
+ */
 export function toPlantCareProfilesShape(profiles: PlantProfiles): PlantCareProfiles {
   const result = PLANT_CATEGORIES.reduce((acc, type) => {
     acc[type] = {};
@@ -191,63 +221,20 @@ export function toPlantCareProfilesShape(profiles: PlantProfiles): PlantCareProf
   for (const type of PLANT_CATEGORIES) {
     for (const [name, p] of Object.entries(profiles[type] ?? {})) {
       if (p.isDeleted) continue;
-      const override: PlantCareProfileOverride = {};
-      if (p.waterRequirement !== undefined) override.waterRequirement = p.waterRequirement;
-      if (p.wateringFrequencyDays !== undefined)
-        override.wateringFrequencyDays = p.wateringFrequencyDays;
-      if (p.wateringEnabled !== undefined) override.wateringEnabled = p.wateringEnabled;
-      if (p.fertilisingFrequencyDays !== undefined)
-        override.fertilisingFrequencyDays = p.fertilisingFrequencyDays;
-      if (p.fertilisingEnabled !== undefined) override.fertilisingEnabled = p.fertilisingEnabled;
-      if (p.pruningFrequencyDays !== undefined)
-        override.pruningFrequencyDays = p.pruningFrequencyDays;
-      if (p.pruningEnabled !== undefined) override.pruningEnabled = p.pruningEnabled;
-      if (p.sunlight !== undefined) override.sunlight = p.sunlight;
-      if (p.soilType !== undefined) override.soilType = p.soilType;
-      if (p.preferredFertiliser !== undefined) override.preferredFertiliser = p.preferredFertiliser;
-      if (p.initialGrowthStage !== undefined) override.initialGrowthStage = p.initialGrowthStage;
-      if (p.pruningTips !== undefined) override.pruningTips = p.pruningTips;
-      if (p.shapePruningTip !== undefined) override.shapePruningTip = p.shapePruningTip;
-      if (p.shapePruningMonths !== undefined) override.shapePruningMonths = p.shapePruningMonths;
-      if (p.flowerPruningTip !== undefined) override.flowerPruningTip = p.flowerPruningTip;
-      if (p.flowerPruningMonths !== undefined) override.flowerPruningMonths = p.flowerPruningMonths;
-      if (p.scientificName !== undefined) override.scientificName = p.scientificName;
-      if (p.taxonomicFamily !== undefined) override.taxonomicFamily = p.taxonomicFamily;
-      if (p.lifecycle !== undefined) override.lifecycle = p.lifecycle;
-      if (p.tamilName !== undefined) override.tamilName = p.tamilName;
-      if (p.description !== undefined) override.description = p.description;
-      if (p.daysToHarvest !== undefined) override.daysToHarvest = p.daysToHarvest;
-      if (p.yearsToFirstHarvest !== undefined) override.yearsToFirstHarvest = p.yearsToFirstHarvest;
-      if (p.heightCm !== undefined) override.heightCm = p.heightCm;
-      if (p.spacingCm !== undefined) override.spacingCm = p.spacingCm;
-      if (p.plantingDepthCm !== undefined) override.plantingDepthCm = p.plantingDepthCm;
-      if (p.growingSeason !== undefined) override.growingSeason = p.growingSeason;
-      if (p.germinationDays !== undefined) override.germinationDays = p.germinationDays;
-      if (p.germinationTempC !== undefined) override.germinationTempC = p.germinationTempC;
-      if (p.soilPhRange !== undefined) override.soilPhRange = p.soilPhRange;
-      if (p.heatTolerance !== undefined) override.heatTolerance = p.heatTolerance;
-      if (p.droughtTolerance !== undefined) override.droughtTolerance = p.droughtTolerance;
-      if (p.waterloggingTolerance !== undefined)
-        override.waterloggingTolerance = p.waterloggingTolerance;
-      if (p.vitamins !== undefined) override.vitamins = p.vitamins;
-      if (p.minerals !== undefined) override.minerals = p.minerals;
-      if (p.petToxicity !== undefined) override.petToxicity = p.petToxicity;
-      if (p.feedingIntensity !== undefined) override.feedingIntensity = p.feedingIntensity;
-      if (p.customPests !== undefined) override.customPests = p.customPests;
-      if (p.customDiseases !== undefined) override.customDiseases = p.customDiseases;
-      if (p.customBeneficials !== undefined) override.customBeneficials = p.customBeneficials;
-      if (p.growthStageDurations !== undefined)
-        override.growthStageDurations = p.growthStageDurations;
-      if (p.annualCycleDurations !== undefined)
-        override.annualCycleDurations = p.annualCycleDurations;
-      if (p.floweringStartMonth !== undefined) override.floweringStartMonth = p.floweringStartMonth;
-      if (p.seedSource !== undefined) override.seedSource = p.seedSource;
-      if (p.isPermanent !== undefined) override.isPermanent = p.isPermanent;
-      if (p.isDynamicAccumulator !== undefined)
-        override.isDynamicAccumulator = p.isDynamicAccumulator;
-      if (p.chopDropIntervalDays !== undefined)
-        override.chopDropIntervalDays = p.chopDropIntervalDays;
-      if (p.guild !== undefined) override.guild = p.guild;
+
+      const {
+        plantType: _plantType,
+        name: _name,
+        varieties: _varieties,
+        varietyDetails: _varietyDetails,
+        isUserAdded: _isUserAdded,
+        isDeleted: _isDeleted,
+        cropFamily: _cropFamily,
+        layer: _layer,
+        ...care
+      } = p;
+
+      const override = dropUndefined<PlantCareProfileOverride>(care);
       if (Object.keys(override).length > 0) result[type][name] = override;
     }
   }

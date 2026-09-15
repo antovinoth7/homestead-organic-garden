@@ -13,19 +13,12 @@ import {
   ToleranceLevel,
   WaterRequirement,
 } from '../types/database.types';
+import { PLANT_CATEGORIES } from './plantCategories';
 // Type-only — erased at build time, so this cannot create an import cycle.
 import type { GrowthStageSource } from './plantHelpers';
 
-const CATEGORY_ORDER: PlantType[] = [
-  'vegetable',
-  'fruit_tree',
-  'spinach',
-  'coconut_tree',
-  'herb',
-  'timber_tree',
-  'flower',
-  'shrub',
-];
+/** The shared order — see `plantCategories.ts`. Aliased for the call sites below. */
+const CATEGORY_ORDER = PLANT_CATEGORIES;
 
 export const CATEGORY_LABELS: Record<PlantType, string> = {
   vegetable: 'Vegetable',

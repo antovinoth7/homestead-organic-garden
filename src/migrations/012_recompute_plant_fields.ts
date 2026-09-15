@@ -34,11 +34,11 @@ export async function recomputePlantDerivedFields(userId: string): Promise<void>
     );
 
   if (updates.length === 0) {
-    logger.info('009_recompute_plant_fields: every plant already correct');
+    logger.info('012_recompute_plant_fields: every plant already correct');
     return;
   }
 
-  logger.info(`009_recompute_plant_fields: updating ${updates.length} plant(s)`);
+  logger.info(`012_recompute_plant_fields: updating ${updates.length} plant(s)`);
 
   for (let start = 0; start < updates.length; start += BATCH_LIMIT) {
     const batch = writeBatch(db);
@@ -50,5 +50,5 @@ export async function recomputePlantDerivedFields(userId: string): Promise<void>
     await withTimeoutAndRetry(() => batch.commit(), { timeoutMs: FIRESTORE_READ_TIMEOUT_MS });
   }
 
-  logger.info('009_recompute_plant_fields: done');
+  logger.info('012_recompute_plant_fields: done');
 }

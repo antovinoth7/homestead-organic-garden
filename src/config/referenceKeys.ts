@@ -27,6 +27,8 @@ export const PLANT_IMAGE_ALIASES: Record<string, string> = {
   amaranth: 'amaranthus',
   amaranth_greens: 'amaranthus',
   palak: 'spinach',
+  // 'Cashew Nut' was a reference-only name; the catalog row is 'Cashew'.
+  cashew: 'cashew_nut',
 };
 
 /**
@@ -54,6 +56,8 @@ export const EXTRA_REFERENCE_PLANT_NAMES = [
   // Removed from the catalog in the Tamil Nadu relevance pass (Sep 2026) but
   // their photos stay bundled: Coleus, and the Mediterranean herbs and
   // glasshouse flowers that are not Tamil Nadu homestead plants.
+  // `Ash Plantain` joined them in migration 010, merged into `Banana`.
+  'Ash Plantain',
   'Coleus',
   'Parsley',
   'Rosemary',

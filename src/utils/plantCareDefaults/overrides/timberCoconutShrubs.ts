@@ -322,7 +322,7 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     petToxicity: false,
     feedingIntensity: 'heavy',
   },
-  [buildProfileKey('shrub', 'Nandiyavattai')]: {
+  [buildProfileKey('flower', 'Nandiyavattai')]: {
     waterRequirement: 'medium',
     wateringFrequencyDays: 3,
     fertilisingFrequencyDays: 30,

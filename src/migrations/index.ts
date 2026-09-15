@@ -13,11 +13,14 @@ import { repairFarmConfig } from './005_repair_farm_config';
 import { repairZoneAssignment } from './006_repair_zone_assignment';
 import { mergeDuplicatePlantNames } from './007_merge_duplicate_plant_names';
 import { recategorisePlants } from './008_recategorise_plants';
-import { recomputePlantDerivedFields } from './009_recompute_plant_fields';
+import { realignCatalog } from './009_realign_catalog';
+import { mergePlantainRetypeCastor } from './010_merge_plantain_retype_castor';
+import { repairStaleTamilNames } from './011_repair_stale_tamil_names';
+import { recomputePlantDerivedFields } from './012_recompute_plant_fields';
 
 const SETTINGS_COLLECTION = 'user_settings';
 
-export const LATEST_SCHEMA_VERSION = 9;
+export const LATEST_SCHEMA_VERSION = 12;
 
 const migrations: Migration[] = [
   { version: 1, name: 'backfill_district', run: backfillDistrict },
@@ -28,7 +31,12 @@ const migrations: Migration[] = [
   { version: 6, name: 'repair_zone_assignment', run: repairZoneAssignment },
   { version: 7, name: 'merge_duplicate_plant_names', run: mergeDuplicatePlantNames },
   { version: 8, name: 'recategorise_plants', run: recategorisePlants },
-  { version: 9, name: 'recompute_plant_fields', run: recomputePlantDerivedFields },
+  { version: 9, name: 'realign_catalog', run: realignCatalog },
+  { version: 10, name: 'merge_plantain_retype_castor', run: mergePlantainRetypeCastor },
+  { version: 11, name: 'repair_stale_tamil_names', run: repairStaleTamilNames },
+  // Last on purpose: it recomputes against the catalog as 009-011 leave it, so a
+  // plant Castor-retyped by 010 gets its lifecycle and family from the new type.
+  { version: 12, name: 'recompute_plant_fields', run: recomputePlantDerivedFields },
 ];
 
 export async function getSchemaVersion(userId: string): Promise<number> {

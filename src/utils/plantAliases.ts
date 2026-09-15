@@ -6,9 +6,10 @@
  * missing entries the others had. Catalog search, the duplicate-entry check and
  * companion lookup all need the full set, so it lives here.
  *
- * Deliberately import-free: `config/referenceKeys.ts` pulls this in, and that
- * module is loaded by `scripts/reference/*` under tsx, where the `@/` alias and
- * Metro-only `require('*.webp')` calls do not resolve.
+ * Deliberately import-free, so `config/referenceKeys.ts` can pull it in and
+ * stay loadable by `scripts/reference/*` under tsx. The `@/` alias itself
+ * resolves there; what does not is `@/lib/firebase` (it throws on missing env
+ * at import) and the Metro-only `require('*.webp')` calls.
  */
 
 /** Lowercased, whitespace-collapsed form used as the key for every lookup. */
@@ -21,8 +22,9 @@ export function toLookupKey(value: string): string {
  *
  * An entry here asserts the two names are *the same catalog entry*, so the
  * canonical side must be a real name in `DEFAULT_PLANT_CATALOG`. Names that
- * merely share a photo (Palak/Spinach, Amaranth Greens/Amaranthus) do not belong here —
- * those stay in `PLANT_IMAGE_ALIASES`, which answers a different question.
+ * merely share a photo (Palak and true Spinach are different crops that use
+ * one image) do not belong here — those stay in `PLANT_IMAGE_ALIASES`, which
+ * answers a different question.
  */
 export const PLANT_NAME_ALIASES: Record<string, string> = {
   // Ladies Finger
@@ -85,10 +87,43 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   peppercorns: 'black pepper',
   'piper nigrum': 'black pepper',
 
-  // Amaranthus
+  // Amaranthus. `Amaranth Greens` was a second catalog row for the same plant
+  // until the Tamil Nadu pass dropped it; migration 009 moves stored plants
+  // across and these keep the old names searchable.
   keerai: 'amaranthus',
   'thandu keerai': 'amaranthus',
   'mulai keerai': 'amaranthus',
+  'arai keerai': 'amaranthus',
+  'siru keerai': 'amaranthus',
+  amaranth: 'amaranthus',
+  'amaranth greens': 'amaranthus',
+
+  // Pasalai Keerai — likewise the survivor of the `Malabar Spinach` duplicate.
+  'malabar spinach': 'pasalai keerai',
+  'vasalai keerai': 'pasalai keerai',
+  pasali: 'pasalai keerai',
+  basella: 'pasalai keerai',
+  'basella alba': 'pasalai keerai',
+
+  // Agathi — the keerai is what it is grown for, and what it is searched for.
+  'agathi keerai': 'agathi',
+  agathikeerai: 'agathi',
+  'august tree': 'agathi',
+  sesbania: 'agathi',
+  'sesbania grandiflora': 'agathi',
+
+  // Banana. `Ash Plantain` was a second catalog row for the same plant — its
+  // Tamil name was நேந்திரம் வாழை, which is Nendran, already a Banana variety.
+  // Migration 010 moves stored plants across; these keep the old names
+  // searchable, so a grower typing "vazhakkai" still lands on Banana.
+  'ash plantain': 'banana',
+  plantain: 'banana',
+  'green plantain': 'banana',
+  'cooking banana': 'banana',
+  vazhai: 'banana',
+  vazhakkai: 'banana',
+  vaazhakkai: 'banana',
+  nendran: 'banana',
 
   // Gourds
   pudalangai: 'snake gourd',
@@ -115,6 +150,16 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   thuvarai: 'pigeon pea',
   'toor dal': 'pigeon pea',
   avarai: 'lablab bean',
+  avarakkai: 'lablab bean',
+  avaraikkai: 'lablab bean',
+  mochai: 'lablab bean',
+  mochakottai: 'lablab bean',
+  'hyacinth bean': 'lablab bean',
+  ellu: 'sesame',
+  'ellu urundai': 'sesame',
+  gingelly: 'sesame',
+  til: 'sesame',
+  'sesamum indicum': 'sesame',
 
   // Herbs & greens
   pudina: 'mint',
@@ -130,6 +175,7 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   'chinna vengayam': 'shallot',
   poondu: 'garlic',
   'senai kizhangu': 'elephant yam',
+  'elephant foot yam': 'elephant yam',
   'sweet potato kizhangu': 'sweet potato',
   sarkaraivalli: 'sweet potato',
 
@@ -176,7 +222,13 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   avaram: 'aavaram',
   aavarampoo: 'aavaram',
   avarampoo: 'aavaram',
+  'aavaram poo': 'aavaram',
+  'avaram poo': 'aavaram',
   "tanner's cassia": 'aavaram',
+  'crape jasmine': 'nandiyavattai',
+  'crepe jasmine': 'nandiyavattai',
+  nandhiyavattai: 'nandiyavattai',
+  'tabernaemontana divaricata': 'nandiyavattai',
   notchi: 'nochi',
   vitex: 'nochi',
   'five-leaved chaste tree': 'nochi',
@@ -191,6 +243,98 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   'indian borage': 'karpooravalli',
   'mexican mint': 'karpooravalli',
   'cuban oregano': 'karpooravalli',
+
+  // Tamil Nadu edible staples added in the Sep 2026 pass
+  kovakkai: 'ivy gourd',
+  kovaikkai: 'ivy gourd',
+  kovai: 'ivy gourd',
+  'little gourd': 'ivy gourd',
+  tindora: 'ivy gourd',
+  tendli: 'ivy gourd',
+  'coccinia grandis': 'ivy gourd',
+  sundakkai: 'turkey berry',
+  sundaikkai: 'turkey berry',
+  sundakka: 'turkey berry',
+  'pea eggplant': 'turkey berry',
+  'solanum torvum': 'turkey berry',
+  koorka: 'chinese potato',
+  koorkkan: 'chinese potato',
+  kurkka: 'chinese potato',
+  sirukizhangu: 'chinese potato',
+  'coleus potato': 'chinese potato',
+  'plectranthus rotundifolius': 'chinese potato',
+
+  // Keerai
+  'pulicha keerai': 'roselle',
+  pulichakeerai: 'roselle',
+  gongura: 'roselle',
+  'roselle leaves': 'roselle',
+  'red sorrel': 'roselle',
+  'hibiscus sabdariffa': 'roselle',
+  'karisalankanni keerai': 'false daisy',
+  karisalankanni: 'false daisy',
+  karisalai: 'false daisy',
+  bhringraj: 'false daisy',
+  'eclipta prostrata': 'false daisy',
+  musumusukkai: 'madras pea pumpkin',
+  musumusukai: 'madras pea pumpkin',
+  musumuskkai: 'madras pea pumpkin',
+  'rough bryony': 'madras pea pumpkin',
+  'mukia maderaspatana': 'madras pea pumpkin',
+
+  // Homestead trees
+  puli: 'tamarind',
+  puliyam: 'tamarind',
+  puliyamparam: 'tamarind',
+  imli: 'tamarind',
+  naval: 'jamun',
+  naaval: 'jamun',
+  'naval pazham': 'jamun',
+  'java plum': 'jamun',
+  'black plum': 'jamun',
+  'indian blackberry': 'jamun',
+  'syzygium cumini': 'jamun',
+  mundhiri: 'cashew',
+  munthiri: 'cashew',
+  'cashew nut': 'cashew',
+  cashewnut: 'cashew',
+  'mundhiri paruppu': 'cashew',
+  vilampazham: 'wood apple',
+  vilam: 'wood apple',
+  'elephant apple': 'wood apple',
+  ilanthai: 'indian jujube',
+  elanthai: 'indian jujube',
+  ber: 'indian jujube',
+  'ziziphus mauritiana': 'indian jujube',
+  panai: 'palmyra',
+  'panai maram': 'palmyra',
+  'palmyra palm': 'palmyra',
+  'toddy palm': 'palmyra',
+  nungu: 'palmyra',
+  karupatti: 'palmyra',
+  sathukudi: 'sweet lime',
+  chathukudi: 'sweet lime',
+  mosambi: 'sweet lime',
+  musambi: 'sweet lime',
+  'sweet lemon': 'sweet lime',
+
+  // Spices
+  kirambu: 'clove',
+  grambu: 'clove',
+  lavangam: 'clove',
+  'syzygium aromaticum': 'clove',
+  karuvapattai: 'cinnamon',
+  pattai: 'cinnamon',
+  lavangapattai: 'cinnamon',
+  'ceylon cinnamon': 'cinnamon',
+  'maa inji': 'mango ginger',
+  'mangai inji': 'mango ginger',
+  maainji: 'mango ginger',
+  'curcuma amada': 'mango ginger',
+  pirandai: 'adamant creeper',
+  perandai: 'adamant creeper',
+  'veldt grape': 'adamant creeper',
+  'cissus quadrangularis': 'adamant creeper',
 
   // Other
   thakkali: 'tomato',
@@ -210,7 +354,10 @@ export function getCanonicalPlantKey(value: string | null | undefined): string |
 }
 
 /** True when two names refer to the same plant, ignoring case and aliases. */
-export function isSamePlantName(a: string | null | undefined, b: string | null | undefined): boolean {
+export function isSamePlantName(
+  a: string | null | undefined,
+  b: string | null | undefined
+): boolean {
   const keyA = getCanonicalPlantKey(a);
   const keyB = getCanonicalPlantKey(b);
   return keyA !== null && keyA === keyB;
