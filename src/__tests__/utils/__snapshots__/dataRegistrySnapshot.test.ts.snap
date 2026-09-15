@@ -5242,6 +5242,63 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
+  "vegetable:Capsicum": {
+    "profile": {
+      "daysToHarvest": {
+        "max": 90,
+        "min": 60,
+      },
+      "description": "Warm-season fruiting plant related to chilli, producing sweet or mildly hot fruits. Grows year-round in Kanyakumari with good drainage and regular feeding.",
+      "droughtTolerance": "medium",
+      "feedingIntensity": "medium",
+      "fertilisingFrequencyDays": 21,
+      "germinationDays": {
+        "max": 14,
+        "min": 7,
+      },
+      "germinationTempC": {
+        "max": 30,
+        "min": 22,
+      },
+      "growingSeason": "Year Round",
+      "growthStageDurations": {
+        "flowering": 14,
+        "fruiting": 19,
+        "seedling": 21,
+        "vegetative": 24,
+      },
+      "heatTolerance": "high",
+      "heightCm": {
+        "max": 90,
+        "min": 40,
+      },
+      "initialGrowthStage": "seedling",
+      "lifecycle": "perennial",
+      "petToxicity": true,
+      "plantingDepthCm": 1,
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 30,
+      "scientificName": "Capsicum annuum",
+      "soilPhRange": {
+        "max": 7,
+        "min": 6,
+      },
+      "soilType": "garden_soil",
+      "spacingCm": 45,
+      "sunlight": "full_sun",
+      "tamilName": "குடைமிளகாய்",
+      "taxonomicFamily": "Solanaceae",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 2,
+    },
+    "pruning": {
+      "tips": [
+        "Remove yellowing lower leaves",
+        "Pinch tips to encourage branching",
+        "Cut diseased stems at the base",
+      ],
+    },
+  },
   "vegetable:Carrot": {
     "profile": {
       "daysToHarvest": {
@@ -6315,63 +6372,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "waterRequirement": "medium",
       "wateringFrequencyDays": 3,
       "waterloggingTolerance": "low",
-    },
-    "pruning": {
-      "tips": [
-        "Remove yellowing lower leaves",
-        "Pinch tips to encourage branching",
-        "Cut diseased stems at the base",
-      ],
-    },
-  },
-  "vegetable:Pepper": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 90,
-        "min": 60,
-      },
-      "description": "Warm-season fruiting plant related to chilli, producing sweet or mildly hot fruits. Grows year-round in Kanyakumari with good drainage and regular feeding.",
-      "droughtTolerance": "medium",
-      "feedingIntensity": "medium",
-      "fertilisingFrequencyDays": 21,
-      "germinationDays": {
-        "max": 14,
-        "min": 7,
-      },
-      "germinationTempC": {
-        "max": 30,
-        "min": 22,
-      },
-      "growingSeason": "Year Round",
-      "growthStageDurations": {
-        "flowering": 14,
-        "fruiting": 19,
-        "seedling": 21,
-        "vegetative": 24,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 90,
-        "min": 40,
-      },
-      "initialGrowthStage": "seedling",
-      "lifecycle": "perennial",
-      "petToxicity": true,
-      "plantingDepthCm": 1,
-      "preferredFertiliser": "compost",
-      "pruningFrequencyDays": 30,
-      "scientificName": "Capsicum annuum",
-      "soilPhRange": {
-        "max": 7,
-        "min": 6,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 45,
-      "sunlight": "full_sun",
-      "tamilName": "குடைமிளகாய்",
-      "taxonomicFamily": "Solanaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 2,
     },
     "pruning": {
       "tips": [

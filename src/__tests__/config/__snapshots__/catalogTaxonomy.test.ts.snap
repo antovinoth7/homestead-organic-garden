@@ -1,0 +1,36 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`crop family derivation maps every botanical family the catalog actually uses: unmapped botanical families 1`] = `
+[
+  "Acanthaceae",
+  "Anacardiaceae",
+  "Annonaceae",
+  "Arecaceae",
+  "Asphodelaceae",
+  "Basellaceae",
+  "Bromeliaceae",
+  "Caricaceae",
+  "Clusiaceae",
+  "Dioscoreaceae",
+  "Euphorbiaceae",
+  "Lauraceae",
+  "Lythraceae",
+  "Meliaceae",
+  "Moraceae",
+  "Moringaceae",
+  "Musaceae",
+  "Myristicaceae",
+  "Myrtaceae",
+  "Nelumbonaceae",
+  "Oxalidaceae",
+  "Passifloraceae",
+  "Phyllanthaceae",
+  "Piperaceae",
+  "Plantaginaceae",
+  "Portulacaceae",
+  "Rutaceae",
+  "Santalaceae",
+  "Sapindaceae",
+  "Sapotaceae",
+]
+`;

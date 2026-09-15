@@ -20,7 +20,7 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Cabbage: ['Dill', 'Mint', 'Beans'],
   Broccoli: ['Onion', 'Garlic'],
   Cucumber: ['Beans', 'Green Peas', 'Radish', 'Sunflower'],
-  Pepper: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold'],
+  Capsicum: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold'],
   Chilli: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold', 'Turmeric'],
   Brinjal: ['Beans', 'Green Peas', 'Spinach', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
   'Long Brinjal': ['Beans', 'Green Peas', 'Spinach', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
@@ -37,14 +37,14 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Spinach: ['Green Peas', 'Beans', 'Brinjal'],
   Radish: ['Cucumber', 'Carrot', 'Spinach'],
   Potato: ['Beans', 'Cabbage', 'Corn', 'Green Peas'],
-  Onion: ['Carrot', 'Tomato', 'Cabbage', 'Pepper'],
+  Onion: ['Carrot', 'Tomato', 'Cabbage', 'Capsicum'],
   Garlic: ['Tomato', 'Roses', 'Cabbage', 'Fruit trees'],
-  Shallot: ['Carrot', 'Tomato', 'Cabbage', 'Pepper'],
+  Shallot: ['Carrot', 'Tomato', 'Cabbage', 'Capsicum'],
   Beans: ['Corn', 'Cucumber', 'Cabbage', 'Carrot', 'Radish'],
   'Green Peas': ['Carrot', 'Radish', 'Cucumber', 'Corn', 'Beans'],
 
   // Herbs
-  Basil: ['Tomato', 'Pepper'],
+  Basil: ['Tomato', 'Capsicum'],
   Mint: ['Cabbage', 'Tomato', 'Radish'],
   Coriander: ['Tomato', 'Beans', 'Green Peas'],
   Dill: ['Cucumber', 'Cabbage', 'Onion'],
@@ -70,7 +70,7 @@ const COMPANION_PLANTS: Record<string, string[]> = {
 
   // Bed-type plants — new additions
   Fenugreek: ['Spinach', 'Radish', 'Onion', 'Coriander'],
-  'Ladies Finger': ['Basil', 'Pepper', 'Brinjal', 'Cucumber', 'Marigold', 'Cowpea'],
+  'Ladies Finger': ['Basil', 'Capsicum', 'Brinjal', 'Cucumber', 'Marigold', 'Cowpea'],
   'Pasalai Keerai': ['Radish', 'Turmeric', 'Basil'],
   'French Beans': ['Carrot', 'Beetroot', 'Cucumber', 'Radish'],
   'Black Gram': ['Carrot', 'Radish', 'Coriander'],
@@ -153,7 +153,7 @@ const INCOMPATIBLE_PLANTS: Record<string, string[]> = {
   Brinjal: ['Fennel', 'Potato'],
   'Long Brinjal': ['Fennel', 'Potato'],
   Chilli: ['Fennel'],
-  Pepper: ['Fennel'],
+  Capsicum: ['Fennel'],
   'Ladies Finger': ['Potato', 'Sweet Potato'],
   Radish: ['Hyssop'],
   Drumstick: ['Fennel'],
@@ -1471,7 +1471,7 @@ export function getCoconutNutrientDeficiencies(): CoconutNutrientDeficiency[] {
 const PLANT_EMOJI_MAP: Record<string, string> = {
   Tomato: '🍅',
   Chilli: '🌶️',
-  Pepper: '🌶️',
+  Capsicum: '🌶️',
   Carrot: '🥕',
   Lettuce: '🥬',
   Cabbage: '🥬',

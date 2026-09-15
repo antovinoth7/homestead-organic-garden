@@ -41,6 +41,14 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   kathirikai: 'brinjal',
   kathirikkai: 'brinjal',
 
+  // Capsicum — the catalog entry was called "Pepper" until it was renamed, which
+  // read as Black Pepper (கருமிளகு) rather than குடைமிளகாய். These keep every
+  // plant a user saved as "Pepper", and the obvious English spellings, resolving.
+  pepper: 'capsicum',
+  'bell pepper': 'capsicum',
+  'sweet pepper': 'capsicum',
+  kudaimilagai: 'capsicum',
+
   // Tapioca
   cassava: 'tapioca',
   maravalli: 'tapioca',

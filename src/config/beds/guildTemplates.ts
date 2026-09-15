@@ -153,7 +153,7 @@ export const GUILD_TEMPLATES: Record<BedType, GuildTemplate> = {
         spacing_cm: 45,
         row_gap_cm: 60,
         crop_family: 'other',
-        companion_plants: ['Basil', 'Pepper'],
+        companion_plants: ['Basil', 'Capsicum'],
         days_to_harvest: 50,
         care_tasks: ['Harvest every 3 days'],
         succession_week: 1,

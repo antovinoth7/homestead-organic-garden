@@ -26,7 +26,7 @@ export const PLANT_VARIETIES_BY_TYPE: Record<PlantType, string[]> = {
     'Cauliflower',
     'Carrot',
     'Potato',
-    'Pepper',
+    'Capsicum',
     // Kanyakumari root vegetables & tubers
     'Taro',
     'Elephant Yam',

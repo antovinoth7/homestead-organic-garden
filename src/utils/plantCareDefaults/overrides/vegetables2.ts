@@ -254,7 +254,7 @@ export const VEGETABLE_OVERRIDES_2: Record<string, PlantCareProfile> = {
     feedingIntensity: 'heavy',
     growthStageDurations: { seedling: 15, vegetative: 45, mature: 28 },
   },
-  [buildProfileKey('vegetable', 'Pepper')]: {
+  [buildProfileKey('vegetable', 'Capsicum')]: {
     waterRequirement: 'medium',
     wateringFrequencyDays: 2,
     fertilisingFrequencyDays: 21,

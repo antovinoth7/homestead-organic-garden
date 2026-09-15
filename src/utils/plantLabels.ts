@@ -1,9 +1,12 @@
 import {
+  CatalogGroup,
   FeedingIntensity,
   FertiliserType,
   GrowthStage,
   HealthStatus,
+  PlantHabit,
   PlantLifecycle,
+  PlantTag,
   PlantType,
   SoilType,
   SunlightLevel,
@@ -47,16 +50,113 @@ export const CATEGORY_FULL_LABELS: Record<PlantType, string> = {
   shrub: 'Shrub',
 };
 
-export const CATEGORY_SHORT_LABELS: Record<PlantType, string> = {
-  vegetable: 'Veg',
-  herb: 'Herb',
-  flower: 'Flwr',
-  fruit_tree: 'Fruit',
-  timber_tree: 'Tmbr',
-  coconut_tree: 'Coco',
-  shrub: 'Shrb',
-  spinach: 'Greens',
+/**
+ * Browse-group labels — the catalog pills and the Add Plant picker headers.
+ *
+ * Separate from `CATEGORY_LABELS`, which names a `PlantType` (the care model).
+ * Both exist on purpose: a plant is browsed under "Fruits" while its care model
+ * is still `fruit_tree`.
+ */
+export const CATALOG_GROUP_LABELS: Record<CatalogGroup, string> = {
+  vegetables: 'Vegetables',
+  greens: 'Greens',
+  fruits: 'Fruits',
+  spices: 'Spices',
+  herbs_medicinal: 'Herbs & Medicinal',
+  flowers: 'Flowers',
+  farm_support: 'Support & Input Plants',
+  plantation_timber: 'Plantation & Timber',
 };
+
+/**
+ * Sub-group headers inside a group. Keyed by the sub-group ids in
+ * `SUB_GROUP_ORDER`; `catalogTaxonomy.test.ts` checks the two agree.
+ */
+export const SUB_GROUP_LABELS: Record<string, string> = {
+  // vegetables
+  gourds_melons: 'Gourds & Melons',
+  fruit_vegetables: 'Fruit Vegetables',
+  beans_pods: 'Beans & Pods',
+  pulses_oilseeds_cereals: 'Pulses, Oilseeds & Cereals',
+  roots_tubers: 'Roots & Tubers',
+  onion_family: 'Onion Family',
+  cabbage_family: 'Cabbage Family',
+  other: 'Other',
+  // greens
+  spinach: 'Spinach',
+  keerai: 'Keerai & Leafy Greens',
+  // fruits
+  quick_fruits: 'Quick Fruits',
+  orchard_trees: 'Orchard Trees',
+  // spices
+  rhizome: 'Rhizome Spices',
+  vine_tree: 'Vine & Tree Spices',
+  seed_clump: 'Seed & Clump Spices',
+  // herbs_medicinal
+  kitchen_herbs: 'Kitchen Herbs',
+  medicinal: 'Medicinal',
+  // flowers
+  seasonal_flowers: 'Seasonal Flowers',
+  flowering_shrubs: 'Flowering Shrubs & Climbers',
+  // plantation_timber
+  plantation_crops: 'Plantation Crops',
+  timber_utility: 'Timber & Utility Trees',
+};
+
+/** Growth-habit badge text on a catalog row. */
+export const HABIT_LABELS: Record<PlantHabit, string> = {
+  annual_bed: 'Annual',
+  perennial: 'Perennial',
+  shrub: 'Shrub',
+  tree: 'Tree',
+  vine: 'Vine',
+  palm: 'Palm',
+  clump: 'Clump',
+  aquatic: 'Aquatic',
+};
+
+/** Tag chip text. Also what catalog search matches on. */
+export const TAG_LABELS: Record<PlantTag, string> = {
+  keerai: 'Keerai',
+  gourd: 'Gourd',
+  pulse: 'Pulse',
+  oilseed: 'Oilseed',
+  cereal: 'Cereal',
+  spice: 'Spice',
+  medicinal: 'Medicinal',
+  puja: 'Puja',
+  companion: 'Companion',
+  pest_repellent: 'Pest Repellent',
+  green_manure: 'Green Manure',
+  living_fence: 'Living Fence',
+  coconut_intercrop: 'Coconut Intercrop',
+  masticatory: 'Betel & Nut',
+  container_ok: 'Grows in Pots',
+  needs_trellis: 'Needs Trellis',
+  tuber: 'Tuber',
+  plantation: 'Plantation',
+  timber: 'Timber',
+  fruit: 'Fruit',
+};
+
+/**
+ * Section headers for the catalog's Season grouping mode. Worded for what the
+ * farmer does about it, not just the botanical term — rotation is the point.
+ */
+export const LIFECYCLE_SECTION_LABELS: Record<PlantLifecycle, string> = {
+  annual: 'Annual — sow each season',
+  biennial: 'Biennial — two seasons',
+  perennial: 'Perennial — stays in the bed',
+  permanent: 'Permanent — never cleared',
+};
+
+/** The order Season-mode sections appear in: shortest-lived first. */
+export const LIFECYCLE_SECTION_ORDER: readonly PlantLifecycle[] = [
+  'annual',
+  'biennial',
+  'perennial',
+  'permanent',
+];
 
 export const WATER_REQUIREMENT_LABELS: Record<WaterRequirement, string> = {
   low: 'Low',

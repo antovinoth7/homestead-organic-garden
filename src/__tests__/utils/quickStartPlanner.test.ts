@@ -117,7 +117,7 @@ describe('buildQuickStartPlan', () => {
     const plan = buildQuickStartPlan(GUILD_TEMPLATES.fruiting, W, L, 'fruiting', 'raised');
     // 4 understory/climber mains + 3 companions exceed a 1.2x3.0 bed; the planner reports
     // the unavoidable omissions rather than silently dropping them.
-    expect(plan.dropped).toContain('Pepper');
+    expect(plan.dropped).toContain('Capsicum');
     expect(plan.dropped).toContain('Ladies Finger');
   });
 
