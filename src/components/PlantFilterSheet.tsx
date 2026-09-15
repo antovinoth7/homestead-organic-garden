@@ -2,32 +2,36 @@ import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GardenIcon } from './GardenIcon';
-import { PLANT_TYPE_ICON_KEYS } from '../config/iconRegistry';
 import { useTheme } from '../theme';
 import { SheetHandle } from './SheetHandle';
 import { createStyles } from '../styles/plantsStyles';
-import { HealthStatus, PlantType, UNASSIGNED_PLOT_ID } from '../types/database.types';
+import { CatalogGroup, HealthStatus, UNASSIGNED_PLOT_ID } from '../types/database.types';
 import { UNASSIGNED_PLOT_NAME } from '../utils/plotGrouping';
 import type { ActiveFilters, PlantFacetCounts } from '../utils/plantFilters';
 import { TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { HEALTH_STATUS_LABELS, HEALTH_STATUS_TONE } from '../utils/plantLabels';
+import {
+  CATALOG_GROUP_LABELS,
+  HEALTH_STATUS_LABELS,
+  HEALTH_STATUS_TONE,
+} from '../utils/plantLabels';
+import { CATALOG_GROUP_ICON_KEYS } from '../config/iconRegistry';
+import { CATALOG_GROUP_ORDER } from '../config/plants/catalogTaxonomy';
 import type { StatusTone } from '../utils/plantLabels';
 
 type SortOption = 'name' | 'newest' | 'oldest' | 'health' | 'age';
 
 const HEALTH_STATUSES: HealthStatus[] = ['healthy', 'stressed', 'recovering', 'sick'];
 
-const PLANT_TYPE_OPTIONS: readonly { value: PlantType; label: string }[] = [
-  { value: 'vegetable', label: 'Vegetable' },
-  { value: 'spinach', label: 'Spinach' },
-  { value: 'fruit_tree', label: 'Fruit' },
-  { value: 'coconut_tree', label: 'Coconut' },
-  { value: 'herb', label: 'Herb' },
-  { value: 'timber_tree', label: 'Timber' },
-  { value: 'flower', label: 'Flower' },
-  { value: 'shrub', label: 'Shrub' },
-];
+/**
+ * Filter chips, one per browse group — matching what the plant cards show.
+ *
+ * This used to be a private list of `PlantType` values that said "Spinach" where
+ * the catalog said "Greens", so one category had two names depending on the
+ * screen. Now both read from the same source.
+ */
+const PLANT_TYPE_OPTIONS: readonly { value: CatalogGroup; label: string }[] =
+  CATALOG_GROUP_ORDER.map((value) => ({ value, label: CATALOG_GROUP_LABELS[value] }));
 
 const SORT_OPTIONS: readonly {
   value: SortOption;
@@ -193,7 +197,7 @@ export function PlantFilterSheet({
                 accessibilityState={{ selected: filters.type === value }}
               >
                 <GardenIcon
-                  name={PLANT_TYPE_ICON_KEYS[value]}
+                  name={CATALOG_GROUP_ICON_KEYS[value]}
                   size={14}
                   color={filters.type === value ? theme.primary : theme.textSecondary}
                 />

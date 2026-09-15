@@ -5,11 +5,18 @@ import { useTheme } from '@/theme';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
-import type { PlantType } from '@/types/database.types';
+import { HABIT_LABELS } from '@/utils/plantLabels';
+import type { PlantHabit, PlantType } from '@/types/database.types';
 
 interface Props {
   plantName: string;
   plantType: PlantType;
+  /**
+   * Growth habit, shown inline in the subtitle. This is the axis the old
+   * category pills conflated with purpose — a farmer needs to see that Drumstick
+   * is a tree even though it is filed under Vegetables.
+   */
+  habit?: PlantHabit;
   /** Garden plants currently using this entry; the chip hides at zero. */
   count: number;
   /**
@@ -25,6 +32,7 @@ interface Props {
 function CatalogBrowseRowComponent({
   plantName,
   plantType,
+  habit,
   count,
   subtitle,
   isFirst,
@@ -55,8 +63,10 @@ function CatalogBrowseRowComponent({
           <Text style={styles.plantName} numberOfLines={1}>
             {plantName}
           </Text>
-          {subtitle ? (
+          {habit || subtitle ? (
             <Text style={styles.plantSubtitle} numberOfLines={1}>
+              {habit ? <Text style={styles.plantHabit}>{HABIT_LABELS[habit]}</Text> : null}
+              {habit && subtitle ? ' · ' : ''}
               {subtitle}
             </Text>
           ) : null}

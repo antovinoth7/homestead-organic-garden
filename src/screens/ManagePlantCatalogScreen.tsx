@@ -19,6 +19,7 @@ import { CatalogSearchBar } from '@/components/catalog/CatalogSearchBar';
 import { CatalogBrowseRow } from '@/components/catalog/CatalogBrowseRow';
 import { CatalogSearchResultRow } from '@/components/catalog/CatalogSearchResultRow';
 import { CatalogSectionHeader } from '@/components/catalog/CatalogSectionHeader';
+import { CatalogGroupModeToggle } from '@/components/catalog/CatalogGroupModeToggle';
 import { RecentSearchChips } from '@/components/catalog/RecentSearchChips';
 import { HiddenPlantsSection } from '@/components/catalog/HiddenPlantsSection';
 import { usePlantCatalogManager } from '@/hooks/usePlantCatalogManager';
@@ -30,6 +31,7 @@ import {
   measureCatalogItems,
 } from '@/utils/catalogListItems';
 import type { CatalogListItem } from '@/utils/catalogListItems';
+import { CATALOG_GROUP_DEFAULT_TYPE } from '@/config/plants/catalogTaxonomy';
 import type { PlantType } from '@/types/database.types';
 
 export default function ManagePlantCatalogScreen(): React.JSX.Element {
@@ -39,18 +41,27 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
 
   const {
-    activeCategory,
-    setActiveCategory,
+    activeGroup,
+    setActiveGroup,
+    groupMode,
+    setGroupMode,
     loading,
     refreshing,
-    categoryData,
-    allCategoryCounts,
+    groupData,
+    groupCounts,
     plantCountsByType,
     mergedProfiles,
     hiddenPlantNames,
     restore,
     refresh,
   } = usePlantCatalogManager();
+
+  /**
+   * A group spans several care models — Fruits holds both `fruit_tree` trees and
+   * herbaceous quick fruits — so a newly created entry only gets a starting type
+   * from the active pill; the entry form lets it be corrected.
+   */
+  const newPlantType = CATALOG_GROUP_DEFAULT_TYPE[activeGroup];
 
   const {
     query,
@@ -79,10 +90,10 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const onAddPlant = useCallback(() => {
     moreNav.navigate('CatalogPlantDetail', {
       plantName: '',
-      plantType: activeCategory,
+      plantType: newPlantType,
       isCreating: true,
     });
-  }, [moreNav, activeCategory]);
+  }, [moreNav, newPlantType]);
 
   // "Okra" and "Methi" are Ladies Finger and Fenugreek. Creating a second entry
   // for a name the catalog already knows is how the duplicates got there, so
@@ -107,10 +118,10 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
 
     moreNav.navigate('CatalogPlantDetail', {
       plantName: trimmed,
-      plantType: activeCategory,
+      plantType: newPlantType,
       isCreating: true,
     });
-  }, [moreNav, query, activeCategory, commitSearch, results]);
+  }, [moreNav, query, newPlantType, commitSearch, results]);
 
   const onSubmitSearch = useCallback(() => commitSearch(query), [commitSearch, query]);
 
@@ -122,18 +133,18 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
         isSearching
           ? buildSearchItems(results)
           : buildBrowseItems({
-              plantNames: categoryData.plantNames,
-              counts: categoryData.counts,
-              profilesForType: mergedProfiles[activeCategory] ?? {},
+              group: activeGroup,
+              entries: groupData.entries,
+              mode: groupMode,
             })
       ),
-    [isSearching, results, categoryData, mergedProfiles, activeCategory]
+    [isSearching, results, activeGroup, groupData, groupMode]
   );
 
   const renderItem = useCallback(
     ({ item, index }: { item: CatalogListItem; index: number }) => {
       if (item.kind === 'section') {
-        return <CatalogSectionHeader letter={item.letter} count={item.count} />;
+        return <CatalogSectionHeader title={item.title} count={item.count} />;
       }
       if (item.kind === 'result') {
         // Search results are one flat card: no letter groups to break them up.
@@ -149,7 +160,9 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       return (
         <CatalogBrowseRow
           plantName={item.name}
-          plantType={activeCategory}
+          // The row's own type, not the active pill: a group spans several.
+          plantType={item.plantType}
+          habit={item.habit}
           count={item.count}
           subtitle={item.subtitle}
           isFirst={item.isFirst}
@@ -158,13 +171,13 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
         />
       );
     },
-    [data.length, activeCategory, openPlant]
+    [data.length, openPlant]
   );
 
   const keyExtractor = useCallback((item: CatalogListItem) => {
-    if (item.kind === 'section') return `s:${item.letter}`;
+    if (item.kind === 'section') return `s:${item.title}`;
     return item.kind === 'browse'
-      ? `b:${item.name}`
+      ? `b:${item.plantType}:${item.name}`
       : `r:${item.result.plantType}:${item.result.name}`;
   }, []);
 
@@ -187,11 +200,14 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
             </Text>
           </View>
         ) : (
-          <PlantCategoryTabs
-            activeCategory={activeCategory}
-            allCategoryCounts={allCategoryCounts}
-            onCategoryChange={setActiveCategory}
-          />
+          <>
+            <PlantCategoryTabs
+              activeGroup={activeGroup}
+              groupCounts={groupCounts}
+              onGroupChange={setActiveGroup}
+            />
+            <CatalogGroupModeToggle mode={groupMode} onChange={setGroupMode} />
+          </>
         )}
       </>
     ),
@@ -204,9 +220,11 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       results.length,
       totalMatches,
       styles,
-      activeCategory,
-      allCategoryCounts,
-      setActiveCategory,
+      activeGroup,
+      groupCounts,
+      setActiveGroup,
+      groupMode,
+      setGroupMode,
     ]
   );
 
@@ -221,7 +239,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
             onSelect={setQuery}
             onClearAll={clearRecentSearches}
           />
-          <HiddenPlantsSection names={hiddenPlantNames} onRestore={restore} />
+          <HiddenPlantsSection plants={hiddenPlantNames} onRestore={restore} />
         </>
       );
     }

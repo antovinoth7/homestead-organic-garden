@@ -5,7 +5,16 @@ import type { DiseaseEntry, PestEntry, PlantType } from '@/types/database.types'
 
 type PlantReference = PestEntry | DiseaseEntry;
 
-/** Broad labels intentionally used by reference entries. */
+/**
+ * Broad labels intentionally used by reference entries.
+ *
+ * These are **matching keys, not UI labels**: the strings are what pest and
+ * disease entries literally carry in `plantsAffected` ('Vegetables', 'Fruit
+ * trees', 'Timber trees', 'Flower crops', 'Coconut'). Do not swap them for
+ * `CATEGORY_LABELS` or `CATALOG_GROUP_LABELS` to "deduplicate" — renaming a value
+ * here silently stops a whole class of pests matching. `herb` and `shrub` are
+ * absent because the corpus has no broad label for them, not by oversight.
+ */
 export const REFERENCE_GROUPS_BY_PLANT_TYPE: Partial<Record<PlantType, string[]>> = {
   vegetable: ['Vegetables'],
   spinach: ['Vegetables'],

@@ -9,6 +9,8 @@ import { getPlantImage, REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceA
 import { useTheme } from '../theme';
 import { getYearsOld } from '../utils/dateHelpers';
 import { getPlantWaterStatus, daysSinceLastWatered } from '../utils/plantWatering';
+import { CATALOG_GROUP_LABELS } from '@/utils/plantLabels';
+import { getTaxonomy } from '@/config/plants/catalogTaxonomy';
 import { createStyles } from '../styles/plantCardStyles';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
@@ -45,31 +47,13 @@ function PlantCard({
 
   const referenceImage = getPlantImage(plant.name);
 
-  const getPlantTypeLabel = (): string => {
-    const labels: Record<string, string> = {
-      vegetable: 'Vegetable',
-      herb: 'Herb',
-      flower: 'Flower',
-      fruit_tree: 'Fruit',
-      timber_tree: 'Timber Tree',
-      coconut_tree: 'Coconut Tree',
-      shrub: 'Shrub',
-    };
-    return labels[plant.plant_type] || 'Plant';
-  };
-
-  const getPlantTypeBg = (): string => {
-    const bgs: Record<string, string> = {
-      vegetable: '#e8f5e9',
-      herb: '#e0f2f1',
-      flower: '#fce4ec',
-      fruit_tree: '#fff3e0',
-      timber_tree: '#e8eaf6',
-      coconut_tree: '#efebe9',
-      shrub: '#f1f8e9',
-    };
-    return bgs[plant.plant_type] || '#e8f5e9';
-  };
+  /**
+   * The browse group, not the care model — so a plant reads the same here as in
+   * the catalog and the Add Plant picker. This used to be a private label map
+   * that had no `spinach` key, so every keerai plant fell through to "Plant".
+   */
+  const getPlantTypeLabel = (): string =>
+    CATALOG_GROUP_LABELS[getTaxonomy(plant.plant_variety ?? plant.name, plant.plant_type).group];
 
   const isTree = ['fruit_tree', 'timber_tree', 'coconut_tree'].includes(plant.plant_type);
   const age = getYearsOld(plant.planting_date ?? null);
@@ -193,7 +177,7 @@ function PlantCard({
               cachePolicy={REFERENCE_IMAGE_CACHE_POLICY}
             />
           ) : (
-            <View style={[styles.image, styles.placeholder, { backgroundColor: getPlantTypeBg() }]}>
+            <View style={[styles.image, styles.placeholder]}>
               <GardenIcon name="general.plant" size={32} color={theme.primary} />
               {plant.photo_url && imageError && (
                 <View style={styles.missingImageBadge}>

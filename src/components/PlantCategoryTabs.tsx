@@ -1,23 +1,32 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { GardenIcon } from '@/components/GardenIcon';
-import { PLANT_TYPE_ICON_KEYS } from '@/config/iconRegistry';
+import { CATALOG_GROUP_ICON_KEYS } from '@/config/iconRegistry';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
-import { PLANT_CATEGORIES } from '@/services/plantProfiles';
-import { PlantType } from '@/types/database.types';
-import { CATEGORY_LABELS } from '@/utils/plantLabels';
+import { CATALOG_GROUP_ORDER } from '@/config/plants/catalogTaxonomy';
+import { CATALOG_GROUP_LABELS } from '@/utils/plantLabels';
+import type { CatalogGroup } from '@/types/database.types';
 
 interface Props {
-  activeCategory: PlantType;
-  allCategoryCounts: Record<PlantType, number>;
-  onCategoryChange: (category: PlantType) => void;
+  activeGroup: CatalogGroup;
+  groupCounts: Record<CatalogGroup, number>;
+  onGroupChange: (group: CatalogGroup) => void;
 }
 
+/**
+ * The catalog's top-level pills — one per purpose group.
+ *
+ * Purpose, not growth habit: these used to be `PlantType` values, which mixed
+ * "what you harvest" (vegetable, herb, flower) with "what shape it grows in"
+ * (shrub, tree) and one single species (coconut_tree). A pill stays rendered at
+ * a count of zero so a group whose entries were all deleted is still reachable —
+ * the hidden-plants section that restores them lives inside it.
+ */
 export function PlantCategoryTabs({
-  activeCategory,
-  allCategoryCounts,
-  onCategoryChange,
+  activeGroup,
+  groupCounts,
+  onGroupChange,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -29,23 +38,27 @@ export function PlantCategoryTabs({
       style={styles.categoryScroll}
       contentContainerStyle={styles.categoryScrollContent}
     >
-      {PLANT_CATEGORIES.map((category) => {
-        const isActive = activeCategory === category;
-        const count = allCategoryCounts[category] ?? 0;
+      {CATALOG_GROUP_ORDER.map((group) => {
+        const isActive = activeGroup === group;
+        const count = groupCounts[group] ?? 0;
+        const label = CATALOG_GROUP_LABELS[group];
         return (
           <TouchableOpacity
-            key={category}
+            key={group}
             style={[styles.categoryPill, isActive && styles.categoryPillActive]}
-            onPress={() => onCategoryChange(category)}
+            onPress={() => onGroupChange(group)}
             activeOpacity={0.7}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={`${label}, ${count} ${count === 1 ? 'plant' : 'plants'}`}
           >
             <GardenIcon
-              name={PLANT_TYPE_ICON_KEYS[category]}
+              name={CATALOG_GROUP_ICON_KEYS[group]}
               size={14}
               color={isActive ? theme.primary : theme.textSecondary}
             />
             <Text style={[styles.categoryPillText, isActive && styles.categoryPillTextActive]}>
-              {CATEGORY_LABELS[category]}
+              {label}
             </Text>
             {count > 0 && (
               <View style={[styles.categoryPillBadge, isActive && styles.categoryPillBadgeActive]}>

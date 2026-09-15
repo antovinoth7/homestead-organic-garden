@@ -199,6 +199,32 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
 
     // ---- A–Z letter headers (browse mode only) ----------------------------
+    modeToggleRow: {
+      flexDirection: 'row',
+      alignSelf: 'flex-start',
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      padding: 2,
+      marginBottom: 4,
+    },
+    modeToggleButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 6,
+    },
+    modeToggleButtonActive: {
+      backgroundColor: theme.card,
+    },
+    modeToggleText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    modeToggleTextActive: {
+      color: theme.primary,
+    },
     catalogSectionHeader: {
       // Fixed height, and it carries the gap above the group it introduces —
       // see CATALOG_SECTION_HEADER_HEIGHT.
@@ -212,13 +238,26 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     catalogSectionLetter: {
       fontSize: 13,
       fontWeight: '700',
-      letterSpacing: 0.6,
+      // Tight enough that "Pulses, Oilseeds & Cereals" fits at 400px; shrinks
+      // rather than pushing the count off the row.
+      letterSpacing: 0.3,
       color: theme.primary,
+      flexShrink: 1,
+      paddingRight: 8,
     },
     catalogSectionCount: {
       fontFamily: MONO_FONT,
       fontSize: 11,
       color: theme.textTertiary,
+    },
+    /**
+     * Growth habit, rendered inline inside the subtitle line rather than as its
+     * own row — CATALOG_ROW_HEIGHT is a contract with getItemLayout, so the badge
+     * must not add height.
+     */
+    plantHabit: {
+      fontWeight: '700',
+      color: theme.primary,
     },
     plantCountChip: {
       paddingHorizontal: 8,

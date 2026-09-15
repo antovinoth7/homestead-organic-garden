@@ -17,16 +17,29 @@
  */
 
 import {
+  CatalogGroup,
   HealthStatus,
   Plant,
-  PlantType,
   SpaceType,
   SunlightLevel,
   WaterRequirement,
 } from '@/types/database.types';
+import { getTaxonomy } from '@/config/plants/catalogTaxonomy';
 import { matchesPlotFilter } from '@/utils/plotGrouping';
 
-export type FilterType = 'all' | PlantType;
+/**
+ * The type chip filters by **browse group**, not `plant_type`.
+ *
+ * The plant card shows a plant's group ("Spices" for Turmeric), so the chip that
+ * filters the same list has to speak the same language — filtering by care model
+ * would put Turmeric under "Herb" while its own card said "Spices".
+ */
+export type FilterType = 'all' | CatalogGroup;
+/** A plant's browse group, resolved from its own name. */
+function groupOf(plant: Plant): CatalogGroup {
+  return getTaxonomy(plant.plant_variety ?? plant.name, plant.plant_type).group;
+}
+
 export type PestStatusFilter = 'all' | 'active_issues' | 'no_issues';
 /** Plants in a bed, or everything else (pots and ground). */
 export type BedSegment = 'bed' | 'other';
@@ -114,7 +127,7 @@ export function filterPlants(
   return plants.filter((plant) => {
     if (!plant?.name) return false;
     if (query && !matchesSearch(plant, query)) return false;
-    if (except !== 'type' && filters.type !== 'all' && plant.plant_type !== filters.type) {
+    if (except !== 'type' && filters.type !== 'all' && groupOf(plant) !== filters.type) {
       return false;
     }
     if (except !== 'health' && filters.health !== 'all' && healthBucketOf(plant) !== filters.health) {
@@ -182,7 +195,7 @@ export function countFacets(plants: Plant[], state: PlantFilterState): PlantFace
 
   const health = tally(byHealth, healthBucketOf);
   return {
-    type: tally(filterPlants(plants, state, 'type'), (p) => p.plant_type),
+    type: tally(filterPlants(plants, state, 'type'), groupOf),
     health: {
       healthy: health.healthy ?? 0,
       stressed: health.stressed ?? 0,

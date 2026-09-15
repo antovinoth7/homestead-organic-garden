@@ -194,3 +194,62 @@ describe('countActiveFilters', () => {
     );
   });
 });
+
+describe('type filter — by browse group, not care model', () => {
+  /**
+   * The behaviour change: chips filter by the group the plant card shows. Turmeric
+   * and Ginger are `plant_type: 'herb'` but browse as Spices, so filtering
+   * "Herbs & Medicinal" must not return them and "Spices" must.
+   */
+  const MIXED_HERBS = [
+    makePlant({ id: 't1', name: 'Turmeric', plant_variety: 'Turmeric', plant_type: 'herb' }),
+    makePlant({ id: 't2', name: 'Ginger', plant_variety: 'Ginger', plant_type: 'herb' }),
+    makePlant({ id: 't3', name: 'Tulsi', plant_variety: 'Tulsi', plant_type: 'herb' }),
+    makePlant({ id: 't4', name: 'Mint', plant_variety: 'Mint', plant_type: 'herb' }),
+  ];
+
+  it('splits one plant_type across two group chips', () => {
+    const spices = filterPlants(MIXED_HERBS, state({ type: 'spices' }));
+    expect(spices.map((p) => p.name).sort()).toEqual(['Ginger', 'Turmeric']);
+
+    const herbs = filterPlants(MIXED_HERBS, state({ type: 'herbs_medicinal' }));
+    expect(herbs.map((p) => p.name).sort()).toEqual(['Mint', 'Tulsi']);
+  });
+
+  it('counts facets by group, so the two chips sum to the population', () => {
+    const facets = countFacets(MIXED_HERBS, state());
+    expect(facets.type.spices).toBe(2);
+    expect(facets.type.herbs_medicinal).toBe(2);
+    expect(facets.type.herb).toBeUndefined();
+  });
+
+  it('files a keerai under greens and a drumstick under vegetables', () => {
+    const plants = [
+      makePlant({ id: 'k1', name: 'Palak', plant_variety: 'Palak', plant_type: 'spinach' }),
+      makePlant({
+        id: 'd1',
+        name: 'Drumstick',
+        plant_variety: 'Drumstick',
+        plant_type: 'vegetable',
+      }),
+    ];
+    expect(filterPlants(plants, state({ type: 'greens' })).map((p) => p.name)).toEqual(['Palak']);
+    expect(filterPlants(plants, state({ type: 'vegetables' })).map((p) => p.name)).toEqual([
+      'Drumstick',
+    ]);
+  });
+
+  it('falls back to the plant type for a plant the catalog does not know', () => {
+    const plants = [
+      makePlant({
+        id: 'x1',
+        name: 'My Own Gourd',
+        plant_variety: 'My Own Gourd',
+        plant_type: 'vegetable',
+      }),
+    ];
+    expect(filterPlants(plants, state({ type: 'vegetables' })).map((p) => p.name)).toEqual([
+      'My Own Gourd',
+    ]);
+  });
+});

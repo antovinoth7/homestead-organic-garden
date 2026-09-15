@@ -20,16 +20,16 @@ jest.mock('@/components/GardenIcon', () => {
     GardenIcon: (props: Record<string, unknown>) => React.createElement('GardenIcon', props),
   };
 });
-jest.mock('@/services/plantProfiles', () => ({
-  PLANT_CATEGORIES: [
-    'vegetable',
-    'fruit_tree',
-    'spinach',
-    'coconut_tree',
-    'herb',
-    'timber_tree',
-    'flower',
-    'shrub',
+jest.mock('@/config/plants/catalogTaxonomy', () => ({
+  CATALOG_GROUP_ORDER: [
+    'vegetables',
+    'greens',
+    'fruits',
+    'spices',
+    'herbs_medicinal',
+    'flowers',
+    'farm_support',
+    'plantation_timber',
   ],
 }));
 jest.mock('@/theme', () => ({
@@ -41,8 +41,9 @@ jest.mock('@/styles/managePlantCatalogStyles', () => ({
 
 import React from 'react';
 import { PlantCategoryTabs } from '@/components/PlantCategoryTabs';
-import { PLANT_CATEGORIES } from '@/services/plantProfiles';
-import type { PlantType } from '@/types/database.types';
+import { CATALOG_GROUP_ORDER } from '@/config/plants/catalogTaxonomy';
+import { CATALOG_GROUP_ICON_KEYS } from '@/config/iconRegistry';
+import type { CatalogGroup } from '@/types/database.types';
 
 interface RenderedNode {
   type: unknown;
@@ -66,8 +67,8 @@ const TestRenderer = jest.requireActual('react-test-renderer') as {
 };
 
 const counts = Object.fromEntries(
-  PLANT_CATEGORIES.map((category, index) => [category, index + 1])
-) as Record<PlantType, number>;
+  CATALOG_GROUP_ORDER.map((group, index) => [group, index + 1])
+) as Record<CatalogGroup, number>;
 
 describe('PlantCategoryTabs icons', () => {
   let consoleErrorSpy: jest.SpyInstance;
@@ -81,40 +82,41 @@ describe('PlantCategoryTabs icons', () => {
 
   afterAll(() => consoleErrorSpy.mockRestore());
 
-  function render(onCategoryChange = jest.fn()): RenderedTree {
+  function render(onGroupChange = jest.fn()): RenderedTree {
     let rendered!: RenderedTree;
     TestRenderer.act(() => {
       rendered = TestRenderer.create(
         <PlantCategoryTabs
-          activeCategory="herb"
-          allCategoryCounts={counts}
-          onCategoryChange={onCategoryChange}
+          activeGroup="herbs_medicinal"
+          groupCounts={counts}
+          onGroupChange={onGroupChange}
         />
       );
     });
     return rendered;
   }
 
-  it('renders a 14 px semantic icon for every category in catalog order', () => {
+  it('renders a 14 px semantic icon for every browse group in pill order', () => {
     const icons = render().root.findAll((node) => node.type === 'GardenIcon');
 
+    expect(icons).toHaveLength(8);
     expect(icons.map((node) => node.props.name)).toEqual(
-      PLANT_CATEGORIES.map((category) => `plant.${category}`)
+      CATALOG_GROUP_ORDER.map((group) => CATALOG_GROUP_ICON_KEYS[group])
     );
-    expect(icons.map((node) => node.props.size)).toEqual(PLANT_CATEGORIES.map(() => 14));
+    expect(icons.map((node) => node.props.size)).toEqual(CATALOG_GROUP_ORDER.map(() => 14));
   });
 
-  it('uses the selected color and keeps category selection behavior', () => {
-    const onCategoryChange = jest.fn();
-    const rendered = render(onCategoryChange);
+  it('uses the selected color and reports the group that was pressed', () => {
+    const onGroupChange = jest.fn();
+    const rendered = render(onGroupChange);
     const icons = rendered.root.findAll((node) => node.type === 'GardenIcon');
     const pills = rendered.root.findAll((node) => node.type === 'TouchableOpacity');
-    const herbIndex = PLANT_CATEGORIES.indexOf('herb');
-    const timberIndex = PLANT_CATEGORIES.indexOf('timber_tree');
+    const activeIndex = CATALOG_GROUP_ORDER.indexOf('herbs_medicinal');
+    const otherIndex = CATALOG_GROUP_ORDER.indexOf('plantation_timber');
 
-    expect(icons[herbIndex]?.props.color).toBe('#1a4a2e');
-    expect(icons[timberIndex]?.props.color).toBe('#4a3828');
-    TestRenderer.act(() => pills[timberIndex]?.props.onPress?.());
-    expect(onCategoryChange).toHaveBeenCalledWith('timber_tree');
+    expect(icons[activeIndex]?.props.color).toBe('#1a4a2e');
+    expect(icons[otherIndex]?.props.color).toBe('#4a3828');
+    TestRenderer.act(() => pills[otherIndex]?.props.onPress?.());
+    expect(onGroupChange).toHaveBeenCalledWith('plantation_timber');
   });
 });

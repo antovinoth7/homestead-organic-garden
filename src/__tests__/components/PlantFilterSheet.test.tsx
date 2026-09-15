@@ -67,15 +67,18 @@ const TestRenderer = jest.requireActual('react-test-renderer') as {
 };
 
 const plantCounts: PlantFacetCounts = {
+  // Keyed by browse group: the chips filter by the group a plant card shows, so
+  // filtering by care model would put Turmeric under "Herb" while its own card
+  // read "Spices".
   type: {
-    vegetable: 1,
-    spinach: 4,
-    fruit_tree: 23,
-    coconut_tree: 59,
-    herb: 3,
-    timber_tree: 7,
-    flower: 0,
-    shrub: 0,
+    vegetables: 1,
+    greens: 4,
+    fruits: 23,
+    spices: 2,
+    herbs_medicinal: 3,
+    flowers: 0,
+    farm_support: 0,
+    plantation_timber: 59,
   },
   health: { healthy: 90, stressed: 3, recovering: 1, sick: 2 },
   space: { pot: 5, bed: 8, ground: 83 },
@@ -130,31 +133,31 @@ describe('PlantFilterSheet plant types', () => {
 
     expect(chips.map((node) => node.props.testID)).toEqual([
       'plant-type-filter-all',
-      'plant-type-filter-vegetable',
-      'plant-type-filter-spinach',
-      'plant-type-filter-fruit_tree',
-      'plant-type-filter-coconut_tree',
-      'plant-type-filter-herb',
-      'plant-type-filter-timber_tree',
-      'plant-type-filter-flower',
-      'plant-type-filter-shrub',
+      'plant-type-filter-vegetables',
+      'plant-type-filter-greens',
+      'plant-type-filter-fruits',
+      'plant-type-filter-spices',
+      'plant-type-filter-herbs_medicinal',
+      'plant-type-filter-flowers',
+      'plant-type-filter-farm_support',
+      'plant-type-filter-plantation_timber',
     ]);
     expect(icons.map((node) => node.props.name)).toEqual([
       'plant.vegetable',
       'plant.spinach',
       'plant.fruit_tree',
-      'plant.coconut_tree',
       'plant.herb',
-      'plant.timber_tree',
+      'plant.herb',
       'plant.flower',
       'plant.shrub',
+      'plant.coconut_tree',
     ]);
   });
 
-  it('shows the Spinach count and selects the Spinach filter', () => {
+  it('shows the Greens count and selects the Greens filter', () => {
     const updateFilter = jest.fn();
     const rendered = render(updateFilter);
-    const spinachChip = rendered.root.findByProps({ testID: 'plant-type-filter-spinach' });
+    const greensChip = rendered.root.findByProps({ testID: 'plant-type-filter-greens' });
     const countLabels = rendered.root.findAll((node) => {
       const children = node.props.children;
       return (
@@ -166,9 +169,12 @@ describe('PlantFilterSheet plant types', () => {
       );
     });
 
-    expect(JSON.stringify(rendered.toJSON())).toContain('Spinach');
+    // "Greens", never "Spinach": the sheet used to carry its own label list that
+    // disagreed with the catalog's.
+    expect(JSON.stringify(rendered.toJSON())).toContain('Greens');
+    expect(JSON.stringify(rendered.toJSON())).not.toContain('Spinach');
     expect(countLabels).toHaveLength(1);
-    TestRenderer.act(() => spinachChip.props.onPress?.());
-    expect(updateFilter).toHaveBeenCalledWith('type', 'spinach');
+    TestRenderer.act(() => greensChip.props.onPress?.());
+    expect(updateFilter).toHaveBeenCalledWith('type', 'greens');
   });
 });

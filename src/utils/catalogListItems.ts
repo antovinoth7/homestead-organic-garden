@@ -2,20 +2,56 @@ import {
   CATALOG_ROW_TOTAL_HEIGHT,
   CATALOG_SECTION_HEADER_HEIGHT,
 } from '@/styles/catalogMetrics';
-import { buildCatalogSubtitle } from '@/utils/catalogSummaries';
-import { plantNameSectionLetter } from '@/utils/plantSort';
+import { SUB_GROUP_ORDER } from '@/config/plants/catalogTaxonomy';
+import {
+  LIFECYCLE_SECTION_LABELS,
+  LIFECYCLE_SECTION_ORDER,
+  SUB_GROUP_LABELS,
+} from '@/utils/plantLabels';
+import { comparePlantNames, plantNameSectionLetter } from '@/utils/plantSort';
 import type { CatalogSearchResult } from '@/utils/catalogSearch';
-import type { PlantProfile } from '@/types/database.types';
+import type {
+  CatalogGroup,
+  PlantHabit,
+  PlantLifecycle,
+  PlantType,
+} from '@/types/database.types';
+
+/** How the browse list sections itself. Driven by the header's mode toggle. */
+export type CatalogGroupMode = 'type' | 'season' | 'alpha';
+
+/**
+ * One plant as the browse list needs it. Assembled by `usePlantCatalogManager`,
+ * which resolves the taxonomy and lifecycle once per plant rather than per mode.
+ */
+export interface CatalogBrowseEntry {
+  name: string;
+  /**
+   * The plant's own care model. A browse group spans several — Fruits holds both
+   * `fruit_tree` trees and herbaceous quick fruits — so the row cannot inherit
+   * this from the active tab the way it used to.
+   */
+  plantType: PlantType;
+  /** Sub-group id, absent for a group that renders as one run or a user-added plant. */
+  subGroup?: string;
+  habit: PlantHabit;
+  lifecycle: PlantLifecycle;
+  /** Garden plants currently using this entry. */
+  count: number;
+  subtitle?: string;
+}
 
 export type CatalogListItem =
-  | { kind: 'section'; letter: string; count: number }
+  | { kind: 'section'; title: string; count: number }
   /**
-   * `isFirst`/`isLast` are per letter group, not per list: each group renders as
-   * its own rounded card, so a row cannot derive them from its index.
+   * `isFirst`/`isLast` are per section, not per list: each section renders as its
+   * own rounded card, so a row cannot derive them from its index.
    */
   | {
       kind: 'browse';
       name: string;
+      plantType: PlantType;
+      habit: PlantHabit;
       count: number;
       subtitle?: string;
       isFirst: boolean;
@@ -32,66 +68,105 @@ export interface CatalogListLayout {
 }
 
 interface BrowseInput {
-  /** Already sorted A–Z by `getPlantNamesForType`. */
-  plantNames: readonly string[];
-  /** Garden-plant counts keyed by plant name. */
-  counts: Record<string, number>;
-  /** Merged profiles for the active category, for the row subtitle. */
-  profilesForType: Record<string, PlantProfile>;
+  group: CatalogGroup;
+  entries: readonly CatalogBrowseEntry[];
+  mode: CatalogGroupMode;
+}
+
+/** Emits one section header and its rows, sorted A–Z within the section. */
+function pushSection(
+  items: CatalogListItem[],
+  title: string,
+  members: readonly CatalogBrowseEntry[]
+): void {
+  if (members.length === 0) return;
+  items.push({ kind: 'section', title, count: members.length });
+  const sorted = [...members].sort((a, b) => comparePlantNames(a.name, b.name));
+  sorted.forEach((entry, index) => {
+    items.push({
+      kind: 'browse',
+      name: entry.name,
+      plantType: entry.plantType,
+      habit: entry.habit,
+      count: entry.count,
+      subtitle: entry.subtitle,
+      isFirst: index === 0,
+      isLast: index === sorted.length - 1,
+    });
+  });
 }
 
 /**
- * Browse list: an A–Z header before each letter's run of plants.
+ * Builds the browse list under one of three groupings.
  *
- * Relies on `plantNames` arriving sorted, which makes each letter's run
- * contiguous and the grouping a single pass.
+ * `type` is the default and the reason the catalog was regrouped: a farmer looks
+ * for "gourds" or "keerai", not for the letter G. `season` answers the other
+ * question a bed plan turns on — what gets resown each season versus what stays
+ * in the ground. `alpha` is the original A–Z, kept for when you already know the
+ * name; search covers that case better, which is why it is no longer the default.
  */
-export function buildBrowseItems({
-  plantNames,
-  counts,
-  profilesForType,
-}: BrowseInput): CatalogListItem[] {
+export function buildBrowseItems({ group, entries, mode }: BrowseInput): CatalogListItem[] {
   const items: CatalogListItem[] = [];
-  let index = 0;
 
-  while (index < plantNames.length) {
-    const letter = plantNameSectionLetter(plantNames[index]!);
-
-    let end = index;
-    while (end < plantNames.length && plantNameSectionLetter(plantNames[end]!) === letter) {
-      end += 1;
+  if (mode === 'alpha') {
+    const sorted = [...entries].sort((a, b) => comparePlantNames(a.name, b.name));
+    let index = 0;
+    while (index < sorted.length) {
+      const letter = plantNameSectionLetter(sorted[index]!.name);
+      let end = index;
+      while (end < sorted.length && plantNameSectionLetter(sorted[end]!.name) === letter) {
+        end += 1;
+      }
+      pushSection(items, letter, sorted.slice(index, end));
+      index = end;
     }
-
-    items.push({ kind: 'section', letter, count: end - index });
-
-    for (let i = index; i < end; i += 1) {
-      const name = plantNames[i]!;
-      const entry = profilesForType[name];
-      items.push({
-        kind: 'browse',
-        name,
-        count: counts[name] ?? 0,
-        subtitle: buildCatalogSubtitle(entry?.description, entry?.varieties?.length ?? 0),
-        isFirst: i === index,
-        isLast: i === end - 1,
-      });
-    }
-
-    index = end;
+    return items;
   }
 
+  if (mode === 'season') {
+    for (const lifecycle of LIFECYCLE_SECTION_ORDER) {
+      pushSection(
+        items,
+        LIFECYCLE_SECTION_LABELS[lifecycle],
+        entries.filter((entry) => entry.lifecycle === lifecycle)
+      );
+    }
+    return items;
+  }
+
+  // `type`: walk the group's declared sub-group order so the sections read in a
+  // deliberate sequence rather than however the data happened to be written.
+  const declared = SUB_GROUP_ORDER[group];
+  if (declared.length === 0) {
+    pushSection(items, SUB_GROUP_LABELS.other ?? 'All', entries);
+    return items;
+  }
+
+  for (const subGroup of declared) {
+    pushSection(
+      items,
+      SUB_GROUP_LABELS[subGroup] ?? subGroup,
+      entries.filter((entry) => entry.subGroup === subGroup)
+    );
+  }
+  // A user-added plant has no sub-group; it would otherwise vanish from the list.
+  pushSection(
+    items,
+    SUB_GROUP_LABELS.other ?? 'Other',
+    entries.filter((entry) => !entry.subGroup || !declared.includes(entry.subGroup))
+  );
   return items;
 }
 
-/** Search results keep their relevance ranking, so they get no letter groups. */
+/** Search results keep their relevance ranking, so they get no sections. */
 export function buildSearchItems(results: readonly CatalogSearchResult[]): CatalogListItem[] {
   return results.map((result) => ({ kind: 'result' as const, result }));
 }
 
 /**
  * Measures a browse list for `getItemLayout`. Browse items come in two fixed
- * heights — rows and letter headers — so a single multiplication no longer
- * works and the screen indexes into this table instead.
+ * heights — rows and section headers — so a single multiplication does not work
+ * and the screen indexes into this table instead. Identical for all three modes.
  */
 export function measureCatalogItems(items: CatalogListItem[]): CatalogListLayout {
   const heights = items.map((item) =>

@@ -7,7 +7,8 @@ import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
 import { splitAtSpan } from '@/utils/catalogSearch';
 import type { CatalogSearchResult } from '@/utils/catalogSearch';
-import { CATEGORY_FULL_LABELS } from '@/utils/plantLabels';
+import { CATALOG_GROUP_LABELS } from '@/utils/plantLabels';
+import { getTaxonomy } from '@/config/plants/catalogTaxonomy';
 import type { PlantType } from '@/types/database.types';
 
 interface Props {
@@ -87,7 +88,7 @@ function CatalogSearchResultRowComponent({
                 {' • '}
               </>
             ) : null}
-            {CATEGORY_FULL_LABELS[result.plantType]}
+            {CATALOG_GROUP_LABELS[getTaxonomy(result.name, result.plantType).group]}
             {' • '}
             {usage}
           </Text>

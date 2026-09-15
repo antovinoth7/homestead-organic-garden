@@ -11,12 +11,16 @@ import {
   restorePlantProfile,
 } from '@/services/plantProfiles';
 import { getAllPlants, getStoredPlants } from '@/services/plants';
-import { Plant, PlantProfiles, PlantType } from '@/types/database.types';
+import { getPlantCareProfile } from '@/utils/plantCareDefaults';
+import { buildCatalogSubtitle } from '@/utils/catalogSummaries';
+import { deriveInstanceLifecycle } from '@/utils/plantHelpers';
+import type { CatalogBrowseEntry, CatalogGroupMode } from '@/utils/catalogListItems';
+import { CatalogGroup, Plant, PlantProfiles, PlantType } from '@/types/database.types';
+import { CATALOG_GROUP_ORDER, getTaxonomy } from '@/config/plants/catalogTaxonomy';
 import { getErrorMessage } from '@/utils/errorLogging';
 
-export interface CategoryData {
-  plantNames: string[];
-  counts: Record<string, number>;
+export interface GroupData {
+  entries: CatalogBrowseEntry[];
   isEmpty: boolean;
 }
 
@@ -29,12 +33,15 @@ export interface UsePlantCatalogManagerReturn {
    */
   mergedProfiles: PlantProfiles;
   plants: Plant[];
-  activeCategory: PlantType;
-  setActiveCategory: (category: PlantType) => void;
+  activeGroup: CatalogGroup;
+  setActiveGroup: (group: CatalogGroup) => void;
+  /** How the browse list sections itself: by sub-group, by season, or A–Z. */
+  groupMode: CatalogGroupMode;
+  setGroupMode: (mode: CatalogGroupMode) => void;
   loading: boolean;
   /** True while a pull-to-refresh is in flight — drives the RefreshControl. */
   refreshing: boolean;
-  categoryData: CategoryData;
+  groupData: GroupData;
   /**
    * Re-reads the catalog. `silent` keeps the current list on screen instead of
    * swapping it for the full-screen spinner — used for every revalidate after
@@ -43,14 +50,14 @@ export interface UsePlantCatalogManagerReturn {
   reload: (options?: { silent?: boolean }) => Promise<void>;
   /** Pull-to-refresh: revalidates silently while showing the RefreshControl. */
   refresh: () => Promise<void>;
-  /** Total catalog plant count per category — drives pill badges. */
-  allCategoryCounts: Record<PlantType, number>;
+  /** Total catalog plant count per browse group — drives pill badges. */
+  groupCounts: Record<CatalogGroup, number>;
   /** Garden-plant counts keyed by category then variety name — feeds search. */
   plantCountsByType: Record<PlantType, Record<string, number>>;
-  /** Bundled entries the user deleted from the active category. */
-  hiddenPlantNames: string[];
+  /** Bundled entries the user deleted from any category in the active group. */
+  hiddenPlantNames: { name: string; plantType: PlantType }[];
   /** Un-hides a deleted bundled entry, then reloads the catalog. */
-  restore: (name: string) => Promise<void>;
+  restore: (name: string, plantType: PlantType) => Promise<void>;
 }
 
 export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
@@ -58,7 +65,8 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<PlantType>('vegetable');
+  const [activeGroup, setActiveGroup] = useState<CatalogGroup>('vegetables');
+  const [groupMode, setGroupMode] = useState<CatalogGroupMode>('type');
 
   /** False until the first load resolves, so only that one shows the spinner. */
   const hasLoadedRef = useRef(false);
@@ -125,33 +133,82 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     return counts;
   }, [plants]);
 
-  // Derived data for the active category — single source for plantNames + counts
-  const categoryData = useMemo((): CategoryData => {
-    const plantNames = getPlantNamesForType(profiles, activeCategory);
-    const counts = plantCountsByType[activeCategory] ?? {};
-    return { plantNames, counts, isEmpty: plantNames.length === 0 };
-  }, [profiles, activeCategory, plantCountsByType]);
-
-  // Total catalog count per category — drives pill badges (no duplicate call needed)
-  const allCategoryCounts = useMemo(() => {
-    const result = {} as Record<PlantType, number>;
-    for (const cat of PLANT_CATEGORIES) {
-      result[cat] = getPlantNamesForType(profiles, cat).length;
-    }
-    return result;
-  }, [profiles]);
-
   const mergedProfiles = useMemo(() => getMergedProfiles(profiles), [profiles]);
 
-  const hiddenPlantNames = useMemo(
-    () => getHiddenPlantNames(profiles)[activeCategory] ?? [],
-    [profiles, activeCategory]
-  );
+  /**
+   * Every catalog plant as a browse entry, bucketed by group.
+   *
+   * Memoised on `profiles` and the garden counts only — deliberately not on
+   * `activeGroup` or `groupMode`, so switching a pill or a grouping re-sections
+   * an already-built list instead of re-resolving 129 care profiles.
+   */
+  const entriesByGroup = useMemo(() => {
+    const buckets = CATALOG_GROUP_ORDER.reduce(
+      (acc, group) => {
+        acc[group] = [];
+        return acc;
+      },
+      {} as Record<CatalogGroup, CatalogBrowseEntry[]>
+    );
+
+    for (const plantType of PLANT_CATEGORIES) {
+      const counts = plantCountsByType[plantType] ?? {};
+      for (const name of getPlantNamesForType(profiles, plantType)) {
+        const taxonomy = getTaxonomy(name, plantType);
+        const profile = getPlantCareProfile(name, plantType);
+        const entry = mergedProfiles[plantType]?.[name];
+        buckets[taxonomy.group].push({
+          name,
+          plantType,
+          subGroup: taxonomy.subGroup,
+          habit: taxonomy.habit,
+          // The same derivation the plant record uses, so a plant is filed under
+          // the same season heading here as on its own detail screen.
+          lifecycle: deriveInstanceLifecycle(profile?.lifecycle, plantType),
+          count: counts[name] ?? 0,
+          subtitle: buildCatalogSubtitle(entry?.description, entry?.varieties?.length ?? 0),
+        });
+      }
+    }
+    return buckets;
+  }, [profiles, mergedProfiles, plantCountsByType]);
+
+  const groupData = useMemo((): GroupData => {
+    const entries = entriesByGroup[activeGroup] ?? [];
+    return { entries, isEmpty: entries.length === 0 };
+  }, [entriesByGroup, activeGroup]);
+
+  /** Catalog count per group — drives the pill badges. */
+  const groupCounts = useMemo(() => {
+    return CATALOG_GROUP_ORDER.reduce(
+      (acc, group) => {
+        acc[group] = entriesByGroup[group]?.length ?? 0;
+        return acc;
+      },
+      {} as Record<CatalogGroup, number>
+    );
+  }, [entriesByGroup]);
+
+  /**
+   * Deleted bundled entries whose group is the active one. A group can span
+   * several `PlantType`s, so each name carries its own — `restorePlantProfile`
+   * needs the type, and the active pill can no longer supply it.
+   */
+  const hiddenPlantNames = useMemo(() => {
+    const hidden = getHiddenPlantNames(profiles);
+    const result: { name: string; plantType: PlantType }[] = [];
+    for (const plantType of PLANT_CATEGORIES) {
+      for (const name of hidden[plantType] ?? []) {
+        if (getTaxonomy(name, plantType).group === activeGroup) result.push({ name, plantType });
+      }
+    }
+    return result;
+  }, [profiles, activeGroup]);
 
   const restore = useCallback(
-    async (name: string): Promise<void> => {
+    async (name: string, plantType: PlantType): Promise<void> => {
       try {
-        await restorePlantProfile(activeCategory, name);
+        await restorePlantProfile(plantType, name);
         // Silent: the list is already on screen, so update it in place rather
         // than blanking it behind the spinner.
         await reload({ silent: true });
@@ -159,21 +216,23 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
         Alert.alert('Error', getErrorMessage(error) ?? 'Failed to restore the plant.');
       }
     },
-    [activeCategory, reload]
+    [reload]
   );
 
   return {
     profiles,
     mergedProfiles,
     plants,
-    activeCategory,
-    setActiveCategory,
+    activeGroup,
+    setActiveGroup,
+    groupMode,
+    setGroupMode,
     loading,
     refreshing,
-    categoryData,
+    groupData,
     reload,
     refresh,
-    allCategoryCounts,
+    groupCounts,
     plantCountsByType,
     hiddenPlantNames,
     restore,

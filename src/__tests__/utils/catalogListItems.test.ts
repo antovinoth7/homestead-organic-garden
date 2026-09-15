@@ -3,134 +3,202 @@ import {
   buildSearchItems,
   measureCatalogItems,
 } from '@/utils/catalogListItems';
-import type { CatalogListItem } from '@/utils/catalogListItems';
+import type { CatalogBrowseEntry, CatalogGroupMode } from '@/utils/catalogListItems';
 import {
   CATALOG_ROW_TOTAL_HEIGHT,
   CATALOG_SECTION_HEADER_HEIGHT,
 } from '@/styles/catalogMetrics';
-import type { PlantProfile } from '@/types/database.types';
+import type { CatalogSearchResult } from '@/utils/catalogSearch';
 
-const profile = (overrides: Partial<PlantProfile> = {}): PlantProfile => ({
+const entry = (
+  name: string,
+  over: Partial<CatalogBrowseEntry> = {}
+): CatalogBrowseEntry => ({
+  name,
   plantType: 'vegetable',
-  name: 'Test Plant',
-  ...overrides,
+  habit: 'annual_bed',
+  lifecycle: 'annual',
+  count: 0,
+  ...over,
 });
 
-const build = (
-  plantNames: string[],
-  counts: Record<string, number> = {},
-  profilesForType: Record<string, PlantProfile> = {}
-): CatalogListItem[] => buildBrowseItems({ plantNames, counts, profilesForType });
+const titles = (items: ReturnType<typeof buildBrowseItems>): string[] =>
+  items.filter((i) => i.kind === 'section').map((i) => (i.kind === 'section' ? i.title : ''));
 
-type SectionItem = Extract<CatalogListItem, { kind: 'section' }>;
-type BrowseItem = Extract<CatalogListItem, { kind: 'browse' }>;
+const namesIn = (items: ReturnType<typeof buildBrowseItems>): string[] =>
+  items.filter((i) => i.kind === 'browse').map((i) => (i.kind === 'browse' ? i.name : ''));
 
-const sections = (items: CatalogListItem[]): SectionItem[] =>
-  items.filter((i): i is SectionItem => i.kind === 'section');
+const VEG: CatalogBrowseEntry[] = [
+  entry('Tomato', { subGroup: 'fruit_vegetables' }),
+  entry('Brinjal', { subGroup: 'fruit_vegetables' }),
+  entry('Bitter Gourd', { subGroup: 'gourds_melons', habit: 'vine' }),
+  entry('Tapioca', { subGroup: 'roots_tubers', habit: 'shrub', lifecycle: 'perennial' }),
+  entry('Onion', { subGroup: 'onion_family', lifecycle: 'biennial' }),
+];
 
-const rows = (items: CatalogListItem[]): BrowseItem[] =>
-  items.filter((i): i is BrowseItem => i.kind === 'browse');
-
-describe('buildBrowseItems', () => {
-  it('puts a header before each letter run and counts it', () => {
-    const items = build(['Ash Gourd', 'Avarai', 'Brinjal', 'Tomato']);
-
-    expect(sections(items).map((s) => [s.letter, s.count])).toEqual([
-      ['A', 2],
-      ['B', 1],
-      ['T', 1],
-    ]);
-    expect(items[0]).toMatchObject({ kind: 'section', letter: 'A' });
-    expect(items[1]).toMatchObject({ kind: 'browse', name: 'Ash Gourd' });
-  });
-
-  // Each letter group is its own rounded card, so the flags are per group.
-  it('marks first and last within each group, not across the list', () => {
-    const items = build(['Ash Gourd', 'Avarai', 'Brinjal']);
-    const flags = rows(items).map((r) => [r.name, r.isFirst, r.isLast]);
-
-    expect(flags).toEqual([
-      ['Ash Gourd', true, false],
-      ['Avarai', false, true],
-      ['Brinjal', true, true],
+describe('buildBrowseItems — type mode', () => {
+  it('sections by sub-group in the declared order, not the data order', () => {
+    // gourds_melons precedes fruit_vegetables in SUB_GROUP_ORDER even though
+    // fruit_vegetables came first in the input.
+    expect(titles(buildBrowseItems({ group: 'vegetables', entries: VEG, mode: 'type' }))).toEqual([
+      'Gourds & Melons',
+      'Fruit Vegetables',
+      'Roots & Tubers',
+      'Onion Family',
     ]);
   });
 
-  it('gives a single-plant group both flags', () => {
-    expect(rows(build(['Tomato']))[0]).toMatchObject({ isFirst: true, isLast: true });
-  });
-
-  it('buckets non-letter names under # as their own group', () => {
-    const items = build(['123 Gourd', 'Ash Gourd']);
-    expect(sections(items).map((s) => s.letter)).toEqual(['#', 'A']);
-  });
-
-  it('carries garden counts and subtitles through', () => {
-    const items = build(
-      ['Brinjal', 'Tomato'],
-      { Brinjal: 3 },
-      {
-        Brinjal: profile({ name: 'Brinjal', description: 'Warm-season fruiting plant' }),
-        Tomato: profile({ name: 'Tomato', varieties: ['Cherry', 'Hybrid'] }),
-      }
-    );
-
-    expect(rows(items)[0]).toMatchObject({
-      name: 'Brinjal',
-      count: 3,
-      subtitle: 'Warm-season fruiting plant',
+  it('omits sub-groups with no members', () => {
+    const items = buildBrowseItems({
+      group: 'vegetables',
+      entries: [entry('Cabbage', { subGroup: 'cabbage_family' })],
+      mode: 'type',
     });
-    // No description, so it falls back to the variety count.
-    expect(rows(items)[1]).toMatchObject({ name: 'Tomato', count: 0, subtitle: '2 varieties' });
+    expect(titles(items)).toEqual(['Cabbage Family']);
   });
 
-  it('leaves the subtitle unset when a plant has neither', () => {
-    expect(rows(build(['Tomato']))[0]?.subtitle).toBeUndefined();
+  it('sorts A–Z within a section', () => {
+    const items = buildBrowseItems({ group: 'vegetables', entries: VEG, mode: 'type' });
+    expect(namesIn(items)).toEqual(['Bitter Gourd', 'Brinjal', 'Tomato', 'Tapioca', 'Onion']);
   });
 
-  it('returns nothing for an empty category', () => {
-    expect(build([])).toEqual([]);
+  it('collects a user-added plant with no sub-group under Other', () => {
+    const items = buildBrowseItems({
+      group: 'vegetables',
+      entries: [entry('Tomato', { subGroup: 'fruit_vegetables' }), entry('My Own Gourd')],
+      mode: 'type',
+    });
+    expect(titles(items)).toEqual(['Fruit Vegetables', 'Other']);
+    expect(namesIn(items)).toEqual(['Tomato', 'My Own Gourd']);
+  });
+
+  it('renders a group with no declared sub-groups as one run', () => {
+    const items = buildBrowseItems({
+      group: 'farm_support',
+      entries: [entry('Agathi', { habit: 'tree' }), entry('Nochi', { habit: 'shrub' })],
+      mode: 'type',
+    });
+    expect(titles(items)).toHaveLength(1);
+    expect(namesIn(items)).toEqual(['Agathi', 'Nochi']);
+  });
+});
+
+describe('buildBrowseItems — season mode', () => {
+  it('sections annual → biennial → perennial → permanent, skipping empties', () => {
+    const entries = [
+      ...VEG,
+      entry('Mango', { plantType: 'fruit_tree', habit: 'tree', lifecycle: 'permanent' }),
+    ];
+    expect(titles(buildBrowseItems({ group: 'vegetables', entries, mode: 'season' }))).toEqual([
+      'Annual — sow each season',
+      'Biennial — two seasons',
+      'Perennial — stays in the bed',
+      'Permanent — never cleared',
+    ]);
+  });
+
+  it('puts each plant under its own lifecycle regardless of sub-group', () => {
+    const items = buildBrowseItems({ group: 'vegetables', entries: VEG, mode: 'season' });
+    const sections = items.reduce<Record<string, string[]>>((acc, item) => {
+      if (item.kind === 'section') acc[item.title] = [];
+      else if (item.kind === 'browse') {
+        const last = Object.keys(acc).pop();
+        if (last) acc[last]!.push(item.name);
+      }
+      return acc;
+    }, {});
+    expect(sections['Annual — sow each season']).toEqual(['Bitter Gourd', 'Brinjal', 'Tomato']);
+    expect(sections['Biennial — two seasons']).toEqual(['Onion']);
+    expect(sections['Perennial — stays in the bed']).toEqual(['Tapioca']);
+  });
+});
+
+describe('buildBrowseItems — alpha mode', () => {
+  it('sections by first letter', () => {
+    const items = buildBrowseItems({ group: 'vegetables', entries: VEG, mode: 'alpha' });
+    expect(titles(items)).toEqual(['B', 'O', 'T']);
+    expect(namesIn(items)).toEqual(['Bitter Gourd', 'Brinjal', 'Onion', 'Tapioca', 'Tomato']);
+  });
+
+  it('buckets a name that does not start with a letter under #', () => {
+    const items = buildBrowseItems({
+      group: 'vegetables',
+      entries: [entry('123 Gourd'), entry('Tomato')],
+      mode: 'alpha',
+    });
+    expect(titles(items)).toEqual(['#', 'T']);
+  });
+});
+
+describe('section boundaries', () => {
+  it.each<CatalogGroupMode>(['type', 'season', 'alpha'])(
+    'marks isFirst/isLast per section, not per list, in %s mode',
+    (mode) => {
+      const items = buildBrowseItems({ group: 'vegetables', entries: VEG, mode });
+      let seenSection = 0;
+      for (const item of items) {
+        if (item.kind === 'section') seenSection += 1;
+      }
+      expect(seenSection).toBeGreaterThan(1);
+
+      // Every section's first row is isFirst and its last row is isLast.
+      let current: typeof items = [];
+      const sections: (typeof items)[] = [];
+      for (const item of items) {
+        if (item.kind === 'section') {
+          if (current.length) sections.push(current);
+          current = [];
+        } else current.push(item);
+      }
+      if (current.length) sections.push(current);
+
+      for (const rows of sections) {
+        expect(rows[0]!.kind === 'browse' && rows[0]!.isFirst).toBe(true);
+        expect(rows.at(-1)!.kind === 'browse' && (rows.at(-1) as { isLast: boolean }).isLast).toBe(
+          true
+        );
+      }
+    }
+  );
+
+  it('carries each row its own plantType rather than the active tab', () => {
+    const items = buildBrowseItems({
+      group: 'fruits',
+      entries: [
+        entry('Banana', { plantType: 'fruit_tree', habit: 'clump', lifecycle: 'perennial' }),
+        entry('Pineapple', { plantType: 'fruit_tree', habit: 'perennial', lifecycle: 'perennial' }),
+      ],
+      mode: 'type',
+    });
+    const rows = items.filter((i) => i.kind === 'browse');
+    expect(rows.every((r) => r.kind === 'browse' && r.plantType === 'fruit_tree')).toBe(true);
+    expect(rows.map((r) => (r.kind === 'browse' ? r.habit : null))).toEqual(['clump', 'perennial']);
   });
 });
 
 describe('measureCatalogItems', () => {
-  it('accumulates offsets across the two item heights', () => {
-    const { heights, offsets } = measureCatalogItems(build(['Ash Gourd', 'Avarai', 'Brinjal']));
+  it.each<CatalogGroupMode>(['type', 'season', 'alpha'])(
+    'keeps offsets cumulative in %s mode',
+    (mode) => {
+      const { items, heights, offsets } = measureCatalogItems(
+        buildBrowseItems({ group: 'vegetables', entries: VEG, mode })
+      );
+      expect(heights).toHaveLength(items.length);
+      expect(offsets).toHaveLength(items.length);
+      let running = 0;
+      items.forEach((item, index) => {
+        expect(offsets[index]).toBe(running);
+        expect(heights[index]).toBe(
+          item.kind === 'section' ? CATALOG_SECTION_HEADER_HEIGHT : CATALOG_ROW_TOTAL_HEIGHT
+        );
+        running += heights[index]!;
+      });
+    }
+  );
 
-    expect(heights).toEqual([
-      CATALOG_SECTION_HEADER_HEIGHT,
-      CATALOG_ROW_TOTAL_HEIGHT,
-      CATALOG_ROW_TOTAL_HEIGHT,
-      CATALOG_SECTION_HEADER_HEIGHT,
-      CATALOG_ROW_TOTAL_HEIGHT,
-    ]);
-
-    // Every offset is the sum of the heights before it — this is what keeps
-    // scrolling gap-free, so assert the invariant rather than fixed numbers.
-    let running = 0;
-    heights.forEach((height, i) => {
-      expect(offsets[i]).toBe(running);
-      running += height;
-    });
-  });
-
-  it('handles an empty list', () => {
-    expect(measureCatalogItems([])).toEqual({ items: [], heights: [], offsets: [] });
-  });
-});
-
-describe('buildSearchItems', () => {
-  it('wraps results without adding letter groups', () => {
-    const result = {
-      name: 'Brinjal',
-      plantType: 'vegetable',
-      gardenCount: 0,
-      matchedField: 'name',
-    } as unknown as Parameters<typeof buildSearchItems>[0][number];
-
-    const items = buildSearchItems([result]);
-    expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({ kind: 'result' });
-    expect(sections(items)).toEqual([]);
+  it('measures search results as rows', () => {
+    const result = { name: 'Tomato', plantType: 'vegetable' } as CatalogSearchResult;
+    const { heights } = measureCatalogItems(buildSearchItems([result]));
+    expect(heights).toEqual([CATALOG_ROW_TOTAL_HEIGHT]);
   });
 });
