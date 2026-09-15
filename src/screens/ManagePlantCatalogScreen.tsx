@@ -32,7 +32,10 @@ import {
 } from '@/utils/catalogListItems';
 import type { CatalogListItem } from '@/utils/catalogListItems';
 import { CATALOG_GROUP_DEFAULT_TYPE } from '@/config/plants/catalogTaxonomy';
-import type { PlantType } from '@/types/database.types';
+import { buildSowNowView } from '@/utils/catalogSowNow';
+import { getActiveZone } from '@/config/zones';
+import type { AgroClimaticZoneId } from '@/config/zones';
+import type { CatalogGroup, PlantType } from '@/types/database.types';
 
 export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const moreNav = useNavigation<NativeStackNavigationProp<MoreStackParamList>>();
@@ -50,6 +53,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     groupData,
     groupCounts,
     plantCountsByType,
+    countsByName,
     mergedProfiles,
     hiddenPlantNames,
     restore,
@@ -61,7 +65,15 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
    * herbaceous quick fruits — so a newly created entry only gets a starting type
    * from the active pill; the entry form lets it be corrected.
    */
-  const newPlantType = CATALOG_GROUP_DEFAULT_TYPE[activeGroup];
+  const isSowNow = activeGroup === 'sow_now';
+  const newPlantType = isSowNow ? 'vegetable' : CATALOG_GROUP_DEFAULT_TYPE[activeGroup];
+
+  /** The zone decides which sowing windows apply; null until Settings has one. */
+  const zoneId = useMemo(() => (getActiveZone()?.id as AgroClimaticZoneId) ?? null, []);
+  const sowNow = useMemo(
+    () => (isSowNow ? buildSowNowView(zoneId, countsByName) : null),
+    [isSowNow, zoneId, countsByName]
+  );
 
   const {
     query,
@@ -132,13 +144,15 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       measureCatalogItems(
         isSearching
           ? buildSearchItems(results)
-          : buildBrowseItems({
-              group: activeGroup,
-              entries: groupData.entries,
-              mode: groupMode,
-            })
+          : sowNow
+            ? sowNow.items
+            : buildBrowseItems({
+                group: activeGroup as CatalogGroup,
+                entries: groupData.entries,
+                mode: groupMode,
+              })
       ),
-    [isSearching, results, activeGroup, groupData, groupMode]
+    [isSearching, results, sowNow, activeGroup, groupData, groupMode]
   );
 
   const renderItem = useCallback(
@@ -206,7 +220,10 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
               groupCounts={groupCounts}
               onGroupChange={setActiveGroup}
             />
-            <CatalogGroupModeToggle mode={groupMode} onChange={setGroupMode} />
+            {/* Sow Now is already sectioned by window, so it has no mode toggle. */}
+            {isSowNow ? null : (
+              <CatalogGroupModeToggle mode={groupMode} onChange={setGroupMode} />
+            )}
           </>
         )}
       </>
@@ -221,6 +238,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       totalMatches,
       styles,
       activeGroup,
+      isSowNow,
       groupCounts,
       setActiveGroup,
       groupMode,
@@ -269,10 +287,11 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const listEmpty = useMemo(
     () => (
       <Text style={styles.emptyText}>
-        {isSearching ? 'No plants match that search.' : 'No plants yet. Tap + to add one.'}
+        {sowNow?.message ??
+          (isSearching ? 'No plants match that search.' : 'No plants yet. Tap + to add one.')}
       </Text>
     ),
-    [styles, isSearching]
+    [styles, isSearching, sowNow]
   );
 
   return (

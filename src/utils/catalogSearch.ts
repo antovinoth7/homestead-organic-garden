@@ -1,4 +1,6 @@
 import { getAliasesFor } from '@/utils/plantAliases';
+import { getTaxonomy } from '@/config/plants/catalogTaxonomy';
+import { TAG_LABELS } from '@/utils/plantLabels';
 import type { PlantProfiles, PlantType } from '@/types/database.types';
 
 export interface CatalogSearchEntry {
@@ -7,6 +9,11 @@ export interface CatalogSearchEntry {
   tamilName?: string;
   /** Other names for this plant — "Okra" for Ladies Finger, "Methi" for Fenugreek. */
   aliases: string[];
+  /**
+   * Tag labels, so a search for what a plant *is for* finds it: "keerai" reaches
+   * the greens, "green manure" reaches Agathi, "trellis" reaches the climbers.
+   */
+  tagLabels: string[];
   /** How many garden plants currently use this catalog entry. */
   gardenCount: number;
 }
@@ -20,9 +27,11 @@ export interface MatchSpan {
 export interface CatalogSearchResult extends CatalogSearchEntry {
   nameSpan?: MatchSpan;
   tamilSpan?: MatchSpan;
-  matchedField: 'name' | 'tamilName' | 'alias' | 'tokens';
+  matchedField: 'name' | 'tamilName' | 'alias' | 'tag' | 'tokens';
   /** The alias that matched, when `matchedField` is 'alias' — shown on the row. */
   matchedAlias?: string;
+  /** The tag that matched, when `matchedField` is 'tag' — shown on the row. */
+  matchedTag?: string;
 }
 
 export interface CatalogSearchOutcome {
@@ -71,6 +80,7 @@ export function buildCatalogSearchIndex(
         name,
         tamilName: profile?.tamilName,
         aliases: getAliasesFor(name),
+        tagLabels: getTaxonomy(name, type).tags.map((tag) => TAG_LABELS[tag]),
         gardenCount: countsByType[type]?.[name] ?? 0,
       });
     }
@@ -89,7 +99,9 @@ const RANK_TAMIL_PREFIX = 1;
 const RANK_NAME_SUBSTRING = 2;
 const RANK_TAMIL_SUBSTRING = 3;
 const RANK_ALIAS = 4;
-const RANK_TOKENS = 5;
+/** Below an alias: a tag says what a plant is for, not what it is called. */
+const RANK_TAG = 5;
+const RANK_TOKENS = 6;
 
 function rankOf(nameIndex: number, tamilIndex: number): number | null {
   if (nameIndex === 0) return RANK_NAME_PREFIX;
@@ -101,7 +113,11 @@ function rankOf(nameIndex: number, tamilIndex: number): number | null {
 
 /** Every string a token match is allowed to look in. */
 function haystacks(entry: CatalogSearchEntry): string[] {
-  const parts = [normalize(entry.name), ...entry.aliases.map(normalize)];
+  const parts = [
+    normalize(entry.name),
+    ...entry.aliases.map(normalize),
+    ...entry.tagLabels.map(normalize),
+  ];
   if (entry.tamilName) parts.push(normalize(entry.tamilName));
   return parts;
 }
@@ -134,6 +150,13 @@ function scoreEntry(entry: CatalogSearchEntry, needle: string): { rank: number; 
   const alias = entry.aliases.find((item) => normalize(item).includes(needle));
   if (alias) {
     return { rank: RANK_ALIAS, result: { ...entry, matchedField: 'alias', matchedAlias: alias } };
+  }
+
+  // "keerai" → every green; "green manure" → Agathi and Aavaram. Ranked below an
+  // alias, since a tag answers what the plant is *for* rather than its name.
+  const tag = entry.tagLabels.find((item) => normalize(item).includes(needle));
+  if (tag) {
+    return { rank: RANK_TAG, result: { ...entry, matchedField: 'tag', matchedTag: tag } };
   }
 
   // Last resort: every word present somewhere, in any order across any field.

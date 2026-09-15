@@ -48,7 +48,7 @@ import { useCatalogEntryForm } from '@/hooks/useCatalogEntryForm';
 import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
 import { getAllPests } from '@/config/pests';
 import { getAllDiseases } from '@/config/diseases';
-import type { VarietyDetail } from '@/types/database.types';
+import type { PlantType, VarietyDetail } from '@/types/database.types';
 import { MoreStackParamList } from '@/types/navigation.types';
 import { sanitizeName } from '@/utils/catalogDraft';
 import {
@@ -131,7 +131,14 @@ const ALL_EXPANDED: Record<CatalogSectionKey, boolean> = {
 export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const route = useRoute<RouteParam>();
   const navigation = useNavigation();
-  const { plantName: initialName, plantType, isCreating = false } = route.params;
+  const { plantName: initialName, plantType: routePlantType, isCreating = false } = route.params;
+
+  /**
+   * The care model. Fixed for an existing entry; while creating, the group's pill
+   * only supplies a starting guess (Fruits starts at `fruit_tree`), so the form
+   * offers a picker — see `PlantInfoSection`.
+   */
+  const [plantType, setPlantType] = useState<PlantType>(routePlantType);
 
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -679,6 +686,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               setName={setName}
               isCreating={isCreating}
               hasOverride={hasOverride}
+              plantType={plantType}
+              onPlantTypeChange={setPlantType}
             />
           </CollapsibleSection>
         </View>

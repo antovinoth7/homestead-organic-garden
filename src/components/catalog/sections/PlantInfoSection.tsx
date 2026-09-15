@@ -8,7 +8,13 @@ import { optionsFromLabels } from '@/components/catalog/catalogEditor';
 import type { CatalogEditor } from '@/components/catalog/catalogEditor';
 import { sanitizeName } from '@/utils/catalogDraft';
 import { CATALOG_FIELD_HELP } from '@/utils/catalogFieldHelp';
-import { LIFECYCLE_DESCRIPTIONS, LIFECYCLE_LABELS } from '@/utils/plantLabels';
+import {
+  CATEGORY_FULL_LABELS,
+  CATEGORY_OPTIONS,
+  LIFECYCLE_DESCRIPTIONS,
+  LIFECYCLE_LABELS,
+} from '@/utils/plantLabels';
+import type { PlantType } from '@/types/database.types';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
@@ -18,6 +24,17 @@ interface Props {
   /** Care-status strip is meaningless before an entry exists. */
   isCreating: boolean;
   hasOverride: boolean;
+  /**
+   * The care model being created, and a setter — offered only while creating,
+   * because it decides which growth-stage model, pest set and task cadence the
+   * entry gets, and changing it afterwards would strand the saved profile.
+   *
+   * It exists as a field at all because browsing and caring came apart: the
+   * group's default is a starting guess (Fruits starts at `fruit_tree`), so a
+   * herbaceous quick fruit like Pineapple needs a way to say otherwise.
+   */
+  plantType?: PlantType;
+  onPlantTypeChange?: (next: PlantType) => void;
 }
 
 export function PlantInfoSection({
@@ -26,6 +43,8 @@ export function PlantInfoSection({
   setName,
   isCreating,
   hasOverride,
+  plantType,
+  onPlantTypeChange,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -99,6 +118,20 @@ export function PlantInfoSection({
     [openPicker, lifecycleOptions, careForm.lifecycle, setForm]
   );
 
+  const onCareModel = useCallback(
+    () =>
+      openPicker({
+        title: 'Care model',
+        options: CATEGORY_OPTIONS.map((option) => ({
+          value: option.value,
+          label: option.label,
+        })),
+        selectedValue: plantType ?? '',
+        onSelect: (value) => onPlantTypeChange?.(value as PlantType),
+      }),
+    [openPicker, plantType, onPlantTypeChange]
+  );
+
   const onDescription = useCallback(
     (description: string) => setForm({ description }),
     [setForm]
@@ -162,6 +195,16 @@ export function PlantInfoSection({
         helpText={CATALOG_FIELD_HELP.scientificName}
         onPress={onScientificName}
       />
+      {isCreating && plantType && onPlantTypeChange ? (
+        <CatalogDetailRow
+          kind="picker"
+          label="Care model"
+          value={CATEGORY_FULL_LABELS[plantType]}
+          helpText={CATALOG_FIELD_HELP.careModel}
+          helpTitle="Care model"
+          onPress={onCareModel}
+        />
+      ) : null}
       <CatalogDetailRow
         kind="text"
         label="Taxonomic family"

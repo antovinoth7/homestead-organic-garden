@@ -27,6 +27,45 @@ Every Tamil Nadu zone uses the IMD meteorological boundaries: Winter (`cool_dry`
 
 ---
 
+## Plant Classification — three axes, deliberately separate
+
+A plant is classified three different ways, and conflating them is what made the
+old catalog pills read wrong.
+
+| Axis | Type | Lives in | Answers |
+| --- | --- | --- | --- |
+| **Care model** | `PlantType` | persisted as `plant_type`; care defaults, pest sets, task cadence | *How do I look after it?* |
+| **Browse group** | `CatalogGroup` | `src/config/plants/catalogTaxonomy.ts` | *What do I harvest it for?* |
+| **Habit + tags** | `PlantHabit`, `PlantTag` | same file | *What shape is it, and what else is it good for?* |
+
+- **`PlantType` is the care model, not a category.** Its eight values include
+  `shrub` (a growth habit) and `coconut_tree` (one species), which is why it does
+  not make a sensible set of browse pills. It is persisted on every garden plant,
+  so its values are a data contract — change it only with a migration.
+- **`CatalogGroup` owns the pills**: Vegetables, Greens, Fruits, Spices, Herbs &
+  Medicinal, Flowers, Support & Input Plants, Plantation & Timber. Purpose is the
+  one axis a farmer and a cook agree on. Every group is mutually exclusive.
+- **Tags carry what one hierarchy cannot.** Drumstick is a tree harvested as a
+  vegetable; Agathi is green manure, keerai and living fence at once;
+  `coconut_intercrop` spans six plants in four groups that together make up a
+  Kanyakumari thoppu planting.
+- **`cropFamily` is derived, never hand-assigned** — from each care profile's own
+  `taxonomicFamily` through `BOTANICAL_TO_CROP_FAMILY`. It drives bed rotation
+  (`src/config/beds/cropFamilyRotation.ts`), so only families that hold crops
+  grown in a rotated bed get their own value; trees and palms map to `other`,
+  which the rotation check treats as "no signal" rather than as a shared family.
+- **`catalogTaxonomy.test.ts` is the drift guard.** Adding a plant to the catalog
+  without classifying it fails the build — the same discipline the alias table
+  earned after three partial copies of it had to be merged.
+
+### Lifecycle
+
+`deriveInstanceLifecycle` reads the catalog's own `lifecycle` first and falls back
+to `PlantType` only for a plant with no care profile. The result is persisted as
+`lifecycle_type`, and only `perennial` plants get the recurring harvest-leaves
+task, so the distinction is not cosmetic: a banana stand and a mango tree are both
+`fruit_tree` but only one is ratooned.
+
 ## Plant Helpers
 
 `src/utils/plantHelpers.ts` contains important domain behavior for:

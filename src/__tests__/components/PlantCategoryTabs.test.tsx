@@ -14,6 +14,12 @@ jest.mock('react-native', () => {
     View: host('View'),
   };
 });
+jest.mock('@expo/vector-icons', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  return {
+    Ionicons: (props: Record<string, unknown>) => React.createElement('Ionicons', props),
+  };
+});
 jest.mock('@/components/GardenIcon', () => {
   const React = jest.requireActual<typeof import('react')>('react');
   return {
@@ -59,6 +65,7 @@ interface RenderedTree {
   root: {
     findAll: (predicate: (node: RenderedNode) => boolean) => RenderedNode[];
   };
+  toJSON: () => unknown;
 }
 
 const TestRenderer = jest.requireActual('react-test-renderer') as {
@@ -96,7 +103,23 @@ describe('PlantCategoryTabs icons', () => {
     return rendered;
   }
 
+  it('leads with a Sow Now pill before the groups', () => {
+    const rendered = render();
+    const pills = rendered.root.findAll((node) => node.type === 'TouchableOpacity');
+    expect(pills).toHaveLength(CATALOG_GROUP_ORDER.length + 1);
+    expect(JSON.stringify(rendered.toJSON())).toContain('Sow Now');
+  });
+
+  it('reports the sow-now selection separately from a group', () => {
+    const onGroupChange = jest.fn();
+    const rendered = render(onGroupChange);
+    const pills = rendered.root.findAll((node) => node.type === 'TouchableOpacity');
+    TestRenderer.act(() => pills[0]?.props.onPress?.());
+    expect(onGroupChange).toHaveBeenCalledWith('sow_now');
+  });
+
   it('renders a 14 px semantic icon for every browse group in pill order', () => {
+    // GardenIcon is the group artwork; Sow Now uses an Ionicon, so it is absent.
     const icons = render().root.findAll((node) => node.type === 'GardenIcon');
 
     expect(icons).toHaveLength(8);
@@ -116,7 +139,8 @@ describe('PlantCategoryTabs icons', () => {
 
     expect(icons[activeIndex]?.props.color).toBe('#1a4a2e');
     expect(icons[otherIndex]?.props.color).toBe('#4a3828');
-    TestRenderer.act(() => pills[otherIndex]?.props.onPress?.());
+    // Sow Now occupies pills[0], so a group's pill sits one further along.
+    TestRenderer.act(() => pills[otherIndex + 1]?.props.onPress?.());
     expect(onGroupChange).toHaveBeenCalledWith('plantation_timber');
   });
 });

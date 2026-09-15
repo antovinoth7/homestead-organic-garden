@@ -48,12 +48,15 @@ function CatalogSearchResultRowComponent({
   // cross-category result carries enough context to pick between near-duplicates.
   const usage = result.gardenCount > 0 ? `${result.gardenCount} in garden` : 'Not in garden';
 
-  // An alias hit shows the canonical name, so without this the row looks
-  // unrelated to what was typed — say which other name matched.
+  // An alias or tag hit shows the canonical name, so without this the row looks
+  // unrelated to what was typed — say what actually matched. A tag match is why
+  // "keerai" reaches the greens and "green manure" reaches Agathi.
   const aliasNote =
     result.matchedField === 'alias' && result.matchedAlias
       ? titleCase(result.matchedAlias)
-      : null;
+      : result.matchedField === 'tag' && result.matchedTag
+        ? result.matchedTag
+        : null;
 
   return (
     <View

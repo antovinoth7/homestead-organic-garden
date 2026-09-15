@@ -33,8 +33,9 @@ export interface UsePlantCatalogManagerReturn {
    */
   mergedProfiles: PlantProfiles;
   plants: Plant[];
-  activeGroup: CatalogGroup;
-  setActiveGroup: (group: CatalogGroup) => void;
+  /** The selected group, or `'sow_now'` for the leading seasonal view. */
+  activeGroup: CatalogGroup | 'sow_now';
+  setActiveGroup: (group: CatalogGroup | 'sow_now') => void;
   /** How the browse list sections itself: by sub-group, by season, or A–Z. */
   groupMode: CatalogGroupMode;
   setGroupMode: (mode: CatalogGroupMode) => void;
@@ -54,6 +55,8 @@ export interface UsePlantCatalogManagerReturn {
   groupCounts: Record<CatalogGroup, number>;
   /** Garden-plant counts keyed by category then variety name — feeds search. */
   plantCountsByType: Record<PlantType, Record<string, number>>;
+  /** The same counts flattened by plant name — feeds the Sow Now rows. */
+  countsByName: Record<string, number>;
   /** Bundled entries the user deleted from any category in the active group. */
   hiddenPlantNames: { name: string; plantType: PlantType }[];
   /** Un-hides a deleted bundled entry, then reloads the catalog. */
@@ -65,7 +68,7 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeGroup, setActiveGroup] = useState<CatalogGroup>('vegetables');
+  const [activeGroup, setActiveGroup] = useState<CatalogGroup | 'sow_now'>('vegetables');
   const [groupMode, setGroupMode] = useState<CatalogGroupMode>('type');
 
   /** False until the first load resolves, so only that one shows the spinner. */
@@ -174,9 +177,23 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   }, [profiles, mergedProfiles, plantCountsByType]);
 
   const groupData = useMemo((): GroupData => {
-    const entries = entriesByGroup[activeGroup] ?? [];
+    const entries = activeGroup === 'sow_now' ? [] : entriesByGroup[activeGroup] ?? [];
     return { entries, isEmpty: entries.length === 0 };
   }, [entriesByGroup, activeGroup]);
+
+  /**
+   * Garden-plant counts keyed by name across every type — what the Sow Now rows
+   * need, since a planting rule names a plant without knowing its care model.
+   */
+  const countsByName = useMemo(() => {
+    const totals: Record<string, number> = {};
+    for (const perName of Object.values(plantCountsByType)) {
+      for (const [name, count] of Object.entries(perName)) {
+        totals[name] = (totals[name] ?? 0) + count;
+      }
+    }
+    return totals;
+  }, [plantCountsByType]);
 
   /** Catalog count per group — drives the pill badges. */
   const groupCounts = useMemo(() => {
@@ -234,6 +251,7 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     refresh,
     groupCounts,
     plantCountsByType,
+    countsByName,
     hiddenPlantNames,
     restore,
   };
