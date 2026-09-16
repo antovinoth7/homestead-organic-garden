@@ -50,6 +50,41 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     headerSpacer: {
       width: 36,
     },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    headerIconBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerIconBtnActive: {
+      backgroundColor: theme.primaryLight,
+    },
+    /**
+     * Dot on a header icon saying its state is no longer the default — a query
+     * still held while search is collapsed, or a non-default grouping.
+     */
+    headerIconDot: {
+      position: 'absolute',
+      top: 6,
+      right: 6,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.primary,
+    },
+    /** Expanded search row — takes the place of the title in the header bar. */
+    searchExpandedRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flex: 1,
+    },
     title: {
       fontSize: 20,
       fontWeight: '700',
@@ -84,6 +119,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     searchBarActive: {
       borderColor: theme.primary,
     },
+    /**
+     * The same field rendered inside the header bar rather than above the list:
+     * no outer margins (the header owns its padding) and a slightly shorter
+     * pill, so expanding search does not grow the header's height.
+     */
+    searchBarHeader: {
+      marginHorizontal: 0,
+      marginTop: 0,
+      marginBottom: 0,
+      minHeight: 40,
+      backgroundColor: theme.background,
+    },
     searchInput: {
       flex: 1,
       fontSize: 15,
@@ -93,6 +140,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     // ---- Category pills ---------------------------------------------------
     categoryScroll: {
+      // The search bar used to sit above and supply this gap; with search moved
+      // into the header bar, the pill row owns its own breathing room.
+      marginTop: 8,
       marginBottom: 8,
     },
     categoryScrollContent: {
@@ -376,6 +426,75 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     createCtaStrong: {
       fontWeight: '700',
       textDecorationLine: 'underline',
+    },
+
+    // ---- Group & sort sheet -----------------------------------------------
+    sheetOverlay: {
+      backgroundColor: theme.overlay,
+      justifyContent: 'flex-end',
+      zIndex: 20,
+    },
+    sheetContainer: {
+      backgroundColor: theme.background,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: 16,
+    },
+    sheetHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 14,
+    },
+    sheetTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    sheetSectionTitle: {
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+      color: theme.textSecondary,
+      marginBottom: 10,
+    },
+    sheetOptionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.backgroundSecondary,
+      marginBottom: 8,
+    },
+    sheetOptionRowActive: {
+      borderColor: theme.primary,
+      backgroundColor: theme.primaryLight,
+    },
+    sheetOptionText: {
+      flex: 1,
+    },
+    sheetOptionLabel: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    sheetOptionLabelActive: {
+      color: theme.primary,
+      fontWeight: '700',
+    },
+    /**
+     * The mode toggle used to be three bare words on screen; given a full row
+     * here, each mode can say what it actually does.
+     */
+    sheetOptionHint: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      marginTop: 2,
     },
 
     // ---- FAB --------------------------------------------------------------

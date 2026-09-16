@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { forwardRef, useMemo } from 'react';
 import { View, TextInput, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
@@ -10,28 +10,47 @@ interface Props {
   onClear: () => void;
   onSubmit?: () => void;
   placeholder?: string;
+  /**
+   * `header` drops the outer margins and shortens the pill so the field can sit
+   * inside the screen's header bar without growing it.
+   */
+  variant?: 'list' | 'header';
+  autoFocus?: boolean;
 }
 
-/** Persistent search field above the catalog list. */
-export function CatalogSearchBar({
-  value,
-  onChangeText,
-  onClear,
-  onSubmit,
-  placeholder = 'Search plants or Tamil name',
-}: Props): React.JSX.Element {
+/** Search field for the catalog, above the list or inside the header bar. */
+export const CatalogSearchBar = forwardRef<TextInput, Props>(function CatalogSearchBar(
+  {
+    value,
+    onChangeText,
+    onClear,
+    onSubmit,
+    placeholder = 'Search plants or Tamil name',
+    variant = 'list',
+    autoFocus = false,
+  },
+  ref
+): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const isActive = value.length > 0;
 
   return (
-    <View style={[styles.searchBar, isActive && styles.searchBarActive]}>
+    <View
+      style={[
+        styles.searchBar,
+        variant === 'header' && styles.searchBarHeader,
+        isActive && styles.searchBarActive,
+      ]}
+    >
       <Ionicons
         name="search"
         size={18}
         color={isActive ? theme.primary : theme.textTertiary}
       />
       <TextInput
+        ref={ref}
+        autoFocus={autoFocus}
         style={styles.searchInput}
         value={value}
         onChangeText={onChangeText}
@@ -50,4 +69,4 @@ export function CatalogSearchBar({
       )}
     </View>
   );
-}
+});

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  LayoutAnimation,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,7 +20,11 @@ import { CatalogSearchBar } from '@/components/catalog/CatalogSearchBar';
 import { CatalogBrowseRow } from '@/components/catalog/CatalogBrowseRow';
 import { CatalogSearchResultRow } from '@/components/catalog/CatalogSearchResultRow';
 import { CatalogSectionHeader } from '@/components/catalog/CatalogSectionHeader';
-import { CatalogGroupModeToggle } from '@/components/catalog/CatalogGroupModeToggle';
+import { CatalogGroupSheet } from '@/components/catalog/CatalogGroupSheet';
+import {
+  CATALOG_GROUP_MODES,
+  DEFAULT_CATALOG_GROUP_MODE,
+} from '@/components/catalog/catalogGroupModes';
 import { RecentSearchChips } from '@/components/catalog/RecentSearchChips';
 import { HiddenPlantsSection } from '@/components/catalog/HiddenPlantsSection';
 import { usePlantCatalogManager } from '@/hooks/usePlantCatalogManager';
@@ -74,6 +79,29 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     () => (isSowNow ? buildSowNowView(zoneId, countsByName) : null),
     [isSowNow, zoneId, countsByName]
   );
+
+  // Search and the grouping sheet each take over the header, so only one is
+  // open at a time; the query itself survives collapsing, marked by the dot.
+  const [searchActive, setSearchActive] = useState(false);
+  const [showGrouping, setShowGrouping] = useState(false);
+
+  const openSearch = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowGrouping(false);
+    setSearchActive(true);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSearchActive(false);
+  }, []);
+
+  const toggleGrouping = useCallback(() => {
+    setSearchActive(false);
+    setShowGrouping((prev) => !prev);
+  }, []);
+
+  const closeGrouping = useCallback(() => setShowGrouping(false), []);
 
   const {
     query,
@@ -135,6 +163,10 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     });
   }, [moreNav, query, newPlantType, commitSearch, results]);
 
+  /** Names the active grouping for the funnel's accessibility label. */
+  const groupModeLabel =
+    CATALOG_GROUP_MODES.find((entry) => entry.value === groupMode)?.label ?? groupMode;
+
   const onSubmitSearch = useCallback(() => commitSearch(query), [commitSearch, query]);
 
   // Items and their pixel offsets are built together: the browse list mixes
@@ -195,54 +227,35 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       : `r:${item.result.plantType}:${item.result.name}`;
   }, []);
 
+  // The search field now lives in the header bar, and the grouping toggle in a
+  // sheet, so the list header is just the group pills — or the match count,
+  // which replaces them because a search spans every group.
   const listHeader = useMemo(
-    () => (
-      <>
-        <CatalogSearchBar
-          value={query}
-          onChangeText={setQuery}
-          onClear={clearQuery}
-          onSubmit={onSubmitSearch}
+    () =>
+      isSearching ? (
+        <View style={styles.sectionLabelRow}>
+          <Text style={styles.sectionLabel}>Matches</Text>
+          <Text style={styles.sectionLabelCount}>
+            {totalMatches > results.length
+              ? `${results.length} of ${totalMatches}`
+              : `${totalMatches} ${totalMatches === 1 ? 'plant' : 'plants'}`}
+          </Text>
+        </View>
+      ) : (
+        <PlantCategoryTabs
+          activeGroup={activeGroup}
+          groupCounts={groupCounts}
+          onGroupChange={setActiveGroup}
         />
-        {isSearching ? (
-          <View style={styles.sectionLabelRow}>
-            <Text style={styles.sectionLabel}>Matches</Text>
-            <Text style={styles.sectionLabelCount}>
-              {totalMatches > results.length
-                ? `${results.length} of ${totalMatches}`
-                : `${totalMatches} ${totalMatches === 1 ? 'plant' : 'plants'}`}
-            </Text>
-          </View>
-        ) : (
-          <>
-            <PlantCategoryTabs
-              activeGroup={activeGroup}
-              groupCounts={groupCounts}
-              onGroupChange={setActiveGroup}
-            />
-            {/* Sow Now is already sectioned by window, so it has no mode toggle. */}
-            {isSowNow ? null : (
-              <CatalogGroupModeToggle mode={groupMode} onChange={setGroupMode} />
-            )}
-          </>
-        )}
-      </>
-    ),
+      ),
     [
-      query,
-      setQuery,
-      clearQuery,
-      onSubmitSearch,
       isSearching,
       results.length,
       totalMatches,
       styles,
       activeGroup,
-      isSowNow,
       groupCounts,
       setActiveGroup,
-      groupMode,
-      setGroupMode,
     ]
   );
 
@@ -297,12 +310,72 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => moreNav.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Manage Plant Catalog</Text>
-        <View style={styles.headerSpacer} />
+        {searchActive ? (
+          <View style={styles.searchExpandedRow}>
+            <TouchableOpacity
+              onPress={closeSearch}
+              style={styles.headerIconBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Close search"
+            >
+              <Ionicons name="chevron-back" size={22} color={theme.text} />
+            </TouchableOpacity>
+            <CatalogSearchBar
+              variant="header"
+              autoFocus
+              value={query}
+              onChangeText={setQuery}
+              onClear={clearQuery}
+              onSubmit={onSubmitSearch}
+            />
+          </View>
+        ) : (
+          <>
+            <TouchableOpacity
+              onPress={() => moreNav.goBack()}
+              style={styles.backButton}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Plant Catalog</Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.headerIconBtn}
+                onPress={openSearch}
+                accessibilityRole="button"
+                accessibilityLabel="Search plant catalog"
+              >
+                <Ionicons name="search" size={20} color={theme.text} />
+                {query.trim() !== '' && <View style={styles.headerIconDot} />}
+              </TouchableOpacity>
+              {/* Sow Now sections itself by sowing window, so it has no mode to set. */}
+              {!isSowNow && (
+                <TouchableOpacity
+                  style={[styles.headerIconBtn, showGrouping && styles.headerIconBtnActive]}
+                  onPress={toggleGrouping}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Group plants by ${groupModeLabel}`}
+                >
+                  <Ionicons
+                    name="funnel"
+                    size={20}
+                    color={showGrouping ? theme.primary : theme.text}
+                  />
+                  {groupMode !== DEFAULT_CATALOG_GROUP_MODE && !showGrouping && (
+                    <View style={styles.headerIconDot} />
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
+        )}
       </View>
+
+      {showGrouping && (
+        <CatalogGroupSheet mode={groupMode} onChange={setGroupMode} onClose={closeGrouping} />
+      )}
 
       {loading ? (
         <View style={styles.loadingState}>
