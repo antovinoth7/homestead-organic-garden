@@ -4,10 +4,7 @@ import {
   measureCatalogItems,
 } from '@/utils/catalogListItems';
 import type { CatalogBrowseEntry, CatalogGroupMode } from '@/utils/catalogListItems';
-import {
-  CATALOG_ROW_TOTAL_HEIGHT,
-  CATALOG_SECTION_HEADER_HEIGHT,
-} from '@/styles/catalogMetrics';
+import { catalogRowTotalHeight, catalogSectionHeaderHeight } from '@/styles/catalogMetrics';
 import type { CatalogSearchResult } from '@/utils/catalogSearch';
 
 const entry = (
@@ -189,16 +186,63 @@ describe('measureCatalogItems', () => {
       items.forEach((item, index) => {
         expect(offsets[index]).toBe(running);
         expect(heights[index]).toBe(
-          item.kind === 'section' ? CATALOG_SECTION_HEADER_HEIGHT : CATALOG_ROW_TOTAL_HEIGHT
+          item.kind === 'section' ? catalogSectionHeaderHeight() : catalogRowTotalHeight()
         );
         running += heights[index]!;
       });
     }
   );
 
+  // The whole point of scaling the metrics: if the offsets table and the
+  // heights disagree at a non-default font size, getItemLayout starts lying and
+  // fast scrolling leaves gaps. This is the regression guard for that.
+  it.each([1, 1.3, 1.6, 3])('keeps offsets cumulative at font scale %s', (scale) => {
+    const { items, heights, offsets } = measureCatalogItems(
+      buildBrowseItems({ group: 'vegetables', entries: VEG, mode: 'type' }),
+      scale
+    );
+
+    let running = 0;
+    items.forEach((item, index) => {
+      expect(offsets[index]).toBe(running);
+      expect(heights[index]).toBe(
+        item.kind === 'section'
+          ? catalogSectionHeaderHeight(scale)
+          : catalogRowTotalHeight(scale)
+      );
+      running += heights[index]!;
+    });
+  });
+
+  it('grows rows with the font scale, up to the clamp', () => {
+    const at1 = measureCatalogItems(
+      buildBrowseItems({ group: 'vegetables', entries: VEG, mode: 'type' }),
+      1
+    );
+    const at13 = measureCatalogItems(
+      buildBrowseItems({ group: 'vegetables', entries: VEG, mode: 'type' }),
+      1.3
+    );
+    const at3 = measureCatalogItems(
+      buildBrowseItems({ group: 'vegetables', entries: VEG, mode: 'type' }),
+      3
+    );
+
+    const last = (o: number[]): number => o[o.length - 1]!;
+    expect(last(at13.offsets)).toBeGreaterThan(last(at1.offsets));
+
+    // Past the clamp the list stops growing: 3x is measured exactly as 1.6x.
+    const atClamp = measureCatalogItems(
+      buildBrowseItems({ group: 'vegetables', entries: VEG, mode: 'type' }),
+      1.6
+    );
+    expect(at3.heights).toEqual(atClamp.heights);
+    expect(at3.offsets).toEqual(atClamp.offsets);
+  });
+
   it('measures search results as rows', () => {
     const result = { name: 'Tomato', plantType: 'vegetable' } as CatalogSearchResult;
     const { heights } = measureCatalogItems(buildSearchItems([result]));
-    expect(heights).toEqual([CATALOG_ROW_TOTAL_HEIGHT]);
+    expect(heights).toEqual([catalogRowTotalHeight()]);
   });
 });

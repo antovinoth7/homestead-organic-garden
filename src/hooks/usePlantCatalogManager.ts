@@ -12,8 +12,9 @@ import {
 } from '@/services/plantProfiles';
 import { getAllPlants, getStoredPlants } from '@/services/plants';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
-import { buildCatalogSubtitle } from '@/utils/catalogSummaries';
+import { buildCatalogMetaLine } from '@/utils/catalogSummaries';
 import { deriveInstanceLifecycle } from '@/utils/plantHelpers';
+import { LIFECYCLE_LABELS } from '@/utils/plantLabels';
 import type { CatalogBrowseEntry, CatalogGroupMode } from '@/utils/catalogListItems';
 import { CatalogGroup, Plant, PlantProfiles, PlantType } from '@/types/database.types';
 import { CATALOG_GROUP_ORDER, getTaxonomy } from '@/config/plants/catalogTaxonomy';
@@ -160,16 +161,26 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
         const taxonomy = getTaxonomy(name, plantType);
         const profile = getPlantCareProfile(name, plantType);
         const entry = mergedProfiles[plantType]?.[name];
+        // The same derivation the plant record uses, so a plant is filed under
+        // the same season heading here as on its own detail screen — and the
+        // meta line names that same lifecycle.
+        const lifecycle = deriveInstanceLifecycle(profile?.lifecycle, plantType);
         buckets[taxonomy.group].push({
           name,
+          tamilName: entry?.tamilName,
           plantType,
           subGroup: taxonomy.subGroup,
           habit: taxonomy.habit,
-          // The same derivation the plant record uses, so a plant is filed under
-          // the same season heading here as on its own detail screen.
-          lifecycle: deriveInstanceLifecycle(profile?.lifecycle, plantType),
+          lifecycle,
           count: counts[name] ?? 0,
-          subtitle: buildCatalogSubtitle(entry?.description, entry?.varieties?.length ?? 0),
+          // A fact the grower can compare between rows, rather than a
+          // description they cannot finish reading in one truncated line.
+          subtitle: buildCatalogMetaLine(
+            profile?.daysToHarvest,
+            LIFECYCLE_LABELS[lifecycle],
+            entry?.description,
+            entry?.varieties?.length ?? 0
+          ),
         });
       }
     }
