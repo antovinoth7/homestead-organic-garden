@@ -14,12 +14,6 @@ jest.mock('react-native', () => {
     View: host('View'),
   };
 });
-jest.mock('@expo/vector-icons', () => {
-  const React = jest.requireActual<typeof import('react')>('react');
-  return {
-    Ionicons: (props: Record<string, unknown>) => React.createElement('Ionicons', props),
-  };
-});
 jest.mock('@/components/GardenIcon', () => {
   const React = jest.requireActual<typeof import('react')>('react');
   return {
@@ -66,6 +60,7 @@ interface RenderedTree {
     findAll: (predicate: (node: RenderedNode) => boolean) => RenderedNode[];
   };
   toJSON: () => unknown;
+  update: (element: React.ReactElement) => void;
 }
 
 const TestRenderer = jest.requireActual('react-test-renderer') as {
@@ -103,23 +98,15 @@ describe('PlantCategoryTabs icons', () => {
     return rendered;
   }
 
-  it('leads with a Sow Now pill before the groups', () => {
+  it('renders one pill per browse group and nothing else', () => {
     const rendered = render();
     const pills = rendered.root.findAll((node) => node.type === 'TouchableOpacity');
-    expect(pills).toHaveLength(CATALOG_GROUP_ORDER.length + 1);
-    expect(JSON.stringify(rendered.toJSON())).toContain('Sow Now');
-  });
-
-  it('reports the sow-now selection separately from a group', () => {
-    const onGroupChange = jest.fn();
-    const rendered = render(onGroupChange);
-    const pills = rendered.root.findAll((node) => node.type === 'TouchableOpacity');
-    TestRenderer.act(() => pills[0]?.props.onPress?.());
-    expect(onGroupChange).toHaveBeenCalledWith('sow_now');
+    expect(pills).toHaveLength(CATALOG_GROUP_ORDER.length);
+    // Sow Now was removed from the catalog; the Today screen owns that question.
+    expect(JSON.stringify(rendered.toJSON())).not.toContain('Sow Now');
   });
 
   it('renders a 14 px semantic icon for every browse group in pill order', () => {
-    // GardenIcon is the group artwork; Sow Now uses an Ionicon, so it is absent.
     const icons = render().root.findAll((node) => node.type === 'GardenIcon');
 
     expect(icons).toHaveLength(8);
@@ -139,8 +126,33 @@ describe('PlantCategoryTabs icons', () => {
 
     expect(icons[activeIndex]?.props.color).toBe('#1a4a2e');
     expect(icons[otherIndex]?.props.color).toBe('#4a3828');
-    // Sow Now occupies pills[0], so a group's pill sits one further along.
-    TestRenderer.act(() => pills[otherIndex + 1]?.props.onPress?.());
+    TestRenderer.act(() => pills[otherIndex]?.props.onPress?.());
     expect(onGroupChange).toHaveBeenCalledWith('plantation_timber');
+  });
+
+  it('keeps each pill handler stable across an unrelated re-render', () => {
+    // The pills are memoised so that a keystroke in search, or a sheet toggle,
+    // does not rebuild the row. That only holds while each handler keeps its
+    // identity, which is what this guards.
+    const onGroupChange = jest.fn();
+    const rendered = render(onGroupChange);
+    const before = rendered.root
+      .findAll((node) => node.type === 'TouchableOpacity')
+      .map((pill) => pill.props.onPress);
+
+    TestRenderer.act(() => {
+      rendered.update(
+        <PlantCategoryTabs
+          activeGroup="herbs_medicinal"
+          groupCounts={counts}
+          onGroupChange={onGroupChange}
+        />
+      );
+    });
+
+    const after = rendered.root
+      .findAll((node) => node.type === 'TouchableOpacity')
+      .map((pill) => pill.props.onPress);
+    expect(after).toEqual(before);
   });
 });

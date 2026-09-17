@@ -37,10 +37,7 @@ import {
 } from '@/utils/catalogListItems';
 import type { CatalogListItem } from '@/utils/catalogListItems';
 import { CATALOG_GROUP_DEFAULT_TYPE } from '@/config/plants/catalogTaxonomy';
-import { buildSowNowView } from '@/utils/catalogSowNow';
-import { getActiveZone } from '@/config/zones';
-import type { AgroClimaticZoneId } from '@/config/zones';
-import type { CatalogGroup, PlantType } from '@/types/database.types';
+import type { PlantType } from '@/types/database.types';
 
 export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const moreNav = useNavigation<NativeStackNavigationProp<MoreStackParamList>>();
@@ -58,7 +55,6 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     groupData,
     groupCounts,
     plantCountsByType,
-    countsByName,
     mergedProfiles,
     hiddenPlantNames,
     restore,
@@ -70,15 +66,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
    * herbaceous quick fruits — so a newly created entry only gets a starting type
    * from the active pill; the entry form lets it be corrected.
    */
-  const isSowNow = activeGroup === 'sow_now';
-  const newPlantType = isSowNow ? 'vegetable' : CATALOG_GROUP_DEFAULT_TYPE[activeGroup];
-
-  /** The zone decides which sowing windows apply; null until Settings has one. */
-  const zoneId = useMemo(() => (getActiveZone()?.id as AgroClimaticZoneId) ?? null, []);
-  const sowNow = useMemo(
-    () => (isSowNow ? buildSowNowView(zoneId, countsByName) : null),
-    [isSowNow, zoneId, countsByName]
-  );
+  const newPlantType = CATALOG_GROUP_DEFAULT_TYPE[activeGroup];
 
   // Search and the grouping sheet each take over the header, so only one is
   // open at a time; the query itself survives collapsing, marked by the dot.
@@ -114,6 +102,8 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     commitSearch,
     clearRecentSearches,
   } = useCatalogSearch({ profiles: mergedProfiles, plantCountsByType });
+
+  const onBack = useCallback(() => moreNav.goBack(), [moreNav]);
 
   const openPlant = useCallback(
     (plantName: string, plantType: PlantType) => {
@@ -176,15 +166,15 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       measureCatalogItems(
         isSearching
           ? buildSearchItems(results)
-          : sowNow
-            ? sowNow.items
-            : buildBrowseItems({
-                group: activeGroup as CatalogGroup,
-                entries: groupData.entries,
-                mode: groupMode,
-              })
+          : // `groupData` carries the group and mode it was built for, so the
+            // list can never pair a freshly tapped pill with the old rows.
+            buildBrowseItems({
+              group: groupData.group,
+              entries: groupData.entries,
+              mode: groupData.mode,
+            })
       ),
-    [isSearching, results, sowNow, activeGroup, groupData, groupMode]
+    [isSearching, results, groupData]
   );
 
   const renderItem = useCallback(
@@ -198,7 +188,10 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
           <CatalogSearchResultRow
             result={item.result}
             isFirst={index === 0}
-            isLast={index === data.length - 1}
+            // `results.length`, not `data.length`: only search rows read this,
+            // and keying on the whole list would give `renderItem` a new
+            // identity on every group switch, re-rendering every browse row.
+            isLast={index === results.length - 1}
             onPress={openPlant}
           />
         );
@@ -217,7 +210,19 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
         />
       );
     },
-    [data.length, openPlant]
+    [results.length, openPlant]
+  );
+
+  // Browse items are fixed heights — two of them, rows and letter headers — so
+  // the fast path reads the offset table built alongside the data. Search rows
+  // wrap to an unknown height, so the screen passes `undefined` instead.
+  const getItemLayout = useCallback(
+    (_: ArrayLike<CatalogListItem> | null | undefined, index: number) => ({
+      length: heights[index] ?? CATALOG_ROW_TOTAL_HEIGHT,
+      offset: offsets[index] ?? 0,
+      index,
+    }),
+    [heights, offsets]
   );
 
   const keyExtractor = useCallback((item: CatalogListItem) => {
@@ -300,11 +305,10 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const listEmpty = useMemo(
     () => (
       <Text style={styles.emptyText}>
-        {sowNow?.message ??
-          (isSearching ? 'No plants match that search.' : 'No plants yet. Tap + to add one.')}
+        {isSearching ? 'No plants match that search.' : 'No plants yet. Tap + to add one.'}
       </Text>
     ),
-    [styles, isSearching, sowNow]
+    [styles, isSearching]
   );
 
   return (
@@ -314,14 +318,13 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
           <View style={styles.searchExpandedRow}>
             <TouchableOpacity
               onPress={closeSearch}
-              style={styles.headerIconBtn}
+              style={styles.searchBackBtn}
               accessibilityRole="button"
               accessibilityLabel="Close search"
             >
-              <Ionicons name="chevron-back" size={22} color={theme.text} />
+              <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
             </TouchableOpacity>
             <CatalogSearchBar
-              variant="header"
               autoFocus
               value={query}
               onChangeText={setQuery}
@@ -332,7 +335,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
         ) : (
           <>
             <TouchableOpacity
-              onPress={() => moreNav.goBack()}
+              onPress={onBack}
               style={styles.backButton}
               accessibilityRole="button"
               accessibilityLabel="Go back"
@@ -347,27 +350,24 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
                 accessibilityRole="button"
                 accessibilityLabel="Search plant catalog"
               >
-                <Ionicons name="search" size={20} color={theme.text} />
-                {query.trim() !== '' && <View style={styles.headerIconDot} />}
+                <Ionicons name="search" size={20} color={theme.textInverse} />
+                {query.trim() !== '' && <View style={styles.headerActiveDot} />}
               </TouchableOpacity>
-              {/* Sow Now sections itself by sowing window, so it has no mode to set. */}
-              {!isSowNow && (
-                <TouchableOpacity
-                  style={[styles.headerIconBtn, showGrouping && styles.headerIconBtnActive]}
-                  onPress={toggleGrouping}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Group plants by ${groupModeLabel}`}
-                >
-                  <Ionicons
-                    name="funnel"
-                    size={20}
-                    color={showGrouping ? theme.primary : theme.text}
-                  />
-                  {groupMode !== DEFAULT_CATALOG_GROUP_MODE && !showGrouping && (
-                    <View style={styles.headerIconDot} />
-                  )}
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={[styles.headerIconBtn, showGrouping && styles.headerIconBtnActive]}
+                onPress={toggleGrouping}
+                accessibilityRole="button"
+                accessibilityLabel={`Group plants by ${groupModeLabel}`}
+              >
+                <Ionicons
+                  name="funnel"
+                  size={20}
+                  color={showGrouping ? theme.primary : theme.textInverse}
+                />
+                {groupMode !== DEFAULT_CATALOG_GROUP_MODE && !showGrouping && (
+                  <View style={styles.headerActiveDot} />
+                )}
+              </TouchableOpacity>
             </View>
           </>
         )}
@@ -401,18 +401,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
             initialNumToRender={12}
             windowSize={7}
             removeClippedSubviews
-            // Browse items are fixed heights — two of them, rows and letter
-            // headers — so the fast path reads the offset table built alongside
-            // the data. Search rows wrap to an unknown height, so it stays off.
-            getItemLayout={
-              isSearching
-                ? undefined
-                : (_, index) => ({
-                    length: heights[index] ?? CATALOG_ROW_TOTAL_HEIGHT,
-                    offset: offsets[index] ?? 0,
-                    index,
-                  })
-            }
+            getItemLayout={isSearching ? undefined : getItemLayout}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}

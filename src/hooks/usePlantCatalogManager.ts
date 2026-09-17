@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useDeferredValue, useMemo, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -13,6 +13,7 @@ import {
 import { getAllPlants, getStoredPlants } from '@/services/plants';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { buildCatalogSubtitle } from '@/utils/catalogSummaries';
+import { signPlantVarietyCounts } from '@/utils/catalogCounts';
 import { deriveInstanceLifecycle } from '@/utils/plantHelpers';
 import type { CatalogBrowseEntry, CatalogGroupMode } from '@/utils/catalogListItems';
 import { CatalogGroup, Plant, PlantProfiles, PlantType } from '@/types/database.types';
@@ -20,6 +21,13 @@ import { CATALOG_GROUP_ORDER, getTaxonomy } from '@/config/plants/catalogTaxonom
 import { getErrorMessage } from '@/utils/errorLogging';
 
 export interface GroupData {
+  /**
+   * The group and mode these entries were built for. Deferred, so they can lag
+   * the pill the user just tapped by a frame — carrying them alongside the
+   * entries is what stops the screen pairing a new group with old rows.
+   */
+  group: CatalogGroup;
+  mode: CatalogGroupMode;
   entries: CatalogBrowseEntry[];
   isEmpty: boolean;
 }
@@ -33,9 +41,9 @@ export interface UsePlantCatalogManagerReturn {
    */
   mergedProfiles: PlantProfiles;
   plants: Plant[];
-  /** The selected group, or `'sow_now'` for the leading seasonal view. */
-  activeGroup: CatalogGroup | 'sow_now';
-  setActiveGroup: (group: CatalogGroup | 'sow_now') => void;
+  /** The selected browse group. Urgent — this is what highlights the pill. */
+  activeGroup: CatalogGroup;
+  setActiveGroup: (group: CatalogGroup) => void;
   /** How the browse list sections itself: by sub-group, by season, or A–Z. */
   groupMode: CatalogGroupMode;
   setGroupMode: (mode: CatalogGroupMode) => void;
@@ -55,8 +63,6 @@ export interface UsePlantCatalogManagerReturn {
   groupCounts: Record<CatalogGroup, number>;
   /** Garden-plant counts keyed by category then variety name — feeds search. */
   plantCountsByType: Record<PlantType, Record<string, number>>;
-  /** The same counts flattened by plant name — feeds the Sow Now rows. */
-  countsByName: Record<string, number>;
   /** Bundled entries the user deleted from any category in the active group. */
   hiddenPlantNames: { name: string; plantType: PlantType }[];
   /** Un-hides a deleted bundled entry, then reloads the catalog. */
@@ -68,11 +74,28 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeGroup, setActiveGroup] = useState<CatalogGroup | 'sow_now'>('vegetables');
+  const [activeGroup, setActiveGroup] = useState<CatalogGroup>('vegetables');
   const [groupMode, setGroupMode] = useState<CatalogGroupMode>('type');
+
+  /**
+   * What the heavy derivations run on. React paints the newly tapped pill from
+   * `activeGroup` first and rebuilds the ~150-row list at low priority after,
+   * so re-sectioning never blocks the tap's own feedback.
+   */
+  const deferredGroup = useDeferredValue(activeGroup);
+  const deferredMode = useDeferredValue(groupMode);
 
   /** False until the first load resolves, so only that one shows the spinner. */
   const hasLoadedRef = useRef(false);
+
+  /**
+   * Signatures of the last applied fetch, so a revalidate that found nothing
+   * new doesn't replace state with structurally-identical objects. `null` (not
+   * `''`) because an empty catalog signs as `''`, which would make the first
+   * load look like a no-op.
+   */
+  const plantsSigRef = useRef<string | null>(null);
+  const profilesSigRef = useRef<string | null>(null);
 
   const reload = useCallback(async (options?: { silent?: boolean }): Promise<void> => {
     if (!options?.silent) setLoading(true);
@@ -87,8 +110,20 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
         getStoredPlants(),
       ]);
       const allPlants = storedPlants.length > 0 ? storedPlants : await getAllPlants();
-      setProfiles(profilesData);
-      setPlants(allPlants);
+
+      // Only adopt what actually changed. A revalidate that found the same data
+      // would otherwise hand down new identities and re-resolve every browse
+      // entry — the background work that made the category pills feel stuck.
+      const profilesSig = JSON.stringify(profilesData);
+      if (profilesSigRef.current !== profilesSig) {
+        profilesSigRef.current = profilesSig;
+        setProfiles(profilesData);
+      }
+      const plantsSig = signPlantVarietyCounts(allPlants);
+      if (plantsSigRef.current !== plantsSig) {
+        plantsSigRef.current = plantsSig;
+        setPlants(allPlants);
+      }
       hasLoadedRef.current = true;
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error) ?? 'Failed to load plant catalog.');
@@ -177,23 +212,9 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   }, [profiles, mergedProfiles, plantCountsByType]);
 
   const groupData = useMemo((): GroupData => {
-    const entries = activeGroup === 'sow_now' ? [] : entriesByGroup[activeGroup] ?? [];
-    return { entries, isEmpty: entries.length === 0 };
-  }, [entriesByGroup, activeGroup]);
-
-  /**
-   * Garden-plant counts keyed by name across every type — what the Sow Now rows
-   * need, since a planting rule names a plant without knowing its care model.
-   */
-  const countsByName = useMemo(() => {
-    const totals: Record<string, number> = {};
-    for (const perName of Object.values(plantCountsByType)) {
-      for (const [name, count] of Object.entries(perName)) {
-        totals[name] = (totals[name] ?? 0) + count;
-      }
-    }
-    return totals;
-  }, [plantCountsByType]);
+    const entries = entriesByGroup[deferredGroup] ?? [];
+    return { group: deferredGroup, mode: deferredMode, entries, isEmpty: entries.length === 0 };
+  }, [entriesByGroup, deferredGroup, deferredMode]);
 
   /** Catalog count per group — drives the pill badges. */
   const groupCounts = useMemo(() => {
@@ -216,11 +237,11 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     const result: { name: string; plantType: PlantType }[] = [];
     for (const plantType of PLANT_CATEGORIES) {
       for (const name of hidden[plantType] ?? []) {
-        if (getTaxonomy(name, plantType).group === activeGroup) result.push({ name, plantType });
+        if (getTaxonomy(name, plantType).group === deferredGroup) result.push({ name, plantType });
       }
     }
     return result;
-  }, [profiles, activeGroup]);
+  }, [profiles, deferredGroup]);
 
   const restore = useCallback(
     async (name: string, plantType: PlantType): Promise<void> => {
@@ -251,7 +272,6 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     refresh,
     groupCounts,
     plantCountsByType,
-    countsByName,
     hiddenPlantNames,
     restore,
   };
