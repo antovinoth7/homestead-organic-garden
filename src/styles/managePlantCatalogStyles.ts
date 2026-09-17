@@ -40,43 +40,52 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomColor: theme.border,
     },
     backButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    headerSpacer: {
-      width: 36,
     },
     headerActions: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
+      gap: 8,
     },
+    /** Filled primary circle, matching the Plants screen's header controls. */
     headerIconBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
     },
     headerIconBtnActive: {
-      backgroundColor: theme.primaryLight,
+      backgroundColor: theme.accent,
     },
     /**
      * Dot on a header icon saying its state is no longer the default — a query
-     * still held while search is collapsed, or a non-default grouping.
+     * still held while search is collapsed, or a non-default grouping. Accent,
+     * because the button beneath it is now filled with the primary colour.
      */
-    headerIconDot: {
+    headerActiveDot: {
       position: 'absolute',
-      top: 6,
+      bottom: 6,
       right: 6,
-      width: 8,
-      height: 8,
+      width: 7,
+      height: 7,
       borderRadius: 4,
+      backgroundColor: theme.accent,
+    },
+    /** The chevron that collapses search, mirroring `plantsStyles`. */
+    searchBackBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
       backgroundColor: theme.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     /** Expanded search row — takes the place of the title in the header bar. */
     searchExpandedRow: {
@@ -102,40 +111,31 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
 
     // ---- Search bar -------------------------------------------------------
+    /**
+     * The field lives inside the header bar, so it carries no outer margins —
+     * the header owns its padding. `flex: 1` is what makes it fill the row
+     * beside the back chevron; without it the pill shrank to its placeholder
+     * and ran past the header's right edge on a narrow screen. Geometry copied
+     * from `plantsStyles.searchExpandedWrapper` so the two screens match.
+     */
     searchBar: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
-      marginHorizontal: 16,
-      marginTop: 12,
-      marginBottom: 4,
+      gap: 8,
       paddingHorizontal: 14,
-      minHeight: 46,
-      borderRadius: 16,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    searchBarActive: {
-      borderColor: theme.primary,
-    },
-    /**
-     * The same field rendered inside the header bar rather than above the list:
-     * no outer margins (the header owns its padding) and a slightly shorter
-     * pill, so expanding search does not grow the header's height.
-     */
-    searchBarHeader: {
-      marginHorizontal: 0,
-      marginTop: 0,
-      marginBottom: 0,
+      paddingVertical: 8,
       minHeight: 40,
+      borderRadius: 24,
       backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.primary,
     },
     searchInput: {
       flex: 1,
-      fontSize: 15,
+      fontSize: 16,
       color: theme.inputText,
-      paddingVertical: 0,
+      padding: 0,
     },
 
     // ---- Category pills ---------------------------------------------------
@@ -249,32 +249,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
 
     // ---- A–Z letter headers (browse mode only) ----------------------------
-    modeToggleRow: {
-      flexDirection: 'row',
-      alignSelf: 'flex-start',
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-      borderRadius: 8,
-      padding: 2,
-      marginBottom: 4,
-    },
-    modeToggleButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 6,
-    },
-    modeToggleButtonActive: {
-      backgroundColor: theme.card,
-    },
-    modeToggleText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-    modeToggleTextActive: {
-      color: theme.primary,
-    },
     catalogSectionHeader: {
       // Fixed height, and it carries the gap above the group it introduces —
       // see CATALOG_SECTION_HEADER_HEIGHT.
@@ -444,57 +418,64 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 14,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
     },
     sheetTitle: {
-      fontSize: 17,
+      fontSize: 18,
       fontWeight: '700',
       color: theme.text,
     },
     sheetSectionTitle: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
-      letterSpacing: 0.6,
+      letterSpacing: 0.5,
       textTransform: 'uppercase',
       color: theme.textSecondary,
-      marginBottom: 10,
-    },
-    sheetOptionRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.backgroundSecondary,
+      marginTop: 16,
       marginBottom: 8,
     },
-    sheetOptionRowActive: {
-      borderColor: theme.primary,
-      backgroundColor: theme.primaryLight,
+    /** "Reset" pill — shown only while the grouping is off its default. */
+    sheetClearBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 14,
+      backgroundColor: theme.errorLight,
     },
-    sheetOptionText: {
-      flex: 1,
-    },
-    sheetOptionLabel: {
-      fontSize: 15,
+    sheetClearText: {
+      fontSize: 13,
       fontWeight: '600',
-      color: theme.text,
+      color: theme.error,
     },
-    sheetOptionLabelActive: {
+    sheetChipWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    sheetChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: theme.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    sheetChipActive: {
+      backgroundColor: theme.primaryLight,
+      borderColor: theme.primary,
+    },
+    sheetChipText: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      fontWeight: '500',
+    },
+    sheetChipTextActive: {
       color: theme.primary,
-      fontWeight: '700',
-    },
-    /**
-     * The mode toggle used to be three bare words on screen; given a full row
-     * here, each mode can say what it actually does.
-     */
-    sheetOptionHint: {
-      fontSize: 12,
-      color: theme.textTertiary,
-      marginTop: 2,
+      fontWeight: '600',
     },
 
     // ---- FAB --------------------------------------------------------------

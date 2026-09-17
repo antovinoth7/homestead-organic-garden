@@ -10,15 +10,10 @@ interface Props {
   onClear: () => void;
   onSubmit?: () => void;
   placeholder?: string;
-  /**
-   * `header` drops the outer margins and shortens the pill so the field can sit
-   * inside the screen's header bar without growing it.
-   */
-  variant?: 'list' | 'header';
   autoFocus?: boolean;
 }
 
-/** Search field for the catalog, above the list or inside the header bar. */
+/** Search field for the catalog, rendered inside the screen's header bar. */
 export const CatalogSearchBar = forwardRef<TextInput, Props>(function CatalogSearchBar(
   {
     value,
@@ -26,7 +21,6 @@ export const CatalogSearchBar = forwardRef<TextInput, Props>(function CatalogSea
     onClear,
     onSubmit,
     placeholder = 'Search plants or Tamil name',
-    variant = 'list',
     autoFocus = false,
   },
   ref
@@ -36,18 +30,8 @@ export const CatalogSearchBar = forwardRef<TextInput, Props>(function CatalogSea
   const isActive = value.length > 0;
 
   return (
-    <View
-      style={[
-        styles.searchBar,
-        variant === 'header' && styles.searchBarHeader,
-        isActive && styles.searchBarActive,
-      ]}
-    >
-      <Ionicons
-        name="search"
-        size={18}
-        color={isActive ? theme.primary : theme.textTertiary}
-      />
+    <View style={styles.searchBar}>
+      <Ionicons name="search" size={16} color={theme.textSecondary} />
       <TextInput
         ref={ref}
         autoFocus={autoFocus}

@@ -5,7 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { SheetHandle } from '@/components/SheetHandle';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
-import { CATALOG_GROUP_MODES } from '@/components/catalog/catalogGroupModes';
+import {
+  CATALOG_GROUP_MODES,
+  DEFAULT_CATALOG_GROUP_MODE,
+} from '@/components/catalog/catalogGroupModes';
 import type { CatalogGroupMode } from '@/utils/catalogListItems';
 
 interface Props {
@@ -21,6 +24,11 @@ interface Props {
  * six plant rows visible in a category of fifty. Grouping is set once and then
  * left alone, so it earns a sheet rather than permanent screen space — and the
  * section headers on the list already say which mode is in force.
+ *
+ * Laid out as chips with a divider'd header and a Reset pill, the same shape as
+ * `PlantFilterSheet`, so the catalog reads as part of the same app. Each mode's
+ * `hint` has no room on a chip and rides on `accessibilityHint` instead, where
+ * it was already being announced.
  *
  * Unlike `PlantFilterSheet`, this screen is in the More stack with no floating
  * tab bar, so the bottom padding is the safe-area inset alone.
@@ -40,6 +48,11 @@ function CatalogGroupSheetComponent({ mode, onChange, onClose }: Props): React.J
     [onChange, onClose]
   );
 
+  const handleReset = useCallback(() => {
+    onChange(DEFAULT_CATALOG_GROUP_MODE);
+    onClose();
+  }, [onChange, onClose]);
+
   return (
     <View style={[StyleSheet.absoluteFill, styles.sheetOverlay]}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
@@ -48,36 +61,47 @@ function CatalogGroupSheetComponent({ mode, onChange, onClose }: Props): React.J
 
         <View style={styles.sheetHeader}>
           <Text style={styles.sheetTitle}>Group plants by</Text>
+          {mode !== DEFAULT_CATALOG_GROUP_MODE && (
+            <TouchableOpacity
+              onPress={handleReset}
+              style={styles.sheetClearBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Reset grouping"
+            >
+              <Text style={styles.sheetClearText}>Reset</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {CATALOG_GROUP_MODES.map(({ value, label, hint, icon }) => {
-          const isActive = mode === value;
-          return (
-            <TouchableOpacity
-              key={value}
-              style={[styles.sheetOptionRow, isActive && styles.sheetOptionRowActive]}
-              onPress={handlePress(value)}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isActive }}
-              accessibilityLabel={label}
-              accessibilityHint={hint}
-            >
-              <Ionicons
-                name={icon}
-                size={18}
-                color={isActive ? theme.primary : theme.textSecondary}
-              />
-              <View style={styles.sheetOptionText}>
-                <Text style={[styles.sheetOptionLabel, isActive && styles.sheetOptionLabelActive]}>
+        <Text style={styles.sheetSectionTitle}>
+          <Ionicons name="layers" size={14} color={theme.textSecondary} /> Group By
+        </Text>
+        <View style={styles.sheetChipWrap}>
+          {CATALOG_GROUP_MODES.map(({ value, label, hint, icon }) => {
+            const isActive = mode === value;
+            return (
+              <TouchableOpacity
+                key={value}
+                style={[styles.sheetChip, isActive && styles.sheetChipActive]}
+                onPress={handlePress(value)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
+                accessibilityLabel={label}
+                accessibilityHint={hint}
+              >
+                <Ionicons
+                  name={icon}
+                  size={14}
+                  color={isActive ? theme.primary : theme.textSecondary}
+                />
+                <Text style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}>
                   {label}
                 </Text>
-                <Text style={styles.sheetOptionHint}>{hint}</Text>
-              </View>
-              {isActive && <Ionicons name="checkmark" size={18} color={theme.primary} />}
-            </TouchableOpacity>
-          );
-        })}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
