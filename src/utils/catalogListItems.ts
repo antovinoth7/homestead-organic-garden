@@ -1,7 +1,4 @@
-import {
-  CATALOG_ROW_TOTAL_HEIGHT,
-  CATALOG_SECTION_HEADER_HEIGHT,
-} from '@/styles/catalogMetrics';
+import { catalogRowTotalHeight, catalogSectionHeaderHeight } from '@/styles/catalogMetrics';
 import { SUB_GROUP_ORDER } from '@/config/plants/catalogTaxonomy';
 import {
   LIFECYCLE_SECTION_LABELS,
@@ -26,6 +23,8 @@ export type CatalogGroupMode = 'type' | 'season' | 'alpha';
  */
 export interface CatalogBrowseEntry {
   name: string;
+  /** Shown beside the English name, as the pest/disease list already does. */
+  tamilName?: string;
   /**
    * The plant's own care model. A browse group spans several — Fruits holds both
    * `fruit_tree` trees and herbaceous quick fruits — so the row cannot inherit
@@ -50,6 +49,7 @@ export type CatalogListItem =
   | {
       kind: 'browse';
       name: string;
+      tamilName?: string;
       plantType: PlantType;
       habit: PlantHabit;
       count: number;
@@ -86,6 +86,7 @@ function pushSection(
     items.push({
       kind: 'browse',
       name: entry.name,
+      tamilName: entry.tamilName,
       plantType: entry.plantType,
       habit: entry.habit,
       count: entry.count,
@@ -168,9 +169,17 @@ export function buildSearchItems(results: readonly CatalogSearchResult[]): Catal
  * heights — rows and section headers — so a single multiplication does not work
  * and the screen indexes into this table instead. Identical for all three modes.
  */
-export function measureCatalogItems(items: CatalogListItem[]): CatalogListLayout {
+export function measureCatalogItems(
+  items: CatalogListItem[],
+  fontScale = 1
+): CatalogListLayout {
+  // Resolved once rather than per item: both heights are pure functions of the
+  // scale, and a list of 200 plants would otherwise recompute them 200 times.
+  const rowHeight = catalogRowTotalHeight(fontScale);
+  const headerHeight = catalogSectionHeaderHeight(fontScale);
+
   const heights = items.map((item) =>
-    item.kind === 'section' ? CATALOG_SECTION_HEADER_HEIGHT : CATALOG_ROW_TOTAL_HEIGHT
+    item.kind === 'section' ? headerHeight : rowHeight
   );
 
   const offsets: number[] = [];

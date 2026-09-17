@@ -4,20 +4,21 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   LayoutAnimation,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme';
-import { createStyles, CATALOG_ROW_TOTAL_HEIGHT } from '@/styles/managePlantCatalogStyles';
+import { createStyles, catalogRowTotalHeight } from '@/styles/managePlantCatalogStyles';
 import { MoreStackParamList } from '@/types/navigation.types';
 import { PlantCategoryTabs } from '@/components/PlantCategoryTabs';
 import { CatalogSearchBar } from '@/components/catalog/CatalogSearchBar';
 import { CatalogBrowseRow } from '@/components/catalog/CatalogBrowseRow';
+import { CatalogSkeletonRows } from '@/components/catalog/CatalogSkeletonRows';
 import { CatalogSearchResultRow } from '@/components/catalog/CatalogSearchResultRow';
 import { CatalogSectionHeader } from '@/components/catalog/CatalogSectionHeader';
 import { CatalogGroupSheet } from '@/components/catalog/CatalogGroupSheet';
@@ -42,7 +43,10 @@ import type { PlantType } from '@/types/database.types';
 export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const moreNav = useNavigation<NativeStackNavigationProp<MoreStackParamList>>();
   const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  // The row heights the list promises getItemLayout scale with the OS font
+  // setting, so the screen, the rows and the headers must all read the same one.
+  const { fontScale } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, fontScale), [theme, fontScale]);
   const insets = useSafeAreaInsets();
 
   const {
@@ -172,15 +176,18 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
               group: groupData.group,
               entries: groupData.entries,
               mode: groupData.mode,
-            })
+            }),
+        fontScale
       ),
-    [isSearching, results, groupData]
+    [isSearching, results, groupData, fontScale]
   );
 
   const renderItem = useCallback(
     ({ item, index }: { item: CatalogListItem; index: number }) => {
       if (item.kind === 'section') {
-        return <CatalogSectionHeader title={item.title} count={item.count} />;
+        return (
+          <CatalogSectionHeader title={item.title} count={item.count} fontScale={fontScale} />
+        );
       }
       if (item.kind === 'result') {
         // Search results are one flat card: no letter groups to break them up.
@@ -199,6 +206,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       return (
         <CatalogBrowseRow
           plantName={item.name}
+          tamilName={item.tamilName}
           // The row's own type, not the active pill: a group spans several.
           plantType={item.plantType}
           habit={item.habit}
@@ -206,11 +214,12 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
           subtitle={item.subtitle}
           isFirst={item.isFirst}
           isLast={item.isLast}
+          fontScale={fontScale}
           onPress={openPlant}
         />
       );
     },
-    [results.length, openPlant]
+    [results.length, openPlant, fontScale]
   );
 
   // Browse items are fixed heights — two of them, rows and letter headers — so
@@ -218,11 +227,11 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   // wrap to an unknown height, so the screen passes `undefined` instead.
   const getItemLayout = useCallback(
     (_: ArrayLike<CatalogListItem> | null | undefined, index: number) => ({
-      length: heights[index] ?? CATALOG_ROW_TOTAL_HEIGHT,
+      length: heights[index] ?? catalogRowTotalHeight(fontScale),
       offset: offsets[index] ?? 0,
       index,
     }),
-    [heights, offsets]
+    [heights, offsets, fontScale]
   );
 
   const keyExtractor = useCallback((item: CatalogListItem) => {
@@ -378,10 +387,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       )}
 
       {loading ? (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={styles.loadingText}>Loading catalog...</Text>
-        </View>
+        <CatalogSkeletonRows />
       ) : (
         <View style={styles.contentWrapper}>
           <FlatList

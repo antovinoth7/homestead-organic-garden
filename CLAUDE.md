@@ -21,7 +21,7 @@ React Native + Expo (SDK 54) app for organic garden management. Android/iOS. Fir
 - **Service pattern**: cache check → `refreshAuthToken()` → `withTimeoutAndRetry()` (reads) / `writeOrQueue()` (writes) → update cache → AsyncStorage fallback.
 - **Offline writes**: user-data mutations go through `writeOrQueue()` (`src/lib/offlineWrite.ts`); creates use client-generated doc ids (`doc(collection(...))` + `setDoc`, never `addDoc`); queued mutations replay via `src/services/offlineSync.ts`.
 - **Cache**: `src/lib/dataCache.ts` (30s TTL). `invalidate()`/`invalidateAll()` after mutations.
-- **Tamil language strategy**: English ↔ Tamil toggle in Settings (Phase G). No language mixing. `tamilName` fields are data-only until Phase G ships the toggle.
+- **Tamil language strategy**: English ↔ Tamil toggle in Settings (Phase G) governs *interface* language only. No language mixing in UI copy — a label is English or Tamil, never half of each. A `tamilName` may be shown *alongside* its English name as a secondary identifier (see `ReferenceListCard`, `CatalogBrowseRow`); it must never replace the English name before the Phase G toggle ships.
 
 ## Directory Structure
 

@@ -1,26 +1,45 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 import { MONO_FONT } from './typography';
-import { CATALOG_ROW_HEIGHT, CATALOG_SECTION_HEADER_HEIGHT } from './catalogMetrics';
+import {
+  catalogRowHeight,
+  catalogSectionHeaderHeight,
+  clampFontScale,
+} from './catalogMetrics';
 
 // Re-exported so existing importers keep working; the numbers themselves live
 // in catalogMetrics, which the pure list-building util also reads.
 export {
-  CATALOG_ROW_HEIGHT,
-  CATALOG_ROW_TOTAL_HEIGHT,
-  CATALOG_SECTION_HEADER_HEIGHT,
+  catalogRowHeight,
+  catalogRowTotalHeight,
+  catalogSectionHeaderHeight,
 } from './catalogMetrics';
 
 /**
- * Cached per theme. Both catalog row components call `createStyles` once per row
- * instance, so without this every row rebuilt this entire sheet — header, FAB and
- * all. `useTheme()` returns one of two module-level constants, so the key identity
- * is stable and the cache hits for the life of the process.
+ * Cached per theme, then per font scale. Both catalog row components call
+ * `createStyles` once per row instance, so without this every row rebuilt this
+ * entire sheet — header, FAB and all. `useTheme()` returns one of two
+ * module-level constants, so the outer key identity is stable and the cache hits
+ * for the life of the process.
+ *
+ * The inner map is keyed by the *clamped* scale, so the handful of distinct
+ * values the clamp can produce is all that is ever cached — and a device that
+ * never changes its font size only ever holds one entry.
  */
-const styleCache = new WeakMap<Theme, ReturnType<typeof StyleSheet.create>>();
+const styleCache = new WeakMap<Theme, Map<number, ReturnType<typeof StyleSheet.create>>>();
 
-export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> => {
-  const cached = styleCache.get(theme);
+export const createStyles = (
+  theme: Theme,
+  fontScale = 1
+): ReturnType<typeof StyleSheet.create> => {
+  const scale = clampFontScale(fontScale);
+
+  let byScale = styleCache.get(theme);
+  if (!byScale) {
+    byScale = new Map();
+    styleCache.set(theme, byScale);
+  }
+  const cached = byScale.get(scale);
   if (cached) return cached;
 
   const styles = StyleSheet.create({
@@ -98,16 +117,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 20,
       fontWeight: '700',
       color: theme.text,
-    },
-    loadingState: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 12,
-    },
-    loadingText: {
-      fontSize: 14,
-      color: theme.textSecondary,
     },
 
     // ---- Search bar -------------------------------------------------------
@@ -228,7 +237,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 16,
       paddingVertical: 10,
       // Fixed, not minHeight: getItemLayout promises exactly this height.
-      height: CATALOG_ROW_HEIGHT,
+      height: catalogRowHeight(scale),
     },
     plantThumbWrap: {
       marginRight: 10,
@@ -237,22 +246,73 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       minWidth: 0,
     },
+    /** Name and Tamil name share a line, aligned on their baselines. */
+    plantNameRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 7,
+    },
     plantName: {
-      fontSize: 15,
+      fontSize: 16,
+      lineHeight: 20,
       fontWeight: '600',
       color: theme.text,
+      // Shrinks rather than pushing the Tamil name off the row.
+      flexShrink: 1,
+    },
+    plantTamil: {
+      fontSize: 12.5,
+      color: theme.inputPlaceholder,
+      flexShrink: 1,
     },
     plantSubtitle: {
-      fontSize: 11.5,
-      color: theme.textTertiary,
+      fontSize: 12.5,
+      // Explicit, so the two text lines sum to the height catalogRowHeight()
+      // budgets for them rather than to whatever the platform picks.
+      lineHeight: 16,
+      color: theme.textSecondary,
       marginTop: 2,
     },
+    /** Pressed feedback — TouchableOpacity's fade alone reads as nothing. */
+    plantRowPressed: {
+      backgroundColor: theme.backgroundTertiary,
+    },
 
-    // ---- A–Z letter headers (browse mode only) ----------------------------
+    // ---- Loading skeleton -------------------------------------------------
+    skeletonHeader: {
+      height: 14,
+      width: 120,
+      borderRadius: 7,
+      backgroundColor: theme.border,
+      marginTop: 14,
+      marginBottom: 12,
+    },
+    skeletonThumb: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      backgroundColor: theme.border,
+      marginRight: 10,
+    },
+    skeletonLineWide: {
+      height: 13,
+      width: '62%',
+      borderRadius: 6,
+      backgroundColor: theme.border,
+    },
+    skeletonLineNarrow: {
+      height: 11,
+      width: '38%',
+      borderRadius: 6,
+      backgroundColor: theme.borderLight,
+      marginTop: 7,
+    },
+
+    // ---- Group headers (browse mode only) ---------------------------------
     catalogSectionHeader: {
       // Fixed height, and it carries the gap above the group it introduces —
-      // see CATALOG_SECTION_HEADER_HEIGHT.
-      height: CATALOG_SECTION_HEADER_HEIGHT,
+      // see catalogSectionHeaderHeight().
+      height: catalogSectionHeaderHeight(scale),
       flexDirection: 'row',
       alignItems: 'flex-end',
       justifyContent: 'space-between',
@@ -276,7 +336,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     /**
      * Growth habit, rendered inline inside the subtitle line rather than as its
-     * own row — CATALOG_ROW_HEIGHT is a contract with getItemLayout, so the badge
+     * own row — catalogRowHeight() is a contract with getItemLayout, so the badge
      * must not add height.
      */
     plantHabit: {
@@ -298,7 +358,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     rowDivider: {
       // Absolute so the hairline paints on the card's bottom edge without adding
-      // to the row's height — CATALOG_ROW_TOTAL_HEIGHT has to stay exact.
+      // to the row's height — catalogRowTotalHeight() has to stay exact.
       position: 'absolute',
       left: 50,
       right: 0,
@@ -496,6 +556,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
   });
 
-  styleCache.set(theme, styles);
+  byScale.set(scale, styles);
   return styles;
 };

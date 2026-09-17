@@ -1,4 +1,5 @@
 import type { CareFormState } from '@/utils/catalogDraft';
+import type { NumericRange } from '@/types/database.types';
 
 /**
  * Collapsed-card summary lines. Each section shows a one-line digest of what it
@@ -124,4 +125,37 @@ export function buildCatalogSubtitle(
   if (trimmed) return trimmed;
   if (varietyCount > 0) return formatCount(varietyCount, 'variety', 'varieties');
   return undefined;
+}
+
+/**
+ * Meta line for a catalog browse row, preferred over the description.
+ *
+ * The row gives this one truncated line, and a description spends it on prose
+ * the reader cannot finish — "Wax-coated trailing cucurbit used in…" poses a
+ * question instead of answering one. A grower scanning the catalog wants a
+ * fact they can compare between rows, so lead with the harvest window, fall
+ * back to how long the plant lives, and only then to the description.
+ *
+ * Returns undefined when a plant carries none of the three — the row keeps its
+ * height either way.
+ */
+export function buildCatalogMetaLine(
+  daysToHarvest: NumericRange | undefined,
+  lifecycleLabel: string | undefined,
+  description: string | undefined,
+  varietyCount: number
+): string | undefined {
+  const days = formatDaysToHarvest(daysToHarvest);
+  if (days) return days;
+  if (lifecycleLabel) return lifecycleLabel;
+  return buildCatalogSubtitle(description, varietyCount);
+}
+
+/** "55–70 days", or "55 days" when the range has collapsed to a point. */
+function formatDaysToHarvest(range: NumericRange | undefined): string | undefined {
+  if (!range) return undefined;
+  const { min, max } = range;
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return undefined;
+  // An en dash, matching how the app writes every other range.
+  return min === max ? `${min} days` : `${min}–${max} days`;
 }
