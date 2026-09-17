@@ -127,3 +127,16 @@ export const coalesceQueue = (
     i === index ? { ...existing, op, payload, revision: (existing.revision ?? 0) + 1 } : m
   );
 };
+
+/**
+ * True when the queue still holds an unsent write for this document.
+ *
+ * A background read that adopts the server's copy must not run while local
+ * changes are still queued — the server is knowingly behind, and overwriting
+ * local state with it undoes whatever the user just did.
+ */
+export const hasPendingWriteFor = (
+  queue: readonly OfflineMutation[],
+  collection: string,
+  docId: string
+): boolean => queue.some((m) => m.collection === collection && m.docId === docId);

@@ -5,6 +5,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   deletePlantProfile,
   getPlantProfiles,
+  isBundledPlant,
+  renamePlantProfile,
   savePlantProfile,
   savePlantProfiles,
   getPlantNamesForType,
@@ -22,7 +24,7 @@ import type {
   VarietyDetail,
 } from '@/types/database.types';
 import type { MoreStackParamList } from '@/types/navigation.types';
-import { getErrorMessage } from '@/utils/errorLogging';
+import { getErrorMessage, logError } from '@/utils/errorLogging';
 import {
   buildCareForm,
   cloneDraft,
@@ -66,6 +68,12 @@ export interface UseCatalogEntryFormReturn {
   hasOverride: boolean;
   isDirty: boolean;
   errors: CatalogErrors;
+  /**
+   * Whether deleting hides a bundled entry — restorable from "hidden plants" —
+   * or removes a user-added one for good. Bundled membership is the only
+   * reliable signal: `isUserAdded` is never set when an entry is created here.
+   */
+  deleteKind: 'hide' | 'remove';
   showErrors: boolean;
   /** Returns the first errored field when the save was blocked, else null. */
   attemptSave: () => CatalogFieldKey | null;
@@ -182,6 +190,11 @@ export function useCatalogEntryForm({
     [plants, plantType, initialName]
   );
 
+  const deleteKind = useMemo<'hide' | 'remove'>(
+    () => (isBundledPlant(plantType, initialName) ? 'hide' : 'remove'),
+    [plantType, initialName]
+  );
+
   const hasOverride = currentProfile?.waterRequirement !== undefined;
 
   /** Reference photos and pest lists follow the edited name, not the route param. */
@@ -276,12 +289,11 @@ export function useCatalogEntryForm({
         };
 
         if (trimmedName !== initialName && !isCreating) {
-          // Rename: move the old entry to the new key in one atomic write.
-          const current = await getPlantProfiles();
-          const next: PlantProfiles = { ...current, [plantType]: { ...current[plantType] } };
-          delete next[plantType][initialName];
-          next[plantType][trimmedName] = { plantType, name: trimmedName, ...profileData };
-          await savePlantProfiles(next);
+          // Rename: writes the new name and tombstones the old one. Dropping
+          // the old key instead left the plant under both names — the bundled
+          // catalog re-injected it locally, and a merged write could not
+          // express the removal remotely either.
+          await renamePlantProfile(plantType, initialName, trimmedName, profileData);
         } else {
           await savePlantProfile(plantType, trimmedName, profileData);
         }
@@ -423,7 +435,10 @@ export function useCatalogEntryForm({
         savedSuccessfully.current = true;
         navigation.goBack();
       } catch (error: unknown) {
-        Alert.alert('Error', getErrorMessage(error) ?? 'Failed to delete.');
+        logError('network', 'useCatalogEntryForm: delete failed', error);
+        // Staying on the screen matters: the entry is still in the catalog, and
+        // navigating back would have claimed otherwise.
+        Alert.alert('Delete failed', getErrorMessage(error));
       } finally {
         setSaving(false);
         isSavingRef.current = false;
@@ -486,6 +501,7 @@ export function useCatalogEntryForm({
     currentProfile,
     categoryPlants,
     usageCount,
+    deleteKind,
     hasOverride,
     isDirty,
     errors,

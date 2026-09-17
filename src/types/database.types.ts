@@ -829,12 +829,23 @@ export interface PlantProfile extends Partial<PlantCareProfile> {
   varietyDetails?: Record<string, VarietyDetail>;
   isUserAdded?: boolean;
   /**
-   * Tombstone for a bundled catalog entry the user deleted. The entry stays in
-   * the stored map because DEFAULT_PLANT_PROFILES would otherwise re-inject
-   * the name on the next read; readers filter it out. User-added entries are
-   * removed outright and never carry this.
+   * Tombstone for a catalog entry the user deleted. The entry stays in the
+   * stored map rather than being removed, for two reasons: a bundled name would
+   * otherwise be re-injected from DEFAULT_PLANT_PROFILES on the next read, and
+   * the profiles map reaches Firestore through a merged `setDoc`, which cannot
+   * express a removed key at all — so a deleted entry that left no tombstone
+   * came straight back on the next sync. Readers filter it out.
    */
   isDeleted?: boolean;
+  /**
+   * Set on a tombstone the user chose to remove for good, which stops it being
+   * listed in the "hidden plants" restore section. A bundled entry can never be
+   * erased outright — it ships with the app — so "permanent" means the
+   * tombstone itself becomes permanent and unlisted.
+   */
+  isDismissed?: boolean;
+  /** Epoch ms the tombstone was written; lets a later migration prune stale ones. */
+  deletedAt?: number;
   cropFamily?: CropFamily;
   layer?: BedLayer;
 }

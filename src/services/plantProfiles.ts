@@ -1,6 +1,14 @@
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { auth, db, refreshAuthToken } from '@/lib/firebase';
 import { writeOrQueue } from '@/lib/offlineWrite';
+import { getQueue } from '@/lib/offlineQueue';
+import { hasPendingWriteFor } from '@/utils/offlineQueueLogic';
+import {
+  applyProfileDeletion,
+  applyProfileDismissal,
+  applyProfileRename,
+  applyProfileRestore,
+} from '@/utils/plantProfileMutations';
 import { getData, setData, KEYS } from '@/lib/storage';
 import { DEFAULT_PLANT_CATALOG } from '@/services/plantCatalog';
 import { getCached, setCached } from '@/lib/dataCache';
@@ -36,6 +44,14 @@ export { PLANT_CATEGORIES };
 const SETTINGS_COLLECTION = 'user_settings';
 const PLANT_PROFILES_FIELD = 'plantProfiles';
 const CACHE_KEY = 'plantProfiles';
+
+/**
+ * Bumped on every local save. `syncFromFirestore` captures it before its read
+ * and re-checks after, so a save that lands while the snapshot is in flight is
+ * never overwritten by the copy that read fetched — the race that made the
+ * resurrection feel random rather than reproducible.
+ */
+let localWriteGeneration = 0;
 
 // ─── Default profiles (built from DEFAULT_PLANT_CATALOG data) ─────────────────
 
@@ -151,6 +167,7 @@ export function getHiddenPlantNames(profiles: PlantProfiles): Record<PlantType, 
       acc[type] = Object.keys(profiles[type] ?? {}).filter(
         (name) =>
           profiles[type]?.[name]?.isDeleted === true &&
+          profiles[type]?.[name]?.isDismissed !== true &&
           DEFAULT_PLANT_PROFILES[type]?.[name] !== undefined
       );
       return acc;
@@ -328,6 +345,11 @@ function normalizeEntry(raw: unknown): PlantProfile | null {
   if (varieties) entry.varieties = varieties;
   if (r.isUserAdded === true) entry.isUserAdded = true;
   if (r.isDeleted === true) entry.isDeleted = true;
+  if (entry.isDeleted) {
+    if (r.isDismissed === true) entry.isDismissed = true;
+    const deletedAt = normalizeNum(r.deletedAt);
+    if (deletedAt) entry.deletedAt = deletedAt;
+  }
   if (r.varietyDetails && typeof r.varietyDetails === 'object')
     entry.varietyDetails = r.varietyDetails as Record<string, VarietyDetail>;
   if (WATER_REQS.includes(r.waterRequirement as WaterRequirement))
@@ -528,8 +550,20 @@ export async function getPlantProfiles(): Promise<PlantProfiles> {
 async function syncFromFirestore(): Promise<void> {
   const user = auth.currentUser;
   if (!user) return;
+
+  // The server is knowingly behind while writes are still queued, so adopting
+  // it here would undo them. Checked before the read, so it also saves a
+  // Firestore hit. The queue is shared with farmCapacity and locations, which
+  // makes this slightly over-eager — it only ever delays a background refresh,
+  // and a flush calls invalidateAll(), so the next read picks the change up.
+  if (hasPendingWriteFor(await getQueue(), SETTINGS_COLLECTION, user.uid)) {
+    logger.info('plantProfiles: local writes still pending, skipping remote adopt');
+    return;
+  }
+
   await refreshAuthToken();
   try {
+    const generation = localWriteGeneration;
     const docRef = doc(db, SETTINGS_COLLECTION, user.uid);
     const snapshot = await withTimeoutAndRetry(() => getDoc(docRef), {
       timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
@@ -538,6 +572,9 @@ async function syncFromFirestore(): Promise<void> {
     const data = snapshot.data() as Record<string, unknown>;
     const remote = data[PLANT_PROFILES_FIELD];
     if (!remote) return;
+    // A save landed while this read was in flight; it is newer than what came
+    // back, so leave it alone.
+    if (generation !== localWriteGeneration) return;
     const normalized = normalizeProfiles(remote);
     await setData(KEYS.PLANT_PROFILES, [normalized]);
     setCached(CACHE_KEY, normalized);
@@ -550,6 +587,7 @@ export async function savePlantProfiles(profiles: PlantProfiles): Promise<PlantP
   const normalized = normalizeProfiles(profiles);
   await setData(KEYS.PLANT_PROFILES, [normalized]);
   setCached(CACHE_KEY, normalized);
+  localWriteGeneration += 1;
 
   const user = auth.currentUser;
   if (!user) return normalized;
@@ -574,6 +612,13 @@ export async function savePlantProfiles(profiles: PlantProfiles): Promise<PlantP
     );
   } catch (err) {
     logError('network', 'plantProfiles: Firestore save failed', err as Error);
+    // The local copy is saved, but the server never got it — so the caller must
+    // not report success. Left silent, the next sync adopts the server's older
+    // copy and undoes whatever this write did. `writeOrQueue` resolves when it
+    // queues, so an offline write still succeeds here; only the errors it
+    // refuses to queue (permission-denied, invalid-argument, expired token)
+    // reach this line.
+    throw err;
   }
 
   return normalized;
@@ -599,27 +644,46 @@ export async function savePlantProfile(
   return savePlantProfiles(updated);
 }
 
+/** True when the app ships this name, so deleting hides rather than removes it. */
+export function isBundledPlant(type: PlantType, name: string): boolean {
+  return DEFAULT_PLANT_PROFILES[type]?.[name] !== undefined;
+}
+
 /**
- * Removes a catalog entry. A user-added entry is deleted outright; a bundled
- * one is tombstoned, because the name would otherwise be re-injected from
- * DEFAULT_PLANT_PROFILES the next time the catalog is read.
+ * Removes a catalog entry — always by tombstone, never by dropping the key.
+ * See `@/utils/plantProfileMutations` for why: the profiles map reaches
+ * Firestore through a merged write, which cannot express a removed key.
  */
 export async function deletePlantProfile(type: PlantType, name: string): Promise<PlantProfiles> {
   const current = await getPlantProfiles();
-  const updated = { ...current, [type]: { ...current[type] } };
-  if (DEFAULT_PLANT_PROFILES[type]?.[name]) {
-    updated[type][name] = { plantType: type, name, isDeleted: true };
-  } else {
-    delete updated[type][name];
-  }
-  return savePlantProfiles(updated);
+  return savePlantProfiles(applyProfileDeletion(current, type, name, Date.now()));
+}
+
+/** Renames an entry: the new name is written, the old one tombstoned. */
+export async function renamePlantProfile(
+  type: PlantType,
+  from: string,
+  to: string,
+  data: Omit<PlantProfile, 'plantType' | 'name'>
+): Promise<PlantProfiles> {
+  const current = await getPlantProfiles();
+  return savePlantProfiles(applyProfileRename(current, type, from, to, data, Date.now()));
 }
 
 /** Undoes a {@link deletePlantProfile} tombstone, restoring the bundled entry. */
 export async function restorePlantProfile(type: PlantType, name: string): Promise<PlantProfiles> {
   const current = await getPlantProfiles();
   if (!current[type]?.[name]?.isDeleted) return current;
-  const updated = { ...current, [type]: { ...current[type] } };
-  delete updated[type][name];
-  return savePlantProfiles(updated);
+  return savePlantProfiles(applyProfileRestore(current, DEFAULT_PLANT_PROFILES, type, name));
+}
+
+/**
+ * Drops a hidden entry from the restore list for good. The bundled record
+ * itself ships with the app and cannot be erased — what this makes permanent
+ * is the hiding.
+ */
+export async function dismissPlantProfile(type: PlantType, name: string): Promise<PlantProfiles> {
+  const current = await getPlantProfiles();
+  if (!current[type]?.[name]?.isDeleted) return current;
+  return savePlantProfiles(applyProfileDismissal(current, type, name));
 }
