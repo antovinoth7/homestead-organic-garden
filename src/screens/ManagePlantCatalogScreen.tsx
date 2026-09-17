@@ -28,6 +28,7 @@ import {
 } from '@/components/catalog/catalogGroupModes';
 import { RecentSearchChips } from '@/components/catalog/RecentSearchChips';
 import { HiddenPlantsSection } from '@/components/catalog/HiddenPlantsSection';
+import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import { usePlantCatalogManager } from '@/hooks/usePlantCatalogManager';
 import { useCatalogSearch } from '@/hooks/useCatalogSearch';
 import { getCanonicalPlantKey } from '@/utils/plantAliases';
@@ -64,6 +65,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     mergedProfiles,
     hiddenPlantNames,
     restore,
+    removePermanently,
     refresh,
   } = usePlantCatalogManager();
 
@@ -110,6 +112,25 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   } = useCatalogSearch({ profiles: mergedProfiles, plantCountsByType });
 
   const onBack = useCallback(() => moreNav.goBack(), [moreNav]);
+
+  // Removing a hidden plant for good is the one irreversible action on this
+  // screen, so it is the only one that asks first.
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    name: string;
+    plantType: PlantType;
+  } | null>(null);
+
+  const requestPermanentRemoval = useCallback((name: string, plantType: PlantType) => {
+    setPendingRemoval({ name, plantType });
+  }, []);
+
+  const cancelPermanentRemoval = useCallback(() => setPendingRemoval(null), []);
+
+  const confirmPermanentRemoval = useCallback(() => {
+    if (!pendingRemoval) return;
+    void removePermanently(pendingRemoval.name, pendingRemoval.plantType);
+    setPendingRemoval(null);
+  }, [pendingRemoval, removePermanently]);
 
   const openPlant = useCallback(
     (plantName: string, plantType: PlantType) => {
@@ -286,7 +307,11 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
             onSelect={setQuery}
             onClearAll={clearRecentSearches}
           />
-          <HiddenPlantsSection plants={hiddenPlantNames} onRestore={restore} />
+          <HiddenPlantsSection
+            plants={hiddenPlantNames}
+            onRestore={restore}
+            onRemove={requestPermanentRemoval}
+          />
         </>
       );
     }
@@ -306,6 +331,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     clearRecentSearches,
     hiddenPlantNames,
     restore,
+    requestPermanentRemoval,
     styles,
     onCreateFromQuery,
     theme.primary,
@@ -440,6 +466,15 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       {showGrouping && (
         <CatalogGroupSheet mode={groupMode} onChange={setGroupMode} onClose={closeGrouping} />
       )}
+
+      <ConfirmDeleteModal
+        visible={pendingRemoval !== null}
+        title="Remove permanently?"
+        message={`"${pendingRemoval?.name ?? ''}" will stay hidden and stop being offered here. This cannot be undone.`}
+        confirmLabel="Remove"
+        onCancel={cancelPermanentRemoval}
+        onConfirm={confirmPermanentRemoval}
+      />
 
       {loading ? (
         <CatalogSkeletonRows />

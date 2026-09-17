@@ -8,6 +8,7 @@ import {
   getPlantNamesForType,
   getMergedProfiles,
   getHiddenPlantNames,
+  dismissPlantProfile,
   restorePlantProfile,
 } from '@/services/plantProfiles';
 import { getAllPlants, getStoredPlants } from '@/services/plants';
@@ -74,6 +75,12 @@ export interface UsePlantCatalogManagerReturn {
   hiddenPlantNames: { name: string; plantType: PlantType }[];
   /** Un-hides a deleted bundled entry, then reloads the catalog. */
   restore: (name: string, plantType: PlantType) => Promise<void>;
+  /**
+   * Drops a hidden entry from the restore list for good. The bundled record
+   * ships with the app and cannot be erased — the hiding is what becomes
+   * permanent.
+   */
+  removePermanently: (name: string, plantType: PlantType) => Promise<void>;
 }
 
 export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
@@ -270,6 +277,19 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     return result;
   }, [profiles, deferredGroup]);
 
+  const removePermanently = useCallback(
+    async (name: string, plantType: PlantType): Promise<void> => {
+      try {
+        await dismissPlantProfile(plantType, name);
+        await reload({ silent: true });
+      } catch (err: unknown) {
+        logError('network', 'usePlantCatalogManager: permanent removal failed', err);
+        Alert.alert('Error', getErrorMessage(err));
+      }
+    },
+    [reload]
+  );
+
   const restore = useCallback(
     async (name: string, plantType: PlantType): Promise<void> => {
       try {
@@ -303,5 +323,6 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     plantCountsByType,
     hiddenPlantNames,
     restore,
+    removePermanently,
   };
 }

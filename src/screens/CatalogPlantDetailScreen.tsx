@@ -183,6 +183,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     lookupName,
     categoryPlants,
     usageCount,
+    deleteKind,
     hasOverride,
     isDirty,
     errors,
@@ -519,6 +520,28 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       setShowReassign(true);
     }
   }, [requestDelete, categoryPlants, initialName]);
+
+  /**
+   * The old copy promised "This cannot be undone" for every entry, which was
+   * untrue of the plants the app ships: those are hidden, not removed, and the
+   * catalog list offers them back. The wording deliberately echoes
+   * `HiddenPlantsSection` so the two surfaces read as one idea.
+   */
+  const deleteCopy = useMemo(
+    () =>
+      deleteKind === 'hide'
+        ? {
+            title: 'Hide plant?',
+            message: `"${initialName}" comes with the app, so deleting hides it instead of removing it for good. You can bring it back from "hidden plants" at the bottom of the catalog.`,
+            confirmLabel: 'Hide',
+          }
+        : {
+            title: 'Delete plant?',
+            message: `Remove "${initialName}" from the catalog? This cannot be undone.`,
+            confirmLabel: 'Delete',
+          },
+    [deleteKind, initialName]
+  );
 
   const onConfirmDelete = useCallback(() => {
     setShowDeleteConfirm(false);
@@ -971,9 +994,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
 
       <ConfirmDeleteModal
         visible={showDeleteConfirm}
-        title="Delete plant?"
-        message={`Remove "${initialName}" from the catalog? This cannot be undone.`}
-        confirmLabel="Delete"
+        title={deleteCopy.title}
+        message={deleteCopy.message}
+        confirmLabel={deleteCopy.confirmLabel}
+        busy={saving}
         onCancel={closeDeleteConfirm}
         onConfirm={onConfirmDelete}
       />

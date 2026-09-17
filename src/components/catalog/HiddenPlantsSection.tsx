@@ -13,12 +13,14 @@ export interface HiddenPlant {
 
 interface RowProps extends HiddenPlant {
   onRestore: (name: string, plantType: PlantType) => void;
+  onRemove: (name: string, plantType: PlantType) => void;
 }
 
-function HiddenPlantRow({ name, plantType, onRestore }: RowProps): React.JSX.Element {
+function HiddenPlantRow({ name, plantType, onRestore, onRemove }: RowProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const handlePress = useCallback(() => onRestore(name, plantType), [onRestore, name, plantType]);
+  const handleRestore = useCallback(() => onRestore(name, plantType), [onRestore, name, plantType]);
+  const handleRemove = useCallback(() => onRemove(name, plantType), [onRemove, name, plantType]);
 
   return (
     <View style={styles.row}>
@@ -27,8 +29,17 @@ function HiddenPlantRow({ name, plantType, onRestore }: RowProps): React.JSX.Ele
         {name}
       </Text>
       <TouchableOpacity
+        style={styles.removeButton}
+        onPress={handleRemove}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={`Remove ${name} permanently`}
+      >
+        <Text style={styles.removeText}>Remove</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         style={styles.restoreButton}
-        onPress={handlePress}
+        onPress={handleRestore}
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel={`Restore ${name}`}
@@ -48,6 +59,8 @@ interface Props {
    */
   plants: readonly HiddenPlant[];
   onRestore: (name: string, plantType: PlantType) => void;
+  /** Drops the entry from this list for good — it stays hidden, unrestorably. */
+  onRemove: (name: string, plantType: PlantType) => void;
 }
 
 /**
@@ -55,7 +68,11 @@ interface Props {
  * name would otherwise come straight back from the bundled catalog. This is the
  * way back, kept collapsed so it stays out of the way until it is wanted.
  */
-export function HiddenPlantsSection({ plants, onRestore }: Props): React.JSX.Element | null {
+export function HiddenPlantsSection({
+  plants,
+  onRestore,
+  onRemove,
+}: Props): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [expanded, setExpanded] = useState(false);
@@ -87,6 +104,7 @@ export function HiddenPlantsSection({ plants, onRestore }: Props): React.JSX.Ele
         <>
           <Text style={styles.hint}>
             These come with the app, so deleting hides them instead of removing them for good.
+            Restore one to bring it back, or remove it to stop it being offered here.
           </Text>
           {plants.map(({ name, plantType }) => (
             <HiddenPlantRow
@@ -94,6 +112,7 @@ export function HiddenPlantsSection({ plants, onRestore }: Props): React.JSX.Ele
               name={name}
               plantType={plantType}
               onRestore={onRestore}
+              onRemove={onRemove}
             />
           ))}
         </>

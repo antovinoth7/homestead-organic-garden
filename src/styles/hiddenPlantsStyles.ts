@@ -56,4 +56,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.primary,
     },
+    /** Quieter than Restore: it is the destructive one, so it does not compete. */
+    removeButton: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 14,
+    },
+    removeText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textTertiary,
+    },
   });
