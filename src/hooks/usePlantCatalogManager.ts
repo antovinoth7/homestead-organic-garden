@@ -19,7 +19,7 @@ import { LIFECYCLE_LABELS } from '@/utils/plantLabels';
 import type { CatalogBrowseEntry, CatalogGroupMode } from '@/utils/catalogListItems';
 import { CatalogGroup, Plant, PlantProfiles, PlantType } from '@/types/database.types';
 import { CATALOG_GROUP_ORDER, getTaxonomy } from '@/config/plants/catalogTaxonomy';
-import { getErrorMessage } from '@/utils/errorLogging';
+import { getErrorMessage, logError } from '@/utils/errorLogging';
 
 export interface GroupData {
   /**
@@ -49,6 +49,12 @@ export interface UsePlantCatalogManagerReturn {
   groupMode: CatalogGroupMode;
   setGroupMode: (mode: CatalogGroupMode) => void;
   loading: boolean;
+  /**
+   * Why the last load failed, or null. The screen shows this with a retry —
+   * without it a failed load fell through to the empty state and told the user
+   * their catalog was empty.
+   */
+  error: string | null;
   /** True while a pull-to-refresh is in flight — drives the RefreshControl. */
   refreshing: boolean;
   groupData: GroupData;
@@ -75,6 +81,7 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<CatalogGroup>('vegetables');
   const [groupMode, setGroupMode] = useState<CatalogGroupMode>('type');
 
@@ -126,8 +133,17 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
         setPlants(allPlants);
       }
       hasLoadedRef.current = true;
-    } catch (error: unknown) {
-      Alert.alert('Error', getErrorMessage(error) ?? 'Failed to load plant catalog.');
+      setError(null);
+    } catch (err: unknown) {
+      logError('network', 'usePlantCatalogManager: catalog load failed', err);
+      setError(getErrorMessage(err));
+      // A silent revalidate runs on every focus, so alerting there would pop a
+      // modal each time the user came back from a plant while offline. The
+      // screen renders the error state instead; only a load the user asked for
+      // interrupts them. Same split as PlantsScreen's loadPlants.
+      if (!options?.silent) {
+        Alert.alert('Error', getErrorMessage(err));
+      }
     } finally {
       setLoading(false);
     }
@@ -261,8 +277,9 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
         // Silent: the list is already on screen, so update it in place rather
         // than blanking it behind the spinner.
         await reload({ silent: true });
-      } catch (error: unknown) {
-        Alert.alert('Error', getErrorMessage(error) ?? 'Failed to restore the plant.');
+      } catch (err: unknown) {
+        logError('network', 'usePlantCatalogManager: restore failed', err);
+        Alert.alert('Error', getErrorMessage(err));
       }
     },
     [reload]
@@ -277,6 +294,7 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     groupMode,
     setGroupMode,
     loading,
+    error,
     refreshing,
     groupData,
     reload,

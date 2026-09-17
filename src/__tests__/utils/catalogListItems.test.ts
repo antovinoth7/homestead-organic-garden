@@ -69,6 +69,51 @@ describe('buildBrowseItems — type mode', () => {
     expect(namesIn(items)).toEqual(['Tomato', 'My Own Gourd']);
   });
 
+  it('folds unfiled plants into a declared Other rather than adding a second one', () => {
+    // Vegetables declares `other` (Drumstick lives there), so a user-added plant
+    // with no sub-group must join that section. Emitting a separate catch-all
+    // gave the list two "Other" headers sharing one FlatList key.
+    const items = buildBrowseItems({
+      group: 'vegetables',
+      entries: [
+        entry('Tomato', { subGroup: 'fruit_vegetables' }),
+        entry('Drumstick', { subGroup: 'other', habit: 'tree' }),
+        entry('My Own Gourd'),
+      ],
+      mode: 'type',
+    });
+
+    expect(titles(items)).toEqual(['Fruit Vegetables', 'Other']);
+    expect(namesIn(items)).toEqual(['Tomato', 'Drumstick', 'My Own Gourd']);
+  });
+
+  it('gives every section a distinct title, so the list keys cannot collide', () => {
+    const items = buildBrowseItems({
+      group: 'vegetables',
+      entries: [
+        entry('Drumstick', { subGroup: 'other', habit: 'tree' }),
+        entry('My Own Gourd'),
+        entry('Stray', { subGroup: 'not_a_declared_sub_group' }),
+      ],
+      mode: 'type',
+    });
+    const sectionTitles = titles(items);
+
+    expect(new Set(sectionTitles).size).toBe(sectionTitles.length);
+  });
+
+  it('keeps the trailing catch-all for a group that does not declare Other', () => {
+    // greens declares only spinach and keerai, so leftovers still need a section.
+    const items = buildBrowseItems({
+      group: 'greens',
+      entries: [entry('Palak', { subGroup: 'spinach' }), entry('My Own Keerai')],
+      mode: 'type',
+    });
+
+    expect(titles(items)).toEqual(['Spinach', 'Other']);
+    expect(namesIn(items)).toEqual(['Palak', 'My Own Keerai']);
+  });
+
   it('renders a group with no declared sub-groups as one run', () => {
     const items = buildBrowseItems({
       group: 'farm_support',

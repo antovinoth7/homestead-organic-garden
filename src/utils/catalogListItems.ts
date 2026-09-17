@@ -18,6 +18,13 @@ import type {
 export type CatalogGroupMode = 'type' | 'season' | 'alpha';
 
 /**
+ * The sub-group that holds whatever a group's named sub-groups do not. Some
+ * groups declare it in `SUB_GROUP_ORDER` and some do not, which is why the
+ * leftovers have to be folded in rather than always appended.
+ */
+const OTHER_SUB_GROUP = 'other';
+
+/**
  * One plant as the browse list needs it. Assembled by `usePlantCatalogManager`,
  * which resolves the taxonomy and lifecycle once per plant rather than per mode.
  */
@@ -139,23 +146,29 @@ export function buildBrowseItems({ group, entries, mode }: BrowseInput): Catalog
   // deliberate sequence rather than however the data happened to be written.
   const declared = SUB_GROUP_ORDER[group];
   if (declared.length === 0) {
-    pushSection(items, SUB_GROUP_LABELS.other ?? 'All', entries);
+    pushSection(items, SUB_GROUP_LABELS.other ?? 'Other', entries);
     return items;
   }
 
+  // A plant with no sub-group — every user-added one — belongs with whatever the
+  // group files under `other`. Vegetables *declares* `other` and Drumstick sits
+  // in it, so emitting the leftovers as their own section gave that group two
+  // "Other" headers with the same FlatList key the moment a user added a plant.
+  const isLeftover = (entry: CatalogBrowseEntry): boolean =>
+    !entry.subGroup || !declared.includes(entry.subGroup);
+
   for (const subGroup of declared) {
-    pushSection(
-      items,
-      SUB_GROUP_LABELS[subGroup] ?? subGroup,
-      entries.filter((entry) => entry.subGroup === subGroup)
-    );
+    const members =
+      subGroup === OTHER_SUB_GROUP
+        ? entries.filter((entry) => entry.subGroup === subGroup || isLeftover(entry))
+        : entries.filter((entry) => entry.subGroup === subGroup);
+    pushSection(items, SUB_GROUP_LABELS[subGroup] ?? subGroup, members);
   }
-  // A user-added plant has no sub-group; it would otherwise vanish from the list.
-  pushSection(
-    items,
-    SUB_GROUP_LABELS.other ?? 'Other',
-    entries.filter((entry) => !entry.subGroup || !declared.includes(entry.subGroup))
-  );
+
+  // Only groups that do not declare `other` still need a trailing catch-all.
+  if (!declared.includes(OTHER_SUB_GROUP)) {
+    pushSection(items, SUB_GROUP_LABELS.other ?? 'Other', entries.filter(isLeftover));
+  }
   return items;
 }
 

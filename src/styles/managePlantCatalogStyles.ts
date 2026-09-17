@@ -366,12 +366,41 @@ export const createStyles = (
       height: StyleSheet.hairlineWidth,
       backgroundColor: theme.borderLight,
     },
+    /**
+     * Empty state, matching the pest/disease lists: an icon, a line saying which
+     * nothing this is, and — where one exists — the way out. The catalog used to
+     * render a single italic line that could not tell a failed load from an
+     * empty group, so a load failure read as "you have no plants".
+     */
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 48,
+    },
+    emptyTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.text,
+      marginTop: 12,
+      textAlign: 'center',
+    },
     emptyText: {
       fontSize: 13,
       color: theme.textTertiary,
-      fontStyle: 'italic',
+      marginTop: 6,
       textAlign: 'center',
-      paddingVertical: 32,
+    },
+    emptyAction: {
+      marginTop: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 9,
+      borderRadius: 11,
+      backgroundColor: theme.primary,
+    },
+    emptyActionText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.textInverse,
     },
 
     // ---- Search results ---------------------------------------------------

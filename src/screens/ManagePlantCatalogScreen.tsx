@@ -55,8 +55,10 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     groupMode,
     setGroupMode,
     loading,
+    error,
     refreshing,
     groupData,
+    reload,
     groupCounts,
     plantCountsByType,
     mergedProfiles,
@@ -311,14 +313,67 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     query,
   ]);
 
-  const listEmpty = useMemo(
-    () => (
-      <Text style={styles.emptyText}>
-        {isSearching ? 'No plants match that search.' : 'No plants yet. Tap + to add one.'}
-      </Text>
-    ),
-    [styles, isSearching]
-  );
+  // Clearing the query is what returns the list to browsing: collapsing search
+  // deliberately keeps it, so without this the pills stay hidden behind a
+  // results list the user can no longer see a field for.
+  const onClearSearch = useCallback(() => {
+    clearQuery();
+    setSearchActive(false);
+  }, [clearQuery]);
+
+  const onRetry = useCallback(() => {
+    void reload();
+  }, [reload]);
+
+  /**
+   * Three different nothings, which the old single line of text could not tell
+   * apart: the load failed, the search matched nothing, or the group is empty.
+   * Only the first two have a way out, and both offer it.
+   */
+  const listEmpty = useMemo(() => {
+    if (error) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="cloud-offline-outline" size={40} color={theme.textTertiary} />
+          <Text style={styles.emptyTitle}>Couldn&apos;t load the catalog</Text>
+          <Text style={styles.emptyText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.emptyAction}
+            onPress={onRetry}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading the plant catalog"
+          >
+            <Text style={styles.emptyActionText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (isSearching) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="search-outline" size={40} color={theme.textTertiary} />
+          <Text style={styles.emptyTitle}>No plants match that search</Text>
+          <TouchableOpacity
+            style={styles.emptyAction}
+            onPress={onClearSearch}
+            accessibilityRole="button"
+            accessibilityLabel="Clear the search and browse the catalog"
+          >
+            <Text style={styles.emptyActionText}>Clear search</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="leaf-outline" size={40} color={theme.textTertiary} />
+        <Text style={styles.emptyTitle}>No plants in this group</Text>
+        <Text style={styles.emptyText}>Tap + to add one.</Text>
+      </View>
+    );
+  }, [styles, isSearching, error, onClearSearch, onRetry, theme.textTertiary]);
 
   return (
     <View style={styles.container}>
@@ -422,6 +477,8 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
             style={[styles.fab, { bottom: Math.max(insets.bottom, 16) + 16 }]}
             onPress={onAddPlant}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Add a plant to the catalog"
           >
             <Ionicons name="add" size={28} color={theme.textInverse} />
           </TouchableOpacity>
