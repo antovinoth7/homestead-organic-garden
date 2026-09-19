@@ -67,13 +67,13 @@ describe('image resolvers', () => {
 });
 
 describe('generated map integrity (gen file must match config ids)', () => {
-  it('tracks the documented 225 bundled reference assets', () => {
+  it('tracks the documented 253 bundled reference assets', () => {
     expect(
       Object.keys(PEST_IMAGES).length +
         Object.keys(DISEASE_IMAGES).length +
         Object.keys(PLANT_IMAGES).length +
         Object.keys(ORGANIC_INPUT_IMAGES).length
-    ).toBe(225);
+    ).toBe(253);
   });
 
   it('every PEST_IMAGES key is a known pest id or imageAsset', () => {

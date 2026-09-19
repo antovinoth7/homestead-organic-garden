@@ -2078,7 +2078,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "fruit_tree:Palmyra": {
+  "fruit_tree:Palm Tree": {
     "profile": {
       "annualCycleDurations": {
         "dormant": 155,
@@ -6445,62 +6445,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "Pinch growing tip at 6 inches for bushiness",
         "Remove leaves below first fork",
         "Pick ripe fruits to encourage new ones",
-      ],
-    },
-  },
-  "vegetable:Chinese Potato": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 180,
-        "min": 150,
-      },
-      "description": "Aromatic Kanyakumari tuber traditionally intercropped under coconut. Planted from rooted vine cuttings after the southwest monsoon and lifted in January; needs loose, free-draining soil to bulk.",
-      "droughtTolerance": "medium",
-      "feedingIntensity": "medium",
-      "fertilisingFrequencyDays": 30,
-      "germinationDays": {
-        "max": 14,
-        "min": 7,
-      },
-      "germinationTempC": {
-        "max": 32,
-        "min": 22,
-      },
-      "growingSeason": "Northeast Monsoon (Oct–Dec)",
-      "growthStageDurations": {
-        "mature": 75,
-        "seedling": 20,
-        "vegetative": 70,
-      },
-      "heatTolerance": "medium",
-      "heightCm": {
-        "max": 60,
-        "min": 30,
-      },
-      "initialGrowthStage": "seedling",
-      "lifecycle": "annual",
-      "petToxicity": false,
-      "plantingDepthCm": 5,
-      "preferredFertiliser": "cow_dung_slurry",
-      "scientificName": "Plectranthus rotundifolius",
-      "soilPhRange": {
-        "max": 7,
-        "min": 5.5,
-      },
-      "soilType": "sandy_loam",
-      "spacingCm": 30,
-      "sunlight": "partial_sun",
-      "tamilName": "கூர்க்கன் கிழங்கு",
-      "taxonomicFamily": "Lamiaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 3,
-      "waterloggingTolerance": "low",
-    },
-    "pruning": {
-      "tips": [
-        "Pinch running tips once to push side shoots",
-        "Earth up around the base as the tubers bulk — that matters more than cutting",
-        "Leave the foliage alone until it yellows, then lift",
       ],
     },
   },

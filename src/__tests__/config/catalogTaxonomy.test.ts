@@ -108,9 +108,9 @@ describe('purpose and care model are independent', () => {
   });
 
   it('files a tapped palm as plantation, though its care model is fruit_tree', () => {
-    const palmyra = getTaxonomy('Palmyra', 'fruit_tree');
-    expect(palmyra.group).toBe('plantation_timber');
-    expect(palmyra.habit).toBe('palm');
+    const palmTree = getTaxonomy('Palm Tree', 'fruit_tree');
+    expect(palmTree.group).toBe('plantation_timber');
+    expect(palmTree.habit).toBe('palm');
   });
 
   it('splits one plant_type across two groups', () => {

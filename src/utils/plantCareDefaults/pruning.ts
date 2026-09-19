@@ -444,13 +444,6 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
       'Cut the foliage back once it dies down, then lift',
     ],
   },
-  [buildProfileKey('vegetable', 'Chinese Potato')]: {
-    tips: [
-      'Pinch running tips once to push side shoots',
-      'Earth up around the base as the tubers bulk — that matters more than cutting',
-      'Leave the foliage alone until it yellows, then lift',
-    ],
-  },
   [buildProfileKey('vegetable', 'Sesame')]: {
     tips: [
       'No pruning — the crop is a short annual cut whole at maturity',
@@ -523,7 +516,7 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
     ],
     shapePruning: { tip: 'Cut back to a low framework once the crop is off', months: 'Apr–May' },
   },
-  [buildProfileKey('fruit_tree', 'Palmyra')]: {
+  [buildProfileKey('fruit_tree', 'Palm Tree')]: {
     tips: [
       'Remove only fully dried fronds — never cut green ones',
       'Never top a palm: the single growing point does not regrow',

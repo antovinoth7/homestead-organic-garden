@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-19 — src/: 701 files, 129,434 lines.
+> Snapshot: 2026-09-19 — src/: 704 files, 129,662 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -90,7 +90,7 @@
 - dataCache.test.ts (153)
 - storage.test.ts (100)
 
-### src/__tests__/migrations/ — 9 files, 1,219 lines
+### src/__tests__/migrations/ — 10 files, 1,295 lines
 
 - removedCatalogPlantsLogic.test.ts (208)
 - catalogRealignmentLogic.test.ts (197)
@@ -100,6 +100,7 @@
 - mergedPlantNamesLogic.test.ts (122)
 - staleTamilNamesLogic.test.ts (91)
 - 005_repair_farm_config.test.ts (76)
+- renamedPalmyraLogic.test.ts (76)
 - 006_repair_zone_assignment.test.ts (51)
 
 ### src/__tests__/mocks/ — 1 files, 4 lines
@@ -112,14 +113,14 @@
 - noFunctionalEmoji.test.ts (54)
 - agronomyEvidenceDocs.test.ts (44)
 
-### src/__tests__/services/ — 14 files, 2,584 lines
+### src/__tests__/services/ — 14 files, 2,583 lines
 
 - alerts.test.ts (533)
 - manualTaskScheduling.test.ts (317)
 - weatherResponse.test.ts (206)
 - weather.test.ts (204)
 - offlineSync.test.ts (202)
-- plantCatalog.localSuitability.test.ts (181)
+- plantCatalog.localSuitability.test.ts (180)
 - plantProfilesTombstone.test.ts (166)
 - taskSkip.test.ts (154)
 - plantProfilesCareBridge.test.ts (146)
@@ -133,7 +134,7 @@
 
 - catalogMetrics.test.ts (67)
 
-### src/__tests__/utils/ — 80 files, 11,685 lines
+### src/__tests__/utils/ — 80 files, 11,708 lines
 
 - careTaskFilters.test.ts (651)
 - rowLayoutEngine.test.ts (523)
@@ -147,8 +148,8 @@
 - plotGrouping.test.ts (263)
 - plantFilters.test.ts (256)
 - upcomingJobs.test.ts (242)
+- catalogSummaries.test.ts (232)
 - filterAndSortBeds.test.ts (228)
-- catalogSummaries.test.ts (222)
 - weatherWords.test.ts (219)
 - seasonHelpers.test.ts (208)
 - plantProfileMutations.test.ts (204)
@@ -178,10 +179,10 @@
 - plantNameGenerator.test.ts (125)
 - plantPhotos.test.ts (124)
 - rotationRules.rowLevel.test.ts (118)
+- plantAliases.test.ts (111)
 - scrollSpy.test.ts (109)
 - journalEntryOptions.test.ts (107)
 - bedEditReconcile.test.ts (104)
-- plantAliases.test.ts (104)
 - journalStats.test.ts (102)
 - plantClassification.test.ts (98)
 - cropFamilyFromName.test.ts (89)
@@ -201,9 +202,9 @@
 - perennialCare.test.ts (62)
 - catalogCounts.test.ts (60)
 - dateHelpers.test.ts (55)
+- growSpecFormat.test.ts (55)
 - plotBedCounts.test.ts (55)
 - voiceInput.test.ts (50)
-- growSpecFormat.test.ts (49)
 - recurringTaskStatus.test.ts (48)
 - plantCompanions.test.ts (47)
 - bedOccupancy.test.ts (44)
@@ -406,11 +407,11 @@
 - TodayHeader.tsx (82)
 - NeedsActionRow.tsx (73)
 
-### src/config/ — 8 files, 1,221 lines
+### src/config/ — 8 files, 1,249 lines
 
+- referenceImages.gen.ts (276)
 - tamilNaduPlantingCalendar.ts (269)
 - iconRegistry.ts (257)
-- referenceImages.gen.ts (248)
 - referenceKeys.ts (139)
 - almanac.ts (108)
 - referenceAssets.ts (78)
@@ -474,10 +475,10 @@
 - derive.ts (47)
 - index.ts (32)
 
-### src/config/plantCatalog/entries/ — 8 files, 1,857 lines
+### src/config/plantCatalog/entries/ — 8 files, 1,846 lines
 
-- vegetables.ts (615)
-- fruitTrees.ts (399)
+- vegetables.ts (602)
+- fruitTrees.ts (401)
 - herbs.ts (359)
 - spinach.ts (185)
 - flowers.ts (135)
@@ -544,15 +545,16 @@
 - storage.ts (109)
 - offlineWrite.ts (47)
 
-### src/migrations/ — 24 files, 2,069 lines
+### src/migrations/ — 26 files, 2,188 lines
 
 - removedCatalogPlantsLogic.ts (336)
 - 010_merge_plantain_retype_castor.ts (173)
 - 009_realign_catalog.ts (172)
 - 013_prune_removed_catalog_plants.ts (162)
-- index.ts (131)
+- index.ts (133)
 - 008_recategorise_plants.ts (104)
 - catalogRealignmentLogic.ts (103)
+- 014_rename_palmyra.ts (100)
 - 003_consolidate_plant_profiles.ts (96)
 - recategorisedPlantsLogic.ts (92)
 - 007_merge_duplicate_plant_names.ts (90)
@@ -569,6 +571,7 @@
 - 001_backfill_district.ts (31)
 - 006_repair_zone_assignment.ts (25)
 - zoneAssignmentRepairLogic.ts (18)
+- renamedPalmyraLogic.ts (17)
 - types.ts (6)
 
 ### src/navigation/ — 1 files, 197 lines
@@ -636,14 +639,14 @@
 - weatherLogic.ts (100)
 - alerts.ts (19)
 
-### src/styles/ — 95 files, 20,356 lines
+### src/styles/ — 95 files, 20,364 lines
 
 - bedCreationWizardStyles.ts (1906) ⚠️ large — Grep/search inside, do not read whole
 - calendarStyles.ts (1810) ⚠️ large — Grep/search inside, do not read whole
 - plantFormStyles.ts (1719) ⚠️ large — Grep/search inside, do not read whole
 - plantDetailStyles.ts (687)
 - bedRowLayoutStyles.ts (633)
-- managePlantCatalogStyles.ts (591)
+- managePlantCatalogStyles.ts (599)
 - journalFormStyles.ts (590)
 - journalStyles.ts (524)
 - plantsStyles.ts (503)
@@ -746,14 +749,14 @@
 - visual.types.ts (90)
 - offline.types.ts (49)
 
-### src/utils/ — 88 files, 12,439 lines
+### src/utils/ — 88 files, 12,461 lines
 
 - plantHelpers.ts (1863) ⚠️ large — Grep/search inside, do not read whole
 - rowLayoutEngine.ts (660)
 - zipHelper.ts (398)
 - harvestStats.ts (387)
 - careTaskFilters.ts (386)
-- plantAliases.ts (382)
+- plantAliases.ts (380)
 - plantLabels.ts (326)
 - catalogDraft.ts (273)
 - plotBriefLine.ts (269)
@@ -766,8 +769,8 @@
 - catalogListItems.ts (207)
 - quickStartPlanner.ts (180)
 - plantWatering.ts (171)
+- catalogSummaries.ts (168)
 - errorTracker.ts (168)
-- catalogSummaries.ts (162)
 - logger.ts (161)
 - firestoreTimeout.ts (159)
 - bedStatus.ts (156)
@@ -794,6 +797,7 @@
 - seasonHelpers.ts (93)
 - seasonProgress.ts (90)
 - plantEntryMapper.ts (86)
+- growSpecFormat.ts (84)
 - dateHelpers.ts (83)
 - networkState.ts (81)
 - scrollSpy.ts (80)
@@ -805,7 +809,6 @@
 - plantPickerItems.ts (71)
 - bedNameGenerator.ts (70)
 - plantHealth.ts (67)
-- growSpecFormat.ts (66)
 - taskWeatherAdvisory.ts (61)
 - plantTypeFromName.ts (60)
 - catalogFieldHelp.ts (53)
@@ -837,18 +840,18 @@
 - dragRowMath.ts (16)
 - textSanitizer.ts (14)
 
-### src/utils/plantCareDefaults/ — 5 files, 868 lines
+### src/utils/plantCareDefaults/ — 5 files, 861 lines
 
-- pruning.ts (607)
+- pruning.ts (600)
 - index.ts (145)
 - typeDefaults.ts (98)
 - varieties.ts (13)
 - profileKey.ts (5)
 
-### src/utils/plantCareDefaults/overrides/ — 16 files, 4,741 lines
+### src/utils/plantCareDefaults/overrides/ — 16 files, 4,712 lines
 
 - fruitTrees.ts (739)
-- tamilNaduEdibles.ts (596)
+- tamilNaduEdibles.ts (567)
 - vegetables1.ts (554)
 - bedVegetables.ts (391)
 - timberCoconutShrubs.ts (385)
@@ -870,7 +873,7 @@
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (882)
+- CODEMAP.md (889)
 - COMPONENTS.md (66)
 - CONVENTIONS.md (239)
 - DOMAIN_LOGIC.md (162)
@@ -880,6 +883,6 @@
 - REFERENCE_IMAGES.md (81)
 - SCHEMA_MIGRATIONS.md (58)
 - SERVICES.md (208)
-- tamil-nadu-reference-audit.md (779)
+- tamil-nadu-reference-audit.md (789)
 - TESTING.md (33)
 - TODAY_SCREEN_RECOMMENDATION.md (629)

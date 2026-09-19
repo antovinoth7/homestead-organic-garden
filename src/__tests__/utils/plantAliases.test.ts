@@ -74,6 +74,13 @@ describe('plantAliases', () => {
       expect(isSamePlantName('Amaranth Greens', 'Amaranthus')).toBe(true);
     });
 
+    it('resolves the old Palmyra name, and its Tamil ones, to Palm Tree', () => {
+      expect(getCanonicalPlantKey('Palmyra')).toBe('palm tree');
+      expect(getCanonicalPlantKey('panai')).toBe('palm tree');
+      expect(getCanonicalPlantKey('nungu')).toBe('palm tree');
+      expect(isSamePlantName('Palmyra', 'Palm Tree')).toBe(true);
+    });
+
     it('keeps the Amaranthus variety names searchable as the plant', () => {
       expect(getCanonicalPlantKey('Arai Keerai')).toBe('amaranthus');
       expect(getCanonicalPlantKey('Siru Keerai')).toBe('amaranthus');

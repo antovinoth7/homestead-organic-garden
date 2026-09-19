@@ -130,6 +130,24 @@ const PLANT_PROMPT_HABIT: Record<string, string> = {
   Karpooravalli: 'a compact potted bush of thick fleshy aromatic leaves',
   'Passion Fruit': 'a vine on a trellis with fruit hanging',
   'Lotus Stem': 'an aquatic plant in shallow water, leaves held above the surface',
+  // A vegetable-bed framing alone reads as chilli; ask for the bell pepper.
+  Capsicum: 'a bushy plant in a garden bed with blocky bell-shaped fruits hanging, green and ripening red',
+  // Filed as `fruit_tree`, but a palm: a spreading canopy is the wrong shape.
+  'Palm Tree':
+    'a tall single-trunked palmyra palm with a crown of stiff fan-shaped leaves and clusters of dark round fruit',
+  'Ivy Gourd': 'a vine on a trellis or fence with slender green and red-ripe gourds hanging',
+  'Madras Pea Pumpkin':
+    'a slender trailing vine over low support, small lobed leaves and tiny round fruits',
+  'Adamant Creeper': 'a climbing succulent vine of four-angled jointed green stems over a support',
+  'Turkey Berry': 'a prickly shrub with clusters of small green pea-sized berries',
+  Sesame: 'a stand of upright plants in a garden bed with tubular flowers and green seed pods',
+  // Filed under `spinach` for the sour leaves, but known by its red calyces.
+  Roselle: 'a bushy plant with red stems and fleshy deep-red calyces',
+  'False Daisy': 'a low sprawling herb with lance-shaped leaves and small white daisy-like flowers',
+  'Mango Ginger': 'a clump of broad upright leaves with fresh rhizomes lifted beside it',
+  // Spice trees filed under `herb` — the leafy-clump framing would shrink them.
+  Cinnamon: 'a young bushy evergreen tree with glossy red-flushed new leaves',
+  Clove: 'a conical evergreen tree with clusters of pink-red flower buds',
   // Pandal gourds — trailed overhead, never grown as free-standing plants.
   'Bottle Gourd': 'a vine on an overhead pandal with fruit hanging below',
   'Snake Gourd': 'a vine on an overhead pandal with fruit hanging below',

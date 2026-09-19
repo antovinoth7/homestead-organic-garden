@@ -18,10 +18,11 @@ import { mergePlantainRetypeCastor } from './010_merge_plantain_retype_castor';
 import { repairStaleTamilNames } from './011_repair_stale_tamil_names';
 import { recomputePlantDerivedFields } from './012_recompute_plant_fields';
 import { pruneRemovedCatalogPlants } from './013_prune_removed_catalog_plants';
+import { renamePalmyra } from './014_rename_palmyra';
 
 const SETTINGS_COLLECTION = 'user_settings';
 
-export const LATEST_SCHEMA_VERSION = 13;
+export const LATEST_SCHEMA_VERSION = 14;
 
 const migrations: Migration[] = [
   { version: 1, name: 'backfill_district', run: backfillDistrict },
@@ -43,6 +44,7 @@ const migrations: Migration[] = [
   // — it removes stored entries for names the catalog no longer has, which
   // nothing recomputes from.
   { version: 13, name: 'prune_removed_catalog_plants', run: pruneRemovedCatalogPlants },
+  { version: 14, name: 'rename_palmyra', run: renamePalmyra },
 ];
 
 export async function getSchemaVersion(userId: string): Promise<number> {

@@ -586,19 +586,6 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
     varieties: ['Local'],
   },
   {
-    name: 'Chinese Potato',
-    group: 'vegetables',
-    subGroup: 'roots_tubers',
-    habit: 'annual_bed',
-    tags: ['tuber', 'coconut_intercrop'],
-    plantType: 'vegetable',
-    cropFamily: 'lamiaceae',
-    tamilName: 'கூர்க்கன் கிழங்கு',
-    shortDescription:
-      'Aromatic Kanyakumari tuber traditionally intercropped under coconut; lifted in January',
-    varieties: ['Sree Dhara', 'Nidhi', 'Local'],
-  },
-  {
     name: 'Sesame',
     group: 'vegetables',
     subGroup: 'pulses_oilseeds_cereals',

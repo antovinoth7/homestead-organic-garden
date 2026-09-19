@@ -370,7 +370,9 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
     varieties: ['Gola', 'Umran', 'Local'],
   },
   {
-    name: 'Palmyra',
+    // "Palmyra" until it was renamed: across Tamil Nadu பனை மரம் is simply the
+    // palm tree, and the botanical-English name read as a stranger's word for it.
+    name: 'Palm Tree',
     group: 'plantation_timber',
     subGroup: 'plantation_crops',
     habit: 'palm',

@@ -192,6 +192,16 @@ describe('buildCatalogMetaLine', () => {
     expect(buildCatalogMetaLine({ min: 60, max: 60 }, undefined, undefined, 0)).toBe('60 days');
   });
 
+  it('states a wait of a year or more in years', () => {
+    expect(buildCatalogMetaLine({ min: 4380, max: 5475 }, undefined, undefined, 0)).toBe(
+      '12–15 years'
+    );
+    expect(buildCatalogMetaLine({ min: 365, max: 365 }, undefined, undefined, 0)).toBe('1 year');
+    expect(buildCatalogMetaLine({ min: 300, max: 400 }, undefined, undefined, 0)).toBe(
+      '300–400 days'
+    );
+  });
+
   it('falls back to the lifecycle when there is no harvest window', () => {
     expect(buildCatalogMetaLine(undefined, 'Perennial', 'A trailing vine', 3)).toBe('Perennial');
   });

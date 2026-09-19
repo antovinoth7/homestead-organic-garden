@@ -491,7 +491,7 @@ ignores `daysToHarvest` entirely, and Cardamom is the closer precedent.
 | Cashew | முந்திரி | *Anacardium occidentale* | Major Kanyakumari crop on poor sandy ground |
 | Wood Apple | விளாம்பழம் | *Limonia acidissima* | Spiny; slow |
 | Indian Jujube | இலந்தை | *Ziziphus mauritiana* | Fruits on current-season growth — wants a hard annual cutback |
-| Palmyra | பனை | *Borassus flabellifer* | The state tree; nungu, padaneer, karupatti |
+| Palm Tree (was Palmyra) | பனை | *Borassus flabellifer* | The state tree; nungu, padaneer, karupatti |
 | Sweet Lime | சாத்துக்குடி | *Citrus limetta* | |
 
 `fruit_tree` means *perennial fruit crop*, not literally a tree — the same reading that put
@@ -518,7 +518,7 @@ alias, so typing the Tamil name still finds the row.**
 
 The other eleven were already accurate English common names and were left alone: Ivy Gourd
 (*Coccinia grandis*), Turkey Berry (*Solanum torvum*), Sesame, Clove, Cinnamon, Mango Ginger,
-Tamarind, Cashew, Wood Apple (*Limonia acidissima*, the standard name for that species), Palmyra
+Tamarind, Cashew, Wood Apple (*Limonia acidissima*, the standard name for that species), Palmyra (since renamed Palm Tree, the name it goes by across Tamil Nadu)
 and Sweet Lime.
 
 No migration was needed. All seven rows were added on this branch and had never shipped, so no
@@ -600,6 +600,11 @@ semantic icon, which `docs/REFERENCE_IMAGES.md` documents as safe and which twel
 already do. `npm run reference:manifest` now lists 29 missing prompts — the twelve that predate
 this pass plus these seventeen. The bundled asset count is unchanged at 225.
 
+**Follow-up (19 September 2026):** photos for 28 of those 29 were generated and ingested, raising
+the bundled count to 253 (169 plants). The 29th, Chinese Potato, was dropped from the catalog
+instead (see below), so no plant row now falls back to the icon. `clove.webp` needed the ingest's
+encoder effort raised to 6 to fit the 160 KB cap at q60.
+
 ### Considered and rejected
 
 | Plant | Reason |
@@ -623,6 +628,11 @@ this pass plus these seventeen. The bundled asset count is unchanged at 225.
 - **`Yam` (கிழங்கு) remains a vague row** alongside `Elephant Yam` (கருணைக்கிழங்கு). கிழங்கு just
   means "tuber". Not touched here — it predates this pass and resolving it would mean deciding
   whether it is *Dioscorea* and, if it is a duplicate, another migration.
+- **Chinese Potato (Koorka, *Plectranthus rotundifolius*) was removed again on 19 September 2026**,
+  five days after it was added, so the gap this pass closed is open once more. Its catalog row,
+  care override, pruning entry and aliases all went. No migration: the row post-dates migration
+  003's profile seeding, so a stored copy can only be a user edit or a garden plant, and migration
+  013's guards leave both of those alone anyway.
 
 ## Validation method and limitations
 

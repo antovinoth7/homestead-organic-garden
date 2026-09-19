@@ -1,5 +1,6 @@
 import type { CareFormState } from '@/utils/catalogDraft';
 import type { NumericRange } from '@/types/database.types';
+import { harvestRangeInYears } from '@/utils/growSpecFormat';
 
 /**
  * Collapsed-card summary lines. Each section shows a one-line digest of what it
@@ -151,11 +152,16 @@ export function buildCatalogMetaLine(
   return buildCatalogSubtitle(description, varietyCount);
 }
 
-/** "55–70 days", or "55 days" when the range has collapsed to a point. */
+/**
+ * "55–70 days", or "55 days" when the range has collapsed to a point. A wait
+ * of a year or more reads in years instead: "12–15 years", not "4380–5475 days".
+ */
 function formatDaysToHarvest(range: NumericRange | undefined): string | undefined {
   if (!range) return undefined;
-  const { min, max } = range;
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return undefined;
+  if (!Number.isFinite(range.min) || !Number.isFinite(range.max)) return undefined;
+  const years = harvestRangeInYears(range);
+  const { min, max } = years ?? range;
+  const unit = years ? (max === 1 ? 'year' : 'years') : 'days';
   // An en dash, matching how the app writes every other range.
-  return min === max ? `${min} days` : `${min}–${max} days`;
+  return min === max ? `${min} ${unit}` : `${min}–${max} ${unit}`;
 }

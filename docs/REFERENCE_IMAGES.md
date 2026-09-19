@@ -40,7 +40,7 @@ The ingest accepts `.png`, `.jpg`, `.jpeg`, and `.webp` at any resolution. It sl
 
 ## Size Budget
 
-The repository currently bundles 225 WebP assets: 141 plants, 36 pests, 36 diseases, and 12 organic inputs. The ingest converts each source to an 800 x 600 cover-cropped WebP, stepping quality from 80 down to 60 until it fits within 160 KB, so the current set adds about 27 MB to the app bundle. Most assets land at q80 and well under the cap; the floor exists for the few busy images that do not.
+The repository currently bundles 253 WebP assets: 169 plants, 36 pests, 36 diseases, and 12 organic inputs. The ingest converts each source to an 800 x 600 cover-cropped WebP, at maximum encoder effort, stepping quality from 80 down to 60 until it fits within 160 KB, so the current set adds about 32 MB to the app bundle. Most assets land at q80 and well under the cap; the floor exists for the few busy images that do not.
 
 The constants live in `scripts/reference/ingest-images.js`. `sharp` is a build-time dev dependency and does not ship to the device.
 

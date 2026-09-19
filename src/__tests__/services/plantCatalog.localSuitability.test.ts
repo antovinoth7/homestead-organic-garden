@@ -82,11 +82,10 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
   });
 
   // The Tamil Nadu edibles pass. Ivy Gourd and Turkey Berry are the two the
-  // catalog was most conspicuously missing; Chinese Potato (koorka) had been
-  // flagged "still open" in two earlier audit passes without ever being added.
+  // catalog was most conspicuously missing.
   it('carries the Tamil Nadu edible staples with complete display metadata', () => {
     const additions: Record<string, string[]> = {
-      vegetable: ['Ivy Gourd', 'Turkey Berry', 'Chinese Potato', 'Sesame'],
+      vegetable: ['Ivy Gourd', 'Turkey Berry', 'Sesame'],
       spinach: ['Roselle', 'False Daisy', 'Madras Pea Pumpkin'],
       herb: ['Adamant Creeper', 'Clove', 'Cinnamon', 'Mango Ginger'],
       fruit_tree: [
@@ -95,7 +94,7 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
         'Cashew',
         'Wood Apple',
         'Indian Jujube',
-        'Palmyra',
+        'Palm Tree',
         'Sweet Lime',
       ],
     };

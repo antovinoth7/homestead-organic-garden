@@ -130,7 +130,7 @@ exports[`the bundled plant catalog is unchanged 1`] = `
         "Mangosteen": "Ultra-tropical tree bearing prized purple fruits with sweet-tangy segments",
         "Nutmeg": "Aromatic tropical tree yielding two spices — nutmeg seed and mace aril; 7–8 years to first harvest",
         "Orange": "Evergreen citrus tree producing sweet, juicy fruits",
-        "Palmyra": "Tamil Nadu’s state tree, tapped for padaneer and karupatti and cut young for nungu; very long-lived",
+        "Palm Tree": "Tamil Nadu’s state tree, tapped for padaneer and karupatti and cut young for nungu; very long-lived",
         "Papaya": "Fast-growing single-trunk tree bearing melon-like fruits rich in papain",
         "Passion Fruit": "Vigorous tropical vine producing aromatic, tangy-sweet fruits",
         "Pineapple": "Low-growing monocarpic bromeliad producing sweet, acidic tropical fruits",
@@ -175,7 +175,7 @@ exports[`the bundled plant catalog is unchanged 1`] = `
         "Cashew",
         "Wood Apple",
         "Indian Jujube",
-        "Palmyra",
+        "Palm Tree",
         "Sweet Lime",
       ],
       "tamilNames": {
@@ -198,7 +198,7 @@ exports[`the bundled plant catalog is unchanged 1`] = `
         "Mangosteen": "மாங்குஸ்தான்",
         "Nutmeg": "ஜாதிக்காய்",
         "Orange": "ஆரஞ்சு",
-        "Palmyra": "பனை",
+        "Palm Tree": "பனை",
         "Papaya": "பப்பாளி",
         "Passion Fruit": "பேஷன் ஃப்ரூட்",
         "Pineapple": "அன்னாசி",
@@ -284,7 +284,7 @@ exports[`the bundled plant catalog is unchanged 1`] = `
           "Local",
           "Kerala Local",
         ],
-        "Palmyra": [
+        "Palm Tree": [
           "Local",
         ],
         "Papaya": [
@@ -672,7 +672,6 @@ exports[`the bundled plant catalog is unchanged 1`] = `
         "Carrot": "Popular root vegetable rich in beta-carotene",
         "Cauliflower": "Cool-season brassica producing compact white curds",
         "Chilli": "Pungent hot pepper central to South Indian spice blends and daily cooking",
-        "Chinese Potato": "Aromatic Kanyakumari tuber traditionally intercropped under coconut; lifted in January",
         "Cluster Beans": "Heat-tolerant legume yielding slender pods and nitrogen-fixing roots",
         "Cowpea": "Heat-tolerant nitrogen-fixing legume yielding protein-rich pods and beans",
         "Cucumber": "Fast-growing warm-season vine producing crisp, refreshing fruits",
@@ -758,7 +757,6 @@ exports[`the bundled plant catalog is unchanged 1`] = `
         "Muskmelon",
         "Ivy Gourd",
         "Turkey Berry",
-        "Chinese Potato",
         "Sesame",
       ],
       "tamilNames": {
@@ -774,7 +772,6 @@ exports[`the bundled plant catalog is unchanged 1`] = `
         "Carrot": "கேரட்",
         "Cauliflower": "காலிஃபிளவர்",
         "Chilli": "மிளகாய்",
-        "Chinese Potato": "கூர்க்கன் கிழங்கு",
         "Cluster Beans": "கொத்தவரை",
         "Cowpea": "காராமணி",
         "Cucumber": "வெள்ளரிக்காய்",
@@ -862,11 +859,6 @@ exports[`the bundled plant catalog is unchanged 1`] = `
           "Bird's Eye",
           "Gundu",
           "Long Chilli",
-        ],
-        "Chinese Potato": [
-          "Sree Dhara",
-          "Nidhi",
-          "Local",
         ],
         "Cluster Beans": [
           "Pusa Navbahar",
@@ -1085,7 +1077,7 @@ exports[`the bundled plant catalog lists every category in a stable order 1`] = 
     "Cashew",
     "Wood Apple",
     "Indian Jujube",
-    "Palmyra",
+    "Palm Tree",
     "Sweet Lime",
   ],
   "herb": [
@@ -1194,7 +1186,6 @@ exports[`the bundled plant catalog lists every category in a stable order 1`] = 
     "Muskmelon",
     "Ivy Gourd",
     "Turkey Berry",
-    "Chinese Potato",
     "Sesame",
   ],
 }
