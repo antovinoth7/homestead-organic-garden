@@ -80,7 +80,7 @@ describe('plantCareDefaults A2 enrichment', () => {
    * identity fields, so both halves have to survive.
    */
   describe('Tamil Nadu agronomy gaps', () => {
-    const ENRICHED: ReadonlyArray<[string, PlantType]> = [
+    const ENRICHED: readonly [string, PlantType][] = [
       ['Knol Khol', 'vegetable'],
       ['Lablab Bean', 'vegetable'],
       ['Winged Bean', 'vegetable'],

@@ -17,10 +17,11 @@ import { realignCatalog } from './009_realign_catalog';
 import { mergePlantainRetypeCastor } from './010_merge_plantain_retype_castor';
 import { repairStaleTamilNames } from './011_repair_stale_tamil_names';
 import { recomputePlantDerivedFields } from './012_recompute_plant_fields';
+import { pruneRemovedCatalogPlants } from './013_prune_removed_catalog_plants';
 
 const SETTINGS_COLLECTION = 'user_settings';
 
-export const LATEST_SCHEMA_VERSION = 12;
+export const LATEST_SCHEMA_VERSION = 13;
 
 const migrations: Migration[] = [
   { version: 1, name: 'backfill_district', run: backfillDistrict },
@@ -37,6 +38,11 @@ const migrations: Migration[] = [
   // Last on purpose: it recomputes against the catalog as 009-011 leave it, so a
   // plant Castor-retyped by 010 gets its lifecycle and family from the new type.
   { version: 12, name: 'recompute_plant_fields', run: recomputePlantDerivedFields },
+  // After 012 rather than before it: 012's "run last" is about recomputing
+  // against the catalog as 009-011 leave it, and this pass is a different axis
+  // — it removes stored entries for names the catalog no longer has, which
+  // nothing recomputes from.
+  { version: 13, name: 'prune_removed_catalog_plants', run: pruneRemovedCatalogPlants },
 ];
 
 export async function getSchemaVersion(userId: string): Promise<number> {

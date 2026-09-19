@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-17 — src/: 697 files, 128,365 lines.
+> Snapshot: 2026-09-19 — src/: 701 files, 129,434 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -90,8 +90,9 @@
 - dataCache.test.ts (153)
 - storage.test.ts (100)
 
-### src/__tests__/migrations/ — 8 files, 1,011 lines
+### src/__tests__/migrations/ — 9 files, 1,219 lines
 
+- removedCatalogPlantsLogic.test.ts (208)
 - catalogRealignmentLogic.test.ts (197)
 - catalogRealignment010Logic.test.ts (192)
 - recategorisedPlantsLogic.test.ts (155)
@@ -132,7 +133,7 @@
 
 - catalogMetrics.test.ts (67)
 
-### src/__tests__/utils/ — 80 files, 11,628 lines
+### src/__tests__/utils/ — 80 files, 11,685 lines
 
 - careTaskFilters.test.ts (651)
 - rowLayoutEngine.test.ts (523)
@@ -172,6 +173,7 @@
 - plantHelpersA2.test.ts (133)
 - plantWateringSeasons.test.ts (131)
 - seasonProgress.test.ts (130)
+- plantCareDefaultsA2.test.ts (129)
 - plantTypeFromName.test.ts (127)
 - plantNameGenerator.test.ts (125)
 - plantPhotos.test.ts (124)
@@ -189,7 +191,6 @@
 - activityRows.test.ts (76)
 - plantHealth.test.ts (75)
 - backupManifest.test.ts (74)
-- plantCareDefaultsA2.test.ts (72)
 - plantEntryMapper.test.ts (72)
 - plantSort.test.ts (71)
 - farmDate.test.ts (69)
@@ -543,11 +544,13 @@
 - storage.ts (109)
 - offlineWrite.ts (47)
 
-### src/migrations/ — 22 files, 1,565 lines
+### src/migrations/ — 24 files, 2,069 lines
 
+- removedCatalogPlantsLogic.ts (336)
 - 010_merge_plantain_retype_castor.ts (173)
 - 009_realign_catalog.ts (172)
-- index.ts (125)
+- 013_prune_removed_catalog_plants.ts (162)
+- index.ts (131)
 - 008_recategorise_plants.ts (104)
 - catalogRealignmentLogic.ts (103)
 - 003_consolidate_plant_profiles.ts (96)
@@ -842,7 +845,7 @@
 - varieties.ts (13)
 - profileKey.ts (5)
 
-### src/utils/plantCareDefaults/overrides/ — 15 files, 4,441 lines
+### src/utils/plantCareDefaults/overrides/ — 16 files, 4,741 lines
 
 - fruitTrees.ts (739)
 - tamilNaduEdibles.ts (596)
@@ -850,15 +853,16 @@
 - bedVegetables.ts (391)
 - timberCoconutShrubs.ts (385)
 - vegetables2.ts (371)
+- tamilNaduAgronomyGaps.ts (294)
 - herbs.ts (292)
 - tamilNaduPlants.ts (259)
 - flowers.ts (238)
 - herbsSpices.ts (213)
 - todayRecommendationCrops.ts (118)
-- botanicalIdentity.ts (85)
+- botanicalIdentity.ts (86)
 - newShrubs.ts (73)
 - intercropFruitTrees.ts (69)
-- index.ts (58)
+- index.ts (63)
 
 ## docs/
 
@@ -866,15 +870,15 @@
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (879)
+- CODEMAP.md (882)
 - COMPONENTS.md (66)
 - CONVENTIONS.md (239)
-- DOMAIN_LOGIC.md (149)
+- DOMAIN_LOGIC.md (162)
 - ENTERPRISE_AUDIT.md (417)
 - IMAGE_STORAGE.md (38)
-- IMPLEMENTATION_ROADMAP.md (494)
+- IMPLEMENTATION_ROADMAP.md (501)
 - REFERENCE_IMAGES.md (81)
-- SCHEMA_MIGRATIONS.md (57)
+- SCHEMA_MIGRATIONS.md (58)
 - SERVICES.md (208)
 - tamil-nadu-reference-audit.md (779)
 - TESTING.md (33)
