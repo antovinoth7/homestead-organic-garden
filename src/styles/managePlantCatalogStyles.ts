@@ -153,6 +153,14 @@ export const createStyles = (
       // into the header bar, the pill row owns its own breathing room.
       marginTop: 8,
       marginBottom: 8,
+      // Cancels `listContent`'s gutter, which this row inherits by being the
+      // list header. Without it the two paddings stacked: the first pill sat at
+      // 32 while the cards below it sat at 16, and the rail was boxed in rather
+      // than bleeding, so pills clipped short of the right edge. The 16 comes
+      // back on `categoryScrollContent`, so the first pill lines up with the
+      // card edges and the rail still runs full width — the behaviour
+      // `SectionHeader.tsx` describes for a horizontal rail.
+      marginHorizontal: -16,
     },
     categoryScrollContent: {
       flexDirection: 'row',
