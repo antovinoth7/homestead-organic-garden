@@ -2,13 +2,14 @@ import type { PlantCareProfile } from '@/types/database.types';
 import { buildProfileKey } from '@/utils/plantCareDefaults/profileKey';
 
 /**
- * Botanical identity for the nine catalog plants that carry no care-profile
- * shard of their own and so fall back to bare type defaults.
+ * Botanical identity for the nine catalog plants whose agronomy is authored
+ * separately, in `tamilNaduAgronomyGaps.ts`.
  *
  * Deliberately only the three *factual* fields — binomial, family and lifecycle.
  * Watering intervals, spacing and harvest windows are agronomic recommendations
- * for Tamil Nadu and are not invented here; those plants keep their type
- * defaults until someone with local knowledge fills them in.
+ * for Tamil Nadu, not botanical facts, so they live in their own shard and are
+ * cited there; this file stays the single source for the three facts and is
+ * merged on top of that shard, so neither copy can drift from the other.
  *
  * Why it matters that these three are present:
  * - `taxonomicFamily` is what `getCropFamily` reads for crop rotation. Without

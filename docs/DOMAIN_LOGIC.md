@@ -129,6 +129,19 @@ transplant, 45–60 days), while a care profile's `daysToHarvest` is not
 anchored to one. Reconciling them is tracked as **G5** in
 `docs/IMPLEMENTATION_ROADMAP.md`.
 
+**Nine rows carry hand-authored harvest windows.** Knol Khol, Lablab Bean,
+Winged Bean and Sword Bean (`vegetable`), and Water Spinach, Ponnanganni Keerai,
+Vallarai Keerai, Manathakkali Keerai and Mustard Greens (`spinach`) had botanical
+identity but no agronomy, so they fell through to bare type defaults and browsed
+as "Annual · Annual". `src/utils/plantCareDefaults/overrides/tamilNaduAgronomyGaps.ts`
+now gives them a full care profile. Its `daysToHarvest` figures come from TNAU
+and Tamil Nadu home-garden practice and each names the establishment action it is
+anchored to (sowing, cutting or slip) in a comment — but they are **not**
+zone-parameterised and carry **no evidence id or review expiry**. None of the
+nine appears in `TAMIL_NADU_PLANTING_RULES`, so unlike the crops there they have
+no per-establishment-window maturity to reconcile against. Closing that is part
+of **G5**.
+
 What *is* regionally grounded: `getCoconutAgeInfo` (`plantHelpers.ts`) follows
 TNAU age stages and supplies the coconut harvest cadence, and
 `getDefaultHarvestSeason` returns Tamil Nadu season strings.

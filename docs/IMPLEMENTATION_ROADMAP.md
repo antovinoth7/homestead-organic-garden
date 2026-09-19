@@ -152,6 +152,13 @@
 | G44 | Stacked Alert Cards with Swipe Dismiss                          | None — TodayScreen has basic alert list                        | High-Value           | M      | High      | Phase C                             |
 | G45 | Add Plant to Catalog Wizard (standalone)                        | ManagePlantCatalogScreen lacks quick-add wizard from bed flow  | High-Value           | M      | Medium    | Phase B2 ✅                         |
 
+**G5 follow-up**: add planting windows and evidence ids for the nine
+keerai/pandal-legume rows enriched in
+`src/utils/plantCareDefaults/overrides/tamilNaduAgronomyGaps.ts`. Their
+`daysToHarvest` is hand-authored from TNAU and home-garden practice — zone-blind
+and with no review expiry, unlike `TAMIL_NADU_PLANTING_RULES`. See
+`docs/DOMAIN_LOGIC.md` → Regional scope.
+
 ---
 
 ## 4. Recommended Architecture Adjustments
