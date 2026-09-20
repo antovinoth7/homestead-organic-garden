@@ -4,21 +4,24 @@ import type { ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { Plant } from '../types/database.types';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
+import { getPlantImage, REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceAssets';
 import { useTheme } from '../theme';
 import { getYearsOld } from '../utils/dateHelpers';
+import { getPlantWaterStatus, daysSinceLastWatered } from '../utils/plantWatering';
 import { createStyles } from '../styles/plantCardStyles';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 interface PlantCardProps {
   plant: Plant;
-  onPress: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onPress: (plantId: string) => void;
+  onEdit: (plantId: string) => void;
+  onDelete: (plantId: string) => void;
   searchQuery?: string;
   onSwipeableOpen?: (ref: Swipeable) => void;
 }
 
-export default function PlantCard({
+function PlantCard({
   plant,
   onPress,
   onEdit,
@@ -40,18 +43,7 @@ export default function PlantCard({
     };
   }, [plant.photo_url]);
 
-  const getPlantTypeIcon = (): string => {
-    const icons: Record<string, string> = {
-      vegetable: '🥬',
-      herb: '🌿',
-      flower: '🌸',
-      fruit_tree: '🥭',
-      timber_tree: '🌲',
-      coconut_tree: '🥥',
-      shrub: '🌱',
-    };
-    return icons[plant.plant_type] || '🌱';
-  };
+  const referenceImage = getPlantImage(plant.name);
 
   const getPlantTypeLabel = (): string => {
     const labels: Record<string, string> = {
@@ -84,18 +76,12 @@ export default function PlantCard({
 
   const getHealthColor = (): string => {
     const colors: Record<string, string> = {
-      healthy: '#4caf50',
-      stressed: '#ff9800',
-      recovering: '#2196f3',
-      sick: '#f44336',
+      healthy: theme.success,
+      stressed: theme.warning,
+      recovering: theme.info,
+      sick: theme.error,
     };
-    return (plant.health_status ? colors[plant.health_status] : undefined) ?? '#4caf50';
-  };
-
-  const getDaysSinceWatered = (): number | null => {
-    if (!plant.last_watered_date) return null;
-    const diff = Date.now() - new Date(plant.last_watered_date).getTime();
-    return Math.floor(diff / (1000 * 60 * 60 * 24));
+    return (plant.health_status ? colors[plant.health_status] : undefined) ?? theme.success;
   };
 
   const handleImageError = (): void => {
@@ -116,6 +102,14 @@ export default function PlantCard({
     ];
   };
 
+  const handlePress = useCallback(() => onPress(plant.id), [onPress, plant.id]);
+
+  const handleSwipeableOpen = useCallback(() => {
+    if (onSwipeableOpen && swipeableRef.current) {
+      onSwipeableOpen(swipeableRef.current);
+    }
+  }, [onSwipeableOpen]);
+
   const renderRightActions = useCallback(
     () => (
       <View style={styles.swipeActions}>
@@ -123,7 +117,7 @@ export default function PlantCard({
           style={styles.swipeEditAction}
           onPress={() => {
             swipeableRef.current?.close();
-            setTimeout(onEdit, 150);
+            setTimeout(() => onEdit(plant.id), 150);
           }}
           accessibilityLabel="Edit plant"
           accessibilityRole="button"
@@ -135,7 +129,7 @@ export default function PlantCard({
           style={styles.swipeDeleteAction}
           onPress={() => {
             swipeableRef.current?.close();
-            setTimeout(onDelete, 150);
+            setTimeout(() => onDelete(plant.id), 150);
           }}
           accessibilityLabel="Delete plant"
           accessibilityRole="button"
@@ -145,14 +139,20 @@ export default function PlantCard({
         </TouchableOpacity>
       </View>
     ),
-    [styles, onEdit, onDelete]
+    [styles, onEdit, onDelete, plant.id]
   );
 
-  const daysSinceWatered = getDaysSinceWatered();
-  const isOverdueWater =
-    daysSinceWatered !== null &&
-    plant.watering_frequency_days != null &&
-    daysSinceWatered > plant.watering_frequency_days;
+  // Watering status shares the single source of truth used by the Today screen
+  // and bed cards (midnight-floored, >= comparison, handles never-watered), so
+  // the red "overdue" state here can't disagree with the rest of the app.
+  const waterStatus = getPlantWaterStatus(plant);
+  const daysWatered = daysSinceLastWatered(plant);
+  const waterOverdueLabel =
+    waterStatus.reason === 'due_today'
+      ? 'Water today'
+      : waterStatus.reason === 'no_history'
+        ? 'Needs water'
+        : `${waterStatus.daysOverdue}d overdue`;
 
   const activePestCount = (plant.pest_disease_history || []).filter((r) => !r.resolved).length;
 
@@ -164,13 +164,9 @@ export default function PlantCard({
       overshootRight={false}
       friction={2}
       rightThreshold={40}
-      onSwipeableOpen={() => {
-        if (onSwipeableOpen && swipeableRef.current) {
-          onSwipeableOpen(swipeableRef.current);
-        }
-      }}
+      onSwipeableOpen={handleSwipeableOpen}
     >
-      <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.7}>
         {/* Left health stripe */}
         <View style={[styles.healthStripe, { backgroundColor: getHealthColor() }]} />
 
@@ -187,12 +183,21 @@ export default function PlantCard({
               cachePolicy="memory-disk"
               priority="normal"
             />
+          ) : referenceImage ? (
+            <Image
+              source={referenceImage}
+              style={styles.image as ImageStyle}
+              contentFit="cover"
+              transition={150}
+              recyclingKey={`reference:${plant.name}`}
+              cachePolicy={REFERENCE_IMAGE_CACHE_POLICY}
+            />
           ) : (
             <View style={[styles.image, styles.placeholder, { backgroundColor: getPlantTypeBg() }]}>
-              <Text style={styles.emoji}>{getPlantTypeIcon()}</Text>
+              <GardenIcon name="general.plant" size={32} color={theme.primary} />
               {plant.photo_url && imageError && (
                 <View style={styles.missingImageBadge}>
-                  <Ionicons name="camera" size={12} color="#999" />
+                  <Ionicons name="camera" size={12} color={theme.textTertiary} />
                 </View>
               )}
             </View>
@@ -254,16 +259,21 @@ export default function PlantCard({
                 <Text style={styles.bedChipText}>Bed</Text>
               </View>
             )}
-            {daysSinceWatered !== null && (
-              <View style={[styles.statusChip, isOverdueWater && styles.statusChipOverdue]}>
-                <Ionicons name="water" size={12} color={isOverdueWater ? '#f44336' : '#2196f3'} />
-                <Text
-                  style={[styles.statusChipText, isOverdueWater && styles.statusChipTextOverdue]}
-                >
-                  {daysSinceWatered === 0 ? 'Today' : `${daysSinceWatered}d ago`}
+            {waterStatus.overdue ? (
+              <View style={[styles.statusChip, styles.statusChipOverdue]}>
+                <Ionicons name="water" size={12} color={theme.error} />
+                <Text style={[styles.statusChipText, styles.statusChipTextOverdue]}>
+                  {waterOverdueLabel}
                 </Text>
               </View>
-            )}
+            ) : daysWatered !== null ? (
+              <View style={styles.statusChip}>
+                <Ionicons name="water" size={12} color={theme.info} />
+                <Text style={styles.statusChipText}>
+                  {daysWatered === 0 ? 'Today' : `${daysWatered}d ago`}
+                </Text>
+              </View>
+            ) : null}
             {plant.health_status && plant.health_status !== 'healthy' && (
               <View
                 style={[
@@ -282,13 +292,21 @@ export default function PlantCard({
             )}
             {activePestCount > 0 && (
               <View style={[styles.statusChip, styles.pestStatusChip]}>
-                <Ionicons name="bug" size={12} color="#f44336" />
+                <Ionicons name="bug" size={12} color={theme.error} />
                 <Text style={styles.pestStatusChipText}>{activePestCount} active</Text>
               </View>
             )}
           </View>
         </View>
+        <Ionicons
+          name="chevron-forward"
+          size={18}
+          color={theme.textTertiary}
+          style={styles.chevron}
+        />
       </TouchableOpacity>
     </Swipeable>
   );
 }
+
+export default React.memo(PlantCard);

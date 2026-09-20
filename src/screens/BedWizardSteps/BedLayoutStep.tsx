@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { BedCapacityModal } from '@/components/modals/BedCapacityModal';
 import { BedPlantPickerSheet } from '@/components/BedPlantPickerSheet';
@@ -12,7 +13,7 @@ import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { getGuildTemplate } from '@/config/beds/guildTemplates';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
 import { getLayerColor } from '@/config/beds/layerMeta';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
 import { getPlant } from '@/services/plants';
 import { logger } from '@/utils/logger';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
@@ -257,16 +258,40 @@ export function BedLayoutStep({
 
   const ghostRowsForWizard = useMemo<GhostRow[]>(() => {
     if (!bedType || !visibleLayers) return [];
+    const template = getGuildTemplate(bedType);
     const occupiedLayers = new Set(rowLayout.rows.map((r) => r.layer));
     const bedWidthCm = Math.round(step3.width_m * 100);
     return visibleLayers
       .filter((layer) => !occupiedLayers.has(layer))
-      .map((layer) => ({
-        layer,
-        plantsPerRow: computePlantsPerRow(bedWidthCm, 30),
-        spacingCm: 30,
-      }));
+      .map((layer) => {
+        // Representative spacing for the layer from the guild template (its
+        // tightest crop) so the advertised slot count matches a real add.
+        const layerSpacings =
+          template?.plant_rows.filter((r) => r.layer === layer).map((r) => r.spacing_cm) ?? [];
+        const spacingCm = layerSpacings.length > 0 ? Math.min(...layerSpacings) : 30;
+        return {
+          layer,
+          plantsPerRow: computePlantsPerRow(bedWidthCm, spacingCm),
+          spacingCm,
+        };
+      });
   }, [bedType, visibleLayers, rowLayout.rows, step3.width_m]);
+
+  // Rows containing either side of a companion conflict feed the map's warning tags.
+  // so the Layout tab flags the same conflicts the Crops tab lists.
+  const rowWarnings = useMemo(() => {
+    const warnings: { rowIndex: number; message: string }[] = [];
+    for (const row of rowLayout.rows) {
+      const names = new Set(row.plants.map((p) => p.name));
+      for (const w of rowLayout.companionWarnings) {
+        if (names.has(w.plantA) || names.has(w.plantB)) {
+          warnings.push({ rowIndex: row.rowIndex, message: `${w.plantA} + ${w.plantB} — ${w.reason}` });
+          break;
+        }
+      }
+    }
+    return warnings;
+  }, [rowLayout.rows, rowLayout.companionWarnings]);
 
   return (
     <ScrollView
@@ -302,23 +327,39 @@ export function BedLayoutStep({
         </TouchableOpacity>
       </View>
 
+      {/* Companion conflicts apply to the bed, not a tab — visible on both. */}
+      {rowLayout.companionWarnings.length > 0 && (
+        <View style={styles.blCompanionWarningBanner}>
+          {rowLayout.companionWarnings.map((w, i) => (
+            <View key={i} style={styles.inlineLabelRow}>
+              <Ionicons name="warning-outline" size={16} color={theme.warning} />
+              <Text style={styles.blCompanionWarningText}>
+                {`${w.plantA} + ${w.plantB} — ${w.reason}`}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {activeTab === 'layout' ? (
         <>
           <BedTopDownMap
             widthM={step3.width_m}
             lengthM={step3.length_m}
             rows={rowLayout.rows}
-            plantEmoji={getPlantEmoji}
+            plantImage={getPlantImage}
             layerColor={resolveLayerColor}
             walkingPathCm={rowLayout.walkingPathCm}
             edgeBufferCm={rowLayout.edgeBufferCm}
             overflowCm={rowLayout.overflowCm}
+            rowWarnings={rowWarnings}
           />
 
           {hasTrellisRow && (
             <View style={styles.blTrellisCard}>
+              <Ionicons name="construct-outline" size={18} color={theme.primary} />
               <Text style={styles.blTrellisText}>
-                🔧 Trellis required — Install bamboo poles or wire frame on the North end, min 1.5 m
+                Trellis required — Install bamboo poles or wire frame on the North end, min 1.5 m
                 height. Anchor firmly before sowing.
               </Text>
             </View>
@@ -326,16 +367,6 @@ export function BedLayoutStep({
         </>
       ) : (
         <>
-          {rowLayout.companionWarnings.length > 0 && (
-            <View style={styles.blCompanionWarningBanner}>
-              {rowLayout.companionWarnings.map((w, i) => (
-                <Text key={i} style={styles.blCompanionWarningText}>
-                  {`⚠ ${w.plantA} + ${w.plantB} — ${w.reason}`}
-                </Text>
-              ))}
-            </View>
-          )}
-
           <BedRowLayout
             result={rowLayout}
             solanaceaeBlocked={solanaceaeBlocked ?? false}

@@ -18,6 +18,7 @@ import {
   PlantProfiles,
 } from '@/types/database.types';
 import { logger } from '@/utils/logger';
+import { buildPlantPickerItems, PlantPickerItem } from '@/utils/plantPickerItems';
 
 export interface UsePlantFormDataReturn {
   existingPlants: Plant[];
@@ -30,12 +31,9 @@ export interface UsePlantFormDataReturn {
   parentLocationOptions: string[];
   childLocationOptions: string[];
   specificPlantOptions: string[];
+  plantPickerItems: PlantPickerItem[];
   varietySuggestions: string[];
   harvestSeasonOptions: string[];
-  basicFieldCount: number;
-  locationFieldCount: number;
-  harvestSectionFieldCount: number;
-  notesHistoryFieldCount: number;
 }
 
 const TAMIL_NADU_HARVEST_SEASONS = [
@@ -52,8 +50,6 @@ interface UsePlantFormDataOptions {
   parentLocation: string;
   childLocation: string;
   harvestSeason: string;
-  formMode: 'quick' | 'advanced';
-  customVarietyMode: boolean;
 }
 
 export function usePlantFormData({
@@ -62,8 +58,6 @@ export function usePlantFormData({
   parentLocation,
   childLocation,
   harvestSeason,
-  formMode,
-  customVarietyMode,
 }: UsePlantFormDataOptions): UsePlantFormDataReturn {
   const [existingPlants, setExistingPlants] = useState<Plant[]>([]);
   const [plantProfiles, setPlantProfiles] = useState<PlantProfiles>(DEFAULT_PLANT_PROFILES);
@@ -152,6 +146,8 @@ export function usePlantFormData({
     return plants;
   }, [plantProfiles, plantType, plantVariety]);
 
+  const plantPickerItems = React.useMemo(() => buildPlantPickerItems(plantProfiles), [plantProfiles]);
+
   const varietySuggestions = React.useMemo(() => {
     if (!plantVariety) return [];
     return plantProfiles[plantType as PlantType]?.[plantVariety]?.varieties ?? [];
@@ -165,36 +161,6 @@ export function usePlantFormData({
     return [harvestSeason, ...TAMIL_NADU_HARVEST_SEASONS];
   }, [harvestSeason]);
 
-  const basicFieldCount = React.useMemo(() => {
-    let count = 3;
-    if (formMode === 'advanced') {
-      count += 2;
-      if (varietySuggestions.length > 0 && customVarietyMode) {
-        count += 1;
-      }
-    }
-    return count;
-  }, [formMode, varietySuggestions.length, customVarietyMode]);
-
-  const locationFieldCount = React.useMemo(() => {
-    let count = 1;
-    if (parentLocation !== '') {
-      count += 1;
-    }
-    if (formMode === 'advanced') {
-      count += 1;
-    }
-    return count;
-  }, [formMode, parentLocation]);
-
-  const harvestSectionFieldCount = React.useMemo(() => {
-    return (plantType as PlantType) === 'fruit_tree' ? 4 : 2;
-  }, [plantType]);
-
-  const notesHistoryFieldCount = React.useMemo(() => {
-    return 1;
-  }, []);
-
   return {
     existingPlants,
     setExistingPlants,
@@ -206,11 +172,8 @@ export function usePlantFormData({
     parentLocationOptions,
     childLocationOptions,
     specificPlantOptions,
+    plantPickerItems,
     varietySuggestions,
     harvestSeasonOptions,
-    basicFieldCount,
-    locationFieldCount,
-    harvestSectionFieldCount,
-    notesHistoryFieldCount,
   };
 }

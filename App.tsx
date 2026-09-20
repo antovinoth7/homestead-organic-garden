@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
@@ -15,13 +15,24 @@ import Constants from 'expo-constants';
 import * as Sentry from '@sentry/react-native';
 import { migrateImagesToMediaLibrary } from './src/lib/imageStorage';
 import { runPendingMigrations } from './src/migrations';
+import { subscribeToNetworkChanges } from './src/utils/networkState';
+import { flushOfflineQueue } from './src/services/offlineSync';
+import { getFarmConfig } from './src/services/farmCapacity';
+import { clearAllData } from './src/lib/storage';
+import { setQueueOwner } from './src/lib/offlineQueue';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  SafeAreaInsetsContext,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import { useOfflineStatus } from './src/hooks/useOfflineStatus';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Screens & Navigation
 import AuthScreen from './src/screens/AuthScreen';
 import { AuthedNavigator } from './src/navigation/AppNavigator';
+import OfflineBanner from './src/components/OfflineBanner';
 
 const expoExtra = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
 const sentryDsnFromExtra =
@@ -32,6 +43,9 @@ const captureConsoleBreadcrumbs =
   expoExtra['sentryCaptureConsole'] === '1' ||
   expoExtra['sentryCaptureConsole'] === true;
 const isDev = __DEV__;
+
+/** Last signed-in uid, used to detect an account switch on a shared device. */
+const LAST_UID_KEY = '@garden_last_uid';
 
 // Only log Sentry config in development
 if (isDev) {
@@ -181,6 +195,16 @@ const AppRoot = (): React.JSX.Element | null => {
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
   const { resolvedMode } = useThemeMode();
+  const insets = useSafeAreaInsets();
+  const { isOnline, pendingCount } = useOfflineStatus();
+
+  // The offline banner absorbs the status-bar inset itself, so while it is
+  // visible the screens below must not pad for that inset a second time.
+  const offlineBannerVisible = !!user && (!isOnline || pendingCount > 0);
+  const contentInsets = useMemo(
+    () => (offlineBannerVisible ? { ...insets, top: 0 } : insets),
+    [offlineBannerVisible, insets]
+  );
 
   // Update Android navigation bar button style to match theme
   useEffect(() => {
@@ -228,6 +252,17 @@ const AppRoot = (): React.JSX.Element | null => {
     // Initialize app lifecycle management for memory cleanup
     const cleanupLifecycle = initAppLifecycle();
 
+    // Reading the farm config is enough to publish the zone — `getFarmConfig`
+    // stores it on every resolved config. Cached, so this is a cheap no-op read.
+    const primeActiveZone = (): void => {
+      getFarmConfig().catch((error) => {
+        logger.warn(
+          'Failed to resolve active agro-climatic zone',
+          error instanceof Error ? error : new Error(String(error))
+        );
+      });
+    };
+
     // Run image migration once on Android
     const runImageMigration = async (): Promise<void> => {
       if (Platform.OS !== 'android') return;
@@ -264,6 +299,40 @@ const AppRoot = (): React.JSX.Element | null => {
       }
     };
 
+    /**
+     * Local caches are shared across accounts, so on a device where a second
+     * user signs in they would otherwise render the previous account's plants,
+     * tasks, journal, beds, and farm config. Drop cached data whenever the
+     * signed-in uid changes.
+     *
+     * `clearAllData` deliberately preserves the offline queue — the previous
+     * account's unsent writes stay queued and replay skips them until their
+     * owner signs back in (see offlineSync's ownerUid check).
+     */
+    const clearStateOnAccountChange = async (uid: string | null): Promise<void> => {
+      try {
+        // Stamp subsequent offline writes with their owner so replay can tell
+        // whose they are on a shared device.
+        setQueueOwner(uid);
+
+        const previousUid = await AsyncStorage.getItem(LAST_UID_KEY);
+        if (previousUid === uid) return;
+
+        if (previousUid) {
+          logger.info('Account changed on this device, clearing local caches');
+          await clearAllData(previousUid);
+        }
+
+        if (uid) await AsyncStorage.setItem(LAST_UID_KEY, uid);
+        else await AsyncStorage.removeItem(LAST_UID_KEY);
+      } catch (error) {
+        logger.warn(
+          'Failed to reset local state on account change',
+          error instanceof Error ? error : new Error(String(error))
+        );
+      }
+    };
+
     // Listen for auth state changes with error handling
     const unsubscribe = onAuthStateChanged(
       auth,
@@ -273,8 +342,6 @@ const AppRoot = (): React.JSX.Element | null => {
         if (isDev) {
           logger.debug(`Auth state changed: ${user ? `Logged in as ${user.uid}` : 'Logged out'}`);
         }
-        setUser(user);
-        setLoading(false);
 
         // Update error logging context
         setErrorLogUserId(user?.uid);
@@ -285,19 +352,34 @@ const AppRoot = (): React.JSX.Element | null => {
             id: user.uid,
           });
           Sentry.setTag('user_authenticated', 'true');
-
-          // Run migrations after successful authentication
-          runPendingMigrations(user.uid).catch((error) => {
-            logger.warn(
-              'Schema migration failed',
-              error instanceof Error ? error : new Error(String(error))
-            );
-          });
-          runImageMigration();
         } else {
           Sentry.setUser(null);
           Sentry.setTag('user_authenticated', 'false');
         }
+
+        // Clear stale account data BEFORE the tree renders with the new user,
+        // so no screen can read the previous account's cached records.
+        void clearStateOnAccountChange(user?.uid ?? null).then(() => {
+          if (!isMounted) return;
+          setUser(user);
+          setLoading(false);
+
+          if (user) {
+            // Run migrations after successful authentication
+            runPendingMigrations(user.uid).catch((error) => {
+              logger.warn(
+                'Schema migration failed',
+                error instanceof Error ? error : new Error(String(error))
+              );
+            });
+            runImageMigration();
+            // Resolve the farm's agro-climatic zone up front: watering cadence
+            // is computed synchronously deep in the scheduling helpers, and the
+            // Care Plan can be the first screen opened, so waiting for Today to
+            // mount would schedule that session against the legacy default zone.
+            primeActiveZone();
+          }
+        });
       },
       (error) => {
         if (!isMounted) return;
@@ -339,6 +421,32 @@ const AppRoot = (): React.JSX.Element | null => {
     };
   }, []);
 
+  // Replay offline-queued writes when connectivity returns (and once after
+  // sign-in — the subscription fires immediately with the current state).
+  useEffect(() => {
+    if (!user) return;
+
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribeNetwork = subscribeToNetworkChanges((online) => {
+      if (!online) return;
+      // Short debounce so connectivity settles before replaying
+      if (flushTimer) clearTimeout(flushTimer);
+      flushTimer = setTimeout(() => {
+        flushOfflineQueue().catch((error) => {
+          logger.warn(
+            'Offline queue flush failed',
+            error instanceof Error ? error : new Error(String(error))
+          );
+        });
+      }, 2000);
+    });
+
+    return () => {
+      if (flushTimer) clearTimeout(flushTimer);
+      unsubscribeNetwork();
+    };
+  }, [user]);
+
   if (loading) return null; // Show splash screen
 
   return (
@@ -348,15 +456,18 @@ const AppRoot = (): React.JSX.Element | null => {
         backgroundColor="transparent"
         translucent={true}
       />
-      <NavigationContainer theme={navigationTheme}>
-        <RootStack.Navigator screenOptions={{ headerShown: false }}>
-          {user ? (
-            <RootStack.Screen name="AppTabs" component={AuthedNavigator} />
-          ) : (
-            <RootStack.Screen name="Auth" component={AuthScreen} />
-          )}
-        </RootStack.Navigator>
-      </NavigationContainer>
+      {user && <OfflineBanner />}
+      <SafeAreaInsetsContext.Provider value={contentInsets}>
+        <NavigationContainer theme={navigationTheme}>
+          <RootStack.Navigator screenOptions={{ headerShown: false }}>
+            {user ? (
+              <RootStack.Screen name="Main" component={AuthedNavigator} />
+            ) : (
+              <RootStack.Screen name="Auth" component={AuthScreen} />
+            )}
+          </RootStack.Navigator>
+        </NavigationContainer>
+      </SafeAreaInsetsContext.Provider>
     </>
   );
 };

@@ -10,17 +10,14 @@ import {
   doc,
   getDocs,
   getDoc,
-  addDoc,
+  setDoc,
   updateDoc,
   query,
   where,
 } from 'firebase/firestore';
 import { getData, setData, KEYS } from '@/lib/storage';
-import {
-  withTimeoutAndRetry,
-  FIRESTORE_WRITE_TIMEOUT_MS,
-  FIRESTORE_READ_TIMEOUT_MS,
-} from '@/utils/firestoreTimeout';
+import { writeOrQueue } from '@/lib/offlineWrite';
+import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
 import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 import { getCached, invalidate, dedup, CACHE_KEYS } from '@/lib/dataCache';
@@ -52,18 +49,19 @@ export async function getBeds(): Promise<Bed[]> {
     await refreshAuthToken();
 
     try {
-      const q = query(
-        collection(db, BEDS_COLLECTION),
-        where('user_id', '==', user.uid),
-        where('is_deleted', '==', false)
-      );
+      // Soft deletes are filtered client-side, never with `where('is_deleted','==',false)`.
+      // A Firestore equality filter does not match documents where the field is
+      // absent, so a bed written without the flag would be silently omitted here
+      // while being perfectly alive — and callers treat "missing from this list"
+      // as "deleted". `normalizeBed` already defaults the flag on read.
+      const q = query(collection(db, BEDS_COLLECTION), where('user_id', '==', user.uid));
       const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
         timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
       });
 
-      const beds = snapshot.docs.map((d) =>
-        normalizeBed(d.id, d.data() as Record<string, unknown>)
-      );
+      const beds = snapshot.docs
+        .map((d) => normalizeBed(d.id, d.data() as Record<string, unknown>))
+        .filter((bed) => bed.is_deleted !== true);
       await setData(KEYS.BEDS, beds);
       return beds;
     } catch (error) {
@@ -108,12 +106,20 @@ export async function addBed(
     updated_at: now,
   };
 
-  const docRef = await withTimeoutAndRetry(() => addDoc(collection(db, BEDS_COLLECTION), payload), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  // Client-generated id so the optimistic local record matches the synced one
+  const docRef = doc(collection(db, BEDS_COLLECTION));
+  await writeOrQueue(
+    { collection: BEDS_COLLECTION, docId: docRef.id, op: 'create', payload },
+    () => setDoc(docRef, payload)
+  );
 
   invalidate(CACHE_KEYS.BEDS);
   const newBed: Bed = { id: docRef.id, ...payload };
+
+  // Keep the AsyncStorage copy in sync so the bed is visible offline
+  const cachedBeds = await getData<Bed>(KEYS.BEDS);
+  await setData(KEYS.BEDS, [...cachedBeds, newBed]);
+
   return newBed;
 }
 
@@ -127,11 +133,19 @@ export async function updateBed(
 
   const payload = { ...updates, updated_at: new Date().toISOString() };
 
-  await withTimeoutAndRetry(() => updateDoc(doc(db, BEDS_COLLECTION, id), payload), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  await writeOrQueue({ collection: BEDS_COLLECTION, docId: id, op: 'update', payload }, () =>
+    updateDoc(doc(db, BEDS_COLLECTION, id), payload)
+  );
 
   invalidate(CACHE_KEYS.BEDS);
+
+  // Keep the AsyncStorage copy in sync so the change is visible offline
+  const cachedBeds = await getData<Bed>(KEYS.BEDS);
+  const index = cachedBeds.findIndex((b) => b.id === id);
+  if (index !== -1) {
+    cachedBeds[index] = { ...cachedBeds[index]!, ...payload };
+    await setData(KEYS.BEDS, cachedBeds);
+  }
 }
 
 export async function deleteBed(id: string): Promise<void> {

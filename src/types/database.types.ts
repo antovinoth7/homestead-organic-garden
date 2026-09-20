@@ -1,3 +1,5 @@
+import type { VisualIconKey } from '@/types/visual.types';
+
 export type SpaceType = 'pot' | 'bed' | 'ground';
 
 // ─── Farm Setup Types (Phase B3) ─────────────────────────────────────────────
@@ -9,6 +11,8 @@ export interface FarmConfig {
   land_cents?: number;
   families_count: number;
   goals: FarmGoal[];
+  /** Display name shown on the More tab account header. */
+  owner_name?: string;
   /** Tamil Nadu district selected during onboarding. Defaults to Kanyakumari. */
   district?: string;
   /** Agro-climatic zone id derived from the district. Drives seasons/watering. */
@@ -75,6 +79,7 @@ export type PlantType =
 export enum JournalEntryType {
   Observation = 'observation',
   Harvest = 'harvest',
+  PestDisease = 'pest_disease',
   Issue = 'issue',
   Milestone = 'milestone',
   Other = 'other',
@@ -95,7 +100,27 @@ export type SoilType =
   | 'custom';
 export type WaterRequirement = 'low' | 'medium' | 'high';
 export type HealthStatus = 'healthy' | 'stressed' | 'recovering' | 'sick';
+/**
+ * Why the forecast moved a watering interval away from its seasonal baseline.
+ * `rain` — rain is coming that the season did not assume, so wait longer.
+ * `dry` — the season assumed rain that is not falling, so do not wait as long.
+ */
+export type WateringAdjustment = 'rain' | 'dry';
 export type IssueSeverity = 'low' | 'medium' | 'high' | 'severe';
+// ─── Journal pest/disease + milestone + harvest vocab ────────────────────────
+export type PestDiseaseKind = 'pest' | 'disease';
+export type PestStatus = 'active' | 'treated' | 'resolved';
+export type TreatmentEffectiveness = 'effective' | 'partially_effective' | 'ineffective';
+export type MilestoneKind =
+  | 'germinated'
+  | 'first_flower'
+  | 'first_fruit'
+  | 'first_harvest'
+  | 'transplanted'
+  | 'pruned'
+  | 'season_end'
+  | 'custom';
+export type HarvestUnit = 'kg' | 'g' | 'pcs' | 'bunches';
 export type FertiliserType =
   | 'compost'
   | 'vermicompost'
@@ -288,13 +313,19 @@ export interface FarmAlert {
   type: FarmAlertType;
   bedId?: string;
   plantId?: string;
+  /**
+   * Backing task template, when the alert presents a real scheduled task rather
+   * than a template-less condition (sick plant, harvest readiness, green manure).
+   * Its presence is what lets the card complete the task for real.
+   */
+  templateId?: string;
   /** Display heading (e.g. plant or bed name). */
   title: string;
   /** Short action/explanation line. */
   message: string;
   severity: FarmAlertSeverity;
-  /** Emoji/icon hint for the card. */
-  icon: string;
+  /** Platform-neutral icon resolved by the UI; alerts are never persisted. */
+  iconKey: VisualIconKey;
   /** Sortable urgency — higher is more urgent. */
   daysOverdue: number;
   created_at: string;
@@ -309,6 +340,12 @@ export interface DailyWeather {
   tempMinC: number;
   /** Total precipitation in mm for the day. */
   precipitationMm: number;
+  /** Open-Meteo daily WMO weather code. Null only for a normalized legacy cache entry. */
+  weatherCode: number | null;
+  /** Maximum daily precipitation probability (0-100). Null for legacy/unavailable data. */
+  precipitationProbabilityPct: number | null;
+  /** Maximum 10 m wind speed for the day (km/h). Null for legacy/unavailable data. */
+  windSpeedMaxKph?: number | null;
 }
 
 export interface WeatherForecast {
@@ -316,6 +353,8 @@ export interface WeatherForecast {
   longitude: number;
   /** 7-day daily forecast, soonest first. */
   daily: DailyWeather[];
+  /** IANA timezone used to build the provider's daily buckets. */
+  timezone: string;
   /** ISO timestamp the forecast was fetched. */
   fetched_at: string;
 }
@@ -347,6 +386,238 @@ export interface LocationConfig {
   parentLocationShortNames?: Record<string, string>;
   /** Soil & environment profile keyed by parent location name. */
   parentLocationProfiles?: Record<string, LocationProfile>;
+}
+
+// ─── Today briefing view-model (derived, never persisted) ────────────────────
+
+/**
+ * Bucket for plants/beds/tasks whose parent location is blank. Kept as an
+ * explicit plot rather than dropped, so the plot cards' counts always add up to
+ * the header's account-wide total.
+ */
+export const UNASSIGNED_PLOT_ID = '__unassigned__';
+
+export type WeatherConditionId =
+  | 'clear'
+  | 'partly_cloudy'
+  | 'cloudy'
+  | 'fog'
+  | 'drizzle'
+  | 'rain'
+  | 'heavy_rain'
+  | 'showers'
+  | 'heavy_showers'
+  | 'snow'
+  | 'thunderstorm'
+  | 'hot'
+  | 'unknown';
+
+export interface PlotWeatherBrief {
+  lat: number;
+  lng: number;
+  /** Drives the forecast overlay's "district reading, not this plot" banner. */
+  source: 'plot' | 'district' | 'default';
+  /** The whole 7-day forecast, so the overlay opens without a second fetch. */
+  forecast: WeatherForecast | null;
+  /** The entry in `forecast.daily` whose date is today — not necessarily `daily[0]`. */
+  today: DailyWeather | null;
+  condition: WeatherConditionId;
+  conditionLabel: string;
+  conditionIconKey: VisualIconKey;
+  fetched_at: string | null;
+  /** True once the forecast is past the weather service's freshness window. */
+  stale: boolean;
+  /** True while this plot's forecast is being fetched or revalidated. */
+  loading: boolean;
+}
+
+/** One count per `HealthStatus` — the shape `getPlantHealthSummary` returns. */
+export interface PlotHealthCounts {
+  healthy: number;
+  stressed: number;
+  recovering: number;
+  sick: number;
+  total: number;
+}
+
+/**
+ * Beds on a plot split by lifecycle — the same precedence `getBedStatus` uses
+ * (permanent > resting > empty > growing), so a bed lands in exactly one bucket
+ * and `total` equals the plot's `bedCount`.
+ */
+export interface PlotBedCounts {
+  growing: number;
+  resting: number;
+  empty: number;
+  permanent: number;
+  total: number;
+}
+
+/**
+ * The plot card's one line of context — what is going on here, as opposed to
+ * the standing counts around it. Both halves are nullable and the card renders
+ * nothing at all when both are, so a plot with no history shows no empty row.
+ */
+/**
+ * Which rung of `buildPlotBriefLine`'s ladder produced the headline: an overdue
+ * job, rain closing a window, or what today's load consists of.
+ */
+export type PlotBriefLineKind = 'overdue' | 'rain' | 'load';
+
+export interface PlotBriefLine {
+  /** The rung `headline` came from, or null when there is no headline. */
+  kind: PlotBriefLineKind | null;
+  /**
+   * The single most decision-changing signal for this plot, or null on a quiet
+   * one — where the title row already says "Nothing due" and repeating it would
+   * waste the line.
+   */
+  headline: string | null;
+  /**
+   * When work was last recorded here, from the beds' and plants' `last_*`
+   * dates. Null when none of them is set. Says "worked", not "walked": those
+   * fields only cover watering, jeevamrutha, weeding, fertilising and
+   * harvesting, so an unlogged visit leaves no trace.
+   */
+  freshness: string | null;
+}
+
+/** One plot card on the Today screen. */
+export interface PlotBrief {
+  /** Parent location name, or `UNASSIGNED_PLOT_ID`. Stable list key. */
+  id: string;
+  name: string;
+  /** False for the unassigned bucket, unrecognised parents, and the no-plots fallback card. */
+  isConfigured: boolean;
+  district: string | null;
+  /** Plants in pots and ground only — bed plants are counted by `bedCount`. */
+  cropCount: number;
+  bedCount: number;
+  /** The same beds `bedCount` totals, split by lifecycle for the card's bed strip. */
+  bedStatus: PlotBedCounts;
+  dueCount: number;
+  overdueCount: number;
+  /** Same scope as `cropCount`: pots and ground, so it matches the plant list. */
+  health: PlotHealthCounts;
+  weather: PlotWeatherBrief;
+  /** One line of context between the facts line and the weather chip. */
+  line: PlotBriefLine;
+}
+
+export interface SeasonProgress {
+  seasonId: string;
+  /** Short name, e.g. "SW Monsoon". */
+  seasonName: string;
+  /** Full label with its month range, e.g. "SW Monsoon (Jun–Sep)". */
+  seasonLabel: string;
+  monthLabel: string;
+  /** 1-based week within the season. */
+  week: number;
+  totalWeeks: number;
+  elapsedDays: number;
+  totalDays: number;
+  /** 1-based day within the season — `elapsedDays` as the card states it. */
+  dayOfSeason: number;
+  /** Days left after today. 0 on the season's last day. */
+  daysRemaining: number;
+  /** 0–1. Drives the two-segment progress bar. */
+  elapsedFraction: number;
+}
+
+/** How a crop should be established in the current month. */
+export type PlantNowAction = 'sow' | 'transplant';
+
+/**
+ * One curated crop tile in the Today screen's seasonal card.
+ *
+ * `label` is the catalog plant name, which is what resolves both the bundled
+ * reference photo and the catalog entry the tile opens — the tile carries no
+ * artwork of its own.
+ */
+export interface PlantNowRecommendation {
+  key: string;
+  label: string;
+  /** Routes the tile to its catalog entry alongside `label`. */
+  plantType: PlantType;
+  action: PlantNowAction;
+  /** "25–40 days", or null when the profile does not state one. */
+  daysToHarvest: string | null;
+  /**
+   * When starting the crop today would come good: "harvest by Sep", or
+   * "harvest by Jan 2027" once it lands in another year. Null without a range.
+   */
+  harvestByLabel: string | null;
+  spacingCm: number | null;
+  /** Source-qualified spacing; preferred over the legacy single value. */
+  spacingLabel: string | null;
+  /** Source-defined crop window or pattam, e.g. "Aadi pattam · Jun–Jul". */
+  windowLabel: string;
+  /** Conditions that keep the calendar entry from becoming an unconditional promise. */
+  conditions: string[];
+  /** Stable ids into the bundled agronomy evidence registry. */
+  evidenceIds: string[];
+  reviewedOn: string;
+  /** This is the last month the window is open. */
+  closing: boolean;
+}
+
+export type PlantingRecommendationState =
+  | 'available'
+  | 'no_current_window'
+  | 'missing_district'
+  | 'unsupported_district'
+  | 'review_expired';
+
+/** A single seasonal reminder for perennials already established on the farm. */
+export interface PerennialCareBrief {
+  count: number;
+  message: string;
+  evidenceIds: string[];
+  reviewedOn: string;
+}
+
+/**
+ * One row in the Today screen's "Needs action" queue: an exception plus where it
+ * is. Built by `buildNeedsActionItems`, which resolves the alert's plant/bed id
+ * against the plot grouping.
+ */
+export interface NeedsActionItem {
+  alert: FarmAlert;
+  /**
+   * "Home farm · Bed 3", "Home farm", "Bed 3", or "" when neither segment
+   * applies — the row omits the line rather than printing a stray separator.
+   */
+  where: string;
+}
+
+/**
+ * Everything the Today screen renders, assembled by `useTodayBrief` so the
+ * screen composes blocks rather than deriving data.
+ */
+export interface TodayBrief {
+  /** Pre-formatted, e.g. "Friday 31 July". */
+  dateLabel: string;
+  /** Work still owed today: due plus overdue, completions removed. */
+  remainingTasks: number;
+  needActionCount: number;
+  plots: PlotBrief[];
+  needsAction: NeedsActionItem[];
+  season: SeasonProgress;
+  seasonNote: string;
+  /** The season's icon, shown in the season header's badge. See `getSeasonIconKey`. */
+  seasonIconKey: VisualIconKey;
+  seasonTip: string;
+  /** Heads the tip so a risk reads as a risk rather than as closing fine print. */
+  seasonTipTitle: string;
+  district: string | null;
+  zoneLabel: string | null;
+  plantingState: PlantingRecommendationState;
+  plantNow: PlantNowRecommendation[];
+  /** Crop names whose window opens next month — one line, no tiles. */
+  openingNext: string[];
+  /** The month those windows open in, e.g. "September". Empty when no zone resolves. */
+  openingNextLabel: string;
+  perennialCare: PerennialCareBrief | null;
 }
 
 export interface VarietyDetail {
@@ -450,6 +721,13 @@ export interface PlantProfile {
   varieties?: string[];
   varietyDetails?: Record<string, VarietyDetail>;
   isUserAdded?: boolean;
+  /**
+   * Tombstone for a bundled catalog entry the user deleted. The entry stays in
+   * the stored map because DEFAULT_PLANT_PROFILES would otherwise re-inject
+   * the name on the next read; readers filter it out. User-added entries are
+   * removed outright and never carry this.
+   */
+  isDeleted?: boolean;
   // Care override fields (all optional — fall back to static defaults)
   waterRequirement?: WaterRequirement;
   wateringFrequencyDays?: number;
@@ -554,6 +832,16 @@ export interface Plant {
   last_harvest_date?: string | null;
   // Health & Tracking
   last_watered_date?: string | null;
+  /**
+   * The zone/season multiplier actually applied when this plant was last
+   * watered, after any forecast damping. Recorded rather than recomputed
+   * because the forecast that informed it rolls out of the 7-day window — see
+   * `getEffectiveWateringIntervalDays`. A multiplier rather than a day count so
+   * it still composes if the base `watering_frequency_days` is edited later.
+   */
+  last_watering_multiplier?: number | null;
+  /** Why the forecast moved the last watering interval, for display. */
+  last_watering_adjustment?: WateringAdjustment | null;
   last_fertilised_date?: string | null;
   health_status?: HealthStatus | null;
   // Pest & Disease History
@@ -623,6 +911,24 @@ export interface TaskTemplate {
   // Bed association (Phase B2)
   bed_id?: string | null;
   task_subtype?: BedTaskSubtype | null;
+  // Skip tracking — set by the Care Plan's skip action so the "why" survives
+  // past the confirmation alert and can be surfaced on the task detail sheet.
+  last_skipped_at?: string | null;
+  last_skip_reason?: string | null;
+  skip_count?: number | null;
+  /**
+   * Who owns this template's schedule.
+   *
+   * `auto` templates are derived from the plant's care profile and are
+   * reconciled — created, re-dated, disabled — by `syncCareTasksForPlant` on
+   * every plant save. `manual` templates were created deliberately from the
+   * Care Plan (or a journal prompt) and sync must never reshape them.
+   *
+   * Absent means `auto`: every template written before this field existed was
+   * already being managed by sync, so the fallback keeps existing data
+   * behaving exactly as it does now. Read it through `isSyncOwnedTemplate()`.
+   */
+  source?: 'auto' | 'manual' | null;
   created_at: string;
 }
 
@@ -635,7 +941,13 @@ export interface TaskLog {
   done_at: string;
   product_used?: string | null;
   notes?: string | null;
-  harvest_weight_kg?: number | null;
+  completed_early?: boolean;
+  completion_reason?: string | null;
+  input_quantity?: number | null;
+  input_unit?: string | null;
+  treated_area?: number | null;
+  area_unit?: string | null;
+  labour_minutes?: number | null;
   created_at: string;
 }
 
@@ -655,11 +967,23 @@ export interface JournalEntry {
   tags?: string[];
   // Enhanced Harvest tracking fields
   harvest_quantity?: number | null;
-  harvest_unit?: string | null; // 'kg', 'g', 'lbs', 'pieces', 'bunches'
+  harvest_unit?: string | null; // HarvestUnit for new entries; legacy: 'lbs'/'pieces'
   harvest_quality?: 'excellent' | 'good' | 'fair' | 'poor' | null;
   harvest_notes?: string | null; // Storage method, taste notes, etc.
   // For coconut groves (record_kind 'row'): which tree this harvest came from (B.6)
   harvest_tree_number?: number | null;
+  // Pest/Disease tracking fields (entry_type 'pest_disease')
+  pest_kind?: PestDiseaseKind | null;
+  pest_name?: string | null;
+  pest_severity?: IssueSeverity | null;
+  pest_status?: PestStatus | null;
+  pest_occurred_at?: string | null; // Local YYYY-MM-DD the issue was observed
+  pest_affected_parts?: string[] | null;
+  pest_treatment?: string | null;
+  pest_treatment_effectiveness?: TreatmentEffectiveness | null;
+  pest_resolved_at?: string | null; // Set when pest_status becomes 'resolved'
+  // Milestone tracking (entry_type 'milestone')
+  milestone_kind?: MilestoneKind | null;
   // Bed association (Phase B2)
   bed_id?: string | null;
   created_at: string;
@@ -669,7 +993,7 @@ export interface JournalEntry {
 
 export type PestCategory = 'sap_sucking' | 'mites' | 'borers_larvae' | 'beetles_weevils' | 'other';
 
-export type DiseaseCategory = 'fungal' | 'bacterial' | 'viral' | 'physiological';
+export type DiseaseCategory = 'fungal' | 'bacterial' | 'viral' | 'phytoplasma' | 'physiological';
 
 export type RiskLevel = 'low' | 'moderate' | 'high';
 export type TreatmentEffort = 'easy' | 'moderate' | 'advanced';
@@ -739,4 +1063,11 @@ export interface OrganicInputEntry {
   storageTips?: string;
   plantsIdeal: string[];
   imageAsset?: string;
+  /**
+   * Id of the farm-scaled DIY recipe in `ORGANIC_RECIPES` that prepares this
+   * input, when one exists. Typed as `string` rather than `RecipeId` to keep
+   * `src/config` from being imported by the type module — narrow it at the use
+   * site with `getRecipeById`.
+   */
+  recipeId?: string;
 }

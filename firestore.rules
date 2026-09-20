@@ -15,29 +15,42 @@ service cloud.firestore {
         && request.resource.data.user_id == request.auth.uid;
     }
 
+    // An update must not change ownership. Without this an authenticated user
+    // could rewrite user_id on their own document and inject records into
+    // another account's queryable dataset.
+    function ownsUpdate() {
+      return ownsDoc()
+        && request.resource.data.user_id == resource.data.user_id;
+    }
+
     match /plants/{plantId} {
       allow create: if ownsNewDoc();
-      allow read, update, delete: if ownsDoc();
+      allow read, delete: if ownsDoc();
+      allow update: if ownsUpdate();
     }
 
     match /task_templates/{taskId} {
       allow create: if ownsNewDoc();
-      allow read, update, delete: if ownsDoc();
+      allow read, delete: if ownsDoc();
+      allow update: if ownsUpdate();
     }
 
     match /task_logs/{logId} {
       allow create: if ownsNewDoc();
-      allow read, update, delete: if ownsDoc();
+      allow read, delete: if ownsDoc();
+      allow update: if ownsUpdate();
     }
 
     match /journal_entries/{entryId} {
       allow create: if ownsNewDoc();
-      allow read, update, delete: if ownsDoc();
+      allow read, delete: if ownsDoc();
+      allow update: if ownsUpdate();
     }
 
     match /beds/{bedId} {
       allow create: if ownsNewDoc();
-      allow read, update, delete: if ownsDoc();
+      allow read, delete: if ownsDoc();
+      allow update: if ownsUpdate();
     }
 
     match /user_settings/{userId} {

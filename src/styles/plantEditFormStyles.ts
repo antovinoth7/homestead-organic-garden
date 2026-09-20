@@ -3,19 +3,53 @@ import type { Theme } from '../theme/colors';
 
 export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
-    progressBarTrack: {
-      height: 3,
-      backgroundColor: theme.borderLight,
-      width: '100%',
+    // Full-bleed editable hero photo at the top of the scroll, mirroring the
+    // detail screen. Negative margins cancel the content container's padding so
+    // it spans edge-to-edge and sits flush under the header.
+    editHero: {
+      marginHorizontal: -16,
+      marginTop: -10,
+      height: 240,
+      backgroundColor: theme.primaryLight,
+      overflow: 'hidden' as const,
     },
-    progressBarFill: {
-      height: 3,
-      backgroundColor: theme.primary,
-      borderRadius: 1.5,
+    editHeroCaption: {
+      marginTop: 12,
+      marginBottom: 4,
     },
-    editHeaderSpacer: {
-      width: 40,
-      height: 40,
+    // In-flow tab bar sits below the hero; spans full-bleed like the header.
+    inFlowTabBar: {
+      marginHorizontal: -16,
+    },
+    // Pinned copy of the tab bar, shown below the header once the in-flow bar
+    // scrolls away. Absolute so its appearance doesn't shift the scroll content.
+    pinnedTabBar: {
+      position: 'absolute' as const,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.background,
+      zIndex: 5,
+    },
+    editHeaderTitleBlock: {
+      flex: 1,
+      marginLeft: 12,
+      marginRight: 8,
+    },
+    editHeaderTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    editHeaderTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+      flexShrink: 1,
+    },
+    editHeaderSubtitle: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 1,
     },
     dataLoadingOverlay: {
       ...StyleSheet.absoluteFillObject,
@@ -27,8 +61,32 @@ export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.cre
     flexOne: {
       flex: 1,
     },
+    // Horizontal/top padding lives on the content container (not the ScrollView
+    // box) so the sticky tab bar can span full-bleed via a negative margin.
+    scrollBody: {
+      paddingHorizontal: 0,
+      paddingTop: 0,
+    },
     scrollContentPadding: {
-      paddingBottom: 160,
+      paddingHorizontal: 16,
+      paddingTop: 10,
+    },
+    // PlantSectionHeader carries its own 24px inset, so cancel the content
+    // container's 16px padding to keep it aligned with the detail screen.
+    sectionHeaderBleed: {
+      marginHorizontal: -16,
+    },
+    // Circular "+" — mirrors sectionHeaderAction on the plant-catalog (care
+    // default) screen so section add controls look the same across the app.
+    sectionHeaderAction: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      backgroundColor: theme.primaryLight,
+      borderWidth: 1,
+      borderColor: theme.primary + '30',
     },
     spaceTypeCardHint: {
       fontSize: 10,
@@ -44,103 +102,95 @@ export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.cre
     spacerMedium: {
       marginTop: 12,
     },
-    noMarginBottom: {
-      marginBottom: 0,
+    // Compact pest/disease records: hairline-separated rows in one bordered card.
+    pestListCard: {
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.backgroundSecondary,
+      overflow: 'hidden' as const,
+      marginBottom: 12,
     },
-    pruningFrequencyRow: {
+    pestRow: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       gap: 10,
-      marginBottom: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.borderLight,
     },
-    frequencyInputWrapCompact: {
-      width: 70,
-      marginBottom: 0,
+    pestRowLast: {
+      borderBottomWidth: 0,
     },
-    frequencyInputLarge: {
-      fontSize: 18,
-    },
-    pruningTipsCard: {
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 10,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-      marginBottom: 8,
-    },
-    pruningTipsHeader: {
-      flexDirection: 'row' as const,
+    pestRowIconWrap: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
       alignItems: 'center' as const,
-      gap: 6,
-      marginBottom: 8,
+      justifyContent: 'center' as const,
     },
-    pruningTipsTitle: {
-      fontSize: 12,
-      fontWeight: '700' as const,
-      color: theme.textSecondary,
-      textTransform: 'uppercase' as const,
-      letterSpacing: 0.5,
+    pestRowIconWrapActive: {
+      backgroundColor: theme.errorLight,
     },
-    pruningTipRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'flex-start' as const,
-      gap: 6,
-      marginBottom: 4,
+    pestRowIconWrapResolved: {
+      backgroundColor: theme.successLight,
     },
-    pruningTipBullet: {
-      color: theme.textTertiary,
-      fontSize: 13,
-      lineHeight: 18,
-    },
-    pruningTipText: {
-      color: theme.text,
-      fontSize: 13,
-      lineHeight: 18,
+    pestRowTextBlock: {
       flex: 1,
     },
-    pruningTechniqueTopGap: {
-      marginTop: 6,
-    },
-    pruningFlowerTopGap: {
-      marginTop: 4,
-    },
-    pruningTechniqueIcon: {
+    pestRowName: {
       fontSize: 13,
-      lineHeight: 18,
-    },
-    pruningTechniqueTitle: {
+      fontWeight: '600' as const,
       color: theme.text,
+    },
+    pestRowNameResolved: {
+      color: theme.textSecondary,
+    },
+    pestRowMeta: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      marginTop: 1,
+    },
+    pestRowDelete: {
+      padding: 6,
+    },
+    pestEmpty: {
       fontSize: 13,
-      lineHeight: 18,
-      fontWeight: '600' as const,
+      color: theme.textTertiary,
+      textAlign: 'center' as const,
+      paddingVertical: 16,
+      fontStyle: 'italic' as const,
     },
-    pruningTechniqueDetail: {
-      fontWeight: '400' as const,
-    },
-    pruningTechniqueBestTime: {
-      color: theme.primary,
+    carePlanCaption: {
       fontSize: 12,
+      color: theme.textTertiary,
+      marginTop: -8,
+      marginBottom: 12,
+      lineHeight: 16,
+    },
+    // Collapsed-by-default "Adjust schedule" expander inside Care & Schedule.
+    adjustScheduleHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+      backgroundColor: theme.backgroundSecondary,
+      marginBottom: 12,
+    },
+    adjustScheduleHeaderText: {
+      flex: 1,
+      fontSize: 14,
       fontWeight: '600' as const,
-      marginTop: 2,
+      color: theme.text,
     },
-    coconutInfoCard: {
-      marginBottom: 16,
-      borderLeftColor: theme.coconut,
-      borderLeftWidth: 4,
-    },
-    coconutInfoCardTitle: {
-      color: theme.coconut,
-    },
-    infoCardTextBold: {
-      marginTop: 6,
-      fontWeight: '600' as const,
-    },
-    pestCardResolved: {
-      borderLeftWidth: 3,
-      borderLeftColor: theme.success,
-    },
-    pestCardUnresolved: {
-      borderLeftWidth: 3,
-      borderLeftColor: theme.error,
+    adjustScheduleHint: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      marginTop: 1,
     },
   });

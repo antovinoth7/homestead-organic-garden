@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { createStyles } from '../styles/voiceInputButtonStyles';
@@ -7,6 +7,11 @@ import { createStyles } from '../styles/voiceInputButtonStyles';
 interface Props {
   isListening: boolean;
   disabled?: boolean;
+  /**
+   * Device has no recognizer: looks the same as disabled but stays pressable so
+   * the tap can explain why nothing will happen.
+   */
+  unavailable?: boolean;
   onPress: () => void;
 }
 
@@ -18,29 +23,42 @@ interface Props {
 export default function VoiceInputButton({
   isListening,
   disabled = false,
+  unavailable = false,
   onPress,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
+  const muted = disabled || unavailable;
+
   return (
     <TouchableOpacity
-      style={[
-        styles.button,
-        isListening && styles.buttonListening,
-        disabled && styles.buttonDisabled,
-      ]}
+      style={styles.button}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={isListening ? 'Stop voice input' : 'Start voice input'}
+      accessibilityLabel={
+        unavailable
+          ? 'Voice input unavailable on this device'
+          : isListening
+            ? 'Stop voice input'
+            : 'Start voice input'
+      }
       accessibilityState={{ disabled, busy: isListening }}
     >
-      <Ionicons
-        name={isListening ? 'stop' : 'mic'}
-        size={22}
-        color={isListening ? theme.textInverse : disabled ? theme.textTertiary : theme.primary}
-      />
+      <View
+        style={[
+          styles.buttonCircle,
+          isListening && styles.buttonListening,
+          muted && styles.buttonDisabled,
+        ]}
+      >
+        <Ionicons
+          name={isListening ? 'stop' : 'mic'}
+          size={17}
+          color={isListening ? theme.textInverse : muted ? theme.textTertiary : theme.primary}
+        />
+      </View>
     </TouchableOpacity>
   );
 }

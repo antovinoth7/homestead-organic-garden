@@ -52,7 +52,10 @@ export function DetailNutritionSection({
 
   return (
     <View style={styles.careSection}>
-      <Text style={styles.sectionTitle}>🥗 Nutrition</Text>
+      <View style={styles.sectionTitleRow}>
+        <Ionicons name="nutrition-outline" size={19} color={theme.primary} />
+        <Text style={styles.sectionTitle}>Nutrition</Text>
+      </View>
       {feedingCfg && (
         <View style={[enrichedStyles.feedingBadge, { borderColor: feedingCfg.color }]}>
           <Ionicons name={feedingCfg.icon} size={16} color={feedingCfg.color} />

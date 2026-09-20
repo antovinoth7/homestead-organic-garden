@@ -1,9 +1,12 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db, auth, refreshAuthToken } from '@/lib/firebase';
 import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
+import { writeOrQueue } from '@/lib/offlineWrite';
 import { logError } from '@/utils/errorLogging';
 import { getData, setData, KEYS } from '@/lib/storage';
 import { getCached, setCached, invalidate } from '@/lib/dataCache';
+import { sumLandCents } from '@/utils/landCents';
+import { resolveActiveZone, setActiveZone } from '@/config/zones';
 import type { FarmConfig, Bed, BedType, LocationProfile } from '@/types/database.types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -12,7 +15,7 @@ const SETTINGS_COLLECTION = 'user_settings';
 const FARM_CONFIG_FIELD = 'farmConfig';
 
 /** 1 cent = 40.47 sqm */
-const SQM_PER_CENT = 40.47;
+export const SQM_PER_CENT = 40.47;
 /** Usable factor: ~70% after paths, structures */
 const USABLE_FACTOR = 0.7;
 /** Average bed area in sqm (1.2m × 4m) */
@@ -66,7 +69,7 @@ export function calcWeeklyVegNeed(familiesCount: number): number {
  * Replaces the single user-level land_cents in FarmConfig.
  */
 export function calcCapacityFromProfiles(profiles: Record<string, LocationProfile>): number {
-  return Object.values(profiles).reduce((sum, p) => sum + (p.land_cents ?? 0), 0);
+  return sumLandCents(profiles);
 }
 
 /**
@@ -149,16 +152,28 @@ const DEFAULT_FARM_CONFIG: FarmConfig = {
   goals: ['self_sufficiency'],
 };
 
+/**
+ * Publish the config's agro-climatic zone so the synchronous scheduling helpers
+ * can reach it (see `src/config/zones/activeZone.ts`). Every resolved config
+ * passes through here, so the zone can never lag behind the saved district.
+ * `DEFAULT_FARM_CONFIG` deliberately does not — it carries no district, and
+ * clearing the zone would only replace a real answer with a fallback.
+ */
+function rememberZone(config: FarmConfig): FarmConfig {
+  setActiveZone(resolveActiveZone(config));
+  return config;
+}
+
 export async function getFarmConfig(): Promise<FarmConfig> {
   // 1. In-memory cache
   const cached = getCached<FarmConfig>(CACHE_KEY_FARM_CONFIG);
-  if (cached) return cached;
+  if (cached) return rememberZone(cached);
 
   // 2. AsyncStorage
   const stored = await getData<FarmConfig>(KEYS.FARM_CONFIG);
   if (stored.length > 0 && stored[0]) {
     setCached(CACHE_KEY_FARM_CONFIG, stored[0]);
-    return stored[0];
+    return rememberZone(stored[0]);
   }
 
   // 3. Firestore
@@ -179,7 +194,7 @@ export async function getFarmConfig(): Promise<FarmConfig> {
       if (remote) {
         setCached(CACHE_KEY_FARM_CONFIG, remote);
         await setData(KEYS.FARM_CONFIG, [remote]);
-        return remote;
+        return rememberZone(remote);
       }
     }
   } catch (error) {
@@ -196,6 +211,9 @@ export async function saveFarmConfig(config: FarmConfig): Promise<FarmConfig> {
   setCached(CACHE_KEY_FARM_CONFIG, withTimestamp);
   await setData(KEYS.FARM_CONFIG, [withTimestamp]);
   invalidate(CACHE_KEY_FARM_CONFIG);
+  // Changing the district must take effect on watering cadence immediately,
+  // not on the next app launch.
+  rememberZone(withTimestamp);
 
   // Write to Firestore
   const user = auth.currentUser;
@@ -205,14 +223,21 @@ export async function saveFarmConfig(config: FarmConfig): Promise<FarmConfig> {
 
   try {
     const docRef = doc(db, SETTINGS_COLLECTION, user.uid);
-    await withTimeoutAndRetry(
+    // Queued payload uses a concrete Timestamp (serverTimestamp() sentinels
+    // can't be serialized for replay); the online path keeps server time.
+    await writeOrQueue(
+      {
+        collection: SETTINGS_COLLECTION,
+        docId: user.uid,
+        op: 'set',
+        payload: { [FARM_CONFIG_FIELD]: withTimestamp, updated_at: Timestamp.now() },
+      },
       () =>
         setDoc(
           docRef,
           { [FARM_CONFIG_FIELD]: withTimestamp, updated_at: serverTimestamp() },
           { merge: true }
-        ),
-      { timeoutMs: FIRESTORE_READ_TIMEOUT_MS, throwOnTimeout: false }
+        )
     );
   } catch (error) {
     logError('network', 'Failed to save farm config', error as Error);

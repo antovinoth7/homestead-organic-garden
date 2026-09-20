@@ -7,18 +7,43 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       backgroundColor: theme.background,
     },
-    editButton: {
+    // --- Immersive hero header: floating buttons over the full-bleed photo,
+    // --- swapped for a solid compact row once the tab bar pins. The pinned tab
+    // --- bar lives here (outside the ScrollView) so Android doesn't drop taps
+    // --- on a translated sticky header.
+    headerOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      paddingBottom: 6,
+    },
+    headerOverlayRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+    },
+    headerOverlayStuck: {
+      backgroundColor: theme.background,
+    },
+    headerOverlaySpacer: {
+      flex: 1,
+    },
+    floatingCircleButton: {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: theme.card,
+      backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+    },
+    stuckHeaderTitle: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.text,
+      textAlign: 'center',
     },
     photo: {
       width: '100%',
@@ -30,7 +55,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
     },
     content: {
-      padding: 24,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    keyInfoWrapper: {
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      paddingBottom: 4,
     },
     name: {
       fontSize: 32,
@@ -78,14 +109,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginLeft: 12,
     },
-    notesSection: {
-      marginBottom: 24,
-    },
     sectionTitle: {
       fontSize: 18,
       fontWeight: '600',
       color: theme.text,
       marginBottom: 12,
+    },
+    sectionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
     },
     notesText: {
       fontSize: 16,
@@ -202,9 +235,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 4,
       lineHeight: 18,
     },
-    tasksSection: {
-      marginBottom: 24,
-    },
     taskItem: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -235,6 +265,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskDisabled: {
       color: theme.textTertiary,
     },
+    careTasksLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: 10,
+    },
     centered: {
       flex: 1,
       justifyContent: 'center',
@@ -250,12 +288,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.card,
       padding: 16,
       borderRadius: 12,
-      marginBottom: 16,
-    },
-    harvestHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
       marginBottom: 16,
     },
     harvestStats: {
@@ -373,25 +405,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       color: theme.text,
       marginTop: 2,
-    },
-    // Image zoom modal
-    zoomOverlay: {
-      flex: 1,
-      backgroundColor: theme.shadow,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    zoomClose: {
-      position: 'absolute',
-      top: 16,
-      right: 16,
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.textInverse + '33',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10,
     },
     // Coconut metrics
     metricsGrid: {
@@ -532,14 +545,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 6,
       marginTop: 8,
     },
-    gestureRoot: {
-      flex: 1,
-    },
-    zoomGestureContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
     healthStatusHealthy: {
       color: theme.success,
       fontWeight: '600',
@@ -581,6 +586,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center' as const,
       gap: 4,
       marginTop: 4,
+      marginLeft: 28,
+    },
+    growthStageHint: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      fontStyle: 'italic' as const,
+      marginTop: 6,
       marginLeft: 28,
     },
     growthStageActionText: {
@@ -670,24 +682,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       padding: 12,
       borderColor: theme.warning,
       backgroundColor: theme.warning + '20',
-    },
-    beejamruthaCta: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginHorizontal: 16,
-      marginBottom: 12,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderRadius: 12,
-      backgroundColor: theme.primaryLight,
-      borderWidth: 1,
-      borderColor: theme.primary + '40',
-    },
-    beejamruthaCtaText: {
-      flex: 1,
-      fontSize: 13,
-      fontWeight: '600' as const,
-      color: theme.text,
     },
   });

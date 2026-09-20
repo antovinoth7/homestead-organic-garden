@@ -130,8 +130,8 @@ export function checkRotationRules(input: RotationCheckInput): RotationRule[] {
       rule: 'At least one dynamic accumulator present',
       passed: hasDynamicAccumulator(plants),
       description: hasDynamicAccumulator(plants)
-        ? 'Dynamic accumulator (Agathi / Moringa / Comfrey / Banana) found. Chop-and-drop scheduled.'
-        : 'No dynamic accumulator in bed. Consider adding Agathi or Moringa.',
+        ? 'Dynamic accumulator (Agathi / Drumstick / Comfrey / Banana) found. Chop-and-drop scheduled.'
+        : 'No dynamic accumulator in bed. Consider adding Agathi or Drumstick.',
     },
     {
       id: 'no_pest_recurrence',

@@ -122,6 +122,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontStyle: 'italic',
       lineHeight: 18,
     },
+    backupNoteRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 7,
+      marginTop: 12,
+    },
+    backupNoteText: {
+      flex: 1,
+      fontSize: 13,
+      color: theme.textSecondary,
+      fontStyle: 'italic',
+      lineHeight: 18,
+    },
     helpText: {
       fontSize: 13,
       color: theme.textSecondary,
@@ -131,5 +144,60 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     backupButtonTextSuccess: {
       color: theme.primary,
+    },
+    backupProgressRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    backupProgressText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textInverse,
+    },
+    backupProgressTextSuccess: {
+      color: theme.primary,
+    },
+    themeLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.text,
+      marginBottom: 12,
+    },
+    themePills: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    themePill: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+      borderRadius: 20,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    themePillActive: {
+      backgroundColor: theme.primaryLight,
+      borderColor: theme.primary,
+    },
+    themePillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    themePillTextActive: {
+      color: theme.primary,
+      fontWeight: '700',
+    },
+    themeHint: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      marginTop: 10,
+      lineHeight: 18,
     },
   });

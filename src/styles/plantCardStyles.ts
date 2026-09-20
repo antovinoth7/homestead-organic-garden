@@ -12,6 +12,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingLeft: 14,
       marginBottom: 8,
       alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
       shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.08,
@@ -39,9 +41,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     placeholder: {
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    emoji: {
-      fontSize: 32,
     },
     missingImageBadge: {
       position: 'absolute',
@@ -178,6 +177,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.primary,
       backgroundColor: theme.primaryLight,
+    },
+    chevron: {
+      marginLeft: 4,
     },
     moreBtn: {
       width: 36,

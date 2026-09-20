@@ -22,11 +22,13 @@ export const voiceErrorMessage = (code: string): string =>
   VOICE_ERROR_MESSAGES[code] ?? VOICE_FALLBACK_ERROR;
 
 /**
- * Appends dictated text to existing content with a separating space, then runs
- * the shared sanitizer (which preserves Tamil letters via `\p{L}`).
+ * Sanitizes the dictated text (preserving Tamil letters via `\p{L}`) and appends
+ * it to existing content with a separating space. The previous content is left
+ * untouched, so dictating into a field never rewrites text the user already
+ * typed — important for fields whose typed path keeps punctuation or newlines.
  */
 export const appendVoiceTranscript = (prev: string, text: string): string => {
-  if (!text) return prev;
-  const combined = prev ? `${prev} ${text}` : text;
-  return sanitizeAlphaNumericSpaces(combined);
+  const clean = sanitizeAlphaNumericSpaces(text).trim();
+  if (!clean) return prev;
+  return prev ? `${prev} ${clean}` : clean;
 };

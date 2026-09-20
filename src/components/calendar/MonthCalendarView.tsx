@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TaskTemplate, TaskType } from '../../types/database.types';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/calendarStyles';
+import { calendarDateKey, farmToday, formatFarmDate } from '@/utils/farmDate';
 
 interface MonthCalendarViewProps {
   currentMonth: Date;
@@ -42,6 +43,9 @@ export default function MonthCalendarView({
     <View style={styles.monthView}>
       <View style={styles.monthHeader}>
         <TouchableOpacity
+          style={styles.monthNavBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Previous month"
           onPress={() => {
             const newDate = new Date(currentMonth);
             newDate.setMonth(newDate.getMonth() - 1);
@@ -51,12 +55,18 @@ export default function MonthCalendarView({
           <Ionicons name="chevron-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.monthTitle}>
-          {currentMonth.toLocaleDateString('en-US', {
-            month: 'short',
-            year: 'numeric',
-          })}
+          {formatFarmDate(
+            currentMonth,
+            {
+              month: 'short',
+              year: 'numeric',
+            }
+          )}
         </Text>
         <TouchableOpacity
+          style={styles.monthNavBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Next month"
           onPress={() => {
             const newDate = new Date(currentMonth);
             newDate.setMonth(newDate.getMonth() + 1);
@@ -85,8 +95,10 @@ export default function MonthCalendarView({
 
           const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
           const dayTasks = getTasksForDate(date);
-          const isToday = date.toDateString() === new Date().toDateString();
-          const isSelected = selectedDate?.toDateString() === date.toDateString();
+          const isToday = calendarDateKey(date) === calendarDateKey(farmToday());
+          const isSelected = selectedDate
+            ? calendarDateKey(selectedDate) === calendarDateKey(date)
+            : false;
 
           return (
             <TouchableOpacity
@@ -97,6 +109,16 @@ export default function MonthCalendarView({
                 isSelected && styles.monthCellSelected,
               ]}
               onPress={() => onSelectDate(date)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
+              accessibilityLabel={`${formatFarmDate(
+                date,
+                {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                }
+              )}, ${dayTasks.length} task${dayTasks.length === 1 ? '' : 's'}`}
             >
               <Text
                 style={[

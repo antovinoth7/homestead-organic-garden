@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Bed, Plant } from '@/types/database.types';
+import { Bed, GrowthStage, Plant } from '@/types/database.types';
 import { getBeds } from '@/services/beds';
-import { getAllPlants } from '@/services/plants';
+import { getAllPlants, getStoredPlants } from '@/services/plants';
 import { isPlantArchived } from '@/utils/plantHelpers';
 import { isPlantWaterOverdue } from '@/utils/plantWatering';
+import { buildBedPreview } from '@/utils/bedPreview';
 import { logError } from '@/utils/errorLogging';
 
 export interface BedWithCoverage extends Bed {
@@ -13,6 +14,10 @@ export interface BedWithCoverage extends Bed {
   active_plant_count: number;
   /** True when at least one active plant in the bed is due/overdue for watering. */
   water_overdue: boolean;
+  /** Plant names for the bed card's mini thumbnails — at most MAX_PREVIEW_PINS. */
+  preview_plant_names: string[];
+  /** Stage most of the bed's plants are in; null when none has one recorded. */
+  dominant_stage: GrowthStage | null;
 }
 
 interface UseBedDataResult {
@@ -37,17 +42,37 @@ export function useBedData(): UseBedDataResult {
     if (!options?.silent) setLoading(true);
     setError(null);
     try {
-      const [rawBeds, allPlants] = await Promise.all([getBeds(), getAllPlants()]);
+      // The bed list renders no plant images, so use the image-free, offline-first
+      // plant reader (same one the dashboard uses) instead of getAllPlants, which
+      // would needlessly paginate Firestore and resolve every plant's local image.
+      // Fall back to the full fetch only on a cold cache so counts are never wrong.
+      const [rawBeds, storedPlants] = await Promise.all([getBeds(), getStoredPlants()]);
+      const allPlants = storedPlants.length > 0 ? storedPlants : await getAllPlants();
       const now = Date.now();
+
+      // Group plants by bed once (O(N+M)) rather than filtering all plants per bed.
+      const plantsByBed = new Map<string, Plant[]>();
+      for (const p of allPlants) {
+        if (p.is_deleted || !p.bed_id) continue;
+        const list = plantsByBed.get(p.bed_id);
+        if (list) list.push(p);
+        else plantsByBed.set(p.bed_id, [p]);
+      }
+
       const enriched = rawBeds.map((bed) => {
-        const bedPlants = allPlants.filter((p) => p.bed_id === bed.id && !p.is_deleted);
+        const bedPlants = plantsByBed.get(bed.id) ?? [];
         const activePlants = bedPlants.filter((p) => !isPlantArchived(p));
+        // The plants are already in hand, so the card's grid pins and stage
+        // badge cost nothing beyond this pass.
+        const preview = buildBedPreview(activePlants);
         return {
           ...bed,
           legume_coverage_pct: computeLegumePct(bedPlants),
           plant_count: bedPlants.length,
           active_plant_count: activePlants.length,
           water_overdue: activePlants.some((p) => isPlantWaterOverdue(p, now)),
+          preview_plant_names: preview.plantNames,
+          dominant_stage: preview.dominantStage,
         };
       });
       // Newest beds first.
@@ -61,9 +86,13 @@ export function useBedData(): UseBedDataResult {
     }
   }, []);
 
+  // Show the spinner only on the first load; subsequent tab re-focuses refresh
+  // silently so returning to the Beds tab feels instant.
+  const hasLoadedRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      load();
+      load({ silent: hasLoadedRef.current });
+      hasLoadedRef.current = true;
     }, [load])
   );
 

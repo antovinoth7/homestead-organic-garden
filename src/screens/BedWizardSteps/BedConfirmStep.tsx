@@ -9,9 +9,10 @@ import { getLayerColor } from '@/config/beds/layerMeta';
 import { computeRowLayout } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
-import { getPlantEmoji, buildHarvestPreview } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import { BedTopDownMap } from '@/components/BedTopDownMap';
+import VoiceDictation from '@/components/VoiceDictation';
 
 interface Props {
   stepData: Partial<WizardStepData>;
@@ -43,8 +44,6 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
     if (inputs.length === 0) return null;
     return computeRowLayout(inputs, s3.width_m, s3.length_m, s1.bed_type, s2?.construction_type);
   }, [s1?.bed_type, s3, entries, s2?.construction_type]);
-
-  const harvestPreview = useMemo(() => buildHarvestPreview(entries, template), [entries, template]);
 
   const plantsLabel = useMemo(() => {
     if (entries.length === 0) return null;
@@ -145,38 +144,12 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
             widthM={s3.width_m}
             lengthM={s3.length_m}
             rows={rowLayout.rows}
-            plantEmoji={getPlantEmoji}
+            plantImage={getPlantImage}
             layerColor={resolveLayerColor}
             walkingPathCm={rowLayout.walkingPathCm}
             edgeBufferCm={rowLayout.edgeBufferCm}
             overflowCm={rowLayout.overflowCm}
           />
-        </View>
-      )}
-
-      {/* First-harvest timeline */}
-      {harvestPreview.length > 1 && (
-        <View style={styles.cfSection}>
-          <Text style={styles.cfEyebrow}>First harvest from this bed</Text>
-          <View style={styles.cfCard}>
-            {harvestPreview.map((item) => {
-              const maxDays = harvestPreview[harvestPreview.length - 1]!.days;
-              const barWidth = Math.max(20, Math.round((item.days / maxDays) * 140));
-              return (
-                <View key={item.name} style={styles.gtHarvestRow}>
-                  <View style={styles.gtHarvestLabelCol}>
-                    <Text style={styles.gtHarvestName}>
-                      {item.emoji} {item.name}
-                    </Text>
-                  </View>
-                  <View style={styles.gtHarvestBarTrack}>
-                    <View style={[styles.gtHarvestBar, { width: barWidth }]} />
-                  </View>
-                  <Text style={styles.gtHarvestDays}>{item.days}d</Text>
-                </View>
-              );
-            })}
-          </View>
         </View>
       )}
 
@@ -189,16 +162,27 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
               activeOpacity={0.7}
               onPress={() => setPrepExpanded((v) => !v)}
             >
-              <Text style={styles.szPrepCardTitle}>
-                🌱 Prep checklist · {prepSteps.length} steps
-              </Text>
-              <Text style={styles.szPrepChevron}>{prepExpanded ? '▲' : '▼'}</Text>
+              <View style={styles.inlineLabelRow}>
+                <Ionicons name="checkmark-done-outline" size={18} color={theme.primary} />
+                <Text style={styles.szPrepCardTitle}>
+                  Prep checklist · {prepSteps.length} steps
+                </Text>
+              </View>
+              <Ionicons
+                name={prepExpanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={theme.textSecondary}
+              />
             </TouchableOpacity>
             {prepExpanded &&
               prepSteps.map((s, i) => (
                 <View key={i} style={[styles.szPrepStepRow, i === 0 && styles.szPrepFirstStep]}>
                   <View style={styles.szPrepStepNumber}>
-                    <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+                    {s.kind === 'warning' ? (
+                      <Ionicons name="warning" size={15} color={theme.warning} />
+                    ) : (
+                      <Text style={styles.szPrepStepNumberText}>{s.number}</Text>
+                    )}
                   </View>
                   <View style={styles.szPrepStepContent}>
                     <Text style={styles.szPrepStepText}>{s.text}</Text>
@@ -224,6 +208,7 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
       {/* Notes — editable, at the bottom */}
       <View style={styles.cfSection}>
         <Text style={styles.cfEyebrow}>Notes (optional)</Text>
+        <VoiceDictation value={data.notes} onChangeText={(v) => onChange({ notes: v })} />
         <TextInput
           style={[styles.textInput, styles.cfNotesArea]}
           value={data.notes}

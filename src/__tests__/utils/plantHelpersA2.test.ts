@@ -4,6 +4,8 @@ import {
   getDefaultHarvestSeason,
   getCommonPests,
   getCommonDiseases,
+  getDefaultGroupedPests,
+  getDefaultGroupedDiseases,
 } from '../../utils/plantHelpers';
 
 describe('plantHelpers A2 enrichment', () => {
@@ -94,6 +96,37 @@ describe('plantHelpers A2 enrichment', () => {
 
     it('returns empty for null type', () => {
       expect(getCommonDiseases(null)).toEqual([]);
+    });
+  });
+
+  describe('getDefaultGroupedPests', () => {
+    it('returns non-empty grouped generic pests', () => {
+      const groups = getDefaultGroupedPests();
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('includes the expected categories', () => {
+      const categories = getDefaultGroupedPests().map((g) => g.category);
+      expect(categories).toEqual(
+        expect.arrayContaining(['Sap-Sucking', 'Borers & Larvae', 'Mites & Spiders'])
+      );
+    });
+
+    it('includes known common pests', () => {
+      const items = getDefaultGroupedPests().flatMap((g) => g.items);
+      expect(items).toEqual(expect.arrayContaining(['Aphids', 'Leaf Miner', 'Mites']));
+    });
+  });
+
+  describe('getDefaultGroupedDiseases', () => {
+    it('returns non-empty grouped generic diseases', () => {
+      const groups = getDefaultGroupedDiseases();
+      expect(groups.length).toBeGreaterThan(0);
+    });
+
+    it('includes known common diseases', () => {
+      const items = getDefaultGroupedDiseases().flatMap((g) => g.items);
+      expect(items).toEqual(expect.arrayContaining(['Leaf Spot', 'Powdery Mildew', 'Root Rot']));
     });
   });
 });

@@ -445,12 +445,12 @@ export const GUILD_TEMPLATES: Record<BedType, GuildTemplate> = {
     type: 'medicinal_guild',
     label: 'Medicinal Guild Bed',
     description:
-      'Moringa, tulsi, aloe vera, neem — multi-purpose medicinal and pest-repelling plants.',
+      'Drumstick, tulsi, aloe vera, neem — multi-purpose medicinal and pest-repelling plants.',
     low_light_flag: true,
     sunlight_requirement: 'partial_sun',
     plant_rows: [
       {
-        name: 'Moringa',
+        name: 'Drumstick',
         layer: 'canopy',
         spacing_cm: 300,
         // A single guild moringa is pruned to ~2m (see care task) and grown as the canopy
@@ -470,7 +470,7 @@ export const GUILD_TEMPLATES: Record<BedType, GuildTemplate> = {
         spacing_cm: 45,
         row_gap_cm: 45,
         crop_family: 'lamiaceae',
-        companion_plants: ['Moringa', 'Tomato'],
+        companion_plants: ['Drumstick', 'Tomato'],
         benefit_tag: 'pest-repel',
         is_companion: true,
         care_tasks: ['Pinch tulsi buds monthly'],
@@ -482,7 +482,7 @@ export const GUILD_TEMPLATES: Record<BedType, GuildTemplate> = {
         spacing_cm: 60,
         row_gap_cm: 60,
         crop_family: 'other',
-        companion_plants: ['Moringa'],
+        companion_plants: ['Drumstick'],
         days_to_harvest: 365,
         benefit_tag: 'soil-builder',
         care_tasks: ['Divide pups yearly'],

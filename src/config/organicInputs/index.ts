@@ -5,7 +5,7 @@
 
 import type { OrganicInputEntry, OrganicInputCategory } from '@/types/database.types';
 export type { OrganicInputRecipe, RecipeIngredient, RecipeId } from './recipes';
-export { ORGANIC_RECIPES } from './recipes';
+export { ORGANIC_RECIPES, getRecipeById } from './recipes';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -36,11 +36,11 @@ const ALL_ORGANIC_INPUTS: OrganicInputEntry[] = [
     category: 'fertilizers',
     emoji: '🐄',
     description: 'Aged animal waste mixed with bedding material',
-    ingredients: ['cattle dung', 'poultry waste', 'straw'],
+    ingredients: ['cattle dung and urine', 'livestock bedding', 'straw'],
     applicationRate: '5-10 tonnes per hectare',
     applicationTiming: '3-4 weeks before planting',
     benefits: ['Slow nutrient release', 'Improves soil texture', 'Cost-effective'],
-    precautions: ['Must be aged 4-6 weeks', 'Check for weed seeds'],
+    precautions: ['Use only well-decomposed manure', 'Check for weed seeds'],
     storageTips: 'Stack in shade to prevent nutrient loss',
     plantsIdeal: ['root crops', 'tubers', 'greens'],
   },
@@ -79,14 +79,75 @@ const ALL_ORGANIC_INPUTS: OrganicInputEntry[] = [
     tamilName: 'ஜீவ அம்ருத',
     category: 'growth_promoters',
     emoji: '🌾',
-    description: 'Ancient Indian biofertilizer promoting microbial soil life',
+    description: 'Farm-made fermented microbial culture used as a soil inoculant',
     ingredients: ['cow dung', 'cow urine', 'jaggery', 'flour', 'soil', 'water'],
     applicationRate: '200 litres per hectare',
-    applicationTiming: 'Once every 2 weeks during monsoon',
+    applicationTiming: 'Apply to moist soil every 2 weeks during active growth',
     benefits: ['Boosts beneficial microbes', 'Free to prepare', 'Culturally significant'],
     precautions: ['Use within 7 days of preparation', 'Stir before use'],
     storageTips: 'Prepare fresh in earthen pot',
     plantsIdeal: ['all crops'],
+    recipeId: 'jeevamrutha',
+  },
+  {
+    id: 'panchagavya',
+    name: 'Panchagavya',
+    tamilName: 'பஞ்சகவ்யா',
+    category: 'growth_promoters',
+    emoji: '🥛',
+    description: 'Fermented blend of five cow products that boosts immunity and fruiting',
+    ingredients: ['cow dung', 'cow urine', 'milk', 'curd', 'ghee', 'jaggery', 'banana'],
+    applicationRate: '3% foliar spray (30 mL per litre) or 5% soil drench',
+    applicationTiming: 'Every 15 days during active growth',
+    benefits: [
+      'Improves flowering and fruit set',
+      'Strengthens plant immunity',
+      'Keeps for up to 6 months once fermented',
+    ],
+    precautions: ['Needs 21 days to ferment', 'Always dilute before spraying'],
+    storageTips: 'Filter and store in a shaded, wide-mouthed container',
+    plantsIdeal: ['fruiting', 'vegetables', 'all crops'],
+    recipeId: 'panchagavya',
+  },
+  {
+    id: 'beejamrutha',
+    name: 'Beejamrutha',
+    tamilName: 'பீஜாமிருதம்',
+    category: 'growth_promoters',
+    emoji: '🌰',
+    description: 'Seed treatment that shields seeds and seedlings from soil-borne disease',
+    ingredients: ['cow dung', 'cow urine', 'lime powder', 'bund soil', 'water'],
+    applicationRate: 'Coat seed thoroughly; use as a 20-minute root dip for transplants',
+    applicationTiming: 'Treat immediately before sowing or transplanting, then shade-dry seed',
+    benefits: [
+      'Protects against damping-off and seed rot',
+      'Improves germination rate',
+      'Cheap to prepare from farm materials',
+    ],
+    precautions: ['Prepare fresh for every sowing batch', 'Dry treated seed in shade, not sun'],
+    storageTips: 'Do not store — use the same day it is mixed',
+    plantsIdeal: ['all crops'],
+    recipeId: 'beejamrutha',
+  },
+  {
+    id: 'vermiwash',
+    name: 'Vermiwash',
+    tamilName: 'மண்புழு கரைசல்',
+    category: 'growth_promoters',
+    emoji: '💧',
+    description: 'Liquid extract drained from vermicompost beds, rich in growth hormones',
+    ingredients: ['active vermicompost', 'cow dung', 'water'],
+    applicationRate: 'Dilute 1:5 for soil drench, 1:10 for foliar spray',
+    applicationTiming: 'Soil drench weekly or foliar spray fortnightly in the vegetative phase',
+    benefits: [
+      'Rich in micronutrients and growth hormones',
+      'Gentle enough for seedlings',
+      'Collection column can be reused indefinitely',
+    ],
+    precautions: ['Always dilute before use', 'Keep the compost column moist, never flooded'],
+    storageTips: 'Use within 3 days of collection; keep in a shaded closed container',
+    plantsIdeal: ['leafy', 'vegetables', 'herbs'],
+    recipeId: 'vermiwash',
   },
   {
     id: 'lime',
@@ -109,12 +170,12 @@ const ALL_ORGANIC_INPUTS: OrganicInputEntry[] = [
     category: 'soil_amendments',
     emoji: '💛',
     description: 'Elemental sulfur to acidify alkaline soils and control pests',
-    applicationRate: '500 kg to 2 tonnes per hectare',
-    applicationTiming: 'Before planting or during growing season',
+    applicationRate: 'Only at a soil-test-calculated rate; requirements vary by soil pH and texture',
+    applicationTiming: 'Incorporate before planting and allow time for soil microbes to oxidise it',
     benefits: ['Lowers soil pH', 'Adds sulfur nutrient', 'Pest deterrent'],
     precautions: ['Test soil before use', 'Work into soil thoroughly'],
     storageTips: 'Store in cool, dry place',
-    plantsIdeal: ['blueberries', 'acid-loving plants', 'root crops'],
+    plantsIdeal: ['alkaline-soil crops'],
   },
   {
     id: 'neem',
@@ -122,22 +183,27 @@ const ALL_ORGANIC_INPUTS: OrganicInputEntry[] = [
     tamilName: 'வேப்பு எண்ணெய்',
     category: 'biopesticides',
     emoji: '🌿',
-    description: 'Natural insecticide from neem tree leaves/seeds',
-    applicationRate: '3-5% concentrate',
+    description: 'Botanical insect growth regulator and feeding deterrent made from neem seed',
+    applicationRate: 'Neem oil 3-5 mL per litre, or a separately prepared 5% neem-seed-kernel extract',
     applicationTiming: 'Weekly or as needed for pests',
-    benefits: ['Controls multiple pests', 'Non-toxic to humans', 'Sustainable'],
-    precautions: ['Apply in evening', "Don't mix with alkaline soaps", 'Wear gloves'],
+    benefits: ['Suppresses multiple soft-bodied pests', 'Reduces feeding and insect development'],
+    precautions: [
+      'Apply in evening to reduce pollinator exposure and leaf scorch',
+      "Don't mix with alkaline products",
+      'Follow the product label and wear gloves',
+      'Test on a few leaves before whole-crop spraying',
+    ],
     storageTips: 'Keep in dark bottle away from light',
     plantsIdeal: ['all crops'],
   },
   {
     id: 'pongamia',
     name: 'Pongamia Oil',
-    tamilName: 'ஊமத்தை எண்ணெய்',
+    tamilName: 'புங்க எண்ணெய்',
     category: 'biopesticides',
     emoji: '🌳',
     description: 'Traditional insecticide from pongamia tree seeds',
-    applicationRate: '5-10% solution',
+    applicationRate: 'Use only at the labelled crop rate; test a small area before spraying',
     applicationTiming: 'Weekly spray during pest season',
     benefits: ['Controls sap-sucking insects', 'Regional availability', 'Cost-effective'],
     precautions: ['Always dilute', 'Test on small area first'],
@@ -221,4 +287,35 @@ export function getGroupedOrganicInputs(): OrganicInputCategoryGroup[] {
 
 export function getCategoryLabel(category: OrganicInputCategory): string {
   return CATEGORY_LABELS[category] ?? category;
+}
+
+/**
+ * `plantsIdeal` holds terse slugs ("leafy", "root crops"). Map the known ones
+ * to reader-facing labels for the detail-screen chips; anything unmapped falls
+ * back to sentence case so a new slug never renders raw.
+ */
+const IDEAL_FOR_LABELS: Record<string, string> = {
+  leafy: 'Leafy greens',
+  greens: 'Greens',
+  herbs: 'Herbs',
+  vegetables: 'Vegetables',
+  fruiting: 'Fruiting crops',
+  fruits: 'Fruits',
+  flowers: 'Flowers',
+  legumes: 'Legumes',
+  brassicas: 'Brassicas',
+  tubers: 'Tubers',
+  'root crops': 'Root crops',
+  'leafy greens': 'Leafy greens',
+  'all crops': 'All crops',
+  'acid-loving plants': 'Acid-loving plants',
+  'alkaline-soil crops': 'Crops in alkaline soil',
+  blueberries: 'Blueberries',
+};
+
+export function formatIdealFor(slug: string): string {
+  const normalised = slug.trim().toLowerCase();
+  const mapped = IDEAL_FOR_LABELS[normalised];
+  if (mapped) return mapped;
+  return normalised.charAt(0).toUpperCase() + normalised.slice(1);
 }

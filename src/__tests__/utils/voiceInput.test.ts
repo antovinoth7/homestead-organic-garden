@@ -33,11 +33,17 @@ describe('appendVoiceTranscript', () => {
     expect(appendVoiceTranscript('existing notes', '')).toBe('existing notes');
   });
 
+  it('preserves existing punctuation/newlines, sanitizing only the dictated text', () => {
+    expect(appendVoiceTranscript('Floods in monsoon.\nShade after 2pm.', 'drains well')).toBe(
+      'Floods in monsoon.\nShade after 2pm. drains well'
+    );
+  });
+
   it('preserves Tamil script through the sanitizer', () => {
     expect(appendVoiceTranscript('', 'தக்காளி நன்றாக உள்ளது')).toBe('தக்காளி நன்றாக உள்ளது');
   });
 
-  it('strips punctuation and collapses whitespace (sanitizer behaviour)', () => {
-    expect(appendVoiceTranscript('', 'Hello,   world!')).toBe('Hello world ');
+  it('strips punctuation and collapses whitespace in the dictated text', () => {
+    expect(appendVoiceTranscript('', 'Hello,   world!')).toBe('Hello world');
   });
 });

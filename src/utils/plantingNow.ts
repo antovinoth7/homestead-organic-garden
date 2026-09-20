@@ -7,7 +7,7 @@
  * season vocabularies used across `plantCareDefaults` and the catalog.
  */
 
-import { PlantType } from '@/types/database.types';
+import { NumericRange, PlantType } from '@/types/database.types';
 
 /** Kanyakumari season ids (see `src/config/zones/`). */
 export type KKSeasonId = 'summer' | 'sw_monsoon' | 'ne_monsoon' | 'cool_dry';
@@ -19,11 +19,14 @@ export interface PlantingCandidate {
   growingSeason?: string;
   /** Optional structured season suitability strings. */
   seasonSuitability?: string[];
+  /** Harvest window from the care profile, e.g. `{ min: 100, max: 140 }`. */
+  daysToHarvest?: NumericRange;
 }
 
 export interface PlantingSuggestion {
   plantType: PlantType;
   variety: string;
+  daysToHarvest?: NumericRange;
 }
 
 /**
@@ -91,7 +94,26 @@ export function getWhatToPlantNow(
     const key = `${c.plantType}:${c.variety}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    suggestions.push({ plantType: c.plantType, variety: c.variety });
+    suggestions.push({
+      plantType: c.plantType,
+      variety: c.variety,
+      daysToHarvest: c.daysToHarvest,
+    });
   }
   return suggestions.sort((a, b) => a.variety.localeCompare(b.variety));
+}
+
+/**
+ * Collapsed-card summary line, e.g. "Agathi, Aloe Vera, Amaranthus + 5 more".
+ * Names the first `previewCount` varieties and counts the rest.
+ */
+export function formatSuggestionSummary(
+  suggestions: PlantingSuggestion[],
+  previewCount = 3
+): string {
+  if (suggestions.length === 0) return '';
+  const names = suggestions.slice(0, previewCount).map((s) => s.variety);
+  const remaining = suggestions.length - names.length;
+  const list = names.join(', ');
+  return remaining > 0 ? `${list} + ${remaining} more` : list;
 }

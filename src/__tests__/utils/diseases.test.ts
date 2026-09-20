@@ -7,6 +7,7 @@ import {
   getGroupedDiseaseEntries,
   getCategoryLabel,
 } from '../../config/diseases';
+import { DEFAULT_ZONE } from '../../config/zones';
 import type { DiseaseCategory } from '../../types/database.types';
 
 describe('disease registry', () => {
@@ -83,7 +84,13 @@ describe('disease registry', () => {
     it('returns groups in the expected order', () => {
       const groups = getGroupedDiseaseEntries();
       const categories = groups.map((g) => g.category);
-      const expectedOrder: DiseaseCategory[] = ['fungal', 'bacterial', 'viral', 'physiological'];
+      const expectedOrder: DiseaseCategory[] = [
+        'fungal',
+        'bacterial',
+        'viral',
+        'phytoplasma',
+        'physiological',
+      ];
       let lastIdx = -1;
       for (const cat of categories) {
         const idx = expectedOrder.indexOf(cat);
@@ -102,7 +109,13 @@ describe('disease registry', () => {
 
   describe('getCategoryLabel', () => {
     it('returns readable labels for all categories', () => {
-      const categories: DiseaseCategory[] = ['fungal', 'bacterial', 'viral', 'physiological'];
+      const categories: DiseaseCategory[] = [
+        'fungal',
+        'bacterial',
+        'viral',
+        'phytoplasma',
+        'physiological',
+      ];
       for (const cat of categories) {
         const label = getCategoryLabel(cat);
         expect(label).toBeTruthy();
@@ -120,6 +133,20 @@ describe('disease registry', () => {
         for (const t of disease.organicTreatments) {
           expect(validMethods.has(t.method)).toBe(true);
           expect(validEfforts.has(t.effort)).toBe(true);
+        }
+      }
+    });
+  });
+
+  describe('seasonal risk validation', () => {
+    it('every seasonalRisk key is a season id of the default zone', () => {
+      const validSeasons = new Set(DEFAULT_ZONE.seasons.map((s) => s.id));
+      const validLevels = new Set(['low', 'moderate', 'high']);
+
+      for (const disease of getAllDiseases()) {
+        for (const [season, level] of Object.entries(disease.seasonalRisk ?? {})) {
+          expect(validSeasons.has(season)).toBe(true);
+          expect(validLevels.has(level ?? "")).toBe(true);
         }
       }
     });

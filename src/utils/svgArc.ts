@@ -2,11 +2,14 @@
  * SVG arc-path helper for donut/progress-ring rendering (Phase C).
  *
  * Extracted from the inline `describeArc` in `TodayScreen` so the progress
- * ring can move into `TodayProgressCard` and be unit-tested. Angles are in
+ * ring can live in a component and still be unit-tested. Angles are in
  * degrees, 0° at 12 o'clock, sweeping clockwise.
  */
 
-/** Geometry constants for the Today progress donut. */
+/**
+ * Geometry constants for a card-sized progress donut. `DashboardHero` passes
+ * its own smaller values — `describeArc` itself is fully parameterised.
+ */
 export const DONUT_SIZE = 140;
 export const DONUT_STROKE = 14;
 export const DONUT_RADIUS = (DONUT_SIZE - DONUT_STROKE) / 2;

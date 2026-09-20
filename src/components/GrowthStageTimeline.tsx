@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
+import { GROWTH_STAGE_ICON_KEYS } from '@/config/iconRegistry';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/growthStageTimelineStyles';
 import type {
@@ -10,13 +12,15 @@ import type {
 } from '@/types/database.types';
 import type { EffectiveGrowthStage } from '@/utils/plantHelpers';
 
+// Must match STAGE_ORDER in utils/plantHelpers.ts (dormant after mature —
+// turmeric/ginger mature first, then die back to dormancy).
 const STAGE_ORDER: GrowthStage[] = [
   'seedling',
   'vegetative',
   'flowering',
   'fruiting',
-  'dormant',
   'mature',
+  'dormant',
 ];
 
 const STAGE_LABELS: Record<GrowthStage, string> = {
@@ -26,15 +30,6 @@ const STAGE_LABELS: Record<GrowthStage, string> = {
   fruiting: 'Fruiting',
   dormant: 'Dormant',
   mature: 'Mature',
-};
-
-const STAGE_ICONS: Record<GrowthStage, string> = {
-  seedling: '🌱',
-  vegetative: '🌿',
-  flowering: '🌸',
-  fruiting: '🍅',
-  dormant: '😴',
-  mature: '🌳',
 };
 
 interface Props {
@@ -69,11 +64,19 @@ const GrowthStageTimeline: React.FC<Props> = ({
   const isAnnualCycle = effectiveStage.source === 'annual_cycle';
   const activeDurations = isAnnualCycle ? annualCycleDurations : durations;
 
-  // Build the list of stages to show based on available durations
+  // Build the list of stages to show based on available durations. The
+  // current stage is always included even when it has no duration entry
+  // (e.g. a pinned stage outside the profile's lifecycle), so the timeline
+  // never renders with nothing highlighted.
   const stages = useMemo(() => {
-    if (!activeDurations) return [];
-    return STAGE_ORDER.filter((s) => activeDurations[s] !== undefined && activeDurations[s]! > 0);
-  }, [activeDurations]);
+    const fromDurations = activeDurations
+      ? STAGE_ORDER.filter((s) => activeDurations[s] !== undefined && activeDurations[s]! > 0)
+      : [];
+    if (fromDurations.includes(effectiveStage.stage)) return fromDurations;
+    return STAGE_ORDER.filter(
+      (s) => s === effectiveStage.stage || fromDurations.includes(s)
+    );
+  }, [activeDurations, effectiveStage.stage]);
 
   // Find current stage index
   const currentIndex = stages.indexOf(effectiveStage.stage);
@@ -144,9 +147,14 @@ const GrowthStageTimeline: React.FC<Props> = ({
 
             {/* Content column */}
             <View style={styles.content}>
-              <Text style={labelStyle}>
-                {STAGE_ICONS[stage]} {STAGE_LABELS[stage]}
-              </Text>
+              <View style={styles.stageLabelRow}>
+                <GardenIcon
+                  name={GROWTH_STAGE_ICON_KEYS[stage]}
+                  size={16}
+                  color={isFuture ? theme.textTertiary : isCurrent ? theme.primary : theme.text}
+                />
+                <Text style={labelStyle}>{STAGE_LABELS[stage]}</Text>
+              </View>
 
               {dateLabel ? (
                 <Text style={styles.dateText}>

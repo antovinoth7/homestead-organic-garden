@@ -8,7 +8,8 @@ while keeping image storage off the cloud.
 
 - Firestore stores text data and image filenames only.
 - Plant and journal photos stay on the device.
-- Reads are offline-friendly through AsyncStorage caching.
+- Works offline: reads serve from AsyncStorage caches, and
+  writes queue locally and sync automatically on reconnect.
 - Image backups are user-controlled ZIP exports.
 - The care model is tailored to Kanyakumari / South Tamil Nadu
   growing conditions.
@@ -20,7 +21,7 @@ while keeping image storage off the cloud.
   and archive/restore support.
 - Recurring care plan with watering, fertilising, pruning,
   repotting, spraying, mulching, and harvest tasks.
-- Today dashboard with task completion, snooze/skip flows,
+- Today dashboard with task completion, skip flows,
   and garden health alerts.
 - Calendar screen with week/month views, search, grouping,
   and manual task creation.
@@ -71,6 +72,7 @@ Notes:
 - React Navigation
 - fflate
 - Sentry
+- Open-Meteo weather data
 
 ## Prerequisites
 
@@ -288,9 +290,13 @@ Stored image fields:
   on failure.
 - Writes target Firestore first and update local cache on
   success.
+- When the device is offline, creates/updates/deletes are
+  saved to a local mutation queue, applied to the local cache
+  immediately (optimistic), and replayed to Firestore
+  automatically when connectivity returns.
+- A banner above the app shows offline state and the number
+  of changes pending sync.
 - Clearing cache from Settings only removes local cached data.
-- If the device is offline, create/update operations may need
-  to be retried later.
 
 ## Runtime Structure
 
@@ -473,3 +479,22 @@ in `jest.config.js`.
 eas build --platform android
 eas build --platform ios
 ```
+
+## Weather Data and Non-Commercial Operation
+
+This maintained application is free, has no advertising or subscriptions, and uses the
+Open-Meteo free API for non-commercial weather forecasts. Weather data is provided by
+[Open-Meteo](https://open-meteo.com/) under CC BY 4.0. The client caches forecasts for
+three hours and sends only the selected plot or fallback district coordinates needed for
+the forecast request.
+
+Open-Meteo's free service currently requires fewer than 10,000 calls per day, 5,000 per
+hour, and 600 per minute, and remains subject to its published terms. A commercial
+deployment or commercial fork must obtain an appropriate Open-Meteo plan or replace the
+weather provider; the Apache-2.0 license does not restrict commercial reuse of this code.
+See `THIRD_PARTY_NOTICES.md` for attribution details and verify current provider terms
+before publishing a build.
+
+## License
+
+Licensed under the Apache License 2.0. See `LICENSE`.

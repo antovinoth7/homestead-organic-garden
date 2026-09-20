@@ -23,11 +23,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles, ROW_TILE_STEP } from '@/styles/bedRowLayoutStyles';
 import { computeTargetIndex } from '@/utils/dragRowMath';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
+import { GardenIcon } from '@/components/GardenIcon';
+import { BED_LAYER_ICON_KEYS } from '@/config/iconRegistry';
 import type { BedLayer, BedType, EntryResolution } from '@/types/database.types';
 import { bedExpectsLegumes } from '@/config/beds';
 import type { RowLayoutResult, BedRow, RowPlant } from '@/utils/rowLayoutEngine';
-import { interleavePlants } from '@/utils/rowLayoutEngine';
+import { computeEmptySlotPositions, interleavePlants } from '@/utils/rowLayoutEngine';
 
 // Enable LayoutAnimation on Android old architecture
 const isNewArchitectureEnabled =
@@ -63,14 +66,6 @@ interface Props {
   onOpenPlant?: (plantId: string) => void;
   bedType?: BedType;
 }
-
-const LAYER_ICON: Record<BedLayer, string> = {
-  canopy: '🌳',
-  climber: '🌿',
-  understory: '🌱',
-  root: '🥕',
-  ground_cover: '🌸',
-};
 
 const BENEFIT_LABEL: Record<string, string> = {
   nematode: 'nematode',
@@ -147,13 +142,18 @@ function PlantTile({
         isCompanion ? null : { borderColor: layerBorderColor },
       ]}
     >
-      <Text style={styles.plantTileEmoji}>{getPlantEmoji(plant.name)}</Text>
+      <ReferenceThumb
+        source={getPlantImage(plant.name)}
+        fallbackIcon="general.plant"
+        variant="chip"
+        accessibilityLabel={`${plant.name} reference image`}
+      />
       <Text style={styles.plantTileName} numberOfLines={2}>
         {plant.name}
       </Text>
       <Text style={styles.plantTileSpacing}>
         {isCompanion
-          ? `★ ${plant.spacingCm}cm`
+          ? `Companion · ${plant.spacingCm}cm`
           : plant.daysToHarvest !== undefined
             ? `${plant.spacingCm}cm · Day ${plant.daysToHarvest}`
             : `${plant.spacingCm}cm`}
@@ -305,7 +305,6 @@ function RowCard({
 
   const borderColor = theme.layerColors[row.layer].color;
   const bgColor = theme.layerColors[row.layer].bg;
-  const icon = LAYER_ICON[row.layer];
   const displayName = getRowDisplayName(row.layer, row.isStaggered);
   const hasNFixer = row.plants.some((p) => p.isNFixer);
   const isGndCover = row.layer === 'ground_cover';
@@ -315,9 +314,20 @@ function RowCard({
       ? `${mainPlantCount} main + ${row.interplantedCount} companion`
       : `${row.plants.length} / ${row.plantsPerRow} plant${row.plantsPerRow !== 1 ? 's' : ''}`;
   const careTasks = Array.from(new Set(row.plants.flatMap((p) => p.careTasks ?? [])));
+  // Open slots and their spacing mirror the Layout tab: companions interplant
+  // between mains and don't consume column slots, and the label is the slot
+  // grid's actual column pitch (main-crop spacing), not the smallest spacing
+  // in the row.
+  const emptySlotCount = computeEmptySlotPositions(row).length;
+  const mainSpacings = row.plants
+    .filter((p) => p.isCompanion !== true)
+    .map((p) => p.spacingCm);
   const tileSpacingCm =
-    row.plants.length > 0 ? Math.min(...row.plants.map((p) => p.spacingCm)) : 30;
-  const emptySlotCount = Math.max(0, row.plantsPerRow - row.plants.length);
+    row.eastPositionsCm.length >= 2
+      ? Math.round(row.eastPositionsCm[1]! - row.eastPositionsCm[0]!)
+      : mainSpacings.length > 0
+        ? Math.max(...mainSpacings)
+        : 30;
 
   return (
     <View style={[styles.rowCard, { borderColor, backgroundColor: bgColor }]}>
@@ -329,7 +339,7 @@ function RowCard({
           <View style={[styles.rowNumCircle, { backgroundColor: borderColor }]}>
             <Text style={styles.rowNumText}>{row.rowIndex}</Text>
           </View>
-          <Text style={styles.rowIcon}>{icon}</Text>
+          <GardenIcon name={BED_LAYER_ICON_KEYS[row.layer]} size={20} color={borderColor} />
           <Text style={styles.rowNameText} numberOfLines={1}>
             {displayName}
           </Text>
@@ -546,7 +556,11 @@ function AvailableLayersSection({
               onPress={() => onAddToRow(ghost.layer)}
               activeOpacity={0.7}
             >
-              <Text style={styles.availableLayerItemIcon}>{LAYER_ICON[ghost.layer]}</Text>
+              <GardenIcon
+                name={BED_LAYER_ICON_KEYS[ghost.layer]}
+                size={20}
+                color={theme.layerColors[ghost.layer].color}
+              />
               <View style={styles.availableLayerItemTextBlock}>
                 <Text style={styles.availableLayerItemName}>
                   {getRowDisplayName(ghost.layer, false)}
@@ -731,7 +745,7 @@ function Legend(): React.JSX.Element {
       </View>
       <View style={styles.legendItem}>
         <View style={styles.legendSwatchCompanion} />
-        <Text style={styles.legendText}>★ Companion</Text>
+        <Text style={styles.legendText}>Companion</Text>
       </View>
       <View style={styles.legendItem}>
         <View style={styles.legendSwatchGround} />
@@ -815,7 +829,6 @@ export function GhostRowCard({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const borderColor = theme.layerColors[ghost.layer].color;
   const bgColor = theme.layerColors[ghost.layer].bg;
-  const icon = LAYER_ICON[ghost.layer];
   const displayName = getRowDisplayName(ghost.layer, false);
 
   return (
@@ -823,7 +836,7 @@ export function GhostRowCard({
       <View style={[styles.rowAccentStripe, { backgroundColor: borderColor }]} />
       <View style={[styles.rowHeader, { borderBottomColor: borderColor }]}>
         <View style={styles.rowHeaderTop}>
-          <Text style={styles.rowIcon}>{icon}</Text>
+          <GardenIcon name={BED_LAYER_ICON_KEYS[ghost.layer]} size={20} color={borderColor} />
           <Text style={styles.rowNameText} numberOfLines={1}>
             {displayName}
           </Text>

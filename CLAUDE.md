@@ -15,10 +15,11 @@ React Native + Expo (SDK 54) app for organic garden management. Android/iOS. Fir
 
 ## Architecture
 
-- **Offline-first**: in-memory cache → AsyncStorage → Firestore.
+- **Offline-first**: in-memory cache → AsyncStorage → Firestore. Reads fall back to AsyncStorage; writes queue offline and auto-sync on reconnect (see `docs/SERVICES.md` → Offline Write Queue).
 - **Separation**: screens orchestrate UI; services own data; hooks own derived state.
 - **Free-tier**: avoid Firestore reads servable from cache. Batch writes.
-- **Service pattern**: cache check → `refreshAuthToken()` → `withTimeoutAndRetry()` → update cache → AsyncStorage fallback.
+- **Service pattern**: cache check → `refreshAuthToken()` → `withTimeoutAndRetry()` (reads) / `writeOrQueue()` (writes) → update cache → AsyncStorage fallback.
+- **Offline writes**: user-data mutations go through `writeOrQueue()` (`src/lib/offlineWrite.ts`); creates use client-generated doc ids (`doc(collection(...))` + `setDoc`, never `addDoc`); queued mutations replay via `src/services/offlineSync.ts`.
 - **Cache**: `src/lib/dataCache.ts` (30s TTL). `invalidate()`/`invalidateAll()` after mutations.
 - **Tamil language strategy**: English ↔ Tamil toggle in Settings (Phase G). No language mixing. `tamilName` fields are data-only until Phase G ships the toggle.
 
@@ -60,6 +61,12 @@ npm run lint       # ESLint (zero errors required)
 npm test           # Jest
 ````
 
+## Working Efficiently (agents)
+
+- Read `docs/CODEMAP.md` (generated; `npm run codemap` to refresh) before exploring `src/` — it lists every file with line counts.
+- Files over 800 lines (flagged ⚠️ in the codemap, e.g. `src/utils/plantHelpers.ts`, `src/screens/CatalogPlantDetailScreen.tsx`, `src/styles/plantFormStyles.ts`) — Grep/search inside them; do not read them whole.
+- Scoped checks: `npm run lint:file -- <path>` lints one file; `npm test -- <path-or-pattern>` runs one test file. Prefer these while iterating; run full `npm run lint` + `npm test` before finishing.
+
 ## New Feature Order
 
 1. Define types in `src/types/database.types.ts`
@@ -80,12 +87,14 @@ npm test           # Jest
 
 Read these on demand when working in specific areas:
 
+- **`docs/CODEMAP.md`** — generated file inventory with line counts; read before exploring `src/`
 - **`docs/CONVENTIONS.md`** — TypeScript, naming, component/hook/styling standards, code quality, AI checklist, commit format
 - **`docs/SERVICES.md`** — service layer, Firestore shape, specific service behaviors, caching, utilities
 - **`docs/COMPONENTS.md`** — component/styles inventory, reusable UI, custom hooks, UI conventions
 - **`docs/SCHEMA_MIGRATIONS.md`** — migration runner, schema change workflow
 - **`docs/DOMAIN_LOGIC.md`** — agro-climatic zones, seasons, plant/care helpers
 - **`docs/TESTING.md`** — test standards, fixture factories, coverage targets
-- **`docs/IMAGE_STORAGE.md`** — image storage rules, platform behavior, migration flow
-- **`docs/IMPLEMENTATION_ROADMAP.md`** — phased build plan, progress tracker, gap analysis
+- **`docs/IMAGE_STORAGE.md`** — user photo storage rules, platform behavior, migration flow
+- **`docs/REFERENCE_IMAGES.md`** — bundled pest/disease/plant reference photos: prompt generation, staging, ingest pipeline, size budget
+- **`docs/IMPLEMENTATION_ROADMAP.md`** — active roadmap: progress tracker, gap analysis, planned phases only (completed-phase detail lives in `docs/archive/ROADMAP_ARCHIVE.md` — rarely needed)
 - **`docs/BEST_PRACTICES.md`** — prioritized performance, product, and architecture recommendations

@@ -8,7 +8,7 @@ describe('BedSuccessionTimeline — harvest data resolution', () => {
     );
     expect(range.source).toBe('profile');
     expect(range.min).toBe(60);
-    expect(range.max).toBe(90);
+    expect(range.max).toBe(65);
   });
 
   it('recovers real harvest data via plant_variety when the display name is custom', () => {
@@ -17,7 +17,7 @@ describe('BedSuccessionTimeline — harvest data resolution', () => {
     );
     expect(range.source).toBe('profile');
     expect(range.min).toBe(60);
-    expect(range.max).toBe(90);
+    expect(range.max).toBe(65);
   });
 
   it('falls back to the generic 55–75 window for genuinely unknown annuals', () => {

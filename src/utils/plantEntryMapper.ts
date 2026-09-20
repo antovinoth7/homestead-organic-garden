@@ -1,6 +1,29 @@
 import type { PlantEntry } from '@/types/database.types';
-import type { GuildTemplate } from '@/config/beds/guildTemplates';
+import type { GuildTemplate, PlantRow } from '@/config/beds/guildTemplates';
 import type { RowPlantInput } from '@/utils/rowLayoutEngine';
+
+/**
+ * Engine candidate for a template plant_row, carrying its real gap/family
+ * metadata. The single candidate builder for capacity probes (Step 4's
+ * maxFitForSpecies, Quick Start planning) — must stay field-for-field in sync
+ * with the template join in `mapPlantEntriesToRowInputs`, especially
+ * `rowGapCm`: probing without it makes the engine fall back to
+ * spacing × multiplier and over-estimate fit for wide-gap crops.
+ */
+export function templateRowToCandidate(row: PlantRow): RowPlantInput {
+  return {
+    name: row.name,
+    layer: row.layer,
+    spacingCm: row.spacing_cm,
+    rowGapCm: row.row_gap_cm,
+    cropFamily: row.crop_family,
+    daysToHarvest: row.days_to_harvest,
+    benefitTag: row.benefit_tag,
+    careTasks: row.care_tasks,
+    isCompanion: row.is_companion,
+    successionWeek: row.succession_week,
+  };
+}
 
 /**
  * Maps wizard `PlantEntry` records to the engine's `RowPlantInput` shape.

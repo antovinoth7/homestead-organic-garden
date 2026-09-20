@@ -3,6 +3,7 @@ import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { useBedDetail } from '@/hooks/useBedDetail';
 import { RotationStatusCard } from '@/components/RotationStatusCard';
@@ -17,11 +18,13 @@ import {
 } from '@/services/beds';
 import { getSmartNextCrops, getGuildTemplate } from '@/config/beds';
 import { getLayerColor } from '@/config/beds/layerMeta';
+import { BED_TYPE_NAME } from '@/config/beds/bedTypeMeta';
+import { BED_TYPE_ICON_KEYS } from '@/config/iconRegistry';
 import { computeRowLayout } from '@/utils/rowLayoutEngine';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
-import { plantToEntry } from '@/utils/bedEditReconcile';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { plantToLayoutEntries } from '@/utils/bedEditReconcile';
+import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/bedDetailStyles';
 import { logger } from '@/utils/logger';
 import type { BedLayer } from '@/types/database.types';
@@ -84,7 +87,7 @@ export default function BedDetailScreen(): React.JSX.Element {
   // as the wizard's Step 6 review).
   const rowLayout = useMemo<RowLayoutResult | null>(() => {
     if (!bed || plants.length === 0) return null;
-    const entries = plants.map(plantToEntry);
+    const entries = plants.flatMap(plantToLayoutEntries);
     const tpl = getGuildTemplate(bed.type);
     const inputs = mapPlantEntriesToRowInputs(entries, tpl);
     if (inputs.length === 0) return null;
@@ -97,6 +100,25 @@ export default function BedDetailScreen(): React.JSX.Element {
       construction
     );
   }, [bed, plants]);
+
+  // Companion conflicts mapped onto the rows that contain warning tags.
+  const rowWarnings = useMemo(() => {
+    if (!rowLayout) return [];
+    const warnings: { rowIndex: number; message: string }[] = [];
+    for (const row of rowLayout.rows) {
+      const names = new Set(row.plants.map((p) => p.name));
+      for (const w of rowLayout.companionWarnings) {
+        if (names.has(w.plantA) || names.has(w.plantB)) {
+          warnings.push({
+            rowIndex: row.rowIndex,
+            message: `${w.plantA} + ${w.plantB} — ${w.reason}`,
+          });
+          break;
+        }
+      }
+    }
+    return warnings;
+  }, [rowLayout]);
 
   const transitionInputs = useMemo(() => {
     if (!bed?.prev_crop_family) return [];
@@ -146,16 +168,13 @@ export default function BedDetailScreen(): React.JSX.Element {
         title={bed.name}
         onBack={() => navigation.goBack()}
         right={
-          <>
-            <Text style={styles.typeBadge}>{bed.type.replace(/_/g, ' ')}</Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => navigation.navigate('BedCreationWizard', { editBedId: bedId })}
-              accessibilityLabel="Edit bed"
-            >
-              <Ionicons name="pencil" size={18} color={theme.primary} />
-            </TouchableOpacity>
-          </>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => navigation.navigate('BedCreationWizard', { editBedId: bedId })}
+            accessibilityLabel="Edit bed"
+          >
+            <Ionicons name="pencil" size={18} color={theme.primary} />
+          </TouchableOpacity>
         }
       />
       <ScrollView
@@ -178,17 +197,29 @@ export default function BedDetailScreen(): React.JSX.Element {
         </View>
       )}
 
-      {/* Dimensions */}
-      <View style={styles.infoRow}>
-        <Ionicons name="resize-outline" size={16} color={theme.textSecondary} />
-        <Text style={styles.infoText}>
-          {bed.dimensions.width_m} m × {bed.dimensions.length_m} m ({bed.dimensions.area_sqm} sqm)
-        </Text>
+      {/* Bed meta: type · size · raised */}
+      <View style={styles.metaRow}>
+        <View style={styles.typeChip}>
+          <GardenIcon name={BED_TYPE_ICON_KEYS[bed.type]} size={15} color={theme.primary} />
+          <Text style={styles.typeChipText}>{BED_TYPE_NAME[bed.type]}</Text>
+        </View>
+        <View style={styles.metaDim}>
+          <Ionicons name="resize-outline" size={14} color={theme.textSecondary} />
+          <Text style={styles.metaDimText}>
+            {bed.dimensions.width_m} × {bed.dimensions.length_m} m · {bed.dimensions.area_sqm} m²
+          </Text>
+        </View>
         {bed.is_raised_bed && (
           <View style={styles.raisedBadge}>
             <Text style={styles.raisedBadgeText}>Raised</Text>
           </View>
         )}
+      </View>
+
+      {/* Succession & Season Timeline */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Season Timeline</Text>
+        <BedSuccessionTimeline bed={bed} plants={plants} />
       </View>
 
       {/* Bed Layout — read-only top-down row map */}
@@ -199,20 +230,15 @@ export default function BedDetailScreen(): React.JSX.Element {
             widthM={bed.dimensions.width_m}
             lengthM={bed.dimensions.length_m}
             rows={rowLayout.rows}
-            plantEmoji={getPlantEmoji}
+            plantImage={getPlantImage}
             layerColor={resolveLayerColor}
             walkingPathCm={rowLayout.walkingPathCm}
             edgeBufferCm={rowLayout.edgeBufferCm}
             overflowCm={rowLayout.overflowCm}
+            rowWarnings={rowWarnings}
           />
         </View>
       )}
-
-      {/* Succession & Season Timeline */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Season Timeline</Text>
-        <BedSuccessionTimeline bed={bed} plants={plants} />
-      </View>
 
       {/* Soil Input Log */}
       <View style={styles.section}>

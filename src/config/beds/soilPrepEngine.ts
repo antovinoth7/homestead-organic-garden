@@ -3,6 +3,7 @@ import { getGreenManureForMonth } from './greenManureEngine';
 
 export interface PrepStep {
   number: string;
+  kind?: 'step' | 'warning';
   text: string;
   detail: string;
 }
@@ -196,7 +197,7 @@ export function getSoilPrepSteps(params: SoilPrepParams): PrepStep[] {
   for (const record of pest_history) {
     const extra = PEST_ADDITIONS[record.pest_name];
     if (extra) {
-      steps.push({ number: '⚠', text: extra.text, detail: extra.detail });
+      steps.push({ number: '', kind: 'warning', text: extra.text, detail: extra.detail });
     }
   }
 

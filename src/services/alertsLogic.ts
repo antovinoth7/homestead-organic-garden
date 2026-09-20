@@ -4,22 +4,69 @@
  * No Firestore / React-Native imports so it can be unit-tested directly. The
  * service wrapper in `alerts.ts` re-exports these for screens/hooks.
  *
- * Consolidates the dashboard "Needs Attention" logic that previously lived
- * inline in `TodayScreen`'s `stats` memo, and extends it with bed-derived
- * rotation/resting alerts and season-aware pest alerts.
+ * Care alerts are a *presentation of task templates*, not a second scheduler:
+ * `water_needed` / `fertilise_due` / `prune_due` / `harvest_due` come from
+ * overdue `TaskTemplate`s, so no surface built on this can disagree with the
+ * Care Plan about what is due. Only conditions with no template behind them are
+ * derived from plant fields here — a plant marked sick, harvest readiness for
+ * crops that get no harvest task, bed rotation, green manure. That split is
+ * what `isActionable` keys off to separate exceptions from routine work.
  */
 
 import {
   Plant,
   FarmAlert,
   FarmAlertSeverity,
+  FarmAlertType,
   RotationStatus,
   HarvestGapWarning,
+  TaskTemplate,
+  TaskType,
 } from '@/types/database.types';
-import { getPlantWaterStatus } from '@/utils/plantWatering';
-import { getSeasonalPestAlerts } from '@/utils/seasonHelpers';
+import type { VisualIconKey } from '@/types/visual.types';
+// This module must stay free of React-Native imports so the alert rules can run
+// anywhere. Its dependencies below all honour that: `harvestStats` and the
+// `farmDate`/`taskConstants` it reaches are RN-free, and the icon-bearing
+// module in that neighbourhood (`journalEntryOptions.ts`) is never on this path.
+import type { PlantLastCareField } from '@/services/taskSchedulingLogic';
+import { isPlantArchived } from '@/utils/plantHelpers';
+import { HARVEST_TASK_TYPES, isHarvestSatisfied } from '@/utils/harvestStats';
+import { getGreenManureForMonth } from '@/config/beds';
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+/**
+ * How far a task must have slipped before it earns a care alert. Work due
+ * *today* is already stated by the per-plot due counts, so these start one whole
+ * day late.
+ *
+ * Care alerts no longer reach the Today queue (`isActionable` drops anything
+ * with a `templateId`), but they remain part of this service's output for
+ * `getTopAlert` and for callers that want the schedule expressed as alerts.
+ */
+export const ATTENTION_MIN_DAYS_OVERDUE = 1;
+
+/**
+ * Task types that have a matching alert shape, with the wording and icon their
+ * card uses. Types absent here (spray, mulch, repot, weeding, …) stay the
+ * ring's and the Care Plan's business — they have no `FarmAlertType`, and
+ * inventing one per task type would just rebuild the Care Plan on the Home tab.
+ *
+ * Declared locally rather than imported from `taskConstants`, which pulls in
+ * `@expo/vector-icons` — this module is contractually RN-free.
+ */
+const TASK_ALERT_SHAPE: Partial<
+  Record<TaskType, { type: FarmAlertType; verb: string; iconKey: VisualIconKey }>
+> = {
+  water: { type: 'water_needed', verb: 'Watering', iconKey: 'alert.water_needed' },
+  fertilise: { type: 'fertilise_due', verb: 'Fertilising', iconKey: 'alert.fertilise_due' },
+  prune: { type: 'prune_due', verb: 'Pruning', iconKey: 'alert.prune_due' },
+  harvest: { type: 'harvest_due', verb: 'Harvest', iconKey: 'alert.harvest_due' },
+  harvest_leaves: { type: 'harvest_due', verb: 'Leaf harvest', iconKey: 'alert.harvest_due' },
+};
+
+// `HARVEST_TASK_TYPES` (imported above) is what makes a template supersede the
+// field-derived harvest-readiness nudge below.
 
 const SEVERITY_RANK: Record<FarmAlertSeverity, number> = {
   critical: 3,
@@ -27,26 +74,66 @@ const SEVERITY_RANK: Record<FarmAlertSeverity, number> = {
   info: 1,
 };
 
-/** Alert types shown in the actionable "Needs Attention" scroll (C.8). */
-const ACTIONABLE_TYPES = new Set<FarmAlert['type']>([
-  'harvest_due',
-  'water_needed',
-  'fertilise_due',
-  'trellis_repair',
-  'prune_due',
-  'rotation_due',
-  'bed_resting_end',
+/**
+ * Alert types the Today screen's "Needs action" queue lists.
+ *
+ * The queue is an *exception* list, not a second overdue count: the plot cards
+ * state how much scheduled work each plot owes, so a card for work that already
+ * has a task behind it would say the same thing twice, in numbers that cannot
+ * be reconciled (the cards count every task type and drop what was completed
+ * today; these alerts do neither). Only conditions with no task to complete
+ * belong here — see `isActionable`, which enforces that with `templateId`.
+ *
+ * `bed_resting_end` stays out because a seasonal green-manure suggestion is
+ * advice, not something the farm has fallen behind on; it renders as the season
+ * block's closing line instead. `pest_spotted` and `health_stressed` are
+ * likewise informational.
+ */
+const EXCEPTION_TYPES = new Set<FarmAlert['type']>([
   'health_sick',
+  // Only the field-derived readiness nudge reaches the queue — a harvest that
+  // has a real task carries `templateId` and is counted on its plot card.
+  'harvest_due',
+  // Rotation conflicts and harvest-gap risk. Nothing else on the screen states
+  // these, so without them they are computed and shown nowhere.
+  'rotation_due',
 ]);
+
+/**
+ * Alert types resolvable by stamping a plant date field, for the one card kind
+ * that has no task behind it to complete: harvest readiness on crops that get
+ * no harvest template. Everything else carries a `templateId` and completes
+ * through `markTaskDone`, which writes a real `TaskLog`.
+ *
+ * Typed as `PlantLastCareField` so this cannot drift from
+ * `TASK_TYPE_TO_PLANT_LAST_CARE_FIELD`, which the task layer writes on
+ * completion — Home and Care Plan must agree on what "harvested" means.
+ */
+export const ALERT_COMPLETE_FIELD: Partial<Record<FarmAlert['type'], PlantLastCareField>> = {
+  harvest_due: 'last_harvest_date',
+};
 
 export interface FarmAlertInputs {
   plants: Plant[];
+  /**
+   * Today's task templates (`getTodayTasks`) — the single source of truth for
+   * care that is due. Overdue entries become the care alerts; omit it and only
+   * the template-less conditions are reported.
+   */
+  todayTasks?: TaskTemplate[];
   /** Cross-bed rotation statuses from `getCrossBedStatus` (optional). */
   rotationStatuses?: RotationStatus[];
   /** Harvest-gap warnings from `getHarvestGapWarnings` (optional). */
   harvestGapWarnings?: HarvestGapWarning[];
   /** Map of bedId → bed display name, for labelling bed alerts. */
   bedNames?: Record<string, string>;
+  /**
+   * How many beds are empty or resting (candidates for green manure).
+   * `null`/`undefined` = beds not loaded yet — the seasonal green-manure card
+   * still shows (generic wording). `0` = every bed is planted — the card is
+   * considered done and is omitted.
+   */
+  emptyOrRestingBedCount?: number | null;
   /** Injectable clock for deterministic tests. */
   now?: number;
 }
@@ -72,11 +159,63 @@ function plural(n: number): string {
  * most-urgent-first (severity, then days overdue, then name).
  */
 export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
-  const { plants, rotationStatuses, harvestGapWarnings, bedNames, now = Date.now() } = inputs;
+  const {
+    plants,
+    todayTasks,
+    rotationStatuses,
+    harvestGapWarnings,
+    bedNames,
+    emptyOrRestingBedCount,
+    now = Date.now(),
+  } = inputs;
   const nowIso = new Date(now).toISOString();
   const alerts: FarmAlert[] = [];
 
-  const activePlants = plants.filter((p) => !p.is_deleted);
+  // Archived plants (bed cleared after final harvest) are done — they must not
+  // keep emitting care/harvest alerts. Mirrors the filter every other surface
+  // applies (useBedData, usePlantDetail, PlantsScreen, tasks.ts).
+  const activePlants = plants.filter((p) => !p.is_deleted && !isPlantArchived(p));
+  const plantsById = new Map(activePlants.map((p) => [p.id, p]));
+
+  // Care alerts, straight from the task schedule. Nothing is recomputed from
+  // plant date fields here: a disabled care type has no enabled template, so it
+  // simply produces no card — the two can't drift.
+  const plantsWithHarvestTask = new Set<string>();
+  for (const template of todayTasks ?? []) {
+    if (!template?.enabled) continue;
+
+    const plant = template.plant_id ? plantsById.get(template.plant_id) : null;
+    // A template for a deleted/archived plant is stale — skip it. Bed and farm
+    // tasks carry no plant_id and are kept.
+    if (template.plant_id && !plant) continue;
+
+    if (plant && HARVEST_TASK_TYPES.has(template.task_type)) {
+      plantsWithHarvestTask.add(plant.id);
+    }
+
+    const shape = TASK_ALERT_SHAPE[template.task_type];
+    if (!shape) continue;
+
+    const daysOverdue = daysSince(template.next_due_at, now);
+    if (daysOverdue === null || daysOverdue < ATTENTION_MIN_DAYS_OVERDUE) continue;
+
+    const frequency = Number(template.frequency_days);
+    const halfCycle = Number.isFinite(frequency) && frequency > 0 ? Math.ceil(frequency / 2) : 2;
+
+    alerts.push({
+      id: `task_${template.id}`,
+      type: shape.type,
+      templateId: template.id,
+      ...(plant ? { plantId: plant.id } : {}),
+      ...(template.bed_id ? { bedId: template.bed_id } : {}),
+      title: plant?.name ?? (template.bed_id ? bedNames?.[template.bed_id] ?? 'Bed' : 'Farm'),
+      message: `${shape.verb} overdue by ${daysOverdue} day${plural(daysOverdue)}`,
+      severity: daysOverdue >= Math.max(2, halfCycle) ? 'critical' : 'warning',
+      iconKey: shape.iconKey,
+      daysOverdue,
+      created_at: nowIso,
+    });
+  }
 
   for (const plant of activePlants) {
     // Health
@@ -88,83 +227,37 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
         title: plant.name,
         message: 'Marked sick — needs care',
         severity: 'critical',
-        icon: '🤒',
-        daysOverdue: 0,
-        created_at: nowIso,
-      });
-    } else if (plant.health_status === 'stressed') {
-      alerts.push({
-        id: `health_stressed_${plant.id}`,
-        type: 'health_stressed',
-        plantId: plant.id,
-        title: plant.name,
-        message: 'Showing stress — check conditions',
-        severity: 'warning',
-        icon: '⚠️',
+        iconKey: 'alert.health_sick',
         daysOverdue: 0,
         created_at: nowIso,
       });
     }
 
-    // Water
-    const water = getPlantWaterStatus(plant, now);
-    if (water.reason === 'overdue' || water.reason === 'due_today') {
-      const frequency = Number(plant.watering_frequency_days);
-      const high = water.daysOverdue >= Math.max(2, Math.ceil(frequency / 2));
-      alerts.push({
-        id: `water_${plant.id}`,
-        type: 'water_needed',
-        plantId: plant.id,
-        title: plant.name,
-        message:
-          water.daysOverdue > 0
-            ? `Watering overdue by ${water.daysOverdue} day${plural(water.daysOverdue)}`
-            : 'Watering due today',
-        severity: high ? 'critical' : 'warning',
-        icon: '💧',
-        daysOverdue: water.daysOverdue,
-        created_at: nowIso,
-      });
-    } else if (water.reason === 'no_history') {
-      alerts.push({
-        id: `water_${plant.id}`,
-        type: 'water_needed',
-        plantId: plant.id,
-        title: plant.name,
-        message: 'No watering history logged',
-        severity: 'warning',
-        icon: '💧',
-        daysOverdue: water.daysOverdue,
-        created_at: nowIso,
-      });
-    }
+    // Watering, fertilising and pruning are not derived here — they arrive from
+    // their task templates above, so a care type switched off (which disables
+    // its template) can no longer keep firing a card the Care Plan has dropped.
 
-    // Fertilising
-    const fertFreq = Number(plant.fertilising_frequency_days);
-    if (Number.isFinite(fertFreq) && fertFreq > 0) {
-      const sinceFert = daysSince(plant.last_fertilised_date, now);
-      if (sinceFert !== null && sinceFert >= fertFreq) {
-        const overdue = Math.max(0, sinceFert - fertFreq);
-        alerts.push({
-          id: `fertilise_${plant.id}`,
-          type: 'fertilise_due',
-          plantId: plant.id,
-          title: plant.name,
-          message:
-            overdue > 0
-              ? `Fertilising overdue by ${overdue} day${plural(overdue)}`
-              : 'Fertilising due today',
-          severity: overdue >= Math.ceil(fertFreq / 2) ? 'critical' : 'warning',
-          icon: '🌿',
-          daysOverdue: overdue,
-          created_at: nowIso,
-        });
-      }
-    }
+    // Harvest-ready. One-shot readiness nudge: once the plant has actually been
+    // harvested on or after its expected date the prompt is done, otherwise the
+    // card would sit here forever with an ever-growing overdue count. Recurring
+    // harvests (perennials, coconut) are driven by their harvest task instead —
+    // the guard below is what keeps those from being reported twice.
+    if (plantsWithHarvestTask.has(plant.id)) continue;
 
-    // Harvest-ready
     const toHarvest = daysSince(plant.expected_harvest_date, now);
-    if (toHarvest !== null && toHarvest >= 0) {
+    // `daysSince` counts back from today, so a *later* date yields a *smaller*
+    // number: the gap between the two is how far the harvest fell after the
+    // expected date, which is what `isHarvestSatisfied` reads. That rule is
+    // shared with the Care Plan's Harvest Ready section — cut-and-come-again
+    // crops get no care task of their own, so it is the only thing re-arming
+    // their prompt one picking cycle on.
+    const sinceHarvest = daysSince(plant.last_harvest_date, now);
+    const alreadyHarvested = isHarvestSatisfied(
+      plant.harvest_mode,
+      sinceHarvest !== null && toHarvest !== null ? toHarvest - sinceHarvest : null,
+      sinceHarvest
+    );
+    if (toHarvest !== null && toHarvest >= 0 && !alreadyHarvested) {
       alerts.push({
         id: `harvest_${plant.id}`,
         type: 'harvest_due',
@@ -175,29 +268,8 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
             ? 'Ready to harvest today'
             : `Harvest overdue by ${toHarvest} day${plural(toHarvest)}`,
         severity: 'warning',
-        icon: '🧺',
+        iconKey: 'alert.harvest_due',
         daysOverdue: toHarvest,
-        created_at: nowIso,
-      });
-    }
-  }
-
-  // Season-aware pest alerts — deduped per plant type so the dashboard isn't noisy.
-  const seenPlantTypes = new Set<string>();
-  for (const plant of activePlants) {
-    if (seenPlantTypes.has(plant.plant_type)) continue;
-    seenPlantTypes.add(plant.plant_type);
-    const pestAlerts = getSeasonalPestAlerts(plant.plant_type);
-    for (const pest of pestAlerts) {
-      alerts.push({
-        id: `pest_${plant.plant_type}_${pest.issue}`,
-        type: 'pest_spotted',
-        plantId: plant.id,
-        title: pest.issue,
-        message: pest.tip,
-        severity: 'info',
-        icon: pest.type === 'disease' ? '🦠' : '🐛',
-        daysOverdue: 0,
         created_at: nowIso,
       });
     }
@@ -214,24 +286,33 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
         title: bedLabel,
         message: 'Same-family repeat — rotate this bed',
         severity: 'critical',
-        icon: '🔄',
+        iconKey: 'alert.rotation_due',
         daysOverdue: 0,
         created_at: nowIso,
       });
     }
-    if (status.green_manure_recommendation) {
-      alerts.push({
-        id: `resting_${status.bed_id}`,
-        type: 'bed_resting_end',
-        bedId: status.bed_id,
-        title: bedLabel,
-        message: `Sow ${status.green_manure_recommendation.name} green manure`,
-        severity: 'info',
-        icon: '🌱',
-        daysOverdue: 0,
-        created_at: nowIso,
-      });
-    }
+  }
+
+  // Seasonal green-manure suggestion — a single farm-level card rather than one
+  // per bed. Computed straight from the calendar so it never blinks out while
+  // bed data loads; it drops away ("completes") once every bed is planted.
+  if (emptyOrRestingBedCount !== 0) {
+    const nowDate = new Date(now);
+    const month = nowDate.getMonth() + 1;
+    const gm = getGreenManureForMonth(month);
+    alerts.push({
+      id: `green_manure_${nowDate.getFullYear()}_${month}`,
+      type: 'bed_resting_end',
+      title: 'Green manure',
+      message:
+        emptyOrRestingBedCount != null
+          ? `Sow ${gm.name} in ${emptyOrRestingBedCount} empty bed${plural(emptyOrRestingBedCount)}`
+          : `Sow ${gm.name} green manure in empty beds`,
+      severity: 'info',
+      iconKey: 'alert.bed_resting_end',
+      daysOverdue: 0,
+      created_at: nowIso,
+    });
   }
 
   // Harvest-gap warnings (two same-guild beds clearing within 21 days).
@@ -244,7 +325,7 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
       title: bedLabel,
       message: `Harvest gap risk (${gap.category}) — stagger clearing`,
       severity: 'warning',
-      icon: '📆',
+      iconKey: 'alert.rotation_due',
       daysOverdue: 0,
       created_at: nowIso,
     });
@@ -264,9 +345,16 @@ export function sortAlerts(alerts: FarmAlert[]): FarmAlert[] {
   });
 }
 
-/** Whether an alert belongs in the actionable "Needs Attention" scroll (C.8). */
+/**
+ * Whether an alert belongs in the Today screen's "Needs action" queue.
+ *
+ * `templateId` is the exact test for "a task already covers this": it is set
+ * only on the alerts built from `todayTasks`. Anything carrying one is routine
+ * scheduled work that the plot cards count and the Care Plan owns; what is left
+ * is a condition with nothing to complete, which no count on the screen states.
+ */
 export function isActionable(alert: FarmAlert): boolean {
-  return ACTIONABLE_TYPES.has(alert.type);
+  return alert.templateId === undefined && EXCEPTION_TYPES.has(alert.type);
 }
 
 /** Highest-priority alert overall, or null when there are none. Drives TipStrip (C.14). */

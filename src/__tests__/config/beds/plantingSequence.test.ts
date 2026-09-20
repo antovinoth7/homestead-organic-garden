@@ -25,8 +25,10 @@ describe('getPlantingSequence', () => {
     expect(seq[1]!.action).toContain('Radish');
   });
 
-  it('returns no sequence when every row shares one wave', () => {
-    // spice rows are all succession_week 1 — nothing to sequence.
+  it('returns no sequence for the single-wave guilds (drives the "sow all together" note)', () => {
+    // These guilds tag every row succession_week 1 — nothing to stagger.
     expect(getPlantingSequence(GUILD_TEMPLATES.spice)).toEqual([]);
+    expect(getPlantingSequence(GUILD_TEMPLATES.climber_trellis)).toEqual([]);
+    expect(getPlantingSequence(GUILD_TEMPLATES.medicinal_guild)).toEqual([]);
   });
 });

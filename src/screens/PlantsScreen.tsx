@@ -16,49 +16,80 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import { getAllPlants, deletePlant, getCachedPlants } from '../services/plants';
+import { getAllPlants, deletePlant, archivePlant, getCachedPlants } from '../services/plants';
 import { getLocationConfig } from '../services/locations';
-import {
-  Plant,
-  PlantType,
-  SpaceType,
-  HealthStatus,
-  SunlightLevel,
-  WaterRequirement,
-} from '../types/database.types';
+import { Plant, HealthStatus } from '../types/database.types';
 import PlantCard from '../components/PlantCard';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { PlantsScreenNavigationProp, PlantsScreenRouteProp } from '../types/navigation.types';
 import { useTheme } from '../theme';
+import type { Theme } from '../theme/colors';
 import { createStyles } from '../styles/plantsStyles';
 import { logger } from '../utils/logger';
 import { getErrorMessage } from '../utils/errorLogging';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { PlantFilterSheet } from '../components/PlantFilterSheet';
-import { useBedData } from '../hooks/useBedData';
+import { UndoToast } from '../components/UndoToast';
+import { ConfirmDeleteModal } from '../components/modals/ConfirmDeleteModal';
+import { useBedOptions } from '@/hooks/useBedOptions';
 import { isPlantArchived } from '../utils/plantHelpers';
-
-type FilterType = 'all' | PlantType;
+import {
+  ActiveFilters,
+  BedSegment,
+  countActiveFilters,
+  countFacets,
+  EMPTY_FILTERS,
+  filterPlants,
+} from '@/utils/plantFilters';
 
 type ListItem = { kind: 'plant'; data: Plant } | { kind: 'header'; title: string };
 type SortOption = 'name' | 'newest' | 'oldest' | 'health' | 'age';
 
-interface ActiveFilters {
-  type: FilterType;
-  health: HealthStatus | 'all';
-  space: SpaceType | 'all';
-  sunlight: SunlightLevel | 'all';
-  water: WaterRequirement | 'all';
-  parentLocation: string;
-  childLocation: string;
-  pestStatus: 'all' | 'active_issues' | 'no_issues';
-}
-
 const ITEMS_PER_PAGE = 20;
 
-type BedSegment = 'bed' | 'other';
+/**
+ * What an empty list says when it was opened from a Today plot card's health
+ * count — a table rather than a ternary ladder, so a fifth status is one row.
+ */
+const HEALTH_EMPTY_STATE: Record<
+  HealthStatus,
+  { icon: React.ComponentProps<typeof Ionicons>['name']; title: string; subtitle: string }
+> = {
+  healthy: {
+    icon: 'happy-outline',
+    title: 'No healthy plants yet',
+    subtitle: 'Add plants and keep them thriving',
+  },
+  stressed: {
+    icon: 'warning-outline',
+    title: 'No stressed plants — looking good!',
+    subtitle: 'Your garden is healthy and happy',
+  },
+  recovering: {
+    icon: 'bandage-outline',
+    title: 'Nothing is recovering',
+    subtitle: 'No plant is on the mend right now',
+  },
+  sick: {
+    icon: 'medkit-outline',
+    title: 'No sick plants — great news!',
+    subtitle: 'All your plants are doing well',
+  },
+};
+
+/** The status tone each empty state paints its icon in. */
+const HEALTH_EMPTY_COLOR: Record<HealthStatus, (theme: Theme) => string> = {
+  healthy: (theme) => theme.success,
+  stressed: (theme) => theme.warning,
+  recovering: (theme) => theme.info,
+  sick: (theme) => theme.error,
+};
+
+/** Narrows the free-string route param to a status the filter understands. */
+const isHealthStatus = (value: string | undefined): value is HealthStatus =>
+  value !== undefined && value in HEALTH_EMPTY_STATE;
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -78,7 +109,7 @@ export default function PlantsScreen(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const [bedSegment, setBedSegment] = useState<BedSegment>('other');
-  const { beds } = useBedData();
+  const { beds } = useBedOptions();
   const bedNameMap = useMemo(() => new Map(beds.map((b) => [b.id, b.name])), [beds]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{
@@ -86,9 +117,15 @@ export default function PlantsScreen(): React.JSX.Element {
     plant: Plant;
     index: number;
   } | null>(null);
+  // Active plant awaiting the themed delete-confirmation modal.
+  const [confirmDelete, setConfirmDelete] = useState<Plant | null>(null);
   const undoProgress = useRef(new Animated.Value(1)).current;
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openSwipeableRef = useRef<Swipeable | null>(null);
+  // Lightweight "Plant saved" confirmation shown after returning from the form.
+  const [savedToast, setSavedToast] = useState<{ id: string; name: string } | null>(null);
+  const savedToastProgress = useRef(new Animated.Value(1)).current;
+  const savedToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // searchInput: raw controlled value; searchQuery: debounced, drives filtering
   const [searchInput, setSearchInput] = useState('');
@@ -97,18 +134,9 @@ export default function PlantsScreen(): React.JSX.Element {
   const searchInputRef = useRef<TextInput>(null);
 
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [filters, setFilters] = useState<ActiveFilters>({
-    type: 'all',
-    health: 'all',
-    space: 'all',
-    sunlight: 'all',
-    water: 'all',
-    parentLocation: '',
-    childLocation: '',
-    pestStatus: 'all',
-  });
+  const [filters, setFilters] = useState<ActiveFilters>(EMPTY_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
-  const [homeHealthFilter, setHomeHealthFilter] = useState<string | null>(null);
+  const [homeHealthFilter, setHomeHealthFilter] = useState<HealthStatus | null>(null);
   const [parentLocations, setParentLocations] = useState<string[]>([]);
   const [childLocations, setChildLocations] = useState<string[]>([]);
 
@@ -181,6 +209,7 @@ export default function PlantsScreen(): React.JSX.Element {
       if (loadMoreTimeoutRef.current) clearTimeout(loadMoreTimeoutRef.current);
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
     };
   }, [navigation, loadPlants, loadLocations, resetTabBar]);
 
@@ -193,28 +222,59 @@ export default function PlantsScreen(): React.JSX.Element {
     }
   }, [route.params, navigation, loadPlants, resetTabBar]);
 
+  // Show a brief "saved" confirmation when the plant form returns a savedPlantId.
+  useEffect(() => {
+    const savedPlantId = route.params?.savedPlantId;
+    if (!savedPlantId) return;
+    setSavedToast({ id: savedPlantId, name: route.params?.savedPlantName || 'Plant' });
+    savedToastProgress.setValue(1);
+    Animated.timing(savedToastProgress, {
+      toValue: 0,
+      duration: 2500,
+      useNativeDriver: false,
+    }).start();
+    if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
+    savedToastTimerRef.current = setTimeout(() => setSavedToast(null), 2500);
+    navigation.setParams({ savedPlantId: undefined, savedPlantName: undefined });
+  }, [route.params, navigation, savedToastProgress]);
+
+  // Health and plot scope arrive together from a Today plot card's health count.
+  // The plot lands in `parentLocation` — the filter sheet's own Location filter —
+  // rather than a separate scope of its own, so the sheet shows what is applied
+  // and clearing it works the way every other filter does. Both go in one
+  // `setFilters` so the list never paints an intermediate combination.
+  //
+  // The segment is forced back to Pots & Ground because that is the population
+  // the card counted — `bedSegment` otherwise persists across visits and would
+  // show a figure that contradicts the count just tapped.
   useEffect(() => {
     const healthFilter = route.params?.healthFilter;
-    if (healthFilter) {
-      if (healthFilter === 'healthy') {
-        setFilters((prev) => ({ ...prev, health: 'healthy' as HealthStatus }));
-        setHomeHealthFilter('healthy');
-      } else if (healthFilter === 'sick') {
-        setFilters((prev) => ({ ...prev, health: 'sick' as HealthStatus }));
-        setHomeHealthFilter('sick');
-      } else if (healthFilter === 'stressed') {
-        setFilters((prev) => ({ ...prev, health: 'stressed' as HealthStatus }));
-        setHomeHealthFilter('stressed');
-      }
-      setShowFilters(false);
-      navigation.setParams({ healthFilter: undefined });
-    }
+    const plotFilter = route.params?.plotFilter;
+    if (!healthFilter && !plotFilter) return;
+
+    const health: HealthStatus | null = isHealthStatus(healthFilter) ? healthFilter : null;
+
+    setFilters((prev) => ({
+      ...prev,
+      ...(health !== null && { health }),
+      ...(plotFilter && { parentLocation: plotFilter, childLocation: '' }),
+    }));
+    if (health !== null) setHomeHealthFilter(health);
+    if (plotFilter) setBedSegment('other');
+    setShowFilters(false);
+    setDisplayCount(ITEMS_PER_PAGE);
+    navigation.setParams({ healthFilter: undefined, plotFilter: undefined });
   }, [route.params, navigation]);
 
   const commitDelete = useCallback(
-    async (id: string) => {
+    async (plant: Plant) => {
       try {
-        await deletePlant(id);
+        // Active plants are archived first (preserving rotation history and
+        // disabling their tasks) before the soft delete.
+        if (!isPlantArchived(plant)) {
+          await archivePlant(plant.id);
+        }
+        await deletePlant(plant.id);
       } catch (error: unknown) {
         Alert.alert('Error', getErrorMessage(error));
         void loadPlants();
@@ -223,32 +283,19 @@ export default function PlantsScreen(): React.JSX.Element {
     [loadPlants]
   );
 
-  const handleDelete = useCallback(
-    (id: string) => {
-      const index = plants.findIndex((p) => p.id === id);
-      if (index === -1) return;
-      const plant = plants[index]!;
-
-      // Block deleting an active plant — it must be archived first.
-      if (!isPlantArchived(plant)) {
-        Alert.alert(
-          'Can’t delete active plant',
-          'This plant is still active. Archive it (after harvest or clearing the bed) before deleting.'
-        );
-        return;
-      }
-
+  const startPendingDelete = useCallback(
+    (plant: Plant, index: number) => {
       // Cancel any in-flight undo for the previous pending delete
       if (undoTimerRef.current) {
         clearTimeout(undoTimerRef.current);
         if (pendingDelete) {
-          void commitDelete(pendingDelete.id);
+          void commitDelete(pendingDelete.plant);
         }
       }
 
       // Optimistic remove
-      setPlants((prev) => prev.filter((p) => p.id !== id));
-      setPendingDelete({ id, plant, index });
+      setPlants((prev) => prev.filter((p) => p.id !== plant.id));
+      setPendingDelete({ id: plant.id, plant, index });
 
       // Animate progress bar from full → empty over 4 seconds
       undoProgress.setValue(1);
@@ -261,11 +308,38 @@ export default function PlantsScreen(): React.JSX.Element {
       undoTimerRef.current = setTimeout(() => {
         setPendingDelete(null);
         undoTimerRef.current = null;
-        void commitDelete(id);
+        void commitDelete(plant);
       }, 4000);
     },
-    [plants, pendingDelete, commitDelete, undoProgress]
+    [pendingDelete, commitDelete, undoProgress]
   );
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      const index = plants.findIndex((p) => p.id === id);
+      if (index === -1) return;
+      const plant = plants[index]!;
+
+      // Active plants are still deletable, but confirm first since deleting one
+      // also archives it (ends its place in the bed's rotation).
+      if (!isPlantArchived(plant)) {
+        setConfirmDelete(plant);
+        return;
+      }
+
+      startPendingDelete(plant, index);
+    },
+    [plants, startPendingDelete]
+  );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!confirmDelete) return;
+    const plant = confirmDelete;
+    setConfirmDelete(null);
+    const index = plants.findIndex((p) => p.id === plant.id);
+    if (index === -1) return;
+    startPendingDelete(plant, index);
+  }, [confirmDelete, plants, startPendingDelete]);
 
   const handleUndo = useCallback(() => {
     if (!pendingDelete) return;
@@ -281,98 +355,15 @@ export default function PlantsScreen(): React.JSX.Element {
     setPendingDelete(null);
   }, [pendingDelete, undoProgress]);
 
-  // Per-category counts from unfiltered plants for chip display
-  const plantCounts = useMemo(() => {
-    const type: Record<string, number> = {};
-    const health: Record<string, number> = {};
-    const space: Record<string, number> = {};
-    const sunlight: Record<string, number> = {};
-    const water: Record<string, number> = {};
-    let pestActive = 0;
+  const filterState = useMemo(
+    () => ({ filters, searchQuery, bedSegment }),
+    [filters, searchQuery, bedSegment]
+  );
 
-    plants.forEach((p) => {
-      type[p.plant_type] = (type[p.plant_type] || 0) + 1;
-      const h = p.health_status || 'healthy';
-      health[h] = (health[h] || 0) + 1;
-      if (p.space_type) space[p.space_type] = (space[p.space_type] || 0) + 1;
-      if (p.sunlight) sunlight[p.sunlight] = (sunlight[p.sunlight] || 0) + 1;
-      if (p.water_requirement) water[p.water_requirement] = (water[p.water_requirement] || 0) + 1;
-      if ((p.pest_disease_history || []).some((r) => !r.resolved)) pestActive++;
-    });
-
-    return {
-      type,
-      health,
-      space,
-      sunlight,
-      water,
-      pestActive,
-      pestNone: plants.length - pestActive,
-    };
-  }, [plants]);
-
-  const getFilteredPlants = useCallback(() => {
-    if (!plants || plants.length === 0) return [];
-    let filtered = [...plants];
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (p) =>
-          p &&
-          p.name &&
-          (p.name.toLowerCase().includes(query) ||
-            (p.plant_variety && p.plant_variety.toLowerCase().includes(query)) ||
-            (p.variety && p.variety.toLowerCase().includes(query)) ||
-            (p.location && p.location.toLowerCase().includes(query)) ||
-            (p.landmarks && p.landmarks.toLowerCase().includes(query)))
-      );
-    }
-
-    if (filters.type !== 'all') {
-      filtered = filtered.filter((p) => p.plant_type === filters.type);
-    }
-
-    if (filters.health !== 'all') {
-      if (filters.health === 'healthy') {
-        filtered = filtered.filter(
-          (p) =>
-            !p.health_status || p.health_status === 'healthy' || p.health_status === 'recovering'
-        );
-      } else {
-        filtered = filtered.filter((p) => p.health_status === filters.health);
-      }
-    }
-
-    if (filters.space !== 'all') {
-      filtered = filtered.filter((p) => p.space_type === filters.space);
-    }
-
-    if (filters.sunlight !== 'all') {
-      filtered = filtered.filter((p) => p.sunlight === filters.sunlight);
-    }
-
-    if (filters.water !== 'all') {
-      filtered = filtered.filter((p) => p.water_requirement === filters.water);
-    }
-
-    if (filters.parentLocation) {
-      filtered = filtered.filter((p) => p.location?.includes(filters.parentLocation));
-    }
-
-    if (filters.childLocation) {
-      filtered = filtered.filter((p) => p.location?.includes(filters.childLocation));
-    }
-
-    if (filters.pestStatus !== 'all') {
-      filtered = filtered.filter((p) => {
-        const activeIssues = (p.pest_disease_history || []).filter((r) => !r.resolved).length;
-        return filters.pestStatus === 'active_issues' ? activeIssues > 0 : activeIssues === 0;
-      });
-    }
-
-    return filtered;
-  }, [filters, plants, searchQuery]);
+  // Each chip's count is taken against every *other* active filter, so it reads
+  // as "how many would I get if I picked this" rather than a farm-wide total
+  // sitting above a filtered list.
+  const plantCounts = useMemo(() => countFacets(plants, filterState), [plants, filterState]);
 
   const getSortedPlants = useCallback(
     (plantsToSort: Plant[]) => {
@@ -416,18 +407,7 @@ export default function PlantsScreen(): React.JSX.Element {
     setFilters((prev) => ({ ...prev, [category]: value }));
   };
 
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (filters.type !== 'all') count++;
-    if (filters.health !== 'all') count++;
-    if (filters.space !== 'all') count++;
-    if (filters.sunlight !== 'all') count++;
-    if (filters.water !== 'all') count++;
-    if (filters.parentLocation !== '') count++;
-    if (filters.childLocation !== '') count++;
-    if (filters.pestStatus !== 'all') count++;
-    return count;
-  }, [filters]);
+  const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
 
   const hasActiveFilters = useMemo(
     () => activeFilterCount > 0 || searchQuery.trim() !== '',
@@ -435,21 +415,35 @@ export default function PlantsScreen(): React.JSX.Element {
   );
 
   const clearAllFilters = (): void => {
-    setFilters({
-      type: 'all',
-      health: 'all',
-      space: 'all',
-      sunlight: 'all',
-      water: 'all',
-      parentLocation: '',
-      childLocation: '',
-      pestStatus: 'all',
-    });
+    setFilters(EMPTY_FILTERS);
     setSearchInput('');
     setSearchQuery('');
     setHomeHealthFilter(null);
     setDisplayCount(ITEMS_PER_PAGE);
   };
+
+  // An empty list means one of three things: no plants at all, a health count
+  // from Today that turned out to be empty, or filters that match nothing.
+  const emptyState = useMemo(() => {
+    if (plants.length === 0) {
+      return {
+        icon: 'leaf-outline' as const,
+        color: theme.primary,
+        title: 'Your garden is empty',
+        subtitle: 'Tap + to add your first plant and start tracking your garden',
+      };
+    }
+    if (homeHealthFilter !== null) {
+      const copy = HEALTH_EMPTY_STATE[homeHealthFilter];
+      return { ...copy, color: HEALTH_EMPTY_COLOR[homeHealthFilter](theme) };
+    }
+    return {
+      icon: 'search-outline' as const,
+      color: theme.border,
+      title: 'No plants match',
+      subtitle: 'Try adjusting your filters or search',
+    };
+  }, [plants.length, homeHealthFilter, theme]);
 
   const toggleFilters = (): void => {
     if (!showFilters) {
@@ -458,22 +452,10 @@ export default function PlantsScreen(): React.JSX.Element {
     setShowFilters((prev) => !prev);
   };
 
-  // Search + filter result, before the All/Bed/Other segment is applied — drives the
-  // segment counts so they reflect the active search and filters.
-  const baseFiltered = useMemo(() => getFilteredPlants(), [getFilteredPlants]);
-
-  const segmentCounts = useMemo(
-    () => ({
-      bed: baseFiltered.filter((p) => p.bed_id != null).length,
-      other: baseFiltered.filter((p) => p.bed_id == null).length,
-    }),
-    [baseFiltered]
+  const segmentFiltered = useMemo(
+    () => filterPlants(plants, filterState),
+    [plants, filterState]
   );
-
-  const segmentFiltered = useMemo(() => {
-    if (bedSegment === 'bed') return baseFiltered.filter((p) => p.bed_id != null);
-    return baseFiltered.filter((p) => p.bed_id == null);
-  }, [baseFiltered, bedSegment]);
 
   const filteredPlants = useMemo(
     () => getSortedPlants(segmentFiltered),
@@ -494,7 +476,9 @@ export default function PlantsScreen(): React.JSX.Element {
       return displayedPlants.map((p): ListItem => ({ kind: 'plant', data: p }));
     }
     const buckets = new Map<string, Plant[]>();
-    for (const p of filteredPlants) {
+    // Bucket the paged slice (not the full filtered set) so the Bed segment
+    // respects Load More instead of rendering every bed plant at once.
+    for (const p of displayedPlants) {
       const key = p.bed_id ?? '';
       if (!buckets.has(key)) buckets.set(key, []);
       buckets.get(key)!.push(p);
@@ -512,7 +496,7 @@ export default function PlantsScreen(): React.JSX.Element {
       for (const p of bPlants) items.push({ kind: 'plant', data: p });
     }
     return items;
-  }, [autoGroup, displayedPlants, filteredPlants, bedNameMap]);
+  }, [autoGroup, displayedPlants, bedNameMap]);
 
   const loadMore = (): void => {
     if (loadingMore || !hasMore) return;
@@ -541,6 +525,25 @@ export default function PlantsScreen(): React.JSX.Element {
     openSwipeableRef.current = ref;
   }, []);
 
+  const handleCardPress = useCallback(
+    (plantId: string) => navigation.navigate('PlantDetail', { plantId }),
+    [navigation]
+  );
+
+  const handleViewSaved = useCallback(() => {
+    if (!savedToast) return;
+    if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
+    savedToastProgress.stopAnimation();
+    const id = savedToast.id;
+    setSavedToast(null);
+    navigation.navigate('PlantDetail', { plantId: id });
+  }, [savedToast, navigation, savedToastProgress]);
+
+  const handleCardEdit = useCallback(
+    (plantId: string) => navigation.navigate('PlantForm', { plantId }),
+    [navigation]
+  );
+
   const renderListItem = useCallback(
     ({ item }: { item: ListItem }) => {
       if (item.kind === 'header') {
@@ -556,13 +559,13 @@ export default function PlantsScreen(): React.JSX.Element {
           plant={item.data}
           searchQuery={searchQuery}
           onSwipeableOpen={handleSwipeableOpen}
-          onPress={() => navigation.navigate('PlantDetail', { plantId: item.data.id })}
-          onEdit={() => navigation.navigate('PlantForm', { plantId: item.data.id })}
-          onDelete={() => handleDelete(item.data.id)}
+          onPress={handleCardPress}
+          onEdit={handleCardEdit}
+          onDelete={handleDelete}
         />
       );
     },
-    [navigation, handleDelete, searchQuery, handleSwipeableOpen, styles, theme]
+    [handleCardPress, handleCardEdit, handleDelete, searchQuery, handleSwipeableOpen, styles, theme]
   );
 
   const renderUndoToast = (): React.JSX.Element | null => {
@@ -708,8 +711,8 @@ export default function PlantsScreen(): React.JSX.Element {
         <View style={styles.segmentRow}>
           {(
             [
-              ['other', 'Pots & Ground', 'cube-outline', segmentCounts.other],
-              ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
+              ['other', 'Pots & Ground', 'cube-outline', plantCounts.segment.other],
+              ['bed', 'Beds', 'grid-outline', plantCounts.segment.bed],
             ] as const
           ).map(([value, label, icon, count]) => {
             const active = bedSegment === value;
@@ -758,53 +761,9 @@ export default function PlantsScreen(): React.JSX.Element {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyState}>
-              <Ionicons
-                name={
-                  plants.length === 0
-                    ? 'leaf-outline'
-                    : homeHealthFilter === 'healthy'
-                      ? 'happy-outline'
-                      : homeHealthFilter === 'sick'
-                        ? 'medkit-outline'
-                        : homeHealthFilter === 'stressed'
-                          ? 'warning-outline'
-                          : 'search-outline'
-                }
-                size={64}
-                color={
-                  plants.length === 0
-                    ? theme.primary
-                    : homeHealthFilter === 'healthy'
-                      ? theme.success
-                      : homeHealthFilter === 'sick'
-                        ? theme.error
-                        : homeHealthFilter === 'stressed'
-                          ? theme.warning
-                          : theme.border
-                }
-              />
-              <Text style={styles.emptyText}>
-                {plants.length === 0
-                  ? 'Your garden is empty'
-                  : homeHealthFilter === 'healthy'
-                    ? 'No healthy plants yet'
-                    : homeHealthFilter === 'sick'
-                      ? 'No sick plants — great news!'
-                      : homeHealthFilter === 'stressed'
-                        ? 'No stressed plants — looking good!'
-                        : 'No plants match'}
-              </Text>
-              <Text style={styles.emptySubtext}>
-                {plants.length === 0
-                  ? 'Tap + to add your first plant and start tracking your garden'
-                  : homeHealthFilter === 'healthy'
-                    ? 'Add plants and keep them thriving'
-                    : homeHealthFilter === 'sick'
-                      ? 'All your plants are doing well 🌱'
-                      : homeHealthFilter === 'stressed'
-                        ? 'Your garden is healthy and happy 🎉'
-                        : 'Try adjusting your filters or search'}
-              </Text>
+              <Ionicons name={emptyState.icon} size={64} color={emptyState.color} />
+              <Text style={styles.emptyText}>{emptyState.title}</Text>
+              <Text style={styles.emptySubtext}>{emptyState.subtitle}</Text>
               {plants.length === 0 ? (
                 <TouchableOpacity
                   style={styles.clearFiltersEmptyButton}
@@ -838,12 +797,30 @@ export default function PlantsScreen(): React.JSX.Element {
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
-        removeClippedSubviews={true}
+        // removeClippedSubviews is intentionally OFF: combined with a legacy
+        // gesture-handler Swipeable per row under the New Architecture it caused
+        // blank/stuck cells while scrolling. Pagination (20/page) bounds cost.
         updateCellsBatchingPeriod={50}
       />
 
       <AnimatedFAB onPress={() => navigation.navigate('PlantForm')} />
+      <ConfirmDeleteModal
+        visible={confirmDelete !== null}
+        title="Delete plant?"
+        message={`This archives and deletes “${confirmDelete?.name ?? ''}”. You’ll have a few seconds to undo.`}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
       {renderUndoToast()}
+      <UndoToast
+        visible={savedToast !== null}
+        message={`${savedToast?.name ?? 'Plant'} saved`}
+        onUndo={handleViewSaved}
+        progress={savedToastProgress}
+        bottomOffset={TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8}
+        icon="checkmark-circle"
+        actionLabel="View"
+      />
     </View>
   );
 }

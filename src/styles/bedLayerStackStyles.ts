@@ -46,6 +46,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.errorLight ?? theme.backgroundTertiary,
       fontWeight: '700' as const,
     },
+    capacityWarning: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: theme.errorLight,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
+    capacityOverflowText: {
+      color: theme.error,
+      fontSize: 11,
+      fontWeight: '700',
+    },
 
     // ── Layer section card ───────────────────────────────────────────────────
     layerCard: {

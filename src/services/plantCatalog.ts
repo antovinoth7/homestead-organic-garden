@@ -1,5 +1,6 @@
 import { PlantCatalog, PlantCatalogCategory, PlantType } from '../types/database.types';
 import { getData, KEYS } from '../lib/storage';
+import { getCanonicalPlantKey, PLANT_NAME_ALIASES, toLookupKey } from '../utils/plantAliases';
 
 export const PLANT_CATEGORIES: PlantType[] = [
   'vegetable',
@@ -23,7 +24,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Tapioca',
         'Drumstick',
         'Amaranthus',
-        'Methi',
         'Cowpea',
         'Beans',
         'Bitter Gourd',
@@ -41,21 +41,18 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Cauliflower',
         'Carrot',
         'Potato',
-        'Eggplant',
         'Pepper',
         // Kanyakumari root vegetables & tubers
         'Taro',
         'Elephant Yam',
         'Sweet Potato',
         'Ash Plantain',
-        'Colocasia',
         // Bed-type plants — leafy greens
         'Lettuce',
         'Purslane',
         'Pasalai Keerai',
         'Fenugreek',
         'Ladies Finger',
-        'Moringa',
         // Bed-type plants — fruiting & climbing
         'Squash',
         'Yardlong Beans',
@@ -71,6 +68,15 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Maize',
         // Bed-type plants — aquatic
         'Lotus Stem',
+        // Additional Tamil Nadu warm-season and short cool-season crops
+        'Turnip',
+        'Knol Khol',
+        'Green Peas',
+        'Lablab Bean',
+        'Winged Bean',
+        'Sword Bean',
+        'Watermelon',
+        'Muskmelon',
         // Companion plants
         'Strawberry',
       ],
@@ -82,7 +88,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Tapioca: ['Mulluvadi', 'CO 2', 'H-165'],
         Drumstick: ['PKM 1', 'PKM 2', 'Local'],
         Amaranthus: ['Arai Keerai', 'Siru Keerai', 'Mulai Keerai'],
-        Methi: ['Kasuri', 'Pusa Early', 'Local'],
         Cowpea: ['Bush', 'Pole', 'Red Cowpea'],
         Beans: ['Bush Beans', 'Pole Beans', 'Double Beans'],
         'Bitter Gourd': ['Mithipagal', 'Long Green', 'CO 1'],
@@ -97,11 +102,10 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Radish: ['Pusa Chetki', 'White Long', 'Pink'],
         Cabbage: ['Golden Acre', 'CO 1', 'Green Ball'],
         Cauliflower: ['Pusa Snowball', 'CO 1', 'Early White'],
-        Taro: ['Seppan Kizhangu', 'White Taro', 'Local'],
+        Taro: ['Seppan Kizhangu', 'White Taro', 'Purple Stem', 'Green Stem', 'Local'],
         'Elephant Yam': ['Karunai Kizhangu', 'White Yam', 'Local'],
         'Sweet Potato': ['Orange Flesh', 'White Flesh', 'Local'],
         'Ash Plantain': ['Vazhakkai', 'Green Plantain', 'Local'],
-        Colocasia: ['Purple Stem', 'Green Stem', 'Seppan'],
         Lettuce: ['Iceberg', 'Butterhead', 'Romaine', 'Loose Leaf'],
         Beetroot: ['Detroit Dark Red', 'Crimson Globe', 'Local Red'],
         'French Beans': ['Contender', 'Bush Blue Lake', 'Local Dwarf'],
@@ -114,9 +118,16 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Maize: ['Hybrid Sweet', 'Country Corn', 'CO 1'],
         Fenugreek: ['Kasuri', 'Pusa Early', 'Local'],
         'Ladies Finger': ['CO 4', 'CO 5', 'Arka Anamika'],
-        Moringa: ['PKM 1', 'PKM 2', 'Local'],
         'Pasalai Keerai': ['Green Stem', 'Red Stem', 'Local'],
         Strawberry: ['Sweet Charlie', 'Festival', 'Local Hill'],
+        Turnip: ['Purple Top White Globe', 'Pusa Sweti', 'Local'],
+        'Knol Khol': ['White Vienna', 'Purple Vienna', 'Local'],
+        'Green Peas': ['Arkel', 'Bonneville', 'Local'],
+        'Lablab Bean': ['CO 1', 'CO 2', 'Local'],
+        'Winged Bean': ['AKWB 1', 'Local Green'],
+        'Sword Bean': ['Bush', 'Climbing', 'Local'],
+        Watermelon: ['Sugar Baby', 'Arka Manik', 'Local'],
+        Muskmelon: ['Pusa Sharbati', 'Hara Madhu', 'Local'],
       },
       tamilNames: {
         Brinjal: 'கத்தரிக்காய்',
@@ -126,7 +137,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Tapioca: 'மரவள்ளிக்கிழங்கு',
         Drumstick: 'முருங்கை',
         Amaranthus: 'அரைக்கீரை',
-        Methi: 'வெந்தயக்கீரை',
         Cowpea: 'காராமணி',
         Beans: 'பீன்ஸ்',
         'Bitter Gourd': 'பாகற்காய்',
@@ -144,19 +154,16 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Cauliflower: 'காலிஃபிளவர்',
         Carrot: 'கேரட்',
         Potato: 'உருளைக்கிழங்கு',
-        Eggplant: 'கத்திரிக்காய்',
         Pepper: 'குடைமிளகாய்',
         Taro: 'சேப்பங்கிழங்கு',
         'Elephant Yam': 'கருணைக்கிழங்கு',
         'Sweet Potato': 'சர்க்கரைவள்ளிக்கிழங்கு',
         'Ash Plantain': 'நேந்திரம் வாழை',
-        Colocasia: 'சேம்பு',
         Lettuce: 'லெட்டுஸ்',
         Purslane: 'பொட்டுக்கீரை',
         'Pasalai Keerai': 'பசளைக்கீரை',
         Fenugreek: 'வெந்தயம்',
         'Ladies Finger': 'வெண்டைக்காய்',
-        Moringa: 'முருங்கை',
         Squash: 'ஸ்குவாஷ்',
         'Yardlong Beans': 'தட்டப்பயறு',
         Beetroot: 'பீட்ரூட்',
@@ -169,6 +176,14 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Maize: 'மக்காச்சோளம்',
         'Lotus Stem': 'தாமரைத்தண்டு',
         Strawberry: 'ஸ்ட்ராபெர்ரி',
+        Turnip: 'டர்னிப்',
+        'Knol Khol': 'நூல்கோல்',
+        'Green Peas': 'பச்சைப் பட்டாணி',
+        'Lablab Bean': 'அவரைக்காய்',
+        'Winged Bean': 'சிறகவரை',
+        'Sword Bean': 'வாள் அவரை',
+        Watermelon: 'தர்பூசணி',
+        Muskmelon: 'முலாம்பழம்',
       },
       descriptions: {
         Brinjal:
@@ -180,7 +195,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Tapioca: 'Starchy root crop grown widely in Kanyakumari for kappa and traditional dishes',
         Drumstick: 'Fast-growing tropical tree providing nutrient-dense pods, leaves, and flowers',
         Amaranthus: 'Quick-growing leafy green rich in iron, popular as keerai in Tamil cuisine',
-        Methi: 'Aromatic legume grown for its iron-rich leaves and bitter-sweet flavour',
         Cowpea: 'Heat-tolerant nitrogen-fixing legume yielding protein-rich pods and beans',
         Beans: 'Versatile climbing legume producing tender pods for stir-fries and curries',
         'Bitter Gourd': 'Warty-skinned climbing cucurbit prized for its medicinal bitter flavour',
@@ -199,13 +213,11 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         Cauliflower: 'Cool-season brassica producing compact white curds',
         Carrot: 'Popular root vegetable rich in beta-carotene',
         Potato: 'Versatile tuberous crop grown worldwide',
-        Eggplant: 'Heat-loving fruiting vegetable closely related to brinjal',
         Pepper: 'Warm-season fruiting plant producing sweet or mildly hot fruits',
         Taro: 'Tropical tuber crop with edible corms and leaves',
         'Elephant Yam': 'Large tropical tuber crop valued in South Indian cuisine',
         'Sweet Potato': 'Nutritious tropical vine producing sweet tuberous roots',
         'Ash Plantain': 'Starchy cooking banana widely used in South Indian cuisine',
-        Colocasia: 'Versatile aroid grown for both corms and leaves',
         Lettuce: 'Cool-season leafy green ideal for salads and fresh garnishes',
         Purslane:
           'Succulent edible weed rich in omega-3 fatty acids; drought-tolerant ground cover',
@@ -213,7 +225,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
           'Malabar spinach — vigorous climbing leafy green thriving in Tamil Nadu heat',
         Fenugreek: 'Aromatic annual legume grown for its iron-rich leaves and distinctive seeds',
         'Ladies Finger': 'Heat-loving mucilaginous pod vegetable essential in South Indian cooking',
-        Moringa: 'Multipurpose tropical tree with nutrient-dense leaves, pods, and flowers',
         Squash: 'Fast-growing cucurbit producing tender fruits; ideal ground cover in polycultures',
         'Yardlong Beans':
           'Vigorous climbing legume producing metre-long tender pods; fixes nitrogen',
@@ -231,6 +242,14 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'Lotus Stem':
           'Aquatic perennial with crunchy, tunnel-riddled rhizomes used in South Indian cooking',
         Strawberry: 'Low-growing fruiting plant producing sweet red berries; companion to spinach',
+        Turnip: 'Fast cool-season root crop best scheduled for Kanyakumari’s milder months',
+        'Knol Khol': 'Cool-season brassica grown for its tender swollen stem',
+        'Green Peas': 'Short cool-season climbing legume suited to the mildest local months',
+        'Lablab Bean': 'Heat-tolerant perennial bean widely grown as avarai in Tamil Nadu',
+        'Winged Bean': 'Humid-tropical climbing legume with edible pods, leaves, flowers, and tubers',
+        'Sword Bean': 'Vigorous tropical bean suited to fences and trellises; young pods are cooked',
+        Watermelon: 'Warm-season trailing cucurbit requiring drainage and a relatively dry fruiting period',
+        Muskmelon: 'Warm-season melon performing best with full sun, drainage, and low leaf wetness',
       },
     },
     herb: {
@@ -510,8 +529,14 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
     coconut_tree: {
       plants: ['Dwarf Coconut', 'Tall Coconut', 'Hybrid Coconut', 'King Coconut'],
       varieties: {
-        'Dwarf Coconut': ['COD', 'Malayan Dwarf'],
-        'Tall Coconut': ['West Coast Tall', 'East Coast Tall'],
+        'Dwarf Coconut': [
+          'Chowghat Orange Dwarf',
+          'Chowghat Green Dwarf',
+          'Malayan Yellow Dwarf',
+        ],
+        'Tall Coconut': ['West Coast Tall', 'East Coast Tall', 'Tiptur Tall', 'Arasampatti Tall'],
+        'Hybrid Coconut': ['VHC 1', 'VHC 2', 'VHC 3', 'Kerasankara', 'Chandrasankara'],
+        'King Coconut': ['Sri Lanka King Coconut'],
       },
       tamilNames: {
         'Dwarf Coconut': 'குட்டைத் தென்னை',
@@ -520,11 +545,14 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
         'King Coconut': 'ராஜ தென்னை',
       },
       descriptions: {
-        'Dwarf Coconut': 'Compact coconut palm ideal for small plots, bears early',
-        'Tall Coconut': 'Traditional tall coconut grown along the Kanyakumari coast',
+        'Dwarf Coconut':
+          'Early-bearing compact palms, mainly for tender nuts; choose locally tested planting material',
+        'Tall Coconut':
+          'Long-lived palms including West Coast Tall, a strong fit for humid Kanyakumari conditions',
         'Hybrid Coconut':
-          'Cross between Dwarf and Tall combining early bearing with high copra yield',
-        'King Coconut': 'Orange-skinned coconut prized for its naturally sweet water',
+          'Tall × Dwarf or Dwarf × Tall crosses; yield depends on certified true-to-type seedlings and management',
+        'King Coconut':
+          'Orange tender-nut type suited climatically but less standard in Tamil Nadu than released local cultivars',
       },
     },
     shrub: {
@@ -578,49 +606,50 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
     spinach: {
       plants: [
         'Palak',
-        'Saag',
-        'Pusa Jyoti',
-        'Hybrid Leafy',
-        'Local Green',
-        'Pusa Green',
-        'Winter Spinach',
-        'Red Stem',
+        'Malabar Spinach',
+        'Water Spinach',
+        'Amaranth Greens',
+        'Ponnanganni Keerai',
+        'Manathakkali Keerai',
+        'Mustard Greens',
+        'Vallarai Keerai',
       ],
       varieties: {
-        Palak: ['Palak Green', 'Palak Red', 'Palak Local', 'Palak Hybrid'],
-        Saag: ['Palak Saag', 'Mustard Saag', 'Mixed Saag', 'Traditional Saag'],
-        'Pusa Jyoti': ['CO 1', 'CO 2', 'Standard'],
-        'Hybrid Leafy': ['Hybrid A', 'Hybrid B', 'Hybrid Premium'],
-        'Local Green': ['Kanyakumari Local', 'Tamil Nadu Local', 'Traditional'],
-        'Pusa Green': ['PB 47', 'PB 51', 'Early Pusa'],
-        'Winter Spinach': ['Winter Green', 'Cool Season', 'Frost Hardy'],
-        'Red Stem': ['Red Veined', 'Purple Stem', 'Ornamental Red'],
+        Palak: ['All Green', 'Pusa Palak', 'Jobner Green', 'Local'],
+        'Malabar Spinach': ['Green Stem', 'Red Stem', 'Local'],
+        'Water Spinach': ['Broad Leaf', 'Narrow Leaf', 'Local'],
+        'Amaranth Greens': ['Arai Keerai', 'Siru Keerai', 'Mulai Keerai', 'CO 1'],
+        'Ponnanganni Keerai': ['Green', 'Red', 'Local'],
+        'Manathakkali Keerai': ['Local Green'],
+        'Mustard Greens': ['Broad Leaf', 'Local'],
+        'Vallarai Keerai': ['Local'],
       },
       tamilNames: {
-        Palak: 'பசலை',
-        Saag: 'சாக்',
-        'Pusa Jyoti': 'புஷா ஜோதி',
-        'Hybrid Leafy': 'கலப்பின பசலை',
-        'Local Green': 'தமிழ்நாடு பசலை',
-        'Pusa Green': 'புஷா பசலை',
-        'Winter Spinach': 'குளிர்காலப் பசலை',
-        'Red Stem': 'சிவப்பு கிழங்கு பசலை',
+        Palak: 'பாலக் கீரை',
+        'Malabar Spinach': 'பசலைக் கீரை',
+        'Water Spinach': 'நீர்க் கீரை',
+        'Amaranth Greens': 'அமராந்தஸ் கீரைகள்',
+        'Ponnanganni Keerai': 'பொன்னாங்கண்ணிக் கீரை',
+        'Manathakkali Keerai': 'மணத்தக்காளிக் கீரை',
+        'Mustard Greens': 'கடுகுக் கீரை',
+        'Vallarai Keerai': 'வல்லாரைக் கீரை',
       },
       descriptions: {
         Palak:
-          'Classic spinach variety rich in iron and vitamins, smooth dark-green leaves ideal for curries and saag',
-        Saag: 'Leafy green blend used in traditional Tamil and North Indian cooking for its earthy, nutritious profile',
-        'Pusa Jyoti':
-          'High-yielding bold-leaved variety suited to cool and moderate climates across South India',
-        'Hybrid Leafy':
-          'Modern hybrid combining fast growth, disease resistance, and tender leaf texture',
-        'Local Green':
-          'Heritage variety adapted to Tamil Nadu climate with superior bolt resistance',
-        'Pusa Green': 'Cold-tolerant variety bred for winter gardens in tropical regions',
-        'Winter Spinach':
-          'Frost-hardy variety optimised for December–March growing season in Kanyakumari',
-        'Red Stem':
-          'Ornamental-edible variety with striking red veins and purple stems for aesthetic vegetable gardens',
+          'True spinach grown as a short cool-season leafy crop during Kanyakumari’s mildest months',
+        'Malabar Spinach':
+          'Heat- and humidity-tolerant climbing leafy vegetable well suited to Kanyakumari',
+        'Water Spinach':
+          'Fast-growing tropical leafy vegetable for consistently moist beds; prevent escape into waterways',
+        'Amaranth Greens':
+          'Quick warm-season keerai group including arai, siru, and mulai types',
+        'Ponnanganni Keerai':
+          'Low-growing traditional Tamil leafy vegetable suited to moist soil and repeated harvest',
+        'Manathakkali Keerai':
+          'Traditional short-lived Tamil green; cook leaves and use correctly identified planting material',
+        'Mustard Greens': 'Peppery cool-season leaves best grown during the mild, less humid months',
+        'Vallarai Keerai':
+          'Moisture-loving creeping Tamil green suited to partial shade and humid home gardens',
       },
     },
   },
@@ -629,35 +658,6 @@ export const DEFAULT_PLANT_CATALOG: PlantCatalog = {
 const REQUIRED_LOCAL_PLANTS: Partial<Record<PlantType, string[]>> = {
   vegetable: ['Brinjal', 'Ladies Finger', 'Chilli', 'Drumstick', 'Tapioca'],
 };
-const KNOWN_VARIETY_ALIASES: Record<string, string> = {
-  "lady's finger": 'ladies finger',
-  'ladies finger': 'ladies finger',
-  eggplant: 'brinjal',
-  aubergine: 'brinjal',
-  okra: 'ladies finger',
-  bhindi: 'ladies finger',
-  vendakkai: 'ladies finger',
-  kathirikai: 'brinjal',
-  'chilli pepper': 'chilli',
-  chili: 'chilli',
-  chilli: 'chilli',
-  maravalli: 'tapioca',
-  cassava: 'tapioca',
-  murungai: 'drumstick',
-  drumstick: 'drumstick',
-  keerai: 'amaranthus',
-  pudina: 'mint',
-  kothamalli: 'coriander',
-  karuveppilai: 'curry leaf',
-};
-
-const toLookupKey = (value: string): string => value.toLowerCase().replace(/\s+/g, ' ').trim();
-
-const getCanonicalPlantKey = (value: string): string => {
-  const key = toLookupKey(value);
-  return KNOWN_VARIETY_ALIASES[key] ?? key;
-};
-
 const hasEquivalentPlant = (plants: string[], target: string): boolean => {
   const targetKey = getCanonicalPlantKey(target);
   return plants.some((plant) => getCanonicalPlantKey(plant) === targetKey);
@@ -691,7 +691,7 @@ const normalizeVarieties = (
     const normalizedPlantName = plantName?.toString().trim();
     if (!normalizedPlantName) return;
     const plantKey = toLookupKey(normalizedPlantName);
-    const aliasKey = KNOWN_VARIETY_ALIASES[plantKey];
+    const aliasKey = PLANT_NAME_ALIASES[plantKey];
     const canonicalPlantName =
       validPlantMap.get(plantKey) ?? (aliasKey ? validPlantMap.get(aliasKey) : undefined);
     if (!canonicalPlantName) return;
@@ -724,7 +724,7 @@ const getKnownVarietiesForPlant = (
   defaultVarietyLookup: Record<string, string[]>
 ): string[] => {
   const plantKey = toLookupKey(plantName);
-  const aliasKey = KNOWN_VARIETY_ALIASES[plantKey];
+  const aliasKey = PLANT_NAME_ALIASES[plantKey];
   const defaults =
     defaultVarietyLookup[plantKey] ?? (aliasKey ? defaultVarietyLookup[aliasKey] : undefined);
   return defaults ? [...defaults] : [];

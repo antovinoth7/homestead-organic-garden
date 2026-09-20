@@ -1,5 +1,5 @@
 import type { BedType, BedLayer, PlantEntry } from '@/types/database.types';
-import type { GuildTemplate, PlantRow } from '@/config/beds/guildTemplates';
+import type { GuildTemplate } from '@/config/beds/guildTemplates';
 import { validateCompanionPair } from '@/config/beds/companionRules';
 import {
   computeRowLayout,
@@ -8,7 +8,7 @@ import {
   effectiveRowGapCm,
 } from '@/utils/rowLayoutEngine';
 import type { RowPlantInput } from '@/utils/rowLayoutEngine';
-import { mapPlantEntriesToRowInputs } from '@/utils/plantEntryMapper';
+import { mapPlantEntriesToRowInputs, templateRowToCandidate } from '@/utils/plantEntryMapper';
 
 /** Layer/spacing applied to a suggested companion that isn't itself a template plant_row. */
 export const COMPANION_DEFAULT_LAYER: BedLayer = 'ground_cover';
@@ -33,21 +33,8 @@ function makeEntry(name: string, layer: BedLayer, spacingCm: number): PlantEntry
   };
 }
 
-/** Engine candidate for a template plant_row, carrying its real gap/family metadata. */
-function mainCandidate(row: PlantRow): RowPlantInput {
-  return {
-    name: row.name,
-    layer: row.layer,
-    spacingCm: row.spacing_cm,
-    rowGapCm: row.row_gap_cm,
-    cropFamily: row.crop_family,
-    daysToHarvest: row.days_to_harvest,
-    benefitTag: row.benefit_tag,
-    careTasks: row.care_tasks,
-    isCompanion: row.is_companion,
-    successionWeek: row.succession_week,
-  };
-}
+/** Engine candidate for a template plant_row — shared builder in plantEntryMapper. */
+const mainCandidate = templateRowToCandidate;
 
 /** Engine candidate for a suggested companion that has no template row of its own. */
 function companionCandidate(name: string): RowPlantInput {

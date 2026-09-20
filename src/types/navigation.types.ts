@@ -5,17 +5,36 @@ import {
 } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { JournalEntry, JournalEntryType, BedType, BedLayer, SunlightLevel } from './database.types';
+import {
+  JournalEntry,
+  JournalEntryType,
+  BedType,
+  BedLayer,
+  SunlightLevel,
+  TaskType,
+} from './database.types';
+// Type-only: erased at compile time, so this stays a one-way dependency on the util.
+import type { BedLifecycle } from '@/utils/bedStatus';
 
 // ─── Stack param lists ────────────────────────────────────────────────────────
 
+// Root stack: "Main" wraps the whole authed area (AuthedStack), not just the
+// tabs — naming it "AppTabs" too used to trigger React Navigation's duplicate
+// nested-screen-name warning against AuthedStack's own "AppTabs" screen.
 export type RootStackParamList = {
-  AppTabs: NavigatorScreenParams<RootTabParamList>;
+  Main: NavigatorScreenParams<AuthedStackParamList>;
   Auth: undefined;
 };
 
+export type AuthedStackParamList = {
+  AppTabs: NavigatorScreenParams<RootTabParamList>;
+  Onboarding: undefined;
+};
+
 export type BedsStackParamList = {
-  BedList: undefined;
+  // The filters are set by the Today plot card's bed counts, which open this list
+  // scoped to the lifecycle tapped and the plot it was counted for.
+  BedList: { lifecycleFilter?: BedLifecycle; plotFilter?: string } | undefined;
   BedDetail: { bedId: string };
   BedCreationWizard:
     | {
@@ -35,7 +54,21 @@ export type RootTabParamList = {
   Home: { refresh?: number } | undefined;
   Plants: NavigatorScreenParams<PlantsStackParamList>;
   Beds: NavigatorScreenParams<BedsStackParamList>;
-  'Care Plan': { resetFilters?: boolean; filterOverdue?: boolean } | undefined;
+  'Care Plan':
+    | {
+        resetFilters?: boolean;
+        filterOverdue?: boolean;
+        /**
+         * One-shot: reveal a section of the plan rather than opening at the top.
+         * Set by the Today plot card's overdue count, which names a section the
+         * Care Plan already renders.
+         */
+        scrollTo?: 'overdue';
+        openCreateTask?: boolean;
+        prefillPlantId?: string;
+        prefillTaskType?: TaskType;
+      }
+    | undefined;
   Journal: NavigatorScreenParams<JournalStackParamList> | undefined;
   More: NavigatorScreenParams<MoreStackParamList>;
 };
@@ -53,7 +86,19 @@ export interface PlantFormPrefill {
 }
 
 export type PlantsStackParamList = {
-  PlantsList: { healthFilter?: string; refresh?: number } | undefined;
+  PlantsList:
+    | {
+        healthFilter?: string;
+        /**
+         * Parent location name, or `UNASSIGNED_PLOT_ID` — scopes the list to one
+         * plot by preselecting the filter sheet's Location filter.
+         */
+        plotFilter?: string;
+        refresh?: number;
+        savedPlantId?: string;
+        savedPlantName?: string;
+      }
+    | undefined;
   ArchivedPlants: undefined;
   PlantDetail: { plantId: string };
   PlantForm:
@@ -96,7 +141,6 @@ export type MoreStackParamList = {
   Settings: undefined;
   MyFarm: undefined;
   InputRecipes: { initialTab?: string } | undefined;
-  SeasonalAlmanac: undefined;
 };
 
 // ─── Global declaration (makes useNavigation() auto-typed) ───────────────────
@@ -138,6 +182,7 @@ export type PlantFormScreenRouteProp = RouteProp<PlantsStackParamList, 'PlantFor
 
 // CalendarScreen (Care Plan tab) — receives tab-level params
 export type CalendarScreenRouteProp = RouteProp<RootTabParamList, 'Care Plan'>;
+export type CalendarScreenNavigationProp = BottomTabNavigationProp<RootTabParamList, 'Care Plan'>;
 
 // JournalScreen — navigates within JournalStack only
 export type JournalScreenNavigationProp = NativeStackNavigationProp<
@@ -159,10 +204,11 @@ export type PestListScreenNavigationProp = NativeStackNavigationProp<
   'PestList'
 >;
 
-// PestDetailScreen — receives pestId param
-export type PestDetailScreenNavigationProp = NativeStackNavigationProp<
-  MoreStackParamList,
-  'PestDetail'
+// PestDetailScreen — receives pestId param; also hops to the Care Plan tab to
+// open the create-task form from an action-plan step (composite)
+export type PestDetailScreenNavigationProp = CompositeNavigationProp<
+  NativeStackNavigationProp<MoreStackParamList, 'PestDetail'>,
+  BottomTabNavigationProp<RootTabParamList>
 >;
 export type PestDetailScreenRouteProp = RouteProp<MoreStackParamList, 'PestDetail'>;
 
@@ -172,10 +218,11 @@ export type DiseaseListScreenNavigationProp = NativeStackNavigationProp<
   'DiseaseList'
 >;
 
-// DiseaseDetailScreen — receives diseaseId param
-export type DiseaseDetailScreenNavigationProp = NativeStackNavigationProp<
-  MoreStackParamList,
-  'DiseaseDetail'
+// DiseaseDetailScreen — receives diseaseId param; also hops to the Care Plan
+// tab to open the create-task form from an action-plan step (composite)
+export type DiseaseDetailScreenNavigationProp = CompositeNavigationProp<
+  NativeStackNavigationProp<MoreStackParamList, 'DiseaseDetail'>,
+  BottomTabNavigationProp<RootTabParamList>
 >;
 export type DiseaseDetailScreenRouteProp = RouteProp<MoreStackParamList, 'DiseaseDetail'>;
 
@@ -198,6 +245,7 @@ export type BedListScreenNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<BedsStackParamList, 'BedList'>,
   BottomTabNavigationProp<RootTabParamList>
 >;
+export type BedListScreenRouteProp = RouteProp<BedsStackParamList, 'BedList'>;
 
 export type BedDetailScreenNavigationProp = NativeStackNavigationProp<
   BedsStackParamList,

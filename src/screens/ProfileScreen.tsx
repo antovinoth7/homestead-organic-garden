@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
@@ -24,12 +24,14 @@ export default function ProfileScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const { config, save } = useFarmCapacity();
 
+  const [ownerName, setOwnerName] = useState(config?.owner_name ?? '');
   const [families, setFamilies] = useState(config?.families_count ?? 1);
   const [goals, setGoals] = useState<FarmGoal[]>(config?.goals ?? ['self_sufficiency']);
   const [saving, setSaving] = useState(false);
 
   React.useEffect(() => {
     if (config) {
+      setOwnerName(config.owner_name ?? '');
       setFamilies(config.families_count);
       setGoals(config.goals as FarmGoal[]);
     }
@@ -43,11 +45,12 @@ export default function ProfileScreen(): React.JSX.Element {
     setSaving(true);
     await save({
       ...(config ?? { families_count: 1, goals: [] }),
+      owner_name: ownerName.trim() || undefined,
       families_count: families,
       goals,
     });
     setSaving(false);
-  }, [config, families, goals, save]);
+  }, [config, ownerName, families, goals, save]);
 
   const weeklyVeg = calcWeeklyVegNeed(families);
 
@@ -66,6 +69,18 @@ export default function ProfileScreen(): React.JSX.Element {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
       >
+        <Text style={styles.sectionLabel}>You</Text>
+
+        <TextInput
+          style={styles.nameInput}
+          value={ownerName}
+          onChangeText={setOwnerName}
+          placeholder="Your name"
+          placeholderTextColor={theme.inputPlaceholder}
+          autoCapitalize="words"
+          maxLength={40}
+        />
+
         <Text style={styles.sectionLabel}>Household</Text>
 
         <View style={styles.stepperRow}>

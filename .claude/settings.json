@@ -6,9 +6,20 @@
       "Bash(npm run test:coverage:*)",
       "Bash(npm run typecheck:*)",
       "Bash(npx tsc:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx jest:*)",
+      "Bash(npm run lint:file:*)",
+      "Bash(npm run codemap:*)",
+      "Bash(node scripts/generate-codemap.js)",
+      "Bash(node scripts/ensure-deps.js)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git stash list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)"
     ]
   },
   "hooks": {
@@ -17,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npm install --no-audit --no-fund --silent"
+            "command": "node scripts/ensure-deps.js"
           }
         ]
       }

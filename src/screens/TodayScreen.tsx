@@ -1,425 +1,358 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+/**
+ * TodayScreen — the daily operations brief.
+ *
+ * Four blocks: what today weighs (the sentence header), how each plot stands,
+ * what needs a decision, and where the season has got to. Anything that belongs
+ * to another tab lives in that tab; this screen answers "what do I do today, and
+ * where" and then gets out of the way.
+ *
+ * The plot cards and the needs-action list divide the work between them and do
+ * not overlap: the cards state *how much* scheduled work each plot owes, and the
+ * list names the exceptions no count can express — a sick crop, a rotation
+ * conflict, a harvest window — each with the plot it is on. Routine overdue work
+ * is a number here and a list in the Care Plan, never both.
+ *
+ * All the joining and counting happens in `useTodayBrief` — this file composes
+ * blocks, owns navigation, and owns whether the forecast overlay is open.
+ *
+ * The list is a FlatList because the needs-action list is unbounded: a farm
+ * with enough plants routinely produces more rows than a ScrollView should
+ * hold. The plot cards ride in the header — as a swipeable rail once there is
+ * more than one of them, see `PlotCarousel` — which must stay a memoized
+ * element or it remounts every time an alert changes, taking the rail's scroll
+ * position with it.
+ */
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
   ActivityIndicator,
+  FlatList,
+  LayoutChangeEvent,
+  RefreshControl,
+  Text,
+  View,
 } from 'react-native';
-import {
-  getTodayTasks,
-  getTodayTaskLogs,
-  getSeasonalCareReminder,
-  markTaskDone,
-} from '../services/tasks';
-import { getAllPlants } from '../services/plants';
-import { TaskTemplate, Plant, TaskLog, FarmAlert } from '../types/database.types';
-import { useBedData } from '../hooks/useBedData';
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { TodayScreenNavigationProp, TodayScreenRouteProp } from '../types/navigation.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, useThemeMode } from '../theme';
-import { createStyles } from '../styles/todayStyles';
-import { summarizeTodayTasks, computeDonutSegments } from '../utils/taskSummary';
-import { useTabBarScroll, TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
-import { safeGetItem, safeSetItem } from '../utils/safeStorage';
-import { getErrorMessage } from '../utils/errorLogging';
-import { getDaysToSWMonsoon, getPreMonsoonTasks } from '../utils/preMonsoonTasks';
-import { getSeasonalCareRhythm } from '../config/organicInputs/seasonalAdaptations';
-import { getSeasonLabel } from '../utils/seasonHelpers';
-import { getPlantHealthSummary } from '../utils/plantHealth';
-import { getFarmAlerts, isActionable } from '../services/alerts';
-import { getHarvestGapWarnings } from '../services/beds';
-import { useCrossBedStatus } from '../hooks/useCrossBedStatus';
-import { useFarmCapacity } from '../hooks/useFarmCapacity';
-import { NeedsAttentionScroll } from '../components/NeedsAttentionScroll';
-import { WeatherCard } from '../components/WeatherCard';
-import { PlantNowSection } from '../components/PlantNowSection';
-import { AlmanacHighlight } from '../components/AlmanacHighlight';
-import { InputReminderStrip } from '../components/InputReminderStrip';
-import { FarmHealthCard } from '../components/FarmHealthCard';
-import { TodayProgressCard } from '../components/TodayProgressCard';
-import { TaskListSection } from '../components/TaskListSection';
-import { BedsQuickScroll } from '../components/BedsQuickScroll';
-import { TipStrip } from '../components/TipStrip';
-import type { BedWithCoverage } from '../hooks/useBedData';
-
-const getGreeting = (): string => {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good Morning';
-  if (hour < 17) return 'Good Afternoon';
-  return 'Good Evening';
-};
-
-const THEME_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; label: string }> = {
-  light: { icon: 'sunny', label: 'Light' },
-  dark: { icon: 'moon', label: 'Dark' },
-  system: { icon: 'phone-portrait-outline', label: 'Auto' },
-};
+import { NeedsActionItem, PlantType, PlotBrief } from '@/types/database.types';
+import { BedLifecycle } from '@/utils/bedStatus';
+import { TodayScreenNavigationProp, TodayScreenRouteProp } from '@/types/navigation.types';
+import { useTheme } from '@/theme';
+import { createStyles } from '@/styles/todayScreenStyles';
+import { useTodayBrief } from '@/hooks/useTodayBrief';
+import { useTabBarScroll, TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
+import { TodayHeader } from '@/components/today/TodayHeader';
+import { PlotHealthFilter } from '@/components/today/PlotCard';
+import { PlotCarousel } from '@/components/today/PlotCarousel';
+import { NeedsActionRow } from '@/components/today/NeedsActionRow';
+import { SeasonBlock } from '@/components/today/SeasonBlock';
+import { ForecastOverlay } from '@/components/today/ForecastOverlay';
 
 export default function TodayScreen(): React.JSX.Element {
   const navigation = useNavigation<TodayScreenNavigationProp>();
   const route = useRoute<TodayScreenRouteProp>();
   const theme = useTheme();
-  const { mode, setMode } = useThemeMode();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const scrollViewRef = useRef<ScrollView>(null);
+  const listRef = useRef<FlatList<NeedsActionItem>>(null);
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
-  const [tasks, setTasks] = useState<TaskTemplate[]>([]);
-  const [plants, setPlants] = useState<Plant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
-  const isMountedRef = React.useRef(true);
-  const { beds: bedList } = useBedData();
 
-  // Pre-monsoon prep card — shown within 21 days of monsoon onset, dismissible per day
-  const [preMonsoonDismissed, setPreMonsoonDismissed] = useState(false);
-  useEffect(() => {
-    safeGetItem('premonsoon_card_dismissed_date').then((stored) => {
-      const today = new Date().toDateString();
-      if (stored === today) setPreMonsoonDismissed(true);
-    });
-  }, []);
-  const dismissPreMonsoon = useCallback(async () => {
-    setPreMonsoonDismissed(true);
-    await safeSetItem('premonsoon_card_dismissed_date', new Date().toDateString());
-  }, []);
+  const { brief, loading, error, reload, refreshWeatherFor, jobsByDateFor } = useTodayBrief();
+  const [forecastPlotId, setForecastPlotId] = useState<string | null>(null);
 
-  const daysToMonsoon = useMemo(() => getDaysToSWMonsoon(), []);
-  const preMonsoonTasks = useMemo(() => getPreMonsoonTasks(daysToMonsoon), [daysToMonsoon]);
-  const seasonRhythm = useMemo(() => getSeasonalCareRhythm(), []);
-  const seasonLabel = useMemo(() => getSeasonLabel(), []);
+  const openPlot = useMemo<PlotBrief | null>(
+    () => brief.plots.find((plot) => plot.id === forecastPlotId) ?? null,
+    [brief.plots, forecastPlotId]
+  );
 
-  const loadData = useCallback(async (options?: { silent?: boolean }) => {
-    if (isMountedRef.current && !options?.silent) {
-      setLoading(true);
-    }
-    try {
-      const [tasksData, plantsData, todayLogs] = await Promise.all([
-        getTodayTasks(),
-        getAllPlants(),
-        getTodayTaskLogs(),
-      ]);
-
-      if (!isMountedRef.current) return;
-
-      const plantIds = new Set(plantsData.map((plant) => plant.id));
-      const filteredTasks = tasksData.filter(
-        (task) => !task.plant_id || plantIds.has(task.plant_id)
-      );
-      const filteredLogs = todayLogs.filter((log) => !log.plant_id || plantIds.has(log.plant_id));
-
-      setTasks(filteredTasks);
-      setPlants(plantsData);
-      setTaskLogs(filteredLogs);
-    } catch (error: unknown) {
-      if (!isMountedRef.current) return;
-      if (!options?.silent) {
-        Alert.alert('Error', getErrorMessage(error));
-      }
-    } finally {
-      if (isMountedRef.current && !options?.silent) {
-        setLoading(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    loadData();
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, [loadData]);
-
-  // Listen for refresh param (e.g., after completing tasks)
+  // Refresh param, e.g. after completing work in another tab.
   useEffect(() => {
     if (route.params?.refresh) {
-      loadData();
+      void reload();
       navigation.setParams({ refresh: undefined });
     }
-  }, [route.params, navigation, loadData]);
+  }, [route.params, navigation, reload]);
 
-  // Reset scroll and do a silent refresh whenever the screen regains focus.
   useFocusEffect(
-    React.useCallback(() => {
-      // Reset scroll to top
-      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    useCallback(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
       resetTabBar();
-      void loadData({ silent: true });
-    }, [loadData, resetTabBar])
+      void reload({ silent: true });
+      // Leaving the tab with the overlay open would strand the user on a
+      // forecast when they came back.
+      return () => setForecastPlotId(null);
+    }, [reload, resetTabBar])
   );
 
-  // Task progress + per-type stats for the donut, pills and on-screen list.
-  const taskSummary = useMemo(() => summarizeTodayTasks(tasks, taskLogs), [tasks, taskLogs]);
-  const donutSegments = useMemo(() => computeDonutSegments(taskSummary), [taskSummary]);
+  // ─── Navigation ────────────────────────────────────────────────────────────
 
-  // Plant health counts (Garden Health tiles).
-  const health = useMemo(() => getPlantHealthSummary(plants), [plants]);
+  const goToCarePlan = useCallback(
+    () => navigation.navigate('Care Plan', { resetFilters: true }),
+    [navigation]
+  );
 
-  // Farm-wide alerts now flow through the alerts service (C.10) rather than
-  // inline computation. Bed rotation context comes from useCrossBedStatus.
-  const { config: farmConfig, metrics: farmMetrics } = useFarmCapacity();
-  const { rotationStatuses } = useCrossBedStatus(bedList);
-  const bedNames = useMemo(
-    () => Object.fromEntries(bedList.map((b) => [b.id, b.name])),
-    [bedList]
-  );
-  const farmAlerts = useMemo(
-    () =>
-      getFarmAlerts({
-        plants,
-        rotationStatuses,
-        harvestGapWarnings: getHarvestGapWarnings(bedList),
-        bedNames,
-      }),
-    [plants, rotationStatuses, bedList, bedNames]
-  );
-  const actionableAlerts = useMemo(() => farmAlerts.filter(isActionable), [farmAlerts]);
+  // The header flag counts exceptions, not overdue tasks — sending it to the
+  // Care Plan's overdue filter would open a list that does not contain them.
+  // Reveal the section it counts instead.
+  //
+  // Scrolls by measured offset rather than `scrollToIndex`: the first row sits
+  // below a tall header, so it is often not laid out yet and the index call
+  // would fail. `onLayout` on the section heading is measured either way.
+  //
+  // `layout.y` is relative to the parent, so the heading has to stay a direct
+  // child of the list header's root view for this to be a list offset.
+  const sectionYRef = useRef(0);
+  const handleSectionLayout = useCallback((e: LayoutChangeEvent) => {
+    sectionYRef.current = e.nativeEvent.layout.y;
+  }, []);
+
+  const goToNeedsAction = useCallback(() => {
+    listRef.current?.scrollToOffset({ offset: sectionYRef.current, animated: true });
+  }, []);
 
   const handleAlertPress = useCallback(
-    (alert: FarmAlert) => {
+    ({ alert }: NeedsActionItem) => {
       if (alert.plantId) {
         navigation.navigate('Plants', {
           screen: 'PlantDetail',
           params: { plantId: alert.plantId },
         });
       } else if (alert.bedId) {
-        navigation.navigate('Beds', {
-          screen: 'BedDetail',
-          params: { bedId: alert.bedId },
-        });
+        navigation.navigate('Beds', { screen: 'BedDetail', params: { bedId: alert.bedId } });
+      } else {
+        // Farm-level alert — the bed list is where it can be acted on.
+        navigation.navigate('Beds', { screen: 'BedList' });
       }
     },
     [navigation]
   );
 
-  const openJeevamruthaRecipe = useCallback(() => {
-    navigation.navigate('More', {
-      screen: 'InputRecipes',
-      params: { initialTab: 'jeevamrutha' },
-    });
-  }, [navigation]);
+  const handlePressPlot = useCallback(() => goToCarePlan(), [goToCarePlan]);
 
-  const openAlmanac = useCallback(() => {
-    navigation.navigate('More', { screen: 'SeasonalAlmanac' });
-  }, [navigation]);
+  // The card's overdue figure names a section the Care Plan already renders, so
+  // it opens the plan *there* rather than at the top. Filters are still reset —
+  // the plan is not narrowed, the rest of it just sits below the section. The
+  // count is per-plot and the plan is farm-wide, so the plot id is not carried.
+  const handlePressOverdue = useCallback(
+    () => navigation.navigate('Care Plan', { resetFilters: true, scrollTo: 'overdue' }),
+    [navigation]
+  );
+  const handlePressWeather = useCallback((plotId: string) => setForecastPlotId(plotId), []);
+  const closeForecast = useCallback(() => setForecastPlotId(null), []);
+  const retryForecast = useCallback(() => {
+    if (forecastPlotId) void refreshWeatherFor(forecastPlotId);
+  }, [forecastPlotId, refreshWeatherFor]);
+  const handleRefresh = useCallback(() => {
+    void reload({ forceWeather: true });
+  }, [reload]);
 
+  // The no-beds tile's "Add a bed" link — the one place a card opens the Beds tab
+  // without saying which beds it means.
+  const goToBeds = useCallback(
+    () => navigation.navigate('Beds', { screen: 'BedList' }),
+    [navigation]
+  );
+
+  // A season suggestion is a crop the farm does not have yet, so it has no
+  // plant record to open — the catalog entry is where its spacing, depth and
+  // days to harvest are, which is what the tile's figures are quoting from.
+  const goToCatalogEntry = useCallback(
+    (plantName: string, plantType: PlantType) => {
+      navigation.navigate('More', {
+        screen: 'CatalogPlantDetail',
+        params: { plantName, plantType },
+      });
+    },
+    [navigation]
+  );
+
+  const goToMyFarm = useCallback(
+    () => navigation.navigate('More', { screen: 'MyFarm' }),
+    [navigation]
+  );
+
+  // The health counts open the plant list filtered to that status *and* scoped
+  // to the plot that was tapped, so the list holds exactly the plants the count
+  // named. Both land in the list's own filter sheet, where they are visible and
+  // clearable. The card counts pots and ground because that is the segment the
+  // list opens on.
   const handlePressHealth = useCallback(
-    (healthFilter: 'healthy' | 'stressed' | 'sick') => {
-      navigation.navigate('Plants', { screen: 'PlantsList', params: { healthFilter } });
+    (plotId: string, healthFilter: PlotHealthFilter) => {
+      navigation.navigate('Plants', {
+        screen: 'PlantsList',
+        params: { healthFilter, plotFilter: plotId },
+      });
     },
     [navigation]
   );
 
-  const handlePressBed = useCallback(
-    (bed: BedWithCoverage) => {
-      navigation.navigate('Beds', { screen: 'BedDetail', params: { bedId: bed.id } });
+  // The bed counts do the same into the Beds tab: the lifecycle tapped, scoped to
+  // the plot that was tapped.
+  //
+  // With no plots configured there is one card, and it is named after the district
+  // rather than after anything a bed is filed under — scoping by its id would open
+  // an empty list, so the whole list is the honest answer there. Configured plots
+  // and the unassigned bucket both resolve against `Bed.parent_location`.
+  const plotsAreConfigured = useMemo(
+    () => brief.plots.some((plot) => plot.isConfigured),
+    [brief.plots]
+  );
+
+  const handlePressBedStatus = useCallback(
+    (plotId: string, lifecycleFilter: BedLifecycle) => {
+      navigation.navigate('Beds', {
+        screen: 'BedList',
+        params: { lifecycleFilter, ...(plotsAreConfigured && { plotFilter: plotId }) },
+      });
     },
-    [navigation]
+    [navigation, plotsAreConfigured]
   );
 
-  const handleNewBed = useCallback(() => {
-    navigation.navigate('Beds', { screen: 'BedCreationWizard' });
-  }, [navigation]);
+  // ─── List parts ────────────────────────────────────────────────────────────
 
-  const cycleTheme = useCallback(() => {
-    const order: ('light' | 'dark' | 'system')[] = ['light', 'dark', 'system'];
-    const idx = order.indexOf(mode);
-    setMode(order[(idx + 1) % order.length]!);
-  }, [mode, setMode]);
+  const listHeader = useMemo(
+    () => (
+      <View>
+        <TodayHeader
+          dateLabel={brief.dateLabel}
+          taskCount={brief.remainingTasks}
+          needActionCount={brief.needActionCount}
+          topInset={insets.top}
+          onPressTasks={goToCarePlan}
+          onPressNeedAction={goToNeedsAction}
+        />
 
-  const handleCompleteTask = useCallback(
-    async (template: TaskTemplate) => {
-      const ok = await markTaskDone(template);
-      if (ok) void loadData({ silent: true });
-    },
-    [loadData]
+        {error !== null && <Text style={styles.errorText}>{error}</Text>}
+
+        {/* The card rides up onto the green. Suppressed while an error is
+            showing, so the card cannot pull up over the message. */}
+        <View style={error === null ? styles.plotsLift : null}>
+          <PlotCarousel
+            plots={brief.plots}
+            onPressPlot={handlePressPlot}
+            onPressOverdue={handlePressOverdue}
+            onPressWeather={handlePressWeather}
+            onPressHealth={handlePressHealth}
+            onPressBedStatus={handlePressBedStatus}
+            onPressBeds={goToBeds}
+          />
+        </View>
+
+        {/* Withheld on an all-clear day: no heading, no empty row. */}
+        {brief.needActionCount > 0 && (
+          <View style={styles.sectionHeader} onLayout={handleSectionLayout}>
+            <Text style={styles.sectionTitle}>Needs action</Text>
+            <Text style={styles.sectionCount}>{brief.needActionCount}</Text>
+          </View>
+        )}
+      </View>
+    ),
+    [
+      brief,
+      insets.top,
+      error,
+      styles,
+      goToCarePlan,
+      goToNeedsAction,
+      handleSectionLayout,
+      handlePressPlot,
+      handlePressOverdue,
+      handlePressWeather,
+      handlePressHealth,
+      handlePressBedStatus,
+      goToBeds,
+    ]
   );
 
-  const targetNames = useMemo(() => {
-    const map: Record<string, string> = { ...bedNames };
-    for (const plant of plants) map[plant.id] = plant.name;
-    return map;
-  }, [plants, bedNames]);
-
-  const goToCarePlan = useCallback(
-    () => navigation.navigate('Care Plan', { resetFilters: true }),
-    [navigation]
+  const listFooter = useMemo(
+    () => (
+      <SeasonBlock
+        season={brief.season}
+        note={brief.seasonNote}
+        seasonIconKey={brief.seasonIconKey}
+        tip={brief.seasonTip}
+        tipTitle={brief.seasonTipTitle}
+        district={brief.district}
+        zoneLabel={brief.zoneLabel}
+        plantingState={brief.plantingState}
+        recommendations={brief.plantNow}
+        openingNext={brief.openingNext}
+        openingNextLabel={brief.openingNextLabel}
+        perennialCare={brief.perennialCare}
+        onPressCrop={goToCatalogEntry}
+        onPressDistrict={goToMyFarm}
+      />
+    ),
+    [brief, goToCatalogEntry, goToMyFarm]
   );
-  const goToOverdue = useCallback(
-    () => navigation.navigate('Care Plan', { filterOverdue: true }),
-    [navigation]
+
+  const renderItem = useCallback(
+    ({ item }: { item: NeedsActionItem }) => (
+      <NeedsActionRow item={item} onPress={handleAlertPress} />
+    ),
+    [handleAlertPress]
   );
-  const goToCarePlanPlain = useCallback(() => navigation.navigate('Care Plan'), [navigation]);
 
-  // Daily tip (C.14): prefer the top informational farm alert (e.g. green
-  // manure / pest note), else fall back to a season-specific care reminder.
-  const tipText = useMemo(() => {
-    const info = farmAlerts.find((a) => !isActionable(a));
-    if (info) return info.message;
-    for (const plant of plants) {
-      const tip = getSeasonalCareReminder(plant);
-      if (tip) return tip;
-    }
-    return null;
-  }, [farmAlerts, plants]);
+  const separator = useCallback(() => <View style={styles.divider} />, [styles]);
 
-  if (loading && tasks.length === 0 && plants.length === 0) {
+  // True first-ever launch: nothing cached, so there is genuinely nothing to paint.
+  if (loading && brief.plots.length === 0) {
     return (
-      <View style={[styles.container, styles.containerCentered, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={styles.container}>
+        <TodayHeader
+          dateLabel={brief.dateLabel}
+          taskCount={0}
+          needActionCount={0}
+          topInset={insets.top}
+          onPressTasks={goToCarePlan}
+          onPressNeedAction={goToNeedsAction}
+        />
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={styles.loadingText}>Loading your farm…</Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      ref={scrollViewRef}
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 }}
-      onScroll={onTabBarScroll}
-      scrollEventThrottle={16}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
-    >
-      {/* Hero Header */}
-      <View style={[styles.heroHeader, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.headerRow}>
-          <View style={styles.flexOne}>
-            <Text style={styles.heroGreeting}>{getGreeting()}</Text>
-            <Text style={styles.heroDate}>
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-          </View>
-          <TouchableOpacity style={styles.heroThemeToggle} onPress={cycleTheme}>
-            <Ionicons name={THEME_ICONS[mode]!.icon} size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Today's progress donut + task-type pills (C.11) */}
-      <TodayProgressCard
-        completionRate={taskSummary.completionRate}
-        completed={taskSummary.completed}
-        totalTasks={taskSummary.totalTasks}
-        overdueCount={taskSummary.overdueCount}
-        typeStats={taskSummary.typeStats}
-        donutSegments={donutSegments}
-        onPressRing={goToCarePlan}
-        onPressOverdue={goToOverdue}
-        onPressType={goToCarePlanPlain}
+    <View style={styles.container}>
+      <FlatList
+        ref={listRef}
+        style={styles.list}
+        data={brief.needsAction}
+        keyExtractor={(item) => item.alert.id}
+        renderItem={renderItem}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
+        ItemSeparatorComponent={separator}
+        contentContainerStyle={{
+          paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16,
+        }}
+        onScroll={onTabBarScroll}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={handleRefresh}
+            progressViewOffset={insets.top}
+          />
+        }
       />
 
-      {/* On-screen task list with inline completion (C.15) */}
-      <TaskListSection
-        overdue={taskSummary.overdueTasks}
-        today={taskSummary.todayTasks}
-        targetNames={targetNames}
-        onComplete={handleCompleteTask}
-        onSeeAll={goToCarePlanPlain}
-      />
-
-      {/* Needs Attention — actionable alerts from alerts.ts (C.8/C.10) */}
-      <NeedsAttentionScroll alerts={actionableAlerts} onPressAlert={handleAlertPress} />
-
-      {/* Weather (C.3) + What to Plant Now (C.1) */}
-      <WeatherCard />
-      <PlantNowSection />
-
-      {/* Farm health: header + health tiles + capacity bars (C.7) */}
-      <FarmHealthCard
-        health={health}
-        categoryBreakdown={farmMetrics?.categoryBreakdown}
-        bedCount={bedList.length}
-        usableSqm={farmMetrics?.usableSqm}
-        familiesCount={farmConfig?.families_count}
-        onPressHealth={handlePressHealth}
-      />
-
-      {/* Bed mini-cards horizontal scroll (C.12) */}
-      <BedsQuickScroll beds={bedList} onPressBed={handlePressBed} onNewBed={handleNewBed} />
-
-      {/* Current-season care rhythm */}
-      {seasonRhythm !== null && (
-        <View style={styles.rhythmCard}>
-          <Text style={styles.rhythmTitle}>🗓️ This Season&apos;s Rhythm · {seasonLabel}</Text>
-          <View style={styles.rhythmRow}>
-            <Text style={styles.rhythmLabel}>💧 Water</Text>
-            <Text style={styles.rhythmValue}>{seasonRhythm.waterInterval}</Text>
-          </View>
-          <View style={styles.rhythmRow}>
-            <Text style={styles.rhythmLabel}>🍂 Mulch</Text>
-            <Text style={styles.rhythmValue}>{seasonRhythm.mulchCheck}</Text>
-          </View>
-          <View style={styles.rhythmRow}>
-            <Text style={styles.rhythmLabel}>🧪 Jeevamrutha</Text>
-            <Text style={styles.rhythmValue}>{seasonRhythm.jeevamruthaInterval}</Text>
-          </View>
-        </View>
+      {openPlot !== null && (
+        <ForecastOverlay
+          plotName={openPlot.name}
+          district={openPlot.district}
+          source={openPlot.weather.source}
+          forecast={openPlot.weather.forecast}
+          stale={openPlot.weather.stale}
+          loading={openPlot.weather.loading}
+          jobsByDate={jobsByDateFor(openPlot.id)}
+          onRetry={retryForecast}
+          onClose={closeForecast}
+        />
       )}
-
-      {/* Pre-monsoon prep — only within the 21-day window, dismissible per day */}
-      {preMonsoonTasks.length > 0 && !preMonsoonDismissed && (
-        <View style={styles.preMonsoonCard}>
-          <View style={styles.preMonsoonHeader}>
-            <Text style={styles.preMonsoonTitle}>
-              🌧️ Pre-Monsoon Prep · {daysToMonsoon} day{daysToMonsoon === 1 ? '' : 's'} to monsoon
-            </Text>
-            <TouchableOpacity
-              style={styles.preMonsoonClose}
-              onPress={dismissPreMonsoon}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="close" size={16} color={theme.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          {preMonsoonTasks.map((task) => (
-            <View key={task.id} style={styles.preMonsoonTaskRow}>
-              <Text style={styles.preMonsoonTaskIcon}>{task.icon}</Text>
-              <View style={styles.preMonsoonTaskText}>
-                <Text style={styles.preMonsoonTaskTitle}>{task.title}</Text>
-                <Text style={styles.preMonsoonTaskDesc}>{task.description}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Daily tip strip — dismissible per day (C.14) */}
-      <TipStrip tip={tipText} />
-
-      {/* Jeevamrutha batch reminder (C.13) */}
-      <InputReminderStrip
-        landCents={farmConfig?.land_cents ?? 5}
-        bedCount={bedList.length}
-        cadenceLabel={seasonRhythm?.jeevamruthaInterval}
-        onPress={openJeevamruthaRecipe}
-      />
-
-      {/* Monthly almanac highlight (C.4) */}
-      <AlmanacHighlight onViewAll={openAlmanac} />
-
-      {tasks.length === 0 && !loading && (
-        <View style={styles.emptyState}>
-          <Ionicons name="checkmark-circle-outline" size={64} color="#4caf50" />
-          <Text style={styles.emptyText}>All caught up! 🎉</Text>
-          <Text style={styles.emptySubtext}>No tasks due today</Text>
-          <TouchableOpacity
-            style={styles.emptyButton}
-            onPress={() => navigation.navigate('Care Plan')}
-          >
-            <Text style={styles.emptyButtonText}>View Schedule</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </ScrollView>
+    </View>
   );
 }

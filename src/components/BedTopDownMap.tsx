@@ -8,6 +8,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import type { ImageSource } from 'expo-image';
 import {
   GestureHandlerRootView,
   PinchGestureHandler,
@@ -21,9 +22,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
-import { computeInterleavedEastPositions } from '@/utils/rowLayoutEngine';
+import { computeEmptySlotPositions, computeInterleavedEastPositions } from '@/utils/rowLayoutEngine';
 import type { BedRow } from '@/utils/rowLayoutEngine';
 import type { BedLayer } from '@/types/database.types';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
 
 interface RowWarning {
   rowIndex: number;
@@ -34,7 +36,7 @@ interface BedTopDownMapProps {
   widthM: number;
   lengthM: number;
   rows: BedRow[];
-  plantEmoji: (name: string) => string;
+  plantImage: (name: string) => ImageSource | undefined;
   layerColor: (layer: BedLayer) => string;
   walkingPathCm?: number;
   edgeBufferCm?: number;
@@ -50,10 +52,15 @@ function shortLabel(name: string): string {
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const LABEL_VISIBLE_SCALE = 1.2;
-// Inline: tdmCard.padding (10) ×2 + tdmRuler.width (26) + tdmMapWrap.gap (6)
-const HORIZONTAL_OVERHEAD = 10 * 2 + 26 + 6;
-// Modal: tdmModalCanvasWrap.padding (12) + tdmRuler.width (26) + tdmMapWrap.gap (6)
-const MODAL_HORIZONTAL_OVERHEAD = 12 * 2 + 26 + 6;
+// Row-tag gutter sits to the left of the canvas (see tdmRowTagGutter).
+const ROW_TAG_GUTTER_WIDTH = 34;
+// Skip the row-gap chip when the gap is under this share of the bed length —
+// the chip would collide with the adjacent centerlines/pins.
+const ROW_GAP_LABEL_MIN_PCT = 7;
+// Inline: tdmCard.padding (10) ×2 + row-tag gutter (34) + tdmPlotRow.gap (6)
+const HORIZONTAL_OVERHEAD = 10 * 2 + ROW_TAG_GUTTER_WIDTH + 6;
+// Modal: tdmModalCanvasWrap.padding (12) ×2 + row-tag gutter (34) + tdmPlotRow.gap (6)
+const MODAL_HORIZONTAL_OVERHEAD = 12 * 2 + ROW_TAG_GUTTER_WIDTH + 6;
 // Modal vertical chrome around the canvas: header (~52), compass top+bottom (~58),
 // legend (~36), wrap padding (~24).
 const MODAL_VERTICAL_CHROME = 170;
@@ -136,7 +143,7 @@ function BedTopDownCanvas({
   widthM,
   lengthM,
   rows,
-  plantEmoji,
+  plantImage,
   layerColor,
   walkingPathCm = 60,
   edgeBufferCm = 0,
@@ -151,21 +158,12 @@ function BedTopDownCanvas({
 
   const pinScale = clamp(mapWidth / 360, 0.9, 1.5);
   const pinSize = Math.round(22 * pinScale);
-  const pinEmojiSize = Math.round(11 * pinScale);
   const pinLabelSize = Math.max(6, Math.round(7 * pinScale));
   const gapCaretSize = Math.max(6, Math.round(7 * pinScale));
   const pinWrapWidth = pinSize + 10;
 
   const widthCm = Math.max(1, Math.round(widthM * 100));
   const lengthCm = Math.max(1, Math.round(lengthM * 100));
-
-  const rulerTicks = useMemo<number[]>(() => {
-    const ticks: number[] = [];
-    for (let m = 0; m <= lengthM + 1e-6; m += 0.5) {
-      ticks.push(Math.round(m * 10) / 10);
-    }
-    return ticks;
-  }, [lengthM]);
 
   const gridColCount = Math.max(0, Math.floor((widthCm - 1) / 30));
   const gridRowCount = Math.max(0, Math.floor((lengthCm - 1) / 30));
@@ -189,6 +187,10 @@ function BedTopDownCanvas({
   );
   const companionCount = useMemo(
     () => rows.reduce((sum, r) => sum + r.plants.filter((p) => p.isCompanion === true).length, 0),
+    [rows]
+  );
+  const openSlotCount = useMemo(
+    () => rows.reduce((sum, r) => sum + computeEmptySlotPositions(r).length, 0),
     [rows]
   );
 
@@ -329,7 +331,7 @@ function BedTopDownCanvas({
 
   const pathLabel = `${walkingPathCm} cm path`;
   const edgeLabel = `${edgeBufferCm} cm edge`;
-  const compassDim = `${widthM.toFixed(1)} m wide`;
+  const compassDim = `${widthM.toFixed(1)} m × ${lengthM.toFixed(1)} m`;
   const legendFooter =
     edgeBufferCm > 0
       ? `${walkingPathCm} cm path · ${edgeBufferCm} cm edge`
@@ -348,12 +350,21 @@ function BedTopDownCanvas({
       </View>
 
       <View style={styles.tdmPlotRow}>
-        <View style={styles.tdmRuler}>
-          {rulerTicks.map((m) => (
-            <Text key={m} style={[styles.tdmRulerTick, { top: `${(m / lengthM) * 100}%` }]}>
-              {m.toFixed(1)} m
-            </Text>
-          ))}
+        <View style={styles.tdmRowTagGutter}>
+          {rows.map((row) => {
+            const centerPct = (row.northEdgeCm / lengthCm) * 100;
+            const warning = warningByRow.get(row.rowIndex);
+            return (
+              <View
+                key={`rowtag-${row.rowIndex}`}
+                style={[styles.tdmRowTag, { top: `${centerPct}%` }]}
+                accessibilityLabel={`Row ${row.rowIndex}${warning ? ` · ${warning}` : ''}`}
+              >
+                <Text style={styles.tdmRowTagText}>R{row.rowIndex}</Text>
+                {warning ? <Ionicons name="warning" size={10} color={theme.warning} /> : null}
+              </View>
+            );
+          })}
         </View>
 
         <View style={styles.tdmPlotCol}>
@@ -451,8 +462,37 @@ function BedTopDownCanvas({
                   );
                 })}
 
+                {rows.slice(0, -1).map((row, i) => {
+                  const next = rows[i + 1];
+                  if (next === undefined) return null;
+                  const gapCm = Math.round(next.northEdgeCm - row.northEdgeCm);
+                  const gapPct = (gapCm / lengthCm) * 100;
+                  if (gapCm <= 0 || gapPct < ROW_GAP_LABEL_MIN_PCT) return null;
+                  const midPct = ((row.northEdgeCm + next.northEdgeCm) / 2 / lengthCm) * 100;
+                  return (
+                    <View
+                      key={`rowgap-${row.rowIndex}`}
+                      style={[styles.tdmRowGapChip, { top: `${midPct}%` }]}
+                      pointerEvents="none"
+                      accessibilityLabel={`${gapCm} cm gap between row ${row.rowIndex} and row ${next.rowIndex}`}
+                    >
+                      <Text
+                        style={[styles.tdmRowGapChipText, { fontSize: gapCaretSize }]}
+                        numberOfLines={1}
+                      >
+                        Gap {gapCm} cm
+                      </Text>
+                    </View>
+                  );
+                })}
+
                 {rows.map((row) => {
-                  const positions = computeInterleavedEastPositions(row);
+                  // Gaps read across the whole slot grid — planted and open
+                  // slots alike — so every column gap is measured.
+                  const positions = [
+                    ...computeInterleavedEastPositions(row),
+                    ...computeEmptySlotPositions(row),
+                  ].sort((a, b) => a - b);
                   const topPct = (row.northEdgeCm / lengthCm) * 100;
                   const carets: React.ReactNode[] = [];
                   for (let i = 0; i < positions.length - 1; i++) {
@@ -463,22 +503,24 @@ function BedTopDownCanvas({
                     if (gapCm <= 0) continue;
                     const midPct = ((left + right) / 2 / widthCm) * 100;
                     carets.push(
-                      <Animated.View
+                      <View
                         key={`gap-${row.rowIndex}-${i}`}
                         style={[
                           styles.tdmGapCaret,
                           {
                             left: `${midPct}%`,
                             top: `${topPct}%`,
-                            opacity: labelOpacity,
                           },
                         ]}
                         pointerEvents="none"
                       >
-                        <Text style={[styles.tdmGapCaretText, { fontSize: gapCaretSize }]}>
-                          ↔{gapCm}
+                        <Text
+                          style={[styles.tdmGapCaretText, { fontSize: gapCaretSize }]}
+                          numberOfLines={1}
+                        >
+                          {gapCm}cm
                         </Text>
-                      </Animated.View>
+                      </View>
                     );
                   }
                   return <React.Fragment key={`gaps-${row.rowIndex}`}>{carets}</React.Fragment>;
@@ -520,9 +562,12 @@ function BedTopDownCanvas({
                               : { borderColor: layerColor(row.layer) },
                           ]}
                         >
-                          <Text style={[styles.tdmPinEmoji, { fontSize: pinEmojiSize }]}>
-                            {plantEmoji(plant.name)}
-                          </Text>
+                          <ReferenceThumb
+                            source={plantImage(plant.name)}
+                            fallbackIcon="general.plant"
+                            variant="chip"
+                            accessibilityLabel={`${plant.name} reference image`}
+                          />
                         </View>
                         <Animated.Text
                           style={[
@@ -539,23 +584,36 @@ function BedTopDownCanvas({
                 })}
 
                 {rows.map((row) => {
-                  const centerPct = (row.northEdgeCm / lengthCm) * 100;
-                  const warning = warningByRow.get(row.rowIndex);
-                  return (
-                    <View
-                      key={`rowtag-${row.rowIndex}`}
-                      style={[styles.tdmRowTag, { top: `${centerPct}%` }]}
-                    >
-                      <Text style={styles.tdmRowTagText}>R{row.rowIndex}</Text>
-                      {warning ? <Text style={styles.tdmRowTagWarn}> ⚠</Text> : null}
-                    </View>
-                  );
+                  const topPct = (row.northEdgeCm / lengthCm) * 100;
+                  return computeEmptySlotPositions(row).map((eastCm, i) => {
+                    const leftPct = (eastCm / widthCm) * 100;
+                    return (
+                      <View
+                        key={`emptyslot-${row.rowIndex}-${i}`}
+                        style={[
+                          styles.tdmEmptySlot,
+                          {
+                            width: pinSize,
+                            height: pinSize,
+                            borderRadius: pinSize / 2,
+                            left: `${leftPct}%`,
+                            top: `${topPct}%`,
+                            marginLeft: -pinSize / 2,
+                            marginTop: -pinSize / 2,
+                          },
+                        ]}
+                        pointerEvents="none"
+                        accessibilityLabel={`Open slot at ${eastCm} cm in row ${row.rowIndex}`}
+                      />
+                    );
+                  });
                 })}
 
                 {overflowCm > 0 && (
                   <View style={styles.tdmOverflowBadge}>
+                    <Ionicons name="warning-outline" size={13} color={theme.error} />
                     <Text style={styles.tdmOverflowText}>
-                      ⚠ Overflow {Math.round(overflowCm)} cm
+                      Overflow {Math.round(overflowCm)} cm
                     </Text>
                   </View>
                 )}
@@ -626,6 +684,12 @@ function BedTopDownCanvas({
           <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchCompanion]} />
           <Text style={styles.tdmLegendText}>Companion × {companionCount}</Text>
         </View>
+        {openSlotCount > 0 && (
+          <View style={styles.tdmLegendItem}>
+            <View style={[styles.tdmLegendSwatch, styles.tdmLegendSwatchOpenSlot]} />
+            <Text style={styles.tdmLegendText}>Open slot × {openSlotCount}</Text>
+          </View>
+        )}
         <Text style={styles.tdmLegendHint}>Tallest crops at North</Text>
       </View>
 
@@ -685,14 +749,17 @@ export function BedTopDownMap(props: BedTopDownMapProps): React.JSX.Element | nu
             style={[styles.tdmModalRoot, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
           >
             <View style={styles.tdmModalHeader}>
-              <Text style={styles.tdmModalTitle}>{dimensionLabel}</Text>
+              <View>
+                <Text style={styles.tdmModalTitle}>{dimensionLabel}</Text>
+                <Text style={styles.tdmModalSubtitle}>Top-down view · 30 cm grid</Text>
+              </View>
               <TouchableOpacity
                 style={styles.tdmModalClose}
                 onPress={() => setIsFullScreen(false)}
                 accessibilityLabel="Close fullscreen map"
                 hitSlop={8}
               >
-                <Ionicons name="close" size={24} color={theme.text} />
+                <Ionicons name="close" size={18} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
             <View style={styles.tdmModalCanvasWrap}>

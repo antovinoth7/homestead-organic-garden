@@ -58,6 +58,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       color: theme.text,
     },
+    stageLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
     stageLabelCurrent: {
       color: theme.primary,
       fontWeight: '700',

@@ -34,6 +34,17 @@ export const createStyles = (theme: Theme) =>
       marginBottom: 10,
       marginTop: 4,
     },
+    nameInput: {
+      backgroundColor: theme.inputBackground,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      paddingHorizontal: 12,
+      height: 44,
+      fontSize: 15,
+      color: theme.inputText,
+      marginBottom: 16,
+    },
     stepperRow: {
       flexDirection: 'row',
       alignItems: 'center',

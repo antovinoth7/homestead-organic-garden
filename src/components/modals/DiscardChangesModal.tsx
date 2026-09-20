@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import type { Theme } from '../../theme/colors';
@@ -19,8 +19,22 @@ export default function DiscardChangesModal({
 }: DiscardChangesModalProps): React.JSX.Element {
   const theme = useTheme() as Theme;
   return (
-    <Modal visible={visible} animationType="fade" transparent={true} onRequestClose={onKeepEditing}>
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={onKeepEditing}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={styles.discardOverlay}>
+        {/* Tapping outside takes the non-destructive path, never Discard. */}
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onKeepEditing}
+          accessibilityRole="button"
+          accessibilityLabel="Keep editing"
+        />
         <View style={styles.discardCard}>
           <View style={styles.discardIconWrap}>
             <Ionicons name="alert-circle" size={36} color={theme.error} />

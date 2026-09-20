@@ -19,12 +19,17 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
     },
     statIconRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       gap: 6,
       marginBottom: 4,
+      // Reserve two label lines so wrapped labels ("Years to First Harvest")
+      // never overflow the card and every value below stays row-aligned.
+      minHeight: 32,
     },
     statLabel: {
+      flex: 1,
       fontSize: 12,
+      lineHeight: 16,
       color: theme.textTertiary,
       fontWeight: '500',
     },

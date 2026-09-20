@@ -1,7 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import type { ImageStyle } from 'react-native';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { Image } from 'expo-image';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -9,8 +8,9 @@ import { pinGrowthStage, unpinGrowthStage, archivePlant } from '@/services/plant
 import { JournalEntryType } from '@/types/database.types';
 import type { GrowthStage } from '@/types/database.types';
 import { useTheme } from '@/theme';
-import { ScreenHeader } from '@/components/ScreenHeader';
 import { createStyles } from '@/styles/plantDetailStyles';
+import { PlantDetailHero } from '@/components/plantDetail/PlantDetailHero';
+import { PlantSectionHeader } from '@/components/plantDetail/PlantSectionHeader';
 import {
   getCompanionSuggestions,
   getIncompatiblePlants,
@@ -18,29 +18,40 @@ import {
   getCoconutAgeInfo,
   getCoconutNutrientDeficiencies,
   getEffectiveGrowthStage,
+  getValidStagesForPlant,
 } from '@/utils/plantHelpers';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
-import PestDiseaseHistorySection from '@/components/PestDiseaseHistorySection';
-import HarvestHistorySection from '@/components/HarvestHistorySection';
-import { DetailQuickInfoSection } from '@/components/DetailQuickInfoSection';
-import { BedContextSection } from '@/components/BedContextSection';
-import { DetailCareGuidanceSection } from '@/components/DetailCareGuidanceSection';
-import { PlantKeyInfoSection } from '@/components/PlantKeyInfoSection';
-import { GrowthStageSection } from '@/components/GrowthStageSection';
-import { ClearBedCta } from '@/components/ClearBedCta';
-import { CareScheduleSection } from '@/components/CareScheduleSection';
-import { CompanionPlantingSection } from '@/components/CompanionPlantingSection';
-import { HarvestInfoSection } from '@/components/HarvestInfoSection';
-import { CoconutSection } from '@/components/CoconutSection';
-import { PlantNotesSection } from '@/components/PlantNotesSection';
-import { PlantTasksSection } from '@/components/PlantTasksSection';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
 import { PinGrowthStageModal } from '@/components/PinGrowthStageModal';
+import { SegmentedTabs } from '@/components/SegmentedTabs';
+import type { SegmentedTab } from '@/components/SegmentedTabs';
+import { PlantDetailCareSection } from '@/components/plantDetail/PlantDetailCareSection';
+import { PlantDetailGuideSection } from '@/components/plantDetail/PlantDetailGuideSection';
+import { PlantDetailInfoSection } from '@/components/plantDetail/PlantDetailInfoSection';
+import { PlantPicturesSection } from '@/components/plantDetail/PlantPicturesSection';
+import { PlantHistorySection } from '@/components/plantDetail/PlantHistorySection';
+import { CoconutSection } from '@/components/CoconutSection';
 import { usePlantDetail } from '@/hooks/usePlantDetail';
+import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
 import {
   PlantDetailScreenNavigationProp,
   PlantDetailScreenRouteProp,
 } from '@/types/navigation.types';
+
+type PlantDetailTabKey = 'care' | 'guide' | 'info' | 'pictures' | 'history';
+
+const TAB_KEYS: readonly PlantDetailTabKey[] = ['care', 'guide', 'info', 'pictures', 'history'];
+
+/** Height of the header overlay below the top inset: 4 top gap + 40 button + 6 bottom pad. */
+const HEADER_OVERLAY_CLEARANCE = 50;
+
+const TABS: readonly SegmentedTab<PlantDetailTabKey>[] = [
+  { key: 'care', label: 'Care', icon: 'water-outline' },
+  { key: 'guide', label: 'Guide', icon: 'book-outline' },
+  { key: 'info', label: 'Info', icon: 'people-outline' },
+  { key: 'pictures', label: 'Pictures', icon: 'images-outline' },
+  { key: 'history', label: 'History', icon: 'time-outline' },
+];
 
 export default function PlantDetailScreen(): React.JSX.Element {
   const navigation = useNavigation<PlantDetailScreenNavigationProp>();
@@ -50,10 +61,62 @@ export default function PlantDetailScreen(): React.JSX.Element {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
-  const { plant, tasks, harvestEntries, loading, reload } = usePlantDetail(plantId);
+  const { plant, tasks, journalEntries, loading, reload } = usePlantDetail(plantId);
   const [isArchiving, setIsArchiving] = useState(false);
   const [zoomVisible, setZoomVisible] = useState(false);
   const [pinStageVisible, setPinStageVisible] = useState(false);
+  // Task logs are an uncached read — defer loading until the History section is reached.
+  const [historyEnabled, setHistoryEnabled] = useState(false);
+  // The hero is full-bleed with floating buttons; once the tab bar pins we swap
+  // to a solid compact header so back/edit stay reachable over content.
+  const [tabsStuck, setTabsStuck] = useState(false);
+  const tabBarYRef = useRef(0);
+
+  const {
+    activeKey,
+    scrollRef,
+    registerSection,
+    onTabBarLayout,
+    onScroll,
+    onMomentumScrollEnd,
+    scrollToKey,
+  } = useSectionScrollSpy<PlantDetailTabKey>(TAB_KEYS, insets.top + HEADER_OVERLAY_CLEARANCE);
+
+  const contentBottomPadding = Math.max(insets.bottom, 48) + 16;
+
+  const handleTabBarLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      tabBarYRef.current = event.nativeEvent.layout.y;
+      onTabBarLayout(event);
+    },
+    [onTabBarLayout]
+  );
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // Swap to the pinned overlay tab bar as the in-flow one reaches the bottom
+      // of the floating header, so the two line up and the handoff is seamless.
+      const stuckAt = tabBarYRef.current - (insets.top + HEADER_OVERLAY_CLEARANCE);
+      const stuck = event.nativeEvent.contentOffset.y >= stuckAt;
+      setTabsStuck((prev) => (prev === stuck ? prev : stuck));
+      onScroll(event);
+    },
+    [onScroll, insets.top]
+  );
+
+  useEffect(() => {
+    if (activeKey === 'history') setHistoryEnabled(true);
+  }, [activeKey]);
+
+  const handleTabPress = useCallback(
+    (key: PlantDetailTabKey) => {
+      // Enable the lazy task-log read as soon as History is requested, even if
+      // the section is too short to scroll fully under the sticky bar.
+      if (key === 'history') setHistoryEnabled(true);
+      scrollToKey(key);
+    },
+    [scrollToKey]
+  );
 
   const openHarvestForm = useCallback(() => {
     navigation.navigate('Journal', {
@@ -65,12 +128,29 @@ export default function PlantDetailScreen(): React.JSX.Element {
     });
   }, [navigation, plantId]);
 
-  const openBeejamruthaRecipe = useCallback(() => {
-    navigation.navigate('More', {
-      screen: 'InputRecipes',
-      params: { initialTab: 'beejamrutha' },
+  const openPestForm = useCallback(() => {
+    navigation.navigate('Journal', {
+      screen: 'JournalForm',
+      params: {
+        initialEntryType: JournalEntryType.PestDisease,
+        initialPlantId: plantId,
+      },
     });
-  }, [navigation]);
+  }, [navigation, plantId]);
+
+  const openNoteForm = useCallback(() => {
+    navigation.navigate('Journal', {
+      screen: 'JournalForm',
+      params: {
+        initialEntryType: JournalEntryType.Observation,
+        initialPlantId: plantId,
+      },
+    });
+  }, [navigation, plantId]);
+
+  const openCreateTask = useCallback(() => {
+    navigation.navigate('Care Plan', { openCreateTask: true, prefillPlantId: plantId });
+  }, [navigation, plantId]);
 
   if (!plantId) {
     return (
@@ -86,7 +166,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <Text>Loading...</Text>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -116,6 +196,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
   const careProfile = getPlantCareProfile(plant.plant_variety || '', plant.plant_type);
   const effectiveStage = careProfile ? getEffectiveGrowthStage(plant, careProfile) : null;
   const isPinned = Boolean(plant.growth_stage_pinned);
+  const pinnableStages = getValidStagesForPlant(plant, careProfile);
 
   const handleUnpin = async (): Promise<void> => {
     await unpinGrowthStage(plant.id);
@@ -154,134 +235,58 @@ export default function PlantDetailScreen(): React.JSX.Element {
   };
 
   return (
-    <>
-      <ScreenHeader
-        title={plant.name}
-        onBack={() => navigation.goBack()}
-        right={
-          <TouchableOpacity
-            onPress={() => navigation.navigate('PlantForm', { plantId })}
-            style={styles.editButton}
-            accessibilityRole="button"
-            accessibilityLabel="Edit plant"
-          >
-            <Ionicons name="pencil" size={22} color={theme.primary} />
-          </TouchableOpacity>
-        }
-      />
+    <View style={styles.container}>
+      {plant.photo_url && (
+        <ImageZoomModal
+          visible={zoomVisible}
+          sources={[plant.photo_url]}
+          onClose={() => setZoomVisible(false)}
+        />
+      )}
+
       <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
+        ref={scrollRef}
+        onScroll={handleScroll}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: contentBottomPadding }}
       >
-        {plant.photo_url ? (
-          <TouchableOpacity activeOpacity={0.9} onPress={() => setZoomVisible(true)}>
-            <Image
-              source={{ uri: plant.photo_url }}
-              style={styles.photo as ImageStyle}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
-              priority="high"
-            />
-          </TouchableOpacity>
-        ) : (
-          <View style={[styles.photo, styles.photoPlaceholder]}>
-            <Ionicons name="leaf" size={64} color={theme.primary} />
-          </View>
-        )}
+        <PlantDetailHero plant={plant} onPhotoPress={() => setZoomVisible(true)} />
 
-        {plant.photo_url && (
-          <ImageZoomModal
-            visible={zoomVisible}
-            uri={plant.photo_url}
-            insets={insets}
-            styles={styles}
-            onClose={() => setZoomVisible(false)}
-          />
-        )}
+        {/* In-flow tab bar for the un-stuck state (sits below the hero). Once it
+            scrolls under the header, the pinned copy in the overlay takes over —
+            both are outside any translated sticky header, so taps never drop. */}
+        <View onLayout={handleTabBarLayout}>
+          <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={handleTabPress} />
+        </View>
 
-        <View style={styles.content}>
-          <PlantKeyInfoSection styles={styles} theme={theme} plant={plant} />
-
-          <GrowthStageSection
-            styles={styles}
-            theme={theme}
+        <View onLayout={registerSection('care')}>
+          <PlantSectionHeader title="Care" icon="water-outline" />
+          <PlantDetailCareSection
             plant={plant}
+            tasks={tasks}
             effectiveStage={effectiveStage}
             careProfile={careProfile}
             isPinned={isPinned}
+            isArchiving={isArchiving}
+            computedHarvestDate={computedHarvestDate}
             onPin={() => setPinStageVisible(true)}
             onUnpin={handleUnpin}
-          />
-
-          <ClearBedCta
-            styles={styles}
-            theme={theme}
-            plant={plant}
-            effectiveStage={effectiveStage}
-            isArchiving={isArchiving}
             onClearBed={handleClearBed}
-          />
-
-          <CareScheduleSection styles={styles} theme={theme} plant={plant} />
-
-          {plant.plant_type !== 'coconut_tree' && (
-            <TouchableOpacity
-              style={styles.beejamruthaCta}
-              onPress={openBeejamruthaRecipe}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="leaf-outline" size={20} color={theme.primary} />
-              <Text style={styles.beejamruthaCtaText}>
-                Treat seeds with Beejamrutha before sowing
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-            </TouchableOpacity>
-          )}
-
-          <BedContextSection plant={plant} />
-
-          <DetailQuickInfoSection
-            theme={theme}
-            plantType={plant.plant_type}
-            plantVariety={plant.plant_variety || ''}
-            plantCareProfiles={{}}
-          />
-
-          <DetailCareGuidanceSection
-            theme={theme}
-            plantType={plant.plant_type}
-            plantVariety={plant.plant_variety || ''}
-            plantCareProfiles={{}}
-          />
-
-          <PestDiseaseHistorySection
-            records={plant.pest_disease_history || []}
-            seasonalAlerts={[]}
-            styles={styles}
-          />
-
-          <CompanionPlantingSection
-            styles={styles}
-            companions={companions}
-            incompatible={incompatible}
-          />
-
-          <HarvestInfoSection
-            styles={styles}
-            theme={theme}
-            plant={plant}
-            computedHarvestDate={computedHarvestDate}
-          />
-
-          <HarvestHistorySection
-            plantType={plant.plant_type}
-            harvestEntries={harvestEntries}
-            styles={styles}
             onRecordHarvest={openHarvestForm}
-            onViewAll={() => navigation.navigate('Journal')}
+            onLogPest={openPestForm}
+            onAddNote={openNoteForm}
+            onAddCareTask={openCreateTask}
           />
+        </View>
 
+        <View onLayout={registerSection('guide')}>
+          <PlantSectionHeader title="Guide" icon="book-outline" />
+          <PlantDetailGuideSection
+            plantType={plant.plant_type}
+            plantVariety={plant.plant_variety || ''}
+          />
+          {/* Coconut-specific guidance lives under the general Guide section. */}
           <CoconutSection
             styles={styles}
             theme={theme}
@@ -289,20 +294,86 @@ export default function PlantDetailScreen(): React.JSX.Element {
             coconutAge={coconutAge}
             coconutDeficiencies={coconutDeficiencies}
           />
+        </View>
 
-          <PlantNotesSection styles={styles} plant={plant} />
+        <View onLayout={registerSection('info')}>
+          <PlantSectionHeader title="Info" icon="people-outline" />
+          <PlantDetailInfoSection
+            plantVariety={plant.plant_variety || ''}
+            companions={companions}
+            incompatible={incompatible}
+            petToxic={careProfile?.petToxicity ?? false}
+          />
+        </View>
 
-          <PlantTasksSection styles={styles} tasks={tasks} />
+        <View onLayout={registerSection('pictures')}>
+          <PlantSectionHeader title="Pictures" icon="images-outline" />
+          <PlantPicturesSection plant={plant} journalEntries={journalEntries} />
+        </View>
+
+        <View onLayout={registerSection('history')}>
+          <PlantSectionHeader title="History" icon="time-outline" />
+          <PlantHistorySection
+            plant={plant}
+            journalEntries={journalEntries}
+            enabled={historyEnabled}
+          />
         </View>
       </ScrollView>
+
+      {/* Always-mounted header overlay: transparent floating buttons over the
+          full-bleed hero, gaining a solid background, title and the pinned tab
+          bar once the in-flow tabs scroll away. Living outside the ScrollView
+          keeps the buttons and tabs tappable in both states (Android drops
+          touches on interactive children of a translated sticky header). */}
+      <View
+        style={[
+          styles.headerOverlay,
+          { paddingTop: insets.top + 4 },
+          tabsStuck && styles.headerOverlayStuck,
+        ]}
+        pointerEvents={tabsStuck ? 'auto' : 'box-none'}
+      >
+        <View style={styles.headerOverlayRow}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.floatingCircleButton}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
+          </TouchableOpacity>
+          {tabsStuck ? (
+            <Text style={styles.stuckHeaderTitle} numberOfLines={1}>
+              {plant.name}
+            </Text>
+          ) : (
+            <View style={styles.headerOverlaySpacer} pointerEvents="none" />
+          )}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('PlantForm', { plantId })}
+            style={styles.floatingCircleButton}
+            accessibilityRole="button"
+            accessibilityLabel="Edit plant"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="pencil" size={20} color={theme.textInverse} />
+          </TouchableOpacity>
+        </View>
+        {tabsStuck && (
+          <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={handleTabPress} />
+        )}
+      </View>
 
       <PinGrowthStageModal
         visible={pinStageVisible}
         styles={styles}
         theme={theme}
+        stages={pinnableStages}
         onClose={() => setPinStageVisible(false)}
         onSelect={handlePinSelect}
       />
-    </>
+    </View>
   );
 }

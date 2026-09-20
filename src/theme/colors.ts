@@ -103,6 +103,27 @@ export const lightTheme = {
   tabBarInactive: '#7a6858',
   tabBarBackground: '#fbf9f5',
 
+  // Dashboard hero — a deep-green gradient block that always carries light
+  // content, so text/track values are white-alpha in both themes and only the
+  // green ground and the ring fill shift.
+  heroGradientStart: '#1a4a2e',
+  heroGradientEnd: '#0f2d1a',
+  heroGlow: '#c8842a',
+  heroText: '#ffffff',
+  heroTextMuted: 'rgba(255,255,255,0.74)',
+  heroTextFaint: 'rgba(255,255,255,0.55)',
+  // Alert text on the hero green. The `error*` ramp is tuned for paper and is
+  // near-invisible here (`errorDark` is about 1.6:1 on the green ground), so
+  // this is the one hero value that is a colour rather than white-alpha.
+  heroTextAlert: '#ff8a80',
+  // Raised chip ground on the hero green — a translucent white so it lifts on
+  // either green without carrying a colour of its own.
+  heroSurface: 'rgba(255,255,255,0.10)',
+  heroDivider: 'rgba(255,255,255,0.16)',
+  heroRingTrack: 'rgba(255,255,255,0.16)',
+  heroRingFill: '#a5d6a7',
+  heroBarTrack: 'rgba(255,255,255,0.16)',
+
   // Bed layer accent + tile background colors
   layerColors: lightLayerColors,
 };
@@ -184,6 +205,22 @@ export const darkTheme = {
   tabBarActive: '#4caf50',
   tabBarInactive: '#808080',
   tabBarBackground: '#1e1e1e',
+
+  // Dashboard hero — deepened so the block reads as a raised surface against
+  // the near-black background rather than glowing off it.
+  heroGradientStart: '#173a1d',
+  heroGradientEnd: '#0d2011',
+  heroGlow: '#e08b4f',
+  heroText: '#ffffff',
+  heroTextMuted: 'rgba(255,255,255,0.74)',
+  heroTextFaint: 'rgba(255,255,255,0.55)',
+  // Same value as light: the hero ground is dark in both themes.
+  heroTextAlert: '#ff8a80',
+  heroSurface: 'rgba(255,255,255,0.10)',
+  heroDivider: 'rgba(255,255,255,0.16)',
+  heroRingTrack: 'rgba(255,255,255,0.16)',
+  heroRingFill: '#81c784',
+  heroBarTrack: 'rgba(255,255,255,0.16)',
 
   // Bed layer accent + tile background colors
   layerColors: darkLayerColors,

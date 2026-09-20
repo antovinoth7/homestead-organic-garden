@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { Text } from 'react-native';
 import type { Plant } from '@/types/database.types';
 import type { createStyles } from '@/styles/plantDetailStyles';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 
 type DetailStyles = ReturnType<typeof createStyles>;
 
@@ -17,16 +18,14 @@ export function PlantNotesSection({ styles, plant }: Props): React.JSX.Element |
   return (
     <>
       {plant.notes && (
-        <View style={styles.notesSection}>
-          <Text style={styles.sectionTitle}>Notes</Text>
+        <DetailCard title="Notes" icon="document-text-outline">
           <Text style={styles.notesText}>{plant.notes}</Text>
-        </View>
+        </DetailCard>
       )}
       {plant.pruning_notes && (
-        <View style={styles.notesSection}>
-          <Text style={styles.sectionTitle}>Pruning Notes</Text>
+        <DetailCard title="Pruning Notes" icon="cut-outline">
           <Text style={styles.notesText}>{plant.pruning_notes}</Text>
-        </View>
+        </DetailCard>
       )}
     </>
   );

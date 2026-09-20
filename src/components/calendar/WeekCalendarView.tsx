@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TaskTemplate, TaskType } from '../../types/database.types';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/calendarStyles';
+import { addCalendarDays, calendarDateKey, farmToday, formatFarmDate } from '@/utils/farmDate';
 
 interface WeekCalendarViewProps {
   currentWeekStart: Date;
@@ -26,9 +27,7 @@ export default function WeekCalendarView({
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const weekDays = Array.from({ length: 7 }).map((_, i) => {
-    const date = new Date(currentWeekStart);
-    date.setDate(date.getDate() + i);
-    return date;
+    return addCalendarDays(currentWeekStart, i);
   });
 
   return (
@@ -36,6 +35,8 @@ export default function WeekCalendarView({
       <View style={styles.weekDaysRow}>
         <TouchableOpacity
           style={styles.weekNavBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Previous week"
           onPress={() => {
             const newDate = new Date(currentWeekStart);
             newDate.setDate(newDate.getDate() - 7);
@@ -46,8 +47,10 @@ export default function WeekCalendarView({
         </TouchableOpacity>
         {weekDays.map((date, index) => {
           const dayTasks = getTasksForDate(date);
-          const isToday = date.toDateString() === new Date().toDateString();
-          const isSelected = selectedDate?.toDateString() === date.toDateString();
+          const isToday = calendarDateKey(date) === calendarDateKey(farmToday());
+          const isSelected = selectedDate
+            ? calendarDateKey(selectedDate) === calendarDateKey(date)
+            : false;
 
           return (
             <TouchableOpacity
@@ -58,6 +61,16 @@ export default function WeekCalendarView({
                 isSelected && styles.weekDaySelected,
               ]}
               onPress={() => onSelectDate(date)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
+              accessibilityLabel={`${formatFarmDate(
+                date,
+                {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                }
+              )}, ${dayTasks.length} task${dayTasks.length === 1 ? '' : 's'}`}
             >
               <Text
                 style={[
@@ -66,7 +79,7 @@ export default function WeekCalendarView({
                   isSelected && styles.weekDayNameSelected,
                 ]}
               >
-                {date.toLocaleDateString('en-US', { weekday: 'narrow' })}
+                {formatFarmDate(date, { weekday: 'narrow' })}
               </Text>
               <Text
                 style={[
@@ -95,6 +108,8 @@ export default function WeekCalendarView({
         })}
         <TouchableOpacity
           style={styles.weekNavBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Next week"
           onPress={() => {
             const newDate = new Date(currentWeekStart);
             newDate.setDate(newDate.getDate() + 7);

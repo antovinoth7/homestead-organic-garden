@@ -1,27 +1,45 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
-  Platform,
   ImageStyle,
+  LayoutChangeEvent,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import PhotoSourceModal from '../components/modals/PhotoSourceModal';
 import FloatingLabelInput from '../components/FloatingLabelInput';
 import ThemedDropdown from '../components/ThemedDropdown';
-import VoiceInputButton from '../components/VoiceInputButton';
+import VoiceDictation from '@/components/VoiceDictation';
+import {
+  JournalHarvestSection,
+  type HarvestFields,
+} from '@/components/forms/JournalHarvestSection';
+import {
+  JournalPestDiseaseSection,
+  type PestDiseaseFields,
+} from '@/components/forms/JournalPestDiseaseSection';
+import { JournalMilestoneSection } from '@/components/forms/JournalMilestoneSection';
 import { createJournalEntry, updateJournalEntry, saveJournalImage } from '../services/journal';
-import { getAllPlants } from '../services/plants';
-import { Plant, JournalEntryType } from '../types/database.types';
-import { useBedData } from '../hooks/useBedData';
-import { useVoiceInput } from '../hooks/useVoiceInput';
-import { appendVoiceTranscript } from '../utils/voiceInput';
+import { getAllPlants, updatePlant } from '../services/plants';
+import { createTaskTemplate } from '../services/tasks';
+import {
+  HealthStatus,
+  MilestoneKind,
+  Plant,
+  JournalEntryType,
+} from '../types/database.types';
+import { useBedOptions } from '@/hooks/useBedOptions';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
+import {
+  firstJournalErrorField,
+  journalFormErrors,
+  type JournalFieldKey,
+} from '@/hooks/journalFormValidation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -31,6 +49,8 @@ import {
 } from '../types/navigation.types';
 import { useTheme } from '../theme';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
+import { tagsForEntry, normalizeHarvestUnit } from '../utils/journalEntryOptions';
+import { toLocalDateString } from '../utils/dateHelpers';
 import { createStyles } from '../styles/journalFormStyles';
 import { logger } from '../utils/logger';
 import {
@@ -45,6 +65,17 @@ type PhotoItem = {
   filename: string | null;
 };
 
+const BASE_TYPE_OPTIONS: {
+  value: JournalEntryType;
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+}[] = [
+  { value: JournalEntryType.Observation, label: 'Observation', icon: 'eye' },
+  { value: JournalEntryType.Harvest, label: 'Harvest', icon: 'basket' },
+  { value: JournalEntryType.PestDisease, label: 'Pest/Disease', icon: 'bug' },
+  { value: JournalEntryType.Milestone, label: 'Milestone', icon: 'flag' },
+];
+
 export default function JournalFormScreen(): React.JSX.Element {
   const navigation = useNavigation<JournalFormScreenNavigationProp>();
   const route = useRoute<JournalFormScreenRouteProp>();
@@ -53,6 +84,9 @@ export default function JournalFormScreen(): React.JSX.Element {
   const initialPlantId = route.params?.initialPlantId;
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const keyboardVisible = useKeyboardVisible();
+  // Keyboard covers the nav-bar area, so its inset would become a dead gap.
+  const footerPaddingBottom = keyboardVisible ? 8 : Math.max(insets.bottom, 8);
   const isEditing = !!editEntry;
 
   const [entryType, setEntryType] = useState<JournalEntryType>(
@@ -79,19 +113,16 @@ export default function JournalFormScreen(): React.JSX.Element {
   );
   const [selectedBedId, setSelectedBedId] = useState<string>(editEntry?.bed_id || '');
   const [plants, setPlants] = useState<Plant[]>([]);
-  const { beds: bedList } = useBedData();
+  const { beds: bedList } = useBedOptions();
   const [loading, setLoading] = useState(false);
   const [showPhotoSourceModal, setShowPhotoSourceModal] = useState(false);
+  const bedSyncedRef = useRef(false);
 
-  // Tags
-  const PREDEFINED_TAGS = [
-    'pest',
-    'weather_damage',
-    'harvest',
-    'soil_prep',
-    'growth_update',
-    'experiment',
-  ] as const;
+  // Tags — relevant to the current entry type, unioned with any legacy tags.
+  const availableTags = useMemo(
+    () => tagsForEntry(entryType, editEntry?.tags),
+    [entryType, editEntry?.tags]
+  );
   const [selectedTags, setSelectedTags] = useState<string[]>(editEntry?.tags ?? []);
 
   const toggleTag = useCallback((tag: string) => {
@@ -100,52 +131,71 @@ export default function JournalFormScreen(): React.JSX.Element {
     );
   }, []);
 
-  // Voice-to-text (Phase E): dictate journal content in Tamil or English.
-  const VOICE_LOCALES = [
-    { code: 'ta-IN', label: 'தமிழ்' },
-    { code: 'en-IN', label: 'English' },
-  ] as const;
-  const [voiceLocale, setVoiceLocale] = useState<string>('ta-IN');
-
-  const appendVoiceText = useCallback((text: string) => {
-    setContent((prev) => appendVoiceTranscript(prev, text));
+  // Harvest fields
+  const [harvestFields, setHarvestFields] = useState<HarvestFields>({
+    quantity: editEntry?.harvest_quantity?.toString() ?? '',
+    unit: normalizeHarvestUnit(editEntry?.harvest_unit),
+    quality: editEntry?.harvest_quality ?? 'good',
+    notes: editEntry?.harvest_notes ?? '',
+    treeNumber: editEntry?.harvest_tree_number?.toString() ?? '',
+  });
+  const handleHarvestChange = useCallback((patch: Partial<HarvestFields>) => {
+    setHarvestFields((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const {
-    isListening,
-    partialTranscript,
-    error: voiceError,
-    isAvailable: voiceAvailable,
-    start: startVoice,
-    stop: stopVoice,
-  } = useVoiceInput({ locale: voiceLocale, onResult: appendVoiceText });
+  // Pest/disease fields
+  const [pestFields, setPestFields] = useState<PestDiseaseFields>({
+    kind: editEntry?.pest_kind ?? 'pest',
+    name: editEntry?.pest_name ?? '',
+    severity: editEntry?.pest_severity ?? 'medium',
+    status: editEntry?.pest_status ?? 'active',
+    occurredAt: editEntry?.pest_occurred_at ?? toLocalDateString(new Date()),
+    affectedParts: editEntry?.pest_affected_parts ?? [],
+    treatment: editEntry?.pest_treatment ?? '',
+    treatmentEffectiveness: editEntry?.pest_treatment_effectiveness ?? null,
+  });
+  const handlePestChange = useCallback((patch: Partial<PestDiseaseFields>) => {
+    setPestFields((prev) => ({ ...prev, ...patch }));
+  }, []);
 
-  const handleMicPress = useCallback(() => {
-    if (isListening) {
-      stopVoice();
-    } else {
-      startVoice();
-    }
-  }, [isListening, startVoice, stopVoice]);
+  // Milestone field
+  const [milestoneKind, setMilestoneKind] = useState<MilestoneKind | null>(
+    editEntry?.milestone_kind ?? null
+  );
 
-  useEffect(() => {
-    if (voiceError) {
-      Alert.alert('Voice Input', voiceError);
-    }
-  }, [voiceError]);
-
-  // Harvest-specific fields
-  const [harvestQuantity, setHarvestQuantity] = useState(
-    editEntry?.harvest_quantity?.toString() || ''
+  // Inline validation — errors stay hidden until the first Save attempt, then
+  // the screen scrolls to the offending field (mirrors the plant forms).
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const fieldYs = useRef<Partial<Record<JournalFieldKey, number>>>({});
+  const validationErrors = useMemo(
+    () =>
+      journalFormErrors({
+        entryType,
+        content,
+        harvestQuantity: harvestFields.quantity,
+        pestName: pestFields.name,
+        milestoneKind,
+      }),
+    [entryType, content, harvestFields.quantity, pestFields.name, milestoneKind]
   );
-  const [harvestUnit, setHarvestUnit] = useState(editEntry?.harvest_unit || 'pieces');
-  const [harvestQuality, setHarvestQuality] = useState<'excellent' | 'good' | 'fair' | 'poor'>(
-    editEntry?.harvest_quality || 'good'
+  const errorFor = useCallback(
+    (key: JournalFieldKey): string | undefined =>
+      showValidationErrors ? validationErrors[key][0] : undefined,
+    [showValidationErrors, validationErrors]
   );
-  const [harvestNotes, setHarvestNotes] = useState(editEntry?.harvest_notes || '');
-  const [harvestTreeNumber, setHarvestTreeNumber] = useState(
-    editEntry?.harvest_tree_number?.toString() || ''
-  );
+  const handleHarvestLayout = useCallback((e: LayoutChangeEvent): void => {
+    fieldYs.current.quantity = e.nativeEvent.layout.y;
+  }, []);
+  const handlePestLayout = useCallback((e: LayoutChangeEvent): void => {
+    fieldYs.current.pestName = e.nativeEvent.layout.y;
+  }, []);
+  const handleMilestoneLayout = useCallback((e: LayoutChangeEvent): void => {
+    fieldYs.current.milestone = e.nativeEvent.layout.y;
+  }, []);
+  const handleNotesLayout = useCallback((e: LayoutChangeEvent): void => {
+    fieldYs.current.content = e.nativeEvent.layout.y;
+  }, []);
 
   useEffect(() => {
     loadPlants();
@@ -161,6 +211,17 @@ export default function JournalFormScreen(): React.JSX.Element {
     }
   }, [isEditing, initialEntryType, initialPlantId]);
 
+  // When a linked plant lives in a bed, surface that bed so the plant stays
+  // visible in the (bed-filtered) plant dropdown. Runs once after plants load.
+  useEffect(() => {
+    if (bedSyncedRef.current || plants.length === 0) return;
+    if (selectedPlantId && !selectedBedId) {
+      const plant = plants.find((p) => p.id === selectedPlantId);
+      if (plant?.bed_id) setSelectedBedId(plant.bed_id);
+    }
+    bedSyncedRef.current = true;
+  }, [plants, selectedPlantId, selectedBedId]);
+
   const loadPlants = async (): Promise<void> => {
     try {
       const data = await getAllPlants();
@@ -169,6 +230,44 @@ export default function JournalFormScreen(): React.JSX.Element {
       Alert.alert('Error', getErrorMessage(error));
     }
   };
+
+  // Plants offered depend on the bed: a bed narrows to its members; no bed
+  // shows only standalone (pot / unassigned) plants.
+  const filteredPlants = useMemo(() => {
+    if (selectedBedId) return plants.filter((p) => p.bed_id === selectedBedId);
+    return plants.filter((p) => !p.bed_id);
+  }, [plants, selectedBedId]);
+
+  const selectedPlant = useMemo(
+    () => plants.find((p) => p.id === selectedPlantId) ?? null,
+    [plants, selectedPlantId]
+  );
+
+  const handleBedChange = useCallback(
+    (value: string): void => {
+      setSelectedBedId(value);
+      setSelectedPlantId((prevPlantId) => {
+        if (!prevPlantId) return prevPlantId;
+        const plant = plants.find((p) => p.id === prevPlantId);
+        const stillValid = value ? plant?.bed_id === value : !plant?.bed_id;
+        return stillValid ? prevPlantId : null;
+      });
+    },
+    [plants]
+  );
+
+  const handleTypeChange = useCallback(
+    (type: JournalEntryType): void => {
+      setEntryType(type);
+      // Errors are armed per Save attempt. Switching type swaps in a different
+      // set of fields the user hasn't submitted yet, so re-hide them instead of
+      // greeting the new tab with a red error.
+      setShowValidationErrors(false);
+      const allowed = tagsForEntry(type, editEntry?.tags);
+      setSelectedTags((prev) => prev.filter((t) => allowed.includes(t)));
+    },
+    [editEntry?.tags]
+  );
 
   const openImageLibrary = async (): Promise<void> => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -228,42 +327,77 @@ export default function JournalFormScreen(): React.JSX.Element {
     setPhotoItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSave = async (): Promise<void> => {
-    // Input validation
-    if (!content.trim()) {
-      Alert.alert('Validation Error', 'Please write something in your journal');
-      return;
-    }
-
-    if (content.trim().length < 3) {
-      Alert.alert('Validation Error', 'Journal entry must be at least 3 characters long');
-      return;
-    }
-
-    if (content.trim().length > 5000) {
-      Alert.alert('Validation Error', 'Journal entry must be less than 5000 characters');
-      return;
-    }
-
-    if (entryType === JournalEntryType.Harvest) {
-      if (!harvestQuantity || harvestQuantity.trim() === '') {
-        Alert.alert('Validation Error', 'Please enter harvest quantity');
-        return;
-      }
-
-      const quantity = parseFloat(harvestQuantity);
-      if (isNaN(quantity) || quantity <= 0) {
-        Alert.alert('Validation Error', 'Harvest quantity must be a positive number');
-        return;
-      }
-
-      if (quantity > 100000) {
+  // Prompts carried over from the old pest/disease modal: nudge health status
+  // and offer a recurring spray task when a new, active issue is logged.
+  const runPestSideEffects = useCallback(
+    (plantId: string): void => {
+      const plant = plants.find((p) => p.id === plantId);
+      if (plant && plant.health_status === 'healthy') {
+        const suggested: HealthStatus =
+          pestFields.severity === 'high' || pestFields.severity === 'severe'
+            ? 'sick'
+            : 'stressed';
         Alert.alert(
-          'Validation Error',
-          'Harvest quantity seems too large. Please check your input.'
+          'Update Health Status?',
+          `You logged an active ${pestFields.kind}. Change this plant's health to "${suggested}"?`,
+          [
+            { text: 'Keep Healthy', style: 'cancel' },
+            {
+              text: `Set ${suggested.charAt(0).toUpperCase() + suggested.slice(1)}`,
+              onPress: () => {
+                void updatePlant(plantId, { health_status: suggested }).catch((error) =>
+                  logger.warn('Failed to update plant health', error as Error)
+                );
+              },
+            },
+          ]
         );
-        return;
       }
+
+      setTimeout(() => {
+        Alert.alert(
+          'Create Spray Task?',
+          `Would you like a recurring spray task for "${pestFields.name.trim()}"?`,
+          [
+            { text: 'No', style: 'cancel' },
+            {
+              text: 'Create Task',
+              onPress: async () => {
+                try {
+                  const dueDate = new Date();
+                  dueDate.setHours(18, 0, 0, 0);
+                  await createTaskTemplate({
+                    plant_id: plantId,
+                    task_type: 'spray',
+                    frequency_days: 7,
+                    next_due_at: dueDate.toISOString(),
+                    enabled: true,
+                    preferred_time: null,
+                    source: 'manual',
+                  });
+                  Alert.alert('Done', 'Spray task created!');
+                } catch {
+                  Alert.alert('Error', 'Could not create spray task.');
+                }
+              },
+            },
+          ]
+        );
+      }, 800);
+    },
+    [plants, pestFields.severity, pestFields.kind, pestFields.name]
+  );
+
+  const handleSave = async (): Promise<void> => {
+    const isHarvest = entryType === JournalEntryType.Harvest;
+    const isPest = entryType === JournalEntryType.PestDisease;
+    const isMilestone = entryType === JournalEntryType.Milestone;
+
+    const firstError = firstJournalErrorField(validationErrors);
+    if (firstError) {
+      setShowValidationErrors(true);
+      scrollViewRef.current?.scrollTo({ y: fieldYs.current[firstError] ?? 0, animated: true });
+      return;
     }
 
     if (loading) {
@@ -305,22 +439,41 @@ export default function JournalFormScreen(): React.JSX.Element {
         photo_urls: photoUrls,
         plant_id: selectedPlantId,
         bed_id: selectedBedId || null,
-        tags: selectedTags.length > 0 ? selectedTags : undefined,
-        harvest_quantity:
-          entryType === JournalEntryType.Harvest ? parseFloat(harvestQuantity) : null,
-        harvest_unit: entryType === JournalEntryType.Harvest ? harvestUnit : null,
-        harvest_quality: entryType === JournalEntryType.Harvest ? harvestQuality : null,
-        harvest_notes: entryType === JournalEntryType.Harvest ? harvestNotes : null,
+        // Always an array: Firestore rejects `undefined`, and on edit an empty
+        // array is what actually clears previously-saved tags.
+        tags: selectedTags,
+        harvest_quantity: isHarvest ? parseFloat(harvestFields.quantity) : null,
+        harvest_unit: isHarvest ? harvestFields.unit : null,
+        harvest_quality: isHarvest ? harvestFields.quality : null,
+        harvest_notes: isHarvest ? harvestFields.notes : null,
         harvest_tree_number:
-          entryType === JournalEntryType.Harvest && harvestTreeNumber.trim() !== ''
-            ? parseInt(harvestTreeNumber, 10)
+          isHarvest && harvestFields.treeNumber.trim() !== ''
+            ? parseInt(harvestFields.treeNumber, 10)
             : null,
+        pest_kind: isPest ? pestFields.kind : null,
+        pest_name: isPest ? pestFields.name.trim() || null : null,
+        pest_severity: isPest ? pestFields.severity : null,
+        pest_status: isPest ? pestFields.status : null,
+        pest_occurred_at: isPest ? pestFields.occurredAt : null,
+        pest_affected_parts:
+          isPest && pestFields.affectedParts.length > 0 ? pestFields.affectedParts : null,
+        pest_treatment: isPest ? pestFields.treatment.trim() || null : null,
+        pest_treatment_effectiveness: isPest ? pestFields.treatmentEffectiveness : null,
+        pest_resolved_at: isPest
+          ? pestFields.status === 'resolved'
+            ? editEntry?.pest_resolved_at ?? toLocalDateString(new Date())
+            : null
+          : null,
+        milestone_kind: isMilestone ? milestoneKind : null,
       };
 
       if (isEditing && editEntry) {
         await updateJournalEntry(editEntry.id, entryData);
       } else {
         await createJournalEntry(entryData);
+        if (isPest && pestFields.status !== 'resolved' && selectedPlantId) {
+          runPestSideEffects(selectedPlantId);
+        }
       }
 
       // Trigger refresh in parent screen
@@ -338,352 +491,213 @@ export default function JournalFormScreen(): React.JSX.Element {
 
   const styles = useMemo(() => createStyles(theme), [theme]);
 
+  const typeOptions = useMemo(() => {
+    // 'Issue' is retired for new entries but must remain selectable when editing
+    // a pre-existing issue so its type isn't silently changed.
+    if (editEntry?.entry_type === JournalEntryType.Issue) {
+      return [
+        ...BASE_TYPE_OPTIONS,
+        {
+          value: JournalEntryType.Issue,
+          label: 'Issue',
+          icon: 'alert-circle' as React.ComponentProps<typeof Ionicons>['name'],
+        },
+      ];
+    }
+    return BASE_TYPE_OPTIONS;
+  }, [editEntry?.entry_type]);
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
         </TouchableOpacity>
-        <Text style={styles.title}>{isEditing ? 'Edit Entry' : 'New Entry'}</Text>
-      </View>
-
-      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
-        {/* Entry Type Selector */}
-        <View style={styles.typeSelector}>
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              entryType === JournalEntryType.Observation && styles.typeButtonActive,
-            ]}
-            onPress={() => setEntryType(JournalEntryType.Observation)}
-          >
-            <Ionicons
-              name="eye"
-              size={18}
-              color={entryType === JournalEntryType.Observation ? theme.textInverse : theme.primary}
-            />
-            <Text
-              style={[
-                styles.typeButtonText,
-                entryType === JournalEntryType.Observation && styles.typeButtonTextActive,
-              ]}
-            >
-              Observation
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              entryType === JournalEntryType.Harvest && styles.typeButtonActive,
-            ]}
-            onPress={() => setEntryType(JournalEntryType.Harvest)}
-          >
-            <Ionicons
-              name="basket"
-              size={18}
-              color={entryType === JournalEntryType.Harvest ? theme.textInverse : theme.primary}
-            />
-            <Text
-              style={[
-                styles.typeButtonText,
-                entryType === JournalEntryType.Harvest && styles.typeButtonTextActive,
-              ]}
-            >
-              Harvest
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              entryType === JournalEntryType.Issue && styles.typeButtonActive,
-            ]}
-            onPress={() => setEntryType(JournalEntryType.Issue)}
-          >
-            <Ionicons
-              name="alert-circle"
-              size={18}
-              color={entryType === JournalEntryType.Issue ? theme.textInverse : theme.primary}
-            />
-            <Text
-              style={[
-                styles.typeButtonText,
-                entryType === JournalEntryType.Issue && styles.typeButtonTextActive,
-              ]}
-            >
-              Issue
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              entryType === JournalEntryType.Milestone && styles.typeButtonActive,
-            ]}
-            onPress={() => setEntryType(JournalEntryType.Milestone)}
-          >
-            <Ionicons
-              name="flag"
-              size={18}
-              color={entryType === JournalEntryType.Milestone ? theme.textInverse : theme.primary}
-            />
-            <Text
-              style={[
-                styles.typeButtonText,
-                entryType === JournalEntryType.Milestone && styles.typeButtonTextActive,
-              ]}
-            >
-              Milestone
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.title}>{isEditing ? 'Edit Entry' : 'New Entry'}</Text>
         </View>
-
-        {photoItems.length > 0 && (
-          <View style={styles.photosGrid}>
-            {photoItems.map((item, index) =>
-              item.uri ? (
-                <View key={index} style={styles.photoContainer}>
-                  <Image
-                    source={{ uri: item.uri }}
-                    style={styles.photoThumbnail as ImageStyle}
-                    contentFit="cover"
-                    transition={200}
-                    cachePolicy="memory-disk"
-                    recyclingKey={`journal-photo-${index}`}
-                  />
-                  <TouchableOpacity
-                    style={styles.removePhotoButton}
-                    onPress={() => removeImage(index)}
-                  >
-                    <Ionicons name="close-circle" size={24} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              ) : null
-            )}
-          </View>
-        )}
-
-        <TouchableOpacity style={styles.addPhotoButton} onPress={pickImage}>
-          <Ionicons name="camera" size={20} color={theme.primary} />
-          <Text style={styles.addPhotoText}>
-            {photoItems.length > 0 ? `Add More Photos (${photoItems.length})` : 'Add Photos'}
-          </Text>
-        </TouchableOpacity>
-
-        <ThemedDropdown
-          items={[
-            { label: 'No plant linked', value: '' },
-            ...plants.map((p) => ({ label: p.name, value: p.id })),
-          ]}
-          selectedValue={selectedPlantId || ''}
-          onValueChange={(value) => setSelectedPlantId(value || null)}
-          label="Link to plant"
-          placeholder="Link to plant (optional)"
-          searchable
-        />
-
-        {bedList.length > 0 && (
-          <ThemedDropdown
-            items={[
-              { label: 'No bed linked', value: '' },
-              ...bedList.map((b) => ({ label: b.name, value: b.id })),
-            ]}
-            selectedValue={selectedBedId}
-            onValueChange={(value) => setSelectedBedId(value || '')}
-            label="Link to bed"
-            placeholder="Link to bed (optional)"
-          />
-        )}
-
-        {/* Tags */}
-        <View style={styles.tagsSection}>
-          <Text style={styles.label}>Tags</Text>
-          <View style={styles.tagsWrap}>
-            {PREDEFINED_TAGS.map((tag) => (
-              <TouchableOpacity
-                key={tag}
-                style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]}
-                onPress={() => toggleTag(tag)}
-              >
-                <Text
-                  style={[
-                    styles.tagChipText,
-                    selectedTags.includes(tag) && styles.tagChipTextActive,
-                  ]}
-                >
-                  {tag.replace(/_/g, ' ')}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Harvest-specific fields */}
-        {entryType === JournalEntryType.Harvest && (
-          <View style={styles.harvestSection}>
-            <Text style={styles.sectionTitle}>Harvest Details</Text>
-
-            <View style={styles.harvestRow}>
-              <View style={styles.quantityInput}>
-                <Text style={styles.label}>Quantity *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0"
-                  placeholderTextColor={theme.inputPlaceholder}
-                  value={harvestQuantity}
-                  onChangeText={setHarvestQuantity}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-
-              <View style={styles.unitInput}>
-                <Text style={styles.label}>Unit</Text>
-                <View style={styles.unitButtons}>
-                  {['pcs', 'kg'].map((unit) => (
-                    <TouchableOpacity
-                      key={unit}
-                      style={[styles.unitButton, harvestUnit === unit && styles.unitButtonActive]}
-                      onPress={() => setHarvestUnit(unit)}
-                    >
-                      <Text
-                        style={[
-                          styles.unitButtonText,
-                          harvestUnit === unit && styles.unitButtonTextActive,
-                        ]}
-                      >
-                        {unit}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </View>
-
-            <Text style={styles.label}>Quality</Text>
-            <View style={styles.qualityButtons}>
-              {(
-                [
-                  { value: 'excellent' as const, label: 'Excellent', emoji: '🌟' },
-                  { value: 'good' as const, label: 'Good', emoji: '👍' },
-                  { value: 'fair' as const, label: 'Fair', emoji: '👌' },
-                  { value: 'poor' as const, label: 'Poor', emoji: '👎' },
-                ] satisfies {
-                  value: 'excellent' | 'good' | 'fair' | 'poor';
-                  label: string;
-                  emoji: string;
-                }[]
-              ).map((quality) => (
-                <TouchableOpacity
-                  key={quality.value}
-                  style={[
-                    styles.qualityButton,
-                    harvestQuality === quality.value && styles.qualityButtonActive,
-                  ]}
-                  onPress={() => setHarvestQuality(quality.value)}
-                >
-                  <Text style={styles.qualityEmoji}>{quality.emoji}</Text>
-                  <Text
-                    style={[
-                      styles.qualityButtonText,
-                      harvestQuality === quality.value && styles.qualityButtonTextActive,
-                    ]}
-                  >
-                    {quality.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={[styles.notesWrapper, styles.notesWrapperMarginTop]}>
-              <FloatingLabelInput
-                label="Storage / Notes"
-                value={harvestNotes}
-                onChangeText={(text) => setHarvestNotes(sanitizeAlphaNumericSpaces(text))}
-                multiline
-                numberOfLines={3}
-                maxLength={500}
-              />
-              <Text style={styles.charCounter}>{harvestNotes.length}/500</Text>
-            </View>
-
-            <View style={[styles.notesWrapper, styles.notesWrapperMarginTop]}>
-              <Text style={styles.label}>Tree no. (for groves, optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 3"
-                placeholderTextColor={theme.inputPlaceholder}
-                value={harvestTreeNumber}
-                onChangeText={(text) => setHarvestTreeNumber(text.replace(/[^0-9]/g, ''))}
-                keyboardType="number-pad"
-              />
-            </View>
-          </View>
-        )}
-
-        <View style={styles.notesWrapper}>
-          {voiceAvailable && (
-            <>
-              <View style={styles.voiceRow}>
-                <View style={styles.voiceLocaleRow}>
-                  {VOICE_LOCALES.map((loc) => (
-                    <TouchableOpacity
-                      key={loc.code}
-                      style={[
-                        styles.voiceLocaleChip,
-                        voiceLocale === loc.code && styles.voiceLocaleChipActive,
-                      ]}
-                      onPress={() => setVoiceLocale(loc.code)}
-                      disabled={isListening}
-                    >
-                      <Text
-                        style={[
-                          styles.voiceLocaleChipText,
-                          voiceLocale === loc.code && styles.voiceLocaleChipTextActive,
-                        ]}
-                      >
-                        {loc.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <VoiceInputButton
-                  isListening={isListening}
-                  onPress={handleMicPress}
-                />
-              </View>
-              {isListening && (
-                <Text style={styles.voicePreview}>{partialTranscript || 'Listening…'}</Text>
-              )}
-            </>
-          )}
-          <FloatingLabelInput
-            label="What's happening in your garden today?"
-            value={content}
-            onChangeText={(text) => setContent(sanitizeAlphaNumericSpaces(text))}
-            multiline
-            numberOfLines={6}
-            maxLength={5000}
-          />
-          <Text style={styles.charCounter}>{content.length}/5000</Text>
-        </View>
-
-        {/* Extra spacing for keyboard */}
-        <View style={styles.keyboardSpacer} />
-      </ScrollView>
-
-      <View style={[styles.stickySaveContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         <TouchableOpacity
+          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
           onPress={handleSave}
           disabled={loading}
-          style={[styles.stickySaveButton, loading && styles.stickySaveButtonDisabled]}
           activeOpacity={0.85}
         >
-          <Text style={styles.stickySaveButtonText}>
-            {loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Save Entry'}
+          <Text style={[styles.saveText, loading && styles.saveTextDisabled]}>
+            {loading ? 'Saving…' : 'Save'}
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* KAV padding keeps low inputs above the keyboard; the header stays fixed
+          outside it so Save is always reachable. */}
+      <KeyboardAvoidingView style={styles.scrollWrapper} behavior="padding">
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.content}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: footerPaddingBottom + 24 }}
+        >
+          {/* Entry Type Selector */}
+          <View style={styles.typeSelector}>
+            {typeOptions.map((opt) => {
+              const active = entryType === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.typeButton, active && styles.typeButtonActive]}
+                  onPress={() => handleTypeChange(opt.value)}
+                >
+                  <Ionicons
+                    name={opt.icon}
+                    size={18}
+                    color={active ? theme.textInverse : theme.primary}
+                  />
+                  <Text style={[styles.typeButtonText, active && styles.typeButtonTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {photoItems.length > 0 && (
+            <View style={styles.photosGrid}>
+              {photoItems.map((item, index) =>
+                item.uri ? (
+                  <View key={index} style={styles.photoContainer}>
+                    <Image
+                      source={{ uri: item.uri }}
+                      style={styles.photoThumbnail as ImageStyle}
+                      contentFit="cover"
+                      transition={200}
+                      cachePolicy="memory-disk"
+                      recyclingKey={`journal-photo-${index}`}
+                    />
+                    <TouchableOpacity
+                      style={styles.removePhotoButton}
+                      onPress={() => removeImage(index)}
+                    >
+                      <Ionicons name="close-circle" size={24} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ) : null
+              )}
+            </View>
+          )}
+
+          <TouchableOpacity style={styles.addPhotoButton} onPress={pickImage}>
+            <Ionicons name="camera" size={20} color={theme.primary} />
+            <Text style={styles.addPhotoText}>
+              {photoItems.length > 0 ? `Add More Photos (${photoItems.length})` : 'Add Photos'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Location — bed narrows the plant list below it */}
+          <View style={styles.locationSection}>
+            {bedList.length > 0 && (
+              <ThemedDropdown
+                items={[
+                  { label: 'No bed linked', value: '' },
+                  ...bedList.map((b) => ({ label: b.name, value: b.id })),
+                ]}
+                selectedValue={selectedBedId}
+                onValueChange={handleBedChange}
+                label="Link to bed"
+                placeholder="Link to bed (optional)"
+              />
+            )}
+            <ThemedDropdown
+              items={[
+                { label: 'No plant linked', value: '' },
+                ...filteredPlants.map((p) => ({ label: p.name, value: p.id })),
+              ]}
+              selectedValue={selectedPlantId || ''}
+              onValueChange={(value) => setSelectedPlantId(value || null)}
+              label="Link to plant"
+              placeholder="Link to plant (optional)"
+              searchable
+            />
+            {selectedBedId !== '' && (
+              <Text style={styles.locationHint}>Showing plants in the selected bed</Text>
+            )}
+          </View>
+
+          {/* Tags — only for types that expose free tags */}
+          {availableTags.length > 0 && (
+            <View style={styles.tagsSection}>
+              <Text style={styles.label}>Tags</Text>
+              <View style={styles.tagsWrap}>
+                {availableTags.map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
+                    style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]}
+                    onPress={() => toggleTag(tag)}
+                  >
+                    <Text
+                      style={[
+                        styles.tagChipText,
+                        selectedTags.includes(tag) && styles.tagChipTextActive,
+                      ]}
+                    >
+                      {tag.replace(/_/g, ' ')}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {entryType === JournalEntryType.Harvest && (
+            <View onLayout={handleHarvestLayout}>
+              <JournalHarvestSection
+                value={harvestFields}
+                onChange={handleHarvestChange}
+                plantType={selectedPlant?.plant_type ?? null}
+                errorText={errorFor('quantity')}
+              />
+            </View>
+          )}
+
+          {entryType === JournalEntryType.PestDisease && (
+            <View onLayout={handlePestLayout}>
+              <JournalPestDiseaseSection
+                value={pestFields}
+                onChange={handlePestChange}
+                plantType={selectedPlant?.plant_type ?? null}
+                plantVariety={selectedPlant?.plant_variety ?? null}
+                errorText={errorFor('pestName')}
+              />
+            </View>
+          )}
+
+          {entryType === JournalEntryType.Milestone && (
+            <View onLayout={handleMilestoneLayout}>
+              <JournalMilestoneSection
+                value={milestoneKind}
+                onChange={setMilestoneKind}
+                errorText={errorFor('milestone')}
+              />
+            </View>
+          )}
+
+          <View style={styles.notesWrapper} onLayout={handleNotesLayout}>
+            <VoiceDictation
+              value={content}
+              onChangeText={(text) => setContent(sanitizeAlphaNumericSpaces(text))}
+            />
+            <FloatingLabelInput
+              label="What's happening in your garden today?"
+              value={content}
+              onChangeText={(text) => setContent(sanitizeAlphaNumericSpaces(text))}
+              multiline
+              numberOfLines={6}
+              maxLength={5000}
+              errorText={errorFor('content')}
+            />
+            <Text style={styles.charCounter}>{content.length}/5000</Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <PhotoSourceModal
         visible={showPhotoSourceModal}
@@ -691,6 +705,6 @@ export default function JournalFormScreen(): React.JSX.Element {
         onCamera={openCamera}
         onLibrary={openImageLibrary}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }

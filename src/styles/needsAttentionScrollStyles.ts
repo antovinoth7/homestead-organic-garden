@@ -4,25 +4,31 @@ import type { Theme } from '../theme/colors';
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     section: {
-      backgroundColor: theme.backgroundSecondary,
-      paddingTop: 12,
-      paddingBottom: 14,
-      paddingLeft: 16,
-      marginTop: 1,
+      // No panel chrome: the rail sits directly on the page background like
+      // every other block on the dashboard.
+      paddingBottom: 4,
     },
-    title: {
-      fontSize: 17,
-      fontWeight: '600',
-      color: theme.text,
+    sectionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      paddingHorizontal: 16,
       marginBottom: 10,
     },
+    sectionTitle: {
+      color: theme.text,
+      fontSize: 17,
+      fontWeight: '700',
+    },
     listContent: {
-      paddingRight: 8,
+      paddingLeft: 16,
+      // Cards carry marginRight: 10, so this tops the trailing gap up to 16.
+      paddingRight: 6,
     },
     card: {
       width: 150,
       padding: 12,
-      borderRadius: 14,
+      borderRadius: 12,
       marginRight: 10,
       borderWidth: 1,
     },
@@ -68,5 +74,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 11,
       color: theme.textSecondary,
       lineHeight: 15,
+    },
+    // Small ✓/✕ action chip in the card's top-right corner (quick-complete a
+    // fertilise alert, or dismiss the seasonal green-manure card for the month).
+    actionChip: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
   });

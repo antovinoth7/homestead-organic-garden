@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Theme } from '@/theme/colors';
 import type { Plant } from '@/types/database.types';
 import type { EffectiveGrowthStage } from '@/utils/plantHelpers';
 import { isPlantArchived } from '@/utils/plantHelpers';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
 import type { createStyles } from '@/styles/plantDetailStyles';
 
 type DetailStyles = ReturnType<typeof createStyles>;
@@ -42,8 +43,7 @@ export function ClearBedCta({
   }
 
   return (
-    <View style={styles.careSection}>
-      <Text style={styles.sectionTitle}>🌾 End of Season</Text>
+    <DetailCard title="End of Season" icon="checkmark-done-outline">
       <Text style={styles.clearBedHint}>
         This annual is at harvest stage. Once you have finished harvesting, clear the bed so the
         next crop can be planned.
@@ -54,6 +54,6 @@ export function ClearBedCta({
           {isArchiving ? 'Clearing...' : 'Clear Bed & Archive Plant'}
         </Text>
       </TouchableOpacity>
-    </View>
+    </DetailCard>
   );
 }

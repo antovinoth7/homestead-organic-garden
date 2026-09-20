@@ -11,11 +11,11 @@ import { db, auth, refreshAuthToken } from '../lib/firebase';
 import {
   collection,
   doc,
-  documentId,
   getDocs,
   getDoc,
-  addDoc,
+  setDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -28,6 +28,7 @@ import {
 import {
   saveImageLocallyWithFilename,
   resolveLocalImageUri,
+  deleteImageLocally,
   SavedImage,
 } from '../lib/imageStorage';
 import { getData, setData, KEYS } from '../lib/storage';
@@ -41,11 +42,46 @@ import { logger } from '../utils/logger';
 import { convertTimestamp } from '../utils/dateHelpers';
 import { resolvePhotoFilename } from '../utils/photoFilename';
 import { getCached, setCached, invalidate, dedup, CACHE_KEYS } from '../lib/dataCache';
+import { writeOrQueue, isOfflineWriteError } from '../lib/offlineWrite';
 import { LAYER_ORDER as BED_LAYER_ORDER } from '../config/beds/layerMeta';
 
 const PLANTS_COLLECTION = 'plants';
 const DEFAULT_PAGE_SIZE = 50;
 const FETCH_ALL_PAGE_SIZE = 100;
+
+/** Read a single plant from the AsyncStorage copy (active plants only). */
+const getCachedPlant = async (id: string): Promise<Plant | null> => {
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  return cachedPlants.find((p) => p.id === id) ?? null;
+};
+
+/** Merge a patch into the AsyncStorage copy of a plant, if present. */
+const patchCachedPlant = async (id: string, patch: Partial<Plant>): Promise<void> => {
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  const index = cachedPlants.findIndex((p) => p.id === id);
+  if (index === -1) return;
+  cachedPlants[index] = { ...cachedPlants[index]!, ...patch };
+  await setData(KEYS.PLANTS, cachedPlants);
+};
+
+/**
+ * Verify the signed-in user owns the plant. Online this checks Firestore;
+ * offline it falls back to the local cache, which only ever holds the
+ * signed-in user's own plants.
+ */
+const verifyPlantOwnership = async (id: string, userUid: string, action: string): Promise<void> => {
+  let owned: boolean;
+  try {
+    const snap = await withTimeoutAndRetry(() => getDoc(doc(db, PLANTS_COLLECTION, id)), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    owned = snap.exists() && snap.data().user_id === userUid;
+  } catch (error) {
+    if (!isOfflineWriteError(error)) throw error;
+    owned = (await getCachedPlant(id)) !== null;
+  }
+  if (!owned) throw new Error(`Not authorized to ${action} this plant`);
+};
 
 /**
  * Get all plants with offline-first approach and pagination support
@@ -124,8 +160,11 @@ export const getPlants = async (
     });
     const activePlants = plants.filter((plant) => !plant.is_deleted);
 
-    // Cache the results locally (only first page to avoid memory issues)
-    if (!lastDoc) {
+    // Persist only when this single page provably holds the whole collection
+    // (first page, not full). A partial page must never overwrite the store —
+    // the offline copy always mirrors the complete active-plant set, which
+    // getAllPlants writes after assembling every page.
+    if (!lastDoc && snapshot.docs.length < pageSize) {
       await setData(KEYS.PLANTS, activePlants);
     }
 
@@ -169,6 +208,19 @@ export const getPlants = async (
 /** Synchronous cache read — returns the warm plant list or null if stale/absent. */
 export const getCachedPlants = (): Plant[] | null => getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
 
+/**
+ * Offline-first warm read for an instant first paint: the fresh in-memory cache
+ * if present, otherwise the AsyncStorage copy. Unlike `getAllPlants` this never
+ * touches the network or resolves images — callers that render thumbnails must
+ * still use `getAllPlants`. The dashboard only needs ids/names/health, so this
+ * keeps image resolution off the cold-start critical path.
+ */
+export const getStoredPlants = async (): Promise<Plant[]> => {
+  const warm = getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
+  if (warm) return warm;
+  return getData<Plant>(KEYS.PLANTS);
+};
+
 export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Promise<Plant[]> => {
   // Return fresh in-memory data if available (< 30s old)
   const cached = getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
@@ -178,11 +230,17 @@ export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Prom
     const allPlants: Plant[] = [];
     let lastDoc: QueryDocumentSnapshot | undefined = undefined;
     let hasMore = true;
+    let complete = true;
 
     while (hasMore) {
       try {
         const response = await getPlants(pageSize, lastDoc);
         allPlants.push(...(response.plants ?? []));
+
+        // `fetchedCount` is undefined only when getPlants served its offline
+        // AsyncStorage fallback — that result may be partial or overlap pages
+        // already collected, so it must not be persisted as the full set.
+        if (response.fetchedCount === undefined) complete = false;
 
         // Decide on the RAW page size, not the filtered active count: a page full
         // of docs can still yield <pageSize active plants once soft-deleted docs
@@ -199,11 +257,23 @@ export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Prom
         lastDoc = response.lastDoc;
       } catch (error) {
         logger.warn('getAllPlants: page fetch failed, returning partial results', error as Error);
+        complete = false;
         break;
       }
     }
 
-    return allPlants;
+    // De-dupe by id: an offline fallback mid-pagination returns the whole
+    // stored copy, which can repeat plants from earlier pages.
+    const uniquePlants = Array.from(new Map(allPlants.map((p) => [p.id, p])).values());
+
+    // Persist the fully-assembled set so offline cold-starts see every plant,
+    // not just the newest page (pot/ground plants older than the first page
+    // used to vanish from the offline copy).
+    if (complete) {
+      await setData(KEYS.PLANTS, uniquePlants);
+    }
+
+    return uniquePlants;
   });
 };
 
@@ -215,35 +285,59 @@ export const getPlant = async (id: string): Promise<Plant | null> => {
 
   const docRef = doc(db, PLANTS_COLLECTION, id);
 
-  const docSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
+  try {
+    const docSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
 
-  if (!docSnap.exists()) return null;
+    if (!docSnap.exists()) return null;
 
-  const data = docSnap.data();
+    const data = docSnap.data();
 
-  // Security: Verify the plant belongs to the current user
-  if (data.user_id !== user.uid) {
-    logger.warn('Attempted to access plant belonging to another user');
-    return null;
+    // Security: Verify the plant belongs to the current user
+    if (data.user_id !== user.uid) {
+      logger.warn('Attempted to access plant belonging to another user');
+      return null;
+    }
+
+    if (data.is_deleted) return null;
+
+    const photoIdentifier = data.photo_filename ?? data.photo_url ?? null;
+    const resolvedPhotoUrl = await resolveLocalImageUri(photoIdentifier);
+    const photoFilename = resolvePhotoFilename(data.photo_filename, data.photo_url);
+
+    return {
+      id: docSnap.id,
+      ...data,
+      photo_filename: photoFilename ?? null,
+      photo_url: resolvedPhotoUrl ?? null,
+      created_at: convertTimestamp(data.created_at),
+      deleted_at: convertTimestamp(data.deleted_at),
+      is_deleted: data.is_deleted ?? false,
+    } as Plant;
+  } catch (error) {
+    logger.warn('Failed to fetch plant, using cached copy', error as Error);
+    logError('network', 'Failed to fetch plant from Firestore', error as Error, {
+      userId: user.uid,
+      plantId: id,
+    });
+    const cached = await getCachedPlant(id);
+    // Never cached: callers must see the failure, not a false "plant not found".
+    if (!cached) throw error;
+
+    let resolvedPhotoUrl: string | null = null;
+    try {
+      resolvedPhotoUrl = await resolveLocalImageUri(cached.photo_filename ?? cached.photo_url ?? null);
+    } catch (resolveError) {
+      logger.warn('Failed to resolve cached plant image', resolveError as Error);
+    }
+    return {
+      ...cached,
+      photo_filename:
+        cached.photo_filename ?? resolvePhotoFilename(null, cached.photo_url) ?? null,
+      photo_url: resolvedPhotoUrl,
+    };
   }
-
-  if (data.is_deleted) return null;
-
-  const photoIdentifier = data.photo_filename ?? data.photo_url ?? null;
-  const resolvedPhotoUrl = await resolveLocalImageUri(photoIdentifier);
-  const photoFilename = resolvePhotoFilename(data.photo_filename, data.photo_url);
-
-  return {
-    id: docSnap.id,
-    ...data,
-    photo_filename: photoFilename ?? null,
-    photo_url: resolvedPhotoUrl ?? null,
-    created_at: convertTimestamp(data.created_at),
-    deleted_at: convertTimestamp(data.deleted_at),
-    is_deleted: data.is_deleted ?? false,
-  } as Plant;
 };
 
 export const getArchivedPlants = async (): Promise<Plant[]> => {
@@ -287,23 +381,6 @@ export const getArchivedPlants = async (): Promise<Plant[]> => {
   }
 };
 
-export const plantExists = async (id: string): Promise<boolean> => {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-
-  const q = query(
-    collection(db, PLANTS_COLLECTION),
-    where('user_id', '==', user.uid),
-    where(documentId(), '==', id)
-  );
-
-  const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-
-  return !snapshot.empty;
-};
-
 export const createPlant = async (
   plant: Omit<Plant, 'id' | 'user_id' | 'created_at'>
 ): Promise<Plant> => {
@@ -330,9 +407,11 @@ export const createPlant = async (
     created_at: Timestamp.now(),
   };
 
-  const docRef = await withTimeoutAndRetry(
-    () => addDoc(collection(db, PLANTS_COLLECTION), newPlant),
-    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+  // Client-generated id so the optimistic local record matches the synced one
+  const docRef = doc(collection(db, PLANTS_COLLECTION));
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: docRef.id, op: 'create', payload: newPlant },
+    () => setDoc(docRef, newPlant)
   );
 
   const resolvedPhotoUrl = await resolveLocalImageUri(photoFilename ?? null);
@@ -396,9 +475,15 @@ export const createPlantBatch = async (
     return { docRef, newPlant, photoFilename };
   });
 
-  await withTimeoutAndRetry(() => batch.commit(), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  await writeOrQueue(
+    prepared.map(({ docRef, newPlant }) => ({
+      collection: PLANTS_COLLECTION,
+      docId: docRef.id,
+      op: 'create' as const,
+      payload: newPlant,
+    })),
+    () => batch.commit()
+  );
 
   const results = await Promise.all(
     prepared.map(async ({ docRef, newPlant, photoFilename }) => {
@@ -428,13 +513,7 @@ export const updatePlant = async (id: string, updates: Partial<Plant>): Promise<
 
   const docRef = doc(db, PLANTS_COLLECTION, id);
 
-  // Verify ownership before updating
-  const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!existingSnap.exists() || existingSnap.data().user_id !== user.uid) {
-    throw new Error('Not authorized to update this plant');
-  }
+  await verifyPlantOwnership(id, user.uid, 'update');
 
   // CRITICAL: photo_filename should already be set for local images
   // Only the filename (not the image data) is stored in Firestore
@@ -442,11 +521,24 @@ export const updatePlant = async (id: string, updates: Partial<Plant>): Promise<
   if ('photo_url' in firestoreUpdates) {
     delete (firestoreUpdates as Partial<Plant>).photo_url;
   }
-  await withTimeoutAndRetry(() => updateDoc(docRef, firestoreUpdates as Record<string, unknown>), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  const { queued } = await writeOrQueue(
+    {
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'update',
+      payload: firestoreUpdates as Record<string, unknown>,
+    },
+    () => updateDoc(docRef, firestoreUpdates as Record<string, unknown>)
+  );
 
-  const updated = await getPlant(id);
+  let updated: Plant | null;
+  if (queued) {
+    // Offline: build the optimistic record from the local copy
+    const cached = await getCachedPlant(id);
+    updated = cached ? ({ ...cached, ...updates } as Plant) : null;
+  } else {
+    updated = await getPlant(id);
+  }
   if (!updated) throw new Error('Plant not found');
 
   // Invalidate in-memory cache so next getAllPlants re-fetches
@@ -469,26 +561,16 @@ export const updatePlantLocation = async (id: string, location: string): Promise
 
   const docRef = doc(db, PLANTS_COLLECTION, id);
 
-  // Verify ownership before updating
-  const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!existingSnap.exists() || existingSnap.data().user_id !== user.uid) {
-    throw new Error('Not authorized to update this plant');
-  }
+  await verifyPlantOwnership(id, user.uid, 'update');
 
-  await withTimeoutAndRetry(() => updateDoc(docRef, { location }), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: id, op: 'update', payload: { location } },
+    () => updateDoc(docRef, { location })
+  );
 
   invalidate(CACHE_KEYS.ALL_PLANTS);
 
-  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
-  const index = cachedPlants.findIndex((plant) => plant.id === id);
-  if (index !== -1) {
-    cachedPlants[index] = { ...cachedPlants[index]!, location };
-    await setData(KEYS.PLANTS, cachedPlants);
-  }
+  await patchCachedPlant(id, { location });
 };
 
 export const updatePlantVariety = async (id: string, plantVariety: string): Promise<void> => {
@@ -497,52 +579,45 @@ export const updatePlantVariety = async (id: string, plantVariety: string): Prom
 
   const docRef = doc(db, PLANTS_COLLECTION, id);
 
-  // Verify ownership before updating
-  const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!existingSnap.exists() || existingSnap.data().user_id !== user.uid) {
-    throw new Error('Not authorized to update this plant');
-  }
+  await verifyPlantOwnership(id, user.uid, 'update');
 
-  await withTimeoutAndRetry(() => updateDoc(docRef, { plant_variety: plantVariety }), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
+  await writeOrQueue(
+    {
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'update',
+      payload: { plant_variety: plantVariety },
+    },
+    () => updateDoc(docRef, { plant_variety: plantVariety })
+  );
 
   invalidate(CACHE_KEYS.ALL_PLANTS);
 
-  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
-  const index = cachedPlants.findIndex((plant) => plant.id === id);
-  if (index !== -1) {
-    cachedPlants[index] = {
-      ...cachedPlants[index]!,
-      plant_variety: plantVariety,
-    };
-    await setData(KEYS.PLANTS, cachedPlants);
-  }
+  await patchCachedPlant(id, { plant_variety: plantVariety });
 };
 
+/**
+ * Soft-delete a plant — the record stays restorable from Archived Plants.
+ *
+ * Its care tasks are **disabled, not deleted**. A reversible action must not
+ * destroy data: this previously cascaded to `deleteTasksForPlantIds`, which
+ * removed the templates and their whole completion history, so a restore
+ * returned a plant with no schedule and no record of past work. `restorePlant`
+ * re-derives the schedule via `syncCareTasksForPlant`. The hard cascade belongs
+ * to `permanentlyDeletePlant`, where the loss is the point.
+ */
 export const deletePlant = async (id: string): Promise<void> => {
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
 
   const docRef = doc(db, PLANTS_COLLECTION, id);
 
-  // Verify ownership before deleting
-  const existingSnap = await withTimeoutAndRetry(() => getDoc(docRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!existingSnap.exists() || existingSnap.data().user_id !== user.uid) {
-    throw new Error('Not authorized to delete this plant');
-  }
+  await verifyPlantOwnership(id, user.uid, 'delete');
 
-  await withTimeoutAndRetry(
-    () =>
-      updateDoc(docRef, {
-        is_deleted: true,
-        deleted_at: Timestamp.now(),
-      }),
-    { timeoutMs: FIRESTORE_READ_TIMEOUT_MS }
+  const deletePayload = { is_deleted: true, deleted_at: Timestamp.now() };
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: id, op: 'update', payload: deletePayload },
+    () => updateDoc(docRef, deletePayload)
   );
 
   // Invalidate in-memory cache
@@ -553,12 +628,61 @@ export const deletePlant = async (id: string): Promise<void> => {
   const filtered = cachedPlants.filter((p) => p.id !== id);
   await setData(KEYS.PLANTS, filtered);
 
+  // Reversible: silence the tasks, keep the templates and their history.
+  try {
+    const { disableTasksForPlantIds } = await import('./tasks');
+    await disableTasksForPlantIds([id]);
+  } catch (error) {
+    logger.warn('Failed to disable tasks for soft-deleted plant', error as Error);
+  }
+};
+
+/**
+ * Permanently remove a plant (hard delete) — from the Archived Plants screen.
+ * Unlike deletePlant (which soft-deletes and keeps the record restorable), this
+ * removes the Firestore document, cascades its tasks/logs, and purges the local
+ * photo file. Not reversible. Journal entries are intentionally kept.
+ */
+export const permanentlyDeletePlant = async (id: string): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const docRef = doc(db, PLANTS_COLLECTION, id);
+  await verifyPlantOwnership(id, user.uid, 'delete');
+
+  // Resolve the local photo before removing the record so we can purge it.
+  const cached = await getCachedPlant(id);
+  const photoIdentifier = cached?.photo_filename ?? cached?.photo_url ?? null;
+
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: id, op: 'delete', payload: null },
+    () => deleteDoc(docRef)
+  );
+
+  invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(
+    KEYS.PLANTS,
+    cachedPlants.filter((p) => p.id !== id)
+  );
+
   // Cascade: delete orphaned tasks and logs for this plant
   try {
     const { deleteTasksForPlantIds } = await import('./tasks');
     await deleteTasksForPlantIds([id]);
   } catch (error) {
     logger.warn('Failed to cascade-delete tasks for plant', error as Error);
+  }
+
+  // Best-effort: remove the plant's local photo file
+  if (photoIdentifier) {
+    try {
+      const uri = await resolveLocalImageUri(photoIdentifier);
+      await deleteImageLocally(uri);
+    } catch (error) {
+      logger.warn('Failed to delete local plant image', error as Error);
+    }
   }
 };
 
@@ -588,9 +712,15 @@ export const deletePlantsForBed = async (plants: Plant[]): Promise<void> => {
       deleted_at: deletedAt,
     });
   }
-  await withTimeoutAndRetry(() => batch.commit(), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  await writeOrQueue(
+    ids.map((id) => ({
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'update' as const,
+      payload: { is_deleted: true, deleted_at: deletedAt },
+    })),
+    () => batch.commit()
+  );
 
   // Surgical in-memory cache update: filter deleted ids out of the warm cache
   // rather than invalidating it entirely, so the Plants tab can still serve
@@ -608,12 +738,12 @@ export const deletePlantsForBed = async (plants: Plant[]): Promise<void> => {
     cachedPlants.filter((p) => !idSet.has(p.id))
   );
 
-  // Cascade: delete orphaned tasks and logs for all plants at once.
+  // Reversible (see `deletePlant`): silence the tasks, keep templates and history.
   try {
-    const { deleteTasksForPlantIds } = await import('./tasks');
-    await deleteTasksForPlantIds(ids);
+    const { disableTasksForPlantIds } = await import('./tasks');
+    await disableTasksForPlantIds(ids);
   } catch (error) {
-    logger.warn('Failed to cascade-delete tasks for bed plants', error as Error);
+    logger.warn('Failed to disable tasks for soft-deleted bed plants', error as Error);
   }
 };
 
@@ -672,7 +802,146 @@ export const restorePlant = async (id: string): Promise<Plant> => {
   }
   await setData(KEYS.PLANTS, cachedPlants);
 
+  // Bring the care schedule back. Sync rather than a blunt re-enable: the plant's
+  // own care settings stay the source of truth for which task types belong on it,
+  // and `computeNextDueAt` re-bases the due dates so a plant restored after a long
+  // gap does not return showing weeks of overdue work it never missed.
+  try {
+    const { syncCareTasksForPlant } = await import('./tasks');
+    await syncCareTasksForPlant(restored);
+  } catch (error) {
+    logger.warn('Failed to restore care tasks for plant', error as Error);
+  }
+
   return restored;
+};
+
+/**
+ * Restore every plant in a group in one shot — the "Restore all" action on the
+ * Archived Plants screen.
+ *
+ * Collapses what used to be a sequential loop of N×(ownership getDoc + updateDoc +
+ * getDoc re-read + image resolve + AsyncStorage rewrite) into a single writeBatch,
+ * one cache invalidate, and one AsyncStorage rewrite. Callers pass plants already
+ * fetched for the user, so per-plant ownership re-verification is skipped. The
+ * caller re-fetches fresh state afterward, so this does not need to return the
+ * hydrated plants.
+ */
+export const restorePlantsForBed = async (plants: Plant[]): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  if (plants.length === 0) return;
+
+  await refreshAuthToken();
+
+  const ids = plants.map((p) => p.id);
+
+  const batch = writeBatch(db);
+  for (const id of ids) {
+    batch.update(doc(db, PLANTS_COLLECTION, id), {
+      is_deleted: false,
+      deleted_at: null,
+    });
+  }
+  await writeOrQueue(
+    ids.map((id) => ({
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'update' as const,
+      payload: { is_deleted: false, deleted_at: null },
+    })),
+    () => batch.commit()
+  );
+
+  // The restored plants become active again — invalidate so the Plants tab
+  // re-fetches them instead of serving a stale (deleted-out) warm cache.
+  invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  // Update local AsyncStorage cache once: clear the deletion flags on matching rows.
+  const idSet = new Set(ids);
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(
+    KEYS.PLANTS,
+    cachedPlants.map((p) =>
+      idSet.has(p.id) ? { ...p, is_deleted: false, deleted_at: null } : p
+    )
+  );
+
+  // Bring each plant's care schedule back — same reasoning as `restorePlant`.
+  // `rebuildCareTasksForAllPlants` is the sequential fan-out over the same sync.
+  try {
+    const { rebuildCareTasksForAllPlants } = await import('./tasks');
+    await rebuildCareTasksForAllPlants(
+      plants.map((p) => ({ ...p, is_deleted: false, deleted_at: null }))
+    );
+  } catch (error) {
+    logger.warn('Failed to restore care tasks for bed plants', error as Error);
+  }
+};
+
+/**
+ * Permanently remove every plant in a group (hard delete) — the "Delete all"
+ * action on the Archived Plants screen.
+ *
+ * Bulk counterpart to permanentlyDeletePlant: collapses N×(ownership getDoc +
+ * deleteDoc + AsyncStorage rewrite + task cascade) into a single writeBatch, one
+ * cache invalidate, one AsyncStorage rewrite, and one task cascade. Callers pass
+ * plants already fetched for the user, so per-plant ownership re-verification is
+ * skipped. Not reversible. Journal entries are intentionally kept.
+ */
+export const permanentlyDeletePlantsForBed = async (plants: Plant[]): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  if (plants.length === 0) return;
+
+  await refreshAuthToken();
+
+  const ids = plants.map((p) => p.id);
+
+  const batch = writeBatch(db);
+  for (const id of ids) {
+    batch.delete(doc(db, PLANTS_COLLECTION, id));
+  }
+  await writeOrQueue(
+    ids.map((id) => ({
+      collection: PLANTS_COLLECTION,
+      docId: id,
+      op: 'delete' as const,
+      payload: null,
+    })),
+    () => batch.commit()
+  );
+
+  invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  // Update local AsyncStorage cache once.
+  const idSet = new Set(ids);
+  const cachedPlants = await getData<Plant>(KEYS.PLANTS);
+  await setData(
+    KEYS.PLANTS,
+    cachedPlants.filter((p) => !idSet.has(p.id))
+  );
+
+  // Cascade: delete orphaned tasks and logs for all plants at once.
+  try {
+    const { deleteTasksForPlantIds } = await import('./tasks');
+    await deleteTasksForPlantIds(ids);
+  } catch (error) {
+    logger.warn('Failed to cascade-delete tasks for deleted plants', error as Error);
+  }
+
+  // Best-effort: purge each plant's local photo file. We already hold full Plant
+  // objects, so no getCachedPlant lookup is needed.
+  for (const plant of plants) {
+    const photoIdentifier = plant.photo_filename ?? plant.photo_url ?? null;
+    if (!photoIdentifier) continue;
+    try {
+      const uri = await resolveLocalImageUri(photoIdentifier);
+      await deleteImageLocally(uri);
+    } catch (error) {
+      logger.warn('Failed to delete local plant image', error as Error);
+    }
+  }
 };
 
 /**
@@ -696,27 +965,32 @@ export const pinGrowthStage = async (plantId: string, stage: GrowthStage): Promi
   await refreshAuthToken();
 
   const plantRef = doc(db, PLANTS_COLLECTION, plantId);
-  const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!snap.exists()) throw new Error('Plant not found');
+  let existing: Plant | null;
+  try {
+    const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    existing = snap.exists() ? (snap.data() as Plant) : null;
+  } catch (error) {
+    if (!isOfflineWriteError(error)) throw error;
+    existing = await getCachedPlant(plantId);
+  }
+  if (!existing) throw new Error('Plant not found');
 
-  const existing = snap.data() as Plant;
   const history: GrowthStageHistoryEntry[] = [
     ...(existing.growth_stage_history ?? []),
     { stage, pinnedAt: new Date().toISOString() },
   ];
 
-  await withTimeoutAndRetry(
-    () =>
-      updateDoc(plantRef, {
-        growth_stage_pinned: stage,
-        growth_stage_history: history,
-      } as Record<string, unknown>),
-    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+  const pinPayload = { growth_stage_pinned: stage, growth_stage_history: history };
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: plantId, op: 'update', payload: pinPayload },
+    () => updateDoc(plantRef, pinPayload as Record<string, unknown>)
   );
 
   invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  await patchCachedPlant(plantId, pinPayload);
 };
 
 /**
@@ -730,12 +1004,18 @@ export const unpinGrowthStage = async (plantId: string): Promise<void> => {
   await refreshAuthToken();
 
   const plantRef = doc(db, PLANTS_COLLECTION, plantId);
-  const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!snap.exists()) throw new Error('Plant not found');
+  let existing: Plant | null;
+  try {
+    const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    existing = snap.exists() ? (snap.data() as Plant) : null;
+  } catch (error) {
+    if (!isOfflineWriteError(error)) throw error;
+    existing = await getCachedPlant(plantId);
+  }
+  if (!existing) throw new Error('Plant not found');
 
-  const existing = snap.data() as Plant;
   const history = [...(existing.growth_stage_history ?? [])];
   // Mark the last pin entry as unpinned
   if (history.length > 0) {
@@ -748,16 +1028,15 @@ export const unpinGrowthStage = async (plantId: string): Promise<void> => {
     }
   }
 
-  await withTimeoutAndRetry(
-    () =>
-      updateDoc(plantRef, {
-        growth_stage_pinned: null,
-        growth_stage_history: history,
-      } as Record<string, unknown>),
-    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+  const unpinPayload = { growth_stage_pinned: null, growth_stage_history: history };
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: plantId, op: 'update', payload: unpinPayload },
+    () => updateDoc(plantRef, unpinPayload as Record<string, unknown>)
   );
 
   invalidate(CACHE_KEYS.ALL_PLANTS);
+
+  await patchCachedPlant(plantId, unpinPayload);
 };
 
 const bedLayerRank = (l: BedLayer | null | undefined): number => {
@@ -795,24 +1074,28 @@ export const archivePlant = async (plantId: string): Promise<void> => {
   await refreshAuthToken();
 
   const plantRef = doc(db, PLANTS_COLLECTION, plantId);
-  const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
-    timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-  });
-  if (!snap.exists() || snap.data().user_id !== user.uid) {
-    throw new Error('Not authorized to archive this plant');
+  let plant: Plant | null;
+  try {
+    const snap = await withTimeoutAndRetry(() => getDoc(plantRef), {
+      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+    });
+    plant =
+      snap.exists() && snap.data().user_id === user.uid
+        ? ({ id: plantId, ...snap.data() } as Plant)
+        : null;
+  } catch (error) {
+    if (!isOfflineWriteError(error)) throw error;
+    plant = await getCachedPlant(plantId);
   }
+  if (!plant) throw new Error('Not authorized to archive this plant');
 
-  const plant = { id: plantId, ...snap.data() } as Plant;
   const now = new Date();
   const clearedDate = now.toISOString().split('T')[0]!;
 
-  await withTimeoutAndRetry(
-    () =>
-      updateDoc(plantRef, {
-        cleared_date: clearedDate,
-        archived_at: now.toISOString(),
-      } as Record<string, unknown>),
-    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+  const archivePayload = { cleared_date: clearedDate, archived_at: now.toISOString() };
+  await writeOrQueue(
+    { collection: PLANTS_COLLECTION, docId: plantId, op: 'update', payload: archivePayload },
+    () => updateDoc(plantRef, archivePayload as Record<string, unknown>)
   );
 
   invalidate(CACHE_KEYS.ALL_PLANTS);

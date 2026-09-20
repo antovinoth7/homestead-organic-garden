@@ -2,7 +2,7 @@
 
 > Companion to `docs/IMPLEMENTATION_ROADMAP.md`. Prioritized, actionable recommendations for
 > keeping the app well-crafted for **small organic farmers** in Tamil Nadu / Kanyakumari.
-> Last reviewed: 2026-06-15. These are recommendations only — each links to the roadmap gap (Gxx)
+> Last reviewed: 2026-07-05. These are recommendations only — each links to the roadmap gap (Gxx)
 > or phase where the work belongs.
 >
 > Priority key: **P1** = do soon (real user pain or correctness risk) · **P2** = important, schedule
@@ -19,11 +19,11 @@ deltas worth investing in next.
 
 | # | Area | Current state | Recommendation | Priority |
 | - | ---- | ------------- | -------------- | -------- |
-| P-1 | Long lists | Plants / Beds / Calendar / Journal can grow past 20 items | Audit every list against CLAUDE.md "FlatList for 20+ items": ensure `keyExtractor`, stable `renderItem` (no anon functions in JSX — already an ESLint norm), `getItemLayout` where row height is fixed, and `removeClippedSubviews` on the longest lists. Use `windowSize`/`maxToRenderPerBatch` tuning only where a real jank is measured. | P1 |
-| P-2 | Images | `expo-image` is the standard wrapper | Confirm every image uses `cachePolicy="memory-disk"` and an explicit `contentFit`/placeholder; device-local images (MediaLibrary) should never re-decode on scroll. | P2 |
-| P-3 | Re-renders | Components follow `useMemo(() => createStyles(theme), [theme])` + `useCallback` | Spot-check heavy screens (`TodayScreen`, `CalendarScreen`, `BedDetailScreen`) with the React DevTools profiler; memoize derived lists in hooks rather than in JSX. Keep the large `usePlantFormState` from forcing whole-form re-renders (see A-2). | P2 |
+| P-1 | Long lists | ✅ **Done (2026-07-05)** — CalendarScreen's task area (the last `.map()`-in-ScrollView holdout) converted to a windowed `SectionList`; all other list screens already used FlatList/SectionList with tuned windowing | Keep new list surfaces virtualized from day one; `getItemLayout` only where row height is fixed. | P1 |
+| P-2 | Images | `expo-image` is the standard wrapper; audit confirmed every image uses `cachePolicy="memory-disk"` + explicit `contentFit`, list images add `recyclingKey` | Hold the line on new image call sites. | P2 |
+| P-3 | Re-renders | Memoization is broadly in place; `PlantCard` now `React.memo` with id-based stable callbacks; Catalog pickers' per-item `Set` allocation fixed (2026-07-05) | Keep the large `usePlantFormState` from forcing whole-form re-renders (see A-2); spot-check with the React DevTools profiler when adding heavy sections. | P2 |
 | P-4 | Firestore reads (free-tier) | `dataCache` has 30s TTL + request dedup; mutations call `invalidate()` | Keep new services on the cache → auth → timeout/retry → AsyncStorage pattern so reads stay servable from cache. Batch writes. Avoid per-item `getDoc` loops — prefer one query + client filter. | P1 |
-| P-5 | Cold start | Sentry init + auth listener + migration runner all fire on launch | Keep the migration runner cheap when already at `LATEST_SCHEMA_VERSION` (early-return, no reads); defer non-critical Sentry/integration work until after first paint. Measure TTI on a low-end Android device. | P2 |
+| P-5 | Cold start | Migration runner now caches the schema version in AsyncStorage — zero Firestore reads + no token refresh on launch once at `LATEST_SCHEMA_VERSION` (2026-07-05) | Defer non-critical Sentry/integration work until after first paint. Measure TTI on a low-end Android device. | P2 |
 | P-6 | List data shape | Some screens compute derived status per render | Push derivations (rotation status, attention reasons, capacity bars) into memoized hook selectors so scrolling never recomputes them. | P3 |
 
 ---
@@ -32,7 +32,7 @@ deltas worth investing in next.
 
 | # | Area | Current state | Recommendation | Priority |
 | - | ---- | ------------- | -------------- | -------- |
-| D-1 | Offline writes | `withTimeoutAndRetry()` retries, then **silently fails** | Add an offline mutation queue (persist failed writes to AsyncStorage, replay on reconnect, surface a "pending sync" indicator). This is the single biggest real-world gap for rural connectivity. Roadmap: promote to Critical. | P1 |
+| D-1 | Offline writes | ✅ **Done (2026-07-05)** — offline mutation queue shipped: `writeOrQueue()` persists failed user-data writes to AsyncStorage (`offlineQueue.ts`), `offlineSync.ts` replays FIFO on reconnect, `OfflineBanner` surfaces offline state + pending count. See `docs/SERVICES.md` → Offline Write Queue. | Remaining follow-ups: on-device airplane-mode validation; consider surfacing dropped-after-retries mutations to the user. | P1 |
 | D-2 | Onboarding | New users land on an empty TodayScreen | Build the guided first-run flow (district select → first plot → first plant/bed). Reuse `BedCreationWizard` patterns. Roadmap **G17 / Phase F**. | P1 |
 | D-3 | Tamil i18n | Strings hardcoded in English; `tamilName` data already present | Before Phase G UI work, extract strings to a single message catalog and route through one accessor so the Settings toggle flips the whole app (no language mixing, per CLAUDE.md). Roadmap **G16 / Phase G**. | P2 |
 | D-4 | Low-literacy UX | Text-forward screens | Favor icons + color + numbers over prose; large tap targets; confirm-by-icon. Pair with voice input (G10) for the Journal. Validate with a real farmer if possible. | P2 |
@@ -58,8 +58,10 @@ deltas worth investing in next.
 
 ## Suggested near-term order
 
-1. **D-1** offline mutation queue (Critical, real farmer pain)
-2. **D-2 / G17** onboarding (first impression, Phase F)
-3. **P-1 / P-4** list + Firestore-read performance audit (cheap, broad payoff)
-4. **D-8** finish `SeasonalAdaptationScreen` to close out Phase B4
-5. **A-5** raise coverage thresholds + emulator harness before the suite ossifies
+> 2026-07-05: **D-1** (offline mutation queue) and the **P-1/P-3/P-5** performance items shipped —
+> see the tables above for what changed.
+
+1. **D-2 / G17** onboarding (first impression, Phase F)
+2. **D-8** finish `SeasonalAdaptationScreen` to close out Phase B4
+3. **A-5** raise coverage thresholds + emulator harness before the suite ossifies
+4. On-device airplane-mode validation of the offline queue (D-1 follow-up)

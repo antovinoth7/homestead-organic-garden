@@ -90,7 +90,10 @@ export default function OnboardingScreen({
   }, []);
 
   const seasonLabel = useMemo(
-    () => getSeasonLabel(undefined, resolveActiveZone({ district })),
+    () => {
+      const zone = resolveActiveZone({ district });
+      return zone ? getSeasonLabel(undefined, zone) : 'Location needed';
+    },
     [district]
   );
 
@@ -101,7 +104,7 @@ export default function OnboardingScreen({
         families_count: families,
         goals,
         district,
-        zone_id: getZoneByDistrict(district).id,
+        zone_id: getZoneByDistrict(district)?.id,
       });
     } catch (error) {
       logger.warn('Onboarding: failed to save farm config', error as Error);

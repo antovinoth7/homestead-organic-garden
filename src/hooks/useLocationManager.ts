@@ -3,25 +3,16 @@ import { Alert } from 'react-native';
 import { generateShortName, getLocationConfig, saveLocationConfig } from '@/services/locations';
 import { getAllPlants, updatePlantLocation } from '@/services/plants';
 import { LocationProfile, Plant } from '@/types/database.types';
-import { sanitizeLandmarkText } from '@/utils/textSanitizer';
+import { parseLocation, buildLocation, sanitizeLocationName } from '@/utils/locationHelpers';
 import { getErrorMessage } from '@/utils/errorLogging';
+import { logger } from '@/utils/logger';
 
 // ─── Pure helpers (exported so modal components can reuse them) ───────────────
 
-export const parseLocation = (value?: string | null): { parent: string; child: string } => {
-  if (!value) return { parent: '', child: '' };
-  const parts = value.split(' - ');
-  const parent = parts[0]?.trim() ?? '';
-  const child = parts.slice(1).join(' - ').trim();
-  return { parent, child };
-};
-
-export const buildLocation = (parent: string, child: string): string => {
-  if (parent && child) return `${parent} - ${child}`;
-  return parent || child || '';
-};
-
-export const sanitizeLocationName = (value: string): string => sanitizeLandmarkText(value).trim();
+// The location-string helpers moved to `@/utils/locationHelpers` so the data
+// layer can use them without importing this hook (which pulls in RN + Firebase).
+// Re-exported here so existing call sites are unaffected.
+export { parseLocation, buildLocation, sanitizeLocationName };
 
 export const isDuplicate = (list: string[], value: string, ignore?: string): boolean => {
   const needle = value.toLowerCase();
@@ -77,7 +68,6 @@ export type EditModalState = {
   value: string;
   shortName?: string;
   profile?: LocationProfile;
-  activeTab?: 'name' | 'plot' | 'soil';
   showDatePicker?: boolean;
 };
 
@@ -85,6 +75,11 @@ export type ReassignModalState = {
   type: 'parent' | 'child';
   target: string;
   replacement: string;
+};
+
+export type DeleteConfirmState = {
+  type: 'parent' | 'child';
+  target: string;
 };
 
 // ─── Return type ──────────────────────────────────────────────────────────────
@@ -96,17 +91,21 @@ export interface LocationManagerState {
   locationProfiles: Record<string, LocationProfile>;
   plants: Plant[];
   loading: boolean;
+  plantsLoading: boolean;
   saving: boolean;
   editModal: EditModalState | null;
   reassignModal: ReassignModalState | null;
+  deleteConfirm: DeleteConfirmState | null;
 }
 
 export interface LocationManagerActions {
   loadData: () => Promise<void>;
   setEditModal: React.Dispatch<React.SetStateAction<EditModalState | null>>;
   setReassignModal: React.Dispatch<React.SetStateAction<ReassignModalState | null>>;
+  setDeleteConfirm: React.Dispatch<React.SetStateAction<DeleteConfirmState | null>>;
   handleRename: () => Promise<void>;
   handleDeleteRequest: (type: 'parent' | 'child', name: string) => void;
+  handleDeleteConfirm: () => void;
   handleReassignConfirm: () => void;
   updateProfile: (patch: Partial<LocationProfile>) => void;
 }
@@ -134,19 +133,32 @@ export function useLocationManager(): UseLocationManagerReturn {
   const [locationProfiles, setLocationProfiles] = useState<Record<string, LocationProfile>>({});
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [plantsLoading, setPlantsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
   const [reassignModal, setReassignModal] = useState<ReassignModalState | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setPlantsLoading(true);
+
+    // Plants are only needed for per-location counts, and getAllPlants pages
+    // through the whole collection — resolve it in the background so the
+    // screen paints as soon as the (cache-first) config read lands.
+    void getAllPlants()
+      .then(setPlants)
+      .catch((error: unknown) => {
+        logger.warn('Failed to load plants for location counts', error as Error);
+      })
+      .finally(() => setPlantsLoading(false));
+
     try {
-      const [config, allPlants] = await Promise.all([getLocationConfig(), getAllPlants()]);
+      const config = await getLocationConfig();
       setParentLocations(config.parentLocations);
       setChildLocations(config.childLocations);
       setShortNames(config.parentLocationShortNames ?? {});
       setLocationProfiles(config.parentLocationProfiles ?? {});
-      setPlants(allPlants);
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error) || 'Failed to load locations. Please try again.');
     } finally {
@@ -315,6 +327,12 @@ export function useLocationManager(): UseLocationManagerReturn {
     }
 
     // ── Rename existing ──
+    // Counts drive the plant-cascade confirm below; while plants are still
+    // loading they read 0 and the cascade would be silently skipped.
+    if (plantsLoading) {
+      Alert.alert('Still Loading', 'Plant data is still loading — try again in a moment.');
+      return;
+    }
     const name = sanitizeLocationName(editModal.value);
     const list = editModal.type === 'parent' ? parentLocations : childLocations;
     const count =
@@ -394,6 +412,7 @@ export function useLocationManager(): UseLocationManagerReturn {
     }
   }, [
     editModal,
+    plantsLoading,
     parentLocations,
     childLocations,
     shortNames,
@@ -446,14 +465,17 @@ export function useLocationManager(): UseLocationManagerReturn {
 
   const handleDeleteRequest = useCallback(
     (type: 'parent' | 'child', name: string): void => {
+      // Counts decide between plain delete and the reassign flow; while plants
+      // are still loading they read 0 and the reassign flow would be skipped.
+      if (plantsLoading) {
+        Alert.alert('Still Loading', 'Plant data is still loading — try again in a moment.');
+        return;
+      }
       const list = type === 'parent' ? parentLocations : childLocations;
       const count = type === 'parent' ? parentCounts[name] || 0 : childCounts[name] || 0;
 
       if (count === 0) {
-        Alert.alert('Delete Location', 'Remove this item?', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: () => handleDelete(type, name) },
-        ]);
+        setDeleteConfirm({ type, target: name });
         return;
       }
       const options = list.filter((item) => item !== name);
@@ -466,13 +488,19 @@ export function useLocationManager(): UseLocationManagerReturn {
       }
       setReassignModal({ type, target: name, replacement: options[0]! });
     },
-    [parentLocations, childLocations, parentCounts, childCounts, handleDelete]
+    [plantsLoading, parentLocations, childLocations, parentCounts, childCounts]
   );
 
   const handleReassignConfirm = useCallback((): void => {
     if (!reassignModal) return;
     handleDelete(reassignModal.type, reassignModal.target, reassignModal.replacement);
   }, [reassignModal, handleDelete]);
+
+  const handleDeleteConfirm = useCallback((): void => {
+    if (!deleteConfirm) return;
+    handleDelete(deleteConfirm.type, deleteConfirm.target);
+    setDeleteConfirm(null);
+  }, [deleteConfirm, handleDelete]);
 
   const updateProfile = useCallback((patch: Partial<LocationProfile>): void => {
     setEditModal((prev) =>
@@ -510,16 +538,20 @@ export function useLocationManager(): UseLocationManagerReturn {
       locationProfiles,
       plants,
       loading,
+      plantsLoading,
       saving,
       editModal,
       reassignModal,
+      deleteConfirm,
     },
     actions: {
       loadData,
       setEditModal,
       setReassignModal,
+      setDeleteConfirm,
       handleRename,
       handleDeleteRequest,
+      handleDeleteConfirm,
       handleReassignConfirm,
       updateProfile,
     },

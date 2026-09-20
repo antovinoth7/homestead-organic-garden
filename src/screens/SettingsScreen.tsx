@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -8,7 +8,10 @@ import {
   exportFullBackup,
   importFullBackup,
 } from '@/services/backup';
-import { useTheme } from '@/theme';
+import { rebuildCareTasksForAllPlants } from '@/services/tasks';
+import { getAllPlants } from '@/services/plants';
+import type { BackupProgress } from '@/utils/zipHelper';
+import { useTheme, useThemeMode } from '@/theme';
 import {
   useFocusEffect,
   useNavigation,
@@ -17,21 +20,77 @@ import {
 } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { clearAllData } from '@/lib/storage';
+import { clearQueue, getQueueLength } from '@/lib/offlineQueue';
 import { auth } from '@/lib/firebase';
 import { createStyles } from '@/styles/settingsStyles';
 import { logger } from '@/utils/logger';
 import { getErrorMessage } from '@/utils/errorLogging';
+
+const THEME_OPTIONS: {
+  mode: 'light' | 'dark' | 'system';
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  subtitle: string;
+}[] = [
+  { mode: 'light', icon: 'sunny', label: 'Light', subtitle: 'Always use the light theme' },
+  { mode: 'dark', icon: 'moon', label: 'Dark', subtitle: 'Always use the dark theme' },
+  {
+    mode: 'system',
+    icon: 'phone-portrait-outline',
+    label: 'Auto',
+    subtitle: 'Follow device setting',
+  },
+];
+
+const formatProgress = (progress: BackupProgress): string => {
+  const { phase, current, total } = progress;
+  const counter = typeof current === 'number' && total ? ` ${current}/${total}` : '';
+
+  switch (phase) {
+    case 'collecting':
+      return 'Gathering your data…';
+    case 'resolving':
+      return 'Finding photos…';
+    case 'packing':
+      return `Packing photos${counter}…`;
+    case 'compressing':
+      return 'Building archive…';
+    case 'extracting':
+      return `Restoring photos${counter}…`;
+    case 'saving':
+      return 'Saving…';
+  }
+};
+
 export default function SettingsScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
+  const { mode, setMode } = useThemeMode();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
   const [loadingAction, setLoadingAction] = useState<
-    'export' | 'import' | 'cache' | 'full-export' | 'full-restore' | null
+    'export' | 'import' | 'cache' | 'full-export' | 'full-restore' | 'rebuild-tasks' | null
   >(null);
   const [imageStorageSize, setImageStorageSize] = useState(0);
+  const [progressLabel, setProgressLabel] = useState<string | null>(null);
+  const lastProgressLabel = useRef<string | null>(null);
   const loading = loadingAction !== null;
+
+  // Backup emits one progress event per photo. Only re-render when the visible
+  // text actually changes, so a 300-photo archive does not trigger 300 renders.
+  const handleProgress = useCallback((progress: BackupProgress) => {
+    const label = formatProgress(progress);
+    if (label === lastProgressLabel.current) return;
+    lastProgressLabel.current = label;
+    setProgressLabel(label);
+  }, []);
+
+  const finishAction = useCallback(() => {
+    setLoadingAction(null);
+    lastProgressLabel.current = null;
+    setProgressLabel(null);
+  }, []);
 
   const loadStats = React.useCallback(async () => {
     try {
@@ -60,6 +119,48 @@ export default function SettingsScreen(): React.JSX.Element {
     return mb.toFixed(2) + ' MB';
   };
 
+  /**
+   * Recreate care tasks from each plant's own schedule. Purely additive — it
+   * creates what is missing and corrects due dates, and never deletes a task —
+   * so it is safe to run when the Care Plan looks emptier than it should.
+   */
+  const handleRebuildCareTasks = async (): Promise<void> => {
+    Alert.alert(
+      'Rebuild Care Schedule',
+      'Recreates watering, fertilising and harvest tasks from each plant’s care settings.\n\nNothing is deleted. Tasks you already have are kept and their due dates refreshed. Completion history is not restored.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Rebuild',
+          onPress: async () => {
+            setLoadingAction('rebuild-tasks');
+            setProgressLabel('Reading plants…');
+            try {
+              const plants = await getAllPlants();
+              if (plants.length === 0) {
+                Alert.alert('No Plants', 'Add a plant first — care tasks come from your plants.');
+                return;
+              }
+              const result = await rebuildCareTasksForAllPlants(plants, (done, total) => {
+                setProgressLabel(`Rebuilding ${done}/${total} plants…`);
+              });
+              Alert.alert(
+                'Care Schedule Rebuilt',
+                `${result.created} task${result.created === 1 ? '' : 's'} created, ${result.updated} updated across ${result.plantsProcessed} plant${result.plantsProcessed === 1 ? '' : 's'}.` +
+                  (result.failed > 0 ? `\n\n${result.failed} plant(s) could not be rebuilt.` : '')
+              );
+            } catch (error) {
+              logger.error('Failed to rebuild care tasks', error as Error);
+              Alert.alert('Rebuild Failed', getErrorMessage(error));
+            } finally {
+              finishAction();
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleExportFullBackup = async (): Promise<void> => {
     Alert.alert(
       'Export Complete Backup',
@@ -71,7 +172,7 @@ export default function SettingsScreen(): React.JSX.Element {
           onPress: async () => {
             try {
               setLoadingAction('full-export');
-              await exportFullBackup();
+              await exportFullBackup(handleProgress);
               Alert.alert(
                 'Backup Created',
                 'Your complete backup was saved. Store it on Google Drive or share it to keep it safe.',
@@ -80,7 +181,7 @@ export default function SettingsScreen(): React.JSX.Element {
             } catch (error: unknown) {
               Alert.alert('Export Failed', getErrorMessage(error));
             } finally {
-              setLoadingAction(null);
+              finishAction();
             }
           },
         },
@@ -100,7 +201,7 @@ export default function SettingsScreen(): React.JSX.Element {
           onPress: async () => {
             try {
               setLoadingAction('full-restore');
-              const summary = await importFullBackup();
+              const summary = await importFullBackup(handleProgress);
               Alert.alert(
                 'Restore Complete',
                 `Restored ${summary.plants} plants, ${summary.beds} beds, ${summary.journal} journal entries and ${summary.images} photos.`,
@@ -111,7 +212,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 Alert.alert('Restore Failed', getErrorMessage(error));
               }
             } finally {
-              setLoadingAction(null);
+              finishAction();
             }
           },
         },
@@ -130,7 +231,7 @@ export default function SettingsScreen(): React.JSX.Element {
           onPress: async () => {
             try {
               setLoadingAction('export');
-              await exportImagesOnly();
+              await exportImagesOnly(handleProgress);
               Alert.alert(
                 'Images Exported',
                 'Your garden images have been exported as a ZIP file. This contains only photos, no data.',
@@ -139,7 +240,7 @@ export default function SettingsScreen(): React.JSX.Element {
             } catch (error: unknown) {
               Alert.alert('Export Failed', getErrorMessage(error));
             } finally {
-              setLoadingAction(null);
+              finishAction();
             }
           },
         },
@@ -158,7 +259,7 @@ export default function SettingsScreen(): React.JSX.Element {
           onPress: async () => {
             try {
               setLoadingAction('import');
-              const count = await importImagesOnly();
+              const count = await importImagesOnly(handleProgress);
               Alert.alert(
                 'Images Imported',
                 `Successfully imported ${count} image(s). Your data remains unchanged.`,
@@ -169,7 +270,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 Alert.alert('Import Failed', getErrorMessage(error));
               }
             } finally {
-              setLoadingAction(null);
+              finishAction();
             }
           },
         },
@@ -177,28 +278,54 @@ export default function SettingsScreen(): React.JSX.Element {
     );
   };
 
+  const runClearCache = React.useCallback(
+    async (discardPending: boolean): Promise<void> => {
+      try {
+        setLoadingAction('cache');
+        if (discardPending) await clearQueue();
+        // Clear AsyncStorage cache (safe - doesn't terminate Firebase)
+        await clearAllData(auth.currentUser?.uid);
+        await loadStats();
+        Alert.alert('Success', 'Local cache cleared. Data will be re-synced from Firebase.');
+      } catch (error: unknown) {
+        Alert.alert('Error', getErrorMessage(error) || 'Failed to clear cache');
+      } finally {
+        setLoadingAction(null);
+      }
+    },
+    [loadStats]
+  );
+
   const handleClearCache = async (): Promise<void> => {
+    // Queued writes have never reached Firestore, so they cannot be "re-synced
+    // from Firebase" — the user has to decide their fate explicitly.
+    const pending = await getQueueLength();
+
+    if (pending > 0) {
+      Alert.alert(
+        'Unsent Changes',
+        `${pending} change${pending === 1 ? '' : 's'} have not reached the server yet. ` +
+          'Clearing the cache keeps them queued — they will sync when you are back online. ' +
+          'Discarding them deletes them permanently.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Keep & Clear Cache', onPress: () => void runClearCache(false) },
+          {
+            text: 'Discard Changes',
+            style: 'destructive',
+            onPress: () => void runClearCache(true),
+          },
+        ]
+      );
+      return;
+    }
+
     Alert.alert(
       'Clear App Cache',
       "This will clear the app's local data cache. Firebase data will be re-synced on next load. Your data will not be deleted.",
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear Cache',
-          onPress: async () => {
-            try {
-              setLoadingAction('cache');
-              // Clear AsyncStorage cache (safe - doesn't terminate Firebase)
-              await clearAllData(auth.currentUser?.uid);
-              await loadStats();
-              Alert.alert('Success', 'Local cache cleared. Data will be re-synced from Firebase.');
-            } catch (error: unknown) {
-              Alert.alert('Error', getErrorMessage(error) || 'Failed to clear cache');
-            } finally {
-              setLoadingAction(null);
-            }
-          },
-        },
+        { text: 'Clear Cache', onPress: () => void runClearCache(false) },
       ]
     );
   };
@@ -219,11 +346,49 @@ export default function SettingsScreen(): React.JSX.Element {
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 48) + 16 }}
       >
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <Text style={styles.sectionDescription}>Choose how the app looks on this device.</Text>
+
+          <View style={styles.card}>
+            <Text style={styles.themeLabel}>Theme</Text>
+            <View style={styles.themePills} accessibilityRole="radiogroup">
+              {THEME_OPTIONS.map((option) => {
+                const isActive = mode === option.mode;
+                return (
+                  <TouchableOpacity
+                    key={option.mode}
+                    style={[styles.themePill, isActive && styles.themePillActive]}
+                    onPress={() => setMode(option.mode)}
+                    activeOpacity={0.7}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: isActive }}
+                    accessibilityLabel={`${option.label} theme`}
+                    accessibilityHint={option.subtitle}
+                  >
+                    <Ionicons
+                      name={option.icon}
+                      size={15}
+                      color={isActive ? theme.primary : theme.textSecondary}
+                    />
+                    <Text style={[styles.themePillText, isActive && styles.themePillTextActive]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={styles.themeHint}>
+              {THEME_OPTIONS.find((option) => option.mode === mode)?.subtitle}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Complete Backup</Text>
           <Text style={styles.sectionDescription}>
             Save everything — plants, beds, tasks, journal, settings and photos — in one ZIP you can
-            keep on Drive or share. Your data also syncs to the cloud; this is a portable archive you
-            own and can restore on any device.
+            keep on Drive or share. Your data also syncs to the cloud; this is a portable archive
+            you own and can restore on any device.
           </Text>
 
           <TouchableOpacity
@@ -232,7 +397,12 @@ export default function SettingsScreen(): React.JSX.Element {
             disabled={loading}
           >
             {loadingAction === 'full-export' ? (
-              <ActivityIndicator color={theme.textInverse} />
+              <View style={styles.backupProgressRow}>
+                <ActivityIndicator color={theme.textInverse} />
+                {progressLabel ? (
+                  <Text style={styles.backupProgressText}>{progressLabel}</Text>
+                ) : null}
+              </View>
             ) : (
               <>
                 <Ionicons name="archive-outline" size={20} color="#fff" />
@@ -247,7 +417,14 @@ export default function SettingsScreen(): React.JSX.Element {
             disabled={loading}
           >
             {loadingAction === 'full-restore' ? (
-              <ActivityIndicator color={theme.success} />
+              <View style={styles.backupProgressRow}>
+                <ActivityIndicator color={theme.success} />
+                {progressLabel ? (
+                  <Text style={[styles.backupProgressText, styles.backupProgressTextSuccess]}>
+                    {progressLabel}
+                  </Text>
+                ) : null}
+              </View>
             ) : (
               <>
                 <Ionicons name="cloud-upload-outline" size={20} color={theme.success} />
@@ -258,9 +435,12 @@ export default function SettingsScreen(): React.JSX.Element {
             )}
           </TouchableOpacity>
 
-          <Text style={styles.backupNote}>
-            ⚠️ Restoring replaces the data on this device with the backup contents.
-          </Text>
+          <View style={styles.backupNoteRow}>
+            <Ionicons name="warning-outline" size={16} color={theme.warning} />
+            <Text style={styles.backupNoteText}>
+              Restoring replaces the data on this device with the backup contents.
+            </Text>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -277,7 +457,12 @@ export default function SettingsScreen(): React.JSX.Element {
             disabled={loading}
           >
             {loadingAction === 'export' ? (
-              <ActivityIndicator color={theme.textInverse} />
+              <View style={styles.backupProgressRow}>
+                <ActivityIndicator color={theme.textInverse} />
+                {progressLabel ? (
+                  <Text style={styles.backupProgressText}>{progressLabel}</Text>
+                ) : null}
+              </View>
             ) : (
               <>
                 <Ionicons name="images-outline" size={20} color="#fff" />
@@ -292,7 +477,14 @@ export default function SettingsScreen(): React.JSX.Element {
             disabled={loading}
           >
             {loadingAction === 'import' ? (
-              <ActivityIndicator color={theme.success} />
+              <View style={styles.backupProgressRow}>
+                <ActivityIndicator color={theme.success} />
+                {progressLabel ? (
+                  <Text style={[styles.backupProgressText, styles.backupProgressTextSuccess]}>
+                    {progressLabel}
+                  </Text>
+                ) : null}
+              </View>
             ) : (
               <>
                 <Ionicons name="image-outline" size={20} color={theme.success} />
@@ -303,10 +495,13 @@ export default function SettingsScreen(): React.JSX.Element {
             )}
           </TouchableOpacity>
 
-          <Text style={styles.backupNote}>
-            📸 Note: Images are stored with their original filenames. When imported, they&apos;ll
-            automatically match with your existing plants and journal entries.
-          </Text>
+          <View style={styles.backupNoteRow}>
+            <Ionicons name="images-outline" size={16} color={theme.textSecondary} />
+            <Text style={styles.backupNoteText}>
+              Note: Images are stored with their original filenames. When imported, they&apos;ll
+              automatically match with your existing plants and journal entries.
+            </Text>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -320,6 +515,30 @@ export default function SettingsScreen(): React.JSX.Element {
             <Text style={styles.helpText}>
               Clears temporary data to improve performance. Your plants, tasks, and journal entries
               are not affected.
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.infoItem}
+              onPress={handleRebuildCareTasks}
+              disabled={loading}
+            >
+              {loadingAction === 'rebuild-tasks' ? (
+                <ActivityIndicator color={theme.primary} />
+              ) : (
+                <Ionicons name="refresh-outline" size={20} color={theme.primary} />
+              )}
+              <Text style={styles.infoText}>
+                {loadingAction === 'rebuild-tasks' && progressLabel
+                  ? progressLabel
+                  : 'Rebuild Care Schedule'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.helpText}>
+              Recreates watering, fertilising and harvest tasks from each plant&apos;s care settings.
+              Use this if the Care Plan looks emptier than it should. Nothing is deleted — existing
+              tasks are kept and their due dates refreshed.
             </Text>
           </View>
         </View>

@@ -4,15 +4,22 @@ export const HIGH_RAINFALL_ZONE: AgroClimaticZone = {
   id: 'high_rainfall',
   name: 'High Rainfall Zone',
   districts: ['Kanyakumari'],
-  annualRainfallMm: 2124,
+  annualRainfallMm: 1361.2,
   soilTypes: ['laterite', 'alluvial', 'red_sandy_loam'],
   irrigationDominant: 'well',
 
   seasons: [
     {
+      id: 'cool_dry',
+      name: 'Winter',
+      label: 'Winter (Jan\u2013Feb)',
+      startMonth: 1,
+      endMonth: 2,
+    },
+    {
       id: 'summer',
-      name: 'Summer',
-      label: 'Summer (Mar\u2013May)',
+      name: 'Pre-monsoon',
+      label: 'Pre-monsoon (Mar\u2013May)',
       startMonth: 3,
       endMonth: 5,
     },
@@ -29,13 +36,6 @@ export const HIGH_RAINFALL_ZONE: AgroClimaticZone = {
       label: 'NE Monsoon (Oct\u2013Dec)',
       startMonth: 10,
       endMonth: 12,
-    },
-    {
-      id: 'cool_dry',
-      name: 'Cool & Dry',
-      label: 'Cool & Dry (Jan\u2013Feb)',
-      startMonth: 1,
-      endMonth: 2,
     },
   ],
 

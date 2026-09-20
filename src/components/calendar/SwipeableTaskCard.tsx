@@ -2,11 +2,21 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
+import { TASK_ICON_KEYS } from '@/config/iconRegistry';
 import { TaskTemplate, Plant } from '../../types/database.types';
-import { TASK_EMOJIS, TASK_COLORS, TASK_LABELS } from '../../utils/taskConstants';
+import { TASK_COLORS, TASK_LABELS } from '../../utils/taskConstants';
+import {
+  calendarDaysOverdue,
+  isEarlyCompletionBlocked,
+  isFutureTask,
+  isSkipBlocked,
+} from '../../services/taskSchedulingLogic';
 import { calculateTaskPriority } from '../../services/tasks';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/calendarStyles';
+import { formatFarmDate } from '@/utils/farmDate';
+import type { TaskWeatherAdvisory } from '@/utils/taskWeatherAdvisory';
 
 interface PlantDetails {
   name: string;
@@ -21,15 +31,18 @@ interface Props {
   swipeableRefs: React.MutableRefObject<Map<string, Swipeable>>;
   getPlantDetails: (plantId: string | null) => PlantDetails;
   onComplete: (task: TaskTemplate) => void;
-  onSnooze: (task: TaskTemplate, hours: number) => void;
+  /** Invoked instead of `onComplete` when the task can't be done early. */
+  onBlockedComplete: (task: TaskTemplate) => void;
   onSkipOpen: (task: TaskTemplate) => void;
+  /** Invoked instead of `onSkipOpen` when the task isn't due yet. */
+  onBlockedSkip: (task: TaskTemplate) => void;
   onSelectToggle: (taskId: string) => void;
   onDetail: (task: TaskTemplate) => void;
   /** Shared StyleSheet from the screen — avoids rebuilding the large factory per card. */
   styles: ReturnType<typeof createStyles>;
   bedMap?: Map<string, string>;
-  /** Watering tasks: rain predicted on the due date — show a "may skip" badge. */
-  rainExpected?: boolean;
+  /** Watering tasks: rain predicted on the due date — prompt a soil check. */
+  weatherAdvisory?: TaskWeatherAdvisory | null;
   /** Harvest tasks: formatted estimated harvest date hint (e.g. "Aug 12"). */
   harvestHint?: string | null;
 }
@@ -41,13 +54,14 @@ function SwipeableTaskCardComponent({
   swipeableRefs,
   getPlantDetails,
   onComplete,
-  onSnooze,
+  onBlockedComplete,
   onSkipOpen,
+  onBlockedSkip,
   onSelectToggle,
   onDetail,
   styles,
   bedMap,
-  rainExpected,
+  weatherAdvisory,
   harvestHint,
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
@@ -56,12 +70,20 @@ function SwipeableTaskCardComponent({
 
   const plantDetails = getPlantDetails(task.plant_id);
   const dueDate = new Date(task.next_due_at);
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const isOverdue = dueDate < todayStart;
+  const isOverdue = calendarDaysOverdue(task) !== null;
+  // Not due yet. For most types completing early is allowed but reschedules from
+  // today, so the swipe action says so and the screen confirms. For water /
+  // fertilise / spray it is refused outright — the Done affordance is replaced
+  // rather than left to promise something it won't do.
+  const isFuture = isFutureTask(task);
+  const isBlocked = isEarlyCompletionBlocked(task);
+  // Skipping is refused for *any* not-yet-due task — there is nothing to defer
+  // until it comes due — so the left action is replaced the same way.
+  const skipBlocked = isSkipBlocked(task);
 
   const plantObj = task.plant_id ? plantMap.get(task.plant_id) : undefined;
   const effectivePriority = task.priority_level || calculateTaskPriority(task, plantObj || null);
+  const taskLabel = TASK_LABELS[task.task_type];
 
   // Bed-level tasks have no plant — surface the bed name as the label so the
   // farmer can tell *where* to act instead of a generic "General".
@@ -90,11 +112,27 @@ function SwipeableTaskCardComponent({
       extrapolate: 'clamp',
     });
 
+    if (isBlocked) {
+      return (
+        <TouchableOpacity
+          style={styles.swipeBlockedAction}
+          onPress={() => onBlockedComplete(task)}
+          accessibilityRole="button"
+          accessibilityLabel="Not due yet — why?"
+        >
+          <Animated.View style={[styles.swipeActionContent, { opacity, transform: [{ scale }] }]}>
+            <Ionicons name="ban-outline" size={28} color={theme.textInverse} />
+            <Text style={styles.swipeActionText}>Not due</Text>
+          </Animated.View>
+        </TouchableOpacity>
+      );
+    }
+
     return (
       <TouchableOpacity style={styles.swipeAction} onPress={() => onComplete(task)}>
         <Animated.View style={[styles.swipeActionContent, { opacity, transform: [{ scale }] }]}>
           <Ionicons name="checkmark-circle" size={28} color={theme.textInverse} />
-          <Text style={styles.swipeActionText}>Done</Text>
+          <Text style={styles.swipeActionText}>{isFuture ? 'Done early' : 'Done'}</Text>
         </Animated.View>
       </TouchableOpacity>
     );
@@ -115,17 +153,26 @@ function SwipeableTaskCardComponent({
       extrapolate: 'clamp',
     });
 
-    return (
-      <View style={styles.swipeLeftActions}>
+    // Rendered bare rather than inside `swipeLeftActions`: the blocked box
+    // carries its own bottom margin, same as the right-hand one.
+    if (skipBlocked) {
+      return (
         <TouchableOpacity
-          style={styles.swipeSnoozeAction}
-          onPress={() => onSnooze(task, isOverdue ? 2 : 4)}
+          style={styles.swipeBlockedAction}
+          onPress={() => onBlockedSkip(task)}
+          accessibilityRole="button"
+          accessibilityLabel="Not due yet — why?"
         >
           <Animated.View style={[styles.swipeActionContent, { opacity, transform: [{ scale }] }]}>
-            <Ionicons name="time-outline" size={24} color={theme.textInverse} />
-            <Text style={styles.swipeActionText}>{isOverdue ? '+2h' : '+4h'}</Text>
+            <Ionicons name="ban-outline" size={24} color={theme.textInverse} />
+            <Text style={styles.swipeActionText}>Not due</Text>
           </Animated.View>
         </TouchableOpacity>
+      );
+    }
+
+    return (
+      <View style={styles.swipeLeftActions}>
         <TouchableOpacity style={styles.swipeSkipAction} onPress={() => onSkipOpen(task)}>
           <Animated.View style={[styles.swipeActionContent, { opacity, transform: [{ scale }] }]}>
             <Ionicons name="play-skip-forward" size={24} color={theme.textInverse} />
@@ -154,7 +201,11 @@ function SwipeableTaskCardComponent({
       overshootRight={false}
       overshootLeft={false}
       onSwipeableOpen={(direction) => {
-        if (direction === 'right') onComplete(task);
+        if (direction !== 'right') return;
+        // A blocked task still resolves the swipe — with the explanation rather
+        // than the completion — instead of leaving the drawer hanging open.
+        if (isBlocked) onBlockedComplete(task);
+        else onComplete(task);
       }}
     >
       <View
@@ -174,64 +225,113 @@ function SwipeableTaskCardComponent({
                   { backgroundColor: TASK_COLORS[task.task_type] + '18' },
                 ]}
               >
-                <Text style={styles.taskIconEmoji}>{TASK_EMOJIS[task.task_type] || '📌'}</Text>
+                <GardenIcon
+                  name={TASK_ICON_KEYS[task.task_type]}
+                  size={20}
+                  color={TASK_COLORS[task.task_type]}
+                />
               </View>
               <View style={styles.taskInfo}>
                 <View style={styles.rowCenter}>
-                  <Text style={styles.taskTitle}>{TASK_LABELS[task.task_type]}</Text>
+                  <Text style={styles.taskTitle}>{taskLabel}</Text>
                   {priorityColor && (
                     <View
                       style={[styles.taskPriorityBadge, { backgroundColor: priorityColor + '22' }]}
                     >
                       <Text style={[styles.taskPriorityBadgeText, { color: priorityColor }]}>
-                        {effectivePriority === 'critical' ? '⚠ Critical' : '↑ High'}
+                        {effectivePriority === 'critical' ? 'Critical' : 'High'}
                       </Text>
                     </View>
                   )}
-                  {rainExpected && (
+                  {weatherAdvisory && (
                     <View style={styles.taskRainBadge}>
-                      <Text style={styles.taskRainBadgeText}>🌧️ Rain expected — may skip</Text>
+                      <GardenIcon name={weatherAdvisory.iconKey} size={12} color={theme.info} />
+                      <Text style={styles.taskRainBadgeText}>{weatherAdvisory.text}</Text>
                     </View>
                   )}
                 </View>
                 <Text style={styles.taskPlant}>{displayName}</Text>
                 {plantDetails.location && (
-                  <Text style={styles.taskLocation}>📍 {plantDetails.location}</Text>
+                  <View style={styles.taskMetaLine}>
+                    <GardenIcon name="general.location" size={12} color={theme.textTertiary} />
+                    <Text style={styles.taskLocation}>{plantDetails.location}</Text>
+                  </View>
                 )}
                 {task.plant_id != null && bedLabel != null && (
-                  <Text style={styles.taskBed}>🪴 {bedLabel}</Text>
+                  <View style={styles.taskMetaLine}>
+                    <Ionicons name="grid-outline" size={12} color={theme.primary} />
+                    <Text style={styles.taskBed}>{bedLabel}</Text>
+                  </View>
                 )}
                 {task.preferred_time && (
-                  <Text style={styles.taskPreferredTime}>
-                    {task.preferred_time === 'morning'
-                      ? '🌅 Morning'
-                      : task.preferred_time === 'afternoon'
-                      ? '☀️ Afternoon'
-                      : '🌙 Evening'}
-                  </Text>
+                  <View style={styles.taskMetaLine}>
+                    <Ionicons
+                      name={task.preferred_time === 'evening' ? 'moon-outline' : 'sunny-outline'}
+                      size={12}
+                      color={theme.textTertiary}
+                    />
+                    <Text style={styles.taskPreferredTime}>
+                      {task.preferred_time === 'morning'
+                        ? 'Morning'
+                        : task.preferred_time === 'afternoon'
+                        ? 'Afternoon'
+                        : 'Evening'}
+                    </Text>
+                  </View>
+                )}
+                {task.source === 'manual' && (
+                  // A manual task can sit beside the plant's own schedule, so
+                  // one plant may list the same care type twice. Mark which one
+                  // the farmer added by hand.
+                  <View style={styles.taskMetaLine}>
+                    <Text style={styles.taskCustomBadge}>Custom</Text>
+                  </View>
                 )}
                 {harvestHint && (
-                  <Text style={styles.taskHarvestHint}>🧺 Est. harvest: {harvestHint}</Text>
+                  <View style={styles.taskMetaLine}>
+                    <GardenIcon name="task.harvest" size={12} color={theme.success} />
+                    <Text style={styles.taskHarvestHint}>{harvestHint}</Text>
+                  </View>
                 )}
               </View>
               <View style={styles.taskRight}>
                 <Text style={[styles.taskTime, isOverdue && styles.taskTimeOverdue]}>
                   {isOverdue
                     ? 'Overdue'
-                    : dueDate.toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                    : formatFarmDate(
+                        dueDate,
+                        {
+                          month: 'short',
+                          day: 'numeric',
+                        }
+                      )}
                 </Text>
                 <TouchableOpacity
-                  style={[styles.taskCheckbox, isSelected && styles.taskCheckboxSelected]}
-                  onPress={() => onSelectToggle(task.id)}
+                  style={[
+                    styles.taskCheckbox,
+                    isSelected && styles.taskCheckboxSelected,
+                    isBlocked && styles.taskCheckboxBlocked,
+                  ]}
+                  onPress={() => (isBlocked ? onBlockedComplete(task) : onSelectToggle(task.id))}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   activeOpacity={0.6}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={
+                    isBlocked
+                      ? `Explain early completion for ${taskLabel}`
+                      : `${isSelected ? 'Deselect' : 'Select'} ${taskLabel}`
+                  }
                 >
                   <Ionicons
-                    name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={22}
+                    name={
+                      isBlocked
+                        ? 'ban-outline'
+                        : isSelected
+                        ? 'checkmark-circle'
+                        : 'ellipse-outline'
+                    }
+                    size={20}
                     color={isSelected ? theme.primary : theme.border}
                   />
                 </TouchableOpacity>

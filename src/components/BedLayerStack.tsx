@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
+import { GardenIcon } from '@/components/GardenIcon';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedLayerStackStyles';
 import { DraggablePlantRow } from '@/components/DraggablePlantRow';
 import { LAYER_ORDER, LAYER_META } from '@/config/beds/layerMeta';
-import { getPlantEmoji } from '@/utils/plantHelpers';
+import { getPlantImage } from '@/config/referenceAssets';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
 import type { RowLayoutResult } from '@/utils/rowLayoutEngine';
 import type { BedLayer, EntryResolution, PlantEntry } from '@/types/database.types';
 
@@ -21,9 +23,9 @@ interface Props {
 function resolutionLabel(res: EntryResolution | undefined): { text: string; resolved: boolean } {
   const kind = res?.kind ?? 'placeholder';
   if (kind === 'placeholder') return { text: 'Tap to link / add to My Plants', resolved: false };
-  if (kind === 'link') return { text: '✓ Linked to plant', resolved: true };
+  if (kind === 'link') return { text: 'Linked to plant', resolved: true };
   const variety = res?.kind === 'create' ? res.variety : undefined;
-  return { text: variety ? `✓ New: ${variety}` : '✓ New plant', resolved: true };
+  return { text: variety ? `New: ${variety}` : 'New plant', resolved: true };
 }
 
 export function BedLayerStack({
@@ -76,7 +78,12 @@ export function BedLayerStack({
           isDragging ? styles.tileDragging : null,
         ]}
       >
-        <Text style={styles.tileEmoji}>{getPlantEmoji(entry.name)}</Text>
+        <ReferenceThumb
+          source={getPlantImage(entry.name)}
+          fallbackIcon="general.plant"
+          variant="row"
+          accessibilityLabel={`${entry.name} reference image`}
+        />
         <Text style={styles.tileName} numberOfLines={2}>
           {entry.name}
         </Text>
@@ -115,9 +122,12 @@ export function BedLayerStack({
           <Text style={styles.capacityChip}>+{result.totalRowsFit} more rows fit</Text>
         )}
         {overflowing && (
-          <Text style={[styles.capacityChip, styles.capacityOverflow]}>
-            ⚠ Too short by {Math.round(result.overflowCm)}cm
-          </Text>
+          <View style={styles.capacityWarning}>
+            <GardenIcon name="general.warning" size={13} color={theme.error} />
+            <Text style={styles.capacityOverflowText}>
+              Too short by {Math.round(result.overflowCm)}cm
+            </Text>
+          </View>
         )}
       </View>
       {overflowing && (
@@ -135,7 +145,7 @@ export function BedLayerStack({
         if (layerEntries.length === 0) {
           return (
             <View key={layer} style={styles.ghostCard}>
-              <Text style={styles.ghostIcon}>{meta.icon}</Text>
+              <GardenIcon name={meta.iconKey} size={24} color={theme.textTertiary} />
               <View style={styles.ghostInfo}>
                 <Text style={styles.ghostTitle}>{meta.title} — empty</Text>
                 <Text style={styles.ghostSubtitle}>{meta.subtitle}</Text>
@@ -160,13 +170,13 @@ export function BedLayerStack({
           >
             <View style={[styles.layerAccent, { backgroundColor: layerColor.color }]} />
             <View style={styles.layerHeader}>
-              <Text style={styles.layerIcon}>{meta.icon}</Text>
+              <GardenIcon name={meta.iconKey} size={24} color={layerColor.color} />
               <View style={styles.layerTitleCol}>
                 <Text style={styles.layerTitle}>{meta.title}</Text>
                 <Text style={styles.layerSubtitle}>{meta.subtitle}</Text>
               </View>
               <Text style={styles.layerCount}>
-                {companionCount > 0 ? `${mainCount} + ${companionCount}★` : `${mainCount}`}
+                {companionCount > 0 ? `${mainCount} + ${companionCount} companions` : `${mainCount}`}
               </Text>
               <TouchableOpacity style={styles.addBtn} onPress={() => onAddToLayer(layer)}>
                 <Text style={styles.addBtnText}>+</Text>

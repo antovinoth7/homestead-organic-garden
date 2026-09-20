@@ -1,13 +1,17 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { useNavigation } from '@react-navigation/native';
-import { createStyles } from '@/styles/plantDetailStyles';
 import { createEnrichedSectionStyles } from '@/styles/enrichedSectionStyles';
+import { DetailCard } from '@/components/plantDetail/DetailCard';
+import { ExpandableBlock } from '@/components/plantDetail/ExpandableBlock';
+import { ExpandableText } from '@/components/plantDetail/ExpandableText';
 import { getPlantCareProfile, getPruningTechniques } from '@/utils/plantCareDefaults';
-import { getCommonPests, getCommonDiseases, getPestDiseaseEmoji } from '@/utils/plantHelpers';
+import { getCommonPests, getCommonDiseases } from '@/utils/plantHelpers';
 import { getPestByName } from '@/config/pests';
 import { getDiseaseByName } from '@/config/diseases';
+import { getDiseaseImage, getPestImage } from '@/config/referenceAssets';
 import type { PlantType, PlantCareProfiles } from '@/types/database.types';
 import type { PlantDetailScreenNavigationProp } from '@/types/navigation.types';
 import type { Theme } from '@/theme/colors';
@@ -25,7 +29,6 @@ export function DetailCareGuidanceSection({
   plantVariety,
   plantCareProfiles,
 }: Props): React.JSX.Element | null {
-  const styles = useMemo(() => createStyles(theme), [theme]);
   const enrichedStyles = useMemo(() => createEnrichedSectionStyles(theme), [theme]);
   const navigation = useNavigation<PlantDetailScreenNavigationProp>();
 
@@ -88,21 +91,23 @@ export function DetailCareGuidanceSection({
   if (!hasPruning && !hasPests && !hasDiseases && !hasDescription) return null;
 
   return (
-    <View style={styles.careSection}>
-      <Text style={styles.sectionTitle}>📖 Care Guidance</Text>
-
+    <DetailCard title="Care Guidance" icon="book-outline">
       {hasDescription && (
         <View style={enrichedStyles.narrativeBlock}>
-          <Text style={enrichedStyles.narrativeText}>{profile!.description}</Text>
+          <ExpandableText textStyle={enrichedStyles.narrativeText}>
+            {profile!.description!}
+          </ExpandableText>
         </View>
       )}
 
       {hasPruning && (
-        <View style={enrichedStyles.narrativeBlock}>
-          <View style={enrichedStyles.narrativeHeader}>
-            <Ionicons name="cut-outline" size={16} color={theme.accent} />
-            <Text style={enrichedStyles.narrativeTitle}>Pruning Guide</Text>
-          </View>
+        <ExpandableBlock
+          title="Pruning Guide"
+          icon="cut-outline"
+          summary={`${pruningInfo!.tips.length} tip${pruningInfo!.tips.length === 1 ? '' : 's'}${
+            pruningInfo!.shapePruning ? ' · shape' : ''
+          }${pruningInfo!.flowerPruning ? ' · flower' : ''}`}
+        >
           {pruningInfo!.tips.map((tip, i) => (
             <View key={i} style={enrichedStyles.bulletRow}>
               <Text style={enrichedStyles.bullet}>{'\u2022'}</Text>
@@ -111,7 +116,7 @@ export function DetailCareGuidanceSection({
           ))}
           {pruningInfo!.shapePruning && (
             <View style={enrichedStyles.techniqueRow}>
-              <Text style={enrichedStyles.techniqueIcon}>{'\u2702\uFE0F'}</Text>
+              <Ionicons name="cut-outline" size={18} color={theme.accent} />
               <View style={enrichedStyles.flexOne}>
                 <Text style={enrichedStyles.techniqueTitle}>
                   Shape pruning — {pruningInfo!.shapePruning.tip}
@@ -124,7 +129,7 @@ export function DetailCareGuidanceSection({
           )}
           {pruningInfo!.flowerPruning && (
             <View style={enrichedStyles.techniqueRow}>
-              <Text style={enrichedStyles.techniqueIcon}>{'\uD83C\uDF38'}</Text>
+              <Ionicons name="flower-outline" size={18} color={theme.accent} />
               <View style={enrichedStyles.flexOne}>
                 <Text style={enrichedStyles.techniqueTitle}>
                   Flower pruning — {pruningInfo!.flowerPruning.tip}
@@ -135,15 +140,17 @@ export function DetailCareGuidanceSection({
               </View>
             </View>
           )}
-        </View>
+        </ExpandableBlock>
       )}
 
       {hasPests && (
-        <View style={enrichedStyles.chipSection}>
-          <View style={enrichedStyles.chipSectionHeader}>
-            <Ionicons name="bug-outline" size={16} color="#f44336" />
-            <Text style={enrichedStyles.chipSectionLabel}>Common Pests</Text>
-          </View>
+        <ExpandableBlock
+          title="Common Pests"
+          icon="bug-outline"
+          summary={`${pests.length} to watch · ${pests.slice(0, 2).join(', ')}${
+            pests.length > 2 ? '…' : ''
+          }`}
+        >
           <View style={enrichedStyles.chipRow}>
             {pests.map((name) => {
               const entry = getPestByName(name);
@@ -155,7 +162,11 @@ export function DetailCareGuidanceSection({
                   activeOpacity={entry ? 0.6 : 1}
                   disabled={!entry}
                 >
-                  <Text style={enrichedStyles.chipEmoji}>{getPestDiseaseEmoji(name, 'pest')}</Text>
+                  <ReferenceThumb
+                    source={entry ? getPestImage(entry.id, entry.imageAsset) : undefined}
+                    fallbackIcon="general.pest"
+                    variant="chip"
+                  />
                   <Text style={enrichedStyles.pestChipText}>{name}</Text>
                   {entry && (
                     <Ionicons name="chevron-forward" size={12} color={theme.textTertiary} />
@@ -164,15 +175,17 @@ export function DetailCareGuidanceSection({
               );
             })}
           </View>
-        </View>
+        </ExpandableBlock>
       )}
 
       {hasDiseases && (
-        <View style={enrichedStyles.chipSection}>
-          <View style={enrichedStyles.chipSectionHeader}>
-            <Ionicons name="medical-outline" size={16} color="#FF9800" />
-            <Text style={enrichedStyles.chipSectionLabel}>Common Diseases</Text>
-          </View>
+        <ExpandableBlock
+          title="Common Diseases"
+          icon="medical-outline"
+          summary={`${diseases.length} to watch · ${diseases.slice(0, 2).join(', ')}${
+            diseases.length > 2 ? '…' : ''
+          }`}
+        >
           <View style={enrichedStyles.chipRow}>
             {diseases.map((name) => {
               const entry = getDiseaseByName(name);
@@ -184,9 +197,11 @@ export function DetailCareGuidanceSection({
                   activeOpacity={entry ? 0.6 : 1}
                   disabled={!entry}
                 >
-                  <Text style={enrichedStyles.chipEmoji}>
-                    {getPestDiseaseEmoji(name, 'disease')}
-                  </Text>
+                  <ReferenceThumb
+                    source={entry ? getDiseaseImage(entry.id, entry.imageAsset) : undefined}
+                    fallbackIcon="general.disease"
+                    variant="chip"
+                  />
                   <Text style={enrichedStyles.diseaseChipText}>{name}</Text>
                   {entry && (
                     <Ionicons name="chevron-forward" size={12} color={theme.textTertiary} />
@@ -195,8 +210,8 @@ export function DetailCareGuidanceSection({
               );
             })}
           </View>
-        </View>
+        </ExpandableBlock>
       )}
-    </View>
+    </DetailCard>
   );
 }

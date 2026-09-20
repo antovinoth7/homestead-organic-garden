@@ -47,6 +47,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     progressLabel: { fontSize: 9, color: theme.textTertiary, textAlign: 'center' as const },
     progressLabelActive: { color: theme.primary, fontWeight: '600' as const },
     progressLabelComplete: { color: theme.textSecondary },
+    keyboardAvoiding: { flex: 1 },
     stepContent: { flex: 1 },
     stepContainer: { padding: 16, paddingBottom: 40 },
     stepTitle: { fontSize: 20, fontWeight: '700', color: theme.text, marginBottom: 6 },
@@ -199,10 +200,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 6,
     },
     // Step 1 — type grid
-    typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     typeCard: {
       width: '47%',
-      padding: 14,
+      padding: 10,
       borderRadius: 10,
       backgroundColor: theme.backgroundSecondary,
       borderWidth: 1.5,
@@ -211,12 +212,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     typeCardSelected: { borderColor: theme.primary, backgroundColor: theme.primaryLight },
     typeCardDimmed: { opacity: 0.5 },
-    typeEmoji: { fontSize: 28, marginBottom: 6 },
+    typeIcon: { marginBottom: 4 },
     typeLabel: { fontSize: 13, fontWeight: '600', color: theme.text, textAlign: 'center' },
     typeLabelSelected: { color: theme.primary },
-    typeDesc: { fontSize: 11, color: theme.textSecondary, textAlign: 'center', marginTop: 4 },
+    typeDesc: { fontSize: 11, color: theme.textSecondary, textAlign: 'center', marginTop: 2 },
     typeInfoTag: {
-      marginTop: 6,
+      marginTop: 4,
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 10,
@@ -224,14 +225,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignSelf: 'center' as const,
     },
     typeInfoTagText: { fontSize: 10, fontWeight: '600' as const, color: theme.primary },
-    // Step 1 — Tamil label under card title
-    btTamilLabel: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      textAlign: 'center' as const,
-      marginTop: 2,
-      fontStyle: 'italic' as const,
-    },
     // Step 1 — Ideal season badge overlaid on card
     btIdealBadge: {
       position: 'absolute' as const,
@@ -245,6 +238,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     btIdealBadgeText: { fontSize: 9, fontWeight: '700' as const, color: theme.textInverse },
     // Step 1 — Season context banner
     btSeasonBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
       backgroundColor: theme.infoLight,
       borderRadius: 8,
       paddingHorizontal: 12,
@@ -295,7 +291,23 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 10,
     },
     // Field groups
-    fieldGroup: { marginBottom: 16 },
+    fieldGroup: { marginBottom: 12 },
+    // Step 2 — collapsible "More soil details" toggle
+    lcMoreToggle: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.backgroundSecondary,
+      marginBottom: 12,
+    },
+    lcMoreToggleLabelBlock: { flex: 1, paddingRight: 8 },
+    lcMoreToggleText: { fontSize: 14, fontWeight: '600' as const, color: theme.text },
+    lcMoreToggleHint: { fontSize: 11, color: theme.textSecondary, marginTop: 2 },
     fieldLabelRow: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
@@ -350,6 +362,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     switchThumbActive: { alignSelf: 'flex-end' as const },
     blockAlert: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
       backgroundColor: theme.errorLight,
       borderRadius: 8,
       padding: 12,
@@ -358,8 +373,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.error,
     },
-    blockAlertText: { color: theme.error, fontSize: 13 },
+    blockAlertText: { color: theme.error, fontSize: 13, flex: 1 },
     sunlightWarning: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
       backgroundColor: theme.warningLight,
       borderRadius: 8,
       padding: 10,
@@ -367,7 +385,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.warning,
     },
-    sunlightWarningText: { color: theme.warning, fontSize: 12 },
+    sunlightWarningText: { color: theme.warning, fontSize: 12, flex: 1 },
+    inlineLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
     // Step 3 — size
     recommendationCard: {
       backgroundColor: theme.primaryLight,
@@ -490,6 +509,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sequenceRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
     sequenceWeek: { fontSize: 12, color: theme.primary, fontWeight: '600', width: 48 },
     sequenceAction: { flex: 1, fontSize: 12, color: theme.textSecondary },
+    sequenceNote: { fontSize: 12, color: theme.textSecondary, lineHeight: 16 },
     sectionLabel: { fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 8 },
     plantRowCard: {
       flexDirection: 'row',
@@ -740,6 +760,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     szUnitBtnText: { fontSize: 13, fontWeight: '600' as const, color: theme.textSecondary },
     szUnitBtnTextActive: { color: theme.textInverse },
     szArmReachHint: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 7,
       backgroundColor: theme.warningLight,
       borderRadius: 8,
       paddingHorizontal: 10,
@@ -1260,39 +1283,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 2,
       letterSpacing: 0.2,
     },
-    // Guild step — harvest mini timeline
-    gtHarvestRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      marginBottom: 8,
-    },
-    gtHarvestLabelCol: {
-      width: 120,
-    },
-    gtHarvestName: {
-      fontSize: 12,
-      fontWeight: '600' as const,
-      color: theme.text,
-    },
-    gtHarvestBarTrack: {
-      flex: 1,
-      height: 8,
-      backgroundColor: theme.borderLight,
-      borderRadius: 4,
-      overflow: 'hidden' as const,
-    },
-    gtHarvestBar: {
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: theme.success,
-    },
-    gtHarvestDays: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      fontWeight: '600' as const,
-      marginLeft: 8,
-      width: 34,
-    },
     // Layout step — top-down bed map (Step 5 hero)
     tdmCard: {
       backgroundColor: theme.backgroundSecondary,
@@ -1324,8 +1314,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'stretch' as const,
       gap: 6,
     },
-    // Ruler + canvas live in this row so the ruler stretches to the canvas
-    // height only (not the compass/legend), keeping meter ticks aligned to the
+    // Row-tag gutter + canvas live in this row so the row tags stretch to the
+    // canvas height only (not the compass/legend), keeping tags aligned to the
     // grid at base zoom.
     tdmPlotRow: {
       flexDirection: 'row' as const,
@@ -1335,25 +1325,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmPlotCol: {
       flex: 1,
     },
-    tdmRuler: {
-      width: 26,
-      position: 'relative' as const,
-    },
-    tdmRulerTick: {
-      position: 'absolute' as const,
-      right: 0,
-      fontSize: 10,
-      color: theme.textTertiary,
-      transform: [{ translateY: -6 }],
-      textAlign: 'right' as const,
-    },
     tdmCompass: {
       flexDirection: 'row' as const,
       justifyContent: 'space-between' as const,
       alignItems: 'center' as const,
-      // Indent past the ruler (width 26 + row gap 6) so the N/S markers sit over
-      // the canvas, matching where they sat when nested inside the frame.
-      paddingLeft: 32,
+      // Indent past the row-tag gutter (34) + gap (6) so the N/S markers sit
+      // over the canvas, matching where they sat when nested inside the frame.
+      paddingLeft: 40,
     },
     tdmCompassN: {
       fontSize: 10,
@@ -1414,9 +1392,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       opacity: 0.55,
       transform: [{ translateY: -0.5 }],
     },
+    // Dedicated column between the ruler and the canvas so the R-tags never
+    // cover the westmost plant pins inside the bed.
+    tdmRowTagGutter: {
+      width: 34,
+      position: 'relative' as const,
+    },
     tdmRowTag: {
       position: 'absolute' as const,
-      left: 2,
+      left: 0,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       backgroundColor: theme.backgroundSecondary,
@@ -1426,8 +1410,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 1,
       borderRadius: 999,
       // Centre the pill on the row centerline (≈17px tall → lift half its height).
-      // Rendered after the pins so the opaque pill reads cleanly on top of the
-      // westmost pin at the bed edge.
       transform: [{ translateY: -9 }],
     },
     tdmRowTagText: {
@@ -1482,11 +1464,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       right: 0,
       textAlign: 'center' as const,
     },
-    // Zero-width anchor placed at the gap midpoint; alignItems centers the chip
-    // exactly on that point regardless of digit count. Sits just below the line.
+    // Fixed-width anchor centred on the gap midpoint via negative marginLeft
+    // (same pattern as tdmPinWrap). A zero-width anchor lets Android wrap the
+    // chip text one character per line, leaving stray white slivers on the map.
     tdmGapCaret: {
       position: 'absolute' as const,
-      width: 0,
+      width: 44,
+      marginLeft: -22,
       alignItems: 'center' as const,
       transform: [{ translateY: 7 }],
     },
@@ -1495,6 +1479,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600' as const,
       letterSpacing: 0.1,
       paddingHorizontal: 2,
+      borderRadius: 3,
+      overflow: 'hidden' as const,
+      backgroundColor: theme.backgroundSecondary,
+    },
+    // Chip on the midline between two adjacent rows showing their exact N-S gap.
+    tdmRowGapChip: {
+      position: 'absolute' as const,
+      left: '50%' as const,
+      width: 72,
+      marginLeft: -36,
+      alignItems: 'center' as const,
+      transform: [{ translateY: -6 }],
+    },
+    tdmRowGapChipText: {
+      color: theme.accent,
+      fontWeight: '600' as const,
+      letterSpacing: 0.1,
+      paddingHorizontal: 3,
       borderRadius: 3,
       overflow: 'hidden' as const,
       backgroundColor: theme.backgroundSecondary,
@@ -1587,20 +1589,28 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center' as const,
       justifyContent: 'space-between' as const,
       paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingVertical: 10,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
       backgroundColor: theme.backgroundSecondary,
     },
     tdmModalTitle: {
       fontSize: 16,
-      fontWeight: '600' as const,
+      fontWeight: '700' as const,
       color: theme.text,
     },
+    tdmModalSubtitle: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
     tdmModalClose: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
     },
@@ -1637,6 +1647,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       height: 18,
       borderRadius: 9,
     },
+    // Unplanted column slot — faint dashed outline at the slot's true position.
+    // No fill: the bed surface shows through.
+    tdmEmptySlot: {
+      position: 'absolute' as const,
+      borderWidth: 1,
+      borderStyle: 'dashed' as const,
+      borderColor: theme.textTertiary,
+      opacity: 0.6,
+    },
     tdmPinEmoji: {
       fontSize: 11,
       lineHeight: 13,
@@ -1652,6 +1671,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       maxWidth: 56,
     },
     tdmOverflowBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
       position: 'absolute' as const,
       bottom: 4,
       left: 4,
@@ -1673,8 +1695,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexWrap: 'wrap' as const,
       gap: 8,
       marginTop: 6,
-      // Align under the canvas (past the ruler gutter), matching the compass.
-      paddingLeft: 32,
+      // Align under the canvas (past the ruler + row-tag gutters), matching the compass.
+      paddingLeft: 72,
     },
     tdmLegendItem: {
       flexDirection: 'row' as const,
@@ -1695,6 +1717,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderStyle: 'dashed' as const,
       borderColor: theme.purpleDark,
       backgroundColor: theme.purpleLight,
+    },
+    tdmLegendSwatchOpenSlot: {
+      borderStyle: 'dashed' as const,
+      borderColor: theme.textTertiary,
     },
     tdmLegendText: {
       fontSize: 10,
@@ -1721,6 +1747,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       letterSpacing: 0.2,
     },
     blTrellisCard: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
       backgroundColor: theme.warningLight,
       borderRadius: 10,
       padding: 12,
@@ -1809,6 +1838,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 12,
       borderWidth: 1,
       borderColor: theme.success,
+      gap: 8,
     },
     gtAutoAddedBannerText: {
       flex: 1,
@@ -1830,12 +1860,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.backgroundSecondary,
       borderRadius: 22,
       padding: 4,
-      marginBottom: 12,
+      marginBottom: 10,
       alignSelf: 'stretch' as const,
+      borderWidth: 1,
+      borderColor: theme.border,
     },
     blLayoutTab: {
       flex: 1,
-      paddingVertical: 9,
+      paddingVertical: 7,
       paddingHorizontal: 18,
       borderRadius: 18,
       alignItems: 'center' as const,

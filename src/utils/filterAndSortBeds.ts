@@ -1,8 +1,7 @@
 import { BedType, SunlightLevel } from '@/types/database.types';
 import { BedWithCoverage } from '@/hooks/useBedData';
-
-/** Coverage threshold below which a bed is flagged as low-legume (matches the list banner). */
-const LOW_LEGUME_THRESHOLD = 20;
+import { BedLifecycle, getBedLifecycle } from '@/utils/bedStatus';
+import { matchesPlotFilterParent } from '@/utils/plotGrouping';
 
 export type BedSortOption = 'newest' | 'oldest' | 'name' | 'area' | 'plants' | 'legume';
 
@@ -11,8 +10,14 @@ export interface BedActiveFilters {
   sunlight: SunlightLevel | 'all';
   /** Maps to is_raised_bed: 'raised' = true, 'in_ground' = false. */
   construction: 'all' | 'raised' | 'in_ground';
-  /** 'resting' = is_resting; 'permanent' = is_permanent. */
-  status: 'all' | 'resting' | 'permanent';
+  /**
+   * One `getBedLifecycle` bucket, so the list agrees with every other place a bed
+   * states its state — the bed cards, the bed detail, and the Today plot card's bed
+   * tile, which links straight into this filter. That precedence
+   * (permanent > resting > empty > growing) puts a bed in exactly one bucket: a bed
+   * that is both permanent and resting filters as permanent only.
+   */
+  status: 'all' | BedLifecycle;
   parentLocation: string;
   childLocation: string;
 }
@@ -44,9 +49,18 @@ export function filterBeds(
     if (filters.sunlight !== 'all' && b.sunlight !== filters.sunlight) return false;
     if (filters.construction === 'raised' && !b.is_raised_bed) return false;
     if (filters.construction === 'in_ground' && b.is_raised_bed) return false;
-    if (filters.status === 'resting' && !b.is_resting) return false;
-    if (filters.status === 'permanent' && !b.is_permanent) return false;
-    if (filters.parentLocation && b.parent_location !== filters.parentLocation) return false;
+    if (filters.status !== 'all' && getBedLifecycle(b, b.active_plant_count) !== filters.status) {
+      return false;
+    }
+    // Matched on the normalised parent name rather than raw equality: the filter can
+    // arrive from the Today plot card, whose plot ids are normalised names and whose
+    // unassigned bucket has no parent at all.
+    if (
+      filters.parentLocation &&
+      !matchesPlotFilterParent(b.parent_location, filters.parentLocation)
+    ) {
+      return false;
+    }
     if (filters.childLocation && b.child_location !== filters.childLocation) return false;
     return true;
   });
@@ -79,7 +93,9 @@ export function sortBeds(beds: BedWithCoverage[], sortBy: BedSortOption): BedWit
   return sorted;
 }
 
-export { LOW_LEGUME_THRESHOLD };
+// Defined in `bedStatus` (with the other domain thresholds) and re-exported here,
+// which is where the bed list, the bed cards and the rotation views import it from.
+export { LOW_LEGUME_THRESHOLD } from '@/utils/bedStatus';
 
 /** Single entry point: filter then sort. */
 export function filterAndSortBeds(

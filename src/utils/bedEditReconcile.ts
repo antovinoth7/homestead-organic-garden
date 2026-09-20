@@ -20,6 +20,22 @@ export function plantToEntry(plant: Plant): PlantEntry {
 }
 
 /**
+ * Expand a persisted Plant doc into one PlantEntry per physical plant, for
+ * layout recomputation only. A `record_kind: 'row'` doc holding `plant_count`
+ * plants yields that many entries (suffixed ids keep them unique) so the
+ * recomputed layout shows every plant in the row, matching what the wizard
+ * preview showed at save time. NOT for edit prefill — the wizard's link/save
+ * contract needs exactly one entry per doc (see `plantToEntry`).
+ */
+export function plantToLayoutEntries(plant: Plant): PlantEntry[] {
+  const base = plantToEntry(plant);
+  const count =
+    plant.record_kind === 'row' ? Math.max(1, Math.round(plant.plant_count ?? 1)) : 1;
+  if (count === 1) return [base];
+  return Array.from({ length: count }, (_, i) => ({ ...base, id: `${base.id}-${i}` }));
+}
+
+/**
  * Given the plants originally on a bed and the wizard's current plant entries,
  * return the original plants that are no longer linked — i.e. the user removed
  * them, so they should be soft-deleted on save. Kept link entries and freshly

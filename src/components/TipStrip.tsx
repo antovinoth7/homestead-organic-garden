@@ -9,13 +9,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GardenIcon } from '@/components/GardenIcon';
+import type { VisualIconKey } from '@/types/visual.types';
 import { safeGetItem, safeSetItem } from '@/utils/safeStorage';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/tipStripStyles';
 
 interface Props {
   tip: string | null;
-  icon?: string;
+  iconKey?: VisualIconKey;
 }
 
 function todayKey(): string {
@@ -24,7 +26,7 @@ function todayKey(): string {
 
 export const TipStrip = React.memo(function TipStrip({
   tip,
-  icon = '💡',
+  iconKey = 'general.tip',
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -49,7 +51,7 @@ export const TipStrip = React.memo(function TipStrip({
 
   return (
     <View style={styles.strip}>
-      <Text style={styles.icon}>{icon}</Text>
+      <GardenIcon name={iconKey} size={18} color={theme.warning} />
       <Text style={styles.text}>{tip}</Text>
       <TouchableOpacity
         style={styles.close}

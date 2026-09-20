@@ -163,6 +163,7 @@ export const ORGANIC_RECIPES: OrganicInputRecipe[] = [
 /**
  * Look up a recipe by its ID.
  */
-export function getRecipeById(id: RecipeId): OrganicInputRecipe | undefined {
+export function getRecipeById(id: string | undefined): OrganicInputRecipe | undefined {
+  if (!id) return undefined;
   return ORGANIC_RECIPES.find((r) => r.id === id);
 }

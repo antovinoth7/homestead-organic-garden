@@ -8,6 +8,7 @@ import {
   PlantType,
 } from '../types/database.types';
 import { getPlantCareProfile } from './plantCareDefaults';
+import { getCanonicalPlantKey, toLookupKey } from './plantAliases';
 import { logger } from './logger';
 
 // Companion planting data
@@ -19,15 +20,13 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Cabbage: ['Dill', 'Mint', 'Rosemary', 'Sage', 'Thyme', 'Beans'],
   Broccoli: ['Onion', 'Garlic', 'Rosemary', 'Sage', 'Thyme'],
   Cucumber: ['Beans', 'Peas', 'Radish', 'Sunflower', 'Lettuce'],
-  Pepper: ['Basil', 'Onion', 'Spinach', 'Tomato'],
-  Chilli: ['Basil', 'Onion', 'Spinach', 'Tomato'],
-  Eggplant: ['Beans', 'Peas', 'Spinach', 'Thyme'],
-  Brinjal: ['Beans', 'Peas', 'Spinach', 'Thyme'],
-  'Long Brinjal': ['Beans', 'Peas', 'Spinach', 'Thyme'],
+  Pepper: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold'],
+  Chilli: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold', 'Turmeric'],
+  Brinjal: ['Beans', 'Peas', 'Spinach', 'Thyme', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
+  'Long Brinjal': ['Beans', 'Peas', 'Spinach', 'Thyme', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
   Tapioca: ['Cowpea', 'Beans', 'Marigold'],
-  Drumstick: ['Brinjal', 'Chilli', 'Coriander'],
+  Drumstick: ['Brinjal', 'Chilli', 'Coriander', 'Turmeric', 'Marigold'],
   Amaranthus: ['Onion', 'Radish', 'Beans'],
-  Methi: ['Radish', 'Onion', 'Coriander'],
   Cowpea: ['Cucumber', 'Corn', 'Brinjal', 'Radish'],
   'Bitter Gourd': ['Beans', 'Radish', 'Marigold'],
   'Snake Gourd': ['Beans', 'Coriander', 'Marigold'],
@@ -35,7 +34,7 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   'Bottle Gourd': ['Beans', 'Coriander', 'Marigold'],
   Pumpkin: ['Beans', 'Corn', 'Marigold'],
   'Ash Gourd': ['Beans', 'Marigold', 'Coriander'],
-  Spinach: ['Strawberry', 'Peas', 'Beans', 'Eggplant'],
+  Spinach: ['Strawberry', 'Peas', 'Beans', 'Brinjal'],
   Radish: ['Lettuce', 'Cucumber', 'Carrot', 'Spinach'],
   Potato: ['Beans', 'Cabbage', 'Corn', 'Peas'],
   Onion: ['Carrot', 'Tomato', 'Lettuce', 'Cabbage', 'Pepper'],
@@ -50,7 +49,7 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Coriander: ['Tomato', 'Beans', 'Peas'],
   Parsley: ['Tomato', 'Carrot', 'Roses'],
   Rosemary: ['Cabbage', 'Beans', 'Carrot', 'Sage'],
-  Thyme: ['Cabbage', 'Eggplant', 'Potato', 'Strawberry'],
+  Thyme: ['Cabbage', 'Brinjal', 'Potato', 'Strawberry'],
   Oregano: ['Basil', 'Pepper', 'Cucumber'],
   Sage: ['Rosemary', 'Cabbage', 'Carrot', 'Tomato'],
   Dill: ['Lettuce', 'Cucumber', 'Cabbage', 'Onion'],
@@ -78,8 +77,7 @@ const COMPANION_PLANTS: Record<string, string[]> = {
 
   // Bed-type plants — new additions
   Fenugreek: ['Spinach', 'Radish', 'Onion', 'Coriander'],
-  'Ladies Finger': ['Basil', 'Pepper', 'Eggplant', 'Cucumber'],
-  Moringa: ['Tulsi', 'Aloe Vera', 'Lemongrass'],
+  'Ladies Finger': ['Basil', 'Pepper', 'Brinjal', 'Cucumber', 'Marigold', 'Cowpea'],
   'Pasalai Keerai': ['Radish', 'Turmeric', 'Basil'],
   'French Beans': ['Carrot', 'Beetroot', 'Cucumber', 'Radish'],
   'Black Gram': ['Carrot', 'Radish', 'Coriander'],
@@ -93,15 +91,41 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Yam: ['Banana', 'Taro', 'Cowpea'],
   'Lotus Stem': ['Taro'],
   Strawberry: ['Spinach', 'Lettuce', 'Thyme', 'Marigold'],
-  Brahmi: ['Tulsi', 'Moringa', 'Lemongrass'],
+  Brahmi: ['Tulsi', 'Drumstick', 'Lemongrass'],
   Ashwagandha: ['Basil', 'Marigold'],
-  'Aloe Vera': ['Moringa', 'Lemongrass'],
+  'Aloe Vera': ['Drumstick', 'Lemongrass'],
   Agathi: ['Banana', 'Maize', 'Pigeon Pea'],
-  Cocoa: ['Banana', 'Moringa'],
+  Cocoa: ['Banana', 'Drumstick'],
   'Black Pepper': ['Cocoa', 'Banana'],
   Cardamom: ['Banana', 'Ginger', 'Turmeric'],
   Ajwain: ['Coriander', 'Basil', 'Fennel'],
   Fennel: [],
+
+  // Tamil Nadu tree & plantation crops — based on TNAU coconut/banana
+  // intercropping practice (agritech.tnau.ac.in).
+  Coconut: [
+    'Banana',
+    'Turmeric',
+    'Ginger',
+    'Black Pepper',
+    'Cocoa',
+    'Pineapple',
+    'Groundnut',
+    'Elephant Foot Yam',
+    'Curry Leaf',
+    'Tapioca',
+  ],
+  Banana: ['Turmeric', 'Ginger', 'Elephant Foot Yam', 'Cowpea', 'Coriander', 'Coconut'],
+  Turmeric: ['Coconut', 'Banana', 'Chilli', 'Coriander', 'Ginger'],
+  Ginger: ['Coconut', 'Banana', 'Chilli', 'Coriander', 'Turmeric'],
+  'Elephant Foot Yam': ['Banana', 'Coconut', 'Cowpea'],
+  'Sweet Potato': ['Beans', 'Cowpea', 'Marigold'],
+  Papaya: ['Banana', 'Marigold', 'Coriander', 'Cowpea'],
+  Guava: ['Banana', 'Marigold', 'Turmeric'],
+  Pineapple: ['Coconut', 'Banana', 'Turmeric'],
+  Pomegranate: ['Marigold', 'Basil', 'Cowpea'],
+  Lemon: ['Curry Leaf', 'Marigold', 'Basil'],
+  Mango: ['Turmeric', 'Marigold', 'Cowpea', 'Curry Leaf'],
 };
 
 // Plants to avoid together (incompatible companions)
@@ -125,6 +149,13 @@ const INCOMPATIBLE_PLANTS: Record<string, string[]> = {
   'Black Gram': ['Onion', 'Garlic'],
   Groundnut: ['Onion', 'Garlic'],
   'Pigeon Pea': ['Fennel'],
+  Brinjal: ['Fennel', 'Potato'],
+  'Long Brinjal': ['Fennel', 'Potato'],
+  Chilli: ['Fennel'],
+  Pepper: ['Fennel'],
+  'Ladies Finger': ['Potato', 'Squash', 'Sweet Potato'],
+  Radish: ['Hyssop'],
+  Drumstick: ['Fennel'],
 };
 
 const DEFAULT_HARVEST_SEASON_BY_TYPE: Record<PlantType, string> = {
@@ -190,48 +221,57 @@ export function calculateExpectedHarvestDate(
 }
 
 /**
- * Get companion plant suggestions for a given plant variety
+ * Re-key a display-cased companion record by its normalized lookup key so that
+ * lookups tolerate case, whitespace and aliases (e.g. "Okra" → "ladies finger").
  */
-export function getCompanionSuggestions(plantVariety: string | null | undefined): string[] {
-  if (!plantVariety) return [];
-  return COMPANION_PLANTS[plantVariety] || [];
-}
+const buildNormalizedCompanionMap = (
+  source: Record<string, string[]>
+): Record<string, string[]> => {
+  const map: Record<string, string[]> = {};
+  Object.entries(source).forEach(([name, list]) => {
+    map[toLookupKey(name)] = list;
+  });
+  return map;
+};
 
+const COMPANION_PLANTS_NORMALIZED = buildNormalizedCompanionMap(COMPANION_PLANTS);
+const INCOMPATIBLE_PLANTS_NORMALIZED = buildNormalizedCompanionMap(INCOMPATIBLE_PLANTS);
 /**
- * Get incompatible plants for a given plant variety
+ * Companion data is written once for 'Coconut', but the catalog ships the four
+ * cultivars instead. They are distinct entries with their own images and Tamil
+ * names, so they are not name aliases — only their companion lookup folds in.
  */
-export function getIncompatiblePlants(plantVariety: string | null | undefined): string[] {
-  if (!plantVariety) return [];
-  return INCOMPATIBLE_PLANTS[plantVariety] || [];
-}
-
-const toLookupKey = (value: string): string => value.toLowerCase().replace(/\s+/g, ' ').trim();
-
-const PLANT_VARIETY_ALIASES: Record<string, string> = {
-  okra: 'ladies finger',
-  bhindi: 'ladies finger',
-  bhendi: 'ladies finger',
-  vendakkai: 'ladies finger',
-  eggplant: 'brinjal',
-  aubergine: 'brinjal',
-  kathirikai: 'brinjal',
-  cassava: 'tapioca',
-  maravalli: 'tapioca',
-  murungai: 'drumstick',
-  moringa: 'drumstick',
-  chili: 'chilli',
-  'chilli pepper': 'chilli',
+const COMPANION_NAME_FALLBACKS: Record<string, string> = {
   'dwarf coconut': 'coconut',
   'tall coconut': 'coconut',
   'hybrid coconut': 'coconut',
   'king coconut': 'coconut',
 };
 
-const getCanonicalPlantKey = (plantVariety: string | null | undefined): string | null => {
-  if (!plantVariety) return null;
-  const key = toLookupKey(plantVariety);
-  return PLANT_VARIETY_ALIASES[key] ?? key;
+const companionKey = (plantVariety: string | null | undefined): string | null => {
+  const key = getCanonicalPlantKey(plantVariety);
+  return key === null ? null : COMPANION_NAME_FALLBACKS[key] ?? key;
 };
+
+
+/**
+ * Get companion plant suggestions for a given plant variety. Resolves aliases
+ * and normalizes casing/whitespace so companions surface for every plant whose
+ * canonical name has data (not only exact-cased matches).
+ */
+export function getCompanionSuggestions(plantVariety: string | null | undefined): string[] {
+  const key = companionKey(plantVariety);
+  return key ? COMPANION_PLANTS_NORMALIZED[key] ?? [] : [];
+}
+
+/**
+ * Get incompatible ("bad companion") plants for a given plant variety. Uses the
+ * same alias/normalization resolution as {@link getCompanionSuggestions}.
+ */
+export function getIncompatiblePlants(plantVariety: string | null | undefined): string[] {
+  const key = companionKey(plantVariety);
+  return key ? INCOMPATIBLE_PLANTS_NORMALIZED[key] ?? [] : [];
+}
 
 const mergeUnique = (items: string[]): string[] => {
   const seen = new Set<string>();
@@ -565,6 +605,32 @@ export function getGroupedDiseases(
 ): PestDiseaseGroup[] {
   const diseases = getCommonDiseases(plantType, plantVariety);
   return groupByCategory(diseases, DISEASE_CATEGORY_MAP, 'Other', '💊');
+}
+
+// Generic garden defaults, used when an entry has no linked plant (e.g. a
+// journal pest/disease log created without linking a plant). Mirrors the `herb`
+// baseline in TAMIL_NADU_COMMON_PESTS_DISEASES.
+export const DEFAULT_COMMON_PESTS = ['Aphids', 'Whiteflies', 'Thrips', 'Leaf Miner', 'Mites'];
+export const DEFAULT_COMMON_DISEASES = [
+  'Leaf Spot',
+  'Powdery Mildew',
+  'Damping Off',
+  'Root Rot',
+  'Mosaic Virus',
+];
+
+/**
+ * Grouped generic pest suggestions for when no plant type is available.
+ */
+export function getDefaultGroupedPests(): PestDiseaseGroup[] {
+  return groupByCategory(DEFAULT_COMMON_PESTS, PEST_CATEGORY_MAP, 'Other Pests', '🐛');
+}
+
+/**
+ * Grouped generic disease suggestions for when no plant type is available.
+ */
+export function getDefaultGroupedDiseases(): PestDiseaseGroup[] {
+  return groupByCategory(DEFAULT_COMMON_DISEASES, DISEASE_CATEGORY_MAP, 'Other', '💊');
 }
 
 /**
@@ -1404,7 +1470,6 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Cabbage: '🥬',
   Broccoli: '🥦',
   Cucumber: '🥒',
-  Eggplant: '🍆',
   Brinjal: '🍆',
   'Long Brinjal': '🍆',
   Pumpkin: '🎃',
@@ -1427,7 +1492,6 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Sage: '🌿',
   Dill: '🌿',
   Lemongrass: '🌾',
-  Methi: '🌿',
   Mango: '🥭',
   Banana: '🍌',
   Guava: '🍈',
@@ -1461,7 +1525,6 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   'Pasalai Keerai': '🥬',
   Fenugreek: '🌿',
   'Ladies Finger': '🌿',
-  Moringa: '🌿',
   Squash: '🥒',
   'Yardlong Beans': '🫘',
   Beetroot: '🫚',
@@ -1477,6 +1540,10 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Ashwagandha: '🌿',
   'Aloe Vera': '🌵',
   Agathi: '🌳',
+  Avocado: '🥑',
+  Bamboo: '🎋',
+  Arecanut: '🌴',
+  'Ash Plantain': '🍌',
   Castor: '🌳',
   Coleus: '🌿',
   Cocoa: '🍫',
@@ -1494,6 +1561,11 @@ const PLANT_EMOJI_MAP: Record<string, string> = {
   Comfrey: '🌿',
 };
 
+/** All plant names known to the catalog emoji map — the canonical name list for reference-image tooling. */
+export function getKnownPlantNames(): string[] {
+  return Object.keys(PLANT_EMOJI_MAP);
+}
+
 export function getPlantEmoji(name: string): string {
   if (PLANT_EMOJI_MAP[name]) return PLANT_EMOJI_MAP[name]!;
   const canonical = getCanonicalPlantKey(name);
@@ -1504,46 +1576,22 @@ export function getPlantEmoji(name: string): string {
   return '🌱';
 }
 
-export interface HarvestPreviewItem {
-  name: string;
-  days: number;
-  emoji: string;
-}
-
-/**
- * Build the "first harvest from this bed" timeline: the distinct planted crops
- * that have a known days-to-harvest, sorted soonest-first. Shared by the Crops
- * step and the Review step.
- */
-export function buildHarvestPreview(
-  entries: { name: string }[],
-  template: import('../config/beds/guildTemplates').GuildTemplate | null
-): HarvestPreviewItem[] {
-  if (!template) return [];
-  const seen = new Set<string>();
-  const items: HarvestPreviewItem[] = [];
-  for (const entry of entries) {
-    if (seen.has(entry.name)) continue;
-    seen.add(entry.name);
-    const row = template.plant_rows.find((r) => r.name === entry.name);
-    const days = row?.days_to_harvest;
-    if (days !== undefined) {
-      items.push({ name: entry.name, days, emoji: getPlantEmoji(entry.name) });
-    }
-  }
-  return items.sort((a, b) => a.days - b.days);
-}
-
 // ── Growth Stage Auto-Progression (Phase B.4) ─────────────────────────
 
-/** Ordered stage progression for walking durations. */
+/**
+ * Ordered stage progression for walking durations. `dormant` comes AFTER
+ * `mature`: the only linear profiles that use both (turmeric, ginger) mature
+ * first and then die back to dormancy. Annual fruit-tree cycles are unaffected
+ * — they never include `mature`, so their flowering→fruiting→dormant order is
+ * preserved by filtering.
+ */
 export const STAGE_ORDER: GrowthStage[] = [
   'seedling',
   'vegetative',
   'flowering',
   'fruiting',
-  'dormant',
   'mature',
+  'dormant',
 ];
 
 export interface ComputedGrowthStage {
@@ -1552,6 +1600,21 @@ export interface ComputedGrowthStage {
   daysUntilNextStage: number | null;
   percentComplete: number;
 }
+
+/**
+ * Coconut lifecycle expressed as linear stage durations (days), derived from
+ * the same TNAU age thresholds `getCoconutAgeInfo` uses (~30.44-day months):
+ * seedling 0–6 mo, vegetative 6–36 mo, flowering (pre-bearing) 3–6 yr,
+ * fruiting (peak bearing) 6–20 yr, mature 20 yr+. Lets the growth-stage
+ * timeline render coconut trees, whose care profiles carry no durations.
+ */
+export const COCONUT_STAGE_DURATIONS: GrowthStageDurations = {
+  seedling: 183, // 6 months
+  vegetative: 913, // to 36 months
+  flowering: 1096, // 3–6 years
+  fruiting: 5114, // 6–20 years
+  mature: 14610, // 20 years onward (nominal 40-year span)
+};
 
 /**
  * Compute the expected growth stage for a plant based on elapsed days since
@@ -1697,6 +1760,16 @@ export function computeAnnualCycleStage(
 
 export type GrowthStageSource = 'pinned' | 'coconut' | 'annual_cycle' | 'computed' | 'manual';
 
+/**
+ * The only fields needed to resolve a growth stage. Narrower than `Plant` so the
+ * edit form — which holds loose form state, not a saved plant — can resolve the
+ * same stage the detail screen shows. A full `Plant` satisfies this structurally.
+ */
+export type StageResolvable = Pick<
+  Plant,
+  'plant_type' | 'planting_date' | 'growth_stage' | 'growth_stage_pinned'
+>;
+
 export interface EffectiveGrowthStage {
   stage: GrowthStage;
   source: GrowthStageSource;
@@ -1714,7 +1787,7 @@ export interface EffectiveGrowthStage {
  *   5. Manual fallback (plant.growth_stage)
  */
 export function getEffectiveGrowthStage(
-  plant: Plant,
+  plant: StageResolvable,
   careProfile: PlantCareProfile | null | undefined
 ): EffectiveGrowthStage {
   // 1. Pinned override
@@ -1726,6 +1799,19 @@ export function getEffectiveGrowthStage(
   if (plant.plant_type === 'coconut_tree' && plant.planting_date) {
     const ageInfo = getCoconutAgeInfo(plant.planting_date);
     if (ageInfo) {
+      // Timeline metrics from the day-based coconut durations; only attached
+      // when they agree with the authoritative age-based stage (they can
+      // differ by a day right at a threshold).
+      const metrics = computeExpectedGrowthStage(plant.planting_date, COCONUT_STAGE_DURATIONS);
+      if (metrics && metrics.stage === ageInfo.growthStage) {
+        return {
+          stage: ageInfo.growthStage,
+          source: 'coconut',
+          daysSinceStageStart: metrics.daysSinceStageStart,
+          daysUntilNextStage: metrics.daysUntilNextStage,
+          percentComplete: metrics.percentComplete,
+        };
+      }
       return { stage: ageInfo.growthStage, source: 'coconut' };
     }
   }
@@ -1771,6 +1857,37 @@ export function getEffectiveGrowthStage(
     stage: plant.growth_stage ?? 'seedling',
     source: 'manual',
   };
+}
+
+/**
+ * Returns the growth stages that actually apply to a plant, in canonical
+ * order: the union of its linear duration stages, its annual-cycle stages,
+ * and the coconut lifecycle for coconut trees. Falls back to all stages when
+ * no profile data exists. Used to filter the pin-stage picker so users can't
+ * pin a stage the plant can never be in (e.g. "fruiting" on a timber tree).
+ */
+export function getValidStagesForPlant(
+  plant: StageResolvable,
+  careProfile: PlantCareProfile | null | undefined
+): GrowthStage[] {
+  const valid = new Set<GrowthStage>();
+
+  const collect = (durations: GrowthStageDurations | AnnualCycleDurations | undefined): void => {
+    if (!durations) return;
+    for (const stage of STAGE_ORDER) {
+      const d = (durations as GrowthStageDurations)[stage];
+      if (d !== undefined && d > 0) valid.add(stage);
+    }
+  };
+
+  if (plant.plant_type === 'coconut_tree') {
+    collect(COCONUT_STAGE_DURATIONS);
+  }
+  collect(careProfile?.growthStageDurations);
+  collect(careProfile?.annualCycleDurations);
+
+  if (valid.size === 0) return [...STAGE_ORDER];
+  return STAGE_ORDER.filter((stage) => valid.has(stage));
 }
 
 /**

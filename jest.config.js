@@ -10,6 +10,7 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '\\.(webp|png|jpe?g|gif)$': '<rootDir>/src/__tests__/mocks/fileMock.js',
   },
   collectCoverageFrom: [
     'src/utils/**/*.{ts,tsx}',
@@ -18,6 +19,7 @@ module.exports = {
     '!src/**/*Styles.ts',
     '!src/types/**',
     '!src/__tests__/**',
+    '!src/config/*.gen.ts',
   ],
   coverageThreshold: {
     global: {

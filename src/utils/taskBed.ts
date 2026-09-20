@@ -16,10 +16,14 @@ export function resolveTaskBedId(
 /**
  * A bed-level task (no plant, has a `bed_id`) whose bed no longer exists.
  *
- * These are left behind when a bed is deleted before the cascade ran; the Care
- * Plan hides them (and self-heals by deleting them) so they don't show as a
- * generic "General" task with no clue where to act. Plant-level tasks are
- * covered by the separate orphaned-plant cleanup, so they are never flagged here.
+ * These are left behind when a bed is deleted before the cascade ran. The Care
+ * Plan hides them from its lists and calendar cells so they don't show as a
+ * generic "General" task with no clue where to act — it does **not** delete
+ * them. Absence from a `getBeds()` read is not evidence a bed was deleted (that
+ * read is cached, can fall back to AsyncStorage, and once filtered live beds out
+ * entirely), and acting on it destroyed real schedules. Removal happens only
+ * through the explicit bed cascade in `beds.ts`. Plant-level tasks are never
+ * flagged here; they are filtered out by their own plant lookup.
  */
 export function isBedLevelOrphanTask(
   task: Pick<TaskTemplate, 'bed_id' | 'plant_id'>,

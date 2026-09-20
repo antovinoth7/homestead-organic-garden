@@ -47,5 +47,21 @@ module.exports = defineConfig([
       "react-native/no-raw-text": ["error", { skip: ["Text"] }],
     },
   },
+  {
+    // Node CLI scripts (codemap, deps check) — CommonJS, no return-type annotations
+    files: ["scripts/**/*.js"],
+    languageOptions: {
+      globals: {
+        require: "readonly",
+        module: "readonly",
+        process: "readonly",
+        console: "readonly",
+        __dirname: "readonly",
+      },
+    },
+    rules: {
+      "@typescript-eslint/explicit-function-return-type": "off",
+    },
+  },
   prettier,
 ]);

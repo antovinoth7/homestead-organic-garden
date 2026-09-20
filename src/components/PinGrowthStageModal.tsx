@@ -7,15 +7,6 @@ import type { createStyles } from '@/styles/plantDetailStyles';
 
 type DetailStyles = ReturnType<typeof createStyles>;
 
-const GROWTH_STAGES: GrowthStage[] = [
-  'seedling',
-  'vegetative',
-  'flowering',
-  'fruiting',
-  'dormant',
-  'mature',
-];
-
 const GROWTH_STAGE_ICONS: Record<GrowthStage, React.ComponentProps<typeof Ionicons>['name']> = {
   seedling: 'leaf-outline',
   vegetative: 'nutrition-outline',
@@ -29,6 +20,8 @@ interface Props {
   visible: boolean;
   styles: DetailStyles;
   theme: Theme;
+  /** Stages valid for this plant (from getValidStagesForPlant), canonical order. */
+  stages: GrowthStage[];
   onClose: () => void;
   onSelect: (stage: GrowthStage) => void;
 }
@@ -38,11 +31,19 @@ export function PinGrowthStageModal({
   visible,
   styles,
   theme,
+  stages,
   onClose,
   onSelect,
 }: Props): React.JSX.Element {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={styles.pinModalOverlay}>
         <TouchableOpacity style={styles.pinModalBackdrop} activeOpacity={1} onPress={onClose} />
         <View style={styles.pinModalSheet}>
@@ -52,12 +53,12 @@ export function PinGrowthStageModal({
               <Ionicons name="close" size={18} color={theme.text} />
             </TouchableOpacity>
           </View>
-          {GROWTH_STAGES.map((s, index) => (
+          {stages.map((s, index) => (
             <TouchableOpacity
               key={s}
               style={[
                 styles.pinModalItem,
-                index === GROWTH_STAGES.length - 1 && styles.pinModalItemLast,
+                index === stages.length - 1 && styles.pinModalItemLast,
               ]}
               onPress={() => onSelect(s)}
             >

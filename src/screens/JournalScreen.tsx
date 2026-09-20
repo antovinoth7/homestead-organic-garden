@@ -3,23 +3,21 @@ import {
   View,
   Text,
   ScrollView,
+  FlatList,
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
   Alert,
   TextInput,
-  Modal,
   LayoutAnimation,
   Platform,
   UIManager,
   Pressable,
 } from 'react-native';
-import type { ImageStyle } from 'react-native';
-import { Image } from 'expo-image';
+import type Swipeable from 'react-native-gesture-handler/Swipeable';
 import { getJournalEntries, deleteJournalEntry } from '../services/journal';
 import { getAllPlants } from '../services/plants';
 import { JournalEntry, JournalEntryType, Plant } from '../types/database.types';
-import { useBedData } from '../hooks/useBedData';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
@@ -28,7 +26,13 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { JournalScreenNavigationProp, JournalScreenRouteProp } from '../types/navigation.types';
 import { getErrorMessage } from '../utils/errorLogging';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
+import { computeJournalStats, getDateFilterStart } from '../utils/journalStats';
+import { collectUsedTags } from '../utils/journalEntryOptions';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
+import { ImageZoomModal } from '@/components/ImageZoomModal';
+import { SheetHandle } from '@/components/SheetHandle';
+import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
+import { JournalEntryCard } from '@/components/JournalEntryCard';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -40,7 +44,8 @@ export default function JournalScreen(): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const scrollViewRef = useRef<ScrollView>(null);
+  const listRef = useRef<FlatList<JournalEntry>>(null);
+  const openSwipeableRef = useRef<Swipeable | null>(null);
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [plants, setPlants] = useState<Plant[]>([]);
@@ -55,18 +60,13 @@ export default function JournalScreen(): React.JSX.Element {
 
   // Tag filter state
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  // Bed filter state
-  const [filterBedId, setFilterBedId] = useState<string>('');
-  const { beds: bedList } = useBedData();
-
-  // View mode state
-  const [viewMode, setViewMode] = useState<'list' | 'gallery'>('list');
 
   // Collapsible filter state
   const [showFilters, setShowFilters] = useState(false);
 
-  // Gallery modal state
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  // Gallery modal state — the tapped entry's photos plus the photo to open on.
+  const [gallery, setGallery] = useState<{ uris: string[]; index: number } | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const loadData = async (options?: { silent?: boolean }): Promise<void> => {
     if (!options?.silent) {
@@ -96,7 +96,7 @@ export default function JournalScreen(): React.JSX.Element {
     const unsubscribe = navigation.addListener('focus', () => {
       if (isMounted) {
         // Reset scroll and refresh data so imported image URIs render immediately.
-        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+        listRef.current?.scrollToOffset({ offset: 0, animated: false });
         resetTabBar();
         void loadData({ silent: true });
       }
@@ -125,62 +125,15 @@ export default function JournalScreen(): React.JSX.Element {
     [plants]
   );
 
-  const getEntryTypeIcon = (
-    type: JournalEntryType
-  ): { iconName: React.ComponentProps<typeof Ionicons>['name']; color: string } => {
-    const iconMap: Record<JournalEntryType, React.ComponentProps<typeof Ionicons>['name']> = {
-      [JournalEntryType.Observation]: 'eye',
-      [JournalEntryType.Harvest]: 'basket',
-      [JournalEntryType.Issue]: 'alert-circle',
-      [JournalEntryType.Milestone]: 'flag',
-      [JournalEntryType.Other]: 'document-text',
-    };
-    const colorMap: Record<JournalEntryType, string> = {
-      [JournalEntryType.Observation]: theme.primary,
-      [JournalEntryType.Harvest]: theme.warning,
-      [JournalEntryType.Issue]: theme.error,
-      [JournalEntryType.Milestone]: theme.success,
-      [JournalEntryType.Other]: theme.textSecondary,
-    };
-    const iconName = iconMap[type] || iconMap[JournalEntryType.Other];
-    const color = colorMap[type] || theme.textSecondary;
-    return { iconName, color };
-  };
+  // Summary tiles. Entries/harvests/weight follow the date filter; active
+  // problems is a current-state count over all entries (see computeJournalStats).
+  const stats = useMemo(
+    () => computeJournalStats(entries, getDateFilterStart(dateFilter)),
+    [entries, dateFilter]
+  );
 
-  // Calculate statistics
-  const stats = useMemo(() => {
-    const totalHarvests = entries.filter((e) => e.entry_type === JournalEntryType.Harvest).length;
-    const totalIssues = entries.filter((e) => e.entry_type === JournalEntryType.Issue).length;
-
-    const harvestsByPlant: Record<string, number> = {};
-    let totalWeight = 0;
-
-    entries.forEach((entry) => {
-      if (entry.entry_type === JournalEntryType.Harvest) {
-        const plantName = getPlantName(entry.plant_id) || 'Unknown';
-        harvestsByPlant[plantName] = (harvestsByPlant[plantName] || 0) + 1;
-
-        if (entry.harvest_quantity) {
-          // Convert to kg for totals
-          let weight = entry.harvest_quantity;
-          if (entry.harvest_unit === 'g') weight = weight / 1000;
-          else if (entry.harvest_unit === 'lbs') weight = weight * 0.453592;
-          totalWeight += weight;
-        }
-      }
-    });
-
-    const topPlant = Object.entries(harvestsByPlant).sort((a, b) => b[1] - a[1])[0];
-
-    return {
-      totalEntries: entries.length,
-      totalHarvests,
-      totalIssues,
-      totalWeight: Math.round(totalWeight * 10) / 10,
-      topPlant: topPlant ? topPlant[0] : null,
-      topPlantCount: topPlant ? topPlant[1] : 0,
-    };
-  }, [entries, getPlantName]);
+  // Tags actually present on entries, for the filter sheet.
+  const usedTags = useMemo(() => collectUsedTags(entries), [entries]);
 
   // Filter and search entries
   const filteredEntries = useMemo(() => {
@@ -192,7 +145,8 @@ export default function JournalScreen(): React.JSX.Element {
       filtered = filtered.filter((entry) => {
         const plantName = getPlantName(entry.plant_id)?.toLowerCase() || '';
         const content = entry.content.toLowerCase();
-        return plantName.includes(query) || content.includes(query);
+        const pestName = entry.pest_name?.toLowerCase() || '';
+        return plantName.includes(query) || content.includes(query) || pestName.includes(query);
       });
     }
 
@@ -207,42 +161,24 @@ export default function JournalScreen(): React.JSX.Element {
     }
 
     // Date filter
-    if (dateFilter !== 'all') {
-      const now = new Date();
-      let filterStart: Date;
-
-      if (dateFilter === 'week') {
-        filterStart = new Date(now);
-        filterStart.setDate(now.getDate() - 7);
-      } else if (dateFilter === 'month') {
-        filterStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      } else {
-        // year
-        filterStart = new Date(now.getFullYear(), 0, 1);
-      }
-
+    const filterStart = getDateFilterStart(dateFilter);
+    if (filterStart) {
       filtered = filtered.filter((e) => new Date(e.created_at) >= filterStart);
-    }
-
-    // Bed filter
-    if (filterBedId) {
-      filtered = filtered.filter((e) => e.bed_id === filterBedId);
     }
 
     // Sort by newest first
     filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return filtered;
-  }, [entries, searchQuery, selectedType, selectedTag, dateFilter, filterBedId, getPlantName]);
+  }, [entries, searchQuery, selectedType, selectedTag, dateFilter, getPlantName]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (dateFilter !== 'week') count++;
     if (selectedType) count++;
     if (selectedTag) count++;
-    if (filterBedId) count++;
     return count;
-  }, [dateFilter, selectedType, selectedTag, filterBedId]);
+  }, [dateFilter, selectedType, selectedTag]);
 
   const toggleFilters = (): void => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -254,41 +190,128 @@ export default function JournalScreen(): React.JSX.Element {
     setSelectedType(null);
     setSelectedTag(null);
     setDateFilter('week');
-    setFilterBedId('');
   };
 
-  // Get all photos for gallery view
-  const allPhotos = useMemo(() => {
-    const photos: { uri: string; entryId: string; date: string }[] = [];
-    filteredEntries.forEach((entry) => {
-      entry.photo_urls?.forEach((uri) => {
-        photos.push({
-          uri,
-          entryId: entry.id,
-          date: entry.created_at,
-        });
-      });
-    });
-    return photos;
-  }, [filteredEntries]);
-
-  const handleDelete = async (id: string): Promise<void> => {
-    Alert.alert('Delete Entry', 'Are you sure you want to delete this journal entry?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteJournalEntry(id);
-            loadData();
-          } catch (error: unknown) {
-            Alert.alert('Error', getErrorMessage(error));
-          }
-        },
-      },
-    ]);
+  const confirmDelete = async (): Promise<void> => {
+    if (!deleteId) return;
+    const id = deleteId;
+    setDeleteId(null);
+    try {
+      await deleteJournalEntry(id);
+      loadData();
+    } catch (error: unknown) {
+      Alert.alert('Error', getErrorMessage(error));
+    }
   };
+
+  // Keep only one row swiped open at a time (mirrors BedListScreen).
+  const handleSwipeableOpen = useCallback((ref: Swipeable) => {
+    if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
+      openSwipeableRef.current.close();
+    }
+    openSwipeableRef.current = ref;
+  }, []);
+
+  const handleCardPress = useCallback(
+    (entry: JournalEntry): void => {
+      navigation.navigate('JournalForm', { entry });
+    },
+    [navigation]
+  );
+
+  const requestDelete = useCallback((entry: JournalEntry): void => {
+    setDeleteId(entry.id);
+  }, []);
+
+  const handlePhotoPress = useCallback((uris: string[], index: number): void => {
+    setGallery({ uris, index });
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: JournalEntry }): React.JSX.Element => (
+      <JournalEntryCard
+        entry={item}
+        plantName={getPlantName(item.plant_id) ?? null}
+        onPress={handleCardPress}
+        onEdit={handleCardPress}
+        onDelete={requestDelete}
+        onPhotoPress={handlePhotoPress}
+        onSwipeableOpen={handleSwipeableOpen}
+      />
+    ),
+    [getPlantName, handleCardPress, requestDelete, handlePhotoPress, handleSwipeableOpen]
+  );
+
+  // Statistics dashboard — rendered as the list header.
+  const listHeader = (
+    <View style={styles.statsHeader}>
+      <View style={styles.statsRow}>
+        <View style={styles.statCard}>
+          <Ionicons name="document-text" size={18} color={theme.primary} />
+          <Text style={styles.statNumber}>{stats.entries}</Text>
+          <Text style={styles.statLabel} numberOfLines={1}>
+            Entries
+          </Text>
+        </View>
+        <View style={styles.statCard}>
+          <Ionicons name="basket" size={18} color={theme.warning} />
+          <Text style={styles.statNumber}>{stats.harvests}</Text>
+          <Text style={styles.statLabel} numberOfLines={1}>
+            Harvests
+          </Text>
+        </View>
+        <View style={styles.statCard}>
+          <Ionicons name="scale" size={18} color={theme.success} />
+          <Text style={styles.statNumber}>{stats.weightKg}</Text>
+          <Text style={styles.statLabel} numberOfLines={1}>
+            kg
+          </Text>
+        </View>
+        <View style={styles.statCard}>
+          <Ionicons name="bug" size={18} color={theme.error} />
+          <Text style={styles.statNumber}>{stats.activeProblems}</Text>
+          <Text style={styles.statLabel} numberOfLines={1}>
+            Active
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  // Empty state — hidden while the first load is in flight to avoid a flash.
+  const listEmpty = loading ? null : (
+    <View style={styles.emptyState}>
+      <Ionicons name="book-outline" size={64} color={theme.border} />
+      {entries.length === 0 ? (
+        <>
+          <Text style={styles.emptyText}>No journal entries yet</Text>
+          <Text style={styles.emptySubtext}>Start documenting your garden journey</Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.emptyText}>No entries found</Text>
+          <Text style={styles.emptySubtext}>
+            {searchQuery
+              ? `No results for "${searchQuery}"`
+              : dateFilter !== 'all'
+              ? `No entries in ${
+                  dateFilter === 'week'
+                    ? 'the past week'
+                    : dateFilter === 'month'
+                    ? 'this month'
+                    : 'this year'
+                }`
+              : selectedType
+              ? `No ${selectedType} entries found`
+              : 'Try adjusting your filters'}
+          </Text>
+          <TouchableOpacity style={styles.clearFiltersButton} onPress={clearAllFilters}>
+            <Text style={styles.clearFiltersText}>Clear Filters</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -349,273 +372,29 @@ export default function JournalScreen(): React.JSX.Element {
                     </View>
                   )}
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.viewToggle}
-                  onPress={() => setViewMode((v) => (v === 'list' ? 'gallery' : 'list'))}
-                >
-                  <Ionicons
-                    name={viewMode === 'list' ? 'grid' : 'list'}
-                    size={20}
-                    color={theme.textInverse}
-                  />
-                </TouchableOpacity>
               </View>
             </>
           )}
         </View>
       </View>
 
-      <ScrollView
-        ref={scrollViewRef}
+      <FlatList
+        ref={listRef}
+        data={filteredEntries}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
         style={styles.content}
-        contentContainerStyle={{
-          paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16,
-        }}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 },
+        ]}
         onScroll={onTabBarScroll}
         scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
-      >
-        {/* Statistics Dashboard */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Ionicons name="document-text" size={18} color={theme.primary} />
-            <Text style={styles.statNumber}>{stats.totalEntries}</Text>
-            <Text style={styles.statLabel} numberOfLines={1}>
-              Entries
-            </Text>
-          </View>
-          <View style={styles.statCard}>
-            <Ionicons name="basket" size={18} color={theme.warning} />
-            <Text style={styles.statNumber}>{stats.totalHarvests}</Text>
-            <Text style={styles.statLabel} numberOfLines={1}>
-              Harvests
-            </Text>
-          </View>
-          <View style={styles.statCard}>
-            <Ionicons name="scale" size={18} color={theme.success} />
-            <Text style={styles.statNumber}>{stats.totalWeight}</Text>
-            <Text style={styles.statLabel} numberOfLines={1}>
-              kg Total
-            </Text>
-          </View>
-          <View style={styles.statCard}>
-            <Ionicons name="alert-circle" size={18} color={theme.error} />
-            <Text style={styles.statNumber}>{stats.totalIssues}</Text>
-            <Text style={styles.statLabel} numberOfLines={1}>
-              Issues
-            </Text>
-          </View>
-        </View>
-
-        {/* Collapsible Filter Menu — removed from inline, moved to overlay below */}
-
-        {viewMode === 'list' ? (
-          <View style={styles.entriesContainer}>
-            {filteredEntries.map((entry) => {
-              const plantName = getPlantName(entry.plant_id);
-              const entryDate = new Date(entry.created_at);
-              const date = entryDate.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              });
-              const year = entryDate.getFullYear();
-              const time = entryDate.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-              });
-              const { iconName, color: typeColor } = getEntryTypeIcon(entry.entry_type);
-              const hasPhotos = entry.photo_urls && entry.photo_urls.length > 0;
-              const entryTypeLabel =
-                entry.entry_type.charAt(0).toUpperCase() + entry.entry_type.slice(1);
-
-              return (
-                <TouchableOpacity
-                  key={entry.id}
-                  style={styles.card}
-                  activeOpacity={0.7}
-                  onPress={() => navigation.navigate('JournalForm', { entry })}
-                >
-                  {/* Accent bar */}
-                  <View style={[styles.cardAccent, { backgroundColor: typeColor }]} />
-
-                  <View style={styles.cardBody}>
-                    {/* Top row: type icon + date + actions */}
-                    <View style={styles.cardTopRow}>
-                      <View style={[styles.typeIconCircle, { backgroundColor: typeColor + '18' }]}>
-                        <Ionicons name={iconName} size={16} color={typeColor} />
-                      </View>
-                      <View style={styles.cardMeta}>
-                        <Text style={styles.entryTypeLabel}>{entryTypeLabel}</Text>
-                        <Text style={styles.dateText}>
-                          {date}, {year} · {time}
-                        </Text>
-                      </View>
-                      <View style={styles.cardActions}>
-                        <TouchableOpacity
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            navigation.navigate('JournalForm', { entry });
-                          }}
-                          style={styles.actionBtn}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Ionicons name="create-outline" size={18} color={theme.textSecondary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            handleDelete(entry.id);
-                          }}
-                          style={styles.actionBtn}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Ionicons name="trash-outline" size={18} color={theme.error} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* Plant tag + harvest details */}
-                    {(plantName ||
-                      (entry.entry_type === JournalEntryType.Harvest &&
-                        entry.harvest_quantity)) && (
-                      <View style={styles.tagsRow}>
-                        {plantName && (
-                          <View style={styles.plantTag}>
-                            <Ionicons name="leaf" size={11} color={theme.primary} />
-                            <Text style={styles.plantTagText}>{plantName}</Text>
-                          </View>
-                        )}
-                        {entry.entry_type === JournalEntryType.Harvest &&
-                          entry.harvest_quantity && (
-                            <View style={styles.harvestBadge}>
-                              <Ionicons name="scale-outline" size={11} color={theme.warning} />
-                              <Text style={styles.harvestText}>
-                                {entry.harvest_quantity} {entry.harvest_unit || 'units'}
-                              </Text>
-                            </View>
-                          )}
-                        {entry.entry_type === JournalEntryType.Harvest && entry.harvest_quality && (
-                          <View
-                            style={[styles.qualityBadge, styles[`quality${entry.harvest_quality}`]]}
-                          >
-                            <Text style={styles.qualityText}>
-                              {entry.harvest_quality.toUpperCase()}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    )}
-
-                    {/* Tags */}
-                    {entry.tags && entry.tags.length > 0 && (
-                      <View style={styles.tagsRow}>
-                        {entry.tags.map((tag) => (
-                          <View key={tag} style={styles.journalTagBadge}>
-                            <Text style={styles.journalTagText}>{tag.replace(/_/g, ' ')}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-
-                    {/* Content preview */}
-                    <Text style={styles.contentText} numberOfLines={3}>
-                      {entry.content}
-                    </Text>
-
-                    {/* Photos */}
-                    {hasPhotos && (
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={styles.photosScroll}
-                        contentContainerStyle={styles.photosScrollContent}
-                      >
-                        {entry.photo_urls.map((photoUrl, idx) => (
-                          <TouchableOpacity
-                            key={idx}
-                            onPress={() => setSelectedImage(photoUrl)}
-                            activeOpacity={0.8}
-                          >
-                            <Image
-                              source={{ uri: photoUrl }}
-                              style={styles.photo as ImageStyle}
-                              contentFit="cover"
-                              transition={200}
-                              cachePolicy="memory-disk"
-                              recyclingKey={`journal-${entry.id}-${idx}`}
-                            />
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-
-            {filteredEntries.length === 0 && !loading && (
-              <View style={styles.emptyState}>
-                <Ionicons name="book-outline" size={64} color={theme.border} />
-                {entries.length === 0 ? (
-                  <>
-                    <Text style={styles.emptyText}>No journal entries yet</Text>
-                    <Text style={styles.emptySubtext}>Start documenting your garden journey</Text>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.emptyText}>No entries found</Text>
-                    <Text style={styles.emptySubtext}>
-                      {searchQuery
-                        ? `No results for "${searchQuery}"`
-                        : dateFilter !== 'all'
-                        ? `No entries in ${
-                            dateFilter === 'week'
-                              ? 'the past week'
-                              : dateFilter === 'month'
-                              ? 'this month'
-                              : 'this year'
-                          }`
-                        : selectedType
-                        ? `No ${selectedType} entries found`
-                        : 'Try adjusting your filters'}
-                    </Text>
-                    <TouchableOpacity style={styles.clearFiltersButton} onPress={clearAllFilters}>
-                      <Text style={styles.clearFiltersText}>Clear Filters</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            )}
-          </View>
-        ) : (
-          <View style={styles.galleryGrid}>
-            {allPhotos.map((photo, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.galleryItem}
-                onPress={() => setSelectedImage(photo.uri)}
-              >
-                <Image
-                  source={{ uri: photo.uri }}
-                  style={styles.galleryImage as ImageStyle}
-                  contentFit="cover"
-                  transition={200}
-                  cachePolicy="memory-disk"
-                  recyclingKey={`gallery-${idx}`}
-                />
-              </TouchableOpacity>
-            ))}
-
-            {allPhotos.length === 0 && !loading && (
-              <View style={styles.emptyState}>
-                <Ionicons name="images-outline" size={64} color={theme.border} />
-                <Text style={styles.emptyText}>No photos yet</Text>
-                <Text style={styles.emptySubtext}>Add photos to your journal entries</Text>
-              </View>
-            )}
-          </View>
-        )}
-      </ScrollView>
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={listEmpty}
+      />
 
       {/* Floating Action Button */}
       <AnimatedFAB onPress={() => navigation.navigate('JournalForm')} />
@@ -633,13 +412,7 @@ export default function JournalScreen(): React.JSX.Element {
               { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) },
             ]}
           >
-            <TouchableOpacity
-              activeOpacity={0.6}
-              onPress={toggleFilters}
-              style={styles.sheetHandleArea}
-            >
-              <View style={styles.sheetHandle} />
-            </TouchableOpacity>
+            <SheetHandle onClose={toggleFilters} />
 
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Filter Journal</Text>
@@ -694,18 +467,25 @@ export default function JournalScreen(): React.JSX.Element {
               <View style={styles.sheetChipWrap}>
                 {(
                   [
-                    [null, 'All'],
-                    [JournalEntryType.Observation, '👁️ Observation'],
-                    [JournalEntryType.Harvest, '🧺 Harvest'],
-                    [JournalEntryType.Issue, '⚠️ Issue'],
-                    [JournalEntryType.Milestone, '🏁 Milestone'],
+                    [null, 'All', null],
+                    [JournalEntryType.Observation, 'Observation', 'eye-outline'],
+                    [JournalEntryType.Harvest, 'Harvest', 'basket-outline'],
+                    [JournalEntryType.PestDisease, 'Pest/Disease', 'bug-outline'],
+                    [JournalEntryType.Milestone, 'Milestone', 'flag-outline'],
                   ] as const
-                ).map(([val, label]) => (
+                ).map(([val, label, icon]) => (
                   <TouchableOpacity
                     key={val ?? 'all'}
                     style={[styles.sheetChip, selectedType === val && styles.sheetChipActive]}
                     onPress={() => setSelectedType(val as JournalEntryType | null)}
                   >
+                    {icon && (
+                      <Ionicons
+                        name={icon}
+                        size={14}
+                        color={selectedType === val ? theme.primary : theme.textSecondary}
+                      />
+                    )}
                     <Text
                       style={[
                         styles.sheetChipText,
@@ -718,68 +498,39 @@ export default function JournalScreen(): React.JSX.Element {
                 ))}
               </View>
 
-              {/* Tags */}
-              <Text style={styles.sheetSectionTitle}>
-                <Ionicons name="pricetag" size={14} color={theme.textSecondary} /> Tag
-              </Text>
-              <View style={styles.sheetChipWrap}>
-                {(
-                  [
-                    [null, 'All'],
-                    ['pest', 'Pest'],
-                    ['weather_damage', 'Weather'],
-                    ['harvest', 'Harvest'],
-                    ['soil_prep', 'Soil Prep'],
-                    ['growth_update', 'Growth'],
-                    ['experiment', 'Experiment'],
-                  ] as const
-                ).map(([val, label]) => (
-                  <TouchableOpacity
-                    key={val ?? 'all'}
-                    style={[styles.sheetChip, selectedTag === val && styles.sheetChipActive]}
-                    onPress={() => setSelectedTag(val)}
-                  >
-                    <Text
-                      style={[
-                        styles.sheetChipText,
-                        selectedTag === val && styles.sheetChipTextActive,
-                      ]}
-                    >
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              {/* Bed Filter */}
-              {bedList.length > 0 && (
+              {/* Tags — only those actually in use */}
+              {usedTags.length > 0 && (
                 <>
                   <Text style={styles.sheetSectionTitle}>
-                    <Ionicons name="grid-outline" size={14} color={theme.textSecondary} /> Bed
+                    <Ionicons name="pricetag" size={14} color={theme.textSecondary} /> Tag
                   </Text>
                   <View style={styles.sheetChipWrap}>
                     <TouchableOpacity
-                      style={[styles.sheetChip, !filterBedId && styles.sheetChipActive]}
-                      onPress={() => setFilterBedId('')}
+                      style={[styles.sheetChip, selectedTag === null && styles.sheetChipActive]}
+                      onPress={() => setSelectedTag(null)}
                     >
                       <Text
-                        style={[styles.sheetChipText, !filterBedId && styles.sheetChipTextActive]}
+                        style={[
+                          styles.sheetChipText,
+                          selectedTag === null && styles.sheetChipTextActive,
+                        ]}
                       >
-                        All Beds
+                        All
                       </Text>
                     </TouchableOpacity>
-                    {bedList.map((bed) => (
+                    {usedTags.map((tag) => (
                       <TouchableOpacity
-                        key={bed.id}
-                        style={[styles.sheetChip, filterBedId === bed.id && styles.sheetChipActive]}
-                        onPress={() => setFilterBedId(filterBedId === bed.id ? '' : bed.id)}
+                        key={tag}
+                        style={[styles.sheetChip, selectedTag === tag && styles.sheetChipActive]}
+                        onPress={() => setSelectedTag(tag)}
                       >
                         <Text
                           style={[
                             styles.sheetChipText,
-                            filterBedId === bed.id && styles.sheetChipTextActive,
+                            selectedTag === tag && styles.sheetChipTextActive,
                           ]}
                         >
-                          {bed.name}
+                          {tag.replace(/_/g, ' ')}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -791,32 +542,24 @@ export default function JournalScreen(): React.JSX.Element {
         </View>
       )}
 
-      {/* Image Modal */}
-      <Modal
-        visible={selectedImage !== null}
-        transparent={true}
-        onRequestClose={() => setSelectedImage(null)}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity
-            style={[styles.modalClose, { top: insets.top + 12 }]}
-            onPress={() => setSelectedImage(null)}
-          >
-            <Ionicons name="close" size={32} color="#fff" />
-          </TouchableOpacity>
-          {selectedImage && (
-            <Image
-              source={{ uri: selectedImage }}
-              style={styles.modalImage as ImageStyle}
-              contentFit="contain"
-              transition={200}
-              cachePolicy="memory-disk"
-              placeholder={null}
-              priority="high"
-            />
-          )}
-        </View>
-      </Modal>
+      {/* Fullscreen swipeable image viewer with pinch/pan/double-tap zoom */}
+      {gallery && (
+        <ImageZoomModal
+          visible
+          sources={gallery.uris}
+          initialIndex={gallery.index}
+          onClose={() => setGallery(null)}
+        />
+      )}
+
+      <ConfirmDeleteModal
+        visible={deleteId !== null}
+        title="Delete entry?"
+        message="This journal entry will be permanently removed. This can't be undone."
+        confirmLabel="Delete"
+        onCancel={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+      />
     </View>
   );
 }
