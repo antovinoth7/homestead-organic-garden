@@ -1,4 +1,5 @@
 import {
+  ALL_GROUPS,
   buildBrowseItems,
   buildSearchItems,
   measureCatalogItems,
@@ -13,6 +14,7 @@ const entry = (
 ): CatalogBrowseEntry => ({
   name,
   plantType: 'vegetable',
+  group: 'vegetables',
   habit: 'annual_bed',
   lifecycle: 'annual',
   count: 0,
@@ -289,5 +291,70 @@ describe('measureCatalogItems', () => {
     const result = { name: 'Tomato', plantType: 'vegetable' } as CatalogSearchResult;
     const { heights } = measureCatalogItems(buildSearchItems([result]));
     expect(heights).toEqual([catalogRowTotalHeight()]);
+  });
+});
+
+describe('buildBrowseItems — the all filter', () => {
+  // One entry per group, so a missing category shows up as a missing section.
+  const MIXED: CatalogBrowseEntry[] = [
+    entry('Guava', { group: 'fruits', subGroup: 'orchard_trees', habit: 'tree' }),
+    entry('Tomato', { group: 'vegetables', subGroup: 'fruit_vegetables' }),
+    entry('Palak', { group: 'greens', plantType: 'spinach', subGroup: 'spinach' }),
+    entry('Turmeric', { group: 'spices', plantType: 'herb', subGroup: 'rhizome' }),
+  ];
+
+  it('sections by category in CATALOG_GROUP_ORDER, not input order', () => {
+    // Vegetables leads CATALOG_GROUP_ORDER even though Fruits came first in.
+    expect(titles(buildBrowseItems({ group: ALL_GROUPS, entries: MIXED, mode: 'type' }))).toEqual([
+      'Vegetables',
+      'Greens',
+      'Fruits',
+      'Spices',
+    ]);
+  });
+
+  it('omits categories with no plants rather than leaving a bare header', () => {
+    const items = buildBrowseItems({ group: ALL_GROUPS, entries: MIXED, mode: 'type' });
+    expect(titles(items)).toHaveLength(4);
+    expect(titles(items)).not.toContain('Flowers');
+  });
+
+  it('drops sub-group headers — one header per category is the level that reads', () => {
+    const items = buildBrowseItems({ group: ALL_GROUPS, entries: MIXED, mode: 'type' });
+    expect(titles(items)).not.toContain('Gourds & Melons');
+    expect(titles(items)).not.toContain('Other');
+  });
+
+  it('keeps every entry, sorted A–Z inside its category', () => {
+    const withTwo = [...MIXED, entry('Brinjal', { subGroup: 'fruit_vegetables' })];
+    const items = buildBrowseItems({ group: ALL_GROUPS, entries: withTwo, mode: 'type' });
+    expect(namesIn(items)).toEqual(['Brinjal', 'Tomato', 'Palak', 'Guava', 'Turmeric']);
+  });
+
+  // `SUB_GROUP_ORDER` is keyed by the eight real groups, so an unguarded
+  // `SUB_GROUP_ORDER['all']` would be undefined and throw on `.length`.
+  it('does not reach the sub-group table for the sentinel', () => {
+    expect(() =>
+      buildBrowseItems({ group: ALL_GROUPS, entries: MIXED, mode: 'type' })
+    ).not.toThrow();
+  });
+
+  it('leaves alpha mode alone — it never looked at the group', () => {
+    expect(titles(buildBrowseItems({ group: ALL_GROUPS, entries: MIXED, mode: 'alpha' }))).toEqual(
+      ['G', 'P', 'T']
+    );
+  });
+
+  it('leaves season mode alone — it never looked at the group', () => {
+    const seasonal = [
+      entry('Tomato', { lifecycle: 'annual' }),
+      entry('Guava', { group: 'fruits', lifecycle: 'permanent' }),
+    ];
+    const items = buildBrowseItems({ group: ALL_GROUPS, entries: seasonal, mode: 'season' });
+    expect(namesIn(items)).toEqual(['Tomato', 'Guava']);
+  });
+
+  it('renders an empty catalog as no sections at all', () => {
+    expect(buildBrowseItems({ group: ALL_GROUPS, entries: [], mode: 'type' })).toEqual([]);
   });
 });

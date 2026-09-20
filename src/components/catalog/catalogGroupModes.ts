@@ -1,7 +1,7 @@
 import type { Ionicons } from '@expo/vector-icons';
 import type { CatalogGroupMode } from '@/utils/catalogListItems';
 
-/** The default the catalog opens on — the funnel dot marks any departure from it. */
+/** The grouping the catalog opens on — the funnel badge counts any departure from it. */
 export const DEFAULT_CATALOG_GROUP_MODE: CatalogGroupMode = 'type';
 
 /**

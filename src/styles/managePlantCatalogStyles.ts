@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Dimensions, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 import { MONO_FONT } from './typography';
 import {
@@ -97,6 +97,29 @@ export const createStyles = (
       borderRadius: 4,
       backgroundColor: theme.accent,
     },
+    /**
+     * How many facets the filter sheet has off default. The funnel now carries
+     * two — category and grouping — so a plain dot could no longer say whether
+     * one or both were in force.
+     */
+    filterBadge: {
+      position: 'absolute',
+      top: 1,
+      right: 1,
+      minWidth: 14,
+      height: 14,
+      borderRadius: 7,
+      backgroundColor: theme.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 2,
+    },
+    filterBadgeText: {
+      fontSize: 9,
+      color: theme.textInverse,
+      fontWeight: '700',
+      lineHeight: 14,
+    },
     /** The chevron that collapses search, mirroring `plantsStyles`. */
     searchBackBtn: {
       width: 38,
@@ -145,73 +168,6 @@ export const createStyles = (
       fontSize: 16,
       color: theme.inputText,
       padding: 0,
-    },
-
-    // ---- Category pills ---------------------------------------------------
-    categoryScroll: {
-      // The search bar used to sit above and supply this gap; with search moved
-      // into the header bar, the pill row owns its own breathing room.
-      marginTop: 8,
-      marginBottom: 8,
-      // Cancels `listContent`'s gutter, which this row inherits by being the
-      // list header. Without it the two paddings stacked: the first pill sat at
-      // 32 while the cards below it sat at 16, and the rail was boxed in rather
-      // than bleeding, so pills clipped short of the right edge. The 16 comes
-      // back on `categoryScrollContent`, so the first pill lines up with the
-      // card edges and the rail still runs full width — the behaviour
-      // `SectionHeader.tsx` describes for a horizontal rail.
-      marginHorizontal: -16,
-    },
-    categoryScrollContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 6,
-      gap: 8,
-    },
-    categoryPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      paddingHorizontal: 14,
-      paddingVertical: 7,
-      borderRadius: 20,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    categoryPillActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    categoryPillText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-    categoryPillTextActive: {
-      color: theme.primary,
-      fontWeight: '700',
-    },
-    categoryPillBadge: {
-      minWidth: 18,
-      height: 18,
-      borderRadius: 9,
-      backgroundColor: theme.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 4,
-    },
-    categoryPillBadgeActive: {
-      backgroundColor: theme.primary,
-    },
-    categoryPillBadgeText: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: theme.textTertiary,
-    },
-    categoryPillBadgeTextActive: {
-      color: theme.textInverse,
     },
 
     // ---- List -------------------------------------------------------------
@@ -499,7 +455,7 @@ export const createStyles = (
       textDecorationLine: 'underline',
     },
 
-    // ---- Group & sort sheet -----------------------------------------------
+    // ---- Filter sheet (category + grouping) -------------------------------
     sheetOverlay: {
       backgroundColor: theme.overlay,
       justifyContent: 'flex-end',
@@ -533,7 +489,7 @@ export const createStyles = (
       marginTop: 16,
       marginBottom: 8,
     },
-    /** "Reset" pill — shown only while the grouping is off its default. */
+    /** "Reset" pill — shown only while a facet is off its default. */
     sheetClearBtn: {
       paddingHorizontal: 12,
       paddingVertical: 4,
@@ -544,6 +500,14 @@ export const createStyles = (
       fontSize: 13,
       fontWeight: '600',
       color: theme.error,
+    },
+    /**
+     * The sheet holds two facets now — nine category chips and three grouping
+     * ones — which overflows a short screen, so the body scrolls. Capped rather
+     * than sized to content so the list stays partly visible behind it.
+     */
+    sheetScroll: {
+      maxHeight: Dimensions.get('window').height * 0.55,
     },
     sheetChipWrap: {
       flexDirection: 'row',
@@ -573,6 +537,14 @@ export const createStyles = (
     sheetChipTextActive: {
       color: theme.primary,
       fontWeight: '600',
+    },
+    /**
+     * The " (n)" on a category chip. A zero is information — "this category is
+     * empty" — so it is shown rather than hidden, but muted so it doesn't read
+     * as an invitation. Same treatment as `plantsStyles`.
+     */
+    sheetChipCountZero: {
+      color: theme.textTertiary,
     },
 
     // ---- FAB --------------------------------------------------------------

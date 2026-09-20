@@ -30,6 +30,7 @@ jest.mock('@/services/plantProfiles', () => ({
 }));
 jest.mock('@/services/plants', () => ({
   getAllPlants: jest.fn(async () => []),
+  getStoredPlants: jest.fn(async () => []),
   updatePlantVariety: jest.fn(async () => undefined),
 }));
 jest.mock('@/utils/errorLogging', () => ({

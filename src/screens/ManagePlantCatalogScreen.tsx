@@ -15,17 +15,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme';
 import { createStyles, catalogRowTotalHeight } from '@/styles/managePlantCatalogStyles';
 import { MoreStackParamList } from '@/types/navigation.types';
-import { PlantCategoryTabs } from '@/components/PlantCategoryTabs';
 import { CatalogSearchBar } from '@/components/catalog/CatalogSearchBar';
 import { CatalogBrowseRow } from '@/components/catalog/CatalogBrowseRow';
 import { CatalogSkeletonRows } from '@/components/catalog/CatalogSkeletonRows';
 import { CatalogSearchResultRow } from '@/components/catalog/CatalogSearchResultRow';
 import { CatalogSectionHeader } from '@/components/catalog/CatalogSectionHeader';
-import { CatalogGroupSheet } from '@/components/catalog/CatalogGroupSheet';
-import {
-  CATALOG_GROUP_MODES,
-  DEFAULT_CATALOG_GROUP_MODE,
-} from '@/components/catalog/catalogGroupModes';
+import { CatalogFilterSheet } from '@/components/catalog/CatalogFilterSheet';
+import { DEFAULT_CATALOG_GROUP_MODE } from '@/components/catalog/catalogGroupModes';
 import { RecentSearchChips } from '@/components/catalog/RecentSearchChips';
 import { HiddenPlantsSection } from '@/components/catalog/HiddenPlantsSection';
 import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
@@ -33,6 +29,7 @@ import { usePlantCatalogManager } from '@/hooks/usePlantCatalogManager';
 import { useCatalogSearch } from '@/hooks/useCatalogSearch';
 import { getCanonicalPlantKey } from '@/utils/plantAliases';
 import {
+  ALL_GROUPS,
   buildBrowseItems,
   buildSearchItems,
   measureCatalogItems,
@@ -72,18 +69,22 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   /**
    * A group spans several care models — Fruits holds both `fruit_tree` trees and
    * herbaceous quick fruits — so a newly created entry only gets a starting type
-   * from the active pill; the entry form lets it be corrected.
+   * from the chosen category; the entry form lets it be corrected. Under `all`
+   * no category is chosen, so it starts from the one most plants are added to.
    */
-  const newPlantType = CATALOG_GROUP_DEFAULT_TYPE[activeGroup];
+  const newPlantType =
+    activeGroup === ALL_GROUPS
+      ? CATALOG_GROUP_DEFAULT_TYPE.vegetables
+      : CATALOG_GROUP_DEFAULT_TYPE[activeGroup];
 
-  // Search and the grouping sheet each take over the header, so only one is
+  // Search and the filter sheet each take over the header, so only one is
   // open at a time; the query itself survives collapsing, marked by the dot.
   const [searchActive, setSearchActive] = useState(false);
-  const [showGrouping, setShowGrouping] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const openSearch = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setShowGrouping(false);
+    setShowFilters(false);
     setSearchActive(true);
   }, []);
 
@@ -92,13 +93,15 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     setSearchActive(false);
   }, []);
 
-  const toggleGrouping = useCallback(() => {
+  const toggleFilters = useCallback(() => {
     setSearchActive(false);
-    setShowGrouping((prev) => !prev);
+    setShowFilters((prev) => !prev);
   }, []);
 
-  const closeGrouping = useCallback(() => setShowGrouping(false), []);
+  const closeFilters = useCallback(() => setShowFilters(false), []);
 
+  // `enabled` latches inside the hook, so opening search once is enough — a
+  // query that outlives the collapsed bar keeps its index.
   const {
     query,
     setQuery,
@@ -109,7 +112,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     recentSearches,
     commitSearch,
     clearRecentSearches,
-  } = useCatalogSearch({ profiles: mergedProfiles, plantCountsByType });
+  } = useCatalogSearch({ profiles: mergedProfiles, plantCountsByType, enabled: searchActive });
 
   const onBack = useCallback(() => moreNav.goBack(), [moreNav]);
 
@@ -180,9 +183,13 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     });
   }, [moreNav, query, newPlantType, commitSearch, results]);
 
-  /** Names the active grouping for the funnel's accessibility label. */
-  const groupModeLabel =
-    CATALOG_GROUP_MODES.find((entry) => entry.value === groupMode)?.label ?? groupMode;
+  /**
+   * How many of the sheet's two facets are off default. A dot could say only
+   * that something was filtered, not whether the category, the grouping or both
+   * were responsible for the list on screen.
+   */
+  const activeFilterCount =
+    (activeGroup === ALL_GROUPS ? 0 : 1) + (groupMode === DEFAULT_CATALOG_GROUP_MODE ? 0 : 1);
 
   const onSubmitSearch = useCallback(() => commitSearch(query), [commitSearch, query]);
 
@@ -194,7 +201,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
         isSearching
           ? buildSearchItems(results)
           : // `groupData` carries the group and mode it was built for, so the
-            // list can never pair a freshly tapped pill with the old rows.
+            // list can never pair a freshly tapped category with the old rows.
             buildBrowseItems({
               group: groupData.group,
               entries: groupData.entries,
@@ -264,9 +271,10 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       : `r:${item.result.plantType}:${item.result.name}`;
   }, []);
 
-  // The search field now lives in the header bar, and the grouping toggle in a
-  // sheet, so the list header is just the group pills — or the match count,
-  // which replaces them because a search spans every group.
+  // Search and the category filter both live in the header bar now, so browsing
+  // needs no list header at all — only a search does, to count its matches. The
+  // count is worth stating because a search spans every category, unlike the
+  // list beneath it.
   const listHeader = useMemo(
     () =>
       isSearching ? (
@@ -278,22 +286,8 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
               : `${totalMatches} ${totalMatches === 1 ? 'plant' : 'plants'}`}
           </Text>
         </View>
-      ) : (
-        <PlantCategoryTabs
-          activeGroup={activeGroup}
-          groupCounts={groupCounts}
-          onGroupChange={setActiveGroup}
-        />
-      ),
-    [
-      isSearching,
-      results.length,
-      totalMatches,
-      styles,
-      activeGroup,
-      groupCounts,
-      setActiveGroup,
-    ]
+      ) : null,
+    [isSearching, results.length, totalMatches, styles]
   );
 
   const listFooter = useMemo(() => {
@@ -392,14 +386,18 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       );
     }
 
+    // Under `all` there is no category to blame, so an empty list means the
+    // catalog itself is empty rather than the filter being too narrow.
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="leaf-outline" size={40} color={theme.textTertiary} />
-        <Text style={styles.emptyTitle}>No plants in this group</Text>
+        <Text style={styles.emptyTitle}>
+          {activeGroup === ALL_GROUPS ? 'No plants in the catalog yet' : 'No plants in this group'}
+        </Text>
         <Text style={styles.emptyText}>Tap + to add one.</Text>
       </View>
     );
-  }, [styles, isSearching, error, onClearSearch, onRetry, theme.textTertiary]);
+  }, [styles, isSearching, error, onClearSearch, onRetry, theme.textTertiary, activeGroup]);
 
   return (
     <View style={styles.container}>
@@ -444,18 +442,20 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
                 {query.trim() !== '' && <View style={styles.headerActiveDot} />}
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.headerIconBtn, showGrouping && styles.headerIconBtnActive]}
-                onPress={toggleGrouping}
+                style={[styles.headerIconBtn, showFilters && styles.headerIconBtnActive]}
+                onPress={toggleFilters}
                 accessibilityRole="button"
-                accessibilityLabel={`Group plants by ${groupModeLabel}`}
+                accessibilityLabel="Filter plants"
               >
                 <Ionicons
                   name="funnel"
                   size={20}
-                  color={showGrouping ? theme.primary : theme.textInverse}
+                  color={showFilters ? theme.primary : theme.textInverse}
                 />
-                {groupMode !== DEFAULT_CATALOG_GROUP_MODE && !showGrouping && (
-                  <View style={styles.headerActiveDot} />
+                {activeFilterCount > 0 && !showFilters && (
+                  <View style={styles.filterBadge}>
+                    <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                  </View>
                 )}
               </TouchableOpacity>
             </View>
@@ -463,8 +463,15 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
         )}
       </View>
 
-      {showGrouping && (
-        <CatalogGroupSheet mode={groupMode} onChange={setGroupMode} onClose={closeGrouping} />
+      {showFilters && (
+        <CatalogFilterSheet
+          group={activeGroup}
+          groupCounts={groupCounts}
+          onGroupChange={setActiveGroup}
+          mode={groupMode}
+          onChange={setGroupMode}
+          onClose={closeFilters}
+        />
       )}
 
       <ConfirmDeleteModal

@@ -12,7 +12,7 @@ import {
   getPlantNamesForType,
   getProfileEntry,
 } from '@/services/plantProfiles';
-import { getAllPlants, updatePlantVariety } from '@/services/plants';
+import { getAllPlants, getStoredPlants, updatePlantVariety } from '@/services/plants';
 import type {
   FeedingIntensity,
   Plant,
@@ -29,6 +29,8 @@ import {
   buildCareForm,
   cloneDraft,
   isCatalogDraftDirty,
+  PRUNING_SEED_KEYS,
+  pruningSeed,
   sanitizeName,
   toOptNum,
   toRange,
@@ -83,7 +85,7 @@ export interface UseCatalogEntryFormReturn {
    * entry, reassignment when garden plants do, or null when it cannot be
    * deleted at all (in use, with no sibling to move the plants to).
    */
-  requestDelete: () => 'confirm' | 'reassign' | null;
+  requestDelete: () => Promise<'confirm' | 'reassign' | null>;
   confirmDelete: (replacement?: string) => Promise<void>;
   showDiscardDialog: boolean;
   dismissDiscard: () => void;
@@ -122,6 +124,18 @@ export function useCatalogEntryForm({
   const savedSuccessfully = useRef(false);
   const isDiscarding = useRef(false);
   const isSavingRef = useRef(false);
+  /**
+   * The care model is chosen on this screen while creating, so it must not be a
+   * dependency of the load: everything the load fetches is type-independent,
+   * and rebuilding the form would throw away whatever has been typed. The
+   * pruning seeds are the one type-derived part, re-seeded by their own effect.
+   */
+  const plantTypeRef = useRef(plantType);
+  plantTypeRef.current = plantType;
+  const prevPlantTypeRef = useRef(plantType);
+  const hasLoadedRef = useRef(false);
+  /** Resolves with the garden plants, which load without blocking the form. */
+  const plantsPromiseRef = useRef<Promise<Plant[]> | null>(null);
 
   // ─── Load ────────────────────────────────────────────────────────────────
 
@@ -131,16 +145,20 @@ export function useCatalogEntryForm({
     const load = async (): Promise<void> => {
       setLoading(true);
       try {
-        const [profilesData, allPlants] = await Promise.all([getPlantProfiles(), getAllPlants()]);
+        const type = plantTypeRef.current;
+        const profilesData = await getPlantProfiles();
         if (cancelled) return;
 
-        const form = buildCareForm(profilesData, initialName, plantType, isCreating);
-        const entry = isCreating ? undefined : profilesData[plantType]?.[initialName];
+        const form = buildCareForm(profilesData, initialName, type, isCreating);
+        // The merged entry, not the raw override map: the latter holds only the
+        // user's own edits, so it is empty for a bundled plant nobody has
+        // touched. Reading it directly showed every bundled variety list as
+        // empty and then let the next save write that emptiness back over it.
+        const entry = isCreating ? undefined : getProfileEntry(profilesData, type, initialName);
         const loadedVarieties = entry?.varieties ?? [];
         const loadedDetails = entry?.varietyDetails ?? {};
 
         setProfiles(profilesData);
-        setPlants(allPlants);
         setCareForm(form);
         setVarieties(loadedVarieties);
         setVarietyDetails(loadedDetails);
@@ -153,6 +171,7 @@ export function useCatalogEntryForm({
             varietyDetails: loadedDetails,
           });
         }
+        hasLoadedRef.current = true;
       } catch (error: unknown) {
         if (!cancelled) {
           Alert.alert('Error', getErrorMessage(error) ?? 'Failed to load plant data.');
@@ -166,7 +185,65 @@ export function useCatalogEntryForm({
     return () => {
       cancelled = true;
     };
-  }, [initialName, plantType, isCreating]);
+  }, [initialName, isCreating]);
+
+  /**
+   * Garden plants feed the usage count and the rename/reassign targets — never
+   * the form — so the screen does not wait on them. `getStoredPlants` first for
+   * the reason `usePlantCatalogManager` gives: `getAllPlants` paginates
+   * Firestore and resolves every plant's local image URI, none of which this
+   * screen reads.
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    const promise = (async (): Promise<Plant[]> => {
+      try {
+        const stored = await getStoredPlants();
+        return stored.length > 0 ? stored : await getAllPlants();
+      } catch (error: unknown) {
+        logError('network', 'useCatalogEntryForm: plant load failed', error);
+        return [];
+      }
+    })();
+
+    plantsPromiseRef.current = promise;
+    void promise.then((loaded) => {
+      if (!cancelled) setPlants(loaded);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /**
+   * Re-seeds the pruning fields when the care model changes mid-creation. It
+   * patches rather than rebuilds: a rebuild is what used to discard everything
+   * typed so far. Only fields the user has not written over move, and the
+   * baseline moves with them so a re-seed never reads as an unsaved edit.
+   */
+  useEffect(() => {
+    const previous = prevPlantTypeRef.current;
+    if (previous === plantType) return;
+    prevPlantTypeRef.current = plantType;
+    if (!isCreating || !hasLoadedRef.current) return;
+
+    const outgoing = pruningSeed(previous);
+    const incoming = pruningSeed(plantType);
+    const untouched = (form: CareFormState): boolean =>
+      PRUNING_SEED_KEYS.every((key) => form[key] === outgoing[key]);
+
+    setCareForm((prev) => (prev && untouched(prev) ? { ...prev, ...incoming } : prev));
+
+    const baseline = baselineRef.current;
+    if (baseline && untouched(baseline.careForm)) {
+      baselineRef.current = {
+        ...baseline,
+        careForm: { ...baseline.careForm, ...incoming },
+      };
+    }
+  }, [plantType, isCreating]);
 
   // ─── Derived ─────────────────────────────────────────────────────────────
 
@@ -178,7 +255,10 @@ export function useCatalogEntryForm({
   // Both read the merged catalog, not the raw override map: the latter is empty
   // until the user edits something, which made every bundled entry look absent
   // and its whole category look empty.
-  const currentProfile = getProfileEntry(profiles, plantType, initialName);
+  const currentProfile = useMemo(
+    () => getProfileEntry(profiles, plantType, initialName),
+    [profiles, plantType, initialName]
+  );
   const categoryPlants = useMemo(
     () => getPlantNamesForType(profiles, plantType),
     [profiles, plantType]
@@ -218,13 +298,15 @@ export function useCatalogEntryForm({
   // ─── Save ────────────────────────────────────────────────────────────────
 
   const doSave = useCallback(
-    async (trimmedName: string): Promise<void> => {
+    // `knownPlants` is the settled list the caller already awaited, not the
+    // `plants` state, which may not have re-rendered yet.
+    async (trimmedName: string, knownPlants: Plant[]): Promise<void> => {
       if (!careForm) return;
       setSaving(true);
       isSavingRef.current = true;
       try {
         if (trimmedName !== initialName && !isCreating) {
-          const targets = plants.filter(
+          const targets = knownPlants.filter(
             (p) => p.plant_type === plantType && p.plant_variety === initialName
           );
           for (const p of targets) {
@@ -311,7 +393,6 @@ export function useCatalogEntryForm({
       careForm,
       initialName,
       isCreating,
-      plants,
       plantType,
       varieties,
       varietyDetails,
@@ -338,20 +419,29 @@ export function useCatalogEntryForm({
       return null;
     }
 
-    const renameCount =
-      trimmedName !== initialName
-        ? plants.filter((p) => p.plant_type === plantType && p.plant_variety === initialName)
-            .length
-        : 0;
+    // Validation above is synchronous so the screen can scroll to the offending
+    // field; the rest waits on the background plant load. Pressing Save the
+    // moment the screen appears would otherwise count zero plants to rename,
+    // skipping both the confirmation and the rename itself and stranding the
+    // garden plants under the old variety name.
+    void (async () => {
+      const knownPlants = (await plantsPromiseRef.current) ?? plants;
+      const renameCount =
+        trimmedName !== initialName
+          ? knownPlants.filter(
+              (p) => p.plant_type === plantType && p.plant_variety === initialName
+            ).length
+          : 0;
 
-    if (renameCount > 0) {
-      Alert.alert('Update Plants', `Renaming will update ${renameCount} plant(s). Continue?`, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Rename', onPress: () => void doSave(trimmedName) },
-      ]);
-    } else {
-      void doSave(trimmedName);
-    }
+      if (renameCount > 0) {
+        Alert.alert('Update Plants', `Renaming will update ${renameCount} plant(s). Continue?`, [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Rename', onPress: () => void doSave(trimmedName, knownPlants) },
+        ]);
+      } else {
+        void doSave(trimmedName, knownPlants);
+      }
+    })();
     return null;
   }, [careForm, errors, name, initialName, categoryPlants, plants, plantType, doSave]);
 
@@ -407,8 +497,16 @@ export function useCatalogEntryForm({
     ]);
   }, [hasOverride, plantType, initialName, currentProfile, isCreating]);
 
-  const requestDelete = useCallback((): 'confirm' | 'reassign' | null => {
-    if (usageCount === 0) return 'confirm';
+  const requestDelete = useCallback(async (): Promise<'confirm' | 'reassign' | null> => {
+    // Counted from the settled list rather than the `usageCount` memo: the
+    // plants load in the background, and a delete pressed before they land
+    // would otherwise look unused and skip reassignment entirely, orphaning
+    // every garden plant grown from this entry.
+    const knownPlants = (await plantsPromiseRef.current) ?? plants;
+    const inUse = knownPlants.filter(
+      (p) => p.plant_type === plantType && p.plant_variety === initialName
+    ).length;
+    if (inUse === 0) return 'confirm';
 
     const remaining = categoryPlants.filter((p) => p !== initialName);
     if (remaining.length === 0) {
@@ -416,7 +514,7 @@ export function useCatalogEntryForm({
       return null;
     }
     return 'reassign';
-  }, [usageCount, categoryPlants, initialName]);
+  }, [plants, plantType, categoryPlants, initialName]);
 
   const confirmDelete = useCallback(
     async (replacement?: string): Promise<void> => {
@@ -424,7 +522,8 @@ export function useCatalogEntryForm({
       isSavingRef.current = true;
       try {
         if (replacement) {
-          const targets = plants.filter(
+          const knownPlants = (await plantsPromiseRef.current) ?? plants;
+          const targets = knownPlants.filter(
             (p) => p.plant_type === plantType && p.plant_variety === initialName
           );
           for (const p of targets) {

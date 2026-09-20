@@ -8,13 +8,16 @@ jest.mock('react-native', () => ({
 // call `reload()` themselves so each load is deliberate.
 jest.mock('@react-navigation/native', () => ({ useFocusEffect: () => undefined }));
 
+// Two categories, one plant and one hidden plant each, so a filter that fails
+// to narrow — or fails to widen — is visible in the counts.
 jest.mock('@/services/plantProfiles', () => ({
   DEFAULT_PLANT_PROFILES: {},
-  PLANT_CATEGORIES: ['vegetable'],
+  PLANT_CATEGORIES: ['vegetable', 'spinach'],
   getPlantProfiles: jest.fn(),
-  getPlantNamesForType: () => ['Tomato'],
+  getPlantNamesForType: (_profiles: unknown, plantType: string) =>
+    plantType === 'vegetable' ? ['Tomato'] : ['Palak'],
   getMergedProfiles: (profiles: unknown) => profiles,
-  getHiddenPlantNames: () => ({ vegetable: [] }),
+  getHiddenPlantNames: () => ({ vegetable: ['Okra'], spinach: ['Mulai Keerai'] }),
   restorePlantProfile: jest.fn(),
 }));
 jest.mock('@/services/plants', () => ({
@@ -26,8 +29,11 @@ jest.mock('@/utils/catalogSummaries', () => ({ buildCatalogMetaLine: () => 'meta
 jest.mock('@/utils/plantHelpers', () => ({ deriveInstanceLifecycle: () => 'annual' }));
 jest.mock('@/utils/plantLabels', () => ({ LIFECYCLE_LABELS: { annual: 'Annual' } }));
 jest.mock('@/config/plants/catalogTaxonomy', () => ({
-  CATALOG_GROUP_ORDER: ['vegetables'],
-  getTaxonomy: () => ({ group: 'vegetables', subGroup: 'fruit_vegetables', habit: 'annual_bed' }),
+  CATALOG_GROUP_ORDER: ['vegetables', 'greens'],
+  getTaxonomy: (_name: string, plantType: string) =>
+    plantType === 'vegetable'
+      ? { group: 'vegetables', subGroup: 'fruit_vegetables', habit: 'annual_bed' }
+      : { group: 'greens', subGroup: 'spinach', habit: 'annual_bed' },
 }));
 jest.mock('@/utils/errorLogging', () => ({
   getErrorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
@@ -41,6 +47,7 @@ import type { UsePlantCatalogManagerReturn } from '@/hooks/usePlantCatalogManage
 import { getPlantProfiles } from '@/services/plantProfiles';
 import { getStoredPlants } from '@/services/plants';
 import { logError } from '@/utils/errorLogging';
+import { ALL_GROUPS } from '@/utils/catalogListItems';
 import { makePlant } from '../fixtures/plant.fixtures';
 
 const TestRenderer = jest.requireActual('react-test-renderer') as {
@@ -90,6 +97,94 @@ describe('usePlantCatalogManager', () => {
     jest.clearAllMocks();
     mockProfiles.mockResolvedValue({ vegetable: {} });
     mockStored.mockImplementation(() => Promise.resolve(garden('Tomato')));
+  });
+
+  describe('the all filter', () => {
+    it('opens on all, so the catalog is browsable before anything is chosen', async () => {
+      const tree = await mount();
+
+      expect(latest.activeGroup).toBe(ALL_GROUPS);
+      tree.unmount();
+    });
+
+    it('spans every category while all is selected', async () => {
+      const tree = await mount();
+      await TestRenderer.act(async () => {
+        await latest.reload();
+      });
+
+      expect(latest.groupData.entries.map((entry) => entry.name).sort()).toEqual([
+        'Palak',
+        'Tomato',
+      ]);
+      tree.unmount();
+    });
+
+    it('narrows to the chosen category', async () => {
+      const tree = await mount();
+      await TestRenderer.act(async () => {
+        await latest.reload();
+      });
+      await TestRenderer.act(async () => {
+        latest.setActiveGroup('greens');
+      });
+
+      expect(latest.groupData.entries.map((entry) => entry.name)).toEqual(['Palak']);
+      tree.unmount();
+    });
+
+    it('files each entry under its own group, which the all list sections by', async () => {
+      const tree = await mount();
+      await TestRenderer.act(async () => {
+        await latest.reload();
+      });
+
+      const byName = Object.fromEntries(
+        latest.groupData.entries.map((entry) => [entry.name, entry.group])
+      );
+      expect(byName).toEqual({ Tomato: 'vegetables', Palak: 'greens' });
+      tree.unmount();
+    });
+
+    it('counts the whole catalog under all, alongside the per-category counts', async () => {
+      const tree = await mount();
+      await TestRenderer.act(async () => {
+        await latest.reload();
+      });
+
+      expect(latest.groupCounts[ALL_GROUPS]).toBe(2);
+      expect(latest.groupCounts.vegetables).toBe(1);
+      expect(latest.groupCounts.greens).toBe(1);
+      tree.unmount();
+    });
+
+    // Without this, deleting a plant then leaving the filter on All would hide
+    // the only control that restores it.
+    it('lists every hidden plant under all, not just one category worth', async () => {
+      const tree = await mount();
+      await TestRenderer.act(async () => {
+        await latest.reload();
+      });
+
+      expect(latest.hiddenPlantNames.map((hidden) => hidden.name).sort()).toEqual([
+        'Mulai Keerai',
+        'Okra',
+      ]);
+      tree.unmount();
+    });
+
+    it('narrows the hidden plants once a category is chosen', async () => {
+      const tree = await mount();
+      await TestRenderer.act(async () => {
+        await latest.reload();
+      });
+      await TestRenderer.act(async () => {
+        latest.setActiveGroup('greens');
+      });
+
+      expect(latest.hiddenPlantNames.map((hidden) => hidden.name)).toEqual(['Mulai Keerai']);
+      tree.unmount();
+    });
   });
 
   describe('reload identity guard', () => {

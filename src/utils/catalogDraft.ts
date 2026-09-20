@@ -109,6 +109,33 @@ const CREATE_DEFAULTS: PlantCareProfile = {
 };
 
 /**
+ * The pruning fields a form is seeded with while the user has written none of
+ * their own. Shared with the catalog detail screen, which re-seeds exactly
+ * these when the care model changes mid-creation — they are the only part of a
+ * new entry's form that is derived from the plant type.
+ */
+export const PRUNING_SEED_KEYS = [
+  'pruningTips',
+  'shapePruningTip',
+  'shapePruningMonths',
+  'flowerPruningTip',
+  'flowerPruningMonths',
+] as const;
+
+export type PruningSeed = Pick<CareFormState, (typeof PRUNING_SEED_KEYS)[number]>;
+
+export function pruningSeed(plantType: PlantType, plantName?: string): PruningSeed {
+  const info = getStaticPruningDefaults(plantType, plantName);
+  return {
+    pruningTips: info.tips.join('\n'),
+    shapePruningTip: info.shapePruning?.tip ?? '',
+    shapePruningMonths: info.shapePruning?.months ?? '',
+    flowerPruningTip: info.flowerPruning?.tip ?? '',
+    flowerPruningMonths: info.flowerPruning?.months ?? '',
+  };
+}
+
+/**
  * Merges the static care defaults for a plant with any saved profile overrides
  * into the flat, all-strings form state.
  *
@@ -131,7 +158,7 @@ export function buildCareForm(
 
   const hasUserPruning =
     profileEntry?.pruningTips || profileEntry?.shapePruningTip || profileEntry?.flowerPruningTip;
-  const staticPruning = getStaticPruningDefaults(plantType, plantName);
+  const staticPruning = pruningSeed(plantType, plantName);
 
   const [dthMin, dthMax] = rangeStr(merged.daysToHarvest);
   const [htMin, htMax] = rangeStr(merged.heightCm);
@@ -150,19 +177,19 @@ export function buildCareForm(
     initialGrowthStage: merged.initialGrowthStage,
     pruningTips: hasUserPruning
       ? (profileEntry?.pruningTips ?? []).join('\n')
-      : staticPruning.tips.join('\n'),
+      : staticPruning.pruningTips,
     shapePruningTip: hasUserPruning
       ? profileEntry?.shapePruningTip ?? ''
-      : staticPruning.shapePruning?.tip ?? '',
+      : staticPruning.shapePruningTip,
     shapePruningMonths: hasUserPruning
       ? profileEntry?.shapePruningMonths ?? ''
-      : staticPruning.shapePruning?.months ?? '',
+      : staticPruning.shapePruningMonths,
     flowerPruningTip: hasUserPruning
       ? profileEntry?.flowerPruningTip ?? ''
-      : staticPruning.flowerPruning?.tip ?? '',
+      : staticPruning.flowerPruningTip,
     flowerPruningMonths: hasUserPruning
       ? profileEntry?.flowerPruningMonths ?? ''
-      : staticPruning.flowerPruning?.months ?? '',
+      : staticPruning.flowerPruningMonths,
     // Botanical identity
     scientificName: merged.scientificName ?? '',
     taxonomicFamily: merged.taxonomicFamily ?? '',

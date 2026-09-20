@@ -17,7 +17,12 @@ import { buildCatalogMetaLine } from '@/utils/catalogSummaries';
 import { signPlantVarietyCounts } from '@/utils/catalogCounts';
 import { deriveInstanceLifecycle } from '@/utils/plantHelpers';
 import { LIFECYCLE_LABELS } from '@/utils/plantLabels';
-import type { CatalogBrowseEntry, CatalogGroupMode } from '@/utils/catalogListItems';
+import { ALL_GROUPS } from '@/utils/catalogListItems';
+import type {
+  CatalogBrowseEntry,
+  CatalogGroupFilter,
+  CatalogGroupMode,
+} from '@/utils/catalogListItems';
 import { CatalogGroup, Plant, PlantProfiles, PlantType } from '@/types/database.types';
 import { CATALOG_GROUP_ORDER, getTaxonomy } from '@/config/plants/catalogTaxonomy';
 import { getErrorMessage, logError } from '@/utils/errorLogging';
@@ -25,10 +30,10 @@ import { getErrorMessage, logError } from '@/utils/errorLogging';
 export interface GroupData {
   /**
    * The group and mode these entries were built for. Deferred, so they can lag
-   * the pill the user just tapped by a frame — carrying them alongside the
+   * the chip the user just tapped by a frame — carrying them alongside the
    * entries is what stops the screen pairing a new group with old rows.
    */
-  group: CatalogGroup;
+  group: CatalogGroupFilter;
   mode: CatalogGroupMode;
   entries: CatalogBrowseEntry[];
   isEmpty: boolean;
@@ -43,9 +48,9 @@ export interface UsePlantCatalogManagerReturn {
    */
   mergedProfiles: PlantProfiles;
   plants: Plant[];
-  /** The selected browse group. Urgent — this is what highlights the pill. */
-  activeGroup: CatalogGroup;
-  setActiveGroup: (group: CatalogGroup) => void;
+  /** The selected browse group, or `all`. Urgent — it marks the chosen chip. */
+  activeGroup: CatalogGroupFilter;
+  setActiveGroup: (group: CatalogGroupFilter) => void;
   /** How the browse list sections itself: by sub-group, by season, or A–Z. */
   groupMode: CatalogGroupMode;
   setGroupMode: (mode: CatalogGroupMode) => void;
@@ -67,11 +72,11 @@ export interface UsePlantCatalogManagerReturn {
   reload: (options?: { silent?: boolean }) => Promise<void>;
   /** Pull-to-refresh: revalidates silently while showing the RefreshControl. */
   refresh: () => Promise<void>;
-  /** Total catalog plant count per browse group — drives pill badges. */
-  groupCounts: Record<CatalogGroup, number>;
+  /** Catalog plant count per group, plus an `all` total — drives the chip counts. */
+  groupCounts: Record<CatalogGroupFilter, number>;
   /** Garden-plant counts keyed by category then variety name — feeds search. */
   plantCountsByType: Record<PlantType, Record<string, number>>;
-  /** Bundled entries the user deleted from any category in the active group. */
+  /** Bundled entries the user deleted, narrowed to the selected group unless `all`. */
   hiddenPlantNames: { name: string; plantType: PlantType }[];
   /** Un-hides a deleted bundled entry, then reloads the catalog. */
   restore: (name: string, plantType: PlantType) => Promise<void>;
@@ -89,11 +94,11 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeGroup, setActiveGroup] = useState<CatalogGroup>('vegetables');
+  const [activeGroup, setActiveGroup] = useState<CatalogGroupFilter>(ALL_GROUPS);
   const [groupMode, setGroupMode] = useState<CatalogGroupMode>('type');
 
   /**
-   * What the heavy derivations run on. React paints the newly tapped pill from
+   * What the heavy derivations run on. React paints the newly tapped chip from
    * `activeGroup` first and rebuilds the ~150-row list at low priority after,
    * so re-sectioning never blocks the tap's own feedback.
    */
@@ -111,6 +116,13 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
    */
   const plantsSigRef = useRef<string | null>(null);
   const profilesSigRef = useRef<string | null>(null);
+  /**
+   * The exact object the last signature was taken from. Inside the cache's TTL
+   * `getPlantProfiles` hands back that same object, so identity settles the
+   * common case and the full stringify below is reached only when the store was
+   * actually re-read or rewritten.
+   */
+  const profilesObjRef = useRef<PlantProfiles | null>(null);
 
   const reload = useCallback(async (options?: { silent?: boolean }): Promise<void> => {
     if (!options?.silent) setLoading(true);
@@ -124,21 +136,41 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
         getPlantProfiles(),
         getStoredPlants(),
       ]);
-      const allPlants = storedPlants.length > 0 ? storedPlants : await getAllPlants();
 
       // Only adopt what actually changed. A revalidate that found the same data
       // would otherwise hand down new identities and re-resolve every browse
-      // entry — the background work that made the category pills feel stuck.
-      const profilesSig = JSON.stringify(profilesData);
-      if (profilesSigRef.current !== profilesSig) {
-        profilesSigRef.current = profilesSig;
-        setProfiles(profilesData);
+      // entry — the background work that made switching categories feel stuck.
+      if (profilesObjRef.current !== profilesData) {
+        const profilesSig = JSON.stringify(profilesData);
+        profilesObjRef.current = profilesData;
+        if (profilesSigRef.current !== profilesSig) {
+          profilesSigRef.current = profilesSig;
+          setProfiles(profilesData);
+        }
       }
-      const plantsSig = signPlantVarietyCounts(allPlants);
-      if (plantsSigRef.current !== plantsSig) {
-        plantsSigRef.current = plantsSig;
-        setPlants(allPlants);
+
+      const applyPlants = (loaded: Plant[]): void => {
+        const plantsSig = signPlantVarietyCounts(loaded);
+        if (plantsSigRef.current !== plantsSig) {
+          plantsSigRef.current = plantsSig;
+          setPlants(loaded);
+        }
+      };
+
+      if (storedPlants.length > 0) {
+        applyPlants(storedPlants);
+      } else {
+        // Nothing cached: the full fetch paginates Firestore and resolves every
+        // plant's local image, which is far too slow to hold the catalog behind
+        // — `plants` only feeds the count badges. Let the list render now and
+        // fill the counts in when it lands.
+        void getAllPlants()
+          .then(applyPlants)
+          .catch((err: unknown) => {
+            logError('network', 'usePlantCatalogManager: plant counts unavailable', err);
+          });
       }
+
       hasLoadedRef.current = true;
       setError(null);
     } catch (err: unknown) {
@@ -201,7 +233,7 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
    * Every catalog plant as a browse entry, bucketed by group.
    *
    * Memoised on `profiles` and the garden counts only — deliberately not on
-   * `activeGroup` or `groupMode`, so switching a pill or a grouping re-sections
+   * `activeGroup` or `groupMode`, so switching a category or a grouping re-sections
    * an already-built list instead of re-resolving 129 care profiles.
    */
   const entriesByGroup = useMemo(() => {
@@ -227,6 +259,7 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
           name,
           tamilName: entry?.tamilName,
           plantType,
+          group: taxonomy.group,
           subGroup: taxonomy.subGroup,
           habit: taxonomy.habit,
           lifecycle,
@@ -245,33 +278,55 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     return buckets;
   }, [profiles, mergedProfiles, plantCountsByType]);
 
-  const groupData = useMemo((): GroupData => {
-    const entries = entriesByGroup[deferredGroup] ?? [];
-    return { group: deferredGroup, mode: deferredMode, entries, isEmpty: entries.length === 0 };
-  }, [entriesByGroup, deferredGroup, deferredMode]);
+  /**
+   * Every entry in one flat list, for the `all` filter. Memoised on the buckets
+   * alone so it is built once per catalog load rather than per category change,
+   * and only read when `all` is selected.
+   */
+  const allEntries = useMemo(
+    () => CATALOG_GROUP_ORDER.flatMap((group) => entriesByGroup[group] ?? []),
+    [entriesByGroup]
+  );
 
-  /** Catalog count per group — drives the pill badges. */
+  const groupData = useMemo((): GroupData => {
+    const entries =
+      deferredGroup === ALL_GROUPS ? allEntries : (entriesByGroup[deferredGroup] ?? []);
+    return { group: deferredGroup, mode: deferredMode, entries, isEmpty: entries.length === 0 };
+  }, [entriesByGroup, allEntries, deferredGroup, deferredMode]);
+
+  /** Catalog count per group, plus the `all` total — drives the sheet chip counts. */
   const groupCounts = useMemo(() => {
-    return CATALOG_GROUP_ORDER.reduce(
+    const counts = CATALOG_GROUP_ORDER.reduce(
       (acc, group) => {
         acc[group] = entriesByGroup[group]?.length ?? 0;
         return acc;
       },
-      {} as Record<CatalogGroup, number>
+      {} as Record<CatalogGroupFilter, number>
     );
-  }, [entriesByGroup]);
+    counts[ALL_GROUPS] = allEntries.length;
+    return counts;
+  }, [entriesByGroup, allEntries]);
 
   /**
-   * Deleted bundled entries whose group is the active one. A group can span
-   * several `PlantType`s, so each name carries its own — `restorePlantProfile`
-   * needs the type, and the active pill can no longer supply it.
+   * Deleted bundled entries whose group is the selected one — or every one of
+   * them under `all`, so nothing a user deleted becomes unrestorable just
+   * because no single category is in force.
+   *
+   * A group can span several `PlantType`s, so each name carries its own:
+   * `restorePlantProfile` needs the type, and the chosen category can no longer
+   * supply it.
    */
   const hiddenPlantNames = useMemo(() => {
     const hidden = getHiddenPlantNames(profiles);
     const result: { name: string; plantType: PlantType }[] = [];
     for (const plantType of PLANT_CATEGORIES) {
       for (const name of hidden[plantType] ?? []) {
-        if (getTaxonomy(name, plantType).group === deferredGroup) result.push({ name, plantType });
+        if (
+          deferredGroup === ALL_GROUPS ||
+          getTaxonomy(name, plantType).group === deferredGroup
+        ) {
+          result.push({ name, plantType });
+        }
       }
     }
     return result;

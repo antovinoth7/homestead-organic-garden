@@ -1,6 +1,7 @@
 import { catalogRowTotalHeight, catalogSectionHeaderHeight } from '@/styles/catalogMetrics';
-import { SUB_GROUP_ORDER } from '@/config/plants/catalogTaxonomy';
+import { CATALOG_GROUP_ORDER, SUB_GROUP_ORDER } from '@/config/plants/catalogTaxonomy';
 import {
+  CATALOG_GROUP_LABELS,
   LIFECYCLE_SECTION_LABELS,
   LIFECYCLE_SECTION_ORDER,
   SUB_GROUP_LABELS,
@@ -16,6 +17,16 @@ import type {
 
 /** How the browse list sections itself. Driven by the header's mode toggle. */
 export type CatalogGroupMode = 'type' | 'season' | 'alpha';
+
+/**
+ * The browse list's "no category chosen" sentinel. Deliberately not part of
+ * `CatalogGroup`, which is a stored schema value — this only ever describes
+ * what the filter sheet has selected, the same way `ActiveFilters.type`
+ * carries `'all'` on the Plants screen.
+ */
+export const ALL_GROUPS = 'all' as const;
+
+export type CatalogGroupFilter = CatalogGroup | typeof ALL_GROUPS;
 
 /**
  * The sub-group that holds whatever a group's named sub-groups do not. Some
@@ -38,6 +49,12 @@ export interface CatalogBrowseEntry {
    * this from the active tab the way it used to.
    */
   plantType: PlantType;
+  /**
+   * The browse group this plant is filed under. Resolved once by the hook, so
+   * an "All" list can section itself by category without re-deriving taxonomy
+   * for all ~152 entries on every mode change.
+   */
+  group: CatalogGroup;
   /** Sub-group id, absent for a group that renders as one run or a user-added plant. */
   subGroup?: string;
   habit: PlantHabit;
@@ -75,7 +92,7 @@ export interface CatalogListLayout {
 }
 
 interface BrowseInput {
-  group: CatalogGroup;
+  group: CatalogGroupFilter;
   entries: readonly CatalogBrowseEntry[];
   mode: CatalogGroupMode;
 }
@@ -142,6 +159,28 @@ export function buildBrowseItems({ group, entries, mode }: BrowseInput): Catalog
     return items;
   }
 
+  // `all` in `type` mode sections by category instead, because `SUB_GROUP_ORDER`
+  // is keyed by the eight real groups and has nothing to walk for the sentinel.
+  //
+  // Sub-group headers are deliberately dropped here: the eight groups declare
+  // ~25 sub-groups between them, which would bury the rows the list exists to
+  // show, and the several groups that each declare `other` would collide on one
+  // FlatList key. One header per category is the level that reads.
+  if (group === ALL_GROUPS) {
+    const byGroup = new Map<CatalogGroup, CatalogBrowseEntry[]>();
+    for (const entry of entries) {
+      const bucket = byGroup.get(entry.group);
+      if (bucket) bucket.push(entry);
+      else byGroup.set(entry.group, [entry]);
+    }
+    // `pushSection` skips an empty member list, so a category with no plants
+    // omits itself rather than leaving a bare header.
+    for (const catalogGroup of CATALOG_GROUP_ORDER) {
+      pushSection(items, CATALOG_GROUP_LABELS[catalogGroup], byGroup.get(catalogGroup) ?? []);
+    }
+    return items;
+  }
+
   // `type`: walk the group's declared sub-group order so the sections read in a
   // deliberate sequence rather than however the data happened to be written.
   const declared = SUB_GROUP_ORDER[group];
@@ -154,20 +193,34 @@ export function buildBrowseItems({ group, entries, mode }: BrowseInput): Catalog
   // group files under `other`. Vegetables *declares* `other` and Drumstick sits
   // in it, so emitting the leftovers as their own section gave that group two
   // "Other" headers with the same FlatList key the moment a user added a plant.
-  const isLeftover = (entry: CatalogBrowseEntry): boolean =>
-    !entry.subGroup || !declared.includes(entry.subGroup);
+  //
+  // Bucketed in one pass rather than filtered once per declared sub-group:
+  // Vegetables declares eight, so the old shape walked the whole entry list
+  // nine times on every group or mode tap. `pushSection` sorts each section
+  // A–Z, so how the leftovers interleave here cannot affect the output.
+  const declaredSet = new Set<string>(declared);
+  const buckets = new Map<string, CatalogBrowseEntry[]>();
+  for (const subGroup of declared) buckets.set(subGroup, []);
+  const leftovers: CatalogBrowseEntry[] = [];
+
+  for (const entry of entries) {
+    const bucket = entry.subGroup ? buckets.get(entry.subGroup) : undefined;
+    if (bucket) bucket.push(entry);
+    else leftovers.push(entry);
+  }
 
   for (const subGroup of declared) {
-    const members =
-      subGroup === OTHER_SUB_GROUP
-        ? entries.filter((entry) => entry.subGroup === subGroup || isLeftover(entry))
-        : entries.filter((entry) => entry.subGroup === subGroup);
-    pushSection(items, SUB_GROUP_LABELS[subGroup] ?? subGroup, members);
+    const members = buckets.get(subGroup) ?? [];
+    pushSection(
+      items,
+      SUB_GROUP_LABELS[subGroup] ?? subGroup,
+      subGroup === OTHER_SUB_GROUP ? [...members, ...leftovers] : members
+    );
   }
 
   // Only groups that do not declare `other` still need a trailing catch-all.
-  if (!declared.includes(OTHER_SUB_GROUP)) {
-    pushSection(items, SUB_GROUP_LABELS.other ?? 'Other', entries.filter(isLeftover));
+  if (!declaredSet.has(OTHER_SUB_GROUP)) {
+    pushSection(items, SUB_GROUP_LABELS.other ?? 'Other', leftovers);
   }
   return items;
 }

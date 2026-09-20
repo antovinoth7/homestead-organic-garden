@@ -115,12 +115,32 @@ export function createEmptyProfiles(): PlantProfiles {
  * here (catalog browse, add-plant dropdown via `toPlantCatalogShape`, picker
  * sheet), so sorting once here is what keeps them in agreement.
  */
+/**
+ * Memo for the above, keyed on the profiles object itself. Every write replaces
+ * that object wholesale, so identity is a sound key — and a WeakMap lets the
+ * superseded copy be collected with its entry. Worth it because one catalog
+ * rebuild asks for the same eight categories about three times over, and each
+ * ask re-sorts. Callers get a copy, so the cached order cannot be mutated.
+ */
+const namesByProfiles = new WeakMap<PlantProfiles, Partial<Record<PlantType, string[]>>>();
+
 export function getPlantNamesForType(profiles: PlantProfiles, type: PlantType): string[] {
+  let cached = namesByProfiles.get(profiles);
+  const hit = cached?.[type];
+  if (hit) return [...hit];
+
   const defaults = DEFAULT_PLANT_PROFILES[type];
   const user = profiles[type] ?? {};
   const defaultNames = Object.keys(defaults).filter((n) => !user[n]?.isDeleted);
   const userAdded = Object.keys(user).filter((n) => !defaults[n] && !user[n]?.isDeleted);
-  return sortPlantNames([...defaultNames, ...userAdded]);
+  const names = sortPlantNames([...defaultNames, ...userAdded]);
+
+  if (!cached) {
+    cached = {};
+    namesByProfiles.set(profiles, cached);
+  }
+  cached[type] = names;
+  return [...names];
 }
 
 export function getProfileEntry(
