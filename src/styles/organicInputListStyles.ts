@@ -2,69 +2,19 @@ import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 
 /**
- * Organic-input browse list — chip-filtered flat list with a "make your own"
- * recipe banner above the chips. Mirrors the pest/disease list layout but the
- * cards carry a category pill, an application rate and a DIY-recipe badge
- * instead of a seasonal risk badge.
+ * Organic-input browse list — the "make your own" recipe banner, cards, count
+ * line and empty state.
+ *
+ * The header bar, filter sheet and section dividers live in
+ * `referenceBrowseStyles`, shared with the pest/disease list. What stays here
+ * is what differs: the banner, and cards carrying a category pill, an
+ * application rate and a DIY-recipe badge instead of a seasonal risk badge.
  */
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.background,
-    },
-
-    // Header block — back button, title + subtitle, search field
-    headerBlock: {
-      paddingHorizontal: 18,
-      paddingBottom: 16,
-      backgroundColor: theme.background,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.borderLight,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitleGroup: {
-      flex: 1,
-      minWidth: 0,
-    },
-    headerTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    headerSubtitle: {
-      fontSize: 12,
-      color: theme.inputPlaceholder,
-      marginTop: 1,
-    },
-    searchField: {
-      marginTop: 14,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 9,
-      backgroundColor: theme.inputBackground,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      borderRadius: 13,
-      paddingHorizontal: 13,
-    },
-    searchInput: {
-      flex: 1,
-      paddingVertical: 11,
-      fontSize: 14,
-      color: theme.inputText,
     },
 
     // "Make your own" recipe banner
@@ -100,23 +50,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 17,
       color: theme.heroTextMuted,
       marginTop: 2,
-    },
-
-    // Count line
-    countRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 18,
-      paddingTop: 16,
-      paddingBottom: 6,
-    },
-    countText: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.9,
-      textTransform: 'uppercase',
-      color: theme.textTertiary,
     },
 
     // List

@@ -1,29 +1,40 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import type { ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
-import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 import { DEFAULT_ZONE } from '@/config/zones';
-import FieldHelp from '@/components/FieldHelp';
 import { createStyles } from '@/styles/pestDiseaseListStyles';
-import { ReferenceFilterChips, type ReferenceChip } from './ReferenceFilterChips';
+import { useReferenceBrowse } from '@/hooks/useReferenceBrowse';
+import {
+  ALL_CATEGORIES,
+  REFERENCE_EFFORT_OPTIONS,
+  REFERENCE_GROUP_MODES,
+  REFERENCE_RISK_OPTIONS,
+} from '@/utils/referenceFilters';
+import type {
+  ReferenceEffortFilter,
+  ReferenceGroupMode,
+  ReferenceListItem,
+  ReferenceRiskFilter,
+} from '@/utils/referenceFilters';
+import { ReferenceBrowseHeader } from './ReferenceBrowseHeader';
+import { ReferenceFilterSheet } from './ReferenceFilterSheet';
+import type { FacetSection } from './ReferenceFilterSheet';
+import { ReferenceSectionHeader } from './ReferenceSectionHeader';
 import { ReferenceListCard } from './ReferenceListCard';
 import type { ReferenceEntry, ReferenceGroup } from './types';
 import type { VisualIconKey } from '@/types/visual.types';
-
-const ALL_KEY = '__all__';
 
 interface Props {
   /** Screen title, e.g. "Pests". */
   title: string;
   /** Placeholder for the search field. */
   searchPlaceholder: string;
-  /** Noun used in the count line — "pest" / "disease". */
+  /** Noun used in the empty state — "pest" / "disease". */
   itemNoun: string;
   groups: readonly ReferenceGroup[];
-  categoryDescriptions: Readonly<Record<string, string>>;
   getImage: (entry: ReferenceEntry) => ImageSource | undefined;
   fallbackIcon: VisualIconKey;
   onSelect: (id: string) => void;
@@ -31,16 +42,19 @@ interface Props {
 }
 
 /**
- * Chip-filtered browse list shared by the pest and disease screens. Category
- * chips filter in place (replacing the old sectioned list) and compose with
- * the search box.
+ * Browse list shared by the pest and disease screens.
+ *
+ * Search and the category filter used to sit permanently above the list, one as
+ * a field and one as a pill rail. Both now live in the header bar the plant
+ * catalog uses — a magnifier that expands in place and a funnel that opens
+ * `ReferenceFilterSheet` — which buys back two rows and gives the screen room
+ * for the risk and effort facets, and for sectioning the rows.
  */
 export function ReferenceListView({
   title,
   searchPlaceholder,
   itemNoun,
   groups,
-  categoryDescriptions,
   getImage,
   fallbackIcon,
   onSelect,
@@ -49,155 +63,157 @@ export function ReferenceListView({
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>(ALL_KEY);
+  const browse = useReferenceBrowse(groups);
 
   const totalCount = useMemo(
     () => groups.reduce((sum, g) => sum + g.entries.length, 0),
     [groups]
   );
 
-  /** Search-filtered groups — the chip counts are derived from these so a chip
-   *  never advertises entries the current search has already excluded. */
-  const searchedGroups = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return groups;
+  const { setFilter, setGroupMode } = browse;
 
-    return groups.map((group) => ({
-      ...group,
-      entries: group.entries.filter(
-        (entry) =>
-          entry.name.toLowerCase().includes(query) ||
-          (entry.tamilName?.toLowerCase().includes(query) ?? false) ||
-          entry.plantsAffected.some((plant) => plant.toLowerCase().includes(query))
-      ),
-    }));
-  }, [groups, search]);
-
-  const chips: ReferenceChip[] = useMemo(() => {
-    const matched = searchedGroups.reduce((sum, g) => sum + g.entries.length, 0);
-    return [
-      { key: ALL_KEY, label: 'All', count: matched },
-      ...searchedGroups
-        .filter((g) => g.entries.length > 0)
-        .map((g) => ({ key: g.category, label: g.label, count: g.entries.length })),
-    ];
-  }, [searchedGroups]);
-
-  // A chip can disappear when the search narrows; fall back to All rather than
-  // showing an empty list under a filter the user can no longer see.
-  const effectiveCategory = chips.some((c) => c.key === activeCategory) ? activeCategory : ALL_KEY;
-
-  const displayedEntries = useMemo(
-    () =>
-      searchedGroups
-        .filter((g) => effectiveCategory === ALL_KEY || g.category === effectiveCategory)
-        .flatMap((g) => g.entries),
-    [searchedGroups, effectiveCategory]
+  const setCategory = useCallback((value: string) => setFilter('category', value), [setFilter]);
+  const setRisk = useCallback(
+    (value: string) => setFilter('risk', value as ReferenceRiskFilter),
+    [setFilter]
+  );
+  const setEffort = useCallback(
+    (value: string) => setFilter('effort', value as ReferenceEffortFilter),
+    [setFilter]
+  );
+  const setMode = useCallback(
+    (value: string) => setGroupMode(value as ReferenceGroupMode),
+    [setGroupMode]
   );
 
-  const activeDescription =
-    effectiveCategory === ALL_KEY ? undefined : categoryDescriptions[effectiveCategory];
-  const activeLabel = groups.find((g) => g.category === effectiveCategory)?.label;
-
-  const isFiltered = search.trim().length > 0 || effectiveCategory !== ALL_KEY;
-
-  const handleClearFilters = useCallback(() => {
-    setSearch('');
-    setActiveCategory(ALL_KEY);
-  }, []);
+  const sections: FacetSection[] = useMemo(
+    () => [
+      {
+        key: 'category',
+        title: 'Category',
+        icon: 'apps',
+        selected: browse.filters.category,
+        onSelect: setCategory,
+        options: [
+          {
+            value: ALL_CATEGORIES,
+            label: 'All',
+            hint: 'Browse every category at once',
+            icon: 'layers-outline',
+            count: browse.facetCounts.category[ALL_CATEGORIES] ?? 0,
+          },
+          ...[...browse.categoryLabels].map(([value, label]) => ({
+            value,
+            label,
+            hint: `Browse ${label} only`,
+            icon: 'pricetag-outline' as const,
+            count: browse.facetCounts.category[value] ?? 0,
+          })),
+        ],
+      },
+      {
+        key: 'risk',
+        title: 'Risk now',
+        icon: 'thermometer',
+        selected: browse.filters.risk,
+        onSelect: setRisk,
+        options: REFERENCE_RISK_OPTIONS.map((option) => ({
+          ...option,
+          count: browse.facetCounts.risk[option.value] ?? 0,
+        })),
+      },
+      {
+        key: 'effort',
+        title: 'Treatment effort',
+        icon: 'hammer',
+        selected: browse.filters.effort,
+        onSelect: setEffort,
+        options: REFERENCE_EFFORT_OPTIONS.map((option) => ({
+          ...option,
+          count: browse.facetCounts.effort[option.value] ?? 0,
+        })),
+      },
+      {
+        key: 'mode',
+        // A grouping does not narrow the list, so its chips carry no count.
+        title: 'Group By',
+        icon: 'layers',
+        selected: browse.groupMode,
+        onSelect: setMode,
+        options: REFERENCE_GROUP_MODES.map((option) => ({ ...option })),
+      },
+    ],
+    [
+      browse.filters,
+      browse.facetCounts,
+      browse.categoryLabels,
+      browse.groupMode,
+      setCategory,
+      setRisk,
+      setEffort,
+      setMode,
+    ]
+  );
 
   const renderItem = useCallback(
-    ({ item }: { item: ReferenceEntry }) => (
-      <ReferenceListCard
-        entry={item}
-        image={getImage(item)}
-        fallbackIcon={fallbackIcon}
-        onPress={onSelect}
-      />
-    ),
+    ({ item }: { item: ReferenceListItem }) =>
+      item.kind === 'section' ? (
+        <ReferenceSectionHeader title={item.title} count={item.count} />
+      ) : (
+        <ReferenceListCard
+          entry={item.entry}
+          image={getImage(item.entry)}
+          fallbackIcon={fallbackIcon}
+          onPress={onSelect}
+        />
+      ),
     [fallbackIcon, getImage, onSelect]
   );
 
-  const keyExtractor = useCallback((item: ReferenceEntry) => item.id, []);
+  const keyExtractor = useCallback(
+    (item: ReferenceListItem) =>
+      item.kind === 'section' ? `s:${item.title}` : `e:${item.entry.id}`,
+    []
+  );
 
   return (
     <View style={styles.container}>
-      <View style={[styles.headerBlock, { paddingTop: insets.top + 6 }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={onBack}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleGroup}>
-            <Text style={styles.headerTitle}>{title}</Text>
-            <Text style={styles.headerSubtitle}>
-              {totalCount} in the {DEFAULT_ZONE.name}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.searchField}>
-          <Ionicons name="search" size={16} color={theme.inputPlaceholder} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={searchPlaceholder}
-            placeholderTextColor={theme.inputPlaceholder}
-            value={search}
-            onChangeText={setSearch}
-            autoCorrect={false}
-            returnKeyType="search"
-          />
-          {search.length > 0 ? (
-            <TouchableOpacity
-              onPress={() => setSearch('')}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityRole="button"
-              accessibilityLabel="Clear search"
-            >
-              <Ionicons name="close-circle" size={16} color={theme.inputPlaceholder} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
-
-      <ReferenceFilterChips
-        chips={chips}
-        activeKey={effectiveCategory}
-        onChange={setActiveCategory}
+      <ReferenceBrowseHeader
+        title={title}
+        subtitle={`${totalCount} in the ${DEFAULT_ZONE.name}`}
+        searchPlaceholder={searchPlaceholder}
+        searchAccessibilityLabel={`Search ${title.toLowerCase()}`}
+        query={browse.query}
+        searchActive={browse.searchActive}
+        showFilters={browse.showFilters}
+        activeFilterCount={browse.activeFilterCount}
+        onQueryChange={browse.setQuery}
+        onClearQuery={browse.clearQuery}
+        onOpenSearch={browse.openSearch}
+        onCloseSearch={browse.closeSearch}
+        onToggleFilters={browse.toggleFilters}
+        onBack={onBack}
       />
 
-      <View style={styles.countRow}>
-        <Text style={styles.countText}>
-          {displayedEntries.length} {displayedEntries.length === 1 ? itemNoun : `${itemNoun}s`}
-        </Text>
-        {activeDescription && activeLabel ? (
-          <FieldHelp title={activeLabel} description={activeDescription} compact />
-        ) : null}
-      </View>
-
       <FlatList
-        data={displayedEntries}
+        data={browse.items}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 8) + 16 },
+          // No TAB_BAR_HEIGHT: `FloatingTabBar` hides itself on any non-root
+          // route, and these screens are nested in the More stack.
+          { paddingBottom: Math.max(insets.bottom, 8) + 16 },
         ]}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={40} color={theme.textSecondary} />
             <Text style={styles.emptyText}>No {itemNoun}s match your filters</Text>
-            {isFiltered ? (
+            {browse.isFiltered ? (
               <TouchableOpacity
                 style={styles.emptyAction}
-                onPress={handleClearFilters}
+                onPress={browse.reset}
                 accessibilityRole="button"
               >
                 <Text style={styles.emptyActionText}>Clear filters</Text>
@@ -206,6 +222,16 @@ export function ReferenceListView({
           </View>
         }
       />
+
+      {browse.showFilters && (
+        <ReferenceFilterSheet
+          title={`Filter ${title.toLowerCase()}`}
+          sections={sections}
+          isDefault={browse.isDefault}
+          onReset={browse.resetFilters}
+          onClose={browse.closeFilters}
+        />
+      )}
     </View>
   );
 }
