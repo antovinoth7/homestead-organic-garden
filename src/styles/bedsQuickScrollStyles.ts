@@ -50,7 +50,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primary + '24',
     },
     pinRow: {
-      ...StyleSheet.absoluteFillObject,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',

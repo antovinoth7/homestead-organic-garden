@@ -17,7 +17,6 @@ jest.mock('react-native', () => {
     Linking: { openURL: jest.fn(async () => undefined) },
     StyleSheet: {
       absoluteFill: {},
-      absoluteFillObject: {},
       hairlineWidth: 1,
       create: (value: unknown) => value,
     },

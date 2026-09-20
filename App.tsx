@@ -451,11 +451,7 @@ const AppRoot = (): React.JSX.Element | null => {
 
   return (
     <>
-      <StatusBar
-        style={resolvedMode === 'dark' ? 'light' : 'dark'}
-        backgroundColor="transparent"
-        translucent={true}
-      />
+      <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
       {user && <OfflineBanner />}
       <SafeAreaInsetsContext.Provider value={contentInsets}>
         <NavigationContainer theme={navigationTheme}>

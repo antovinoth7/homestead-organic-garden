@@ -82,7 +82,7 @@ export function ImageZoomModal({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <StatusBar barStyle="light-content" backgroundColor={theme.shadow} />
+      <StatusBar barStyle="light-content" />
       <GestureHandlerRootView style={styles.gestureRoot}>
         <View style={styles.zoomOverlay}>
           <TouchableOpacity
