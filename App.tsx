@@ -209,7 +209,7 @@ const AppRoot = (): React.JSX.Element | null => {
   // Update Android navigation bar button style to match theme
   useEffect(() => {
     if (Platform.OS === 'android') {
-      NavigationBar.setButtonStyleAsync(resolvedMode === 'dark' ? 'light' : 'dark');
+      NavigationBar.setStyle(resolvedMode === 'dark' ? 'light' : 'dark');
     }
   }, [resolvedMode]);
 

@@ -102,6 +102,42 @@ export function MyComponent({ value, onPress }: Props) {
 - Typography: define font sizes from the theme (`theme.typography` or explicit values: `12, 14, 16, 18, 20, 24`).
 - Never use platform-specific style hacks unless required; prefer cross-platform abstractions.
 
+### Absolute fill — `absoluteFill` yes, `absoluteFillObject` never
+
+`StyleSheet.absoluteFillObject` was **removed in React Native 0.85**. Do not
+reintroduce it; it no longer exists and will fail at runtime.
+
+`StyleSheet.absoluteFill` is still exported and is correct when passed straight to
+a `style` prop, which is how 10+ components already use it:
+
+```tsx
+<Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+```
+
+It cannot be **spread** into a style object, because it is typed as a branded
+`RegisteredStyle<AbsoluteFillStyle>` rather than a plain object — `tsc` rejects it
+with `TS2698: Spread types may only be created from object types`. Inside a
+`*Styles.ts` factory, write the edges out:
+
+```ts
+overlay: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  // …
+},
+```
+
+### Android system bars
+
+Edge-to-edge is mandatory from Expo SDK 55 onward. `StatusBar`'s
+`backgroundColor` and `translucent` props are **no-ops** on Android and have been
+removed from the codebase — do not add them back. Pad for system bars with
+`useSafeAreaInsets()` instead. For the navigation bar, use
+`NavigationBar.setStyle()`; `setButtonStyleAsync()` was removed in SDK 57.
+
 ---
 
 ## Navigation Standards
@@ -144,7 +180,7 @@ export function MyComponent({ value, onPress }: Props) {
 - No `console.log` in committed code. Use `src/utils/logger.ts` or remove.
 - No commented-out code blocks. Delete dead code; git history preserves it.
 - No TODO comments without an associated issue number.
-- ESLint must pass with zero errors (`npm run lint`).
+- ESLint must pass with zero errors (`npm run lint`). **215 warnings are the accepted baseline** — 214 from the `eslint-plugin-react-hooks` v7 rules that arrived with `eslint-config-expo` 57 and are demoted in `eslint.config.cjs`, plus one pre-existing `exhaustive-deps` warning. A *new* warning is a regression; the existing ones are tracked in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
 - Keep functions ≤ 50 lines; extract helpers when exceeded.
 - Magic numbers must be named constants.
 - No docstrings, comments, or type annotations added to code that was not changed.
@@ -179,7 +215,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/): `type(scope
 
 **Scope** = affected module: `plants`, `tasks`, `journal`, `auth`, `calendar`, `theme`, `nav`
 
-`commitlint` enforces this on every commit. Do not bypass with `--no-verify`.
+This is a convention, not a hook — there is no `commitlint` in the toolchain, so nothing rejects a malformed message. Follow it anyway; `CHANGELOG.md` maps commit types to its sections.
 
 ---
 
@@ -223,7 +259,7 @@ Before generating any code for this project, verify:
 - No TODO comments without an issue number
 - Functions are ≤ 50 lines; helpers extracted if exceeded
 - Magic numbers are named `UPPER_SNAKE_CASE` constants
-- `npm run lint` passes with zero errors after code generation
+- `npm run lint` passes with zero errors after code generation (215 pre-existing warnings are expected — do not "fix" them as a side task)
 
 ---
 

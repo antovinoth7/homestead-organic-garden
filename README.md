@@ -60,23 +60,27 @@ Notes:
 
 ## Tech Stack
 
-- Expo SDK 54
-- React 19
-- React Native 0.81
-- TypeScript
+- Expo SDK 57
+- React 19.2
+- React Native 0.86
+- TypeScript 6
 - Firebase Auth + Firestore
 - AsyncStorage
 - expo-image-picker
 - expo-file-system
 - expo-media-library
+- expo-image / expo-splash-screen / expo-constants
+- expo-speech-recognition (voice dictation)
 - React Navigation
+- react-native-gesture-handler / react-native-svg
 - fflate
 - Sentry
 - Open-Meteo weather data
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 20.19.4+ (22 and 24 also supported; CI runs 24).
+  React Native 0.86 will not build on Node 18.
 - npm
 - Firebase project on the Spark plan
 - Android emulator / device, iOS simulator / device,
@@ -85,6 +89,14 @@ Notes:
 For Android photo persistence across app reinstalls, use a
 development build or production build. Expo Go falls back to
 app-local file storage.
+
+### Native projects are generated, not committed
+
+This project uses Continuous Native Generation: `android/` and
+`ios/` are produced by `npx expo prebuild` and are git-ignored.
+`npm run android` (= `expo run:android`) prebuilds automatically —
+expect a slow first run and untracked native directories
+afterwards. Never commit them.
 
 ## Setup
 

@@ -4,8 +4,10 @@ This app uses [EAS Build](https://docs.expo.dev/build/introduction/) for buildin
 
 ## Prerequisites
 
-- Node.js 18+
-- Expo CLI: `npm install -g expo-cli`
+- Node.js 20.19.4+ (22 and 24 also supported; CI runs 24). React Native 0.86
+  will not build on Node 18.
+- Expo CLI: use the project-local CLI via `npx expo` — do **not** install the
+  deprecated global `expo-cli` package.
 - EAS CLI: `npm install -g eas-cli`
 - An [Expo account](https://expo.dev/signup) linked via `eas login`
 - Firebase project configured (see `README.md` for setup)
@@ -60,7 +62,7 @@ Firebase config variables (`EXPO_PUBLIC_FIREBASE_*`) are read from the `.env` fi
 
 ## Pre-Deployment Checklist
 
-1. Run lint: `npm run lint`
+1. Run lint: `npm run lint` (expect 0 errors and 215 known warnings)
 2. Run type check: `npx tsc --noEmit`
 3. Run tests: `npm test`
 4. Verify Firestore security rules are deployed: `firebase deploy --only firestore:rules`
@@ -80,6 +82,15 @@ firebase deploy --only firestore:rules --project your-project-id
 ## Sentry Source Maps
 
 Sentry source maps are uploaded automatically during EAS builds when `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are set. These are configured in `.env`.
+
+The upload step is injected by the `@sentry/react-native` config plugin, which is
+declared in `app.json` (with `organization` and `project`). The plugin generates
+`android/sentry.properties` during `expo prebuild` — that file is **no longer
+tracked in git**, since `android/` and `ios/` are generated output. Do not
+recreate it by hand; change the values in the `app.json` plugin block instead.
+
+The auth token is never committed. It must be present in the build environment —
+as an EAS secret for cloud builds, or in your local `.env` for `eas build --local`.
 
 ## Updating the App
 

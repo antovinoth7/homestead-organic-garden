@@ -45,6 +45,21 @@ module.exports = defineConfig([
       "react-native/no-color-literals": "error",
       "react-native/no-inline-styles": "error",
       "react-native/no-raw-text": ["error", { skip: ["Text"] }],
+
+      // eslint-config-expo 57 pulls in eslint-plugin-react-hooks v7, whose new
+      // React-Compiler-era rules flag 214 pre-existing call sites across the app.
+      // None of them are SDK 57 regressions, and triaging them is a separate piece
+      // of work -- demoted to warnings so the lint gate keeps signalling real
+      // breakage. Expected baseline: 0 errors, 215 warnings (these 214 plus one
+      // pre-existing exhaustive-deps warning in CalendarScreen.tsx).
+      // See docs/IMPLEMENTATION_ROADMAP.md section 9, Post-Upgrade Backlog,
+      // before re-raising any of these to "error".
+      "react-hooks/refs": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/globals": "warn",
+      "react-hooks/immutability": "warn",
+      "react-hooks/purity": "warn",
     },
   },
   {

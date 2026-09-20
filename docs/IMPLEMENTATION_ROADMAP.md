@@ -3,6 +3,7 @@
 > Generated: April 12, 2026
 > Last updated: July 5, 2026 — **Post-ship reconciliation (dev→main release delta; no new scope, no schema changes).** All work extends shipped phases. **Phase C extension**: the single `WeatherCard` grew into a location-aware, swipeable multi-plot deck (`WeatherDeck`/`WeatherPlotCard`, `useWeatherLocations`, `config/zones/districtCoordinates.ts` — first concrete step parameterizing the hardcoded-district risk); Today dashboard compacted (active-first progress chips, Garden Health reordering, task list folded into the progress donut). **Phase E extensions**: journal list overhaul (`JournalEntryCard` extraction, swipe edit/delete, grid view dropped); voice dictation extended to all notes/analysis fields via reusable `VoiceDictation` (G10 follow-through); pest/disease history photos with capture-time device-local compression (`expo-image-manipulator` → `utils/imageCompression.ts`) + shared pinch-zoom viewer (`ImageZoomModal`/`usePinchZoom`). Shared `ConfirmDeleteModal` replaced `BedDeleteModal` and the catalog/farm delete flows. **B2 maintenance**: bed wizard/map fixes; first care tasks now scheduled from the planting date with auto-selected care-plan segment (`services/taskSchedulingLogic.ts`). Nav restructure introduced `AuthedStackParamList` (fixes the duplicate nested screen-name warning). Note: four cache-first-paint perf commits were tried and reverted — that approach remains an open want.
 > **2026-07-05 (later same day) — Offline write queue + performance pass.** Closed the Critical "No Offline Mutation Queue" risk: `writeOrQueue()` (`lib/offlineWrite.ts`) + AsyncStorage queue (`lib/offlineQueue.ts`, coalescing in `utils/offlineQueueLogic.ts`) + FIFO replay-on-reconnect (`services/offlineSync.ts`) + `OfflineBanner`/`useOfflineStatus`; creates moved to client-generated doc ids across plants/tasks/journal/beds/locations/farmCapacity. Performance: CalendarScreen task area virtualized (ScrollView `.map()` → `SectionList`), `PlantCard` memoized, catalog picker filter allocation fixed, migration runner now skips its per-launch Firestore read via a local schema-version cache.
+> **2026-09-21 — Expo SDK 54 → 57 upgrade (platform only; no product scope, no schema changes).** React Native 0.81 → 0.86, React 19.1 → 19.2, TypeScript 5.9 → 6.0, all `expo-*` renumbered to `~57.x`. Two app APIs broke and were fixed (`NavigationBar.setStyle`, `expo-media-library/legacy`); `StyleSheet.absoluteFillObject` was removed in RN 0.85 and rewritten at 11 sites across 9 style files. Deferred follow-ups are tracked in **§9 Post-Upgrade Backlog** below.
 > Older "Previous:" reconciliation notes: `docs/archive/ROADMAP_ARCHIVE.md`.
 > Status: Phase 0 / A / A2 / B / B2 / B3 / B4 / C / D / E / F shipped (Phase B with deliberate deferrals); Phase G–H planned
 > Scope: Solo developer, iterative build, Firebase free-tier
@@ -80,7 +81,7 @@
 
 > Reviewed 2026-06-15. Two previously-listed risks are now **resolved** and removed: _No Schema
 > Migration System_ (migration runner + `LATEST_SCHEMA_VERSION` = 4 shipped in Phase 0; see
-> `docs/SCHEMA_MIGRATIONS.md`) and _Minimal Test Coverage_ (was 2 files; now 33 test files
+> `docs/SCHEMA_MIGRATIONS.md`) and _Minimal Test Coverage_ (was 2 files; now 155 test files
 > spanning utils/config/services/hooks/components). A residual test risk is reframed under Medium.
 
 ### Critical
@@ -98,7 +99,7 @@
 
 1. **Direct Firestore Coupling**: Every service imports from `firebase/firestore`. Not a problem now but increases cost of any backend migration (G19).
 2. **Large Hook**: `usePlantFormState` returns 120+ properties. Works but difficult to maintain.
-3. **Test Coverage Shallow Despite Breadth**: 33 test files exist, but coverage thresholds sit at 30% and only `src/utils` + `src/config` are measured; services/hooks lack emulator-backed tests, and CLAUDE.md rule #7 ("never mock Firestore — use emulator") has no emulator wired into CI. Tighten thresholds and add an emulator harness as the suite grows. _(Resolved 2026-06-20: the date-dependent `growthStage` test flakiness — `computeExpectedGrowthStage`/`computeAnnualCycleStage` dropped a day when run before local noon — is fixed by anchoring "now" to noon for a stable calendar-day count; full suite is now deterministically green.)_
+3. **Test Coverage Shallow Despite Breadth**: 155 test files exist, but coverage thresholds sit at 30% and only `src/utils` + `src/config` are measured; services/hooks lack emulator-backed tests, and CLAUDE.md rule #7 ("never mock Firestore — use emulator") has no emulator wired into CI. Tighten thresholds and add an emulator harness as the suite grows. _(Resolved 2026-06-20: the date-dependent `growthStage` test flakiness — `computeExpectedGrowthStage`/`computeAnnualCycleStage` dropped a day when run before local noon — is fixed by anchoring "now" to noon for a stable calendar-day count; full suite is now deterministically green.)_
 
 ---
 
@@ -133,7 +134,7 @@
 | G25 | Water Management                                                | None                                                           | Nice-to-Have         | M      | Low       | Defer                               |
 | G26 | Lifecycle Economics                                             | Age calc exists, no ROI projection                             | Nice-to-Have         | M      | Medium    | Phase H                             |
 | G27 | Zone-Aware Config (State-Level Expansion)                       | Hardcoded Kanyakumari                                          | Nice-to-Have         | XL     | Low (now) | Defer                               |
-| G28 | Test Coverage (30% minimum)                                     | 33 test files, 30% threshold (utils/config only); suite deterministically green | Critical             | L      | High      | Ongoing 🔄 (raise threshold + emulator)|
+| G28 | Test Coverage (30% minimum)                                     | 155 test files, 30% threshold (utils/config only); suite deterministically green | Critical             | L      | High      | Ongoing 🔄 (raise threshold + emulator)|
 | G29 | Pest/Disease/Beneficial Reference (detail pages)                | 160+ treatments exist, no detail pages or browseable reference | High-Value           | M      | High      | Phase A (done) / A3 (deferred)      |
 | G30 | Per-Variety Custom Pests/Diseases/Beneficials                   | Static lists only, no user customisation per variety           | High-Value           | S      | Medium    | Phase A3 (deferred)                 |
 | G31 | Bed Management                                                  | Free-text `bed_name` on Plant, no bed entity or rotation       | High-Value           | XL     | High      | Phase B2 ✅                         |
@@ -471,6 +472,66 @@ and a removed member can no longer read or modify farm data.
 
 ---
 
+## 9. Post-Upgrade Backlog
+
+Deferred deliberately during the Expo SDK 54 → 57 upgrade (2026-09-21). None of
+these block anything; they are recorded so they are not rediscovered as surprises.
+`eslint.config.cjs` points here.
+
+### Lint
+
+- **Triage the 214 `eslint-plugin-react-hooks` v7 findings.** Arrived with
+  `eslint-config-expo` 57 and demoted to warnings in `eslint.config.cjs`:
+  `refs` (142), `set-state-in-effect` (56), `preserve-manual-memoization` (8),
+  `globals` (3), `immutability` (3), `purity` (2). They flag **pre-existing** code,
+  not upgrade regressions — but some of the `refs` findings may be genuine bugs, so
+  this is worth a real pass rather than a blanket disable. Until then the lint
+  baseline is **0 errors / 215 warnings** (the 215th is a pre-existing
+  `exhaustive-deps` warning in `CalendarScreen.tsx`).
+- `docs/ENTERPRISE_AUDIT.md` recommends running lint with `--max-warnings=0`.
+  That is unachievable until the above is done — revisit together.
+
+### Dependencies
+
+- **`@sentry/react-native` v8.** SDK 57 validates against `~7.11.0`, so v8 is
+  optional. It raises Cocoa 8→9, the Sentry Android Gradle Plugin 5→6 and
+  sentry-cli 2→3, so it needs its own branch and its own device build — never
+  combined with an SDK bump, since `metro.config.js` is entirely owned by
+  `getSentryExpoConfig` and a failure in either is indistinguishable.
+- **Remove `expo-secure-store`** — zero imports, and the lockfile shows only the
+  root package requires it. Drop the dependency _and_ its `app.json` plugin entry
+  together. Note **`expo-font` is not removable** despite also having no direct
+  imports: it is a peer dependency of `@expo/vector-icons` and a dependency of
+  `expo` itself.
+- **`@testing-library/react-native` + `@testing-library/jest-native` are unused.**
+  Either adopt them (migrating the 15 `react-test-renderer` tests, which would let
+  them load real React Native and become a genuine compatibility signal) or remove
+  both. See `docs/TESTING.md`.
+- Remove `babel-plugin-module-resolver` in favour of the native tsconfig `paths`
+  support Expo has had since SDK 50. Low reward, touches module resolution for all
+  715 source files — do it in isolation.
+- Raise the `eas.json` `cli.version` floor.
+
+### Deprecated APIs still in use
+
+- **Migrate off `/legacy` imports** — `expo-file-system/legacy`
+  (`src/lib/imageStorage.ts`, `src/services/backup.ts`, `src/utils/zipHelper.ts`)
+  and `expo-media-library/legacy` (`src/lib/imageStorage.ts`). Both still ship in
+  SDK 57. **Write tests first**: `imageStorage.ts` and `backup.ts` have no test
+  coverage at all and carry the most native surface in the app.
+- `Constants.appOwnership` → `Constants.executionEnvironment`
+  (`src/lib/imageStorage.ts`). Deprecated but still present in `expo-constants` 57.
+- 15 sites pass `pointerEvents` as a prop rather than via `style`. Deprecated,
+  still functional.
+
+### Documentation debt (pre-existing)
+
+- `.github/copilot-instructions.md` and `docs/CONVENTIONS.md` claimed `commitlint`
+  was enforced; it is not in `package.json`. Corrected 2026-09-21 — check for other
+  copies.
+- `CHANGELOG.md` version headings are non-monotonic (`[1.2.0]` above `[1.1.0]`)
+  while `package.json` and `app.json` both read `1.1.0`.
+
 ## Design Decisions (Open for Discussion)
 
 ### Coconut Per-Tree Tracking Model
@@ -489,7 +550,7 @@ and a removed member can no longer read or modify farm data.
 
 - `expo-speech` handles TTS only, not STT — not applicable.
 - `@react-native-voice/voice` requires dev client (not Expo Go), supports Tamil well.
-- **Chosen**: `expo-speech-recognition` — Expo SDK 54 config-plugin support, BCP-47 locale
+- **Chosen**: `expo-speech-recognition` — Expo SDK 54 config-plugin support, BCP-47 locale (now on `^57.1.0` following the SDK 57 upgrade)
   control (`ta-IN`/`en-IN`), interim/partial results, on-device + network. Dev client was
   already in use, so the native rebuild is the only extra step.
 

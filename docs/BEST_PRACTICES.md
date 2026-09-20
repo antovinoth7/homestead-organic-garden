@@ -2,7 +2,7 @@
 
 > Companion to `docs/IMPLEMENTATION_ROADMAP.md`. Prioritized, actionable recommendations for
 > keeping the app well-crafted for **small organic farmers** in Tamil Nadu / Kanyakumari.
-> Last reviewed: 2026-07-05. These are recommendations only — each links to the roadmap gap (Gxx)
+> Last reviewed: 2026-09-21 (refreshed for the Expo SDK 57 upgrade). These are recommendations only — each links to the roadmap gap (Gxx)
 > or phase where the work belongs.
 >
 > Priority key: **P1** = do soon (real user pain or correctness risk) · **P2** = important, schedule
@@ -51,7 +51,7 @@ deltas worth investing in next.
 | A-2 | God hook | `usePlantFormState` returns 120+ properties | Split by concern (identity / care / relationships / safety) or move to a reducer + context so consumers subscribe to slices. Improves both maintainability and P-3 re-renders. | P2 |
 | A-3 | Schema discipline | Migration runner + `LATEST_SCHEMA_VERSION` = 4 | Keep following `docs/SCHEMA_MIGRATIONS.md`: required field / reshape → numbered migration + version bump; optional field → `?? fallback`, no migration. Never reshape live data in app code. | P1 |
 | A-4 | Service pattern consistency | Most services follow cache → auth → timeout/retry → AsyncStorage | Audit newer services (`farmCapacity`, `backup`) for the full pattern incl. `invalidate()` after mutations; document any intentional deviations. | P2 |
-| A-5 | Test depth vs breadth | ~29 files, 30% threshold, utils/config only | Raise coverage thresholds incrementally as the suite grows; add a Firestore **emulator** harness so services/hooks can be tested without mocking Firestore (closes the CLAUDE.md rule #7 gap, currently unenforced in CI). | P2 |
+| A-5 | Test depth vs breadth | 155 files, 30% threshold, utils/config only | Raise coverage thresholds incrementally as the suite grows; add a Firestore **emulator** harness so services/hooks can be tested without mocking Firestore (closes the CLAUDE.md rule #7 gap, currently unenforced in CI). | P2 |
 | A-6 | Keep docs in sync | Roadmap had drifted ~6 weeks behind code | After each shipped phase, update the Progress Tracker + add a "delivered" block in the same pass as the feature PR, so the roadmap stays trustworthy. | P2 |
 
 ---

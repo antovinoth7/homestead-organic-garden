@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-20 — src/: 716 files, 132,936 lines.
+> Snapshot: 2026-09-20 — src/: 716 files, 132,987 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -19,20 +19,20 @@
 - src/screens/CatalogPlantDetailScreen.tsx (1007)
 - src/components/BedRowLayout.tsx (984)
 - src/hooks/useBedCreationWizard.ts (937)
-- src/lib/imageStorage.ts (873)
+- src/lib/imageStorage.ts (878)
 - src/screens/BedWizardSteps/GuildTemplateStep.tsx (831)
 - src/screens/PlantsScreen.tsx (827)
 
 ## src/
 
-### src/__tests__/components/ — 15 files, 3,103 lines
+### src/__tests__/components/ — 15 files, 3,102 lines
 
 - SeasonBlock.test.tsx (516)
 - PlotCard.test.tsx (346)
 - VoiceDictation.test.tsx (336)
 - CareTaskFilterSheet.test.tsx (282)
 - CatalogFilterSheet.test.tsx (273)
-- ForecastOverlay.test.tsx (222)
+- ForecastOverlay.test.tsx (221)
 - ReferenceFilterSheet.test.tsx (205)
 - PlantFilterSheet.test.tsx (181)
 - ReferenceBrowseHeader.test.tsx (174)
@@ -77,12 +77,12 @@
 - bed.fixtures.ts (23)
 - journal.fixtures.ts (16)
 
-### src/__tests__/hooks/ — 7 files, 1,207 lines
+### src/__tests__/hooks/ — 7 files, 1,210 lines
 
 - usePlantCatalogManager.test.tsx (283)
 - useCatalogEntryForm.varieties.test.tsx (229)
 - journalFormValidation.test.ts (196)
-- useVoiceLocale.test.ts (174)
+- useVoiceLocale.test.ts (177)
 - useCatalogEntryForm.delete.test.tsx (144)
 - plantFormValidation.test.ts (104)
 - blockReasonForStep.test.ts (77)
@@ -545,9 +545,9 @@
 - useOfflineStatus.ts (31)
 - useKeyboardVisible.ts (25)
 
-### src/lib/ — 6 files, 1,510 lines
+### src/lib/ — 6 files, 1,515 lines
 
-- imageStorage.ts (873) ⚠️ large — Grep/search inside, do not read whole
+- imageStorage.ts (878) ⚠️ large — Grep/search inside, do not read whole
 - offlineQueue.ts (169)
 - dataCache.ts (166)
 - firebase.ts (146)
@@ -648,26 +648,26 @@
 - weatherLogic.ts (100)
 - alerts.ts (19)
 
-### src/styles/ — 96 files, 20,498 lines
+### src/styles/ — 96 files, 20,542 lines
 
 - bedCreationWizardStyles.ts (1906) ⚠️ large — Grep/search inside, do not read whole
 - calendarStyles.ts (1810) ⚠️ large — Grep/search inside, do not read whole
 - plantFormStyles.ts (1719) ⚠️ large — Grep/search inside, do not read whole
-- plantDetailStyles.ts (687)
+- plantDetailStyles.ts (691)
 - bedRowLayoutStyles.ts (633)
 - journalFormStyles.ts (590)
 - managePlantCatalogStyles.ts (571)
-- journalStyles.ts (524)
+- journalStyles.ts (528)
 - plantsStyles.ts (503)
+- pestDiseaseDetailStyles.ts (443)
 - catalogPlantDetailStyles.ts (437)
-- pestDiseaseDetailStyles.ts (435)
 - plotEditStyles.ts (431)
 - enrichedSectionStyles.ts (393)
 - plotCardStyles.ts (379)
+- plantCardStyles.ts (340)
 - bedListStyles.ts (338)
-- plantCardStyles.ts (336)
-- forecastOverlayStyles.ts (334)
-- organicInputDetailStyles.ts (326)
+- forecastOverlayStyles.ts (338)
+- organicInputDetailStyles.ts (334)
 - seasonBlockStyles.ts (308)
 - inputRecipesStyles.ts (269)
 - referenceBrowseStyles.ts (269)
@@ -679,7 +679,7 @@
 - bedSuccessionTimelineStyles.ts (217)
 - settingsStyles.ts (204)
 - archivedPlantsStyles.ts (202)
-- plantEditFormStyles.ts (197)
+- plantEditFormStyles.ts (201)
 - dashboardHeroStyles.ts (180)
 - organicInputListStyles.ts (179)
 - plantEntryResolverStyles.ts (176)
@@ -693,10 +693,10 @@
 - bedRotationStyles.ts (124)
 - sectionSheetStyles.ts (123)
 - optionPickerSheetStyles.ts (117)
+- bedsQuickScrollStyles.ts (113)
 - moreStyles.ts (113)
 - locationPickerSheetStyles.ts (112)
 - growthStageTimelineStyles.ts (111)
-- bedsQuickScrollStyles.ts (109)
 - profileStyles.ts (106)
 - plantAddFormStyles.ts (104)
 - taskCardStyles.ts (97)
@@ -723,8 +723,8 @@
 - catalogSheetStyles.ts (61)
 - authStyles.ts (58)
 - plantHistoryTabStyles.ts (58)
+- fieldHelpStyles.ts (57)
 - bedTasksStyles.ts (54)
-- fieldHelpStyles.ts (53)
 - catalogDangerStyles.ts (52)
 - harvestYieldChartStyles.ts (52)
 - photoSourceModalStyles.ts (48)
@@ -885,16 +885,16 @@
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (899)
+- CODEMAP.md (901)
 - COMPONENTS.md (69)
-- CONVENTIONS.md (239)
+- CONVENTIONS.md (275)
 - DOMAIN_LOGIC.md (162)
-- ENTERPRISE_AUDIT.md (417)
-- IMAGE_STORAGE.md (38)
-- IMPLEMENTATION_ROADMAP.md (501)
+- ENTERPRISE_AUDIT.md (437)
+- IMAGE_STORAGE.md (55)
+- IMPLEMENTATION_ROADMAP.md (562)
 - REFERENCE_IMAGES.md (81)
 - SCHEMA_MIGRATIONS.md (58)
-- SERVICES.md (208)
+- SERVICES.md (213)
 - tamil-nadu-reference-audit.md (789)
-- TESTING.md (33)
+- TESTING.md (76)
 - TODAY_SCREEN_RECOMMENDATION.md (629)
