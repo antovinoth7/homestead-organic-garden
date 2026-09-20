@@ -152,6 +152,13 @@
 | G44 | Stacked Alert Cards with Swipe Dismiss                          | None — TodayScreen has basic alert list                        | High-Value           | M      | High      | Phase C                             |
 | G45 | Add Plant to Catalog Wizard (standalone)                        | ManagePlantCatalogScreen lacks quick-add wizard from bed flow  | High-Value           | M      | Medium    | Phase B2 ✅                         |
 
+**G5 follow-up**: add planting windows and evidence ids for the nine
+keerai/pandal-legume rows enriched in
+`src/utils/plantCareDefaults/overrides/tamilNaduAgronomyGaps.ts`. Their
+`daysToHarvest` is hand-authored from TNAU and home-garden practice — zone-blind
+and with no review expiry, unlike `TAMIL_NADU_PLANTING_RULES`. See
+`docs/DOMAIN_LOGIC.md` → Regional scope.
+
 ---
 
 ## 4. Recommended Architecture Adjustments
@@ -268,22 +275,29 @@ F10 (Beneficials + Custom CRUD, Phase A3 — deferred) is also archived; pull it
 4. **Idempotency**: Each migration checks if transformation already applied before modifying
 5. **Batch limits**: Process max 500 docs per `writeBatch()` (Firestore limit)
 
-### Migration Timeline (by Phase)
+### Migration Timeline
 
-| Migration              | Phase      | Schema Change                                                               |
-| ---------------------- | ---------- | --------------------------------------------------------------------------- |
-| 001_backfill_district  | Phase 0 ✅ | District + zone backfill (Kanyakumari / high_rainfall)                      |
-| 002_seedCatalog        | Phase A    | Enriches catalogs with Tamil names/varieties, botanical identity, nutrition |
-| 003_harvestLogs        | Phase B    | Creates `harvest_logs` from journal harvest entries                         |
-| 004_growthStageHistory | Phase B    | Initializes `growth_stage_history` from current stage                       |
-| 005_plantingZones      | Phase B    | Adds `planting_zone` to plants                                              |
+**See `docs/SCHEMA_MIGRATIONS.md` for what has actually shipped.** That table is kept in
+step with `src/migrations/`; this document does not repeat it.
 
-> **Removed from plan**: `003_plantingWindows` — planting windows are config data on care profiles, not user data requiring migration. `007_journalTags` — already shipped in Phase 0.
+A speculative table used to live here, and it had drifted badly — it still promised
+`003_harvestLogs`, `004_growthStageHistory` and `005_plantingZones` long after those
+numbers had shipped as `consolidate_plant_profiles`, `backfill_lifecycle_type` and
+`repair_farm_config`. Two lists of the same thing is how that happens, so there is now
+one.
+
+> **Dropped while planning**: `003_plantingWindows` — planting windows are config data on
+> care profiles, not user data needing a migration. `007_journalTags` — already shipped
+> in Phase 0.
 
 ### Risky Data Changes
 
-- **004_harvestLogs**: Creates new collection from existing journal data. Must NOT delete original journal entries (they remain as the source of truth). Harvest logs are a materialized view.
-- **002_seedCatalog**: Must merge with user customizations, not overwrite. Use existing normalization pattern in `plantCatalog.ts`.
+- A migration that **creates a collection from existing data** (harvest logs from journal
+  entries, say) must not delete the source: the journal entries remain the record and the
+  new collection is a materialized view.
+- A migration that **seeds or enriches the catalog** must merge with the farmer's own
+  customizations rather than overwrite them — the stored overrides in
+  `plantProfiles.ts` are user data.
 
 ---
 

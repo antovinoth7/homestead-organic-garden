@@ -9,15 +9,20 @@ These are committed repo assets under `assets/reference/`, generated once and sh
 | Command | Script | What it does |
 | --- | --- | --- |
 | `npm run reference:manifest` | `scripts/reference/generate-manifest.ts` | Writes the staging manifest and prompt list. |
+| `npm run reference:manifest -- --missing-only` | `scripts/reference/generate-manifest.ts` | Same, but `PROMPTS.md` carries only the entries with no bundled image. `manifest.json` always stays complete — the ingest validates filenames against it. |
 | `npm run reference:ingest` | `scripts/reference/ingest-images.js` | Converts staged images and regenerates the asset map. |
 | `npm run reference:ingest -- --missing-only` | `scripts/reference/ingest-images.js` | Converts only staged images without an existing WebP, then regenerates the asset map. |
 
 `reference:manifest` reads `getAllPests()`, `getAllDiseases()`, `getAllOrganicInputs()`, and `getKnownPlantNames()` and writes into `assets-src/`:
 
 - `manifest.json`: machine-readable ID allow-list consumed by the ingest.
-- `PROMPTS.md`: one ready-to-use image-generation prompt per entry, with per-kind coverage counts.
+- `PROMPTS.md`: a `## Missing (N)` checklist, then one ready-to-use image-generation prompt per entry, with per-kind coverage counts.
 
 Re-run it after catalog changes or after an ingest to refresh completion counts. Plant names are deduped to their canonical slug via `PLANT_IMAGE_ALIASES`.
+
+`getKnownPlantNames()` reads `PLANT_VARIETIES_BY_TYPE`, which is kept 1:1 with `DEFAULT_PLANT_CATALOG`, so every catalog plant gets a prompt automatically. It deliberately does not read the catalog module directly — that pulls in AsyncStorage, which will not load under `tsx`. `referenceAssets.test.ts` fails if a catalog plant ever loses its reference-image name.
+
+Plant prompts are framed by category (a timber tree gets a standing-tree shot, a leafy green a bed of greens) and carry the plant's scientific name from its care profile. `PLANT_PROMPT_HABIT` in the generator overrides the category framing for plants it gets wrong — vines trained on a support, pandal gourds, shrubs grown for leaf rather than bloom.
 
 `reference:ingest` rewrites `src/config/referenceImages.gen.ts` from staged sources and the committed WebP assets. Pass `-- --missing-only` when adding coverage without re-encoding already bundled images.
 
@@ -35,7 +40,7 @@ The ingest accepts `.png`, `.jpg`, `.jpeg`, and `.webp` at any resolution. It sl
 
 ## Size Budget
 
-The repository currently bundles 225 WebP assets: 141 plants, 36 pests, 36 diseases, and 12 organic inputs. The ingest converts each source to an 800 x 600 cover-cropped WebP, stepping quality from 80 down to 60 until it fits within 160 KB, so the current set adds about 27 MB to the app bundle. Most assets land at q80 and well under the cap; the floor exists for the few busy images that do not.
+The repository currently bundles 253 WebP assets: 169 plants, 36 pests, 36 diseases, and 12 organic inputs. The ingest converts each source to an 800 x 600 cover-cropped WebP, at maximum encoder effort, stepping quality from 80 down to 60 until it fits within 160 KB, so the current set adds about 32 MB to the app bundle. Most assets land at q80 and well under the cap; the floor exists for the few busy images that do not.
 
 The constants live in `scripts/reference/ingest-images.js`. `sharp` is a build-time dev dependency and does not ship to the device.
 

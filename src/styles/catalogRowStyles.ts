@@ -131,15 +131,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     blockLast: {
       borderBottomWidth: 0,
     },
+    // The dictation pill rides at the trailing edge of this row rather than
+    // owning a row of its own. With no pill (or when VoiceDictation renders
+    // nothing) the lone child sits at flex-start, exactly as it used to.
     blockHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      justifyContent: 'space-between',
+      gap: 8,
       marginBottom: 8,
+    },
+    // Keeps the help icon pinned to its label instead of drifting across to
+    // the pill when the row has spare width.
+    blockHeaderMain: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexShrink: 1,
+      minWidth: 0,
     },
     blockLabel: {
       fontSize: 12.5,
       color: theme.textSecondary,
+      flexShrink: 1,
     },
     blockInput: {
       backgroundColor: theme.background,

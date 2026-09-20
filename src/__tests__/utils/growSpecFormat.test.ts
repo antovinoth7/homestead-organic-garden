@@ -13,6 +13,12 @@ describe('formatDaysToHarvest', () => {
     expect(formatDaysToHarvest({ min: 100, max: 140 })).toBe('100–140 d');
     expect(formatDaysToHarvest({ min: 25, max: 40 })).toBe('25–40 d');
   });
+
+  it('switches to years once the shorter bound reaches a year', () => {
+    expect(formatDaysToHarvest({ min: 4380, max: 5475 })).toBe('12–15 yr');
+    expect(formatDaysToHarvest({ min: 730, max: 730 })).toBe('2 yr');
+    expect(formatDaysToHarvest({ min: 300, max: 400 })).toBe('300–400 d');
+  });
 });
 
 describe('formatSpacingFigure', () => {

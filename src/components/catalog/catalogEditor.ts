@@ -12,7 +12,7 @@ export interface TextSheetConfig {
   helpText?: string;
   maxLength?: number;
   autoCapitalize?: 'none' | 'sentences' | 'words';
-  /** Shows the தமிழ்/English + mic control above the input. */
+  /** Shows the தமிழ்/English + mic control above the input. The language is app-wide. */
   dictation?: boolean;
 }
 

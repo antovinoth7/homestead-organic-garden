@@ -7,14 +7,12 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '@/theme';
 import { getPlantImage } from '@/config/referenceAssets';
-import { getTodayCropEvidence } from '@/config/tamilNaduPlantingCalendar';
 import { createStyles } from '@/styles/catalogPlantDetailStyles';
 import CollapsibleSection from '@/components/CollapsibleSection';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
@@ -48,7 +46,7 @@ import { useCatalogEntryForm } from '@/hooks/useCatalogEntryForm';
 import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
 import { getAllPests } from '@/config/pests';
 import { getAllDiseases } from '@/config/diseases';
-import type { VarietyDetail } from '@/types/database.types';
+import type { PlantType, VarietyDetail } from '@/types/database.types';
 import { MoreStackParamList } from '@/types/navigation.types';
 import { sanitizeName } from '@/utils/catalogDraft';
 import {
@@ -99,23 +97,6 @@ const HERO_HEIGHT = 250;
 /** Where the sticky bar starts taking over from the hero's own controls. */
 const STICKY_THRESHOLD = HERO_HEIGHT - 80;
 
-interface EvidenceLinkProps {
-  title: string;
-  url: string;
-  styles: ReturnType<typeof createStyles>;
-}
-
-function EvidenceLink({ title, url, styles }: EvidenceLinkProps): React.JSX.Element {
-  const handlePress = useCallback(() => {
-    void Linking.openURL(url);
-  }, [url]);
-  return (
-    <TouchableOpacity onPress={handlePress} accessibilityRole="link" activeOpacity={0.7}>
-      <Text style={styles.evidenceLink}>{title} ›</Text>
-    </TouchableOpacity>
-  );
-}
-
 const ALL_EXPANDED: Record<CatalogSectionKey, boolean> = {
   plantInfo: true,
   coreCare: true,
@@ -131,7 +112,14 @@ const ALL_EXPANDED: Record<CatalogSectionKey, boolean> = {
 export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const route = useRoute<RouteParam>();
   const navigation = useNavigation();
-  const { plantName: initialName, plantType, isCreating = false } = route.params;
+  const { plantName: initialName, plantType: routePlantType, isCreating = false } = route.params;
+
+  /**
+   * The care model. Fixed for an existing entry; while creating, the group's pill
+   * only supplies a starting guess (Fruits starts at `fruit_tree`), so the form
+   * offers a picker — see `PlantInfoSection`.
+   */
+  const [plantType, setPlantType] = useState<PlantType>(routePlantType);
 
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -176,6 +164,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     lookupName,
     categoryPlants,
     usageCount,
+    deleteKind,
     hasOverride,
     isDirty,
     errors,
@@ -313,10 +302,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const baseProfile = useMemo(
     () => getPlantCareProfile(lookupName, plantType),
     [lookupName, plantType]
-  );
-  const todayEvidence = useMemo(
-    () => getTodayCropEvidence(plantType, lookupName),
-    [plantType, lookupName]
   );
 
   const pestChips = useMemo<CatalogChip[]>(
@@ -503,15 +488,41 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
   }, [attemptSave, scrollToKey]);
 
   const onDeletePress = useCallback(() => {
-    const mode = requestDelete();
-    if (mode === 'confirm') {
-      setShowDeleteConfirm(true);
-    } else if (mode === 'reassign') {
-      const remaining = categoryPlants.filter((p) => p !== initialName);
-      setReassignReplacement(remaining[0] ?? '');
-      setShowReassign(true);
-    }
+    // Async because the garden plants load in the background and decide whether
+    // this is a plain delete or a reassignment.
+    void (async () => {
+      const mode = await requestDelete();
+      if (mode === 'confirm') {
+        setShowDeleteConfirm(true);
+      } else if (mode === 'reassign') {
+        const remaining = categoryPlants.filter((p) => p !== initialName);
+        setReassignReplacement(remaining[0] ?? '');
+        setShowReassign(true);
+      }
+    })();
   }, [requestDelete, categoryPlants, initialName]);
+
+  /**
+   * The old copy promised "This cannot be undone" for every entry, which was
+   * untrue of the plants the app ships: those are hidden, not removed, and the
+   * catalog list offers them back. The wording deliberately echoes
+   * `HiddenPlantsSection` so the two surfaces read as one idea.
+   */
+  const deleteCopy = useMemo(
+    () =>
+      deleteKind === 'hide'
+        ? {
+            title: 'Hide plant?',
+            message: `"${initialName}" comes with the app, so deleting hides it instead of removing it for good. You can bring it back from "hidden plants" at the bottom of the catalog.`,
+            confirmLabel: 'Hide',
+          }
+        : {
+            title: 'Delete plant?',
+            message: `Remove "${initialName}" from the catalog? This cannot be undone.`,
+            confirmLabel: 'Delete',
+          },
+    [deleteKind, initialName]
+  );
 
   const onConfirmDelete = useCallback(() => {
     setShowDeleteConfirm(false);
@@ -641,26 +652,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
           {tabBar}
         </View>
 
-        {todayEvidence.length > 0 && (
-          <View style={styles.evidenceCard}>
-            <View style={styles.evidenceTitleRow}>
-              <Ionicons name="shield-checkmark-outline" size={17} color={theme.primary} />
-              <Text style={styles.evidenceTitle}>Tamil Nadu guidance</Text>
-            </View>
-            <Text style={styles.evidenceText}>
-              {hasOverride
-                ? 'This entry includes your saved edits. The sources below support the app defaults, not user-supplied changes.'
-                : `Source-reviewed for Tamil Nadu home gardens · reviewed ${todayEvidence[0]?.reviewedOn}.`}
-            </Text>
-            <Text style={styles.evidenceText}>
-              The crop image is illustrative and must not be used to diagnose a plant problem.
-            </Text>
-            {todayEvidence.map((source) => (
-              <EvidenceLink key={source.id} title={source.title} url={source.url} styles={styles} />
-            ))}
-          </View>
-        )}
-
         {/* ── Basics ── */}
         <View onLayout={registerSection('basics')}>
           <CollapsibleSection
@@ -679,6 +670,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               setName={setName}
               isCreating={isCreating}
               hasOverride={hasOverride}
+              plantType={plantType}
+              onPlantTypeChange={setPlantType}
             />
           </CollapsibleSection>
         </View>
@@ -962,9 +955,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
 
       <ConfirmDeleteModal
         visible={showDeleteConfirm}
-        title="Delete plant?"
-        message={`Remove "${initialName}" from the catalog? This cannot be undone.`}
-        confirmLabel="Delete"
+        title={deleteCopy.title}
+        message={deleteCopy.message}
+        confirmLabel={deleteCopy.confirmLabel}
+        busy={saving}
         onCancel={closeDeleteConfirm}
         onConfirm={onConfirmDelete}
       />

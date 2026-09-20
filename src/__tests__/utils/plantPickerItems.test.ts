@@ -1,5 +1,6 @@
 import { buildPlantPickerItems, derivePlantSeasonLabel } from '@/utils/plantPickerItems';
 import { PLANT_CATEGORIES } from '@/services/plantProfiles';
+import { sortPlantNames } from '@/utils/plantSort';
 import type { PlantProfile, PlantProfiles, PlantType } from '@/types/database.types';
 
 // plantPickerItems imports the plantProfiles service for the default catalog;
@@ -47,7 +48,9 @@ describe('buildPlantPickerItems', () => {
     expect(typeSequence).toEqual(PLANT_CATEGORIES.filter((t) => typeSequence.includes(t)));
   });
 
-  it('includes user-added plants after the defaults of their category', () => {
+  // User additions used to be appended after the defaults. They now sort in
+  // with them, so the picker reads A–Z the same way the catalog list does.
+  it('interleaves user-added plants alphabetically within their category', () => {
     const profiles = emptyProfiles();
     profiles.vegetable['My Custom Veg'] = profile({
       name: 'My Custom Veg',
@@ -55,9 +58,12 @@ describe('buildPlantPickerItems', () => {
     });
 
     const items = buildPlantPickerItems(profiles);
-    const vegetables = items.filter((i) => i.plantType === 'vegetable');
-    const custom = vegetables[vegetables.length - 1];
-    expect(custom?.name).toBe('My Custom Veg');
+    const names = items.filter((i) => i.plantType === 'vegetable').map((i) => i.name);
+
+    expect(names).toContain('My Custom Veg');
+    expect(names).toEqual(sortPlantNames(names));
+    // Sorted, not appended: bundled names follow it.
+    expect(names.indexOf('My Custom Veg')).toBeLessThan(names.indexOf('Tomato'));
   });
 
   it('prefers user profile data over defaults for the same plant name', () => {

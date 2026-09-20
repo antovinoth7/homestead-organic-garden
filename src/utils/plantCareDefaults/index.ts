@@ -7,6 +7,7 @@ import { PlantType, PlantCareProfile, PlantCareProfiles } from '@/types/database
 import type { PlantingCandidate } from '@/utils/plantingNow';
 
 import { PLANT_CARE_OVERRIDES } from './overrides';
+import { BOTANICAL_IDENTITY_OVERRIDES } from './overrides/botanicalIdentity';
 import { buildProfileKey } from './profileKey';
 import { DEFAULT_PROFILES_BY_TYPE } from './typeDefaults';
 import { PLANT_VARIETIES_BY_TYPE } from './varieties';
@@ -24,6 +25,14 @@ Object.entries(PLANT_VARIETIES_BY_TYPE).forEach(([type, varieties]) => {
 });
 
 Object.assign(PLANT_CARE_PROFILES, PLANT_CARE_OVERRIDES);
+
+// Botanical identity for the plants with no shard of their own, merged over the
+// assembled profile rather than replacing it: these entries carry only binomial,
+// family and lifecycle, so the type defaults supply the rest.
+for (const [key, identity] of Object.entries(BOTANICAL_IDENTITY_OVERRIDES)) {
+  const base = PLANT_CARE_PROFILES[key];
+  if (base) PLANT_CARE_PROFILES[key] = { ...base, ...identity };
+}
 
 const findProfileByVariety = (plantVariety: string): PlantCareProfile | null => {
   const key = Object.keys(PLANT_CARE_PROFILES).find((profileKey) =>

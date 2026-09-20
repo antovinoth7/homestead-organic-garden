@@ -7,7 +7,8 @@
  *   assets-src/PROMPTS.md — human-readable, ready-to-paste image-generation
  *     prompts, grouped by kind, with missing/done status.
  *
- * Usage: npm run reference:manifest   (re-run any time; idempotent)
+ * Usage: npm run reference:manifest                    (re-run any time; idempotent)
+ *        npm run reference:manifest -- --missing-only  (PROMPTS.md lists only what is missing)
  */
 
 import * as fs from 'fs';
@@ -21,8 +22,18 @@ import {
   PLANT_IMAGE_ALIASES,
   slugifyReferenceKey,
 } from '../../src/config/referenceKeys';
-import type { DiseaseEntry, OrganicInputEntry, PestEntry } from '../../src/types/database.types';
+import type {
+  DiseaseEntry,
+  OrganicInputEntry,
+  PestEntry,
+  PlantType,
+} from '../../src/types/database.types';
+import { getPlantCareProfile } from '../../src/utils/plantCareDefaults';
+import { PLANT_VARIETIES_BY_TYPE } from '../../src/utils/plantCareDefaults/varieties';
 import { getKnownPlantNames } from '../../src/utils/plantHelpers';
+
+/** `--missing-only`: emit prompts for entries with no bundled WebP yet. */
+const MISSING_ONLY = process.argv.includes('--missing-only');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const STAGING_DIR = path.join(ROOT, 'assets-src');
@@ -81,11 +92,87 @@ function diseasePrompt(d: DiseaseEntry): string {
   );
 }
 
-function plantPrompt(names: string[]): string {
+/**
+ * How each category should be framed. Without this every entry asked for
+ * "characteristic foliage and produce, whole plant in frame", which is the
+ * wrong shot for a timber tree, an orchid, or a trellised vine alike.
+ */
+const HABIT_BY_TYPE: Record<PlantType, string> = {
+  vegetable: 'whole plant in a garden bed with ripe produce on it',
+  spinach: 'a dense stand of leafy greens at harvest size',
+  herb: 'a leafy clump at harvest size, close enough to read the leaf shape',
+  flower: 'the whole plant in full bloom',
+  shrub: 'the whole shrub in frame, bushy habit in full bloom',
+  fruit_tree: 'a mature bearing tree, full canopy with fruit visible',
+  timber_tree: 'a mature standing tree, clear trunk and full canopy',
+  coconut_tree: 'a bearing palm with nut bunches under the crown',
+};
+
+/** Used for reference-only names that are not catalog rows and have no type. */
+const DEFAULT_HABIT = 'the whole plant in frame, showing its characteristic foliage and produce';
+
+/**
+ * Plants whose growth habit their category alone gets wrong — a climbing vine
+ * photographed as a free-standing bush is the wrong reference image.
+ */
+const PLANT_PROMPT_HABIT: Record<string, string> = {
+  'Betel Leaf': 'a climbing vine trained up a support post, glossy heart-shaped leaves',
+  'Black Pepper': 'a vine trained up a living standard, hanging berry spikes',
+  Bougainvillea: 'a thorny shrub-vine trained over a wall or arch, smothered in papery bracts',
+  Thoothuvalai: 'a scrambling prickly climber sprawling over a low support',
+  // Filed under `herb` for its medicinal use, but grown for the flowers, so
+  // the herb framing would ask for the wrong picture.
+  Nithyakalyani: 'a low bushy plant covered in five-petalled flowers',
+  // Leaf shrubs — the category framing would ask for blooms they are not grown for.
+  Maruthani: 'a clipped boundary hedge in dense leaf',
+  Adathodai: 'a leafy medicinal bush, dense foliage at cutting height',
+  Nochi: 'a tall aromatic bush in leaf, showing the five-lobed palmate leaves',
+  Karpooravalli: 'a compact potted bush of thick fleshy aromatic leaves',
+  'Passion Fruit': 'a vine on a trellis with fruit hanging',
+  'Lotus Stem': 'an aquatic plant in shallow water, leaves held above the surface',
+  // A vegetable-bed framing alone reads as chilli; ask for the bell pepper.
+  Capsicum: 'a bushy plant in a garden bed with blocky bell-shaped fruits hanging, green and ripening red',
+  // Filed as `fruit_tree`, but a palm: a spreading canopy is the wrong shape.
+  'Palm Tree':
+    'a tall single-trunked palmyra palm with a crown of stiff fan-shaped leaves and clusters of dark round fruit',
+  'Ivy Gourd': 'a vine on a trellis or fence with slender green and red-ripe gourds hanging',
+  'Madras Pea Pumpkin':
+    'a slender trailing vine over low support, small lobed leaves and tiny round fruits',
+  'Adamant Creeper': 'a climbing succulent vine of four-angled jointed green stems over a support',
+  'Turkey Berry': 'a prickly shrub with clusters of small green pea-sized berries',
+  Sesame: 'a stand of upright plants in a garden bed with tubular flowers and green seed pods',
+  // Filed under `spinach` for the sour leaves, but known by its red calyces.
+  Roselle: 'a bushy plant with red stems and fleshy deep-red calyces',
+  'False Daisy': 'a low sprawling herb with lance-shaped leaves and small white daisy-like flowers',
+  'Mango Ginger': 'a clump of broad upright leaves with fresh rhizomes lifted beside it',
+  // Spice trees filed under `herb` — the leafy-clump framing would shrink them.
+  Cinnamon: 'a young bushy evergreen tree with glossy red-flushed new leaves',
+  Clove: 'a conical evergreen tree with clusters of pink-red flower buds',
+  // Pandal gourds — trailed overhead, never grown as free-standing plants.
+  'Bottle Gourd': 'a vine on an overhead pandal with fruit hanging below',
+  'Snake Gourd': 'a vine on an overhead pandal with fruit hanging below',
+  'Bitter Gourd': 'a vine on an overhead pandal with fruit hanging below',
+};
+
+/** Catalog plant name → its category, for prompt framing and profile lookup. */
+const PLANT_TYPE_BY_NAME = new Map<string, PlantType>();
+for (const [type, names] of Object.entries(PLANT_VARIETIES_BY_TYPE)) {
+  for (const name of names) PLANT_TYPE_BY_NAME.set(name, type as PlantType);
+}
+
+function plantPrompt(names: string[], scientificName?: string): string {
   const display = names.join(' / ');
+  const sci = scientificName ? ` (${scientificName})` : '';
+  const named = names.find((name) => PLANT_PROMPT_HABIT[name]);
+  const typed = names.find((name) => PLANT_TYPE_BY_NAME.has(name));
+  const habit =
+    (named && PLANT_PROMPT_HABIT[named]) ??
+    (typed && HABIT_BY_TYPE[PLANT_TYPE_BY_NAME.get(typed) as PlantType]) ??
+    DEFAULT_HABIT;
+
   return (
-    `Photorealistic photograph of a healthy mature ${display} plant growing in an organic home garden ` +
-    `in Tamil Nadu, India, showing its characteristic foliage and produce, whole plant in frame, ${STYLE_SUFFIX}`
+    `Photorealistic photograph of a healthy mature ${display}${sci} growing in an organic home ` +
+    `garden in Tamil Nadu, India — ${habit}, ${STYLE_SUFFIX}`
   );
 }
 
@@ -161,13 +248,22 @@ function buildEntries(): ManifestEntry[] {
     byCanonical.set(canonical, names);
   }
   for (const [slug, names] of [...byCanonical.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    // Reference-only names (Apple, Batoko Plum) are not catalog rows, so they
+    // have neither a type nor a care profile — both stay undefined for them.
+    const typedName = names.find((name) => PLANT_TYPE_BY_NAME.has(name));
+    const plantType = typedName ? PLANT_TYPE_BY_NAME.get(typedName) : undefined;
+    const profile = typedName && plantType ? getPlantCareProfile(typedName, plantType) : null;
+
     entries.push({
       kind: 'plant',
       id: slug,
       file: `${slug}.webp`,
       name: names[0] ?? slug,
+      tamilName: profile?.tamilName,
+      scientificName: profile?.scientificName,
+      category: plantType,
       aliasFor: names.length > 1 ? names : undefined,
-      prompt: plantPrompt(names),
+      prompt: plantPrompt(names, profile?.scientificName),
       status: isDone('plant', slug) ? 'done' : 'missing',
     });
   }
@@ -176,6 +272,7 @@ function buildEntries(): ManifestEntry[] {
 }
 
 function writePromptsMarkdown(entries: ManifestEntry[]): void {
+  const missing = entries.filter((e) => e.status === 'missing');
   const lines: string[] = [
     '# Reference Image Prompts',
     '',
@@ -186,11 +283,27 @@ function writePromptsMarkdown(entries: ManifestEntry[]): void {
     '',
   ];
 
+  // A coverage push only cares about what is still missing, and hunting ⬜
+  // through 1300 lines of already-done prompts is the slow way to find it.
+  lines.push(`## Missing (${missing.length})`, '');
+  if (missing.length === 0) {
+    lines.push('Every entry has a bundled image.', '');
+  } else {
+    for (const e of missing) {
+      lines.push(`- [ ] \`${KIND_DIRS[e.kind]}/${e.file}\` — ${e.name}`);
+    }
+    lines.push('');
+  }
+
+  if (MISSING_ONLY) {
+    lines.push('_Listing missing entries only (`--missing-only`)._', '');
+  }
+
   for (const kind of ['pest', 'disease', 'plant', 'organicInput'] as ManifestKind[]) {
     const group = entries.filter((e) => e.kind === kind);
     const done = group.filter((e) => e.status === 'done').length;
     lines.push(`## ${KIND_DIRS[kind]} (${done}/${group.length} done)`, '');
-    for (const e of group) {
+    for (const e of MISSING_ONLY ? group.filter((e) => e.status === 'missing') : group) {
       const status = e.status === 'done' ? '✅' : '⬜';
       const sci = e.scientificName ? ` — _${e.scientificName}_` : '';
       lines.push(`### ${status} \`${e.file}\` — ${e.name}${sci}`, '', '```', e.prompt, '```', '');

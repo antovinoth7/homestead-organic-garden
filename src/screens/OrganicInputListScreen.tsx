@@ -6,7 +6,6 @@ import {
 } from '@/components/organicInput/OrganicInputListView';
 import {
   getGroupedOrganicInputs,
-  CATEGORY_DESCRIPTIONS,
   ORGANIC_RECIPES,
 } from '@/config/organicInputs';
 import { useLandCents } from '@/hooks/useLandCents';
@@ -40,7 +39,6 @@ export default function OrganicInputListScreen(): React.JSX.Element {
   return (
     <OrganicInputListView
       groups={groups}
-      categoryDescriptions={CATEGORY_DESCRIPTIONS}
       recipeCount={ORGANIC_RECIPES.length}
       landCents={landCents}
       onSelect={handleSelect}

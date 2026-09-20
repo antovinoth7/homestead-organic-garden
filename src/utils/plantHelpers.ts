@@ -8,22 +8,21 @@ import {
   PlantType,
 } from '../types/database.types';
 import { getPlantCareProfile } from './plantCareDefaults';
+import { PLANT_VARIETIES_BY_TYPE } from './plantCareDefaults/varieties';
 import { getCanonicalPlantKey, toLookupKey } from './plantAliases';
 import { logger } from './logger';
 
 // Companion planting data
 const COMPANION_PLANTS: Record<string, string[]> = {
   // Vegetables
-  Tomato: ['Basil', 'Marigold', 'Carrot', 'Onion', 'Parsley', 'Lettuce'],
-  Carrot: ['Onion', 'Tomato', 'Lettuce', 'Rosemary', 'Sage'],
-  Lettuce: ['Carrot', 'Radish', 'Cucumber', 'Strawberry', 'Beans'],
-  Cabbage: ['Dill', 'Mint', 'Rosemary', 'Sage', 'Thyme', 'Beans'],
-  Broccoli: ['Onion', 'Garlic', 'Rosemary', 'Sage', 'Thyme'],
-  Cucumber: ['Beans', 'Peas', 'Radish', 'Sunflower', 'Lettuce'],
-  Pepper: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold'],
+  Tomato: ['Basil', 'Marigold', 'Carrot', 'Onion'],
+  Carrot: ['Onion', 'Tomato'],
+  Cabbage: ['Dill', 'Mint', 'Beans'],
+  Cucumber: ['Beans', 'Green Peas', 'Radish', 'Sunflower'],
+  Capsicum: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold'],
   Chilli: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold', 'Turmeric'],
-  Brinjal: ['Beans', 'Peas', 'Spinach', 'Thyme', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
-  'Long Brinjal': ['Beans', 'Peas', 'Spinach', 'Thyme', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
+  Brinjal: ['Beans', 'Green Peas', 'Spinach', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
+  'Long Brinjal': ['Beans', 'Green Peas', 'Spinach', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
   Tapioca: ['Cowpea', 'Beans', 'Marigold'],
   Drumstick: ['Brinjal', 'Chilli', 'Coriander', 'Turmeric', 'Marigold'],
   Amaranthus: ['Onion', 'Radish', 'Beans'],
@@ -34,39 +33,30 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   'Bottle Gourd': ['Beans', 'Coriander', 'Marigold'],
   Pumpkin: ['Beans', 'Corn', 'Marigold'],
   'Ash Gourd': ['Beans', 'Marigold', 'Coriander'],
-  Spinach: ['Strawberry', 'Peas', 'Beans', 'Brinjal'],
-  Radish: ['Lettuce', 'Cucumber', 'Carrot', 'Spinach'],
-  Potato: ['Beans', 'Cabbage', 'Corn', 'Peas'],
-  Onion: ['Carrot', 'Tomato', 'Lettuce', 'Cabbage', 'Pepper'],
+  Spinach: ['Green Peas', 'Beans', 'Brinjal'],
+  Radish: ['Cucumber', 'Carrot', 'Spinach'],
+  Potato: ['Beans', 'Cabbage', 'Corn', 'Green Peas'],
+  Onion: ['Carrot', 'Tomato', 'Cabbage', 'Capsicum'],
   Garlic: ['Tomato', 'Roses', 'Cabbage', 'Fruit trees'],
-  Shallot: ['Carrot', 'Tomato', 'Lettuce', 'Cabbage', 'Pepper'],
+  Shallot: ['Carrot', 'Tomato', 'Cabbage', 'Capsicum'],
   Beans: ['Corn', 'Cucumber', 'Cabbage', 'Carrot', 'Radish'],
-  Peas: ['Carrot', 'Radish', 'Cucumber', 'Corn', 'Beans'],
+  'Green Peas': ['Carrot', 'Radish', 'Cucumber', 'Corn', 'Beans'],
 
   // Herbs
-  Basil: ['Tomato', 'Pepper', 'Oregano', 'Parsley'],
+  Basil: ['Tomato', 'Capsicum'],
   Mint: ['Cabbage', 'Tomato', 'Radish'],
-  Coriander: ['Tomato', 'Beans', 'Peas'],
-  Parsley: ['Tomato', 'Carrot', 'Roses'],
-  Rosemary: ['Cabbage', 'Beans', 'Carrot', 'Sage'],
-  Thyme: ['Cabbage', 'Brinjal', 'Potato', 'Strawberry'],
-  Oregano: ['Basil', 'Pepper', 'Cucumber'],
-  Sage: ['Rosemary', 'Cabbage', 'Carrot', 'Tomato'],
-  Dill: ['Lettuce', 'Cucumber', 'Cabbage', 'Onion'],
+  Coriander: ['Tomato', 'Beans', 'Green Peas'],
+  Dill: ['Cucumber', 'Cabbage', 'Onion'],
   Lemongrass: ['Tomato', 'Basil', 'Cilantro'],
   'Curry Leaf': ['Citrus trees', 'Turmeric', 'Ginger'],
 
   // Flowers
-  Rose: ['Garlic', 'Parsley', 'Chives', 'Marigold'],
-  Sunflower: ['Cucumber', 'Squash', 'Corn'],
+  Rose: ['Garlic', 'Chives', 'Marigold'],
+  Sunflower: ['Cucumber', 'Corn'],
   Marigold: ['Tomato', 'Cabbage', 'Beans', 'Cucumber', 'Most vegetables'],
-  Lily: ['Roses', 'Peonies', 'Ferns'],
-  Tulip: ['Daffodils', 'Hyacinths'],
   Jasmine: ['Roses', 'Gardenias'],
   Hibiscus: ['Aloe', 'Succulents', 'Citrus'],
-  Dahlia: ['Marigold', 'Zinnia', 'Nasturtium'],
   Chrysanthemum: ['Roses', 'Asters', 'Daisies'],
-  Orchid: ['Ferns', 'Bromeliads', 'Anthuriums'],
 
   // Tropical Fruit Trees
   Chikoo: ['Banana', 'Papaya', 'Curry Leaf', 'Lemongrass'],
@@ -77,26 +67,26 @@ const COMPANION_PLANTS: Record<string, string[]> = {
 
   // Bed-type plants — new additions
   Fenugreek: ['Spinach', 'Radish', 'Onion', 'Coriander'],
-  'Ladies Finger': ['Basil', 'Pepper', 'Brinjal', 'Cucumber', 'Marigold', 'Cowpea'],
+  'Ladies Finger': ['Basil', 'Capsicum', 'Brinjal', 'Cucumber', 'Marigold', 'Cowpea'],
   'Pasalai Keerai': ['Radish', 'Turmeric', 'Basil'],
   'French Beans': ['Carrot', 'Beetroot', 'Cucumber', 'Radish'],
   'Black Gram': ['Carrot', 'Radish', 'Coriander'],
   Groundnut: ['Carrot', 'Radish', 'Marigold'],
   'Pigeon Pea': ['Carrot', 'Radish', 'Maize'],
   'Cluster Beans': ['Carrot', 'Radish', 'Maize'],
-  Maize: ['Beans', 'Pumpkin', 'Cowpea', 'Squash'],
-  Squash: ['Maize', 'Beans', 'Marigold'],
+  Maize: ['Beans', 'Pumpkin', 'Cowpea'],
   'Yardlong Beans': ['Carrot', 'Basil', 'Marigold'],
   Beetroot: ['French Beans', 'Onion', 'Coriander'],
   Yam: ['Banana', 'Taro', 'Cowpea'],
   'Lotus Stem': ['Taro'],
-  Strawberry: ['Spinach', 'Lettuce', 'Thyme', 'Marigold'],
   Brahmi: ['Tulsi', 'Drumstick', 'Lemongrass'],
   Ashwagandha: ['Basil', 'Marigold'],
   'Aloe Vera': ['Drumstick', 'Lemongrass'],
   Agathi: ['Banana', 'Maize', 'Pigeon Pea'],
-  Cocoa: ['Banana', 'Drumstick'],
-  'Black Pepper': ['Cocoa', 'Banana'],
+  Cocoa: ['Banana', 'Drumstick', 'Black Pepper'],
+  // Pepper is a vine and needs a living standard to climb; coconut and
+  // arecanut trunks are the usual ones in Tamil Nadu.
+  'Black Pepper': ['Coconut', 'Arecanut', 'Cocoa', 'Banana'],
   Cardamom: ['Banana', 'Ginger', 'Turmeric'],
   Ajwain: ['Coriander', 'Basil', 'Fennel'],
   Fennel: [],
@@ -115,7 +105,16 @@ const COMPANION_PLANTS: Record<string, string[]> = {
     'Curry Leaf',
     'Tapioca',
   ],
-  Banana: ['Turmeric', 'Ginger', 'Elephant Foot Yam', 'Cowpea', 'Coriander', 'Coconut'],
+  Banana: [
+    'Turmeric',
+    'Ginger',
+    'Elephant Foot Yam',
+    'Cowpea',
+    'Coriander',
+    'Coconut',
+    'Black Pepper',
+  ],
+  Arecanut: ['Black Pepper', 'Banana', 'Cocoa', 'Turmeric', 'Ginger'],
   Turmeric: ['Coconut', 'Banana', 'Chilli', 'Coriander', 'Ginger'],
   Ginger: ['Coconut', 'Banana', 'Chilli', 'Coriander', 'Turmeric'],
   'Elephant Foot Yam': ['Banana', 'Coconut', 'Cowpea'],
@@ -132,19 +131,18 @@ const COMPANION_PLANTS: Record<string, string[]> = {
 const INCOMPATIBLE_PLANTS: Record<string, string[]> = {
   Tomato: ['Cabbage', 'Potato', 'Fennel', 'Corn'],
   Carrot: ['Dill', 'Parsnip', 'Celery'],
-  Onion: ['Beans', 'Peas', 'Sage'],
-  Garlic: ['Beans', 'Peas'],
-  Shallot: ['Beans', 'Peas', 'Sage'],
+  Onion: ['Beans', 'Green Peas'],
+  Garlic: ['Beans', 'Green Peas'],
+  Shallot: ['Beans', 'Green Peas'],
   Beans: ['Onion', 'Garlic', 'Fennel'],
-  Peas: ['Onion', 'Garlic'],
-  Potato: ['Tomato', 'Cucumber', 'Squash'],
-  Cucumber: ['Sage', 'Potato'],
-  Cabbage: ['Tomato', 'Strawberry'],
+  'Green Peas': ['Onion', 'Garlic'],
+  Potato: ['Tomato', 'Cucumber'],
+  Cucumber: ['Potato'],
+  Cabbage: ['Tomato'],
   Cowpea: ['Onion', 'Garlic'],
   Sunflower: ['Potato'],
   Maize: ['Tomato'],
   Fennel: ['Brinjal', 'Tomato', 'Coriander'],
-  Sage: ['Basil'],
   'French Beans': ['Onion', 'Garlic'],
   'Black Gram': ['Onion', 'Garlic'],
   Groundnut: ['Onion', 'Garlic'],
@@ -152,8 +150,8 @@ const INCOMPATIBLE_PLANTS: Record<string, string[]> = {
   Brinjal: ['Fennel', 'Potato'],
   'Long Brinjal': ['Fennel', 'Potato'],
   Chilli: ['Fennel'],
-  Pepper: ['Fennel'],
-  'Ladies Finger': ['Potato', 'Squash', 'Sweet Potato'],
+  Capsicum: ['Fennel'],
+  'Ladies Finger': ['Potato', 'Sweet Potato'],
   Radish: ['Hyssop'],
   Drumstick: ['Fennel'],
 };
@@ -247,6 +245,19 @@ const COMPANION_NAME_FALLBACKS: Record<string, string> = {
   'hybrid coconut': 'coconut',
   'king coconut': 'coconut',
 };
+
+/**
+ * Every name the companion tables are keyed by, and the names those keys are
+ * reached through when the catalog ships cultivars instead of the species.
+ * Exported for the coverage guard in `src/__tests__`, which checks that no
+ * entry is stranded on a name nothing resolves to.
+ */
+export const COMPANION_TABLE_NAMES: string[] = [
+  ...new Set([...Object.keys(COMPANION_PLANTS), ...Object.keys(INCOMPATIBLE_PLANTS)]),
+];
+export const COMPANION_FALLBACK_TARGETS: string[] = [
+  ...new Set(Object.values(COMPANION_NAME_FALLBACKS)),
+];
 
 const companionKey = (plantVariety: string | null | undefined): string | null => {
   const key = getCanonicalPlantKey(plantVariety);
@@ -1461,119 +1472,20 @@ export function getCoconutNutrientDeficiencies(): CoconutNutrientDeficiency[] {
   ];
 }
 
-const PLANT_EMOJI_MAP: Record<string, string> = {
-  Tomato: '🍅',
-  Chilli: '🌶️',
-  Pepper: '🌶️',
-  Carrot: '🥕',
-  Lettuce: '🥬',
-  Cabbage: '🥬',
-  Broccoli: '🥦',
-  Cucumber: '🥒',
-  Brinjal: '🍆',
-  'Long Brinjal': '🍆',
-  Pumpkin: '🎃',
-  Spinach: '🥬',
-  Radish: '🥕',
-  Potato: '🥔',
-  Onion: '🧅',
-  Garlic: '🧄',
-  Shallot: '🧅',
-  Beans: '🫘',
-  Peas: '🫛',
-  Corn: '🌽',
-  Basil: '🌿',
-  Mint: '🌿',
-  Coriander: '🌿',
-  Parsley: '🌿',
-  Rosemary: '🌿',
-  Thyme: '🌿',
-  Oregano: '🌿',
-  Sage: '🌿',
-  Dill: '🌿',
-  Lemongrass: '🌾',
-  Mango: '🥭',
-  Banana: '🍌',
-  Guava: '🍈',
-  Papaya: '🍈',
-  Pomegranate: '🍎',
-  Lemon: '🍋',
-  Lime: '🍋',
-  Orange: '🍊',
-  Grape: '🍇',
-  Apple: '🍎',
-  Strawberry: '🍓',
-  Watermelon: '🍉',
-  Pineapple: '🍍',
-  Coconut: '🥥',
-  Rose: '🌹',
-  Sunflower: '🌻',
-  Marigold: '🌼',
-  Jasmine: '🌸',
-  Hibiscus: '🌺',
-  Tulip: '🌷',
-  Drumstick: '🌿',
-  Amaranthus: '🌿',
-  Cowpea: '🫘',
-  Tapioca: '🥔',
-  'Bitter Gourd': '🥒',
-  'Snake Gourd': '🥒',
-  'Ridge Gourd': '🥒',
-  'Bottle Gourd': '🥒',
-  'Ash Gourd': '🥒',
-  Purslane: '🌿',
-  'Pasalai Keerai': '🥬',
-  Fenugreek: '🌿',
-  'Ladies Finger': '🌿',
-  Squash: '🥒',
-  'Yardlong Beans': '🫘',
-  Beetroot: '🫚',
-  'French Beans': '🫘',
-  'Cluster Beans': '🫘',
-  'Black Gram': '🫘',
-  Groundnut: '🥜',
-  'Pigeon Pea': '🫘',
-  Yam: '🥔',
-  Maize: '🌽',
-  'Lotus Stem': '🌸',
-  Brahmi: '🌿',
-  Ashwagandha: '🌿',
-  'Aloe Vera': '🌵',
-  Agathi: '🌳',
-  Avocado: '🥑',
-  Bamboo: '🎋',
-  Arecanut: '🌴',
-  'Ash Plantain': '🍌',
-  Castor: '🌳',
-  Coleus: '🌿',
-  Cocoa: '🍫',
-  Nutmeg: '🌰',
-  'Black Pepper': '🌶️',
-  Cardamom: '🌿',
-  Ajwain: '🌿',
-  Fennel: '🌿',
-  Amaranth: '🌿',
-  Ginger: '🫚',
-  Turmeric: '🟡',
-  'Curry Leaf': '🍃',
-  'Elephant Yam': '🥔',
-  Tulsi: '🌿',
-  Comfrey: '🌿',
-};
-
-/** All plant names known to the catalog emoji map — the canonical name list for reference-image tooling. */
+/**
+ * Every plant name in the default catalog — the canonical name list for
+ * reference-image tooling.
+ *
+ * Reads `PLANT_VARIETIES_BY_TYPE` rather than `DEFAULT_PLANT_CATALOG`: the two
+ * are kept 1:1 by `plantCatalog.localSuitability.test.ts`, and the leaf list
+ * keeps this function out of the service layer. AsyncStorage is not the reason
+ * — `scripts/reference/generate-manifest.ts` imports this under `tsx`, which
+ * loads `@/services/plantCatalog` and the `@/` alias without complaint. Only
+ * `@/lib/firebase` (it throws on missing env at import) and the Metro-only
+ * `require('*.webp')` calls in `referenceImages.gen.ts` actually fail there.
+ */
 export function getKnownPlantNames(): string[] {
-  return Object.keys(PLANT_EMOJI_MAP);
-}
-
-export function getPlantEmoji(name: string): string {
-  if (PLANT_EMOJI_MAP[name]) return PLANT_EMOJI_MAP[name]!;
-  const canonical = getCanonicalPlantKey(name);
-  if (canonical) {
-    const titled = canonical.charAt(0).toUpperCase() + canonical.slice(1);
-    if (PLANT_EMOJI_MAP[titled]) return PLANT_EMOJI_MAP[titled]!;
-  }
-  return '🌱';
+  return [...new Set(Object.values(PLANT_VARIETIES_BY_TYPE).flat())];
 }
 
 // ── Growth Stage Auto-Progression (Phase B.4) ─────────────────────────
@@ -1892,18 +1804,28 @@ export function getValidStagesForPlant(
 
 /**
  * Derives the bed-management lifecycle for a planted instance.
- * Tree types always map to "permanent" regardless of catalog lifecycle.
- * Herbs and shrubs default to "perennial" when lifecycle is unset.
+ *
+ * The catalog's own `lifecycle` wins: it is stated per plant, reviewed, and
+ * finer than anything the type can say. This used to be the other way round —
+ * every `fruit_tree`, `timber_tree` and `coconut_tree` was forced to
+ * `permanent` before the catalog was consulted, which threw away a correct
+ * value for 36 plants and made a banana stand or a pineapple crop
+ * indistinguishable from a mango tree. They are not: a banana is ratooned and a
+ * pineapple replanted, so they are `perennial` and earn the recurring
+ * harvest-leaves task that `permanent` plants are excluded from.
+ *
+ * The type is now only a fallback, for a plant the user added that has no care
+ * profile. A tree type still defaults to `permanent` there, since an unknown
+ * tree is far more likely to be an orchard planting than a bed crop.
  */
 export function deriveInstanceLifecycle(
   lifecycle: PlantLifecycle | undefined,
   plantType: PlantType
 ): PlantLifecycle {
+  if (lifecycle) return lifecycle;
   if (plantType === 'coconut_tree' || plantType === 'timber_tree' || plantType === 'fruit_tree') {
     return 'permanent';
   }
-  if (lifecycle === 'perennial') return 'perennial';
-  if (lifecycle === 'annual' || lifecycle === 'biennial') return lifecycle;
   if (plantType === 'herb' || plantType === 'shrub') return 'perennial';
   return 'annual';
 }

@@ -50,8 +50,10 @@ describe('resolvePlantType — spot checks', () => {
     expect(resolvePlantType('Drumstick')).toBe('vegetable');
   });
 
-  it('resolves Amaranth → vegetable via alias', () => {
-    expect(resolvePlantType('Amaranth')).toBe('vegetable');
+  // The leafy guild template row is named "Amaranth"; the catalog row is
+  // "Amaranthus", and it lives under spinach (the "Greens" tab).
+  it('resolves Amaranth → spinach via alias', () => {
+    expect(resolvePlantType('Amaranth')).toBe('spinach');
   });
 
   it('resolves Black Gram (Urad) → vegetable via alias', () => {
@@ -97,4 +99,28 @@ describe('resolvePlantType — all dynamic accumulator names resolve (not null)'
       expect(resolvePlantType(acc.name)).not.toBeNull();
     });
   }
+});
+
+describe('resolvePlantType — names the catalog knows under another spelling', () => {
+  // Each of these used to fall through to the 'vegetable' default, which put
+  // a keerai in the wrong category on every screen that reads the type.
+  it('resolves a keerai searched for by its harvest', () => {
+    expect(resolvePlantType('Agathi Keerai')).toBe('spinach');
+    expect(resolvePlantType('Arai Keerai')).toBe('spinach');
+  });
+
+  it('resolves a garden plant still on a dropped duplicate name', () => {
+    expect(resolvePlantType('Malabar Spinach')).toBe('spinach');
+    expect(resolvePlantType('Amaranth Greens')).toBe('spinach');
+  });
+
+  it('resolves the moved shrubs to the category their harvest put them in', () => {
+    expect(resolvePlantType('Aavarampoo')).toBe('flower');
+    expect(resolvePlantType('Henna')).toBe('herb');
+    expect(resolvePlantType('Oleander')).toBe('flower');
+  });
+
+  it('still returns null for a name nothing knows', () => {
+    expect(resolvePlantType('Quinoa')).toBeNull();
+  });
 });

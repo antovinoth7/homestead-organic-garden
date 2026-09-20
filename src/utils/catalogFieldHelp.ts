@@ -11,7 +11,9 @@ export const CATALOG_FIELD_HELP = {
   scientificName:
     'Botanical Latin name used for accurate identification and future grouping logic.',
   taxonomicFamily:
-    'Plant family, such as Solanaceae or Fabaceae. Useful for related-crop and rotation features.',
+    'Plant family, such as Solanaceae or Fabaceae. This is what crop rotation reads, so it is worth getting right.',
+  careModel:
+    'Which care rules apply: growth stages, common pests, and how tasks repeat. It is separate from where the plant appears in the catalog, so a fruit that is not a tree can still be cared for as an annual. Set it now — it cannot be changed after saving.',
   lifecycle:
     'Defines whether the plant finishes its life cycle in one season, two seasons, or continues for multiple years.',
   growingSeason: 'Best sowing or growing window for Tamil Nadu and Kanyakumari conditions.',

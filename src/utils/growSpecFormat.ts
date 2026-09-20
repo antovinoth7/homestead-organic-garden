@@ -9,15 +9,33 @@
 
 import type { NumericRange } from '@/types/database.types';
 
+const DAYS_PER_YEAR = 365;
+
+/**
+ * A harvest range restated in whole years, or null when its shorter bound is
+ * under a year. A tree that takes 4380–5475 days reads as a number to decode;
+ * 12–15 years is the figure a grower actually plans around.
+ */
+export function harvestRangeInYears(range: NumericRange): NumericRange | null {
+  if (range.min < DAYS_PER_YEAR) return null;
+  return {
+    min: Math.round(range.min / DAYS_PER_YEAR),
+    max: Math.round(range.max / DAYS_PER_YEAR),
+  };
+}
+
 /**
  * Harvest duration, e.g. "35 d" for an exact figure or "100–140 d" for a
- * range. The range is shown whole: collapsing it to one number would imply a
- * precision the care profiles do not carry.
+ * range, or "12–15 yr" once the wait runs past a year. The range is shown
+ * whole: collapsing it to one number would imply a precision the care
+ * profiles do not carry.
  */
 export function formatDaysToHarvest(range?: NumericRange): string {
   if (!range) return '';
-  const { min, max } = range;
-  return min === max ? `${min} d` : `${min}–${max} d`;
+  const years = harvestRangeInYears(range);
+  const { min, max } = years ?? range;
+  const unit = years ? 'yr' : 'd';
+  return min === max ? `${min} ${unit}` : `${min}–${max} ${unit}`;
 }
 
 /**

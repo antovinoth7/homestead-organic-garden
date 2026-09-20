@@ -1,55 +1,107 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
+  LayoutAnimation,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme';
-import { createStyles, CATALOG_ROW_TOTAL_HEIGHT } from '@/styles/managePlantCatalogStyles';
+import { createStyles, catalogRowTotalHeight } from '@/styles/managePlantCatalogStyles';
 import { MoreStackParamList } from '@/types/navigation.types';
-import { PlantCategoryTabs } from '@/components/PlantCategoryTabs';
 import { CatalogSearchBar } from '@/components/catalog/CatalogSearchBar';
 import { CatalogBrowseRow } from '@/components/catalog/CatalogBrowseRow';
+import { CatalogSkeletonRows } from '@/components/catalog/CatalogSkeletonRows';
 import { CatalogSearchResultRow } from '@/components/catalog/CatalogSearchResultRow';
+import { CatalogSectionHeader } from '@/components/catalog/CatalogSectionHeader';
+import { CatalogFilterSheet } from '@/components/catalog/CatalogFilterSheet';
+import { DEFAULT_CATALOG_GROUP_MODE } from '@/components/catalog/catalogGroupModes';
 import { RecentSearchChips } from '@/components/catalog/RecentSearchChips';
 import { HiddenPlantsSection } from '@/components/catalog/HiddenPlantsSection';
+import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import { usePlantCatalogManager } from '@/hooks/usePlantCatalogManager';
 import { useCatalogSearch } from '@/hooks/useCatalogSearch';
-import type { CatalogSearchResult } from '@/utils/catalogSearch';
 import { getCanonicalPlantKey } from '@/utils/plantAliases';
+import {
+  ALL_GROUPS,
+  buildBrowseItems,
+  buildSearchItems,
+  measureCatalogItems,
+} from '@/utils/catalogListItems';
+import type { CatalogListItem } from '@/utils/catalogListItems';
+import { CATALOG_GROUP_DEFAULT_TYPE } from '@/config/plants/catalogTaxonomy';
 import type { PlantType } from '@/types/database.types';
-
-type CatalogListItem =
-  | { kind: 'browse'; name: string; count: number }
-  | { kind: 'result'; result: CatalogSearchResult };
 
 export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const moreNav = useNavigation<NativeStackNavigationProp<MoreStackParamList>>();
   const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  // The row heights the list promises getItemLayout scale with the OS font
+  // setting, so the screen, the rows and the headers must all read the same one.
+  const { fontScale } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, fontScale), [theme, fontScale]);
   const insets = useSafeAreaInsets();
 
   const {
-    activeCategory,
-    setActiveCategory,
+    activeGroup,
+    setActiveGroup,
+    groupMode,
+    setGroupMode,
     loading,
+    error,
     refreshing,
-    categoryData,
-    allCategoryCounts,
+    groupData,
+    reload,
+    groupCounts,
     plantCountsByType,
     mergedProfiles,
     hiddenPlantNames,
     restore,
+    removePermanently,
     refresh,
   } = usePlantCatalogManager();
 
+  /**
+   * A group spans several care models — Fruits holds both `fruit_tree` trees and
+   * herbaceous quick fruits — so a newly created entry only gets a starting type
+   * from the chosen category; the entry form lets it be corrected. Under `all`
+   * no category is chosen, so it starts from the one most plants are added to.
+   */
+  const newPlantType =
+    activeGroup === ALL_GROUPS
+      ? CATALOG_GROUP_DEFAULT_TYPE.vegetables
+      : CATALOG_GROUP_DEFAULT_TYPE[activeGroup];
+
+  // Search and the filter sheet each take over the header, so only one is
+  // open at a time; the query itself survives collapsing, marked by the dot.
+  const [searchActive, setSearchActive] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const openSearch = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowFilters(false);
+    setSearchActive(true);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSearchActive(false);
+  }, []);
+
+  const toggleFilters = useCallback(() => {
+    setSearchActive(false);
+    setShowFilters((prev) => !prev);
+  }, []);
+
+  const closeFilters = useCallback(() => setShowFilters(false), []);
+
+  // `enabled` latches inside the hook, so opening search once is enough — a
+  // query that outlives the collapsed bar keeps its index.
   const {
     query,
     setQuery,
@@ -60,7 +112,28 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     recentSearches,
     commitSearch,
     clearRecentSearches,
-  } = useCatalogSearch({ profiles: mergedProfiles, plantCountsByType });
+  } = useCatalogSearch({ profiles: mergedProfiles, plantCountsByType, enabled: searchActive });
+
+  const onBack = useCallback(() => moreNav.goBack(), [moreNav]);
+
+  // Removing a hidden plant for good is the one irreversible action on this
+  // screen, so it is the only one that asks first.
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    name: string;
+    plantType: PlantType;
+  } | null>(null);
+
+  const requestPermanentRemoval = useCallback((name: string, plantType: PlantType) => {
+    setPendingRemoval({ name, plantType });
+  }, []);
+
+  const cancelPermanentRemoval = useCallback(() => setPendingRemoval(null), []);
+
+  const confirmPermanentRemoval = useCallback(() => {
+    if (!pendingRemoval) return;
+    void removePermanently(pendingRemoval.name, pendingRemoval.plantType);
+    setPendingRemoval(null);
+  }, [pendingRemoval, removePermanently]);
 
   const openPlant = useCallback(
     (plantName: string, plantType: PlantType) => {
@@ -77,10 +150,10 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const onAddPlant = useCallback(() => {
     moreNav.navigate('CatalogPlantDetail', {
       plantName: '',
-      plantType: activeCategory,
+      plantType: newPlantType,
       isCreating: true,
     });
-  }, [moreNav, activeCategory]);
+  }, [moreNav, newPlantType]);
 
   // "Okra" and "Methi" are Ladies Finger and Fenugreek. Creating a second entry
   // for a name the catalog already knows is how the duplicates got there, so
@@ -105,34 +178,57 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
 
     moreNav.navigate('CatalogPlantDetail', {
       plantName: trimmed,
-      plantType: activeCategory,
+      plantType: newPlantType,
       isCreating: true,
     });
-  }, [moreNav, query, activeCategory, commitSearch, results]);
+  }, [moreNav, query, newPlantType, commitSearch, results]);
+
+  /**
+   * How many of the sheet's two facets are off default. A dot could say only
+   * that something was filtered, not whether the category, the grouping or both
+   * were responsible for the list on screen.
+   */
+  const activeFilterCount =
+    (activeGroup === ALL_GROUPS ? 0 : 1) + (groupMode === DEFAULT_CATALOG_GROUP_MODE ? 0 : 1);
 
   const onSubmitSearch = useCallback(() => commitSearch(query), [commitSearch, query]);
 
-  const data = useMemo<CatalogListItem[]>(() => {
-    if (isSearching) {
-      return results.map((result) => ({ kind: 'result' as const, result }));
-    }
-    return categoryData.plantNames.map((name) => ({
-      kind: 'browse' as const,
-      name,
-      count: categoryData.counts[name] ?? 0,
-    }));
-  }, [isSearching, results, categoryData]);
+  // Items and their pixel offsets are built together: the browse list mixes
+  // two heights, so getItemLayout needs a table rather than one multiplication.
+  const { items: data, offsets, heights } = useMemo(
+    () =>
+      measureCatalogItems(
+        isSearching
+          ? buildSearchItems(results)
+          : // `groupData` carries the group and mode it was built for, so the
+            // list can never pair a freshly tapped category with the old rows.
+            buildBrowseItems({
+              group: groupData.group,
+              entries: groupData.entries,
+              mode: groupData.mode,
+            }),
+        fontScale
+      ),
+    [isSearching, results, groupData, fontScale]
+  );
 
   const renderItem = useCallback(
     ({ item, index }: { item: CatalogListItem; index: number }) => {
-      const isFirst = index === 0;
-      const isLast = index === data.length - 1;
+      if (item.kind === 'section') {
+        return (
+          <CatalogSectionHeader title={item.title} count={item.count} fontScale={fontScale} />
+        );
+      }
       if (item.kind === 'result') {
+        // Search results are one flat card: no letter groups to break them up.
         return (
           <CatalogSearchResultRow
             result={item.result}
-            isFirst={isFirst}
-            isLast={isLast}
+            isFirst={index === 0}
+            // `results.length`, not `data.length`: only search rows read this,
+            // and keying on the whole list would give `renderItem` a new
+            // identity on every group switch, re-rendering every browse row.
+            isLast={index === results.length - 1}
             onPress={openPlant}
           />
         );
@@ -140,65 +236,58 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       return (
         <CatalogBrowseRow
           plantName={item.name}
-          plantType={activeCategory}
+          tamilName={item.tamilName}
+          // The row's own type, not the active pill: a group spans several.
+          plantType={item.plantType}
+          habit={item.habit}
           count={item.count}
-          isFirst={isFirst}
-          isLast={isLast}
+          subtitle={item.subtitle}
+          isFirst={item.isFirst}
+          isLast={item.isLast}
+          fontScale={fontScale}
           onPress={openPlant}
         />
       );
     },
-    [data.length, activeCategory, openPlant]
+    [results.length, openPlant, fontScale]
   );
 
-  const keyExtractor = useCallback(
-    (item: CatalogListItem) =>
-      item.kind === 'browse'
-        ? `b:${item.name}`
-        : `r:${item.result.plantType}:${item.result.name}`,
-    []
+  // Browse items are fixed heights — two of them, rows and letter headers — so
+  // the fast path reads the offset table built alongside the data. Search rows
+  // wrap to an unknown height, so the screen passes `undefined` instead.
+  const getItemLayout = useCallback(
+    (_: ArrayLike<CatalogListItem> | null | undefined, index: number) => ({
+      length: heights[index] ?? catalogRowTotalHeight(fontScale),
+      offset: offsets[index] ?? 0,
+      index,
+    }),
+    [heights, offsets, fontScale]
   );
 
+  const keyExtractor = useCallback((item: CatalogListItem) => {
+    if (item.kind === 'section') return `s:${item.title}`;
+    return item.kind === 'browse'
+      ? `b:${item.plantType}:${item.name}`
+      : `r:${item.result.plantType}:${item.result.name}`;
+  }, []);
+
+  // Search and the category filter both live in the header bar now, so browsing
+  // needs no list header at all — only a search does, to count its matches. The
+  // count is worth stating because a search spans every category, unlike the
+  // list beneath it.
   const listHeader = useMemo(
-    () => (
-      <>
-        <CatalogSearchBar
-          value={query}
-          onChangeText={setQuery}
-          onClear={clearQuery}
-          onSubmit={onSubmitSearch}
-        />
-        {isSearching ? (
-          <View style={styles.sectionLabelRow}>
-            <Text style={styles.sectionLabel}>Matches</Text>
-            <Text style={styles.sectionLabelCount}>
-              {totalMatches > results.length
-                ? `${results.length} of ${totalMatches}`
-                : `${totalMatches} ${totalMatches === 1 ? 'plant' : 'plants'}`}
-            </Text>
-          </View>
-        ) : (
-          <PlantCategoryTabs
-            activeCategory={activeCategory}
-            allCategoryCounts={allCategoryCounts}
-            onCategoryChange={setActiveCategory}
-          />
-        )}
-      </>
-    ),
-    [
-      query,
-      setQuery,
-      clearQuery,
-      onSubmitSearch,
-      isSearching,
-      results.length,
-      totalMatches,
-      styles,
-      activeCategory,
-      allCategoryCounts,
-      setActiveCategory,
-    ]
+    () =>
+      isSearching ? (
+        <View style={styles.sectionLabelRow}>
+          <Text style={styles.sectionLabel}>Matches</Text>
+          <Text style={styles.sectionLabelCount}>
+            {totalMatches > results.length
+              ? `${results.length} of ${totalMatches}`
+              : `${totalMatches} ${totalMatches === 1 ? 'plant' : 'plants'}`}
+          </Text>
+        </View>
+      ) : null,
+    [isSearching, results.length, totalMatches, styles]
   );
 
   const listFooter = useMemo(() => {
@@ -212,7 +301,11 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
             onSelect={setQuery}
             onClearAll={clearRecentSearches}
           />
-          <HiddenPlantsSection names={hiddenPlantNames} onRestore={restore} />
+          <HiddenPlantsSection
+            plants={hiddenPlantNames}
+            onRestore={restore}
+            onRemove={requestPermanentRemoval}
+          />
         </>
       );
     }
@@ -232,6 +325,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     clearRecentSearches,
     hiddenPlantNames,
     restore,
+    requestPermanentRemoval,
     styles,
     onCreateFromQuery,
     theme.primary,
@@ -239,30 +333,158 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     query,
   ]);
 
-  const listEmpty = useMemo(
-    () => (
-      <Text style={styles.emptyText}>
-        {isSearching ? 'No plants match that search.' : 'No plants yet. Tap + to add one.'}
-      </Text>
-    ),
-    [styles, isSearching]
-  );
+  // Clearing the query is what returns the list to browsing: collapsing search
+  // deliberately keeps it, so without this the pills stay hidden behind a
+  // results list the user can no longer see a field for.
+  const onClearSearch = useCallback(() => {
+    clearQuery();
+    setSearchActive(false);
+  }, [clearQuery]);
+
+  const onRetry = useCallback(() => {
+    void reload();
+  }, [reload]);
+
+  /**
+   * Three different nothings, which the old single line of text could not tell
+   * apart: the load failed, the search matched nothing, or the group is empty.
+   * Only the first two have a way out, and both offer it.
+   */
+  const listEmpty = useMemo(() => {
+    if (error) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="cloud-offline-outline" size={40} color={theme.textTertiary} />
+          <Text style={styles.emptyTitle}>Couldn&apos;t load the catalog</Text>
+          <Text style={styles.emptyText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.emptyAction}
+            onPress={onRetry}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading the plant catalog"
+          >
+            <Text style={styles.emptyActionText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (isSearching) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="search-outline" size={40} color={theme.textTertiary} />
+          <Text style={styles.emptyTitle}>No plants match that search</Text>
+          <TouchableOpacity
+            style={styles.emptyAction}
+            onPress={onClearSearch}
+            accessibilityRole="button"
+            accessibilityLabel="Clear the search and browse the catalog"
+          >
+            <Text style={styles.emptyActionText}>Clear search</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Under `all` there is no category to blame, so an empty list means the
+    // catalog itself is empty rather than the filter being too narrow.
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="leaf-outline" size={40} color={theme.textTertiary} />
+        <Text style={styles.emptyTitle}>
+          {activeGroup === ALL_GROUPS ? 'No plants in the catalog yet' : 'No plants in this group'}
+        </Text>
+        <Text style={styles.emptyText}>Tap + to add one.</Text>
+      </View>
+    );
+  }, [styles, isSearching, error, onClearSearch, onRetry, theme.textTertiary, activeGroup]);
 
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => moreNav.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Manage Plant Catalog</Text>
-        <View style={styles.headerSpacer} />
+        {searchActive ? (
+          <View style={styles.searchExpandedRow}>
+            <TouchableOpacity
+              onPress={closeSearch}
+              style={styles.searchBackBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Close search"
+            >
+              <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
+            </TouchableOpacity>
+            <CatalogSearchBar
+              autoFocus
+              value={query}
+              onChangeText={setQuery}
+              onClear={clearQuery}
+              onSubmit={onSubmitSearch}
+            />
+          </View>
+        ) : (
+          <>
+            <TouchableOpacity
+              onPress={onBack}
+              style={styles.backButton}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Plant Catalog</Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.headerIconBtn}
+                onPress={openSearch}
+                accessibilityRole="button"
+                accessibilityLabel="Search plant catalog"
+              >
+                <Ionicons name="search" size={20} color={theme.textInverse} />
+                {query.trim() !== '' && <View style={styles.headerActiveDot} />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.headerIconBtn, showFilters && styles.headerIconBtnActive]}
+                onPress={toggleFilters}
+                accessibilityRole="button"
+                accessibilityLabel="Filter plants"
+              >
+                <Ionicons
+                  name="funnel"
+                  size={20}
+                  color={showFilters ? theme.primary : theme.textInverse}
+                />
+                {activeFilterCount > 0 && !showFilters && (
+                  <View style={styles.filterBadge}>
+                    <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </View>
 
+      {showFilters && (
+        <CatalogFilterSheet
+          group={activeGroup}
+          groupCounts={groupCounts}
+          onGroupChange={setActiveGroup}
+          mode={groupMode}
+          onChange={setGroupMode}
+          onClose={closeFilters}
+        />
+      )}
+
+      <ConfirmDeleteModal
+        visible={pendingRemoval !== null}
+        title="Remove permanently?"
+        message={`"${pendingRemoval?.name ?? ''}" will stay hidden and stop being offered here. This cannot be undone.`}
+        confirmLabel="Remove"
+        onCancel={cancelPermanentRemoval}
+        onConfirm={confirmPermanentRemoval}
+      />
+
       {loading ? (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={styles.loadingText}>Loading catalog...</Text>
-        </View>
+        <CatalogSkeletonRows />
       ) : (
         <View style={styles.contentWrapper}>
           <FlatList
@@ -282,17 +504,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
             initialNumToRender={12}
             windowSize={7}
             removeClippedSubviews
-            // Browse rows are a fixed height; search rows carry a sub-line and
-            // are not, so the measurement fast path only applies to browsing.
-            getItemLayout={
-              isSearching
-                ? undefined
-                : (_, index) => ({
-                    length: CATALOG_ROW_TOTAL_HEIGHT,
-                    offset: CATALOG_ROW_TOTAL_HEIGHT * index,
-                    index,
-                  })
-            }
+            getItemLayout={isSearching ? undefined : getItemLayout}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -307,6 +519,8 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
             style={[styles.fab, { bottom: Math.max(insets.bottom, 16) + 16 }]}
             onPress={onAddPlant}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Add a plant to the catalog"
           >
             <Ionicons name="add" size={28} color={theme.textInverse} />
           </TouchableOpacity>

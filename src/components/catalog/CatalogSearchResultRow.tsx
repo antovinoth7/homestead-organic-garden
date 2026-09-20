@@ -7,7 +7,8 @@ import { getPlantImage } from '@/config/referenceAssets';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
 import { splitAtSpan } from '@/utils/catalogSearch';
 import type { CatalogSearchResult } from '@/utils/catalogSearch';
-import { CATEGORY_FULL_LABELS } from '@/utils/plantLabels';
+import { CATALOG_GROUP_LABELS } from '@/utils/plantLabels';
+import { getTaxonomy } from '@/config/plants/catalogTaxonomy';
 import type { PlantType } from '@/types/database.types';
 
 interface Props {
@@ -18,7 +19,9 @@ interface Props {
 }
 /** "ladies finger" → "Ladies Finger" — aliases are stored as lookup keys. */
 function titleCase(value: string): string {
-  return value.replace(/w/g, (ch) => ch.toUpperCase());
+  // The literal here was a stray backspace byte (0x08) followed by w, which
+  // matched nothing, so alias notes rendered entirely lower-case.
+  return value.replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
 function CatalogSearchResultRowComponent({
@@ -45,12 +48,15 @@ function CatalogSearchResultRowComponent({
   // cross-category result carries enough context to pick between near-duplicates.
   const usage = result.gardenCount > 0 ? `${result.gardenCount} in garden` : 'Not in garden';
 
-  // An alias hit shows the canonical name, so without this the row looks
-  // unrelated to what was typed — say which other name matched.
+  // An alias or tag hit shows the canonical name, so without this the row looks
+  // unrelated to what was typed — say what actually matched. A tag match is why
+  // "keerai" reaches the greens and "green manure" reaches Agathi.
   const aliasNote =
     result.matchedField === 'alias' && result.matchedAlias
       ? titleCase(result.matchedAlias)
-      : null;
+      : result.matchedField === 'tag' && result.matchedTag
+        ? result.matchedTag
+        : null;
 
   return (
     <View
@@ -85,7 +91,7 @@ function CatalogSearchResultRowComponent({
                 {' • '}
               </>
             ) : null}
-            {CATEGORY_FULL_LABELS[result.plantType]}
+            {CATALOG_GROUP_LABELS[getTaxonomy(result.name, result.plantType).group]}
             {' • '}
             {usage}
           </Text>

@@ -29,6 +29,14 @@ const SEASON_MONTHS = [
   { id: 'ne_monsoon' as SeasonId, shortLabel: 'NE Monsoon', startM: 10, endM: 12 },
 ] as const;
 
+/**
+ * What to plant next after each family.
+ *
+ * The first six entries are as they were. The six below them are marked REVIEW:
+ * drafted from the rotation principle each one names, not from a cited source —
+ * this file, like `rotationRules` and `soilPrepEngine`, carries no `evidenceIds`.
+ * Confirm the advice with local practice before treating it as settled.
+ */
 const NEXT_CROP_AFTER: Partial<Record<CropFamily, string>> = {
   solanaceae: 'Legume — N-fixer restores soil after tomato/brinjal',
   cucurbit: 'Legume or Brassica after cucurbits',
@@ -36,6 +44,14 @@ const NEXT_CROP_AFTER: Partial<Record<CropFamily, string>> = {
   brassica: 'Legume or Root crop after brassica',
   allium: 'Most families — alliums suppress soil pathogens',
   other: 'Legume recommended for soil recovery',
+
+  // REVIEW: drafted, not sourced.
+  amaranthaceae: 'Any family but keerai, beetroot or palak — all Amaranthaceae',
+  malvaceae: 'Legume or Allium — not okra again, it hosts root-knot nematode',
+  convolvulaceae: 'Legume — sweet potato leaves the bed low in nitrogen',
+  araceae: 'Legume — tubers draw the bed down, a N-fixer rebuilds it',
+  zingiberaceae: 'Legume or Brassica — keep ginger and turmeric out for 3 seasons',
+  poaceae: 'Legume — maize is a heavy nitrogen user',
 };
 
 // 0-indexed day offset from Jan 1 of baseYear; exceeds 365 for next-year dates

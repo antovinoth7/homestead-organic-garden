@@ -1,6 +1,14 @@
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { auth, db, refreshAuthToken } from '@/lib/firebase';
 import { writeOrQueue } from '@/lib/offlineWrite';
+import { getQueue } from '@/lib/offlineQueue';
+import { hasPendingWriteFor } from '@/utils/offlineQueueLogic';
+import {
+  applyProfileDeletion,
+  applyProfileDismissal,
+  applyProfileRename,
+  applyProfileRestore,
+} from '@/utils/plantProfileMutations';
 import { getData, setData, KEYS } from '@/lib/storage';
 import { DEFAULT_PLANT_CATALOG } from '@/services/plantCatalog';
 import { getCached, setCached } from '@/lib/dataCache';
@@ -26,15 +34,24 @@ import {
 import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
-import { CATEGORY_OPTIONS } from '@/utils/plantLabels';
+import { sortPlantNames } from '@/utils/plantSort';
+import { PLANT_CATEGORIES } from '@/utils/plantCategories';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const PLANT_CATEGORIES: PlantType[] = CATEGORY_OPTIONS.map((opt) => opt.value);
+export { PLANT_CATEGORIES };
 
 const SETTINGS_COLLECTION = 'user_settings';
 const PLANT_PROFILES_FIELD = 'plantProfiles';
 const CACHE_KEY = 'plantProfiles';
+
+/**
+ * Bumped on every local save. `syncFromFirestore` captures it before its read
+ * and re-checks after, so a save that lands while the snapshot is in flight is
+ * never overwritten by the copy that read fetched — the race that made the
+ * resurrection feel random rather than reproducible.
+ */
+let localWriteGeneration = 0;
 
 // ─── Default profiles (built from DEFAULT_PLANT_CATALOG data) ─────────────────
 
@@ -90,13 +107,40 @@ export function createEmptyProfiles(): PlantProfiles {
  * minus any bundled entry they deleted (which survives in the stored map as an
  * `isDeleted` tombstone, since deleting the key alone would let the default
  * re-appear on the next read).
+ *
+ * Sorted A–Z, with the user's own additions interleaved rather than appended.
+ * Unsorted this returned object-key insertion order — the array-literal order of
+ * `DEFAULT_PLANT_CATALOG`, which is a curated top 25 followed by append batches
+ * and reads as random past the first screenful. Every list surface reads through
+ * here (catalog browse, add-plant dropdown via `toPlantCatalogShape`, picker
+ * sheet), so sorting once here is what keeps them in agreement.
  */
+/**
+ * Memo for the above, keyed on the profiles object itself. Every write replaces
+ * that object wholesale, so identity is a sound key — and a WeakMap lets the
+ * superseded copy be collected with its entry. Worth it because one catalog
+ * rebuild asks for the same eight categories about three times over, and each
+ * ask re-sorts. Callers get a copy, so the cached order cannot be mutated.
+ */
+const namesByProfiles = new WeakMap<PlantProfiles, Partial<Record<PlantType, string[]>>>();
+
 export function getPlantNamesForType(profiles: PlantProfiles, type: PlantType): string[] {
+  let cached = namesByProfiles.get(profiles);
+  const hit = cached?.[type];
+  if (hit) return [...hit];
+
   const defaults = DEFAULT_PLANT_PROFILES[type];
   const user = profiles[type] ?? {};
   const defaultNames = Object.keys(defaults).filter((n) => !user[n]?.isDeleted);
   const userAdded = Object.keys(user).filter((n) => !defaults[n] && !user[n]?.isDeleted);
-  return [...defaultNames, ...userAdded];
+  const names = sortPlantNames([...defaultNames, ...userAdded]);
+
+  if (!cached) {
+    cached = {};
+    namesByProfiles.set(profiles, cached);
+  }
+  cached[type] = names;
+  return [...names];
 }
 
 export function getProfileEntry(
@@ -129,12 +173,22 @@ export function getMergedProfiles(profiles: PlantProfiles): PlantProfiles {
   return merged;
 }
 
-/** Bundled entries the user deleted, per category — drives the restore UI. */
+/**
+ * Bundled entries the user deleted, per category — drives the restore UI.
+ *
+ * Cross-checked against the current defaults: a tombstone can outlive the plant
+ * it hides when a name is dropped from the catalog, and offering to restore one
+ * is a lie — `restorePlantProfile` removes the tombstone and nothing comes
+ * back, because there is no default left to un-hide.
+ */
 export function getHiddenPlantNames(profiles: PlantProfiles): Record<PlantType, string[]> {
   return PLANT_CATEGORIES.reduce(
     (acc, type) => {
       acc[type] = Object.keys(profiles[type] ?? {}).filter(
-        (name) => profiles[type]?.[name]?.isDeleted === true
+        (name) =>
+          profiles[type]?.[name]?.isDeleted === true &&
+          profiles[type]?.[name]?.isDismissed !== true &&
+          DEFAULT_PLANT_PROFILES[type]?.[name] !== undefined
       );
       return acc;
     },
@@ -165,6 +219,36 @@ export function toPlantCatalogShape(profiles: PlantProfiles): PlantCatalog {
   return { categories };
 }
 
+/**
+ * Copies an object without the keys whose value is `undefined`.
+ *
+ * Generic over the key so the value type is carried through: iterating with
+ * `Object.entries` would collapse every field to the union of all of them and
+ * lose the per-key relation.
+ */
+function dropUndefined<T extends object>(source: T): T {
+  const result = {} as T;
+  for (const key of Object.keys(source) as (keyof T)[]) {
+    const value = source[key];
+    if (value !== undefined) result[key] = value;
+  }
+  return result;
+}
+
+/**
+ * Narrows stored profiles to just their care-override fields.
+ *
+ * The eight profile-only keys are named and dropped; everything left is, by
+ * construction, `Partial<PlantCareProfile>` — which is what
+ * `PlantCareProfileOverride` is. This used to be 48 hand-written
+ * `if (p.x !== undefined) override.x = p.x` lines, so a newly added care field
+ * was silently dropped here until someone remembered to add a 49th. Now the
+ * failure mode is inverted: a new care field is carried automatically, and
+ * only a new *non*-care field would need a line adding.
+ *
+ * Undefined values are stripped so an override stays a delta — an explicit
+ * `undefined` would otherwise count as a key and shadow the bundled default.
+ */
 export function toPlantCareProfilesShape(profiles: PlantProfiles): PlantCareProfiles {
   const result = PLANT_CATEGORIES.reduce((acc, type) => {
     acc[type] = {};
@@ -174,63 +258,20 @@ export function toPlantCareProfilesShape(profiles: PlantProfiles): PlantCareProf
   for (const type of PLANT_CATEGORIES) {
     for (const [name, p] of Object.entries(profiles[type] ?? {})) {
       if (p.isDeleted) continue;
-      const override: PlantCareProfileOverride = {};
-      if (p.waterRequirement !== undefined) override.waterRequirement = p.waterRequirement;
-      if (p.wateringFrequencyDays !== undefined)
-        override.wateringFrequencyDays = p.wateringFrequencyDays;
-      if (p.wateringEnabled !== undefined) override.wateringEnabled = p.wateringEnabled;
-      if (p.fertilisingFrequencyDays !== undefined)
-        override.fertilisingFrequencyDays = p.fertilisingFrequencyDays;
-      if (p.fertilisingEnabled !== undefined) override.fertilisingEnabled = p.fertilisingEnabled;
-      if (p.pruningFrequencyDays !== undefined)
-        override.pruningFrequencyDays = p.pruningFrequencyDays;
-      if (p.pruningEnabled !== undefined) override.pruningEnabled = p.pruningEnabled;
-      if (p.sunlight !== undefined) override.sunlight = p.sunlight;
-      if (p.soilType !== undefined) override.soilType = p.soilType;
-      if (p.preferredFertiliser !== undefined) override.preferredFertiliser = p.preferredFertiliser;
-      if (p.initialGrowthStage !== undefined) override.initialGrowthStage = p.initialGrowthStage;
-      if (p.pruningTips !== undefined) override.pruningTips = p.pruningTips;
-      if (p.shapePruningTip !== undefined) override.shapePruningTip = p.shapePruningTip;
-      if (p.shapePruningMonths !== undefined) override.shapePruningMonths = p.shapePruningMonths;
-      if (p.flowerPruningTip !== undefined) override.flowerPruningTip = p.flowerPruningTip;
-      if (p.flowerPruningMonths !== undefined) override.flowerPruningMonths = p.flowerPruningMonths;
-      if (p.scientificName !== undefined) override.scientificName = p.scientificName;
-      if (p.taxonomicFamily !== undefined) override.taxonomicFamily = p.taxonomicFamily;
-      if (p.lifecycle !== undefined) override.lifecycle = p.lifecycle;
-      if (p.tamilName !== undefined) override.tamilName = p.tamilName;
-      if (p.description !== undefined) override.description = p.description;
-      if (p.daysToHarvest !== undefined) override.daysToHarvest = p.daysToHarvest;
-      if (p.yearsToFirstHarvest !== undefined) override.yearsToFirstHarvest = p.yearsToFirstHarvest;
-      if (p.heightCm !== undefined) override.heightCm = p.heightCm;
-      if (p.spacingCm !== undefined) override.spacingCm = p.spacingCm;
-      if (p.plantingDepthCm !== undefined) override.plantingDepthCm = p.plantingDepthCm;
-      if (p.growingSeason !== undefined) override.growingSeason = p.growingSeason;
-      if (p.germinationDays !== undefined) override.germinationDays = p.germinationDays;
-      if (p.germinationTempC !== undefined) override.germinationTempC = p.germinationTempC;
-      if (p.soilPhRange !== undefined) override.soilPhRange = p.soilPhRange;
-      if (p.heatTolerance !== undefined) override.heatTolerance = p.heatTolerance;
-      if (p.droughtTolerance !== undefined) override.droughtTolerance = p.droughtTolerance;
-      if (p.waterloggingTolerance !== undefined)
-        override.waterloggingTolerance = p.waterloggingTolerance;
-      if (p.vitamins !== undefined) override.vitamins = p.vitamins;
-      if (p.minerals !== undefined) override.minerals = p.minerals;
-      if (p.petToxicity !== undefined) override.petToxicity = p.petToxicity;
-      if (p.feedingIntensity !== undefined) override.feedingIntensity = p.feedingIntensity;
-      if (p.customPests !== undefined) override.customPests = p.customPests;
-      if (p.customDiseases !== undefined) override.customDiseases = p.customDiseases;
-      if (p.customBeneficials !== undefined) override.customBeneficials = p.customBeneficials;
-      if (p.growthStageDurations !== undefined)
-        override.growthStageDurations = p.growthStageDurations;
-      if (p.annualCycleDurations !== undefined)
-        override.annualCycleDurations = p.annualCycleDurations;
-      if (p.floweringStartMonth !== undefined) override.floweringStartMonth = p.floweringStartMonth;
-      if (p.seedSource !== undefined) override.seedSource = p.seedSource;
-      if (p.isPermanent !== undefined) override.isPermanent = p.isPermanent;
-      if (p.isDynamicAccumulator !== undefined)
-        override.isDynamicAccumulator = p.isDynamicAccumulator;
-      if (p.chopDropIntervalDays !== undefined)
-        override.chopDropIntervalDays = p.chopDropIntervalDays;
-      if (p.guild !== undefined) override.guild = p.guild;
+
+      const {
+        plantType: _plantType,
+        name: _name,
+        varieties: _varieties,
+        varietyDetails: _varietyDetails,
+        isUserAdded: _isUserAdded,
+        isDeleted: _isDeleted,
+        cropFamily: _cropFamily,
+        layer: _layer,
+        ...care
+      } = p;
+
+      const override = dropUndefined<PlantCareProfileOverride>(care);
       if (Object.keys(override).length > 0) result[type][name] = override;
     }
   }
@@ -324,6 +365,11 @@ function normalizeEntry(raw: unknown): PlantProfile | null {
   if (varieties) entry.varieties = varieties;
   if (r.isUserAdded === true) entry.isUserAdded = true;
   if (r.isDeleted === true) entry.isDeleted = true;
+  if (entry.isDeleted) {
+    if (r.isDismissed === true) entry.isDismissed = true;
+    const deletedAt = normalizeNum(r.deletedAt);
+    if (deletedAt) entry.deletedAt = deletedAt;
+  }
   if (r.varietyDetails && typeof r.varietyDetails === 'object')
     entry.varietyDetails = r.varietyDetails as Record<string, VarietyDetail>;
   if (WATER_REQS.includes(r.waterRequirement as WaterRequirement))
@@ -524,8 +570,20 @@ export async function getPlantProfiles(): Promise<PlantProfiles> {
 async function syncFromFirestore(): Promise<void> {
   const user = auth.currentUser;
   if (!user) return;
+
+  // The server is knowingly behind while writes are still queued, so adopting
+  // it here would undo them. Checked before the read, so it also saves a
+  // Firestore hit. The queue is shared with farmCapacity and locations, which
+  // makes this slightly over-eager — it only ever delays a background refresh,
+  // and a flush calls invalidateAll(), so the next read picks the change up.
+  if (hasPendingWriteFor(await getQueue(), SETTINGS_COLLECTION, user.uid)) {
+    logger.info('plantProfiles: local writes still pending, skipping remote adopt');
+    return;
+  }
+
   await refreshAuthToken();
   try {
+    const generation = localWriteGeneration;
     const docRef = doc(db, SETTINGS_COLLECTION, user.uid);
     const snapshot = await withTimeoutAndRetry(() => getDoc(docRef), {
       timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
@@ -534,6 +592,9 @@ async function syncFromFirestore(): Promise<void> {
     const data = snapshot.data() as Record<string, unknown>;
     const remote = data[PLANT_PROFILES_FIELD];
     if (!remote) return;
+    // A save landed while this read was in flight; it is newer than what came
+    // back, so leave it alone.
+    if (generation !== localWriteGeneration) return;
     const normalized = normalizeProfiles(remote);
     await setData(KEYS.PLANT_PROFILES, [normalized]);
     setCached(CACHE_KEY, normalized);
@@ -546,6 +607,7 @@ export async function savePlantProfiles(profiles: PlantProfiles): Promise<PlantP
   const normalized = normalizeProfiles(profiles);
   await setData(KEYS.PLANT_PROFILES, [normalized]);
   setCached(CACHE_KEY, normalized);
+  localWriteGeneration += 1;
 
   const user = auth.currentUser;
   if (!user) return normalized;
@@ -570,6 +632,13 @@ export async function savePlantProfiles(profiles: PlantProfiles): Promise<PlantP
     );
   } catch (err) {
     logError('network', 'plantProfiles: Firestore save failed', err as Error);
+    // The local copy is saved, but the server never got it — so the caller must
+    // not report success. Left silent, the next sync adopts the server's older
+    // copy and undoes whatever this write did. `writeOrQueue` resolves when it
+    // queues, so an offline write still succeeds here; only the errors it
+    // refuses to queue (permission-denied, invalid-argument, expired token)
+    // reach this line.
+    throw err;
   }
 
   return normalized;
@@ -595,27 +664,46 @@ export async function savePlantProfile(
   return savePlantProfiles(updated);
 }
 
+/** True when the app ships this name, so deleting hides rather than removes it. */
+export function isBundledPlant(type: PlantType, name: string): boolean {
+  return DEFAULT_PLANT_PROFILES[type]?.[name] !== undefined;
+}
+
 /**
- * Removes a catalog entry. A user-added entry is deleted outright; a bundled
- * one is tombstoned, because the name would otherwise be re-injected from
- * DEFAULT_PLANT_PROFILES the next time the catalog is read.
+ * Removes a catalog entry — always by tombstone, never by dropping the key.
+ * See `@/utils/plantProfileMutations` for why: the profiles map reaches
+ * Firestore through a merged write, which cannot express a removed key.
  */
 export async function deletePlantProfile(type: PlantType, name: string): Promise<PlantProfiles> {
   const current = await getPlantProfiles();
-  const updated = { ...current, [type]: { ...current[type] } };
-  if (DEFAULT_PLANT_PROFILES[type]?.[name]) {
-    updated[type][name] = { plantType: type, name, isDeleted: true };
-  } else {
-    delete updated[type][name];
-  }
-  return savePlantProfiles(updated);
+  return savePlantProfiles(applyProfileDeletion(current, type, name, Date.now()));
+}
+
+/** Renames an entry: the new name is written, the old one tombstoned. */
+export async function renamePlantProfile(
+  type: PlantType,
+  from: string,
+  to: string,
+  data: Omit<PlantProfile, 'plantType' | 'name'>
+): Promise<PlantProfiles> {
+  const current = await getPlantProfiles();
+  return savePlantProfiles(applyProfileRename(current, type, from, to, data, Date.now()));
 }
 
 /** Undoes a {@link deletePlantProfile} tombstone, restoring the bundled entry. */
 export async function restorePlantProfile(type: PlantType, name: string): Promise<PlantProfiles> {
   const current = await getPlantProfiles();
   if (!current[type]?.[name]?.isDeleted) return current;
-  const updated = { ...current, [type]: { ...current[type] } };
-  delete updated[type][name];
-  return savePlantProfiles(updated);
+  return savePlantProfiles(applyProfileRestore(current, DEFAULT_PLANT_PROFILES, type, name));
+}
+
+/**
+ * Drops a hidden entry from the restore list for good. The bundled record
+ * itself ships with the app and cannot be erased — what this makes permanent
+ * is the hiding.
+ */
+export async function dismissPlantProfile(type: PlantType, name: string): Promise<PlantProfiles> {
+  const current = await getPlantProfiles();
+  if (!current[type]?.[name]?.isDeleted) return current;
+  return savePlantProfiles(applyProfileDismissal(current, type, name));
 }

@@ -557,7 +557,15 @@ export const importFullBackup = async (
     // 2. Whole-document settings (these persist to Firestore too).
     if (manifest.data.farmConfig) await saveFarmConfig(manifest.data.farmConfig);
     if (manifest.data.locations) await saveLocationConfig(manifest.data.locations);
-    if (manifest.data.plantProfiles) await savePlantProfiles(manifest.data.plantProfiles);
+    if (manifest.data.plantProfiles) {
+      try {
+        await savePlantProfiles(manifest.data.plantProfiles);
+      } catch (error) {
+        // The profiles are already on the device; a remote write failure must
+        // not abort a restore whose other data has landed.
+        logger.warn('Restore: plant profiles saved locally but not synced', error as Error);
+      }
+    }
 
     // 3. Re-link imported photos against the freshly extracted image files.
     const getImportedImageUri = buildImageUriLookup(imageUris);

@@ -31,6 +31,18 @@ export type BedType =
   | 'three_sisters'
   | 'medicinal_guild';
 
+/**
+ * Rotation family. Derived from a plant's botanical family via
+ * `BOTANICAL_TO_CROP_FAMILY` in `src/config/plants/catalogTaxonomy.ts` — never
+ * assigned by hand.
+ *
+ * Only families that carry crops actually grown in a rotated bed earn a value.
+ * Trees, palms, timber and orchard fruit map to `other`: an orchard is not
+ * rotated, so a finer value there would buy nothing. The six after `lamiaceae`
+ * were added because each holds bed crops that were previously colliding in
+ * `other` — most importantly the Amaranthaceae keerai, where Amaranthus →
+ * Beetroot → Palak is a same-family run that went undetected.
+ */
 export type CropFamily =
   | 'solanaceae'
   | 'cucurbit'
@@ -39,6 +51,12 @@ export type CropFamily =
   | 'allium'
   | 'apiaceae'
   | 'lamiaceae'
+  | 'amaranthaceae'
+  | 'malvaceae'
+  | 'convolvulaceae'
+  | 'araceae'
+  | 'zingiberaceae'
+  | 'poaceae'
   | 'flower'
   | 'other';
 
@@ -67,6 +85,15 @@ export type TaskType =
   | 'weeding'
   | 'transplanting'
   | 'cultivating';
+/**
+ * The plant's **care model** — which growth-stage model, pest/disease set, care
+ * defaults and task cadence apply. It is persisted on every garden plant as
+ * `plant_type`, so its values are a data contract, not a display choice.
+ *
+ * It is deliberately *not* how the catalog is browsed: `shrub` is a growth habit
+ * and `coconut_tree` is a single species, so neither reads as a shelf a farmer
+ * would look under. Browsing goes through `CatalogGroup` below.
+ */
 export type PlantType =
   | 'vegetable'
   | 'herb'
@@ -76,6 +103,79 @@ export type PlantType =
   | 'coconut_tree'
   | 'shrub'
   | 'spinach';
+
+/**
+ * How the catalog is browsed: what you harvest the plant for. Purpose is the one
+ * axis a farmer and a cook agree on, so it owns the top-level pills.
+ *
+ * Mutually exclusive by construction — a plant belongs to exactly one group. The
+ * plants that genuinely serve two purposes (Drumstick is a tree harvested as a
+ * vegetable; Agathi is green manure, keerai and fence) carry `PlantTag`s for the
+ * other halves rather than being duplicated.
+ */
+export type CatalogGroup =
+  | 'vegetables'
+  | 'greens'
+  | 'fruits'
+  | 'spices'
+  | 'herbs_medicinal'
+  | 'flowers'
+  | 'farm_support'
+  | 'plantation_timber';
+
+/**
+ * Growth habit — a property of the plant, shown as a row badge and offered as a
+ * filter. Never a browse group: filing by habit is what put Hibiscus next to
+ * Agathi and Pineapple under "fruit trees".
+ */
+export type PlantHabit =
+  | 'annual_bed'
+  | 'perennial'
+  | 'shrub'
+  | 'tree'
+  | 'vine'
+  | 'palm'
+  | 'clump'
+  | 'aquatic';
+
+/**
+ * Cross-cutting facts, many per plant. These carry what a single hierarchy
+ * cannot: `keerai` on Drumstick (a vegetable whose leaves are greens),
+ * `coconut_intercrop` on the six plants in four different groups that together
+ * make up a Kanyakumari thoppu planting.
+ */
+export type PlantTag =
+  | 'keerai'
+  | 'gourd'
+  | 'pulse'
+  | 'oilseed'
+  | 'cereal'
+  | 'spice'
+  | 'medicinal'
+  | 'puja'
+  | 'companion'
+  | 'pest_repellent'
+  | 'green_manure'
+  | 'living_fence'
+  | 'coconut_intercrop'
+  | 'masticatory'
+  | 'container_ok'
+  | 'needs_trellis'
+  | 'tuber'
+  | 'plantation'
+  | 'timber'
+  | 'fruit';
+
+/** One plant's place in the browse taxonomy. See `catalogTaxonomy.ts`. */
+export interface CatalogTaxonomyEntry {
+  group: CatalogGroup;
+  /** Sub-group id within the group; omitted where the group renders as one run. */
+  subGroup?: string;
+  habit: PlantHabit;
+  /** Rotation family, derived from the care profile's `taxonomicFamily`. */
+  cropFamily: CropFamily;
+  tags: readonly PlantTag[];
+}
 export enum JournalEntryType {
   Observation = 'observation',
   Harvest = 'harvest',
@@ -711,72 +811,43 @@ export type PlantCareProfiles = Record<PlantType, Record<string, PlantCareProfil
 
 // ─── Unified Plant Profile (replaces PlantCatalog + PlantCareProfiles) ─────────
 
-/** Single source of truth for a plant entry: catalog metadata + care override fields. */
-export interface PlantProfile {
+/**
+ * Single source of truth for a plant entry: catalog metadata + care overrides.
+ *
+ * Extends `Partial<PlantCareProfile>` rather than restating its 48 fields.
+ * They were listed out by hand, and every one of them had to be repeated a
+ * third time in `toPlantCareProfilesShape` for a user's edit to reach the care
+ * path at all — so a field added here but forgotten there was stored, shown in
+ * the edit form, and then silently dropped. All 48 are optional on a profile
+ * because it holds a user's deltas, not a whole record, which is exactly what
+ * `Partial` says.
+ */
+export interface PlantProfile extends Partial<PlantCareProfile> {
   plantType: PlantType;
   name: string;
-  // Catalog metadata
-  tamilName?: string;
-  description?: string;
   varieties?: string[];
   varietyDetails?: Record<string, VarietyDetail>;
   isUserAdded?: boolean;
   /**
-   * Tombstone for a bundled catalog entry the user deleted. The entry stays in
-   * the stored map because DEFAULT_PLANT_PROFILES would otherwise re-inject
-   * the name on the next read; readers filter it out. User-added entries are
-   * removed outright and never carry this.
+   * Tombstone for a catalog entry the user deleted. The entry stays in the
+   * stored map rather than being removed, for two reasons: a bundled name would
+   * otherwise be re-injected from DEFAULT_PLANT_PROFILES on the next read, and
+   * the profiles map reaches Firestore through a merged `setDoc`, which cannot
+   * express a removed key at all — so a deleted entry that left no tombstone
+   * came straight back on the next sync. Readers filter it out.
    */
   isDeleted?: boolean;
-  // Care override fields (all optional — fall back to static defaults)
-  waterRequirement?: WaterRequirement;
-  wateringFrequencyDays?: number;
-  wateringEnabled?: boolean;
-  fertilisingFrequencyDays?: number;
-  fertilisingEnabled?: boolean;
-  pruningFrequencyDays?: number;
-  pruningEnabled?: boolean;
-  sunlight?: SunlightLevel;
-  soilType?: SoilType;
-  preferredFertiliser?: FertiliserType;
-  initialGrowthStage?: GrowthStage;
-  pruningTips?: string[];
-  shapePruningTip?: string;
-  shapePruningMonths?: string;
-  flowerPruningTip?: string;
-  flowerPruningMonths?: string;
-  scientificName?: string;
-  taxonomicFamily?: string;
-  lifecycle?: PlantLifecycle;
-  daysToHarvest?: NumericRange;
-  yearsToFirstHarvest?: number;
-  heightCm?: NumericRange;
-  spacingCm?: number;
-  plantingDepthCm?: number;
-  growingSeason?: string;
-  germinationDays?: NumericRange;
-  germinationTempC?: NumericRange;
-  soilPhRange?: NumericRange;
-  heatTolerance?: ToleranceLevel;
-  droughtTolerance?: ToleranceLevel;
-  waterloggingTolerance?: ToleranceLevel;
-  petToxicity?: boolean;
-  feedingIntensity?: FeedingIntensity;
-  customPests?: string[];
-  customDiseases?: string[];
-  customBeneficials?: string[];
-  growthStageDurations?: GrowthStageDurations;
-  annualCycleDurations?: AnnualCycleDurations;
-  floweringStartMonth?: number;
-  seedSource?: string;
-  isPermanent?: boolean;
-  isDynamicAccumulator?: boolean;
-  chopDropIntervalDays?: number;
-  guild?: string;
+  /**
+   * Set on a tombstone the user chose to remove for good, which stops it being
+   * listed in the "hidden plants" restore section. A bundled entry can never be
+   * erased outright — it ships with the app — so "permanent" means the
+   * tombstone itself becomes permanent and unlisted.
+   */
+  isDismissed?: boolean;
+  /** Epoch ms the tombstone was written; lets a later migration prune stale ones. */
+  deletedAt?: number;
   cropFamily?: CropFamily;
   layer?: BedLayer;
-  vitamins?: string[];
-  minerals?: string[];
 }
 
 /** Top-level unified store: PlantType → plant name → PlantProfile. */

@@ -1,28 +1,45 @@
-import { StyleSheet } from 'react-native';
+import { Dimensions, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 import { MONO_FONT } from './typography';
+import {
+  catalogRowHeight,
+  catalogSectionHeaderHeight,
+  clampFontScale,
+} from './catalogMetrics';
 
-/** Inner browse-row height: a 36px thumb plus 10px of padding top and bottom. */
-export const CATALOG_ROW_HEIGHT = 56;
+// Re-exported so existing importers keep working; the numbers themselves live
+// in catalogMetrics, which the pure list-building util also reads.
+export {
+  catalogRowHeight,
+  catalogRowTotalHeight,
+  catalogSectionHeaderHeight,
+} from './catalogMetrics';
 
 /**
- * What `getItemLayout` must report: the inner row plus the 1px top and bottom
- * border `listCard` draws around it. `rowDivider` is positioned absolutely so it
- * contributes nothing. Keep this in step with `listCard.borderWidth` — if the two
- * drift apart the browse list mis-measures and scrolling leaves gaps.
+ * Cached per theme, then per font scale. Both catalog row components call
+ * `createStyles` once per row instance, so without this every row rebuilt this
+ * entire sheet — header, FAB and all. `useTheme()` returns one of two
+ * module-level constants, so the outer key identity is stable and the cache hits
+ * for the life of the process.
+ *
+ * The inner map is keyed by the *clamped* scale, so the handful of distinct
+ * values the clamp can produce is all that is ever cached — and a device that
+ * never changes its font size only ever holds one entry.
  */
-export const CATALOG_ROW_TOTAL_HEIGHT = CATALOG_ROW_HEIGHT + 2;
+const styleCache = new WeakMap<Theme, Map<number, ReturnType<typeof StyleSheet.create>>>();
 
-/**
- * Cached per theme. Both catalog row components call `createStyles` once per row
- * instance, so without this every row rebuilt this entire sheet — header, FAB and
- * all. `useTheme()` returns one of two module-level constants, so the key identity
- * is stable and the cache hits for the life of the process.
- */
-const styleCache = new WeakMap<Theme, ReturnType<typeof StyleSheet.create>>();
+export const createStyles = (
+  theme: Theme,
+  fontScale = 1
+): ReturnType<typeof StyleSheet.create> => {
+  const scale = clampFontScale(fontScale);
 
-export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> => {
-  const cached = styleCache.get(theme);
+  let byScale = styleCache.get(theme);
+  if (!byScale) {
+    byScale = new Map();
+    styleCache.set(theme, byScale);
+  }
+  const cached = byScale.get(scale);
   if (cached) return cached;
 
   const styles = StyleSheet.create({
@@ -42,111 +59,115 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomColor: theme.border,
     },
     backButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    headerSpacer: {
-      width: 36,
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    /** Filled primary circle, matching the Plants screen's header controls. */
+    headerIconBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerIconBtnActive: {
+      backgroundColor: theme.accent,
+    },
+    /**
+     * Dot on a header icon saying its state is no longer the default — a query
+     * still held while search is collapsed, or a non-default grouping. Accent,
+     * because the button beneath it is now filled with the primary colour.
+     */
+    headerActiveDot: {
+      position: 'absolute',
+      bottom: 6,
+      right: 6,
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: theme.accent,
+    },
+    /**
+     * How many facets the filter sheet has off default. The funnel now carries
+     * two — category and grouping — so a plain dot could no longer say whether
+     * one or both were in force.
+     */
+    filterBadge: {
+      position: 'absolute',
+      top: 1,
+      right: 1,
+      minWidth: 14,
+      height: 14,
+      borderRadius: 7,
+      backgroundColor: theme.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 2,
+    },
+    filterBadgeText: {
+      fontSize: 9,
+      color: theme.textInverse,
+      fontWeight: '700',
+      lineHeight: 14,
+    },
+    /** The chevron that collapses search, mirroring `plantsStyles`. */
+    searchBackBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: theme.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    /** Expanded search row — takes the place of the title in the header bar. */
+    searchExpandedRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flex: 1,
     },
     title: {
       fontSize: 20,
       fontWeight: '700',
       color: theme.text,
     },
-    loadingState: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 12,
-    },
-    loadingText: {
-      fontSize: 14,
-      color: theme.textSecondary,
-    },
 
     // ---- Search bar -------------------------------------------------------
+    /**
+     * The field lives inside the header bar, so it carries no outer margins —
+     * the header owns its padding. `flex: 1` is what makes it fill the row
+     * beside the back chevron; without it the pill shrank to its placeholder
+     * and ran past the header's right edge on a narrow screen. Geometry copied
+     * from `plantsStyles.searchExpandedWrapper` so the two screens match.
+     */
     searchBar: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
-      marginHorizontal: 16,
-      marginTop: 12,
-      marginBottom: 4,
+      gap: 8,
       paddingHorizontal: 14,
-      minHeight: 46,
-      borderRadius: 16,
-      backgroundColor: theme.backgroundSecondary,
+      paddingVertical: 8,
+      minHeight: 40,
+      borderRadius: 24,
+      backgroundColor: theme.background,
       borderWidth: 1,
-      borderColor: theme.border,
-    },
-    searchBarActive: {
       borderColor: theme.primary,
     },
     searchInput: {
       flex: 1,
-      fontSize: 15,
+      fontSize: 16,
       color: theme.inputText,
-      paddingVertical: 0,
-    },
-
-    // ---- Category pills ---------------------------------------------------
-    categoryScroll: {
-      marginBottom: 8,
-    },
-    categoryScrollContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 6,
-      gap: 8,
-    },
-    categoryPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      paddingHorizontal: 14,
-      paddingVertical: 7,
-      borderRadius: 20,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    categoryPillActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    categoryPillText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-    categoryPillTextActive: {
-      color: theme.primary,
-      fontWeight: '700',
-    },
-    categoryPillBadge: {
-      minWidth: 18,
-      height: 18,
-      borderRadius: 9,
-      backgroundColor: theme.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 4,
-    },
-    categoryPillBadgeActive: {
-      backgroundColor: theme.primary,
-    },
-    categoryPillBadgeText: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: theme.textTertiary,
-    },
-    categoryPillBadgeTextActive: {
-      color: theme.textInverse,
+      padding: 0,
     },
 
     // ---- List -------------------------------------------------------------
@@ -169,7 +190,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     listCardLast: {
       borderBottomLeftRadius: 12,
       borderBottomRightRadius: 12,
-      marginBottom: 16,
+      // No marginBottom: every letter group ends on this style, and a margin
+      // here would be height getItemLayout cannot see. The gap between groups
+      // lives in catalogSectionHeader's own height instead, and the list's
+      // trailing space comes from contentContainerStyle's paddingBottom.
     },
     plantRowCompact: {
       flexDirection: 'row',
@@ -177,7 +201,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 16,
       paddingVertical: 10,
       // Fixed, not minHeight: getItemLayout promises exactly this height.
-      height: CATALOG_ROW_HEIGHT,
+      height: catalogRowHeight(scale),
     },
     plantThumbWrap: {
       marginRight: 10,
@@ -186,10 +210,102 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       minWidth: 0,
     },
+    /** Name and Tamil name share a line, aligned on their baselines. */
+    plantNameRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 7,
+    },
     plantName: {
-      fontSize: 15,
+      fontSize: 16,
+      lineHeight: 20,
       fontWeight: '600',
       color: theme.text,
+      // Shrinks rather than pushing the Tamil name off the row.
+      flexShrink: 1,
+    },
+    plantTamil: {
+      fontSize: 12.5,
+      color: theme.inputPlaceholder,
+      flexShrink: 1,
+    },
+    plantSubtitle: {
+      fontSize: 12.5,
+      // Explicit, so the two text lines sum to the height catalogRowHeight()
+      // budgets for them rather than to whatever the platform picks.
+      lineHeight: 16,
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
+    /** Pressed feedback — TouchableOpacity's fade alone reads as nothing. */
+    plantRowPressed: {
+      backgroundColor: theme.backgroundTertiary,
+    },
+
+    // ---- Loading skeleton -------------------------------------------------
+    skeletonHeader: {
+      height: 14,
+      width: 120,
+      borderRadius: 7,
+      backgroundColor: theme.border,
+      marginTop: 14,
+      marginBottom: 12,
+    },
+    skeletonThumb: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      backgroundColor: theme.border,
+      marginRight: 10,
+    },
+    skeletonLineWide: {
+      height: 13,
+      width: '62%',
+      borderRadius: 6,
+      backgroundColor: theme.border,
+    },
+    skeletonLineNarrow: {
+      height: 11,
+      width: '38%',
+      borderRadius: 6,
+      backgroundColor: theme.borderLight,
+      marginTop: 7,
+    },
+
+    // ---- Group headers (browse mode only) ---------------------------------
+    catalogSectionHeader: {
+      // Fixed height, and it carries the gap above the group it introduces —
+      // see catalogSectionHeaderHeight().
+      height: catalogSectionHeaderHeight(scale),
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      paddingHorizontal: 4,
+      paddingBottom: 8,
+    },
+    catalogSectionLetter: {
+      fontSize: 13,
+      fontWeight: '700',
+      // Tight enough that "Pulses, Oilseeds & Cereals" fits at 400px; shrinks
+      // rather than pushing the count off the row.
+      letterSpacing: 0.3,
+      color: theme.primary,
+      flexShrink: 1,
+      paddingRight: 8,
+    },
+    catalogSectionCount: {
+      fontFamily: MONO_FONT,
+      fontSize: 11,
+      color: theme.textTertiary,
+    },
+    /**
+     * Growth habit, rendered inline inside the subtitle line rather than as its
+     * own row — catalogRowHeight() is a contract with getItemLayout, so the badge
+     * must not add height.
+     */
+    plantHabit: {
+      fontWeight: '700',
+      color: theme.primary,
     },
     plantCountChip: {
       paddingHorizontal: 8,
@@ -206,7 +322,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     rowDivider: {
       // Absolute so the hairline paints on the card's bottom edge without adding
-      // to the row's height — CATALOG_ROW_TOTAL_HEIGHT has to stay exact.
+      // to the row's height — catalogRowTotalHeight() has to stay exact.
       position: 'absolute',
       left: 50,
       right: 0,
@@ -214,12 +330,41 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       height: StyleSheet.hairlineWidth,
       backgroundColor: theme.borderLight,
     },
+    /**
+     * Empty state, matching the pest/disease lists: an icon, a line saying which
+     * nothing this is, and — where one exists — the way out. The catalog used to
+     * render a single italic line that could not tell a failed load from an
+     * empty group, so a load failure read as "you have no plants".
+     */
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 48,
+    },
+    emptyTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.text,
+      marginTop: 12,
+      textAlign: 'center',
+    },
     emptyText: {
       fontSize: 13,
       color: theme.textTertiary,
-      fontStyle: 'italic',
+      marginTop: 6,
       textAlign: 'center',
-      paddingVertical: 32,
+    },
+    emptyAction: {
+      marginTop: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 9,
+      borderRadius: 11,
+      backgroundColor: theme.primary,
+    },
+    emptyActionText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.textInverse,
     },
 
     // ---- Search results ---------------------------------------------------
@@ -310,6 +455,98 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textDecorationLine: 'underline',
     },
 
+    // ---- Filter sheet (category + grouping) -------------------------------
+    sheetOverlay: {
+      backgroundColor: theme.overlay,
+      justifyContent: 'flex-end',
+      zIndex: 20,
+    },
+    sheetContainer: {
+      backgroundColor: theme.background,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: 16,
+    },
+    sheetHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    sheetTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.text,
+    },
+    sheetSectionTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+      color: theme.textSecondary,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    /** "Reset" pill — shown only while a facet is off its default. */
+    sheetClearBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 14,
+      backgroundColor: theme.errorLight,
+    },
+    sheetClearText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.error,
+    },
+    /**
+     * The sheet holds two facets now — nine category chips and three grouping
+     * ones — which overflows a short screen, so the body scrolls. Capped rather
+     * than sized to content so the list stays partly visible behind it.
+     */
+    sheetScroll: {
+      maxHeight: Dimensions.get('window').height * 0.55,
+    },
+    sheetChipWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    sheetChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: theme.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    sheetChipActive: {
+      backgroundColor: theme.primaryLight,
+      borderColor: theme.primary,
+    },
+    sheetChipText: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      fontWeight: '500',
+    },
+    sheetChipTextActive: {
+      color: theme.primary,
+      fontWeight: '600',
+    },
+    /**
+     * The " (n)" on a category chip. A zero is information — "this category is
+     * empty" — so it is shown rather than hidden, but muted so it doesn't read
+     * as an invitation. Same treatment as `plantsStyles`.
+     */
+    sheetChipCountZero: {
+      color: theme.textTertiary,
+    },
+
     // ---- FAB --------------------------------------------------------------
     fab: {
       position: 'absolute',
@@ -328,6 +565,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
   });
 
-  styleCache.set(theme, styles);
+  byScale.set(scale, styles);
   return styles;
 };

@@ -25,7 +25,7 @@ describe('getKanyakumariPlantingWindows', () => {
 
   it('opens the crops September has that August does not', () => {
     const { openingNext } = getKanyakumariPlantingWindows(on(7));
-    expect(varieties(openingNext)).toEqual(['Fenugreek', 'Palak', 'Turnip']);
+    expect(varieties(openingNext)).toEqual(['Fenugreek', 'Palak']);
   });
 
   it('keeps a crop out of both lists when its window spans the boundary', () => {

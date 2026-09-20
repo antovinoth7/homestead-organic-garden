@@ -14,10 +14,11 @@ import { BottomSheetModal } from '@/components/BottomSheetModal';
 import { SheetHandle } from '@/components/SheetHandle';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getPlantImage } from '@/config/referenceAssets';
-import { CATEGORY_FULL_LABELS } from '@/utils/plantLabels';
+import { CATALOG_GROUP_LABELS } from '@/utils/plantLabels';
+import { CATALOG_GROUP_ORDER, getTaxonomy } from '@/config/plants/catalogTaxonomy';
 import { createStyles } from '@/styles/plantPickerSheetStyles';
 import type { PlantPickerItem } from '@/utils/plantPickerItems';
-import type { PlantType } from '@/types/database.types';
+import type { CatalogGroup, PlantType } from '@/types/database.types';
 
 interface Props {
   visible: boolean;
@@ -59,20 +60,25 @@ function buildRows(
     });
   }
 
-  let lastType: PlantType | null = null;
-  for (const item of items) {
-    if (q && !item.name.toLowerCase().includes(q)) {
-      continue;
+  // Grouped by browse group, in the same order and under the same names as the
+  // catalog's pills — the header used to come from `plantType`, so a plant sat
+  // under "Fruit Tree" here and "Fruits" in the catalog.
+  const visible = items.filter((item) => !q || item.name.toLowerCase().includes(q));
+  const byGroup = new Map<CatalogGroup, PlantPickerItem[]>();
+  for (const item of visible) {
+    const group = getTaxonomy(item.name, item.plantType).group;
+    const bucket = byGroup.get(group);
+    if (bucket) bucket.push(item);
+    else byGroup.set(group, [item]);
+  }
+
+  for (const group of CATALOG_GROUP_ORDER) {
+    const members = byGroup.get(group);
+    if (!members || members.length === 0) continue;
+    rows.push({ kind: 'label', key: `label:${group}`, label: CATALOG_GROUP_LABELS[group] });
+    for (const item of members) {
+      rows.push({ kind: 'plant', key: `${item.plantType}:${item.name}`, item });
     }
-    if (item.plantType !== lastType) {
-      lastType = item.plantType;
-      rows.push({
-        kind: 'label',
-        key: `label:${item.plantType}`,
-        label: CATEGORY_FULL_LABELS[item.plantType],
-      });
-    }
-    rows.push({ kind: 'plant', key: `${item.plantType}:${item.name}`, item });
   }
   return rows;
 }
@@ -134,7 +140,9 @@ export function PlantPickerSheet({
             <Text style={styles.rowName}>{item.name}</Text>
             <View style={styles.badgeRow}>
               <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>{CATEGORY_FULL_LABELS[item.plantType]}</Text>
+                <Text style={styles.categoryBadgeText}>
+                  {CATALOG_GROUP_LABELS[getTaxonomy(item.name, item.plantType).group]}
+                </Text>
               </View>
               {item.seasonLabel ? (
                 <View style={styles.seasonBadge}>

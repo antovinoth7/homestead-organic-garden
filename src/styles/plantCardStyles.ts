@@ -41,6 +41,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     placeholder: {
       alignItems: 'center',
       justifyContent: 'center',
+      // Themed, so it works in dark mode. This used to be one of seven pastel
+      // hex values picked per plant type and applied inline — light-mode only,
+      // and it had no entry for `spinach`.
+      backgroundColor: theme.primaryLight,
     },
     missingImageBadge: {
       position: 'absolute',

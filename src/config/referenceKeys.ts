@@ -22,22 +22,51 @@ export function slugifyReferenceKey(name: string): string {
  * slug an image file is stored under.
  */
 export const PLANT_IMAGE_ALIASES: Record<string, string> = {
-  pepper: 'chilli',
   lime: 'lemon',
   maize: 'corn',
   amaranth: 'amaranthus',
-  green_peas: 'peas',
   amaranth_greens: 'amaranthus',
   palak: 'spinach',
+  // 'Cashew Nut' was a reference-only name; the catalog row is 'Cashew'.
+  cashew: 'cashew_nut',
 };
 
 /**
- * Curated image-prompt coverage for catalog plants that have no emoji-map
- * entry yet, plus reference-only tropical fruit trees. These names resolve
- * through the same slug-based asset map as catalog plants without changing
- * the visible plant catalog.
+ * Reference-image coverage for names that are not rows in the visible plant
+ * catalog: tropical fruit and timber species kept for their photos, and the
+ * alias spellings whose slug is the canonical asset key (Palak's image lives
+ * under `spinach`, Maize's under `corn`). These resolve through the same
+ * slug-based asset map without adding anything to the catalog.
  */
 export const EXTRA_REFERENCE_PLANT_NAMES = [
+  // Alias spellings and reference-only names that carry a bundled image of
+  // their own. They were catalog rows in the emoji map `getKnownPlantNames()`
+  // used to read; they stay known here so the WebPs are not orphaned and so
+  // both sides of every PLANT_IMAGE_ALIASES pair resolve to a known name.
+  'Amaranth',
+  'Apple',
+  'Broccoli',
+  'Coconut',
+  'Comfrey',
+  'Corn',
+  'Grape',
+  'Lime',
+  'Spinach',
+  'Tulip',
+  // Removed from the catalog in the Tamil Nadu relevance pass (Sep 2026) but
+  // their photos stay bundled: Coleus, and the Mediterranean herbs and
+  // glasshouse flowers that are not Tamil Nadu homestead plants.
+  // `Ash Plantain` joined them in migration 010, merged into `Banana`.
+  'Ash Plantain',
+  'Coleus',
+  'Parsley',
+  'Rosemary',
+  'Thyme',
+  'Oregano',
+  'Sage',
+  'Lettuce',
+  'Squash',
+  'Strawberry',
   'Cauliflower',
   'Taro',
   'Sweet Potato',

@@ -1,4 +1,6 @@
 import {
+  buildCatalogMetaLine,
+  buildCatalogSubtitle,
   coreCareSummary,
   diseasesSummary,
   formatCount,
@@ -173,5 +175,57 @@ describe('section summaries', () => {
     expect(varietiesSummary(2)).toBe('2 saved varieties');
     expect(varietiesSummary(1)).toBe('1 saved variety');
     expect(varietiesSummary(0)).toBe('No saved varieties');
+  });
+});
+
+
+describe('buildCatalogMetaLine', () => {
+  // The row gives one truncated line; a harvest window is a fact a grower can
+  // compare between rows, where a description is a sentence they cannot finish.
+  it('leads with the harvest window', () => {
+    expect(buildCatalogMetaLine({ min: 55, max: 70 }, 'Annual', 'A trailing vine', 3)).toBe(
+      '55–70 days'
+    );
+  });
+
+  it('collapses a point range to a single figure', () => {
+    expect(buildCatalogMetaLine({ min: 60, max: 60 }, undefined, undefined, 0)).toBe('60 days');
+  });
+
+  it('states a wait of a year or more in years', () => {
+    expect(buildCatalogMetaLine({ min: 4380, max: 5475 }, undefined, undefined, 0)).toBe(
+      '12–15 years'
+    );
+    expect(buildCatalogMetaLine({ min: 365, max: 365 }, undefined, undefined, 0)).toBe('1 year');
+    expect(buildCatalogMetaLine({ min: 300, max: 400 }, undefined, undefined, 0)).toBe(
+      '300–400 days'
+    );
+  });
+
+  it('falls back to the lifecycle when there is no harvest window', () => {
+    expect(buildCatalogMetaLine(undefined, 'Perennial', 'A trailing vine', 3)).toBe('Perennial');
+  });
+
+  it('falls back to the description when there is neither', () => {
+    expect(buildCatalogMetaLine(undefined, undefined, 'A trailing vine', 3)).toBe(
+      'A trailing vine'
+    );
+  });
+
+  it('falls back to the variety count last, matching the old subtitle', () => {
+    expect(buildCatalogMetaLine(undefined, undefined, undefined, 3)).toBe(
+      buildCatalogSubtitle(undefined, 3)
+    );
+    expect(buildCatalogMetaLine(undefined, undefined, undefined, 3)).toBe('3 varieties');
+  });
+
+  it('returns undefined when a plant carries none of them', () => {
+    expect(buildCatalogMetaLine(undefined, undefined, undefined, 0)).toBeUndefined();
+  });
+
+  it('ignores a malformed range rather than printing NaN', () => {
+    expect(
+      buildCatalogMetaLine({ min: Number.NaN, max: 70 }, 'Annual', undefined, 0)
+    ).toBe('Annual');
   });
 });

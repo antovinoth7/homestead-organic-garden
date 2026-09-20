@@ -27,6 +27,45 @@ Every Tamil Nadu zone uses the IMD meteorological boundaries: Winter (`cool_dry`
 
 ---
 
+## Plant Classification — three axes, deliberately separate
+
+A plant is classified three different ways, and conflating them is what made the
+old catalog pills read wrong.
+
+| Axis | Type | Lives in | Answers |
+| --- | --- | --- | --- |
+| **Care model** | `PlantType` | persisted as `plant_type`; care defaults, pest sets, task cadence | *How do I look after it?* |
+| **Browse group** | `CatalogGroup` | `src/config/plants/catalogTaxonomy.ts` | *What do I harvest it for?* |
+| **Habit + tags** | `PlantHabit`, `PlantTag` | same file | *What shape is it, and what else is it good for?* |
+
+- **`PlantType` is the care model, not a category.** Its eight values include
+  `shrub` (a growth habit) and `coconut_tree` (one species), which is why it does
+  not make a sensible set of browse pills. It is persisted on every garden plant,
+  so its values are a data contract — change it only with a migration.
+- **`CatalogGroup` owns the pills**: Vegetables, Greens, Fruits, Spices, Herbs &
+  Medicinal, Flowers, Support & Input Plants, Plantation & Timber. Purpose is the
+  one axis a farmer and a cook agree on. Every group is mutually exclusive.
+- **Tags carry what one hierarchy cannot.** Drumstick is a tree harvested as a
+  vegetable; Agathi is green manure, keerai and living fence at once;
+  `coconut_intercrop` spans six plants in four groups that together make up a
+  Kanyakumari thoppu planting.
+- **`cropFamily` is derived, never hand-assigned** — from each care profile's own
+  `taxonomicFamily` through `BOTANICAL_TO_CROP_FAMILY`. It drives bed rotation
+  (`src/config/beds/cropFamilyRotation.ts`), so only families that hold crops
+  grown in a rotated bed get their own value; trees and palms map to `other`,
+  which the rotation check treats as "no signal" rather than as a shared family.
+- **`catalogTaxonomy.test.ts` is the drift guard.** Adding a plant to the catalog
+  without classifying it fails the build — the same discipline the alias table
+  earned after three partial copies of it had to be merged.
+
+### Lifecycle
+
+`deriveInstanceLifecycle` reads the catalog's own `lifecycle` first and falls back
+to `PlantType` only for a plant with no care profile. The result is persisted as
+`lifecycle_type`, and only `perennial` plants get the recurring harvest-leaves
+task, so the distinction is not cosmetic: a banana stand and a mango tree are both
+`fruit_tree` but only one is ratooned.
+
 ## Plant Helpers
 
 `src/utils/plantHelpers.ts` contains important domain behavior for:
@@ -90,6 +129,19 @@ transplant, 45–60 days), while a care profile's `daysToHarvest` is not
 anchored to one. Reconciling them is tracked as **G5** in
 `docs/IMPLEMENTATION_ROADMAP.md`.
 
+**Nine rows carry hand-authored harvest windows.** Knol Khol, Lablab Bean,
+Winged Bean and Sword Bean (`vegetable`), and Water Spinach, Ponnanganni Keerai,
+Vallarai Keerai, Manathakkali Keerai and Mustard Greens (`spinach`) had botanical
+identity but no agronomy, so they fell through to bare type defaults and browsed
+as "Annual · Annual". `src/utils/plantCareDefaults/overrides/tamilNaduAgronomyGaps.ts`
+now gives them a full care profile. Its `daysToHarvest` figures come from TNAU
+and Tamil Nadu home-garden practice and each names the establishment action it is
+anchored to (sowing, cutting or slip) in a comment — but they are **not**
+zone-parameterised and carry **no evidence id or review expiry**. None of the
+nine appears in `TAMIL_NADU_PLANTING_RULES`, so unlike the crops there they have
+no per-establishment-window maturity to reconcile against. Closing that is part
+of **G5**.
+
 What *is* regionally grounded: `getCoconutAgeInfo` (`plantHelpers.ts`) follows
 TNAU age stages and supplies the coconut harvest cadence, and
 `getDefaultHarvestSeason` returns Tamil Nadu season strings.
@@ -97,3 +149,13 @@ TNAU age stages and supplies the coconut harvest cadence, and
 Until that gap is closed, harvest date estimates are presented only where the
 crop's own maturity data exists — an unrecognised variety shows no estimate
 rather than one inherited from its plant type.
+
+**`daysToHarvest` on a perennial means planting-to-first-crop.** Because
+`calculateExpectedHarvestDate` takes the midpoint of the range for every type
+except `fruit_tree`/`coconut_tree`, a perennial herb that stores its
+season-length instead promises a first harvest years early. Black Pepper
+carried the 180–270 day spike-to-ripe-berry window and was corrected on
+6 September 2026 to 1095–1460 days, matching the Cardamom precedent
+(900–1095). The season-length figure belongs in `growthStageDurations.fruiting`.
+`yearsToFirstHarvest` is set alongside it, but is read only for fruit and
+coconut trees, so on a herb it is display-only.

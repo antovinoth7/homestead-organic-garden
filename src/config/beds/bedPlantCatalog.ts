@@ -7,9 +7,11 @@ import { validateCompanionPair } from './companionRules';
 // Recommended plant names per bed type — matched against the app's plant catalog
 export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
   leafy: [
-    'Amaranth',
-    'Spinach',
-    'Lettuce',
+    // Catalog row names — `Amaranth` and `Spinach` were suggested here for a
+    // long time and neither is a row, so the bed offered crops the user could
+    // not then add.
+    'Amaranthus',
+    'Palak',
     'Fenugreek',
     'Coriander',
     'Mint',
@@ -22,7 +24,7 @@ export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
     'Tomato',
     'Brinjal',
     'Ladies Finger',
-    'Pepper',
+    'Capsicum',
     'Chilli',
     'Bitter Gourd',
     'Snake Gourd',
@@ -35,7 +37,7 @@ export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
     'Ginger',
     'Turmeric',
     'Curry Leaf',
-    'Pepper',
+    'Capsicum',
     'Garlic',
     'Onion',
     'Cardamom',
@@ -63,9 +65,9 @@ export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
     'Bottle Gourd',
     'Ridge Gourd',
     'Passion Fruit',
-    'Pepper',
+    'Capsicum',
   ],
-  three_sisters: ['Maize', 'Beans', 'Pumpkin', 'Squash', 'Cowpea', 'Yardlong Beans'],
+  three_sisters: ['Maize', 'Beans', 'Pumpkin', 'Cowpea', 'Yardlong Beans'],
   medicinal_guild: [
     'Drumstick',
     'Tulsi',
