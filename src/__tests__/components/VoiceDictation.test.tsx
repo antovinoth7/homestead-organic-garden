@@ -38,11 +38,21 @@ jest.mock('@/theme', () => ({
   }),
 }));
 
+/* The locale store reaches AsyncStorage through safeStorage, which imports the
+ * native module at load time — fatal under this node env and the trimmed
+ * react-native mock above, so it is stubbed before the component is imported. */
+jest.mock('@/utils/safeStorage', () => ({
+  safeGetItem: jest.fn(async () => null),
+  safeSetItem: jest.fn(async () => true),
+}));
+
 jest.mock('@/hooks/useVoiceInput', () => ({ useVoiceInput: jest.fn() }));
 
 import React from 'react';
 import { Alert } from 'react-native';
 import VoiceDictation from '@/components/VoiceDictation';
+import { setVoiceLocale } from '@/hooks/useVoiceLocale';
+import { safeSetItem } from '@/utils/safeStorage';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import type { UseVoiceInputResult } from '@/hooks/useVoiceInput';
 
@@ -52,7 +62,10 @@ interface RenderedNode {
 
 interface RenderedTree {
   toJSON: () => unknown;
-  root: { findByProps: (props: Record<string, unknown>) => RenderedNode };
+  root: {
+    findByProps: (props: Record<string, unknown>) => RenderedNode;
+    findAllByProps: (props: Record<string, unknown>) => RenderedNode[];
+  };
 }
 
 const TestRenderer = jest.requireActual('react-test-renderer') as {
@@ -86,6 +99,20 @@ const renderControl = (disabled = false): RenderedTree => {
   return rendered;
 };
 
+const renderCompact = (disabled = false): RenderedTree => {
+  let rendered!: RenderedTree;
+  TestRenderer.act(() => {
+    rendered = TestRenderer.create(
+      <VoiceDictation compact value="" onChangeText={jest.fn()} disabled={disabled} />
+    );
+  });
+  return rendered;
+};
+
+/** The language half of the compact pill, which is one toggle, not a pair. */
+const localeToggle = (tree: RenderedTree, label: string): RenderedNode =>
+  tree.root.findByProps({ accessibilityLabel: `Voice language: ${label}` });
+
 describe('VoiceDictation', () => {
   let consoleErrorSpy: jest.SpyInstance;
 
@@ -102,10 +129,13 @@ describe('VoiceDictation', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // The dictation language is app-wide module state now, so a case that
+    // switches to English would otherwise leak into every case after it.
+    setVoiceLocale('ta-IN');
     mockUseVoiceInput.mockReturnValue(voiceState());
   });
 
-  it('starts with Tamil selected and switches only this control to English', () => {
+  it('starts with Tamil selected and switches the shared voice language to English', () => {
     const rendered = renderControl();
 
     expect(
@@ -203,5 +233,103 @@ describe('VoiceDictation', () => {
       voiceState({ isAvailable: false, unavailableReason: 'no-module' })
     );
     expect(renderControl().toJSON()).toBeNull();
+  });
+
+  describe('compact variant', () => {
+    it('replaces the segment pair with a single labelled toggle', () => {
+      const rendered = renderCompact();
+
+      expect(
+        rendered.root.findAllByProps({ accessibilityLabel: 'தமிழ் voice language' })
+      ).toHaveLength(0);
+      expect(
+        rendered.root.findAllByProps({ accessibilityLabel: 'English voice language' })
+      ).toHaveLength(0);
+
+      const toggle = localeToggle(rendered, 'தமிழ்');
+      expect(toggle.props.accessibilityRole).toBe('button');
+      expect(toggle.props.accessibilityHint).toBe('Switches voice input to English');
+      expect(toggle.props.accessibilityState).toEqual({ disabled: false });
+    });
+
+    it('cycles the language on tap and tags the pill with the active script', () => {
+      const rendered = renderCompact();
+      expect(JSON.stringify(rendered.toJSON())).toContain('த');
+
+      TestRenderer.act(() => {
+        (localeToggle(rendered, 'தமிழ்').props.onPress as () => void)();
+      });
+      expect(mockUseVoiceInput).toHaveBeenLastCalledWith(
+        expect.objectContaining({ locale: 'en-IN' })
+      );
+      expect(localeToggle(rendered, 'English').props.accessibilityHint).toBe(
+        'Switches voice input to தமிழ்'
+      );
+      expect(JSON.stringify(rendered.toJSON())).toContain('EN');
+
+      TestRenderer.act(() => {
+        (localeToggle(rendered, 'English').props.onPress as () => void)();
+      });
+      expect(mockUseVoiceInput).toHaveBeenLastCalledWith(
+        expect.objectContaining({ locale: 'ta-IN' })
+      );
+    });
+
+    it('shares the chosen language with every other mounted control', () => {
+      let rendered!: RenderedTree;
+      TestRenderer.act(() => {
+        rendered = TestRenderer.create(
+          <React.Fragment>
+            <VoiceDictation compact value="" onChangeText={jest.fn()} />
+            <VoiceDictation value="" onChangeText={jest.fn()} />
+          </React.Fragment>
+        );
+      });
+
+      TestRenderer.act(() => {
+        (localeToggle(rendered, 'தமிழ்').props.onPress as () => void)();
+      });
+
+      expect(
+        rendered.root.findByProps({ accessibilityLabel: 'English voice language' }).props
+          .accessibilityState
+      ).toEqual({ disabled: false, selected: true });
+    });
+
+    it('persists the chosen language', () => {
+      const rendered = renderCompact();
+      TestRenderer.act(() => {
+        (localeToggle(rendered, 'தமிழ்').props.onPress as () => void)();
+      });
+      expect(safeSetItem).toHaveBeenCalledWith('@garden_voice_locale', 'en-IN');
+    });
+
+    it('locks the toggle and shows the transcript in-row while listening', () => {
+      mockUseVoiceInput.mockReturnValue(
+        voiceState({ isListening: true, partialTranscript: 'வளர்ச்சி நன்றாக உள்ளது' })
+      );
+      const rendered = renderCompact();
+
+      const toggle = localeToggle(rendered, 'தமிழ்');
+      expect(toggle.props.disabled).toBe(true);
+      expect(toggle.props.accessibilityState).toEqual({ disabled: true });
+      expect(rendered.root.findByProps({ accessibilityLabel: 'Stop voice input' })).toBeTruthy();
+      expect(rendered.root.findByProps({ name: 'stop' })).toBeTruthy();
+      expect(JSON.stringify(rendered.toJSON())).toContain('வளர்ச்சி நன்றாக உள்ளது');
+    });
+
+    it('mutes the mic when the field is disabled', () => {
+      const rendered = renderCompact(true);
+      const mic = rendered.root.findByProps({ accessibilityLabel: 'Start voice input' });
+      expect(mic.props.disabled).toBe(true);
+      expect(mic.props.accessibilityState).toEqual({ disabled: true, busy: false });
+    });
+
+    it('renders nothing when the speech module is absent, leaving no stray node', () => {
+      mockUseVoiceInput.mockReturnValue(
+        voiceState({ isAvailable: false, unavailableReason: 'no-module' })
+      );
+      expect(renderCompact().toJSON()).toBeNull();
+    });
   });
 });

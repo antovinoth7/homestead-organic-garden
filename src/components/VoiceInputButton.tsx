@@ -3,6 +3,7 @@ import { TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { createStyles } from '../styles/voiceInputButtonStyles';
+import { micAccessibilityLabel } from '../utils/voiceInput';
 
 interface Props {
   isListening: boolean;
@@ -37,13 +38,7 @@ export default function VoiceInputButton({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={
-        unavailable
-          ? 'Voice input unavailable on this device'
-          : isListening
-            ? 'Stop voice input'
-            : 'Start voice input'
-      }
+      accessibilityLabel={micAccessibilityLabel(isListening, unavailable)}
       accessibilityState={{ disabled, busy: isListening }}
     >
       <View

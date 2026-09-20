@@ -29,7 +29,7 @@
 - `OfflineBanner` (+ `useOfflineStatus`) — connectivity strip above the navigator; shows offline state and pending-sync count from the offline write queue
 - `SectionHeader` — dashboard section heading (17px title + optional right-aligned action link) sitting on the page background above its content; use it for any new home-screen section rather than a bare `<Text>`
 - `ErrorBoundary` — class component error boundary
-- `VoiceDictation` / `VoiceInputButton` (+ `useVoiceInput`) — speech-to-text for existing notes/analysis fields, using a compact Tamil/English segmented control and adjacent mic while retaining 44px touch targets
+- `VoiceDictation` / `VoiceInputButton` (+ `useVoiceInput`, `useVoiceLocale`) — speech-to-text for existing notes/analysis fields. Default layout is a Tamil/English segmented control with an adjacent mic on its own row above the input; `compact` renders a 28px split `mic | language` pill that sits at the trailing end of a field’s existing label row, costing no extra height (used by `CatalogTextBlock`). Both keep 44px touch targets — compact via outer-side `hitSlop`. The dictation language is app-wide and persisted (`useVoiceLocale`), so every mounted control agrees and the choice survives a restart
 - `ImageZoomModal` (+ `usePinchZoom`) — pinch-zoom photo viewer
 - Modals in `src/components/modals/`: `ConfirmDeleteModal` (shared delete confirmation — use this, not bespoke modals), `DiscardChangesModal`, `PhotoSourceModal`, `TaskCompletionModal`, `CreateTaskModal`, `PestDiseaseModal`, `LocationEditModal`, `LocationReassignModal`, `BedCapacityModal`
 

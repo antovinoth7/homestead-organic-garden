@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-20 — src/: 714 files, 132,306 lines.
+> Snapshot: 2026-09-20 — src/: 716 files, 132,936 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -25,14 +25,14 @@
 
 ## src/
 
-### src/__tests__/components/ — 15 files, 2,975 lines
+### src/__tests__/components/ — 15 files, 3,103 lines
 
 - SeasonBlock.test.tsx (516)
 - PlotCard.test.tsx (346)
+- VoiceDictation.test.tsx (336)
 - CareTaskFilterSheet.test.tsx (282)
 - CatalogFilterSheet.test.tsx (273)
 - ForecastOverlay.test.tsx (222)
-- VoiceDictation.test.tsx (208)
 - ReferenceFilterSheet.test.tsx (205)
 - PlantFilterSheet.test.tsx (181)
 - ReferenceBrowseHeader.test.tsx (174)
@@ -77,11 +77,12 @@
 - bed.fixtures.ts (23)
 - journal.fixtures.ts (16)
 
-### src/__tests__/hooks/ — 6 files, 1,033 lines
+### src/__tests__/hooks/ — 7 files, 1,207 lines
 
 - usePlantCatalogManager.test.tsx (283)
 - useCatalogEntryForm.varieties.test.tsx (229)
 - journalFormValidation.test.ts (196)
+- useVoiceLocale.test.ts (174)
 - useCatalogEntryForm.delete.test.tsx (144)
 - plantFormValidation.test.ts (104)
 - blockReasonForStep.test.ts (77)
@@ -221,7 +222,7 @@
 - plantCategories.test.ts (24)
 - plantCapacity.test.ts (21)
 
-### src/components/ — 70 files, 12,090 lines
+### src/components/ — 70 files, 12,169 lines
 
 - BedRowLayout.tsx (984) ⚠️ large — Grep/search inside, do not read whole
 - BedTopDownMap.tsx (778)
@@ -238,6 +239,7 @@
 - WeatherDeck.tsx (235)
 - BedCard.tsx (233)
 - LocationProfileEditor.tsx (223)
+- VoiceDictation.tsx (223)
 - DetailCareGuidanceSection.tsx (218)
 - GardenIcon.tsx (209)
 - BedLayerStack.tsx (202)
@@ -253,7 +255,6 @@
 - LocationPickerSheet.tsx (152)
 - NeedsAttentionScroll.tsx (151)
 - CollapsibleSection.tsx (149)
-- VoiceDictation.tsx (139)
 - StagePickerSheet.tsx (134)
 - PlantKeyInfoSection.tsx (133)
 - ThemedDropdown.tsx (133)
@@ -279,8 +280,8 @@
 - BedContextSection.tsx (71)
 - TipStrip.tsx (66)
 - UndoToast.tsx (65)
-- VoiceInputButton.tsx (65)
 - ClearBedCta.tsx (60)
+- VoiceInputButton.tsx (60)
 - ScreenHeader.tsx (56)
 - OfflineBanner.tsx (53)
 - HarvestInfoSection.tsx (52)
@@ -300,7 +301,7 @@
 - MonthCalendarView.tsx (148)
 - WeekCalendarView.tsx (125)
 
-### src/components/catalog/ — 20 files, 2,042 lines
+### src/components/catalog/ — 20 files, 2,046 lines
 
 - CatalogFilterSheet.tsx (209)
 - VarietyDetailModal.tsx (206)
@@ -315,9 +316,9 @@
 - CatalogRangeEditSheet.tsx (99)
 - CatalogRangeRow.tsx (87)
 - catalogEditor.ts (70)
+- CatalogTextBlock.tsx (70)
 - CatalogSkeletonRows.tsx (68)
 - CatalogDangerFooter.tsx (66)
-- CatalogTextBlock.tsx (66)
 - CatalogSearchBar.tsx (57)
 - RecentSearchChips.tsx (57)
 - CatalogSectionHeader.tsx (48)
@@ -505,7 +506,7 @@
 - types.ts (40)
 - activeZone.ts (26)
 
-### src/hooks/ — 35 files, 7,462 lines
+### src/hooks/ — 36 files, 7,611 lines
 
 - usePlantFormState.ts (1207) ⚠️ large — Grep/search inside, do not read whole
 - useBedCreationWizard.ts (937) ⚠️ large — Grep/search inside, do not read whole
@@ -519,6 +520,7 @@
 - usePlantFormData.ts (180)
 - useReferenceBrowse.ts (177)
 - useOrganicInputBrowse.ts (171)
+- useVoiceLocale.ts (149)
 - useCatalogSearch.ts (125)
 - usePlantDetail.ts (110)
 - useSectionScrollSpy.ts (110)
@@ -646,7 +648,7 @@
 - weatherLogic.ts (100)
 - alerts.ts (19)
 
-### src/styles/ — 96 files, 20,411 lines
+### src/styles/ — 96 files, 20,498 lines
 
 - bedCreationWizardStyles.ts (1906) ⚠️ large — Grep/search inside, do not read whole
 - calendarStyles.ts (1810) ⚠️ large — Grep/search inside, do not read whole
@@ -671,8 +673,8 @@
 - referenceBrowseStyles.ts (269)
 - myFarmStyles.ts (252)
 - bedPlantPickerStyles.ts (250)
+- catalogRowStyles.ts (250)
 - bedLayerStackStyles.ts (245)
-- catalogRowStyles.ts (236)
 - bedDetailStyles.ts (218)
 - bedSuccessionTimelineStyles.ts (217)
 - settingsStyles.ts (204)
@@ -685,6 +687,7 @@
 - collapsibleSectionStyles.ts (164)
 - weatherCardStyles.ts (163)
 - todayScreenStyles.ts (160)
+- voiceDictationStyles.ts (138)
 - plantPickerSheetStyles.ts (133)
 - pestDiseaseListStyles.ts (129)
 - bedRotationStyles.ts (124)
@@ -717,7 +720,6 @@
 - expandableBlockStyles.ts (69)
 - floatingLabelInputStyles.ts (67)
 - plotCarouselStyles.ts (65)
-- voiceDictationStyles.ts (65)
 - catalogSheetStyles.ts (61)
 - authStyles.ts (58)
 - plantHistoryTabStyles.ts (58)
@@ -757,7 +759,7 @@
 - visual.types.ts (90)
 - offline.types.ts (49)
 
-### src/utils/ — 90 files, 13,043 lines
+### src/utils/ — 90 files, 13,052 lines
 
 - plantHelpers.ts (1863) ⚠️ large — Grep/search inside, do not read whole
 - rowLayoutEngine.ts (660)
@@ -832,11 +834,11 @@
 - perennialCare.ts (45)
 - recipeQuantityEngine.ts (45)
 - appLifecycle.ts (44)
+- voiceInput.ts (44)
 - svgArc.ts (40)
 - plantSort.ts (38)
 - weatherTone.ts (38)
 - preMonsoonTasks.ts (36)
-- voiceInput.ts (35)
 - plotBedCounts.ts (34)
 - taskBed.ts (34)
 - catalogCounts.ts (33)
