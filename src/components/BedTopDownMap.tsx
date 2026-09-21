@@ -20,7 +20,7 @@ import {
 } from 'react-native-gesture-handler';
 import type { HandlerStateChangeEvent } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import {

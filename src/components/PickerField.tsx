@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ImageSource } from 'expo-image';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { useTheme } from '@/theme';
@@ -62,11 +62,7 @@ export function PickerField({
         accessibilityState={{ disabled }}
       >
         {value && (thumbnailSource || fallbackIcon) ? (
-          <ReferenceThumb
-            source={thumbnailSource}
-            fallbackIcon={fallbackIcon}
-            variant="row"
-          />
+          <ReferenceThumb source={thumbnailSource} fallbackIcon={fallbackIcon} variant="row" />
         ) : (
           <View style={styles.iconCircle}>
             <Ionicons name={icon ?? 'leaf-outline'} size={18} color={theme.primary} />

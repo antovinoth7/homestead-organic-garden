@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import type { ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { Plant } from '../types/database.types';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { getPlantImage, REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceAssets';
 import { useTheme } from '../theme';

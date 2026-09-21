@@ -35,7 +35,7 @@ import {
   isSkipBlocked,
 } from '../services/taskSchedulingLogic';
 import { JournalEntryType, TaskTemplate, TaskType, WeatherForecast } from '../types/database.types';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { TASK_ICON_KEYS } from '@/config/iconRegistry';
 import {

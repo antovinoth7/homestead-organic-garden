@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { PlantFormStateReturn } from '@/hooks/usePlantFormState';
 import { createAddFormStyles } from '@/styles/plantAddFormStyles';
 import { CarePlanSummary } from './CarePlanSummary';

@@ -18,7 +18,7 @@ import type Swipeable from 'react-native-gesture-handler/Swipeable';
 import { getJournalEntries, deleteJournalEntry } from '../services/journal';
 import { getAllPlants } from '../services/plants';
 import { JournalEntry, JournalEntryType, Plant } from '../types/database.types';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import { createStyles } from '../styles/journalStyles';
@@ -294,16 +294,16 @@ export default function JournalScreen(): React.JSX.Element {
             {searchQuery
               ? `No results for "${searchQuery}"`
               : dateFilter !== 'all'
-              ? `No entries in ${
-                  dateFilter === 'week'
-                    ? 'the past week'
-                    : dateFilter === 'month'
-                    ? 'this month'
-                    : 'this year'
-                }`
-              : selectedType
-              ? `No ${selectedType} entries found`
-              : 'Try adjusting your filters'}
+                ? `No entries in ${
+                    dateFilter === 'week'
+                      ? 'the past week'
+                      : dateFilter === 'month'
+                        ? 'this month'
+                        : 'this year'
+                  }`
+                : selectedType
+                  ? `No ${selectedType} entries found`
+                  : 'Try adjusting your filters'}
           </Text>
           <TouchableOpacity style={styles.clearFiltersButton} onPress={clearAllFilters}>
             <Text style={styles.clearFiltersText}>Clear Filters</Text>

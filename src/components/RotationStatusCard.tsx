@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { BedType, RotationStatus } from '@/types/database.types';
 import { bedExpectsLegumes } from '@/config/beds';
@@ -42,8 +42,8 @@ export function RotationStatusCard({
               {
                 color:
                   status.legume_coverage_pct < LOW_LEGUME_THRESHOLD
-                    ? theme.warning ?? '#f59e0b'
-                    : theme.success ?? '#22c55e',
+                    ? (theme.warning ?? '#f59e0b')
+                    : (theme.success ?? '#22c55e'),
               },
             ]}
           >
@@ -73,7 +73,7 @@ export function RotationStatusCard({
           <Ionicons
             name={rule.passed ? 'checkmark-circle' : 'close-circle'}
             size={18}
-            color={rule.passed ? theme.success ?? '#22c55e' : theme.error ?? '#ef4444'}
+            color={rule.passed ? (theme.success ?? '#22c55e') : (theme.error ?? '#ef4444')}
           />
           <View style={styles.checklistInfo}>
             <Text style={styles.checklistRule}>{rule.rule}</Text>

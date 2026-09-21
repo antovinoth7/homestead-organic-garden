@@ -21,7 +21,7 @@ import { getAllPlants, deletePlant, archivePlant, getCachedPlants } from '../ser
 import { getLocationConfig } from '../services/locations';
 import { Plant, HealthStatus } from '../types/database.types';
 import PlantCard from '../components/PlantCard';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { PlantsScreenNavigationProp, PlantsScreenRouteProp } from '../types/navigation.types';

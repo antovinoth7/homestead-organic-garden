@@ -35,7 +35,7 @@ import {
   journalFormErrors,
   type JournalFieldKey,
 } from '@/hooks/journalFormValidation';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {

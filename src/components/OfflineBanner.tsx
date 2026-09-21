@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { useOfflineStatus } from '@/hooks/useOfflineStatus';
@@ -29,7 +29,11 @@ function OfflineBanner(): React.JSX.Element | null {
         ? `Offline — ${pendingCount} change${pendingCount === 1 ? '' : 's'} will sync when connected`
         : 'Offline — showing saved data';
     return (
-      <View style={[styles.banner, insetPadding]} accessibilityRole="alert" accessibilityLabel={message}>
+      <View
+        style={[styles.banner, insetPadding]}
+        accessibilityRole="alert"
+        accessibilityLabel={message}
+      >
         <Ionicons name="cloud-offline-outline" size={14} color={theme.warningDark} />
         <Text style={styles.text}>{message}</Text>
       </View>

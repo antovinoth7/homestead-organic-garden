@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { MilestoneKind } from '../../types/database.types';
 import { MILESTONE_KINDS } from '../../utils/journalEntryOptions';
 import FieldErrorText from '../FieldErrorText';
@@ -14,11 +14,7 @@ interface Props {
   errorText?: string;
 }
 
-export function JournalMilestoneSection({
-  value,
-  onChange,
-  errorText,
-}: Props): React.JSX.Element {
+export function JournalMilestoneSection({ value, onChange, errorText }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 

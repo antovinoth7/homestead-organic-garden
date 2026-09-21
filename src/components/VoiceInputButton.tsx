@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../theme';
 import { createStyles } from '../styles/voiceInputButtonStyles';
 import { micAccessibilityLabel } from '../utils/voiceInput';

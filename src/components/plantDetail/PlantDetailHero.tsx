@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import type { ImageStyle } from 'react-native';
 import { View, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/plantDetailStyles';
 import { PlantKeyInfoSection } from '@/components/PlantKeyInfoSection';

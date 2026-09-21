@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   HarvestUnit,
   IssueSeverity,
@@ -56,9 +56,7 @@ export const PEST_STATUS_OPTIONS: { value: PestStatus; label: string }[] = [
 
 /** An active problem is a pest/disease entry not yet resolved (null = active). */
 export function isActiveProblem(entry: JournalEntry): boolean {
-  return (
-    entry.entry_type === JournalEntryType.PestDisease && entry.pest_status !== 'resolved'
-  );
+  return entry.entry_type === JournalEntryType.PestDisease && entry.pest_status !== 'resolved';
 }
 
 // ─── Milestones ──────────────────────────────────────────────────────────────
@@ -97,37 +95,19 @@ export function getMilestoneMeta(kind: MilestoneKind | null | undefined): Milest
  * and 'other' entries reuse the observation set.
  */
 export const TAGS_BY_TYPE: Partial<Record<JournalEntryType, readonly string[]>> = {
-  [JournalEntryType.Observation]: [
-    'growth_update',
-    'experiment',
-    'weather_damage',
-    'soil_prep',
-  ],
+  [JournalEntryType.Observation]: ['growth_update', 'experiment', 'weather_damage', 'soil_prep'],
   [JournalEntryType.Harvest]: [],
   [JournalEntryType.PestDisease]: [],
   [JournalEntryType.Milestone]: [],
-  [JournalEntryType.Issue]: [
-    'growth_update',
-    'experiment',
-    'weather_damage',
-    'soil_prep',
-  ],
-  [JournalEntryType.Other]: [
-    'growth_update',
-    'experiment',
-    'weather_damage',
-    'soil_prep',
-  ],
+  [JournalEntryType.Issue]: ['growth_update', 'experiment', 'weather_damage', 'soil_prep'],
+  [JournalEntryType.Other]: ['growth_update', 'experiment', 'weather_damage', 'soil_prep'],
 };
 
 /**
  * Tags selectable for a given entry type, unioned with any legacy tags already
  * on the entry being edited (so old tags stay visible and removable).
  */
-export function tagsForEntry(
-  type: JournalEntryType,
-  existingTags?: string[] | null
-): string[] {
+export function tagsForEntry(type: JournalEntryType, existingTags?: string[] | null): string[] {
   const base = TAGS_BY_TYPE[type] ?? [];
   const merged = [...base];
   for (const tag of existingTags ?? []) {

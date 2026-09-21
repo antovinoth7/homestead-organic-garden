@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { BedType, BedLayer, CropFamily, PlantEntry } from '@/types/database.types';
 import { Step2Data, Step3Data, Step4Data } from '@/hooks/useBedCreationWizard';
@@ -172,7 +172,10 @@ export function GuildTemplateStep({
   // candidate for one instance of a species — used in capacity probes. The
   // shared builder carries rowGapCm so probes pack rows at the template's real
   // N-S gap, exactly like Step 5's layout of placed entries.
-  const candidateForRow = useCallback((row: PlantRow): RowPlantInput => templateRowToCandidate(row), []);
+  const candidateForRow = useCallback(
+    (row: PlantRow): RowPlantInput => templateRowToCandidate(row),
+    []
+  );
 
   const candidateForCompanion = useCallback(
     (name: string): RowPlantInput => ({
@@ -340,7 +343,9 @@ export function GuildTemplateStep({
             gapSlots += Math.ceil(cnt / ppr) * Math.max(0, ppr - 1);
           }
         }
-        const alreadyPlaced = newEntries.filter((e) => companionSuggestions.includes(e.name)).length;
+        const alreadyPlaced = newEntries.filter((e) =>
+          companionSuggestions.includes(e.name)
+        ).length;
         let slotsRemaining = Math.max(0, gapSlots - alreadyPlaced);
 
         for (const compName of companionsToAutoAdd) {
@@ -506,7 +511,10 @@ export function GuildTemplateStep({
               color={quickStartApplied ? theme.success : theme.primary}
             />
             <Text
-              style={[styles.gtQuickStartTitle, quickStartApplied && styles.gtQuickStartTitleApplied]}
+              style={[
+                styles.gtQuickStartTitle,
+                quickStartApplied && styles.gtQuickStartTitleApplied,
+              ]}
             >
               {quickStartApplied ? 'Quick Start applied' : 'Quick Start'}
             </Text>
@@ -578,8 +586,8 @@ export function GuildTemplateStep({
           <View style={styles.inlineLabelRow}>
             <Ionicons name="leaf-outline" size={17} color={theme.primary} />
             <Text style={styles.sequenceNote}>
-              Sow all crops together — this guild has no staggering, so plant the whole bed in
-              one go.
+              Sow all crops together — this guild has no staggering, so plant the whole bed in one
+              go.
             </Text>
           </View>
         </View>
@@ -727,7 +735,7 @@ export function GuildTemplateStep({
               const compFitLabel =
                 compCount > 0
                   ? capacityText(compCandidate, compCount, false)
-                : 'Interplants in gaps';
+                  : 'Interplants in gaps';
               return (
                 <View key={comp} style={styles.gtCompanionRow}>
                   <ReferenceThumb

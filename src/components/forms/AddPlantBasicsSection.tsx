@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import type { ImageStyle } from 'react-native';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { PlantFormStateReturn } from '@/hooks/usePlantFormState';
 import { createStyles } from '@/styles/plantFormStyles';
@@ -175,7 +175,9 @@ export function AddPlantBasicsSection({ formState }: Props): React.JSX.Element {
                   </View>
                 )}
               </View>
-              <Text style={plantingDate ? formStyles.dateCardValue : formStyles.dateCardPlaceholder}>
+              <Text
+                style={plantingDate ? formStyles.dateCardValue : formStyles.dateCardPlaceholder}
+              >
                 {plantingDate ? formatDateDisplay(plantingDate) : 'Tap to select date'}
               </Text>
             </View>

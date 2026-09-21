@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import type { ImageStyle } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceAssets';
 import { useTheme } from '@/theme';
@@ -22,7 +22,12 @@ interface Props {
  * Browse-list row: risk-tinted thumbnail tile, name + Tamil name, a clamped
  * identification snippet, and a current-season risk badge.
  */
-export function ReferenceListCard({ entry, image, fallbackIcon, onPress }: Props): React.JSX.Element {
+export function ReferenceListCard({
+  entry,
+  image,
+  fallbackIcon,
+  onPress,
+}: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 

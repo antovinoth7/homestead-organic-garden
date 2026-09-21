@@ -24,10 +24,11 @@ jest.mock('react-native', () => {
     View: host('View'),
   };
 });
-jest.mock('@expo/vector-icons', () => {
+jest.mock('@expo/vector-icons/Ionicons', () => {
   const React = jest.requireActual<typeof import('react')>('react');
   return {
-    Ionicons: (props: Record<string, unknown>) => React.createElement('Ionicons', props),
+    __esModule: true,
+    default: (props: Record<string, unknown>) => React.createElement('Ionicons', props),
   };
 });
 jest.mock('@/components/ReferenceThumb', () => {

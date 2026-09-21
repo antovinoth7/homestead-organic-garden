@@ -8,7 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { BottomSheetModal } from '@/components/BottomSheetModal';
@@ -159,9 +159,7 @@ function GuildTab({
           </Text>
           {isCompanion && (
             <View style={[styles.guildLayerBadge, { backgroundColor: theme.primaryLight }]}>
-              <Text style={[styles.guildLayerBadgeText, { color: theme.primary }]}>
-                Companion
-              </Text>
+              <Text style={[styles.guildLayerBadgeText, { color: theme.primary }]}>Companion</Text>
             </View>
           )}
         </View>

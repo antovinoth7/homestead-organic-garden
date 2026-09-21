@@ -14,9 +14,12 @@ jest.mock('react-native', () => {
     View: host('View'),
   };
 });
-jest.mock('@expo/vector-icons', () => {
+jest.mock('@expo/vector-icons/Ionicons', () => {
   const React = jest.requireActual<typeof import('react')>('react');
-  return { Ionicons: (props: Record<string, unknown>) => React.createElement('Ionicons', props) };
+  return {
+    __esModule: true,
+    default: (props: Record<string, unknown>) => React.createElement('Ionicons', props),
+  };
 });
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
@@ -96,9 +99,10 @@ describe('ReferenceBrowseHeader', () => {
 
   afterAll(() => consoleErrorSpy.mockRestore());
 
-  function render(
-    over: Partial<React.ComponentProps<typeof ReferenceBrowseHeader>> = {}
-  ): { tree: RenderedTree; props: React.ComponentProps<typeof ReferenceBrowseHeader> } {
+  function render(over: Partial<React.ComponentProps<typeof ReferenceBrowseHeader>> = {}): {
+    tree: RenderedTree;
+    props: React.ComponentProps<typeof ReferenceBrowseHeader>;
+  } {
     const props = {
       title: 'Pests',
       subtitle: '36 in the High Rainfall Zone',
@@ -166,8 +170,8 @@ describe('ReferenceBrowseHeader', () => {
 
   it('offers no clear button until something is typed', () => {
     expect(hosts(render({ searchActive: true }).tree, 'Clear search')).toHaveLength(0);
-    expect(
-      hosts(render({ searchActive: true, query: 'aphid' }).tree, 'Clear search')
-    ).toHaveLength(1);
+    expect(hosts(render({ searchActive: true, query: 'aphid' }).tree, 'Clear search')).toHaveLength(
+      1
+    );
   });
 });

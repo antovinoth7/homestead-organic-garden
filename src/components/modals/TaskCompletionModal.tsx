@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { BottomSheetModal } from '../BottomSheetModal';
 import FloatingLabelInput from '../FloatingLabelInput';
 import VoiceDictation from '@/components/VoiceDictation';

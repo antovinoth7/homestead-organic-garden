@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { BottomSheetModal } from '../BottomSheetModal';
 import VoiceDictation from '@/components/VoiceDictation';
 import { TaskTemplate } from '../../types/database.types';
@@ -89,8 +89,8 @@ export default function SkipTaskModal({
                 ? `Reschedule ${taskCount} Tasks`
                 : 'Reschedule Task'
               : taskCount > 1
-              ? `Skip ${taskCount} Tasks`
-              : 'Skip Task'}
+                ? `Skip ${taskCount} Tasks`
+                : 'Skip Task'}
           </Text>
         </View>
         <TouchableOpacity

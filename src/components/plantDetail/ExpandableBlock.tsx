@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/expandableBlockStyles';
 
@@ -54,7 +54,11 @@ export function ExpandableBlock({
   };
 
   const accentStyle =
-    accent === 'high' ? styles.accentHigh : accent === 'medium' ? styles.accentMedium : styles.accentLow;
+    accent === 'high'
+      ? styles.accentHigh
+      : accent === 'medium'
+        ? styles.accentMedium
+        : styles.accentLow;
 
   return (
     <View style={styles.block}>

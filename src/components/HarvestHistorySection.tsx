@@ -1,11 +1,15 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { JournalEntry, PlantType } from '../types/database.types';
 import { createStyles as createLocalStyles } from '../styles/harvestHistorySectionStyles';
 import { useTheme } from '../theme';
 import type { Theme } from '../theme/colors';
-import { summarizeHarvests, groupHarvestsBySeason, groupHarvestsByTree } from '../utils/harvestStats';
+import {
+  summarizeHarvests,
+  groupHarvestsBySeason,
+  groupHarvestsByTree,
+} from '../utils/harvestStats';
 import HarvestYieldChart from './HarvestYieldChart';
 import { DetailCard } from './plantDetail/DetailCard';
 import { GardenIcon } from '@/components/GardenIcon';

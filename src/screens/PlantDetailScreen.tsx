@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { pinGrowthStage, unpinGrowthStage, archivePlant } from '@/services/plants';
@@ -361,9 +361,7 @@ export default function PlantDetailScreen(): React.JSX.Element {
             <Ionicons name="pencil" size={20} color={theme.textInverse} />
           </TouchableOpacity>
         </View>
-        {tabsStuck && (
-          <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={handleTabPress} />
-        )}
+        {tabsStuck && <SegmentedTabs tabs={TABS} activeKey={activeKey} onChange={handleTabPress} />}
       </View>
 
       <PinGrowthStageModal

@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import type { ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/journalStyles';
@@ -70,8 +70,8 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
     entry.entry_type === JournalEntryType.PestDisease
       ? 'Pest/Disease'
       : milestoneMeta
-      ? milestoneMeta.label
-      : entry.entry_type.charAt(0).toUpperCase() + entry.entry_type.slice(1);
+        ? milestoneMeta.label
+        : entry.entry_type.charAt(0).toUpperCase() + entry.entry_type.slice(1);
 
   const entryDate = new Date(entry.created_at);
   const date = entryDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });

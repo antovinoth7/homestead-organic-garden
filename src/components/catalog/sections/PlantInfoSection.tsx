@@ -15,7 +15,7 @@ import {
   LIFECYCLE_LABELS,
 } from '@/utils/plantLabels';
 import type { PlantType } from '@/types/database.types';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 interface Props {
   editor: CatalogEditor;
@@ -132,10 +132,7 @@ export function PlantInfoSection({
     [openPicker, plantType, onPlantTypeChange]
   );
 
-  const onDescription = useCallback(
-    (description: string) => setForm({ description }),
-    [setForm]
-  );
+  const onDescription = useCallback((description: string) => setForm({ description }), [setForm]);
 
   // The selected lifecycle's own explanation is more useful than the generic
   // help once a choice has been made.

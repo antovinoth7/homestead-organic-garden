@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Animated, Text, TouchableOpacity, View, useAnimatedValue } from 'react-native';
 import type { ImageSource } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';

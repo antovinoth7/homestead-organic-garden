@@ -12,7 +12,7 @@
 
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getPlantImage } from '@/config/referenceAssets';

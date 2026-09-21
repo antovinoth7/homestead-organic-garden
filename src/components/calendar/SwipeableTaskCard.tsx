@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { TASK_ICON_KEYS } from '@/config/iconRegistry';
 import { TaskTemplate, Plant } from '../../types/database.types';
@@ -87,15 +87,15 @@ function SwipeableTaskCardComponent({
 
   // Bed-level tasks have no plant — surface the bed name as the label so the
   // farmer can tell *where* to act instead of a generic "General".
-  const bedLabel = task.bed_id != null ? bedMap?.get(task.bed_id) ?? null : null;
-  const displayName = task.plant_id ? plantDetails.name : bedLabel ?? plantDetails.name;
+  const bedLabel = task.bed_id != null ? (bedMap?.get(task.bed_id) ?? null) : null;
+  const displayName = task.plant_id ? plantDetails.name : (bedLabel ?? plantDetails.name);
 
   const priorityColor =
     effectivePriority === 'critical'
       ? theme.error
       : effectivePriority === 'high'
-      ? theme.warning
-      : null;
+        ? theme.warning
+        : null;
 
   const renderRightActions = (
     progress: Animated.AnimatedInterpolation<number>,
@@ -274,8 +274,8 @@ function SwipeableTaskCardComponent({
                       {task.preferred_time === 'morning'
                         ? 'Morning'
                         : task.preferred_time === 'afternoon'
-                        ? 'Afternoon'
-                        : 'Evening'}
+                          ? 'Afternoon'
+                          : 'Evening'}
                     </Text>
                   </View>
                 )}
@@ -298,13 +298,10 @@ function SwipeableTaskCardComponent({
                 <Text style={[styles.taskTime, isOverdue && styles.taskTimeOverdue]}>
                   {isOverdue
                     ? 'Overdue'
-                    : formatFarmDate(
-                        dueDate,
-                        {
-                          month: 'short',
-                          day: 'numeric',
-                        }
-                      )}
+                    : formatFarmDate(dueDate, {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -328,8 +325,8 @@ function SwipeableTaskCardComponent({
                       isBlocked
                         ? 'ban-outline'
                         : isSelected
-                        ? 'checkmark-circle'
-                        : 'ellipse-outline'
+                          ? 'checkmark-circle'
+                          : 'ellipse-outline'
                     }
                     size={20}
                     color={isSelected ? theme.primary : theme.border}

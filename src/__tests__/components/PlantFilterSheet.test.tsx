@@ -16,9 +16,12 @@ jest.mock('react-native', () => {
     StyleSheet: { absoluteFill: {} },
   };
 });
-jest.mock('@expo/vector-icons', () => {
+jest.mock('@expo/vector-icons/Ionicons', () => {
   const React = jest.requireActual<typeof import('react')>('react');
-  return { Ionicons: (props: Record<string, unknown>) => React.createElement('Ionicons', props) };
+  return {
+    __esModule: true,
+    default: (props: Record<string, unknown>) => React.createElement('Ionicons', props),
+  };
 });
 jest.mock('@/components/GardenIcon', () => {
   const React = jest.requireActual<typeof import('react')>('react');

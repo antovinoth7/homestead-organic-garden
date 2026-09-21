@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getPlantImage } from '@/config/referenceAssets';
@@ -59,9 +59,7 @@ function CatalogSearchResultRowComponent({
         : null;
 
   return (
-    <View
-      style={[styles.listCard, isFirst && styles.listCardFirst, isLast && styles.listCardLast]}
-    >
+    <View style={[styles.listCard, isFirst && styles.listCardFirst, isLast && styles.listCardLast]}>
       <TouchableOpacity style={styles.plantRowCompact} onPress={handlePress} activeOpacity={0.7}>
         <View style={styles.plantThumbWrap}>
           <ReferenceThumb

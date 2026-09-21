@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { TaskTemplate, TaskType } from '../../types/database.types';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/calendarStyles';
@@ -63,14 +63,11 @@ export default function WeekCalendarView({
               onPress={() => onSelectDate(date)}
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={`${formatFarmDate(
-                date,
-                {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                }
-              )}, ${dayTasks.length} task${dayTasks.length === 1 ? '' : 's'}`}
+              accessibilityLabel={`${formatFarmDate(date, {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              })}, ${dayTasks.length} task${dayTasks.length === 1 ? '' : 's'}`}
             >
               <Text
                 style={[

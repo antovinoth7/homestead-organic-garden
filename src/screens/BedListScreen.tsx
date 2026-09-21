@@ -14,7 +14,7 @@ import {
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import type Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { useBedData, BedWithCoverage } from '@/hooks/useBedData';

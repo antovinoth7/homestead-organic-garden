@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { logger } from '@/utils/logger';
 import { useBedCreationWizard } from '@/hooks/useBedCreationWizard';
@@ -149,11 +149,7 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
     switch (wizard.currentStep) {
       case 1:
         return (
-          <BedTypeStep
-            data={wizard.stepData[1]!}
-            onChange={wizard.setStep1}
-            locked={isEditMode}
-          />
+          <BedTypeStep data={wizard.stepData[1]!} onChange={wizard.setStep1} locked={isEditMode} />
         );
       case 2:
         return (

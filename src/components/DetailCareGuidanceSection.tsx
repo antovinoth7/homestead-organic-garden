@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { useNavigation } from '@react-navigation/native';
 import { createEnrichedSectionStyles } from '@/styles/enrichedSectionStyles';

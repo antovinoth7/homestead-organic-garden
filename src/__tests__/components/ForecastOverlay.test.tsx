@@ -22,7 +22,10 @@ jest.mock('react-native', () => {
     },
   };
 });
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons/Ionicons', () => ({
+  __esModule: true,
+  default: () => null,
+}));
 // The today card paints its gradient ground with SVG. Nothing here inspects it,
 // but it has to render without a native host.
 jest.mock('react-native-svg', () => {

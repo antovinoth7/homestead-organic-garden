@@ -8,7 +8,7 @@ import {
   LayoutAnimation,
   useWindowDimensions,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -164,9 +164,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     commitSearch(trimmed);
 
     const canonical = getCanonicalPlantKey(trimmed);
-    const existing = results.find(
-      (result) => getCanonicalPlantKey(result.name) === canonical
-    );
+    const existing = results.find((result) => getCanonicalPlantKey(result.name) === canonical);
     if (existing) {
       moreNav.navigate('CatalogPlantDetail', {
         plantName: existing.name,
@@ -195,7 +193,11 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
 
   // Items and their pixel offsets are built together: the browse list mixes
   // two heights, so getItemLayout needs a table rather than one multiplication.
-  const { items: data, offsets, heights } = useMemo(
+  const {
+    items: data,
+    offsets,
+    heights,
+  } = useMemo(
     () =>
       measureCatalogItems(
         isSearching
@@ -215,9 +217,7 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const renderItem = useCallback(
     ({ item, index }: { item: CatalogListItem; index: number }) => {
       if (item.kind === 'section') {
-        return (
-          <CatalogSectionHeader title={item.title} count={item.count} fontScale={fontScale} />
-        );
+        return <CatalogSectionHeader title={item.title} count={item.count} fontScale={fontScale} />;
       }
       if (item.kind === 'result') {
         // Search results are one flat card: no letter groups to break them up.

@@ -25,7 +25,7 @@ import {
   useAnimatedValue,
 } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, {
   Circle,
   Path,

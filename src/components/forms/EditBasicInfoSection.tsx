@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { PlantFormStateReturn } from '../../hooks/usePlantFormState';
 import { createStyles } from '../../styles/plantFormStyles';

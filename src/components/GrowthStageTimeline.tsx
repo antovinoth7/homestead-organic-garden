@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { GROWTH_STAGE_ICON_KEYS } from '@/config/iconRegistry';
 import { useTheme } from '@/theme';
@@ -73,9 +73,7 @@ const GrowthStageTimeline: React.FC<Props> = ({
       ? STAGE_ORDER.filter((s) => activeDurations[s] !== undefined && activeDurations[s]! > 0)
       : [];
     if (fromDurations.includes(effectiveStage.stage)) return fromDurations;
-    return STAGE_ORDER.filter(
-      (s) => s === effectiveStage.stage || fromDurations.includes(s)
-    );
+    return STAGE_ORDER.filter((s) => s === effectiveStage.stage || fromDurations.includes(s));
   }, [activeDurations, effectiveStage.stage]);
 
   // Find current stage index

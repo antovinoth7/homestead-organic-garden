@@ -1,5 +1,5 @@
 import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import { ICON_REGISTRY } from '@/config/iconRegistry';
 import type { CustomPlantIconType } from '@/config/iconRegistry';
