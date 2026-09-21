@@ -459,7 +459,10 @@ export default function CalendarScreen(): React.JSX.Element {
   );
 
   useEffect(() => {
-    setSelectedTaskIds(new Set());
+    // Bail when nothing is selected: these deps include Date objects and the
+    // filters object, so this runs on most renders, and an unconditional
+    // `new Set()` would re-render the list every time.
+    setSelectedTaskIds((previous) => (previous.size === 0 ? previous : new Set()));
   }, [
     selectedView,
     currentWeekStart,

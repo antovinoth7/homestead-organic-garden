@@ -40,7 +40,15 @@ export function usePlantPhotos({ plant, journalEntries }: UsePlantPhotosParams):
   useEffect(() => {
     const unresolved = collected.filter((p) => !p.uri && p.filename);
     if (unresolved.length === 0) {
-      setPhotos(collected.filter((p) => p.uri));
+      // `collected` is a memo over `plant` + `journalEntries`, so it changes
+      // identity on every data refresh. Keep the previous array when the
+      // resolved set is unchanged, rather than re-rendering the photo grid.
+      const next = collected.filter((p) => p.uri);
+      setPhotos((previous) =>
+        previous.length === next.length && previous.every((p, i) => p.uri === next[i]?.uri)
+          ? previous
+          : next
+      );
       return;
     }
 
