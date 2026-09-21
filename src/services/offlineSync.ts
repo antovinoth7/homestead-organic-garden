@@ -1,12 +1,12 @@
 import { doc, setDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { auth, db, refreshAuthToken } from '@/lib/firebase';
-import { getQueue, removeMutation, incrementRetry } from '@/lib/offlineQueue';
+import { getQueue, removeMutation, incrementRetry, deadLetterMutation } from '@/lib/offlineQueue';
 import { isOfflineWriteError } from '@/lib/offlineWrite';
 import { KEYS } from '@/lib/storage';
 import { invalidateAll } from '@/lib/dataCache';
 import { decodeTimestamps } from '@/utils/offlineQueueLogic';
 import { withTimeoutAndRetry, FIRESTORE_WRITE_TIMEOUT_MS } from '@/utils/firestoreTimeout';
-import { getErrorCode } from '@/utils/errorLogging';
+import { getErrorCode, getErrorMessage, logError } from '@/utils/errorLogging';
 import { safeSetItem } from '@/utils/safeStorage';
 import { logger } from '@/utils/logger';
 import type { OfflineMutation } from '@/types/offline.types';
@@ -119,9 +119,19 @@ async function runFlush(executor: MutationExecutor): Promise<FlushResult> {
 
       const { retryCount: retries, revision } = await incrementRetry(mutation.id);
       if (retries >= MAX_RETRIES) {
-        logger.warn(
-          `Offline sync: dropping ${mutation.op} on ${mutation.collection}/${mutation.docId} after ${retries} failed attempts`,
-          error as Error
+        // Park it rather than delete it. This is a user's edit that never
+        // reached the server; `logger` is disabled outside development, so
+        // deleting it here used to make it vanish with no trace anywhere.
+        const parked = await deadLetterMutation(
+          mutation,
+          `${retries} failed replay attempts: ${getErrorMessage(error)}`
+        );
+        // logError reaches Sentry in production, unlike logger.
+        logError(
+          'storage',
+          `Offline sync gave up on ${mutation.op} ${mutation.collection}/${mutation.docId}`,
+          error,
+          { collection: mutation.collection, op: mutation.op, retries, deadLettered: parked }
         );
         await removeMutation(mutation.id, revision);
         dropped += 1;

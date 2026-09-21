@@ -7,7 +7,7 @@ import { auth } from './src/lib/firebase';
 import { onAuthStateChanged, User } from '@firebase/auth';
 import { ThemeProvider, useTheme, useThemeMode } from './src/theme';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
-import { logAuthError, setErrorLogUserId } from './src/utils/errorLogging';
+import { logAuthError, logError, setErrorLogUserId } from './src/utils/errorLogging';
 import { logger } from './src/utils/logger';
 import { initAppLifecycle } from './src/utils/appLifecycle';
 import { Alert, Platform, StyleSheet } from 'react-native';
@@ -432,12 +432,26 @@ const AppRoot = (): React.JSX.Element | null => {
       // Short debounce so connectivity settles before replaying
       if (flushTimer) clearTimeout(flushTimer);
       flushTimer = setTimeout(() => {
-        flushOfflineQueue().catch((error) => {
-          logger.warn(
-            'Offline queue flush failed',
-            error instanceof Error ? error : new Error(String(error))
-          );
-        });
+        flushOfflineQueue()
+          .then((result) => {
+            // A drop means a user's edit was given up on after repeated replay
+            // failures. It is parked in the dead-letter store, but it must not
+            // pass silently: logger is disabled outside development.
+            if (result.dropped > 0) {
+              logError(
+                'storage',
+                `Offline sync gave up on ${result.dropped} queued write(s); parked for recovery`,
+                undefined,
+                { dropped: result.dropped, remaining: result.remaining }
+              );
+            }
+          })
+          .catch((error) => {
+            logger.warn(
+              'Offline queue flush failed',
+              error instanceof Error ? error : new Error(String(error))
+            );
+          });
       }, 2000);
     });
 

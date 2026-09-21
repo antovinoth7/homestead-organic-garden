@@ -196,6 +196,58 @@ export const incrementRetry = (id: string): Promise<{ retryCount: number; revisi
   });
 
 /**
+ * Cap on the dead-letter store. Old entries are evicted first: a mutation that
+ * has been undeliverable for that many failures is unlikely to be recovered,
+ * and the store must not grow without bound on a persistently failing device.
+ */
+const MAX_DEAD_LETTERS = 50;
+
+/** A mutation that was given up on, kept so it is not simply gone. */
+export interface DeadLetter {
+  mutation: OfflineMutation;
+  reason: string;
+  deadLetteredAt: number;
+}
+
+/**
+ * Park a mutation that replay has given up on.
+ *
+ * Deleting it outright is what used to happen, which meant a user's edit
+ * disappeared with only a `logger.warn` — and the logger is disabled outside
+ * development. Parking it keeps the write recoverable and inspectable.
+ *
+ * Never throws: this runs on the failure path, and losing the dead letter must
+ * not also abort the flush that was cleaning up after the failure.
+ */
+export const deadLetterMutation = async (
+  mutation: OfflineMutation,
+  reason: string
+): Promise<boolean> => {
+  try {
+    const existing = await readData<DeadLetter>(KEYS.OFFLINE_DEAD_LETTER);
+    const current = existing.ok ? existing.data : [];
+    const next = [...current, { mutation, reason, deadLetteredAt: Date.now() }].slice(
+      -MAX_DEAD_LETTERS
+    );
+    return await setData(KEYS.OFFLINE_DEAD_LETTER, next);
+  } catch (e) {
+    logger.warn('Offline queue: could not dead-letter mutation', e as Error);
+    return false;
+  }
+};
+
+/** Read the parked mutations, for surfacing or manual recovery. */
+export const getDeadLetters = async (): Promise<DeadLetter[]> => {
+  const result = await readData<DeadLetter>(KEYS.OFFLINE_DEAD_LETTER);
+  return result.ok ? result.data : [];
+};
+
+/** Discard the parked mutations. */
+export const clearDeadLetters = async (): Promise<void> => {
+  await setData(KEYS.OFFLINE_DEAD_LETTER, []);
+};
+
+/**
  * Drop every queued mutation. Used only when the user explicitly chooses to
  * discard pending writes (Settings → clear cache).
  */
