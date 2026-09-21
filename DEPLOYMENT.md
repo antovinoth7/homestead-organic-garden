@@ -16,11 +16,12 @@ This app uses [EAS Build](https://docs.expo.dev/build/introduction/) for buildin
 
 Build profiles are defined in `eas.json`:
 
-| Profile       | Purpose                      | Distribution  |
-| ------------- | ---------------------------- | ------------- |
-| `development` | Dev client for local testing | Internal      |
-| `preview`     | Internal testing builds      | Internal      |
-| `production`  | Release builds               | APK (Android) |
+| Profile       | Purpose                            | Distribution  |
+| ------------- | ---------------------------------- | ------------- |
+| `development` | Dev client for local testing       | Internal      |
+| `preview`     | Internal testing builds            | Internal      |
+| `production`  | Release builds for direct download | APK (Android) |
+| `play`        | Google Play submission             | AAB (Android) |
 
 ## Building
 
@@ -43,6 +44,38 @@ eas build --profile production --platform android
 ```
 
 The production profile outputs an APK (`"buildType": "apk"` in `eas.json`). Version numbers auto-increment via `"appVersionSource": "remote"`.
+
+#### Android ABIs — why the two profiles differ
+
+An Android build packages native libraries (`.so`) once per CPU architecture.
+With nothing configured, the build produces a **universal APK carrying all four**
+— `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64` — even though any given device uses
+exactly one. That is most of the APK's size.
+
+The set is chosen by the `reactNativeArchitectures` Gradle property, which the
+React Native Gradle plugin reads to set `abiFilters`. Both profiles set it via
+`ORG_GRADLE_PROJECT_reactNativeArchitectures` in their `env` block — Gradle turns
+any `ORG_GRADLE_PROJECT_*` variable into a project property, so this needs no
+extra package and no change to the generated `android/` project.
+
+- **`production` → `arm64-v8a,armeabi-v7a`.** One APK handed straight to users,
+  carrying only the architectures real phones use. `x86`/`x86_64` exist for
+  emulators and a few Chromebooks; dropping them is the single largest size win.
+- **`play` → all four.** Play splits an app bundle per device, so each user still
+  downloads one architecture. Keeping all four costs them nothing and preserves
+  installs on x86 Chromebooks.
+
+If you ever need to run a `production` APK on an emulator, build `preview`
+instead, or add the x86 architectures back for that one build.
+
+### Play Store Build
+
+```bash
+eas build --profile play --platform android
+```
+
+Outputs an `.aab` for Play submission. Use this instead of `production` once the
+app is listed; `production` remains the profile for the directly downloaded APK.
 
 ### iOS Builds
 

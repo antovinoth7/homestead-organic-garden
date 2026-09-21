@@ -527,6 +527,48 @@ these block anything; they are recorded so they are not rediscovered as surprise
   movement) plus typecheck — not by tests exercising them. Worth a device smoke
   test of the plant form, the Plants list, the Today screen and the calendar.
 
+### APK size
+
+- ✅ **Done — icon fonts.** Every icon import went through the `@expo/vector-icons`
+  barrel, whose entry point (`build/IconsLazy.js`) eagerly `require()`s all 15 icon
+  sets despite the name, so all 19 `.ttf` files shipped. Only Ionicons is used.
+  Imports now use the `@expo/vector-icons/Ionicons` subpath. Measured with
+  `expo export --platform android`: fonts 3.89 MB → 0.37 MB, Hermes bytecode
+  7.62 MB → 7.30 MB (glyph maps went too), export total 42.66 MB → 38.82 MB.
+
+- ✅ **Done — ABI packaging.** With nothing setting `reactNativeArchitectures`, an
+  Expo `"buildType": "apk"` build produces a **universal APK carrying all four
+  ABIs**, which was most of the ~106 MB non-asset payload. Both build profiles now
+  set it through `ORG_GRADLE_PROJECT_reactNativeArchitectures` in `eas.json`:
+  `production` (direct-download APK) ships phone architectures only, and a new
+  `play` profile ships an app bundle with all four for Play to split. See
+  `DEPLOYMENT.md` → Android ABIs. **Not yet measured** — needs one EAS build to
+  confirm the saving.
+
+- ✅ **Done — removed `@react-native-picker/picker`**, a native module with zero
+  imports anywhere.
+
+- **Open: R8 / resource shrinking.** Nothing sets `enableProguardInReleaseBuilds`
+  or `enableShrinkResourcesInReleaseBuilds`, and there is no mechanism to —
+  `expo-build-properties` is not installed. This only shrinks DEX and resources,
+  never `.so` files, so it is secondary to the ABI fix above. It also needs keep
+  rules for Firebase, Sentry and Hermes reflection, so it wants its own branch and
+  a full device smoke test. Measure the ABI change first.
+
+- **Considered and rejected: trimming `assets/reference/`.** The 253 bundled WebP
+  files are 32 MB, but all are statically required and reachable, and at 800×600
+  they are already conservative for a full-width × 250 dp hero plus fullscreen
+  preview. Tightening the 160 KB ingest cap to ~120 KB would save roughly 7 MB at a
+  visible quality cost. Offloading them breaks the offline-first design they exist
+  for. See `docs/REFERENCE_IMAGES.md` → Size Budget.
+
+- **Not a size win: `expo-dev-client` in `dependencies`.** It does ship into
+  production builds — EAS does not strip it, and Android autolinking has no
+  `debugOnly` equivalent (that flag is Apple-only). But `expo-dev-launcher` and
+  `expo-dev-menu` swap in a `disableInRelease` source set (32 KB vs 1020 KB / 2.7 MB)
+  and mark every heavy transitive `debugOnly`, so the release cost is tens of KB and
+  no `.so`. Worth moving to `devDependencies` as hygiene; do not expect bytes.
+
 ### Dependencies
 
 - **`@sentry/react-native` v8.** SDK 57 validates against `~7.11.0`, so v8 is
