@@ -536,24 +536,39 @@ these block anything; they are recorded so they are not rediscovered as surprise
   `expo export --platform android`: fonts 3.89 MB → 0.37 MB, Hermes bytecode
   7.62 MB → 7.30 MB (glyph maps went too), export total 42.66 MB → 38.82 MB.
 
-- ✅ **Done — ABI packaging.** With nothing setting `reactNativeArchitectures`, an
-  Expo `"buildType": "apk"` build produces a **universal APK carrying all four
-  ABIs**, which was most of the ~106 MB non-asset payload. Both build profiles now
-  set it through `ORG_GRADLE_PROJECT_reactNativeArchitectures` in `eas.json`:
-  `production` (direct-download APK) ships phone architectures only, and a new
-  `play` profile ships an app bundle with all four for Play to split. See
-  `DEPLOYMENT.md` → Android ABIs. **Not yet measured** — needs one EAS build to
-  confirm the saving.
+- ✅ **Done — ABI packaging. Confirmed by build: 138 MB → 88 MB.** With nothing
+  setting `reactNativeArchitectures`, an Expo `"buildType": "apk"` build produces a
+  **universal APK carrying all four ABIs**, which was most of the ~106 MB non-asset
+  payload. Both build profiles now set it through
+  `ORG_GRADLE_PROJECT_reactNativeArchitectures` in `eas.json`: `production`
+  (direct-download APK) ships `arm64-v8a,armeabi-v7a`, and a new `play` profile
+  ships an app bundle with all four for Play to split. See `DEPLOYMENT.md` →
+  Android ABIs.
+
+  Of the 50 MB saved, ~3.8 MB was the icon fonts and the rest the two dropped
+  architectures — so the native payload is roughly **23 MB per ABI**. The app was
+  verified working on-device after the change.
 
 - ✅ **Done — removed `@react-native-picker/picker`**, a native module with zero
   imports anywhere.
 
+  Current 88 MB breaks down roughly as: 32 MB reference images + ~46 MB native
+  (2 ABIs) + ~8 MB Hermes bytecode + ~2 MB other.
+
+- **Open: drop `armeabi-v7a` too (~23 MB).** That would leave a 64-bit-only APK at
+  roughly 65 MB. Every Android phone sold since about 2017 is arm64, and Play has
+  required 64-bit since 2019 — but 32-bit-only budget handsets do still exist in
+  the field, and this app's users are exactly the sort to have one. **A product
+  decision, not a technical one.** Note the `play` profile makes it moot for Play
+  users: an app bundle ships all four and Play delivers one, so each user's
+  download is already ~65 MB without excluding anybody.
+
 - **Open: R8 / resource shrinking.** Nothing sets `enableProguardInReleaseBuilds`
   or `enableShrinkResourcesInReleaseBuilds`, and there is no mechanism to —
   `expo-build-properties` is not installed. This only shrinks DEX and resources,
-  never `.so` files, so it is secondary to the ABI fix above. It also needs keep
-  rules for Firebase, Sentry and Hermes reflection, so it wants its own branch and
-  a full device smoke test. Measure the ABI change first.
+  never `.so` files, so with native code now down to two ABIs the remaining upside
+  is smaller than it looked. It needs keep rules for Firebase, Sentry and Hermes
+  reflection, so it wants its own branch and a full device smoke test.
 
 - **Considered and rejected: trimming `assets/reference/`.** The 253 bundled WebP
   files are 32 MB, but all are statically required and reachable, and at 800×600

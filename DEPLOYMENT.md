@@ -65,6 +65,12 @@ extra package and no change to the generated `android/` project.
   downloads one architecture. Keeping all four costs them nothing and preserves
   installs on x86 Chromebooks.
 
+Measured effect of this change: **138 MB → 88 MB** for the `production` APK
+(~3.8 MB of that was a separate icon-font fix, the rest the two dropped
+architectures). The native payload is roughly 23 MB per ABI, so the remaining
+88 MB is about 32 MB of bundled reference images, ~46 MB of native code for two
+architectures, ~8 MB of Hermes bytecode and ~2 MB of everything else.
+
 If you ever need to run a `production` APK on an emulator, build `preview`
 instead, or add the x86 architectures back for that one build.
 
