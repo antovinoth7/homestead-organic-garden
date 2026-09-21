@@ -14,6 +14,10 @@ const mockSafeSetItem = jest.fn(async (_key: string, _value: string) => true);
 
 jest.mock('@/lib/storage', () => ({
   KEYS: { OFFLINE_QUEUE: '@garden_offline_queue', LAST_SYNC: '@garden_last_sync' },
+  readData: jest.fn(async (key: string) => ({
+    ok: true,
+    data: mockMemoryStore.get(key) ?? [],
+  })),
   getData: jest.fn(async (key: string) => mockMemoryStore.get(key) ?? []),
   setData: jest.fn(async (key: string, value: unknown[]) => {
     mockMemoryStore.set(key, value);

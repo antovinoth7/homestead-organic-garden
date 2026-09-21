@@ -1,4 +1,5 @@
-import { safeGetData, safeSetData, safeRemoveItem } from '../utils/safeStorage';
+import { safeGetData, safeReadData, safeSetData, safeRemoveItem } from '../utils/safeStorage';
+import type { StorageRead } from '../utils/safeStorage';
 import { logStorageError } from '../utils/errorLogging';
 import { invalidateAll } from './dataCache';
 import { logger } from '../utils/logger';
@@ -31,6 +32,20 @@ export const getData = async <T>(key: string): Promise<T[]> => {
   } catch (e) {
     logStorageError(`Error reading ${key}`, e as Error);
     return [];
+  }
+};
+
+/**
+ * Strict read. Unlike `getData`, a failure is reported rather than flattened to
+ * `[]`, so a caller that read-modify-writes the only durable copy of user data
+ * can refuse to act on a read that did not actually succeed.
+ */
+export const readData = async <T>(key: string): Promise<StorageRead<T>> => {
+  try {
+    return await safeReadData<T>(key);
+  } catch (e) {
+    logStorageError(`Error reading ${key}`, e as Error);
+    return { ok: false, reason: 'io' };
   }
 };
 
