@@ -1,11 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import {
-  BackHandler,
-  Alert,
-  Platform,
-  ScrollView,
-  useWindowDimensions,
-} from 'react-native';
+import { BackHandler, Alert, Platform, ScrollView, useWindowDimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, StackActions } from '@react-navigation/native';
@@ -434,7 +428,7 @@ export function usePlantFormState(): PlantFormStateReturn {
         coconut: 'optional',
         notesHistory: 'optional',
         pestDisease: 'optional',
-      } as const),
+      }) as const,
     [
       plantVariety,
       plantType,
@@ -446,6 +440,121 @@ export function usePlantFormState(): PlantFormStateReturn {
       fertilisingFrequency,
     ]
   );
+
+  const loadPlant = async (): Promise<void> => {
+    if (!plantId) return;
+    try {
+      const plant = await getPlant(plantId);
+      if (plant) {
+        let loadedShortNames = locationShortNames;
+        if (Object.keys(loadedShortNames).length === 0) {
+          try {
+            const config = await getLocationConfig();
+            loadedShortNames = config.parentLocationShortNames ?? {};
+          } catch {}
+        }
+
+        const locationParts = plant.location?.split(' - ') || [];
+        const existingParentLoc = locationParts.length >= 1 ? (locationParts[0] ?? '') : '';
+
+        const richBase = buildGeneratedPlantNameBase(
+          plant.plant_variety || '',
+          plant.variety || '',
+          plant.planting_date || undefined,
+          existingParentLoc || undefined,
+          loadedShortNames[existingParentLoc] || undefined
+        );
+        const richBaseOld = buildGeneratedPlantNameBase(
+          plant.plant_variety || '',
+          plant.variety || '',
+          plant.planting_date || undefined,
+          existingParentLoc || undefined,
+          undefined
+        );
+        const simpleBase = buildGeneratedPlantNameBase(
+          plant.plant_variety || '',
+          plant.variety || ''
+        );
+        const generatedName = isGeneratedPlantName(plant.name, richBase)
+          ? plant.name
+          : isGeneratedPlantName(plant.name, richBaseOld)
+            ? plant.name
+            : isGeneratedPlantName(plant.name, simpleBase)
+              ? plant.name
+              : '';
+
+        setName(generatedName ? '' : plant.name);
+        setLoadedGeneratedName(generatedName);
+        if (!generatedName && plant.name) setShowCustomNameInput(true);
+        setPlantType(plant.plant_type);
+        setPlantVariety(plant.plant_variety || '');
+        setSpaceType(plant.space_type);
+        setLocation(plant.location);
+
+        if (locationParts.length === 2) {
+          setParentLocation(locationParts[0]!);
+          setChildLocation(locationParts[1]!);
+        } else if (locationParts.length === 1 && locationParts[0]) {
+          setParentLocation(locationParts[0]!);
+          setChildLocation('');
+        }
+
+        setBedId(plant.bed_id || '');
+        setBedName(plant.bed_name || '');
+        setPotSize(plant.pot_size || '');
+        setVariety(plant.variety || '');
+        setCustomVarietyMode(false);
+        setLandmarks(plant.landmarks || '');
+        setPlantingDate(plant.planting_date || '');
+        setHarvestSeason(plant.harvest_season || '');
+        setNotes(plant.notes || '');
+        setPhotoUri(plant.photo_url);
+        setPhotoFilename(plant.photo_filename ?? getFilenameFromUri(plant.photo_url ?? ''));
+        setSunlight(plant.sunlight || 'full_sun');
+        setSoilType(plant.soil_type || 'potting_mix');
+        setWaterRequirement(plant.water_requirement || 'medium');
+        setWateringFrequency(plant.watering_frequency_days?.toString() || '3');
+        setFertilisingFrequency(plant.fertilising_frequency_days?.toString() || '14');
+        setPreferredFertiliser(plant.preferred_fertiliser || 'compost');
+        setMulchingUsed(plant.mulching_used || false);
+        setHealthStatus(plant.health_status || 'healthy');
+        setExpectedHarvestDate(plant.expected_harvest_date || '');
+        setPestDiseaseHistory(plant.pest_disease_history || []);
+        setGrowthStage(plant.growth_stage || 'seedling');
+        setPinnedStage(plant.growth_stage_pinned ?? null);
+        initialPinnedStage.current = plant.growth_stage_pinned ?? null;
+        setPruningFrequency(plant.pruning_frequency_days?.toString() || '');
+        setPruningNotes(plant.pruning_notes || '');
+        setWateringEnabled(plant.watering_enabled !== false);
+        setFertilisingEnabled(plant.fertilising_enabled !== false);
+        setPruningEnabled(plant.pruning_enabled !== false);
+        setCoconutFrondsCount(plant.coconut_fronds_count?.toString() || '');
+        setNutsPerMonth(plant.nuts_per_month?.toString() || '');
+        setLastClimbingDate(plant.last_climbing_date || '');
+        setSpatheCount(plant.spathe_count_per_month?.toString() || '');
+        setNutFallCount(plant.nut_fall_count?.toString() || '');
+        setLastNutFallDate(plant.last_nut_fall_date || '');
+
+        setSectionExpanded((prev) => ({
+          ...prev,
+          health:
+            prev.health || (plant.health_status !== undefined && plant.health_status !== 'healthy'),
+          coconut: plant.plant_type === 'coconut_tree',
+          notesHistory:
+            prev.notesHistory || !!plant.notes || (plant.pest_disease_history?.length ?? 0) > 0,
+          pestDisease: prev.pestDisease || (plant.pest_disease_history?.length ?? 0) > 0,
+        }));
+
+        setTimeout(() => {
+          initialDataLoaded.current = true;
+        }, 500);
+      }
+    } catch (error: unknown) {
+      Alert.alert('Error', getErrorMessage(error));
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   // ── Effects ────────────────────────────────────────────────────────────────
 
@@ -666,6 +775,16 @@ export function usePlantFormState(): PlantFormStateReturn {
     }
   }, [parentLocation, childLocation]);
 
+  const handleBackPress = useCallback(() => {
+    if (isSaving.current) return;
+    if (hasUnsavedChanges) {
+      setShowDiscardModal(true);
+    } else {
+      isDiscarding.current = true;
+      navigation.goBack();
+    }
+  }, [hasUnsavedChanges, navigation]);
+
   // Back navigation — shared handler for both add and edit
   useEffect(() => {
     const backAction = (): boolean => {
@@ -698,16 +817,6 @@ export function usePlantFormState(): PlantFormStateReturn {
   const setSectionExpandedState = useCallback((section: FormSectionKey, expanded: boolean) => {
     setSectionExpanded((prev) => ({ ...prev, [section]: expanded }));
   }, []);
-
-  const handleBackPress = useCallback(() => {
-    if (isSaving.current) return;
-    if (hasUnsavedChanges) {
-      setShowDiscardModal(true);
-    } else {
-      isDiscarding.current = true;
-      navigation.goBack();
-    }
-  }, [hasUnsavedChanges, navigation]);
 
   const handleDiscard = useCallback(() => {
     setShowDiscardModal(false);
@@ -780,121 +889,6 @@ export function usePlantFormState(): PlantFormStateReturn {
   const pickImage = useCallback(() => {
     setShowPhotoSourceModal(true);
   }, []);
-
-  const loadPlant = async (): Promise<void> => {
-    if (!plantId) return;
-    try {
-      const plant = await getPlant(plantId);
-      if (plant) {
-        let loadedShortNames = locationShortNames;
-        if (Object.keys(loadedShortNames).length === 0) {
-          try {
-            const config = await getLocationConfig();
-            loadedShortNames = config.parentLocationShortNames ?? {};
-          } catch {}
-        }
-
-        const locationParts = plant.location?.split(' - ') || [];
-        const existingParentLoc = locationParts.length >= 1 ? locationParts[0] ?? '' : '';
-
-        const richBase = buildGeneratedPlantNameBase(
-          plant.plant_variety || '',
-          plant.variety || '',
-          plant.planting_date || undefined,
-          existingParentLoc || undefined,
-          loadedShortNames[existingParentLoc] || undefined
-        );
-        const richBaseOld = buildGeneratedPlantNameBase(
-          plant.plant_variety || '',
-          plant.variety || '',
-          plant.planting_date || undefined,
-          existingParentLoc || undefined,
-          undefined
-        );
-        const simpleBase = buildGeneratedPlantNameBase(
-          plant.plant_variety || '',
-          plant.variety || ''
-        );
-        const generatedName = isGeneratedPlantName(plant.name, richBase)
-          ? plant.name
-          : isGeneratedPlantName(plant.name, richBaseOld)
-          ? plant.name
-          : isGeneratedPlantName(plant.name, simpleBase)
-          ? plant.name
-          : '';
-
-        setName(generatedName ? '' : plant.name);
-        setLoadedGeneratedName(generatedName);
-        if (!generatedName && plant.name) setShowCustomNameInput(true);
-        setPlantType(plant.plant_type);
-        setPlantVariety(plant.plant_variety || '');
-        setSpaceType(plant.space_type);
-        setLocation(plant.location);
-
-        if (locationParts.length === 2) {
-          setParentLocation(locationParts[0]!);
-          setChildLocation(locationParts[1]!);
-        } else if (locationParts.length === 1 && locationParts[0]) {
-          setParentLocation(locationParts[0]!);
-          setChildLocation('');
-        }
-
-        setBedId(plant.bed_id || '');
-        setBedName(plant.bed_name || '');
-        setPotSize(plant.pot_size || '');
-        setVariety(plant.variety || '');
-        setCustomVarietyMode(false);
-        setLandmarks(plant.landmarks || '');
-        setPlantingDate(plant.planting_date || '');
-        setHarvestSeason(plant.harvest_season || '');
-        setNotes(plant.notes || '');
-        setPhotoUri(plant.photo_url);
-        setPhotoFilename(plant.photo_filename ?? getFilenameFromUri(plant.photo_url ?? ''));
-        setSunlight(plant.sunlight || 'full_sun');
-        setSoilType(plant.soil_type || 'potting_mix');
-        setWaterRequirement(plant.water_requirement || 'medium');
-        setWateringFrequency(plant.watering_frequency_days?.toString() || '3');
-        setFertilisingFrequency(plant.fertilising_frequency_days?.toString() || '14');
-        setPreferredFertiliser(plant.preferred_fertiliser || 'compost');
-        setMulchingUsed(plant.mulching_used || false);
-        setHealthStatus(plant.health_status || 'healthy');
-        setExpectedHarvestDate(plant.expected_harvest_date || '');
-        setPestDiseaseHistory(plant.pest_disease_history || []);
-        setGrowthStage(plant.growth_stage || 'seedling');
-        setPinnedStage(plant.growth_stage_pinned ?? null);
-        initialPinnedStage.current = plant.growth_stage_pinned ?? null;
-        setPruningFrequency(plant.pruning_frequency_days?.toString() || '');
-        setPruningNotes(plant.pruning_notes || '');
-        setWateringEnabled(plant.watering_enabled !== false);
-        setFertilisingEnabled(plant.fertilising_enabled !== false);
-        setPruningEnabled(plant.pruning_enabled !== false);
-        setCoconutFrondsCount(plant.coconut_fronds_count?.toString() || '');
-        setNutsPerMonth(plant.nuts_per_month?.toString() || '');
-        setLastClimbingDate(plant.last_climbing_date || '');
-        setSpatheCount(plant.spathe_count_per_month?.toString() || '');
-        setNutFallCount(plant.nut_fall_count?.toString() || '');
-        setLastNutFallDate(plant.last_nut_fall_date || '');
-
-        setSectionExpanded((prev) => ({
-          ...prev,
-          health:
-            prev.health || (plant.health_status !== undefined && plant.health_status !== 'healthy'),
-          coconut: plant.plant_type === 'coconut_tree',
-          notesHistory:
-            prev.notesHistory || !!plant.notes || (plant.pest_disease_history?.length ?? 0) > 0,
-          pestDisease: prev.pestDisease || (plant.pest_disease_history?.length ?? 0) > 0,
-        }));
-
-        setTimeout(() => {
-          initialDataLoaded.current = true;
-        }, 500);
-      }
-    } catch (error: unknown) {
-      Alert.alert('Error', getErrorMessage(error));
-    } finally {
-      setDataLoading(false);
-    }
-  };
 
   const handleSave = async (): Promise<void> => {
     setShowValidationErrors(true);

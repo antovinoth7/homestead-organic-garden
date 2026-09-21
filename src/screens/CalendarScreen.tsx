@@ -1133,7 +1133,7 @@ export default function CalendarScreen(): React.JSX.Element {
         </TouchableOpacity>
       );
     },
-    [getSectionState, toggleSectionSelection, theme]
+    [getSectionState, toggleSectionSelection, theme, styles.sectionSelectButton]
   );
 
   const handleOpenSkipModal = useCallback(

@@ -83,7 +83,7 @@ export function AddPlantCarePlanSection({
       pruningEnabled,
       pruningFrequency,
       growthStage,
-      profile?.lifecycle,
+      profile,
     ]
   );
 

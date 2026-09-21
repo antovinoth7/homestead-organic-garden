@@ -43,7 +43,7 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
     const inputs = mapPlantEntriesToRowInputs(entries, tpl);
     if (inputs.length === 0) return null;
     return computeRowLayout(inputs, s3.width_m, s3.length_m, s1.bed_type, s2?.construction_type);
-  }, [s1?.bed_type, s3, entries, s2?.construction_type]);
+  }, [s1, s3, entries, s2?.construction_type]);
 
   const plantsLabel = useMemo(() => {
     if (entries.length === 0) return null;

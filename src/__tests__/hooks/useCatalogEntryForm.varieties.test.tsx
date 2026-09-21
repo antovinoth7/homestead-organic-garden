@@ -82,11 +82,17 @@ interface ProbeProps {
 }
 
 function Probe({ name, plantType, isCreating }: ProbeProps): null {
-  latest = useCatalogEntryForm({
+  const value = useCatalogEntryForm({
     initialName: name,
     plantType,
     isCreating,
     anyModalOpen: false,
+  });
+  // Captured in an effect rather than assigned during render: reassigning an
+  // outer binding mid-render is a side effect (react-hooks/globals). Effects
+  // flush inside `act`, so `latest` is still set before any assertion runs.
+  React.useEffect(() => {
+    latest = value;
   });
   return null;
 }
@@ -111,25 +117,17 @@ describe('useCatalogEntryForm — bundled varieties and the care model', () => {
   it('opens a bundled plant with the varieties it ships', async () => {
     let tree!: { unmount: () => void };
     await TestRenderer.act(async () => {
-      tree = TestRenderer.create(
-        <Probe name="Tomato" plantType="vegetable" isCreating={false} />
-      );
+      tree = TestRenderer.create(<Probe name="Tomato" plantType="vegetable" isCreating={false} />);
     });
 
-    expect(latest.varieties).toEqual([
-      'Country Tomato',
-      'Hybrid Tomato',
-      'Cherry Tomato',
-    ]);
+    expect(latest.varieties).toEqual(['Country Tomato', 'Hybrid Tomato', 'Cherry Tomato']);
     tree.unmount();
   });
 
   it('keeps the bundled varieties when an unrelated field is saved', async () => {
     let tree!: { unmount: () => void };
     await TestRenderer.act(async () => {
-      tree = TestRenderer.create(
-        <Probe name="Tomato" plantType="vegetable" isCreating={false} />
-      );
+      tree = TestRenderer.create(<Probe name="Tomato" plantType="vegetable" isCreating={false} />);
     });
 
     // An edit that has nothing to do with varieties is what used to erase them.
@@ -142,20 +140,14 @@ describe('useCatalogEntryForm — bundled varieties and the care model', () => {
 
     expect(mockSave).toHaveBeenCalledTimes(1);
     const [, , saved] = mockSave.mock.calls[0] as [string, string, { varieties?: string[] }];
-    expect(saved.varieties).toEqual([
-      'Country Tomato',
-      'Hybrid Tomato',
-      'Cherry Tomato',
-    ]);
+    expect(saved.varieties).toEqual(['Country Tomato', 'Hybrid Tomato', 'Cherry Tomato']);
     tree.unmount();
   });
 
   it('lets the bundled varieties be removed for real', async () => {
     let tree!: { unmount: () => void };
     await TestRenderer.act(async () => {
-      tree = TestRenderer.create(
-        <Probe name="Tomato" plantType="vegetable" isCreating={false} />
-      );
+      tree = TestRenderer.create(<Probe name="Tomato" plantType="vegetable" isCreating={false} />);
     });
 
     await TestRenderer.act(async () => {
@@ -185,9 +177,7 @@ describe('useCatalogEntryForm — bundled varieties and the care model', () => {
 
     let tree!: { unmount: () => void };
     await TestRenderer.act(async () => {
-      tree = TestRenderer.create(
-        <Probe name="Tomato" plantType="vegetable" isCreating={false} />
-      );
+      tree = TestRenderer.create(<Probe name="Tomato" plantType="vegetable" isCreating={false} />);
     });
 
     let mode: 'confirm' | 'reassign' | null = null;
