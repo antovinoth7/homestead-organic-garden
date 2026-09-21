@@ -20,6 +20,7 @@ import {
   PanResponder,
   useWindowDimensions,
   type LayoutChangeEvent,
+  useAnimatedValueXY,
 } from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/weatherCardStyles';
@@ -53,7 +54,7 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
   // Tallest card measured so far. Monotonic: once every card is stretched to it,
   // they all report it back, so it settles after the tallest plot has mounted.
   const [cardHeight, setCardHeight] = useState(0);
-  const pan = useRef(new Animated.ValueXY()).current;
+  const pan = useAnimatedValueXY({ x: 0, y: 0 });
   const screenW = useWindowDimensions().width;
 
   // A different farm means different cards — re-measure from scratch rather than
@@ -226,7 +227,10 @@ export const WeatherDeck = React.memo(function WeatherDeck({ plots }: Props): Re
 
       <View style={styles.dotsRow}>
         {plots.map((plot, i) => (
-          <View key={`${plot.name}-${i}`} style={[styles.dot, i === topIndex && styles.dotActive]} />
+          <View
+            key={`${plot.name}-${i}`}
+            style={[styles.dot, i === topIndex && styles.dotActive]}
+          />
         ))}
       </View>
     </View>

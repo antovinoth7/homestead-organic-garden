@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Animated, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Animated, Text, TouchableOpacity, View, useAnimatedValue } from 'react-native';
 import type { ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,7 +43,7 @@ export function ReferenceDetailView({
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useAnimatedValue(0);
   const [expandedStep, setExpandedStep] = useState<number | null>(0);
   const [previewVisible, setPreviewVisible] = useState(false);
 
@@ -123,10 +123,7 @@ export function ReferenceDetailView({
           onPressImage={image ? handleOpenPreview : undefined}
         />
 
-        <RiskInGardenCard
-          seasonalRisk={entry.seasonalRisk}
-          plantsAffected={entry.plantsAffected}
-        />
+        <RiskInGardenCard seasonalRisk={entry.seasonalRisk} plantsAffected={entry.plantsAffected} />
 
         <View style={styles.panel}>
           <View style={styles.pairRow}>

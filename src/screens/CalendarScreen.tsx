@@ -17,6 +17,7 @@ import {
   LayoutChangeEvent,
   Modal,
   useWindowDimensions,
+  useAnimatedValue,
 } from 'react-native';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import {
@@ -304,15 +305,15 @@ export default function CalendarScreen(): React.JSX.Element {
   const [notDueDialog, setNotDueDialog] = useState<NotDueDialog>(null);
   /** Not-yet-due tasks dropped from the current skip batch, reported in the sheet. */
   const [skipExcludedCount, setSkipExcludedCount] = useState(0);
-  const completeProgress = useRef(new Animated.Value(0)).current; // 0→1 bulk-completion bar
+  const completeProgress = useAnimatedValue(0); // 0→1 bulk-completion bar
   // Selection pill entrance/exit. `selectionBarMounted` outlives an empty
   // selection just long enough for the exit animation to finish — unmounting on
   // the state change alone would make the pill vanish rather than slide away.
   const [selectionBarMounted, setSelectionBarMounted] = useState(false);
-  const selectionBarAnim = useRef(new Animated.Value(0)).current;
+  const selectionBarAnim = useAnimatedValue(0);
   // Collapsible-header state. `scrollY` is fed straight from the list's native
   // scroll event, so the collapse runs entirely on the UI thread.
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useAnimatedValue(0);
   const [headerHeight, setHeaderHeight] = useState(0);
   const searchInputRef = React.useRef<TextInput>(null);
   const normalizeSearchText = (value: string): string =>
@@ -504,14 +505,11 @@ export default function CalendarScreen(): React.JSX.Element {
           dateKey: key,
           label: isToday
             ? 'Today'
-            : formatFarmDate(
-                date,
-                {
-                  weekday: 'long',
-                  month: 'short',
-                  day: 'numeric',
-                }
-              ),
+            : formatFarmDate(date, {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric',
+              }),
           tasks: grouped[key],
           isToday,
         },
@@ -725,7 +723,7 @@ export default function CalendarScreen(): React.JSX.Element {
   const taskSubjectLabel = useCallback(
     (task: TaskTemplate): string => {
       const bedLabel = task.bed_id != null ? bedMap.get(task.bed_id) : undefined;
-      return task.plant_id ? getPlantDetails(task.plant_id).name : bedLabel ?? 'General';
+      return task.plant_id ? getPlantDetails(task.plant_id).name : (bedLabel ?? 'General');
     },
     [bedMap, getPlantDetails]
   );
@@ -951,7 +949,7 @@ export default function CalendarScreen(): React.JSX.Element {
         });
         return;
       }
-      const single = eligible.length === 1 ? eligible[0] ?? null : null;
+      const single = eligible.length === 1 ? (eligible[0] ?? null) : null;
       setSkipTask(single);
       setSkipBulkTasks(single ? null : eligible);
       setSkipExcludedCount(targets.length - eligible.length);
@@ -993,10 +991,10 @@ export default function CalendarScreen(): React.JSX.Element {
             selectedTotal === 1 ? '' : 's'
           } aren't due yet`
         : bulk
-        ? `${selectedTotal} task${selectedTotal === 1 ? '' : 's'} selected`
-        : `${TASK_LABELS[first.task_type]} · ${taskSubjectLabel(first)} · due ${formatDueDate(
-            first
-          )}`;
+          ? `${selectedTotal} task${selectedTotal === 1 ? '' : 's'} selected`
+          : `${TASK_LABELS[first.task_type]} · ${taskSubjectLabel(first)} · due ${formatDueDate(
+              first
+            )}`;
 
     // `blocked` reuses EARLY_COMPLETION_BLOCK_REASON, which only covers water /
     // fertilise / spray. `skipBlocked` applies to every type, so it carries its
@@ -1009,12 +1007,12 @@ export default function CalendarScreen(): React.JSX.Element {
               EARLY_COMPLETION_BLOCK_REASON[first.task_type] ?? ''
             } Reschedule, or log the actual work with a field reason.`
         : kind === 'skipBlocked'
-        ? bulk
-          ? 'These tasks are not due yet. Reschedule them instead of recording a skip.'
-          : 'This task is not due yet. Reschedule it instead of recording a skip.'
-        : bulk
-        ? 'Future tasks require individual review. Tasks already due can still be completed together.'
-        : 'Logging it today will rebase the next cycle from today. Add the field reason first.';
+          ? bulk
+            ? 'These tasks are not due yet. Reschedule them instead of recording a skip.'
+            : 'This task is not due yet. Reschedule it instead of recording a skip.'
+          : bulk
+            ? 'Future tasks require individual review. Tasks already due can still be completed together.'
+            : 'Logging it today will rebase the next cycle from today. Add the field reason first.';
 
     const rescheduleAction: AlertDialogAction = {
       label: 'Reschedule',
@@ -1126,8 +1124,8 @@ export default function CalendarScreen(): React.JSX.Element {
               state === 'all'
                 ? 'checkmark-circle'
                 : state === 'partial'
-                ? 'remove-circle'
-                : 'ellipse-outline'
+                  ? 'remove-circle'
+                  : 'ellipse-outline'
             }
             size={20}
             color={state === 'none' ? theme.border : theme.primary}
@@ -1361,14 +1359,11 @@ export default function CalendarScreen(): React.JSX.Element {
           header: {
             title: selectedIsToday
               ? 'Today'
-              : formatFarmDate(
-                  selectedDate,
-                  {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                  }
-                ),
+              : formatFarmDate(selectedDate, {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                }),
             checkboxTasks: selectedDateTasks,
             count: selectedDateTasks.length,
           },
@@ -1541,16 +1536,16 @@ export default function CalendarScreen(): React.JSX.Element {
           ? effectiveGroupBy === 'location'
             ? groupName
             : effectiveGroupBy === 'type'
-            ? taskLabel(groupName as TaskType) ||
-              groupName.charAt(0).toUpperCase() + groupName.slice(1)
-            : effectiveGroupBy === 'plant'
-            ? groupName
-            : effectiveGroupBy === 'bed'
-            ? groupName
-            : fallbackTitle
+              ? taskLabel(groupName as TaskType) ||
+                groupName.charAt(0).toUpperCase() + groupName.slice(1)
+              : effectiveGroupBy === 'plant'
+                ? groupName
+                : effectiveGroupBy === 'bed'
+                  ? groupName
+                  : fallbackTitle
           : isSearching
-          ? 'Search Results'
-          : fallbackTitle;
+            ? 'Search Results'
+            : fallbackTitle;
         sections.push({
           key: `group-${groupName || 'all'}`,
           header: {
@@ -1559,16 +1554,16 @@ export default function CalendarScreen(): React.JSX.Element {
               effectiveGroupBy === 'location'
                 ? 'general.location'
                 : effectiveGroupBy === 'plant'
-                ? 'general.plant'
-                : effectiveGroupBy === 'bed'
-                ? 'general.bed'
-                : undefined,
+                  ? 'general.plant'
+                  : effectiveGroupBy === 'bed'
+                    ? 'general.bed'
+                    : undefined,
             checkboxTasks: nonOverdue,
             count: groupName
               ? nonOverdue.length
               : isSearching
-              ? tasksForDisplay.length
-              : weekTasks.length,
+                ? tasksForDisplay.length
+                : weekTasks.length,
             showDoneChip: !groupName && !isSearching,
           },
           data: taskRows(`group-${groupName || 'all'}`, nonOverdue),
@@ -2046,8 +2041,8 @@ export default function CalendarScreen(): React.JSX.Element {
                 header.overdue
                   ? styles.sectionTitleOverdue
                   : header.titleFlex !== false
-                  ? styles.sectionTitleFlex
-                  : null,
+                    ? styles.sectionTitleFlex
+                    : null,
               ]}
             >
               {header.title}
@@ -2180,9 +2175,7 @@ export default function CalendarScreen(): React.JSX.Element {
                       {compactTodayAction ? (
                         <Ionicons name="today-outline" size={20} color={theme.warning} />
                       ) : (
-                        <Text style={styles.todayButtonText}>
-                          Today
-                        </Text>
+                        <Text style={styles.todayButtonText}>Today</Text>
                       )}
                     </TouchableOpacity>
                   )}
@@ -2277,15 +2270,12 @@ export default function CalendarScreen(): React.JSX.Element {
                       <Text style={styles.staleBannerTitle}>Showing saved care-plan data</Text>
                       <Text style={styles.staleBannerText}>
                         {lastUpdatedAt
-                          ? `Last updated ${formatFarmDate(
-                              new Date(lastUpdatedAt),
-                              {
-                                day: 'numeric',
-                                month: 'short',
-                                hour: 'numeric',
-                                minute: '2-digit',
-                              }
-                            )}`
+                          ? `Last updated ${formatFarmDate(new Date(lastUpdatedAt), {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}`
                           : 'Live data is temporarily unavailable'}
                       </Text>
                     </View>
@@ -2321,18 +2311,8 @@ export default function CalendarScreen(): React.JSX.Element {
                 <View style={styles.segmentRow}>
                   {(
                     [
-                      [
-                        'other',
-                        'Pots & Ground',
-                        'cube-outline',
-                        segmentCounts.other,
-                      ],
-                      [
-                        'bed',
-                        'Beds',
-                        'grid-outline',
-                        segmentCounts.bed,
-                      ],
+                      ['other', 'Pots & Ground', 'cube-outline', segmentCounts.other],
+                      ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
                     ] as const
                   ).map(([value, label, icon, count]) => {
                     const active = bedSegment === value;
@@ -2424,29 +2404,20 @@ export default function CalendarScreen(): React.JSX.Element {
               >
                 <Text style={styles.collapsedStripText}>
                   {selectedDate
-                    ? formatFarmDate(
-                        selectedDate,
-                        {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                        }
-                      )
+                    ? formatFarmDate(selectedDate, {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      })
                     : selectedView === 'week'
-                    ? `${formatFarmDate(
-                        currentWeekStart,
-                        {
+                      ? `${formatFarmDate(currentWeekStart, {
                           month: 'short',
                           day: 'numeric',
-                        }
-                      )} – ${formatFarmDate(
-                        addCalendarDays(currentWeekStart, 6),
-                        {
+                        })} – ${formatFarmDate(addCalendarDays(currentWeekStart, 6), {
                           month: 'short',
                           day: 'numeric',
-                        }
-                      )}`
-                    : formatFarmDate(currentMonth, { month: 'long', year: 'numeric' })}
+                        })}`
+                      : formatFarmDate(currentMonth, { month: 'long', year: 'numeric' })}
                 </Text>
                 {selectedDate && (
                   <Text style={styles.collapsedStripCount}>
@@ -2735,8 +2706,8 @@ export default function CalendarScreen(): React.JSX.Element {
                               detailTask.preferred_time === 'morning'
                                 ? 'sunny-outline'
                                 : detailTask.preferred_time === 'afternoon'
-                                ? 'sunny'
-                                : 'moon-outline'
+                                  ? 'sunny'
+                                  : 'moon-outline'
                             }
                             size={15}
                             color={theme.textSecondary}
@@ -2745,8 +2716,8 @@ export default function CalendarScreen(): React.JSX.Element {
                             {detailTask.preferred_time === 'morning'
                               ? 'Morning'
                               : detailTask.preferred_time === 'afternoon'
-                              ? 'Afternoon'
-                              : 'Evening'}
+                                ? 'Afternoon'
+                                : 'Evening'}
                           </Text>
                         </View>
                       </View>
@@ -2758,14 +2729,11 @@ export default function CalendarScreen(): React.JSX.Element {
                       >
                         {daysOverdue !== null
                           ? `${daysOverdue}d overdue`
-                          : formatFarmDate(
-                              dueDateObj,
-                              {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                              }
-                            )}
+                          : formatFarmDate(dueDateObj, {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
                       </Text>
                     </View>
                     <View style={styles.taskDetailRow}>
@@ -2786,13 +2754,10 @@ export default function CalendarScreen(): React.JSX.Element {
                           {(detailTask.skip_count ?? 0) > 1 ? ` ×${detailTask.skip_count}` : ''}
                         </Text>
                         <Text style={[styles.taskDetailValue, styles.taskDetailValueSkip]}>
-                          {formatFarmDate(
-                            new Date(detailTask.last_skipped_at),
-                            {
-                              month: 'short',
-                              day: 'numeric',
-                            }
-                          )}
+                          {formatFarmDate(new Date(detailTask.last_skipped_at), {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
                           {detailTask.last_skip_reason ? ` · ${detailTask.last_skip_reason}` : ''}
                         </Text>
                       </View>
@@ -2850,6 +2815,13 @@ export default function CalendarScreen(): React.JSX.Element {
           onConfirm={handleConfirmSkip}
         />
 
+        {/*
+          `notDueDialogProps` closes over `completeSelected`, which reads
+          `isMountedRef.current` inside an async callback. That marks the memo's
+          result as ref-carrying, so reading it here counts as a render-time ref
+          access; the ref is only ever read after an await, never during render.
+        */}
+        {/* eslint-disable-next-line react-hooks/refs */}
         {notDueDialogProps && (
           <AlertDialog
             visible

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
+  useAnimatedValue,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,11 +50,7 @@ import { getAllDiseases } from '@/config/diseases';
 import type { PlantType, VarietyDetail } from '@/types/database.types';
 import { MoreStackParamList } from '@/types/navigation.types';
 import { sanitizeName } from '@/utils/catalogDraft';
-import {
-  FIELD_TO_SECTION,
-  SECTION_TO_TAB,
-  sectionHasError,
-} from '@/utils/catalogValidation';
+import { FIELD_TO_SECTION, SECTION_TO_TAB, sectionHasError } from '@/utils/catalogValidation';
 import type { CatalogSectionKey, CatalogTabKey } from '@/utils/catalogValidation';
 import {
   coreCareSummary,
@@ -67,10 +64,7 @@ import {
   varietiesSummary,
 } from '@/utils/catalogSummaries';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
-import {
-  getCommonDiseases,
-  getCommonPests,
-} from '@/utils/plantHelpers';
+import { getCommonDiseases, getCommonPests } from '@/utils/plantHelpers';
 import {
   CATEGORY_LABELS,
   GROWTH_STAGE_LABELS,
@@ -186,7 +180,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const [headerStuck, setHeaderStuck] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const tabBarYRef = useRef(0);
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useAnimatedValue(0);
   const [sectionExpanded, setSectionExpanded] =
     useState<Record<CatalogSectionKey, boolean>>(ALL_EXPANDED);
 
@@ -249,6 +243,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
 
   const handleScrollEvent = useMemo(
     () =>
+      // `handleScroll` reads `tabBarYRef.current`, so the compiler treats handing
+      // it to Animated.event as a render-time ref read. Animated.event only
+      // stores the listener — it is invoked on scroll, never during render.
+      // eslint-disable-next-line react-hooks/refs
       Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
         useNativeDriver: true,
         listener: handleScroll,
@@ -868,11 +866,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       {tabsStuck && <View style={[styles.pinnedTabBar, { top: headerHeight }]}>{tabBar}</View>}
 
       {heroImage && (
-        <ImageZoomModal
-          visible={previewVisible}
-          sources={previewSources}
-          onClose={closePreview}
-        />
+        <ImageZoomModal visible={previewVisible} sources={previewSources} onClose={closePreview} />
       )}
 
       {/* ── Sheets & modals ── */}
@@ -924,8 +918,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       <PestDiseasePickerModal
         visible={showPestPicker}
         onClose={closePestPicker}
-          title="Add Pest"
-          kind="pest"
+        title="Add Pest"
+        kind="pest"
         searchPlaceholder="Search pests..."
         allEntries={getAllPests()}
         takenNames={takenPestNames}
@@ -935,8 +929,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       <PestDiseasePickerModal
         visible={showDiseasePicker}
         onClose={closeDiseasePicker}
-          title="Link Disease"
-          kind="disease"
+        title="Link Disease"
+        kind="disease"
         searchPlaceholder="Search diseases..."
         allEntries={getAllDiseases()}
         takenNames={takenDiseaseNames}

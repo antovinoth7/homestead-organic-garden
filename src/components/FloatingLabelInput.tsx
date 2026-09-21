@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Animated,
   NativeSyntheticEvent,
@@ -6,6 +6,7 @@ import {
   TextInput,
   TextInputProps,
   View,
+  useAnimatedValue,
 } from 'react-native';
 import { useTheme } from '../theme';
 import { createStyles } from '../styles/floatingLabelInputStyles';
@@ -39,7 +40,7 @@ export default function FloatingLabelInput({
   const s = React.useMemo(() => createStyles(theme), [theme]);
 
   const [isFocused, setIsFocused] = useState(false);
-  const anim = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const anim = useAnimatedValue(value ? 1 : 0);
   const hasHelp = !!helpText?.trim();
 
   const isFloated = isFocused || !!value;
@@ -89,14 +90,14 @@ export default function FloatingLabelInput({
   const borderColor = hasError
     ? theme.error
     : isFocused && accentBorder
-    ? theme.primary
-    : theme.inputBorder;
+      ? theme.primary
+      : theme.inputBorder;
 
   const labelColor = hasError
     ? theme.error
     : isFloated
-    ? theme.textSecondary
-    : theme.inputPlaceholder;
+      ? theme.textSecondary
+      : theme.inputPlaceholder;
 
   const field = (
     <View

@@ -9,6 +9,7 @@ import {
   Animated,
   Alert,
   LayoutAnimation,
+  useAnimatedValue,
 } from 'react-native';
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import type Swipeable from 'react-native-gesture-handler/Swipeable';
@@ -32,10 +33,7 @@ import {
   DEFAULT_BED_FILTERS,
 } from '@/utils/filterAndSortBeds';
 import { getBedLifecycle } from '@/utils/bedStatus';
-import type {
-  BedListScreenNavigationProp,
-  BedListScreenRouteProp,
-} from '@/types/navigation.types';
+import type { BedListScreenNavigationProp, BedListScreenRouteProp } from '@/types/navigation.types';
 
 const bedDeleteMessage = (activePlantCount: number): string => {
   const plantLabel = `${activePlantCount} active plant${activePlantCount === 1 ? '' : 's'}`;
@@ -60,7 +58,7 @@ export default function BedListScreen(): React.JSX.Element {
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [pendingDelete, setPendingDelete] = useState<BedWithCoverage | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BedWithCoverage | null>(null);
-  const undoProgress = useRef(new Animated.Value(1)).current;
+  const undoProgress = useAnimatedValue(1);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openSwipeableRef = useRef<Swipeable | null>(null);
   // Mirror of pendingDelete read inside callbacks, so handleDelete/requestDelete

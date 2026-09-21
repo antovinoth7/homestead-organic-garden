@@ -8,12 +8,9 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  useAnimatedValue,
 } from 'react-native';
-import {
-  LongPressGestureHandler,
-  PanGestureHandler,
-  State,
-} from 'react-native-gesture-handler';
+import { LongPressGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
 import type {
   PanGestureHandlerEventPayload,
   GestureEvent,
@@ -164,7 +161,10 @@ function PlantTile({
           style={[styles.resolutionChip, resLabel.resolved && styles.resolutionChipResolved]}
         >
           <Text
-            style={[styles.resolutionChipText, resLabel.resolved && styles.resolutionChipResolvedText]}
+            style={[
+              styles.resolutionChipText,
+              resLabel.resolved && styles.resolutionChipResolvedText,
+            ]}
           >
             {resLabel.text}
           </Text>
@@ -245,7 +245,7 @@ function RowCard({
   const [localPlants, setLocalPlants] = useState<RowPlant[]>(displayPlants);
   const startIdxRef = useRef(0);
   const currentIdxRef = useRef(0);
-  const translateX = useRef(new Animated.Value(0)).current;
+  const translateX = useAnimatedValue(0);
   const panRef = useRef(null);
 
   useEffect(() => {
@@ -319,9 +319,7 @@ function RowCard({
   // grid's actual column pitch (main-crop spacing), not the smallest spacing
   // in the row.
   const emptySlotCount = computeEmptySlotPositions(row).length;
-  const mainSpacings = row.plants
-    .filter((p) => p.isCompanion !== true)
-    .map((p) => p.spacingCm);
+  const mainSpacings = row.plants.filter((p) => p.isCompanion !== true).map((p) => p.spacingCm);
   const tileSpacingCm =
     row.eastPositionsCm.length >= 2
       ? Math.round(row.eastPositionsCm[1]! - row.eastPositionsCm[0]!)
@@ -381,131 +379,129 @@ function RowCard({
       {/* Plant tiles + care chips */}
       <>
         {onReorder !== undefined ? (
-            <PanGestureHandler
-              ref={panRef}
-              enabled={draggingId !== null}
-              onGestureEvent={handlePan}
-              onHandlerStateChange={handlePanState}
-            >
-              <Animated.View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  scrollEnabled={draggingId === null}
-                >
-                  <View style={styles.plantTilesContainer}>
-                    {localPlants.map((plant, idx) => {
-                      const isDragging = draggingId === plant.id;
-                      const canDrag = !plant.isCompanion && plant.id !== undefined;
-                      const tileEl = (
-                        <Animated.View
-                          style={
-                            isDragging
-                              ? [
-                                  styles.tileWrapperDragging,
-                                  { transform: [{ translateX }, { scale: 1.05 }] },
-                                ]
+          <PanGestureHandler
+            ref={panRef}
+            enabled={draggingId !== null}
+            onGestureEvent={handlePan}
+            onHandlerStateChange={handlePanState}
+          >
+            <Animated.View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                scrollEnabled={draggingId === null}
+              >
+                <View style={styles.plantTilesContainer}>
+                  {localPlants.map((plant, idx) => {
+                    const isDragging = draggingId === plant.id;
+                    const canDrag = !plant.isCompanion && plant.id !== undefined;
+                    const tileEl = (
+                      <Animated.View
+                        style={
+                          isDragging
+                            ? [
+                                styles.tileWrapperDragging,
+                                { transform: [{ translateX }, { scale: 1.05 }] },
+                              ]
+                            : undefined
+                        }
+                      >
+                        <PlantTile
+                          plant={plant}
+                          layerBorderColor={borderColor}
+                          resolution={entryResolutions?.get(plant.id ?? '')}
+                          resolvedName={resolvedNames?.get(plant.id ?? '')}
+                          onOpenPlant={onOpenPlant}
+                          onResolveEntry={
+                            onResolveEntry && plant.id !== undefined
+                              ? () => onResolveEntry(plant.id!)
                               : undefined
                           }
-                        >
-                          <PlantTile
-                            plant={plant}
-                            layerBorderColor={borderColor}
-                            resolution={entryResolutions?.get(plant.id ?? '')}
-                            resolvedName={resolvedNames?.get(plant.id ?? '')}
-                            onOpenPlant={onOpenPlant}
-                            onResolveEntry={
-                              onResolveEntry && plant.id !== undefined
-                                ? () => onResolveEntry(plant.id!)
-                                : undefined
-                            }
-                            onRemove={
-                              onRemovePlant && plant.id !== undefined
-                                ? () => onRemovePlant(plant.id!)
-                                : undefined
-                            }
-                          />
-                        </Animated.View>
-                      );
-                      return (
-                        <React.Fragment key={plant.id ?? `${plant.name}_${idx}`}>
-                          {canDrag ? (
-                            <LongPressGestureHandler
-                              minDurationMs={350}
-                              simultaneousHandlers={panRef}
-                              onActivated={() =>
-                                plant.id !== undefined && beginDrag(plant.id)
-                              }
-                            >
-                              {tileEl}
-                            </LongPressGestureHandler>
-                          ) : (
-                            tileEl
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                    {Array.from({ length: emptySlotCount }, (_, i) => (
-                      <EmptySlot
-                        key={`empty-${i}`}
-                        spacingCm={tileSpacingCm}
-                        borderColor={borderColor}
-                        onPress={onAddToRow ? () => onAddToRow(row.layer) : undefined}
-                      />
-                    ))}
-                  </View>
-                </ScrollView>
-              </Animated.View>
-            </PanGestureHandler>
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.plantTilesContainer}>
-                {displayPlants.map((plant, idx) => (
-                  <React.Fragment key={plant.id ?? `${plant.name}_${idx}`}>
-                    {idx > 0 && <View style={styles.tileGapDot} />}
-                    <PlantTile
-                      plant={plant}
-                      layerBorderColor={borderColor}
-                      resolution={entryResolutions?.get(plant.id ?? '')}
-                      resolvedName={resolvedNames?.get(plant.id ?? '')}
-                      onOpenPlant={onOpenPlant}
-                      onResolveEntry={
-                        onResolveEntry && plant.id !== undefined
-                          ? () => onResolveEntry(plant.id!)
-                          : undefined
-                      }
-                      onRemove={
-                        onRemovePlant && plant.id !== undefined
-                          ? () => onRemovePlant(plant.id!)
-                          : undefined
-                      }
+                          onRemove={
+                            onRemovePlant && plant.id !== undefined
+                              ? () => onRemovePlant(plant.id!)
+                              : undefined
+                          }
+                        />
+                      </Animated.View>
+                    );
+                    return (
+                      <React.Fragment key={plant.id ?? `${plant.name}_${idx}`}>
+                        {canDrag ? (
+                          <LongPressGestureHandler
+                            minDurationMs={350}
+                            simultaneousHandlers={panRef}
+                            onActivated={() => plant.id !== undefined && beginDrag(plant.id)}
+                          >
+                            {tileEl}
+                          </LongPressGestureHandler>
+                        ) : (
+                          tileEl
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                  {Array.from({ length: emptySlotCount }, (_, i) => (
+                    <EmptySlot
+                      key={`empty-${i}`}
+                      spacingCm={tileSpacingCm}
+                      borderColor={borderColor}
+                      onPress={onAddToRow ? () => onAddToRow(row.layer) : undefined}
                     />
-                  </React.Fragment>
-                ))}
-                {Array.from({ length: emptySlotCount }, (_, i) => (
-                  <EmptySlot
-                    key={`empty-${i}`}
-                    spacingCm={tileSpacingCm}
-                    borderColor={borderColor}
-                    onPress={onAddToRow ? () => onAddToRow(row.layer) : undefined}
+                  ))}
+                </View>
+              </ScrollView>
+            </Animated.View>
+          </PanGestureHandler>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.plantTilesContainer}>
+              {displayPlants.map((plant, idx) => (
+                <React.Fragment key={plant.id ?? `${plant.name}_${idx}`}>
+                  {idx > 0 && <View style={styles.tileGapDot} />}
+                  <PlantTile
+                    plant={plant}
+                    layerBorderColor={borderColor}
+                    resolution={entryResolutions?.get(plant.id ?? '')}
+                    resolvedName={resolvedNames?.get(plant.id ?? '')}
+                    onOpenPlant={onOpenPlant}
+                    onResolveEntry={
+                      onResolveEntry && plant.id !== undefined
+                        ? () => onResolveEntry(plant.id!)
+                        : undefined
+                    }
+                    onRemove={
+                      onRemovePlant && plant.id !== undefined
+                        ? () => onRemovePlant(plant.id!)
+                        : undefined
+                    }
                   />
-                ))}
-              </View>
-            </ScrollView>
-          )}
+                </React.Fragment>
+              ))}
+              {Array.from({ length: emptySlotCount }, (_, i) => (
+                <EmptySlot
+                  key={`empty-${i}`}
+                  spacingCm={tileSpacingCm}
+                  borderColor={borderColor}
+                  onPress={onAddToRow ? () => onAddToRow(row.layer) : undefined}
+                />
+              ))}
+            </View>
+          </ScrollView>
+        )}
 
-          {careTasks.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.careTaskChips}>
-                {careTasks.map((task) => (
-                  <View key={task} style={styles.careTaskChip}>
-                    <Text style={styles.careTaskChipText}>{task}</Text>
-                  </View>
-                ))}
-              </View>
-            </ScrollView>
-          )}
-        </>
+        {careTasks.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.careTaskChips}>
+              {careTasks.map((task) => (
+                <View key={task} style={styles.careTaskChip}>
+                  <Text style={styles.careTaskChipText}>{task}</Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        )}
+      </>
     </View>
   );
 }

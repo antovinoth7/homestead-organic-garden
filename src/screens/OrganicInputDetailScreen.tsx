@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, Animated, TouchableOpacity } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, Animated, TouchableOpacity, useAnimatedValue } from 'react-native';
 import type { ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { GardenIcon } from '@/components/GardenIcon';
@@ -32,7 +32,7 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useAnimatedValue(0);
 
   const input = useMemo(() => getOrganicInputById(route.params.inputId), [route.params.inputId]);
   const recipe = useMemo(() => getRecipeById(input?.recipeId), [input?.recipeId]);
@@ -165,10 +165,7 @@ export default function OrganicInputDetailScreen(): React.JSX.Element {
               <Text style={styles.sectionTitle}>What it does</Text>
               <View style={styles.listCard}>
                 {input.benefits.map((benefit, index) => (
-                  <View
-                    key={benefit}
-                    style={[styles.listRow, index === 0 && styles.listRowFirst]}
-                  >
+                  <View key={benefit} style={[styles.listRow, index === 0 && styles.listRowFirst]}>
                     <Ionicons name="checkmark" size={14} color={theme.primary} />
                     <Text style={styles.listText}>{benefit}</Text>
                   </View>
