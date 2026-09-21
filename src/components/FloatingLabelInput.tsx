@@ -6,8 +6,8 @@ import {
   TextInput,
   TextInputProps,
   View,
-  useAnimatedValue,
 } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useTheme } from '../theme';
 import { createStyles } from '../styles/floatingLabelInputStyles';
 import FieldHelp from './FieldHelp';

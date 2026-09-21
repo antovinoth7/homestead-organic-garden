@@ -14,8 +14,8 @@ import {
   Animated,
   NativeSyntheticEvent,
   NativeScrollEvent,
-  useAnimatedValue,
 } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { getAllPlants, deletePlant, archivePlant, getCachedPlants } from '../services/plants';
 import { getLocationConfig } from '../services/locations';

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, ScrollView, useAnimatedValue } from 'react-native';
+import { Animated, ScrollView } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { LongPressGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
 import type {
   PanGestureHandlerEventPayload,

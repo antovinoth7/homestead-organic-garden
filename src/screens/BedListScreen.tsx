@@ -9,9 +9,9 @@ import {
   Animated,
   Alert,
   LayoutAnimation,
-  useAnimatedValue,
 } from 'react-native';
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import type Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';

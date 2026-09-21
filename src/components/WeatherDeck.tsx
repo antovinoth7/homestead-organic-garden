@@ -20,8 +20,8 @@ import {
   PanResponder,
   useWindowDimensions,
   type LayoutChangeEvent,
-  useAnimatedValueXY,
 } from 'react-native';
+import { useAnimatedValueXY } from '@/hooks/useAnimatedValue';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/weatherCardStyles';
 import { WeatherPlotCard } from './WeatherPlotCard';

@@ -8,8 +8,8 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
-  useAnimatedValue,
 } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { LongPressGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
 import type {
   PanGestureHandlerEventPayload,

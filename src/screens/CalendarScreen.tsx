@@ -17,8 +17,8 @@ import {
   LayoutChangeEvent,
   Modal,
   useWindowDimensions,
-  useAnimatedValue,
 } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import {
   markTaskDone,

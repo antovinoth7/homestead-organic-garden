@@ -46,6 +46,24 @@ module.exports = defineConfig([
       'react-native/no-inline-styles': 'error',
       'react-native/no-raw-text': ['error', { skip: ['Text'] }],
 
+      // react-native-web does not export RN 0.86's useAnimatedValue /
+      // useAnimatedValueXY. Importing them from 'react-native' type-checks and
+      // passes tests, then crashes the web bundle at startup with
+      // "useAnimatedValue is not a function". See src/hooks/useAnimatedValue.ts.
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react-native',
+              importNames: ['useAnimatedValue', 'useAnimatedValueXY'],
+              message:
+                "Import from '@/hooks/useAnimatedValue' — react-native-web does not export these.",
+            },
+          ],
+        },
+      ],
+
       // eslint-config-expo 57 pulled in eslint-plugin-react-hooks v7, whose
       // React-Compiler-era rules flagged 214 pre-existing call sites. All six
       // were demoted to warnings during the upgrade; five have since been

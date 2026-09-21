@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, Animated, TouchableOpacity, useAnimatedValue } from 'react-native';
+import { View, Text, Animated, TouchableOpacity } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import type { ImageSource } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';

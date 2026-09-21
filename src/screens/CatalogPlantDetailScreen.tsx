@@ -1,14 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import {
-  Animated,
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  ActivityIndicator,
-  useAnimatedValue,
-} from 'react-native';
+import { Animated, View, Text, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';

@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Animated, Text, TouchableOpacity, View, useAnimatedValue } from 'react-native';
+import { Animated, Text, TouchableOpacity, View } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import type { ImageSource } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

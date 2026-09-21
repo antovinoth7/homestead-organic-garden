@@ -1,15 +1,7 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import {
-  Animated,
-  Easing,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-  useAnimatedValue,
-} from 'react-native';
+import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useTheme } from '@/theme';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { createStyles } from '@/styles/bottomSheetModalStyles';

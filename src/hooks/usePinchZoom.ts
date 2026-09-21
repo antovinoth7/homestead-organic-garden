@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { Animated, Dimensions, useAnimatedValue } from 'react-native';
+import { Animated, Dimensions } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { State } from 'react-native-gesture-handler';
 import type {
   PinchGestureHandlerEventPayload,

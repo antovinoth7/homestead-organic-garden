@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
-  useAnimatedValue,
 } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import type { ImageSource } from 'expo-image';
 import {
   GestureHandlerRootView,

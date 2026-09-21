@@ -9,8 +9,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useAnimatedValue,
 } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/alertDialogStyles';

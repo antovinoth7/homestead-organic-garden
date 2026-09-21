@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, Animated, useWindowDimensions, useAnimatedValue } from 'react-native';
+import { View, Animated, useWindowDimensions } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
 

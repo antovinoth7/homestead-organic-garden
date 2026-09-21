@@ -22,9 +22,9 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
-  useAnimatedValue,
 } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, {
   Circle,

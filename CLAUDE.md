@@ -22,10 +22,15 @@ These are enforced by the platform, not by lint. Reintroducing any of them compi
 - **`StyleSheet.absoluteFillObject` was removed in RN 0.85.** `StyleSheet.absoluteFill` still exists and is correct in component `style={}` props (10+ live sites), but it is typed as a branded `RegisteredStyle` and **cannot be spread** into a style object. In `*Styles.ts`, write the four edges explicitly: `position: 'absolute', top: 0, left: 0, right: 0, bottom: 0`.
 - **`expo-navigation-bar`**: `setButtonStyleAsync` was removed; use `NavigationBar.setStyle()` (same `'light' | 'dark'` values).
 - **Legacy module APIs are deliberate.** `src/lib/imageStorage.ts`, `src/services/backup.ts`, and `src/utils/zipHelper.ts` import `expo-file-system/legacy`, and `imageStorage.ts` also imports **`expo-media-library/legacy`** — in SDK 57 both packages' default exports became new object-oriented APIs. These files have **no test coverage**; do not "modernise" the imports as a side effect of other work. See `docs/SERVICES.md` and `docs/IMAGE_STORAGE.md`.
-- **Animated values use `useAnimatedValue`, never `useRef(new Animated.Value(x)).current`.**
+- **Animated values use `useAnimatedValue` from `@/hooks/useAnimatedValue` — never
+  `useRef(new Animated.Value(x)).current`, and never the `react-native` export.**
   The `useRef` form reads a ref during render, which `react-hooks/refs` now
-  reports as an **error**. React Native 0.86 exports `useAnimatedValue` (and
-  `useAnimatedValueXY`) from `react-native` with identical semantics. For the
+  reports as an **error**. RN 0.86 added `useAnimatedValue`/`useAnimatedValueXY`
+  for exactly this, but **react-native-web does not export them** — importing
+  from `react-native` type-checks and passes tests, then crashes the web bundle
+  at startup. `src/hooks/useAnimatedValue.ts` wraps both with identical
+  semantics and works on all three platforms; `no-restricted-imports` fails the
+  build if the `react-native` import comes back. For the
   `Animated.multiply` / `Animated.event` variants, use `useMemo`. A ref passed
   to a `ref={}` prop through a shared object marks that whole object as
   ref-carrying — destructure it out (see `ZoomableImagePage.tsx`).

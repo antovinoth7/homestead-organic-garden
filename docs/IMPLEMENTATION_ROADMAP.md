@@ -489,7 +489,12 @@ these block anything; they are recorded so they are not rediscovered as surprise
   All 142 `refs` findings had one cause: `useRef(new Animated.Value(x)).current`
   reads a ref during render. RN 0.86 ships `useAnimatedValue` for exactly this,
   so every site uses it now (`useMemo` for the `Animated.multiply` / `.event`
-  variants). Two needed more: `ZoomableImagePage` — one `ref={zoom.panHandlerRef}`
+  variants). Those 17 sites import it from `@/hooks/useAnimatedValue`, not from
+  `react-native`: react-native-web does not export the hook, so the original
+  `react-native` import passed lint, typecheck and all 155 suites while crashing
+  the web bundle at startup in `FloatingTabBarProvider`. The shim is a `useState`
+  lazy initializer — same semantics as RN's, without the render-time ref read —
+  and `no-restricted-imports` now blocks the `react-native` form. Two needed more: `ZoomableImagePage` — one `ref={zoom.panHandlerRef}`
   attribute marks the whole returned object as ref-carrying, so the handler refs
   are destructured out — and `useCatalogEntryForm`, where the backlog's guess
   that "some may be genuine bugs" was right: `baselineRef` was written during
