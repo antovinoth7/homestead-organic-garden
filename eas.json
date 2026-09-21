@@ -21,7 +21,7 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_SENTRY_DSN": "https://de16538fdf01821acaeee58c645bfb1c@o4510631761149952.ingest.us.sentry.io/4510643005161472",
-        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a,armeabi-v7a"
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a"
       },
       "android": {
         "buildType": "apk"

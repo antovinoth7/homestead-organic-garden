@@ -58,18 +58,32 @@ React Native Gradle plugin reads to set `abiFilters`. Both profiles set it via
 any `ORG_GRADLE_PROJECT_*` variable into a project property, so this needs no
 extra package and no change to the generated `android/` project.
 
-- **`production` → `arm64-v8a,armeabi-v7a`.** One APK handed straight to users,
-  carrying only the architectures real phones use. `x86`/`x86_64` exist for
-  emulators and a few Chromebooks; dropping them is the single largest size win.
+- **`production` → `arm64-v8a` only.** One 64-bit APK handed straight to users.
+  Every Android phone sold since roughly 2017 is arm64, and Play has required
+  64-bit support since 2019.
 - **`play` → all four.** Play splits an app bundle per device, so each user still
   downloads one architecture. Keeping all four costs them nothing and preserves
-  installs on x86 Chromebooks.
+  installs on 32-bit handsets and x86 Chromebooks — so the Play build stays
+  maximally compatible even though the direct APK does not.
 
-Measured effect of this change: **138 MB → 88 MB** for the `production` APK
-(~3.8 MB of that was a separate icon-font fix, the rest the two dropped
-architectures). The native payload is roughly 23 MB per ABI, so the remaining
-88 MB is about 32 MB of bundled reference images, ~46 MB of native code for two
-architectures, ~8 MB of Hermes bytecode and ~2 MB of everything else.
+The native payload is roughly **23 MB per architecture**, so each one dropped is
+worth about that much.
+
+| Build                                  | ABIs     | Size            |
+| -------------------------------------- | -------- | --------------- |
+| Before any of this                     | all four | 138 MB          |
+| Dropped `x86`, `x86_64` (+ icon fonts) | 2        | 88 MB           |
+| Dropped `armeabi-v7a`                  | 1        | ~65 MB expected |
+
+The remaining bulk is ~32 MB of bundled reference images, ~23 MB of native code,
+~8 MB of Hermes bytecode and ~2 MB of everything else.
+
+> **A 64-bit-only APK will not install on a 32-bit-only device.** Android reports
+> this as a generic "app not installed" failure rather than anything explanatory,
+> so if a user on an old budget handset reports a failed install, this is the first
+> thing to check. Such devices are rare and shrinking, but they are exactly the
+> kind of phone some users will have. Building `play` instead — or a one-off
+> `production` build with `armeabi-v7a` added back — covers them.
 
 If you ever need to run a `production` APK on an emulator, build `preview`
 instead, or add the x86 architectures back for that one build.

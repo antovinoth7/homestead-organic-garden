@@ -555,13 +555,13 @@ these block anything; they are recorded so they are not rediscovered as surprise
   Current 88 MB breaks down roughly as: 32 MB reference images + ~46 MB native
   (2 ABIs) + ~8 MB Hermes bytecode + ~2 MB other.
 
-- **Open: drop `armeabi-v7a` too (~23 MB).** That would leave a 64-bit-only APK at
-  roughly 65 MB. Every Android phone sold since about 2017 is arm64, and Play has
-  required 64-bit since 2019 — but 32-bit-only budget handsets do still exist in
-  the field, and this app's users are exactly the sort to have one. **A product
-  decision, not a technical one.** Note the `play` profile makes it moot for Play
-  users: an app bundle ships all four and Play delivers one, so each user's
-  download is already ~65 MB without excluding anybody.
+- ✅ **Done — dropped `armeabi-v7a` from the direct APK.** `production` is now
+  `arm64-v8a` only, expected around 65 MB. Deliberate tradeoff: a 64-bit-only APK
+  **will not install on a 32-bit-only device**, and Android surfaces that as a
+  generic "app not installed" error — check this first if an install fails on an
+  old budget handset. The `play` profile deliberately keeps all four, since Play
+  delivers one architecture per device: Play users get the same small download
+  with none of the compatibility loss.
 
 - **Open: R8 / resource shrinking.** Nothing sets `enableProguardInReleaseBuilds`
   or `enableShrinkResourcesInReleaseBuilds`, and there is no mechanism to —

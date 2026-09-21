@@ -31,12 +31,13 @@ version heading with the release date.
 
 ### Changed
 
-- **Android APK is 36% smaller — 138 MB → 88 MB.** With nothing setting
+- **Android APK is dramatically smaller — 138 MB → ~65 MB.** With nothing setting
   `reactNativeArchitectures`, the build was producing a universal APK carrying
   native libraries for all four CPU architectures (`arm64-v8a`, `armeabi-v7a`,
   `x86`, `x86_64`) when any device uses exactly one. The `production` profile now
-  ships only the two architectures real phones use, and a new `play` profile ships
-  an app bundle for Play to split per device. Separately, every icon import went
+  ships `arm64-v8a` only — note that such an APK will not install on a 32-bit-only
+  device — and a new `play` profile ships an app bundle for Play to split per
+  device, keeping all four so Play users lose no compatibility. Separately, every icon import went
   through the `@expo/vector-icons` barrel, which eagerly pulls all 15 icon sets and
   their fonts — only Ionicons is used, so imports now target that subpath directly
   (3.89 MB → 0.37 MB of fonts). The unused `@react-native-picker/picker` native
