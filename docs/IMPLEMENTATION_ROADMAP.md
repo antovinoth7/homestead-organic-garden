@@ -534,9 +534,11 @@ these block anything; they are recorded so they are not rediscovered as surprise
   sentry-cli 2→3, so it needs its own branch and its own device build — never
   combined with an SDK bump, since `metro.config.js` is entirely owned by
   `getSentryExpoConfig` and a failure in either is indistinguishable.
-- **Remove `expo-secure-store`** — zero imports, and the lockfile shows only the
-  root package requires it. Drop the dependency _and_ its `app.json` plugin entry
-  together. Note **`expo-font` is not removable** despite also having no direct
+- ✅ **Done — `expo-secure-store` removed** (dependency and `app.json` plugin entry
+  together; it had zero imports). Note this does **not** close audit finding H-04,
+  which wants auth material moved *into* secure storage rather than left in plain
+  AsyncStorage. That remains an open, separate decision — the two positions were
+  contradictory and only the unused-dependency half is settled. Note **`expo-font` is not removable** despite also having no direct
   imports: it is a peer dependency of `@expo/vector-icons` and a dependency of
   `expo` itself.
 - **`@testing-library/react-native` + `@testing-library/jest-native` are unused.**
@@ -565,8 +567,13 @@ these block anything; they are recorded so they are not rediscovered as surprise
 - `.github/copilot-instructions.md` and `docs/CONVENTIONS.md` claimed `commitlint`
   was enforced; it is not in `package.json`. Corrected 2026-09-21 — check for other
   copies.
-- `CHANGELOG.md` version headings are non-monotonic (`[1.2.0]` above `[1.1.0]`)
-  while `package.json` and `app.json` both read `1.1.0`.
+- **Release version lag.** `CHANGELOG.md` records `[1.2.0] — 2026-04-16` as
+  released, but `package.json` and `app.json` both still read `1.1.0`. (The
+  heading *order* is correct — Keep a Changelog is newest-first, so `[1.2.0]`
+  above `[1.1.0]` is right; an earlier note here called it non-monotonic, which
+  was a misreading.) Bumping the manifests is a release decision, not a docs fix,
+  and interacts with `eas.json`'s `appVersionSource: "remote"` and the production
+  build's `autoIncrement` — decide deliberately.
 
 ## Design Decisions (Open for Discussion)
 

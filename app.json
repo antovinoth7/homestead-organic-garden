@@ -5,7 +5,8 @@
     "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",    "ios": {
+    "userInterfaceStyle": "automatic",
+    "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.antovinoth7.organicgardeningapp",
       "infoPlist": {
@@ -17,7 +18,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },      "softwareKeyboardLayoutMode": "resize",
+      },
+      "softwareKeyboardLayoutMode": "resize",
       "permissions": ["READ_MEDIA_IMAGES", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
     },
     "web": {
@@ -36,7 +38,6 @@
       "expo-image",
       "expo-sharing",
       "expo-status-bar",
-      "expo-secure-store",
       [
         "expo-media-library",
         {
