@@ -78,12 +78,12 @@ Enforced by the platform, not by lint. Reintroducing any of these compiles but b
 npm start          # Expo dev server
 npm run android    # Android (prebuilds into an ignored android/)
 npm run ios        # iOS
-npm run lint       # ESLint (zero errors required; 215 warnings are the expected baseline)
+npm run lint       # ESLint (zero errors required; 54 warnings are the expected baseline)
 npm run typecheck  # tsc --noEmit
 npm test           # Jest (155 suites / 2027 tests)
 ```
 
-The 215 lint warnings are the demoted `eslint-plugin-react-hooks` v7 rules that arrived with `eslint-config-expo` 57, plus one pre-existing `exhaustive-deps` warning. They are expected — do not "fix" them as a side task. See `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
+The 54 lint warnings are all `react-hooks/set-state-in-effect`, deliberately demoted in `eslint.config.cjs`. The other five `eslint-plugin-react-hooks` v7 rules were triaged to zero after the SDK 57 upgrade and are back at `error`. The 54 are expected — do not "fix" them as a side task. See `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
 
 ## New Feature Implementation Order
 

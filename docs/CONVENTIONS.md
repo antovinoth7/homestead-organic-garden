@@ -180,7 +180,7 @@ removed from the codebase — do not add them back. Pad for system bars with
 - No `console.log` in committed code. Use `src/utils/logger.ts` or remove.
 - No commented-out code blocks. Delete dead code; git history preserves it.
 - No TODO comments without an associated issue number.
-- ESLint must pass with zero errors (`npm run lint`). **215 warnings are the accepted baseline** — 214 from the `eslint-plugin-react-hooks` v7 rules that arrived with `eslint-config-expo` 57 and are demoted in `eslint.config.cjs`, plus one pre-existing `exhaustive-deps` warning. A *new* warning is a regression; the existing ones are tracked in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
+- ESLint must pass with zero errors (`npm run lint`). **54 warnings are the accepted baseline**, all `react-hooks/set-state-in-effect` and demoted in `eslint.config.cjs`. The other five `eslint-plugin-react-hooks` v7 rules (`refs`, `preserve-manual-memoization`, `globals`, `immutability`, `purity`) were triaged to zero and are back at `error`, so they now fail the build. A *new* warning is a regression; the remaining ones are tracked in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
 - Keep functions ≤ 50 lines; extract helpers when exceeded.
 - Magic numbers must be named constants.
 - No docstrings, comments, or type annotations added to code that was not changed.
@@ -259,7 +259,7 @@ Before generating any code for this project, verify:
 - No TODO comments without an issue number
 - Functions are ≤ 50 lines; helpers extracted if exceeded
 - Magic numbers are named `UPPER_SNAKE_CASE` constants
-- `npm run lint` passes with zero errors after code generation (215 pre-existing warnings are expected — do not "fix" them as a side task)
+- `npm run lint` passes with zero errors after code generation (54 pre-existing `set-state-in-effect` warnings are expected — do not "fix" them as a side task)
 
 ---
 

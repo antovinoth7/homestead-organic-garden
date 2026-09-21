@@ -62,7 +62,7 @@ Firebase config variables (`EXPO_PUBLIC_FIREBASE_*`) are read from the `.env` fi
 
 ## Pre-Deployment Checklist
 
-1. Run lint: `npm run lint` (expect 0 errors and 215 known warnings)
+1. Run lint: `npm run lint` (expect 0 errors and 54 known warnings)
 2. Run type check: `npx tsc --noEmit`
 3. Run tests: `npm test`
 4. Verify Firestore security rules are deployed: `firebase deploy --only firestore:rules`

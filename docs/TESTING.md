@@ -54,6 +54,13 @@ but **currently unused by any test**. Adopting them (which would let these tests
 load real React Native and become a genuine compatibility signal) or removing
 them is tracked in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
 
+The hand-rolled `Probe` helpers in `src/__tests__/hooks/` capture the hook's
+return value in a `useEffect`, not by assigning during render — reassigning an
+outer binding mid-render is a side effect and `react-hooks/globals` reports it
+as an error. Effects flush inside `act`, so the captured value is still current
+by the time assertions run. `renderHook` from `@testing-library/react-native`
+would replace the pattern outright if that migration happens.
+
 ---
 
 ## Fixture Factory Pattern

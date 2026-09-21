@@ -65,11 +65,13 @@ version heading with the release date.
   `actions/setup-node@v5`. The lint script dropped the `--ext` flag, which ESLint
   9 flat config ignores; file coverage is unchanged at 724 files.
 - **`eslint-config-expo` 10 → 57** brings `eslint-plugin-react-hooks` v7, whose
-  new React-Compiler-era rules flag 214 pre-existing call sites (`refs` 142,
-  `set-state-in-effect` 56, and 16 others). These are not upgrade regressions, so
-  the six rules are demoted to warnings in `eslint.config.cjs`; the lint gate
-  still fails on errors. Triage is tracked in `docs/IMPLEMENTATION_ROADMAP.md` →
-  Post-Upgrade Backlog.
+  new React-Compiler-era rules flagged 214 pre-existing call sites (`refs` 142,
+  `set-state-in-effect` 56, and 16 others). These were not upgrade regressions,
+  so the six rules were demoted to warnings in `eslint.config.cjs`. They have
+  since been triaged: `refs`, `preserve-manual-memoization`, `globals`,
+  `immutability` and `purity` are at zero and back at `error`; 54
+  `set-state-in-effect` warnings remain demoted. Lint baseline is now 0 errors /
+  54 warnings. See `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
 - **CalendarScreen task list virtualized** — the task area is now a windowed
   `SectionList` instead of `.map()` inside a `ScrollView`, keeping scrolling
   smooth as task counts grow (calendar strip collapse, swipe gestures, section

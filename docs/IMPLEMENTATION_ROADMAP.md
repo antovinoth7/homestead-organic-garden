@@ -3,7 +3,7 @@
 > Generated: April 12, 2026
 > Last updated: July 5, 2026 — **Post-ship reconciliation (dev→main release delta; no new scope, no schema changes).** All work extends shipped phases. **Phase C extension**: the single `WeatherCard` grew into a location-aware, swipeable multi-plot deck (`WeatherDeck`/`WeatherPlotCard`, `useWeatherLocations`, `config/zones/districtCoordinates.ts` — first concrete step parameterizing the hardcoded-district risk); Today dashboard compacted (active-first progress chips, Garden Health reordering, task list folded into the progress donut). **Phase E extensions**: journal list overhaul (`JournalEntryCard` extraction, swipe edit/delete, grid view dropped); voice dictation extended to all notes/analysis fields via reusable `VoiceDictation` (G10 follow-through); pest/disease history photos with capture-time device-local compression (`expo-image-manipulator` → `utils/imageCompression.ts`) + shared pinch-zoom viewer (`ImageZoomModal`/`usePinchZoom`). Shared `ConfirmDeleteModal` replaced `BedDeleteModal` and the catalog/farm delete flows. **B2 maintenance**: bed wizard/map fixes; first care tasks now scheduled from the planting date with auto-selected care-plan segment (`services/taskSchedulingLogic.ts`). Nav restructure introduced `AuthedStackParamList` (fixes the duplicate nested screen-name warning). Note: four cache-first-paint perf commits were tried and reverted — that approach remains an open want.
 > **2026-07-05 (later same day) — Offline write queue + performance pass.** Closed the Critical "No Offline Mutation Queue" risk: `writeOrQueue()` (`lib/offlineWrite.ts`) + AsyncStorage queue (`lib/offlineQueue.ts`, coalescing in `utils/offlineQueueLogic.ts`) + FIFO replay-on-reconnect (`services/offlineSync.ts`) + `OfflineBanner`/`useOfflineStatus`; creates moved to client-generated doc ids across plants/tasks/journal/beds/locations/farmCapacity. Performance: CalendarScreen task area virtualized (ScrollView `.map()` → `SectionList`), `PlantCard` memoized, catalog picker filter allocation fixed, migration runner now skips its per-launch Firestore read via a local schema-version cache.
-> **2026-09-21 — Expo SDK 54 → 57 upgrade (platform only; no product scope, no schema changes).** React Native 0.81 → 0.86, React 19.1 → 19.2, TypeScript 5.9 → 6.0, all `expo-*` renumbered to `~57.x`. Two app APIs broke and were fixed (`NavigationBar.setStyle`, `expo-media-library/legacy`); `StyleSheet.absoluteFillObject` was removed in RN 0.85 and rewritten at 11 sites across 9 style files. Deferred follow-ups are tracked in **§9 Post-Upgrade Backlog** below.
+> **2026-09-21 — Expo SDK 54 → 57 upgrade (platform only; no product scope, no schema changes).** React Native 0.81 → 0.86, React 19.1 → 19.2, TypeScript 5.9 → 6.0, all `expo-*` renumbered to `~57.x`. Two app APIs broke and were fixed (`NavigationBar.setStyle`, `expo-media-library/legacy`); `StyleSheet.absoluteFillObject` was removed in RN 0.85 and rewritten at 11 sites across 9 style files. Deferred follow-ups are tracked in **§9 Post-Upgrade Backlog** below; the lint triage recorded there has since been completed, taking the baseline to 0 errors / 54 warnings.
 > Older "Previous:" reconciliation notes: `docs/archive/ROADMAP_ARCHIVE.md`.
 > Status: Phase 0 / A / A2 / B / B2 / B3 / B4 / C / D / E / F shipped (Phase B with deliberate deferrals); Phase G–H planned
 > Scope: Solo developer, iterative build, Firebase free-tier
@@ -480,16 +480,52 @@ these block anything; they are recorded so they are not rediscovered as surprise
 
 ### Lint
 
-- **Triage the 214 `eslint-plugin-react-hooks` v7 findings.** Arrived with
-  `eslint-config-expo` 57 and demoted to warnings in `eslint.config.cjs`:
-  `refs` (142), `set-state-in-effect` (56), `preserve-manual-memoization` (8),
-  `globals` (3), `immutability` (3), `purity` (2). They flag **pre-existing** code,
-  not upgrade regressions — but some of the `refs` findings may be genuine bugs, so
-  this is worth a real pass rather than a blanket disable. Until then the lint
-  baseline is **0 errors / 215 warnings** (the 215th is a pre-existing
-  `exhaustive-deps` warning in `CalendarScreen.tsx`).
+- ✅ **Done — the 214 `eslint-plugin-react-hooks` v7 findings were triaged.**
+  Five of the six rules are at zero and back at `"error"` in `eslint.config.cjs`:
+  `refs` (142 → 0), `preserve-manual-memoization` (8 → 0), `globals` (3 → 0),
+  `immutability` (3 → 0), `purity` (2 → 0), plus the pre-existing
+  `exhaustive-deps` warning in `CalendarScreen.tsx`.
+
+  All 142 `refs` findings had one cause: `useRef(new Animated.Value(x)).current`
+  reads a ref during render. RN 0.86 ships `useAnimatedValue` for exactly this,
+  so every site uses it now (`useMemo` for the `Animated.multiply` / `.event`
+  variants). Two needed more: `ZoomableImagePage` — one `ref={zoom.panHandlerRef}`
+  attribute marks the whole returned object as ref-carrying, so the handler refs
+  are destructured out — and `useCatalogEntryForm`, where the backlog's guess
+  that "some may be genuine bugs" was right: `baselineRef` was written during
+  render and read from `isDirty`'s memo, so the pruning re-seed could move the
+  baseline without the dirty check recomputing and leave the discard prompt
+  reading a stale value. It is state now.
+
+- **Remaining: 54 `react-hooks/set-state-in-effect` warnings**, still demoted on
+  purpose. The 11 genuine findings are fixed — state that was a pure function of
+  other state, written back by an effect, costing a second render per change
+  (`usePlantFormState`'s `location` and `coconutAgeInfo`, `PlantCard`'s
+  `imageError`, `useVoiceInput`'s availability, `CalendarScreen`'s redundant
+  mount reset, and five effects that allocated a fresh empty collection instead
+  of bailing).
+
+  The 54 that remain are benign and fall into two shapes:
+  - **Prop-to-state sync on open** (~14) — `useEffect(() => { if (visible) setX(prop) }, [visible, prop])`
+    in sheets and modals. Clearing these means restructuring each sheet around a
+    `key`-prop remount, which is its own piece of work and carries real UI risk.
+  - **Async loaders** (~9) — the rule does not model `await`, so it reports the
+    call site of an `async` loader whose only synchronous write is a
+    `setLoading(true)` that every one of these hooks already initialises to
+    `true`. These are false positives.
+  The rest are ref-guarded one-shots, monotonic latches and updater functions
+  that already bail correctly.
+
 - `docs/ENTERPRISE_AUDIT.md` recommends running lint with `--max-warnings=0`.
-  That is unachievable until the above is done — revisit together.
+  Now partly satisfied — the five promoted rules already fail the build. A
+  blanket `--max-warnings=0` still waits on the 54 above.
+
+- **Untested paths touched by this triage.** `usePlantFormState`, `PlantCard`,
+  `CalendarScreen`, `usePlantPhotos`, `useCrossBedStatus`, `useWeatherByPlot` and
+  `BedLayoutStep` have no direct test coverage, so the behavioural changes above
+  were verified by the full suite staying green (155 / 2027, no snapshot
+  movement) plus typecheck — not by tests exercising them. Worth a device smoke
+  test of the plant form, the Plants list, the Today screen and the calendar.
 
 ### Dependencies
 

@@ -1,27 +1,27 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-20 — src/: 716 files, 132,987 lines.
+> Snapshot: 2026-09-21 — src/: 716 files, 133,005 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
 ## Large files (search, don't read whole)
 
-- src/screens/CalendarScreen.tsx (2869)
+- src/screens/CalendarScreen.tsx (2851)
 - src/styles/bedCreationWizardStyles.ts (1906)
 - src/utils/plantHelpers.ts (1863)
 - src/styles/calendarStyles.ts (1810)
 - src/styles/plantFormStyles.ts (1719)
 - src/services/tasks.ts (1600)
-- src/hooks/usePlantFormState.ts (1207)
+- src/hooks/usePlantFormState.ts (1200)
 - src/types/database.types.ts (1145)
 - src/services/plants.ts (1140)
-- src/screens/CatalogPlantDetailScreen.tsx (1007)
-- src/components/BedRowLayout.tsx (984)
+- src/screens/CatalogPlantDetailScreen.tsx (1001)
+- src/components/BedRowLayout.tsx (980)
 - src/hooks/useBedCreationWizard.ts (937)
 - src/lib/imageStorage.ts (878)
 - src/screens/BedWizardSteps/GuildTemplateStep.tsx (831)
-- src/screens/PlantsScreen.tsx (827)
+- src/screens/PlantsScreen.tsx (825)
 
 ## src/
 
@@ -77,13 +77,13 @@
 - bed.fixtures.ts (23)
 - journal.fixtures.ts (16)
 
-### src/__tests__/hooks/ — 7 files, 1,210 lines
+### src/__tests__/hooks/ — 7 files, 1,212 lines
 
-- usePlantCatalogManager.test.tsx (283)
-- useCatalogEntryForm.varieties.test.tsx (229)
+- usePlantCatalogManager.test.tsx (289)
+- useCatalogEntryForm.varieties.test.tsx (219)
 - journalFormValidation.test.ts (196)
 - useVoiceLocale.test.ts (177)
-- useCatalogEntryForm.delete.test.tsx (144)
+- useCatalogEntryForm.delete.test.tsx (150)
 - plantFormValidation.test.ts (104)
 - blockReasonForStep.test.ts (77)
 
@@ -222,21 +222,21 @@
 - plantCategories.test.ts (24)
 - plantCapacity.test.ts (21)
 
-### src/components/ — 70 files, 12,169 lines
+### src/components/ — 70 files, 12,195 lines
 
-- BedRowLayout.tsx (984) ⚠️ large — Grep/search inside, do not read whole
-- BedTopDownMap.tsx (778)
+- BedRowLayout.tsx (980) ⚠️ large — Grep/search inside, do not read whole
+- BedTopDownMap.tsx (786)
 - PlantFilterSheet.tsx (531)
 - BedPlantPickerSheet.tsx (489)
 - CareTaskFilterSheet.tsx (428)
 - BedSuccessionTimeline.tsx (426)
 - BedFilterSheet.tsx (356)
-- FloatingTabBar.tsx (319)
-- DashboardHero.tsx (303)
-- PlantCard.tsx (297)
+- FloatingTabBar.tsx (320)
+- PlantCard.tsx (303)
+- DashboardHero.tsx (300)
 - JournalEntryCard.tsx (254)
 - PlantEntryResolverSheet.tsx (253)
-- WeatherDeck.tsx (235)
+- WeatherDeck.tsx (239)
 - BedCard.tsx (233)
 - LocationProfileEditor.tsx (223)
 - VoiceDictation.tsx (223)
@@ -250,7 +250,7 @@
 - FieldHelp.tsx (172)
 - BedRotationView.tsx (168)
 - CoconutSection.tsx (168)
-- FloatingLabelInput.tsx (165)
+- FloatingLabelInput.tsx (166)
 - BedsQuickScroll.tsx (159)
 - LocationPickerSheet.tsx (152)
 - NeedsAttentionScroll.tsx (151)
@@ -265,14 +265,14 @@
 - CareScheduleSection.tsx (109)
 - DetailQuickInfoSection.tsx (108)
 - GrowthStageSection.tsx (108)
+- BottomSheetModal.tsx (106)
 - ErrorBoundary.tsx (100)
 - PickerField.tsx (99)
 - WeatherPlotCard.tsx (98)
-- BottomSheetModal.tsx (97)
 - BedZoneIllustration.tsx (96)
 - DetailNutritionSection.tsx (96)
+- ZoomableImagePage.tsx (95)
 - ShowMoreFooter.tsx (91)
-- ZoomableImagePage.tsx (91)
 - RotationStatusCard.tsx (87)
 - PrepCard.tsx (85)
 - ReferenceThumb.tsx (81)
@@ -301,7 +301,7 @@
 - MonthCalendarView.tsx (148)
 - WeekCalendarView.tsx (125)
 
-### src/components/catalog/ — 20 files, 2,046 lines
+### src/components/catalog/ — 20 files, 2,050 lines
 
 - CatalogFilterSheet.tsx (209)
 - VarietyDetailModal.tsx (206)
@@ -315,9 +315,9 @@
 - CatalogTextEditSheet.tsx (104)
 - CatalogRangeEditSheet.tsx (99)
 - CatalogRangeRow.tsx (87)
-- catalogEditor.ts (70)
+- CatalogSkeletonRows.tsx (72)
 - CatalogTextBlock.tsx (70)
-- CatalogSkeletonRows.tsx (68)
+- catalogEditor.ts (70)
 - CatalogDangerFooter.tsx (66)
 - CatalogSearchBar.tsx (57)
 - RecentSearchChips.tsx (57)
@@ -355,13 +355,13 @@
 - FormSectionCard.tsx (49)
 - EditBeneficialsSection.tsx (35)
 
-### src/components/modals/ — 11 files, 2,011 lines
+### src/components/modals/ — 11 files, 2,012 lines
 
 - CreateTaskModal.tsx (518)
 - PlotEditModal.tsx (415)
 - TaskCompletionModal.tsx (221)
 - SkipTaskModal.tsx (186)
-- AlertDialog.tsx (159)
+- AlertDialog.tsx (160)
 - SectionEditSheet.tsx (137)
 - ConfirmDeleteModal.tsx (101)
 - LocationReassignModal.tsx (80)
@@ -391,11 +391,11 @@
 - PlantDetailHero.tsx (50)
 - DetailCard.tsx (33)
 
-### src/components/reference/ — 10 files, 1,245 lines
+### src/components/reference/ — 10 files, 1,242 lines
 
 - ReferenceListView.tsx (238)
-- ReferenceDetailView.tsx (186)
 - ReferenceFilterSheet.tsx (184)
+- ReferenceDetailView.tsx (183)
 - ReferenceBrowseHeader.tsx (153)
 - ReferenceHero.tsx (140)
 - ActionPlanCard.tsx (116)
@@ -506,30 +506,30 @@
 - types.ts (40)
 - activeZone.ts (26)
 
-### src/hooks/ — 36 files, 7,611 lines
+### src/hooks/ — 36 files, 7,628 lines
 
-- usePlantFormState.ts (1207) ⚠️ large — Grep/search inside, do not read whole
+- usePlantFormState.ts (1200) ⚠️ large — Grep/search inside, do not read whole
 - useBedCreationWizard.ts (937) ⚠️ large — Grep/search inside, do not read whole
 - useCalendarData.ts (695)
-- useCatalogEntryForm.ts (617)
+- useCatalogEntryForm.ts (629)
 - useLocationManager.ts (567)
-- useTodayBrief.ts (522)
+- useTodayBrief.ts (518)
 - usePlantCatalogManager.ts (384)
-- useVoiceInput.ts (218)
-- usePinchZoom.ts (185)
+- useVoiceInput.ts (221)
+- usePinchZoom.ts (191)
 - usePlantFormData.ts (180)
 - useReferenceBrowse.ts (177)
 - useOrganicInputBrowse.ts (171)
 - useVoiceLocale.ts (149)
-- useCatalogSearch.ts (125)
+- useCatalogSearch.ts (123)
 - usePlantDetail.ts (110)
 - useSectionScrollSpy.ts (110)
 - useBedData.ts (101)
 - useFarmCapacity.ts (96)
 - journalFormValidation.ts (94)
+- useWeatherByPlot.ts (87)
 - usePlantHistory.ts (86)
-- useWeatherByPlot.ts (86)
-- usePlantPhotos.ts (72)
+- usePlantPhotos.ts (80)
 - useOnboardingStatus.ts (68)
 - useWeather.ts (68)
 - useWeatherLocations.ts (67)
@@ -587,25 +587,25 @@
 
 - AppNavigator.tsx (197)
 
-### src/screens/ — 28 files, 11,758 lines
+### src/screens/ — 28 files, 11,726 lines
 
-- CalendarScreen.tsx (2869) ⚠️ large — Grep/search inside, do not read whole
-- CatalogPlantDetailScreen.tsx (1007) ⚠️ large — Grep/search inside, do not read whole
-- PlantsScreen.tsx (827) ⚠️ large — Grep/search inside, do not read whole
-- JournalFormScreen.tsx (711)
+- CalendarScreen.tsx (2851) ⚠️ large — Grep/search inside, do not read whole
+- CatalogPlantDetailScreen.tsx (1001) ⚠️ large — Grep/search inside, do not read whole
+- PlantsScreen.tsx (825) ⚠️ large — Grep/search inside, do not read whole
+- JournalFormScreen.tsx (704)
 - JournalScreen.tsx (566)
 - SettingsScreen.tsx (563)
-- BedListScreen.tsx (542)
+- BedListScreen.tsx (540)
 - MyFarmScreen.tsx (538)
 - ManagePlantCatalogScreen.tsx (532)
 - ArchivedPlantsScreen.tsx (390)
 - PlantDetailScreen.tsx (380)
+- BedDetailScreen.tsx (372)
 - BedCreationWizardScreen.tsx (369)
-- BedDetailScreen.tsx (366)
 - TodayScreen.tsx (359)
 - OnboardingScreen.tsx (320)
 - InputRecipesScreen.tsx (242)
-- OrganicInputDetailScreen.tsx (242)
+- OrganicInputDetailScreen.tsx (239)
 - BedPlantPickerScreen.tsx (159)
 - AuthScreen.tsx (146)
 - ProfileScreen.tsx (135)
@@ -618,11 +618,11 @@
 - PestListScreen.tsx (47)
 - PlantFormScreen.tsx (38)
 
-### src/screens/BedWizardSteps/ — 6 files, 2,401 lines
+### src/screens/BedWizardSteps/ — 6 files, 2,404 lines
 
 - GuildTemplateStep.tsx (831) ⚠️ large — Grep/search inside, do not read whole
 - LandConditionsStep.tsx (498)
-- BedLayoutStep.tsx (419)
+- BedLayoutStep.tsx (422)
 - BedSizeStep.tsx (273)
 - BedConfirmStep.tsx (226)
 - BedTypeStep.tsx (154)
@@ -889,12 +889,12 @@
 - COMPONENTS.md (69)
 - CONVENTIONS.md (275)
 - DOMAIN_LOGIC.md (162)
-- ENTERPRISE_AUDIT.md (437)
+- ENTERPRISE_AUDIT.md (438)
 - IMAGE_STORAGE.md (55)
-- IMPLEMENTATION_ROADMAP.md (562)
+- IMPLEMENTATION_ROADMAP.md (598)
 - REFERENCE_IMAGES.md (81)
 - SCHEMA_MIGRATIONS.md (58)
 - SERVICES.md (213)
 - tamil-nadu-reference-audit.md (789)
-- TESTING.md (76)
+- TESTING.md (83)
 - TODAY_SCREEN_RECOMMENDATION.md (629)

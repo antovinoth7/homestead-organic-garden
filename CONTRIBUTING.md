@@ -35,7 +35,7 @@ Native 0.86 will not build on Node 18.
 
 ## Pull Request Process
 
-1. Ensure `npm run lint` passes with zero **errors**. 215 warnings are the current
+1. Ensure `npm run lint` passes with zero **errors**. 54 warnings are the current
    accepted baseline (see `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog);
    a lint run is clean if it adds no new ones.
 2. Update relevant documentation if your change affects architecture or conventions
