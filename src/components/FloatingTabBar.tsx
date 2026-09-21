@@ -7,11 +7,12 @@ import {
   Platform,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  useAnimatedValue,
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../theme';
 import { createStyles, fabStyles } from '../styles/floatingTabBarStyles';
 
@@ -56,7 +57,7 @@ const AnimatedTranslateContext = createContext<Animated.Value>(new Animated.Valu
 export const FloatingTabBarProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const translateY = useRef(new Animated.Value(0)).current;
+  const translateY = useAnimatedValue(0);
   const lastOffsetRef = useRef(0);
   const anchorRef = useRef(0);
   const directionRef = useRef<'up' | 'down' | null>(null);
@@ -242,8 +243,8 @@ export function FloatingTabBar({
           typeof options.tabBarLabel === 'string'
             ? options.tabBarLabel
             : typeof options.title === 'string'
-            ? options.title
-            : route.name;
+              ? options.title
+              : route.name;
 
         return (
           <TouchableOpacity

@@ -1,6 +1,6 @@
 import type React from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions } from 'react-native';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { Animated, Dimensions, useAnimatedValue } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import type {
   PinchGestureHandlerEventPayload,
@@ -35,12 +35,15 @@ export interface PinchZoom {
  * Resets transform state whenever `active` becomes true.
  */
 export function usePinchZoom(active: boolean): PinchZoom {
-  const baseScale = useRef(new Animated.Value(1)).current;
-  const pinchScale = useRef(new Animated.Value(1)).current;
-  const composedScale = useRef(Animated.multiply(baseScale, pinchScale)).current;
+  const baseScale = useAnimatedValue(1);
+  const pinchScale = useAnimatedValue(1);
+  const composedScale = useMemo(
+    () => Animated.multiply(baseScale, pinchScale),
+    [baseScale, pinchScale]
+  );
   const lastScale = useRef(1);
-  const translateX = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(0)).current;
+  const translateX = useAnimatedValue(0);
+  const translateY = useAnimatedValue(0);
   const lastOffset = useRef({ x: 0, y: 0 });
   const pinchHandlerRef = useRef(null);
   const panHandlerRef = useRef(null);
@@ -95,9 +98,10 @@ export function usePinchZoom(active: boolean): PinchZoom {
     [baseScale, translateX, translateY]
   );
 
-  const onPinchEvent = useRef(
-    Animated.event([{ nativeEvent: { scale: pinchScale } }], { useNativeDriver: true })
-  ).current;
+  const onPinchEvent = useMemo(
+    () => Animated.event([{ nativeEvent: { scale: pinchScale } }], { useNativeDriver: true }),
+    [pinchScale]
+  );
 
   const onPinchStateChange = useCallback(
     ({ nativeEvent }: HandlerStateChangeEvent<PinchGestureHandlerEventPayload>) => {
@@ -126,11 +130,13 @@ export function usePinchZoom(active: boolean): PinchZoom {
     [baseScale, pinchScale, panBounds, springToCenter, translateX, translateY]
   );
 
-  const onPanEvent = useRef(
-    Animated.event([{ nativeEvent: { translationX: translateX, translationY: translateY } }], {
-      useNativeDriver: true,
-    })
-  ).current;
+  const onPanEvent = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { translationX: translateX, translationY: translateY } }], {
+        useNativeDriver: true,
+      }),
+    [translateX, translateY]
+  );
 
   const onPanStateChange = useCallback(
     ({ nativeEvent }: HandlerStateChangeEvent<PanGestureHandlerEventPayload>) => {

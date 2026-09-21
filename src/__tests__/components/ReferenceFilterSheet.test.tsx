@@ -16,9 +16,12 @@ jest.mock('react-native', () => {
     StyleSheet: { absoluteFill: {} },
   };
 });
-jest.mock('@expo/vector-icons', () => {
+jest.mock('@expo/vector-icons/Ionicons', () => {
   const React = jest.requireActual<typeof import('react')>('react');
-  return { Ionicons: (props: Record<string, unknown>) => React.createElement('Ionicons', props) };
+  return {
+    __esModule: true,
+    default: (props: Record<string, unknown>) => React.createElement('Ionicons', props),
+  };
 });
 jest.mock('@/components/SheetHandle', () => ({ SheetHandle: () => null }));
 jest.mock('react-native-safe-area-context', () => ({
@@ -141,9 +144,10 @@ describe('ReferenceFilterSheet', () => {
 
   afterAll(() => consoleErrorSpy.mockRestore());
 
-  function render(
-    over: Partial<React.ComponentProps<typeof ReferenceFilterSheet>> = {}
-  ): { tree: RenderedTree; props: React.ComponentProps<typeof ReferenceFilterSheet> } {
+  function render(over: Partial<React.ComponentProps<typeof ReferenceFilterSheet>> = {}): {
+    tree: RenderedTree;
+    props: React.ComponentProps<typeof ReferenceFilterSheet>;
+  } {
     const props = {
       title: 'Filter pests',
       sections: sections(),
@@ -192,7 +196,9 @@ describe('ReferenceFilterSheet', () => {
 
   it('hides Reset while every facet sits at its default', () => {
     const { tree } = render({ isDefault: true });
-    expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'Reset filters')).toHaveLength(0);
+    expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'Reset filters')).toHaveLength(
+      0
+    );
   });
 
   it('offers Reset once something is off default, and closes after resetting', () => {

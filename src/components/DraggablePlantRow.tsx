@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, ScrollView } from 'react-native';
+import { Animated, ScrollView, useAnimatedValue } from 'react-native';
 import { LongPressGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
 import type {
   PanGestureHandlerEventPayload,
@@ -31,7 +31,7 @@ export function DraggablePlantRow({
   const [localOrder, setLocalOrder] = useState<PlantEntry[]>(entries);
   const startIdxRef = useRef(0);
   const currentIdxRef = useRef(0);
-  const translateX = useRef(new Animated.Value(0)).current;
+  const translateX = useAnimatedValue(0);
   const panRef = useRef(null);
 
   // Sync local order with incoming entries when not actively dragging

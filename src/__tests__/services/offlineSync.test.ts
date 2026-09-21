@@ -5,15 +5,34 @@
  */
 
 import { flushOfflineQueue } from '@/services/offlineSync';
-import { enqueueMutations, getQueue, setQueueOwner } from '@/lib/offlineQueue';
+import { enqueueMutations, getQueue, setQueueOwner, getDeadLetters } from '@/lib/offlineQueue';
 import { invalidateAll } from '@/lib/dataCache';
 import type { OfflineMutation, OfflineMutationInput } from '@/types/offline.types';
 
 const mockMemoryStore = new Map<string, unknown[]>();
 const mockSafeSetItem = jest.fn(async (_key: string, _value: string) => true);
 
+/**
+ * `logError` forwards to errorTracker, which dynamically imports the Sentry
+ * native module — unparseable under Jest. The real error helpers are kept so
+ * the not-found / offline discrimination still runs against production code.
+ */
+const mockLogError = jest.fn();
+jest.mock('@/utils/errorLogging', () => ({
+  ...jest.requireActual('@/utils/errorLogging'),
+  logError: (...args: unknown[]) => mockLogError(...args),
+}));
+
 jest.mock('@/lib/storage', () => ({
-  KEYS: { OFFLINE_QUEUE: '@garden_offline_queue', LAST_SYNC: '@garden_last_sync' },
+  KEYS: {
+    OFFLINE_QUEUE: '@garden_offline_queue',
+    OFFLINE_DEAD_LETTER: '@garden_offline_dead_letter',
+    LAST_SYNC: '@garden_last_sync',
+  },
+  readData: jest.fn(async (key: string) => ({
+    ok: true,
+    data: mockMemoryStore.get(key) ?? [],
+  })),
   getData: jest.fn(async (key: string) => mockMemoryStore.get(key) ?? []),
   setData: jest.fn(async (key: string, value: unknown[]) => {
     mockMemoryStore.set(key, value);
@@ -125,6 +144,49 @@ describe('flushOfflineQueue', () => {
     expect(final.dropped).toBe(1);
     expect(final.synced).toBe(1);
     expect(final.remaining).toBe(0);
+  });
+
+  it('parks a given-up mutation in the dead-letter store instead of deleting it', async () => {
+    await enqueueMutations([input({ docId: 'poison', payload: { name: 'Brinjal' } })]);
+
+    const failingExecutor = async (): Promise<void> => {
+      throw firestoreError('internal');
+    };
+
+    for (let i = 1; i <= 5; i++) await flushOfflineQueue(failingExecutor);
+
+    expect(await getQueue()).toHaveLength(0);
+
+    // The user's edit is gone from the queue but not gone from the device.
+    const parked = await getDeadLetters();
+    expect(parked).toHaveLength(1);
+    expect(parked[0]!.mutation.docId).toBe('poison');
+    expect(parked[0]!.mutation.payload).toEqual({ name: 'Brinjal' });
+    expect(parked[0]!.reason).toMatch(/failed replay attempts/);
+    expect(typeof parked[0]!.deadLetteredAt).toBe('number');
+
+    // Reported through logError (which reaches Sentry) rather than the
+    // development-only logger.
+    expect(mockLogError).toHaveBeenCalledWith(
+      'storage',
+      expect.stringContaining('gave up'),
+      expect.anything(),
+      expect.objectContaining({ collection: 'plants', deadLettered: true })
+    );
+  });
+
+  it('does not dead-letter a not-found drop, which is a legitimate no-op', async () => {
+    await enqueueMutations([input({ docId: 'gone', op: 'update' })]);
+
+    const notFoundExecutor = async (): Promise<void> => {
+      throw firestoreError('not-found');
+    };
+
+    const result = await flushOfflineQueue(notFoundExecutor);
+
+    expect(result.dropped).toBe(1);
+    // The document no longer exists, so there is nothing to recover.
+    expect(await getDeadLetters()).toHaveLength(0);
   });
 
   it('shares a single flush across concurrent calls', async () => {

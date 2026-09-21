@@ -28,7 +28,11 @@ interface Props {
 export function ZoomableImagePage({ source, active, onZoomChange }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const zoom = usePinchZoom(active);
+  // The two gesture-handler refs are destructured out of the returned object:
+  // a `ref={panHandlerRef}` attribute marks the whole `zoom` object as
+  // ref-carrying, which makes every other `zoom.*` read count as a ref access
+  // during render (react-hooks/refs). Pulling them out keeps the rest plain.
+  const { panHandlerRef, pinchHandlerRef, ...zoom } = usePinchZoom(active);
   const imageSource = useMemo(
     () => (typeof source === 'string' ? { uri: source } : source),
     [source]
@@ -45,22 +49,22 @@ export function ZoomableImagePage({ source, active, onZoomChange }: Props): Reac
     <TapGestureHandler numberOfTaps={2} onHandlerStateChange={zoom.onDoubleTap}>
       <Animated.View style={styles.page}>
         <PanGestureHandler
-          ref={zoom.panHandlerRef}
+          ref={panHandlerRef}
           // Only claim the drag once zoomed in — otherwise the horizontal pager
           // owns it, so there is no gesture arbitration between the two.
           enabled={zoom.isZoomed}
           onGestureEvent={zoom.onPanEvent}
           onHandlerStateChange={zoom.onPanStateChange}
-          simultaneousHandlers={[zoom.pinchHandlerRef]}
+          simultaneousHandlers={[pinchHandlerRef]}
           minPointers={1}
           maxPointers={2}
         >
           <Animated.View style={styles.imageBox}>
             <PinchGestureHandler
-              ref={zoom.pinchHandlerRef}
+              ref={pinchHandlerRef}
               onGestureEvent={zoom.onPinchEvent}
               onHandlerStateChange={zoom.onPinchStateChange}
-              simultaneousHandlers={[zoom.panHandlerRef]}
+              simultaneousHandlers={[panHandlerRef]}
             >
               <Animated.View
                 style={[

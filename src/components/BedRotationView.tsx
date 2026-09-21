@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { RotationStatus } from '@/types/database.types';
 import { useCrossBedStatus } from '@/hooks/useCrossBedStatus';
@@ -111,8 +111,8 @@ export function BedRotationView({ beds, onOpenBed }: Props): React.JSX.Element {
               <View key={`${gap.bed_id}-${gap.gap_start}`} style={styles.gapRow}>
                 <Ionicons name="time-outline" size={14} color={theme.warning} />
                 <Text style={styles.gapText}>
-                  {bedNameById[gap.bed_id] ?? 'Bed'} ({gap.category.replace(/_/g, ' ')}) clears within
-                  21 days of another same-guild bed — stagger clearing to avoid a supply gap.
+                  {bedNameById[gap.bed_id] ?? 'Bed'} ({gap.category.replace(/_/g, ' ')}) clears
+                  within 21 days of another same-guild bed — stagger clearing to avoid a supply gap.
                 </Text>
               </View>
             ))}

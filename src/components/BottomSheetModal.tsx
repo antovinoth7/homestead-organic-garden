@@ -1,6 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import {
+  Animated,
+  Easing,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  useAnimatedValue,
+} from 'react-native';
 import { useTheme } from '@/theme';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { createStyles } from '@/styles/bottomSheetModalStyles';
@@ -43,7 +52,7 @@ export function BottomSheetModal({
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const translateY = useRef(new Animated.Value(RISE_DISTANCE)).current;
+  const translateY = useAnimatedValue(RISE_DISTANCE);
   const keyboardHeight = useKeyboardHeight();
 
   // Park the sheet back down once closed so the next open rises again.

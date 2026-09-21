@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from './GardenIcon';
 import { useTheme } from '../theme';
 import { SheetHandle } from './SheetHandle';
@@ -344,7 +344,7 @@ export function PlantFilterSheet({
               ] as const
             ).map(([val, label, drops]) => {
               const isActive = filters.water === val;
-              const count = val !== 'all' ? plantCounts.water[val] ?? 0 : null;
+              const count = val !== 'all' ? (plantCounts.water[val] ?? 0) : null;
               return (
                 <TouchableOpacity
                   key={val}

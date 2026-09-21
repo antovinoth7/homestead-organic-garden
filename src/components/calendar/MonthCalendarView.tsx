@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { TaskTemplate, TaskType } from '../../types/database.types';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/calendarStyles';
@@ -55,13 +55,10 @@ export default function MonthCalendarView({
           <Ionicons name="chevron-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={styles.monthTitle}>
-          {formatFarmDate(
-            currentMonth,
-            {
-              month: 'short',
-              year: 'numeric',
-            }
-          )}
+          {formatFarmDate(currentMonth, {
+            month: 'short',
+            year: 'numeric',
+          })}
         </Text>
         <TouchableOpacity
           style={styles.monthNavBtn}
@@ -111,14 +108,11 @@ export default function MonthCalendarView({
               onPress={() => onSelectDate(date)}
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={`${formatFarmDate(
-                date,
-                {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                }
-              )}, ${dayTasks.length} task${dayTasks.length === 1 ? '' : 's'}`}
+              accessibilityLabel={`${formatFarmDate(date, {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              })}, ${dayTasks.length} task${dayTasks.length === 1 ? '' : 's'}`}
             >
               <Text
                 style={[

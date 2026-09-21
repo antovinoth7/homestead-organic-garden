@@ -86,6 +86,17 @@ No analytics, advertising, or social media SDKs are integrated.
 
 ## Backups
 
-- The app supports **images-only ZIP export/import** from the Settings screen.
-- Backup ZIPs contain only image files and a manifest — no user credentials or auth tokens.
-- Backups are created and shared locally; they are not uploaded to any server.
+Two kinds of ZIP export/import are offered from the Settings screen:
+
+- **Images only** — the photo files and a manifest, nothing else.
+- **Complete backup** — the photo files plus your garden records: plants, beds,
+  task templates, task logs, journal entries, location config, plant profiles and
+  farm config.
+
+In both cases:
+
+- Backup ZIPs never contain user credentials or auth tokens.
+- Backups are created and shared locally; they are not uploaded to any server. Where
+  a backup goes after you share it is governed by whichever app you send it to.
+- Restoring a complete backup **replaces** the data on this device with the backup's
+  contents before syncing it to your account.

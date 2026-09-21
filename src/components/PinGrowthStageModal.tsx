@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Theme } from '@/theme/colors';
 import type { GrowthStage } from '@/types/database.types';
 import type { createStyles } from '@/styles/plantDetailStyles';
@@ -56,10 +56,7 @@ export function PinGrowthStageModal({
           {stages.map((s, index) => (
             <TouchableOpacity
               key={s}
-              style={[
-                styles.pinModalItem,
-                index === stages.length - 1 && styles.pinModalItemLast,
-              ]}
+              style={[styles.pinModalItem, index === stages.length - 1 && styles.pinModalItemLast]}
               onPress={() => onSelect(s)}
             >
               <Ionicons name={GROWTH_STAGE_ICONS[s]} size={20} color={theme.primary} />

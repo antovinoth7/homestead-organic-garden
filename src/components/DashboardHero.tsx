@@ -12,7 +12,7 @@
  * HERO_VISIBLE_ROWS show until the user expands them.
  */
 
-import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,9 +22,10 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  useAnimatedValue,
 } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, {
   Circle,
   Path,
@@ -86,7 +87,7 @@ export const DashboardHero = React.memo(function DashboardHero({
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const fade = useRef(new Animated.Value(0)).current;
+  const fade = useAnimatedValue(0);
   const [expanded, setExpanded] = useState(false);
 
   // The background gradient is sized from a measured layout rather than from
@@ -144,13 +145,7 @@ export const DashboardHero = React.memo(function DashboardHero({
             height={heroSize.height}
             fill="url(#heroGround)"
           />
-          <Rect
-            x={0}
-            y={0}
-            width={heroSize.width}
-            height={heroSize.height}
-            fill="url(#heroGlow)"
-          />
+          <Rect x={0} y={0} width={heroSize.width} height={heroSize.height} fill="url(#heroGlow)" />
         </Svg>
       )}
 
@@ -186,13 +181,7 @@ export const DashboardHero = React.memo(function DashboardHero({
                 )}
                 {overdueSweep > 0.5 && (
                   <Path
-                    d={describeArc(
-                      RING_CENTER,
-                      RING_CENTER,
-                      RING_RADIUS,
-                      360 - overdueSweep,
-                      360
-                    )}
+                    d={describeArc(RING_CENTER, RING_CENTER, RING_RADIUS, 360 - overdueSweep, 360)}
                     stroke={theme.error}
                     strokeWidth={RING_STROKE}
                     strokeLinecap="round"
@@ -210,7 +199,11 @@ export const DashboardHero = React.memo(function DashboardHero({
           </TouchableOpacity>
 
           {overdueCount > 0 && (
-            <TouchableOpacity style={styles.overduePill} activeOpacity={0.75} onPress={onPressOverdue}>
+            <TouchableOpacity
+              style={styles.overduePill}
+              activeOpacity={0.75}
+              onPress={onPressOverdue}
+            >
               <Ionicons name="alert-circle" size={11} color={theme.textInverse} />
               <Text style={styles.overduePillText}>{fmtCount(overdueCount)} overdue</Text>
             </TouchableOpacity>
@@ -256,7 +249,11 @@ export const DashboardHero = React.memo(function DashboardHero({
           })}
 
           {hiddenCount > 0 && (
-            <TouchableOpacity style={styles.moreToggle} activeOpacity={0.7} onPress={toggleExpanded}>
+            <TouchableOpacity
+              style={styles.moreToggle}
+              activeOpacity={0.7}
+              onPress={toggleExpanded}
+            >
               <Text style={styles.moreToggleText}>
                 {expanded ? 'Show less' : `+${hiddenCount} more`}
               </Text>

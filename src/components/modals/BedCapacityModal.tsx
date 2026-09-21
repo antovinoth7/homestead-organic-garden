@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedCapacityModalStyles';
 

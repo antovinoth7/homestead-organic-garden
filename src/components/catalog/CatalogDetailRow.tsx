@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/catalogRowStyles';
 import FieldHelp from '@/components/FieldHelp';
@@ -108,18 +108,13 @@ export function CatalogDetailRow({
             </Text>
           </View>
         ) : (
-          <Text
-            style={[styles.value, isEmpty && styles.valuePlaceholder]}
-            numberOfLines={2}
-          >
+          <Text style={[styles.value, isEmpty && styles.valuePlaceholder]} numberOfLines={2}>
             {isEmpty ? EMPTY_VALUE : value}
           </Text>
         )}
       </View>
 
-      {interactive && (
-        <Ionicons name="chevron-forward" size={14} color={theme.textTertiary} />
-      )}
+      {interactive && <Ionicons name="chevron-forward" size={14} color={theme.textTertiary} />}
     </>
   );
 

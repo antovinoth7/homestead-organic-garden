@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  useAnimatedValue,
 } from 'react-native';
 import type { ImageSource } from 'expo-image';
 import {
@@ -19,10 +20,13 @@ import {
 } from 'react-native-gesture-handler';
 import type { HandlerStateChangeEvent } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
-import { computeEmptySlotPositions, computeInterleavedEastPositions } from '@/utils/rowLayoutEngine';
+import {
+  computeEmptySlotPositions,
+  computeInterleavedEastPositions,
+} from '@/utils/rowLayoutEngine';
 import type { BedRow } from '@/utils/rowLayoutEngine';
 import type { BedLayer } from '@/types/database.types';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
@@ -195,14 +199,17 @@ function BedTopDownCanvas({
   );
 
   // ── Pinch + pan state (v1 gesture-handler API — works without reanimated) ──
-  const baseScale = useRef(new Animated.Value(1)).current;
-  const pinchScale = useRef(new Animated.Value(1)).current;
-  const composedScale = useRef(Animated.multiply(baseScale, pinchScale)).current;
+  const baseScale = useAnimatedValue(1);
+  const pinchScale = useAnimatedValue(1);
+  const composedScale = useMemo(
+    () => Animated.multiply(baseScale, pinchScale),
+    [baseScale, pinchScale]
+  );
   const lastScale = useRef(1);
-  const translateX = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(0)).current;
+  const translateX = useAnimatedValue(0);
+  const translateY = useAnimatedValue(0);
   const lastOffset = useRef({ x: 0, y: 0 });
-  const labelOpacity = useRef(new Animated.Value(0)).current;
+  const labelOpacity = useAnimatedValue(0);
   const frameSize = useRef({ width: 0, height: 0 });
   const [currentScale, setCurrentScale] = useState(1);
   const [hintDismissed, setHintDismissed] = useState(false);
@@ -247,9 +254,10 @@ function BedTopDownCanvas({
     [clampOffset, settleOffset]
   );
 
-  const onPinchEvent = useRef(
-    Animated.event([{ nativeEvent: { scale: pinchScale } }], { useNativeDriver: true })
-  ).current;
+  const onPinchEvent = useMemo(
+    () => Animated.event([{ nativeEvent: { scale: pinchScale } }], { useNativeDriver: true }),
+    [pinchScale]
+  );
 
   const onPinchStateChange = useCallback(
     ({ nativeEvent }: HandlerStateChangeEvent<PinchGestureHandlerEventPayload>) => {
@@ -268,11 +276,13 @@ function BedTopDownCanvas({
     [baseScale, pinchScale, clampOffset, settleOffset, applyLabelOpacity, hintDismissed]
   );
 
-  const onPanEvent = useRef(
-    Animated.event([{ nativeEvent: { translationX: translateX, translationY: translateY } }], {
-      useNativeDriver: true,
-    })
-  ).current;
+  const onPanEvent = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { translationX: translateX, translationY: translateY } }], {
+        useNativeDriver: true,
+      }),
+    [translateX, translateY]
+  );
 
   const onPanStateChange = useCallback(
     ({ nativeEvent }: HandlerStateChangeEvent<PanGestureHandlerEventPayload>) => {
@@ -612,9 +622,7 @@ function BedTopDownCanvas({
                 {overflowCm > 0 && (
                   <View style={styles.tdmOverflowBadge}>
                     <Ionicons name="warning-outline" size={13} color={theme.error} />
-                    <Text style={styles.tdmOverflowText}>
-                      Overflow {Math.round(overflowCm)} cm
-                    </Text>
+                    <Text style={styles.tdmOverflowText}>Overflow {Math.round(overflowCm)} cm</Text>
                   </View>
                 )}
 

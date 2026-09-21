@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   TextInput,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import VoiceDictation from '@/components/VoiceDictation';
@@ -93,7 +93,7 @@ export function PlotEditModal({
 
   // Seed the coordinate text boxes from the saved profile each time the editor
   // opens; they are local state so a half-typed value never round-trips.
-  const editingKey = visible ? editModal?.original ?? '' : null;
+  const editingKey = visible ? (editModal?.original ?? '') : null;
   useEffect(() => {
     if (editingKey === null) return;
     const lat = editModal?.profile?.latitude;
@@ -166,7 +166,7 @@ export function PlotEditModal({
                 ...(prev.profile ?? {}),
                 lastSoilTestDate: selectedDate
                   ? toLocalDateString(selectedDate)
-                  : prev.profile?.lastSoilTestDate ?? null,
+                  : (prev.profile?.lastSoilTestDate ?? null),
               },
             }
           : prev

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getPlantImage } from '@/config/referenceAssets';
@@ -75,9 +75,7 @@ function CatalogBrowseRowComponent({
     .join(', ');
 
   return (
-    <View
-      style={[styles.listCard, isFirst && styles.listCardFirst, isLast && styles.listCardLast]}
-    >
+    <View style={[styles.listCard, isFirst && styles.listCardFirst, isLast && styles.listCardLast]}>
       <Pressable
         style={({ pressed }) => [styles.plantRowCompact, pressed && styles.plantRowPressed]}
         onPress={handlePress}

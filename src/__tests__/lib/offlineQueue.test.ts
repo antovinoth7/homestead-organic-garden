@@ -21,6 +21,10 @@ const mockMemoryStore = new Map<string, unknown[]>();
 
 jest.mock('@/lib/storage', () => ({
   KEYS: { OFFLINE_QUEUE: '@garden_offline_queue' },
+  readData: jest.fn(async (key: string) => {
+    if (mockReadDataFails) return { ok: false, reason: mockReadDataFails };
+    return { ok: true, data: mockMemoryStore.get(key) ?? [] };
+  }),
   getData: jest.fn(async (key: string) => mockMemoryStore.get(key) ?? []),
   setData: jest.fn(async (key: string, value: unknown[]) => {
     if (mockSetDataFails) return false;
@@ -31,6 +35,8 @@ jest.mock('@/lib/storage', () => ({
 
 /** Flipped by the durability tests to simulate an AsyncStorage write failure. */
 let mockSetDataFails = false;
+/** Set to a StorageRead failure reason to simulate an unreadable queue. */
+let mockReadDataFails: 'shape' | 'corrupt' | 'io' | null = null;
 
 const input = (overrides: Partial<OfflineMutationInput> = {}): OfflineMutationInput => ({
   collection: 'plants',
@@ -43,6 +49,7 @@ const input = (overrides: Partial<OfflineMutationInput> = {}): OfflineMutationIn
 beforeEach(() => {
   mockMemoryStore.clear();
   mockSetDataFails = false;
+  mockReadDataFails = null;
   setQueueOwner('user-1');
 });
 
@@ -167,5 +174,65 @@ describe('revision compare-and-swap', () => {
     const [entry] = await getQueue();
     expect(await removeMutation(entry!.id, entry!.revision)).toBe(true);
     expect(await getQueueLength()).toBe(0);
+  });
+});
+
+describe('unreadable queue is never mistaken for an empty one', () => {
+  const KEY = '@garden_offline_queue';
+
+  /** Queue two real mutations, then make every subsequent read fail. */
+  const seedThenBreakReads = async (
+    reason: 'shape' | 'corrupt' | 'io' = 'io'
+  ): Promise<unknown[]> => {
+    await enqueueMutations([input({ docId: 'a' }), input({ docId: 'b' })]);
+    const persisted = mockMemoryStore.get(KEY) as unknown[];
+    expect(persisted).toHaveLength(2);
+    mockReadDataFails = reason;
+    return persisted;
+  };
+
+  it.each(['shape', 'corrupt', 'io'] as const)(
+    'enqueueMutations throws on a %s read failure and leaves the queue untouched',
+    async (reason) => {
+      const before = await seedThenBreakReads(reason);
+      await expect(enqueueMutation(input({ docId: 'c' }))).rejects.toThrow(
+        /device storage is unavailable/
+      );
+      expect(mockMemoryStore.get(KEY)).toBe(before);
+      expect(mockMemoryStore.get(KEY)).toHaveLength(2);
+    }
+  );
+
+  // The original bug: incrementRetry read [], mapped to [], and persisted it,
+  // so a single failed read wiped every pending write.
+  it('incrementRetry cannot empty a populated queue', async () => {
+    const before = await seedThenBreakReads();
+    await expect(incrementRetry('om-whatever')).rejects.toThrow(/device storage is unavailable/);
+    expect(mockMemoryStore.get(KEY)).toBe(before);
+    expect(mockMemoryStore.get(KEY)).toHaveLength(2);
+  });
+
+  it('removeMutation throws rather than reporting "not found"', async () => {
+    const before = await seedThenBreakReads();
+    await expect(removeMutation('om-whatever')).rejects.toThrow(/device storage is unavailable/);
+    expect(mockMemoryStore.get(KEY)).toBe(before);
+  });
+
+  it('getQueue surfaces the failure so a flush stops instead of seeing nothing', async () => {
+    await seedThenBreakReads();
+    await expect(getQueue()).rejects.toThrow(/device storage is unavailable/);
+  });
+
+  it('getQueueLength keeps the last known count so the badge never falsely clears', async () => {
+    await seedThenBreakReads();
+    // Would have been 0 before: a failed read told the user everything was synced.
+    await expect(getQueueLength()).resolves.toBe(2);
+  });
+
+  it('recovers once reads succeed again', async () => {
+    await seedThenBreakReads();
+    mockReadDataFails = null;
+    await enqueueMutation(input({ docId: 'c' }));
+    expect(mockMemoryStore.get(KEY)).toHaveLength(3);
   });
 });

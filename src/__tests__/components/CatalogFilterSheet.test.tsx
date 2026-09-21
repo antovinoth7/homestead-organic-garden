@@ -16,13 +16,18 @@ jest.mock('react-native', () => {
     StyleSheet: { absoluteFill: {} },
   };
 });
-jest.mock('@expo/vector-icons', () => {
+jest.mock('@expo/vector-icons/Ionicons', () => {
   const React = jest.requireActual<typeof import('react')>('react');
-  return { Ionicons: (props: Record<string, unknown>) => React.createElement('Ionicons', props) };
+  return {
+    __esModule: true,
+    default: (props: Record<string, unknown>) => React.createElement('Ionicons', props),
+  };
 });
 jest.mock('@/components/GardenIcon', () => {
   const React = jest.requireActual<typeof import('react')>('react');
-  return { GardenIcon: (props: Record<string, unknown>) => React.createElement('GardenIcon', props) };
+  return {
+    GardenIcon: (props: Record<string, unknown>) => React.createElement('GardenIcon', props),
+  };
 });
 jest.mock('@/components/SheetHandle', () => ({ SheetHandle: () => null }));
 jest.mock('react-native-safe-area-context', () => ({
@@ -188,10 +193,7 @@ describe('CatalogFilterSheet', () => {
   it('shows a count on All and on every category', () => {
     const counts = countsOf(render().rendered).map(countTextOf);
 
-    expect(counts).toEqual([
-      ' (42)',
-      ...CATALOG_GROUP_ORDER.map((group) => ` (${COUNTS[group]})`),
-    ]);
+    expect(counts).toEqual([' (42)', ...CATALOG_GROUP_ORDER.map((group) => ` (${COUNTS[group]})`)]);
   });
 
   it('mutes a zero rather than hiding it — an empty category is worth knowing', () => {

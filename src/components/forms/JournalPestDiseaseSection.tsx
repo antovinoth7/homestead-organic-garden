@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import FloatingLabelInput from '../FloatingLabelInput';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
@@ -370,7 +370,9 @@ export function JournalPestDiseaseSection({
               size={14}
               color={showCustomInput ? theme.primary : theme.textSecondary}
             />
-            <Text style={[styles.treatmentChipText, showCustomInput && styles.treatmentChipTextActive]}>
+            <Text
+              style={[styles.treatmentChipText, showCustomInput && styles.treatmentChipTextActive]}
+            >
               Custom treatment...
             </Text>
           </TouchableOpacity>
@@ -399,18 +401,14 @@ export function JournalPestDiseaseSection({
                 <TouchableOpacity
                   key={opt.value}
                   style={[styles.affectedPartChip, active && styles[opt.activeStyle]]}
-                  onPress={() =>
-                    onChange({ treatmentEffectiveness: active ? null : opt.value })
-                  }
+                  onPress={() => onChange({ treatmentEffectiveness: active ? null : opt.value })}
                 >
                   <GardenIcon
                     name={opt.iconKey}
                     size={15}
                     color={active ? theme.textInverse : theme.textSecondary}
                   />
-                  <Text
-                    style={[styles.affectedPartChipText, active && styles.effChipTextActive]}
-                  >
+                  <Text style={[styles.affectedPartChipText, active && styles.effChipTextActive]}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import type { ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { Plant } from '../types/database.types';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { getPlantImage, REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceAssets';
 import { useTheme } from '../theme';
@@ -33,17 +33,23 @@ function PlantCard({
 }: PlantCardProps): React.JSX.Element {
   const theme = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
-  const [imageError, setImageError] = useState(false);
+  /**
+   * Which photo failed, rather than a boolean reset by an effect: as a boolean
+   * it needed an effect per card to clear on `photo_url` change, so every card
+   * in the list ran one on first paint for nothing. Comparing against the
+   * current url resets itself.
+   */
+  const [erroredPhotoUrl, setErroredPhotoUrl] = useState<string | null>(null);
+  const imageError = !!plant.photo_url && erroredPhotoUrl === plant.photo_url;
   const isMountedRef = useRef(true);
   const swipeableRef = useRef<Swipeable>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
-    setImageError(false);
     return () => {
       isMountedRef.current = false;
     };
-  }, [plant.photo_url]);
+  }, []);
 
   const referenceImage = getPlantImage(plant.name);
 
@@ -69,7 +75,7 @@ function PlantCard({
   };
 
   const handleImageError = (): void => {
-    if (isMountedRef.current) setImageError(true);
+    if (isMountedRef.current) setErroredPhotoUrl(plant.photo_url ?? null);
   };
 
   const renderHighlighted = (text: string): React.ReactNode => {
@@ -208,8 +214,8 @@ function PlantCard({
                   plant.space_type === 'pot'
                     ? 'cube-outline'
                     : plant.space_type === 'bed'
-                    ? 'apps'
-                    : 'earth'
+                      ? 'apps'
+                      : 'earth'
                 }
                 size={12}
                 color={theme.textTertiary}
@@ -218,8 +224,8 @@ function PlantCard({
                 {plant.space_type === 'pot'
                   ? plant.pot_size || 'Pot'
                   : plant.space_type === 'bed'
-                  ? plant.bed_name || 'Bed'
-                  : 'Ground'}
+                    ? plant.bed_name || 'Bed'
+                    : 'Ground'}
               </Text>
             </View>
             <Text style={styles.metaDot}>·</Text>

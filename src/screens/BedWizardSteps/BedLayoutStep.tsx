@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { BedCapacityModal } from '@/components/modals/BedCapacityModal';
 import { BedPlantPickerSheet } from '@/components/BedPlantPickerSheet';
@@ -228,7 +228,7 @@ export function BedLayoutStep({
   useEffect(() => {
     let cancelled = false;
     if (linkedPlantPairs.length === 0) {
-      setResolvedNames(new Map());
+      setResolvedNames((previous) => (previous.size === 0 ? previous : new Map()));
       return;
     }
     Promise.all(
@@ -285,7 +285,10 @@ export function BedLayoutStep({
       const names = new Set(row.plants.map((p) => p.name));
       for (const w of rowLayout.companionWarnings) {
         if (names.has(w.plantA) || names.has(w.plantB)) {
-          warnings.push({ rowIndex: row.rowIndex, message: `${w.plantA} + ${w.plantB} — ${w.reason}` });
+          warnings.push({
+            rowIndex: row.rowIndex,
+            message: `${w.plantA} + ${w.plantB} — ${w.reason}`,
+          });
           break;
         }
       }

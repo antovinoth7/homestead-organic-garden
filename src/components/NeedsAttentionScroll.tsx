@@ -17,7 +17,7 @@
 
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { FarmAlert } from '@/types/database.types';
 import { ALERT_COMPLETE_FIELD } from '@/services/alerts';

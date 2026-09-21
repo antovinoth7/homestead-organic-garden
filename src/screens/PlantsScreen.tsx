@@ -14,13 +14,14 @@ import {
   Animated,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  useAnimatedValue,
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { getAllPlants, deletePlant, archivePlant, getCachedPlants } from '../services/plants';
 import { getLocationConfig } from '../services/locations';
 import { Plant, HealthStatus } from '../types/database.types';
 import PlantCard from '../components/PlantCard';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { PlantsScreenNavigationProp, PlantsScreenRouteProp } from '../types/navigation.types';
@@ -119,12 +120,12 @@ export default function PlantsScreen(): React.JSX.Element {
   } | null>(null);
   // Active plant awaiting the themed delete-confirmation modal.
   const [confirmDelete, setConfirmDelete] = useState<Plant | null>(null);
-  const undoProgress = useRef(new Animated.Value(1)).current;
+  const undoProgress = useAnimatedValue(1);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openSwipeableRef = useRef<Swipeable | null>(null);
   // Lightweight "Plant saved" confirmation shown after returning from the form.
   const [savedToast, setSavedToast] = useState<{ id: string; name: string } | null>(null);
-  const savedToastProgress = useRef(new Animated.Value(1)).current;
+  const savedToastProgress = useAnimatedValue(1);
   const savedToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // searchInput: raw controlled value; searchQuery: debounced, drives filtering
@@ -452,10 +453,7 @@ export default function PlantsScreen(): React.JSX.Element {
     setShowFilters((prev) => !prev);
   };
 
-  const segmentFiltered = useMemo(
-    () => filterPlants(plants, filterState),
-    [plants, filterState]
-  );
+  const segmentFiltered = useMemo(() => filterPlants(plants, filterState), [plants, filterState]);
 
   const filteredPlants = useMemo(
     () => getSortedPlants(segmentFiltered),

@@ -17,7 +17,7 @@ export function useCrossBedStatus(beds: BedWithCoverage[]): UseCrossBedStatusRes
 
   useEffect(() => {
     if (beds.length === 0) {
-      setRotationStatuses([]);
+      setRotationStatuses((previous) => (previous.length === 0 ? previous : []));
       return;
     }
 

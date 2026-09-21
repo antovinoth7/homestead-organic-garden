@@ -1,4 +1,5 @@
-import { safeGetData, safeSetData, safeRemoveItem } from '../utils/safeStorage';
+import { safeGetData, safeReadData, safeSetData, safeRemoveItem } from '../utils/safeStorage';
+import type { StorageRead } from '../utils/safeStorage';
 import { logStorageError } from '../utils/errorLogging';
 import { invalidateAll } from './dataCache';
 import { logger } from '../utils/logger';
@@ -10,6 +11,7 @@ const STORAGE_KEYS = {
   JOURNAL: '@garden_journal',
   LAST_SYNC: '@garden_last_sync',
   OFFLINE_QUEUE: '@garden_offline_queue',
+  OFFLINE_DEAD_LETTER: '@garden_offline_dead_letter',
   LOCATIONS: '@garden_locations',
   PLANT_CATALOG: '@garden_plant_catalog',
   PLANT_CARE_PROFILES: '@garden_plant_care_profiles',
@@ -31,6 +33,20 @@ export const getData = async <T>(key: string): Promise<T[]> => {
   } catch (e) {
     logStorageError(`Error reading ${key}`, e as Error);
     return [];
+  }
+};
+
+/**
+ * Strict read. Unlike `getData`, a failure is reported rather than flattened to
+ * `[]`, so a caller that read-modify-writes the only durable copy of user data
+ * can refuse to act on a read that did not actually succeed.
+ */
+export const readData = async <T>(key: string): Promise<StorageRead<T>> => {
+  try {
+    return await safeReadData<T>(key);
+  } catch (e) {
+    logStorageError(`Error reading ${key}`, e as Error);
+    return { ok: false, reason: 'io' };
   }
 };
 
@@ -63,6 +79,9 @@ export const getLocationStorageKey = (uid: string | null | undefined): string =>
  *
  * - OFFLINE_QUEUE holds writes that never reached Firestore; it is their only
  *   durable copy, so clearing it destroys user data.
+ * - OFFLINE_DEAD_LETTER holds writes that were given up on after repeated replay
+ *   failures. It exists precisely so they are recoverable, so clearing it would
+ *   discard the very data it was created to preserve.
  * - ONBOARDING_COMPLETE is user state, not a cache — it is preserved outright.
  * - LAST_SYNC is a scalar string; it is removed rather than overwritten,
  *   because writing `[]` leaves the literal "[]" behind.
@@ -70,7 +89,11 @@ export const getLocationStorageKey = (uid: string | null | undefined): string =>
  * The last two are written via `safeSetItem` as plain strings, so the array
  * write used for every other key corrupts them.
  */
-const PRESERVED_KEYS: string[] = [STORAGE_KEYS.OFFLINE_QUEUE, STORAGE_KEYS.ONBOARDING_COMPLETE];
+const PRESERVED_KEYS: string[] = [
+  STORAGE_KEYS.OFFLINE_QUEUE,
+  STORAGE_KEYS.OFFLINE_DEAD_LETTER,
+  STORAGE_KEYS.ONBOARDING_COMPLETE,
+];
 const SCALAR_KEYS_TO_REMOVE: string[] = [STORAGE_KEYS.LAST_SYNC];
 
 /**

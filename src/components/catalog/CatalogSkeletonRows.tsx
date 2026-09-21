@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { View, Animated, useWindowDimensions } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { View, Animated, useWindowDimensions, useAnimatedValue } from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
 
@@ -23,7 +23,7 @@ function CatalogSkeletonRowsComponent({ count = 8 }: Props): React.JSX.Element {
   const { fontScale } = useWindowDimensions();
   const styles = useMemo(() => createStyles(theme, fontScale), [theme, fontScale]);
 
-  const pulse = useRef(new Animated.Value(0.4)).current;
+  const pulse = useAnimatedValue(0.4);
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -39,7 +39,11 @@ function CatalogSkeletonRowsComponent({ count = 8 }: Props): React.JSX.Element {
   const rows = useMemo(() => Array.from({ length: count }, (_, i) => i), [count]);
 
   return (
-    <View style={styles.listContent} accessibilityLabel="Loading catalog" accessibilityRole="progressbar">
+    <View
+      style={styles.listContent}
+      accessibilityLabel="Loading catalog"
+      accessibilityRole="progressbar"
+    >
       <View style={styles.skeletonHeader} />
       {rows.map((index) => (
         <View

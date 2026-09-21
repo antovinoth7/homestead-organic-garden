@@ -128,6 +128,11 @@ Notes:
 - When importing images, matching is filename-based (`relinkImportedImages` is shared by both import flows so the matching logic never diverges).
 - All four entry points accept an optional `BackupProgressCallback` (`src/utils/zipHelper.ts`) and emit `collecting → resolving → packing → compressing → saving` on export, `extracting → saving` on restore. `SettingsScreen` renders these as button labels; a backup over a large photo set otherwise looks hung.
 - **Binary I/O must stay on the modern `expo-file-system` `File` API** (`bytes()` / `write()`). The legacy base64 reader is a fallback only, for URIs the modern API cannot open (Android `content://` MediaLibrary assets). Converting whole archives through base64 strings in JS previously made a large backup take minutes.
+- **Modern vs legacy module APIs.** Two Expo packages have split their surface: the default export is a new object-oriented API and the previous one moved to a `/legacy` subpath. `expo-file-system` did this in SDK 54; **`expo-media-library` did the same in SDK 57**. The affected imports are deliberate and currently pinned to legacy:
+  - `expo-file-system/legacy` — `src/lib/imageStorage.ts`, `src/services/backup.ts`, `src/utils/zipHelper.ts` (the last also uses the modern `File`/`Directory` classes, per the bullet above)
+  - `expo-media-library/legacy` — `src/lib/imageStorage.ts`
+
+  Both subpaths still ship in SDK 57. Do not switch them opportunistically: `imageStorage.ts` and `backup.ts` have **no test coverage**, so a silent API drift would surface only as a photo or backup failure on a real device. Migration is tracked in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog, tests first.
 - Photo entries are added to the ZIP with `level: 0` (store). JPEG/PNG data does not deflate further, so compressing it is pure CPU cost on the blocking `zipSync` call.
 - Image reads run through a bounded-concurrency pool (`IMAGE_READ_CONCURRENCY`), not `Promise.all` — unbounded parallelism would hold hundreds of whole photos in memory at once.
 

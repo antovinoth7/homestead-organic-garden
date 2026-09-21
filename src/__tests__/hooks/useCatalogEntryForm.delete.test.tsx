@@ -55,11 +55,17 @@ const mockAlert = Alert.alert as unknown as jest.Mock;
 let latest: UseCatalogEntryFormReturn;
 
 function Probe({ name }: { name: string }): null {
-  latest = useCatalogEntryForm({
+  const value = useCatalogEntryForm({
     initialName: name,
     plantType: 'vegetable',
     isCreating: false,
     anyModalOpen: false,
+  });
+  // Captured in an effect rather than assigned during render: reassigning an
+  // outer binding mid-render is a side effect (react-hooks/globals). Effects
+  // flush inside `act`, so `latest` is still set before any assertion runs.
+  React.useEffect(() => {
+    latest = value;
   });
   return null;
 }

@@ -8,7 +8,7 @@ import { createStyles } from '@/styles/bedCreationWizardStyles';
 import { getCurrentSeason } from '@/utils/seasonHelpers';
 import { BED_TYPE_NAME } from '@/config/beds';
 import { BED_TYPE_ICON_KEYS } from '@/config/iconRegistry';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 interface Props {
   data: Partial<Step1Data>;

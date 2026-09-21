@@ -41,7 +41,8 @@ export function useWeatherByPlot(plots: WeatherPlot[]): UseWeatherByPlotResult {
         ? plots.filter((plot) => plot.name === options.plotName)
         : plots;
       if (targets.length === 0) {
-        if (!options.plotName) setByPlotName(new Map());
+        if (!options.plotName)
+          setByPlotName((previous) => (previous.size === 0 ? previous : new Map()));
         setLoading(false);
         return;
       }

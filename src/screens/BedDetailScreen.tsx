@@ -2,7 +2,7 @@ import React, { useMemo, useCallback, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { useBedDetail } from '@/hooks/useBedDetail';
@@ -51,6 +51,7 @@ export default function BedDetailScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const { bed, plants, rotationStatus, loading, error, refresh } = useBedDetail(bedId);
   const [actionLoading, setActionLoading] = useState(false);
+  const [nowMs] = useState(() => Date.now());
   const resolveLayerColor = useCallback(
     (layer: BedLayer): string => getLayerColor(theme, layer),
     [theme]
@@ -122,7 +123,7 @@ export default function BedDetailScreen(): React.JSX.Element {
 
   const transitionInputs = useMemo(() => {
     if (!bed?.prev_crop_family) return [];
-    const nextFamily = plants.length > 0 ? plants[0]?.crop_family ?? 'other' : 'other';
+    const nextFamily = plants.length > 0 ? (plants[0]?.crop_family ?? 'other') : 'other';
     return getTransitionInputs(bed.prev_crop_family, nextFamily, bed.pest_history ?? []);
   }, [bed, plants]);
 
@@ -155,10 +156,13 @@ export default function BedDetailScreen(): React.JSX.Element {
     );
   }
 
+  // Captured once per mount rather than read during render: Date.now() is
+  // impure, so calling it in the render body makes the countdown depend on
+  // whenever React happens to re-render.
   const restingDaysLeft = bed.resting_until
     ? Math.max(
         0,
-        Math.ceil((new Date(bed.resting_until).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+        Math.ceil((new Date(bed.resting_until).getTime() - nowMs) / (1000 * 60 * 60 * 24))
       )
     : 0;
 
@@ -184,181 +188,183 @@ export default function BedDetailScreen(): React.JSX.Element {
           { paddingBottom: Math.max(insets.bottom, 24) + 24 },
         ]}
       >
-      {/* Resting banner */}
-      {bed.is_resting && (
-        <View style={styles.restingBanner}>
-          <Ionicons name="moon-outline" size={16} color={theme.warning ?? '#f59e0b'} />
-          <Text style={styles.restingText}>
-            Resting — {restingDaysLeft} day{restingDaysLeft !== 1 ? 's' : ''} remaining
-          </Text>
-          <TouchableOpacity onPress={handleEndRest} disabled={actionLoading}>
-            <Text style={styles.endRestText}>End rest</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Bed meta: type · size · raised */}
-      <View style={styles.metaRow}>
-        <View style={styles.typeChip}>
-          <GardenIcon name={BED_TYPE_ICON_KEYS[bed.type]} size={15} color={theme.primary} />
-          <Text style={styles.typeChipText}>{BED_TYPE_NAME[bed.type]}</Text>
-        </View>
-        <View style={styles.metaDim}>
-          <Ionicons name="resize-outline" size={14} color={theme.textSecondary} />
-          <Text style={styles.metaDimText}>
-            {bed.dimensions.width_m} × {bed.dimensions.length_m} m · {bed.dimensions.area_sqm} m²
-          </Text>
-        </View>
-        {bed.is_raised_bed && (
-          <View style={styles.raisedBadge}>
-            <Text style={styles.raisedBadgeText}>Raised</Text>
+        {/* Resting banner */}
+        {bed.is_resting && (
+          <View style={styles.restingBanner}>
+            <Ionicons name="moon-outline" size={16} color={theme.warning ?? '#f59e0b'} />
+            <Text style={styles.restingText}>
+              Resting — {restingDaysLeft} day{restingDaysLeft !== 1 ? 's' : ''} remaining
+            </Text>
+            <TouchableOpacity onPress={handleEndRest} disabled={actionLoading}>
+              <Text style={styles.endRestText}>End rest</Text>
+            </TouchableOpacity>
           </View>
         )}
-      </View>
 
-      {/* Succession & Season Timeline */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Season Timeline</Text>
-        <BedSuccessionTimeline bed={bed} plants={plants} />
-      </View>
-
-      {/* Bed Layout — read-only top-down row map */}
-      {rowLayout && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Bed Layout</Text>
-          <BedTopDownMap
-            widthM={bed.dimensions.width_m}
-            lengthM={bed.dimensions.length_m}
-            rows={rowLayout.rows}
-            plantImage={getPlantImage}
-            layerColor={resolveLayerColor}
-            walkingPathCm={rowLayout.walkingPathCm}
-            edgeBufferCm={rowLayout.edgeBufferCm}
-            overflowCm={rowLayout.overflowCm}
-            rowWarnings={rowWarnings}
-          />
-        </View>
-      )}
-
-      {/* Soil Input Log */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Soil Input Log</Text>
-        <View style={styles.inputLogGrid}>
-          <View style={styles.inputLogItem}>
-            <Ionicons name="water-outline" size={16} color={theme.primary} />
-            <Text style={styles.inputLogLabel}>Last water</Text>
-            <Text style={styles.inputLogValue}>{formatRelativeDate(bed.last_water_date)}</Text>
+        {/* Bed meta: type · size · raised */}
+        <View style={styles.metaRow}>
+          <View style={styles.typeChip}>
+            <GardenIcon name={BED_TYPE_ICON_KEYS[bed.type]} size={15} color={theme.primary} />
+            <Text style={styles.typeChipText}>{BED_TYPE_NAME[bed.type]}</Text>
           </View>
-          <View style={styles.inputLogItem}>
-            <Ionicons name="flask-outline" size={16} color={theme.primary} />
-            <Text style={styles.inputLogLabel}>Last Jeevamrutha</Text>
-            <Text style={styles.inputLogValue}>
-              {formatRelativeDate(bed.last_jeevamrutha_date)}
+          <View style={styles.metaDim}>
+            <Ionicons name="resize-outline" size={14} color={theme.textSecondary} />
+            <Text style={styles.metaDimText}>
+              {bed.dimensions.width_m} × {bed.dimensions.length_m} m · {bed.dimensions.area_sqm} m²
             </Text>
           </View>
-          <View style={styles.inputLogItem}>
-            <Ionicons name="cut-outline" size={16} color={theme.primary} />
-            <Text style={styles.inputLogLabel}>Last weeding</Text>
-            <Text style={styles.inputLogValue}>{formatRelativeDate(bed.last_weeding_date)}</Text>
-          </View>
-        </View>
-        <Text style={styles.inputLogHint}>Logged when you complete the bed task in Care Plan</Text>
-      </View>
-
-      {/* Transition Inputs */}
-      {transitionInputs.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Soil Prep (Transition)</Text>
-          {transitionInputs.map((step, i) => (
-            <View key={i} style={styles.transitionRow}>
-              <Text style={styles.transitionBullet}>•</Text>
-              <Text style={styles.transitionText}>{step}</Text>
+          {bed.is_raised_bed && (
+            <View style={styles.raisedBadge}>
+              <Text style={styles.raisedBadgeText}>Raised</Text>
             </View>
-          ))}
+          )}
         </View>
-      )}
 
-      {/* Harvest Gap Alerts */}
-      {harvestGapWarnings.length > 0 && (
+        {/* Succession & Season Timeline */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Harvest Gap Alerts</Text>
-          {harvestGapWarnings.map((w, i) => (
-            <View key={i} style={styles.warningCard}>
-              <Ionicons name="alert-circle" size={16} color={theme.warning ?? '#f59e0b'} />
-              <Text style={styles.warningText}>
-                {w.category.replace(/_/g, ' ')} beds overlap between {w.gap_start} → {w.gap_end}.
-                Stagger harvests for continuous supply.
+          <Text style={styles.sectionTitle}>Season Timeline</Text>
+          <BedSuccessionTimeline bed={bed} plants={plants} />
+        </View>
+
+        {/* Bed Layout — read-only top-down row map */}
+        {rowLayout && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Bed Layout</Text>
+            <BedTopDownMap
+              widthM={bed.dimensions.width_m}
+              lengthM={bed.dimensions.length_m}
+              rows={rowLayout.rows}
+              plantImage={getPlantImage}
+              layerColor={resolveLayerColor}
+              walkingPathCm={rowLayout.walkingPathCm}
+              edgeBufferCm={rowLayout.edgeBufferCm}
+              overflowCm={rowLayout.overflowCm}
+              rowWarnings={rowWarnings}
+            />
+          </View>
+        )}
+
+        {/* Soil Input Log */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Soil Input Log</Text>
+          <View style={styles.inputLogGrid}>
+            <View style={styles.inputLogItem}>
+              <Ionicons name="water-outline" size={16} color={theme.primary} />
+              <Text style={styles.inputLogLabel}>Last water</Text>
+              <Text style={styles.inputLogValue}>{formatRelativeDate(bed.last_water_date)}</Text>
+            </View>
+            <View style={styles.inputLogItem}>
+              <Ionicons name="flask-outline" size={16} color={theme.primary} />
+              <Text style={styles.inputLogLabel}>Last Jeevamrutha</Text>
+              <Text style={styles.inputLogValue}>
+                {formatRelativeDate(bed.last_jeevamrutha_date)}
               </Text>
             </View>
-          ))}
+            <View style={styles.inputLogItem}>
+              <Ionicons name="cut-outline" size={16} color={theme.primary} />
+              <Text style={styles.inputLogLabel}>Last weeding</Text>
+              <Text style={styles.inputLogValue}>{formatRelativeDate(bed.last_weeding_date)}</Text>
+            </View>
+          </View>
+          <Text style={styles.inputLogHint}>
+            Logged when you complete the bed task in Care Plan
+          </Text>
         </View>
-      )}
 
-      {/* Next-crop chips */}
-      {nextCropSuggestions.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Suggested Next Crops</Text>
-          <View style={styles.chipRow}>
-            {nextCropSuggestions.map((crop) => (
-              <View key={crop} style={styles.nextCropChip}>
-                <Text style={styles.nextCropChipText}>{crop}</Text>
+        {/* Transition Inputs */}
+        {transitionInputs.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Soil Prep (Transition)</Text>
+            {transitionInputs.map((step, i) => (
+              <View key={i} style={styles.transitionRow}>
+                <Text style={styles.transitionBullet}>•</Text>
+                <Text style={styles.transitionText}>{step}</Text>
               </View>
             ))}
           </View>
-        </View>
-      )}
+        )}
 
-      {/* Rotation status */}
-      {rotationStatus && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Rotation Health</Text>
-          {/* Progress bar: ratio of rules passed */}
-          <View style={styles.progressBarContainer}>
-            <View
-              style={[
-                styles.progressBarFill,
-                {
-                  width: `${Math.round(
-                    (rotationStatus.coordinator_checklist.filter((r) => r.passed).length /
-                      Math.max(rotationStatus.coordinator_checklist.length, 1)) *
-                      100
-                  )}%`,
-                },
-              ]}
-            />
+        {/* Harvest Gap Alerts */}
+        {harvestGapWarnings.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Harvest Gap Alerts</Text>
+            {harvestGapWarnings.map((w, i) => (
+              <View key={i} style={styles.warningCard}>
+                <Ionicons name="alert-circle" size={16} color={theme.warning ?? '#f59e0b'} />
+                <Text style={styles.warningText}>
+                  {w.category.replace(/_/g, ' ')} beds overlap between {w.gap_start} → {w.gap_end}.
+                  Stagger harvests for continuous supply.
+                </Text>
+              </View>
+            ))}
           </View>
-          <Text style={styles.progressLabel}>
-            {rotationStatus.coordinator_checklist.filter((r) => r.passed).length}/
-            {rotationStatus.coordinator_checklist.length} rotation rules met
-          </Text>
-          <RotationStatusCard status={rotationStatus} bedType={bed.type} />
-        </View>
-      )}
+        )}
 
-      {/* Action buttons */}
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('BedPlantPicker', { bedId })}
-        >
-          <Ionicons name="swap-horizontal-outline" size={20} color={theme.primary} />
-          <Text style={styles.actionText}>Rotate Bed</Text>
-        </TouchableOpacity>
-      </View>
-      {!bed.is_resting && (
+        {/* Next-crop chips */}
+        {nextCropSuggestions.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Suggested Next Crops</Text>
+            <View style={styles.chipRow}>
+              {nextCropSuggestions.map((crop) => (
+                <View key={crop} style={styles.nextCropChip}>
+                  <Text style={styles.nextCropChipText}>{crop}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Rotation status */}
+        {rotationStatus && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Rotation Health</Text>
+            {/* Progress bar: ratio of rules passed */}
+            <View style={styles.progressBarContainer}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: `${Math.round(
+                      (rotationStatus.coordinator_checklist.filter((r) => r.passed).length /
+                        Math.max(rotationStatus.coordinator_checklist.length, 1)) *
+                        100
+                    )}%`,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.progressLabel}>
+              {rotationStatus.coordinator_checklist.filter((r) => r.passed).length}/
+              {rotationStatus.coordinator_checklist.length} rotation rules met
+            </Text>
+            <RotationStatusCard status={rotationStatus} bedType={bed.type} />
+          </View>
+        )}
+
+        {/* Action buttons */}
         <View style={styles.actions}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.restButton]}
-            onPress={handleMarkResting}
-            disabled={actionLoading}
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('BedPlantPicker', { bedId })}
           >
-            <Ionicons name="moon-outline" size={20} color={theme.warning ?? '#f59e0b'} />
-            <Text style={[styles.actionText, { color: theme.warning ?? '#f59e0b' }]}>
-              Mark as Resting
-            </Text>
+            <Ionicons name="swap-horizontal-outline" size={20} color={theme.primary} />
+            <Text style={styles.actionText}>Rotate Bed</Text>
           </TouchableOpacity>
         </View>
-      )}
+        {!bed.is_resting && (
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.restButton]}
+              onPress={handleMarkResting}
+              disabled={actionLoading}
+            >
+              <Ionicons name="moon-outline" size={20} color={theme.warning ?? '#f59e0b'} />
+              <Text style={[styles.actionText, { color: theme.warning ?? '#f59e0b' }]}>
+                Mark as Resting
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </View>
   );

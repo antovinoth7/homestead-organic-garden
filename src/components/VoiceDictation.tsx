@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useVoiceLocale, VOICE_LOCALES } from '@/hooks/useVoiceLocale';

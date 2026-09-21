@@ -120,7 +120,13 @@ export function useCatalogEntryForm({
   const [showErrors, setShowErrors] = useState(false);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
-  const baselineRef = useRef<CatalogDraft | null>(null);
+  /**
+   * The saved draft the form is diffed against. State rather than a ref because
+   * `isDirty` is derived from it during render: as a ref it could move (see the
+   * pruning re-seed below) without the dirty check recomputing, leaving the
+   * discard prompt reading a stale baseline.
+   */
+  const [baseline, setBaseline] = useState<CatalogDraft | null>(null);
   const savedSuccessfully = useRef(false);
   const isDiscarding = useRef(false);
   const isSavingRef = useRef(false);
@@ -131,7 +137,11 @@ export function useCatalogEntryForm({
    * pruning seeds are the one type-derived part, re-seeded by their own effect.
    */
   const plantTypeRef = useRef(plantType);
-  plantTypeRef.current = plantType;
+  // Written in an effect, not during render: the load effect below is declared
+  // after this one, so it always sees the value committed for the same render.
+  useEffect(() => {
+    plantTypeRef.current = plantType;
+  }, [plantType]);
   const prevPlantTypeRef = useRef(plantType);
   const hasLoadedRef = useRef(false);
   /** Resolves with the garden plants, which load without blocking the form. */
@@ -164,12 +174,14 @@ export function useCatalogEntryForm({
         setVarietyDetails(loadedDetails);
 
         if (form) {
-          baselineRef.current = cloneDraft({
-            name: isCreating ? '' : initialName,
-            careForm: form,
-            varieties: loadedVarieties,
-            varietyDetails: loadedDetails,
-          });
+          setBaseline(
+            cloneDraft({
+              name: isCreating ? '' : initialName,
+              careForm: form,
+              varieties: loadedVarieties,
+              varietyDetails: loadedDetails,
+            })
+          );
         }
         hasLoadedRef.current = true;
       } catch (error: unknown) {
@@ -236,13 +248,11 @@ export function useCatalogEntryForm({
 
     setCareForm((prev) => (prev && untouched(prev) ? { ...prev, ...incoming } : prev));
 
-    const baseline = baselineRef.current;
-    if (baseline && untouched(baseline.careForm)) {
-      baselineRef.current = {
-        ...baseline,
-        careForm: { ...baseline.careForm, ...incoming },
-      };
-    }
+    setBaseline((prev) =>
+      prev && untouched(prev.careForm)
+        ? { ...prev, careForm: { ...prev.careForm, ...incoming } }
+        : prev
+    );
   }, [plantType, isCreating]);
 
   // ─── Derived ─────────────────────────────────────────────────────────────
@@ -282,13 +292,13 @@ export function useCatalogEntryForm({
 
   const isDirty = useMemo(() => {
     if (!careForm) return false;
-    return isCatalogDraftDirty(baselineRef.current, {
+    return isCatalogDraftDirty(baseline, {
       name,
       careForm,
       varieties,
       varietyDetails,
     });
-  }, [name, careForm, varieties, varietyDetails]);
+  }, [baseline, name, careForm, varieties, varietyDetails]);
 
   const errors = useMemo(
     () => (careForm ? validateCatalogDraft(name, careForm) : {}),
@@ -343,7 +353,9 @@ export function useCatalogEntryForm({
           initialGrowthStage: careForm.initialGrowthStage,
           pruningTips: pruningTips.length > 0 ? pruningTips : undefined,
           shapePruningTip: shapeTip || undefined,
-          shapePruningMonths: shapeTip ? careForm.shapePruningMonths.trim() || undefined : undefined,
+          shapePruningMonths: shapeTip
+            ? careForm.shapePruningMonths.trim() || undefined
+            : undefined,
           flowerPruningTip: flowerTip || undefined,
           flowerPruningMonths: flowerTip
             ? careForm.flowerPruningMonths.trim() || undefined
@@ -366,8 +378,7 @@ export function useCatalogEntryForm({
             | FeedingIntensity
             | undefined,
           customPests: careForm.customPests.length > 0 ? careForm.customPests : undefined,
-          customDiseases:
-            careForm.customDiseases.length > 0 ? careForm.customDiseases : undefined,
+          customDiseases: careForm.customDiseases.length > 0 ? careForm.customDiseases : undefined,
         };
 
         if (trimmedName !== initialName && !isCreating) {
@@ -428,9 +439,8 @@ export function useCatalogEntryForm({
       const knownPlants = (await plantsPromiseRef.current) ?? plants;
       const renameCount =
         trimmedName !== initialName
-          ? knownPlants.filter(
-              (p) => p.plant_type === plantType && p.plant_variety === initialName
-            ).length
+          ? knownPlants.filter((p) => p.plant_type === plantType && p.plant_variety === initialName)
+              .length
           : 0;
 
       if (renameCount > 0) {
@@ -479,12 +489,14 @@ export function useCatalogEntryForm({
             setVarieties(catalogOnly.varieties ?? []);
             setVarietyDetails(catalogOnly.varietyDetails ?? {});
             if (form) {
-              baselineRef.current = cloneDraft({
-                name: initialName,
-                careForm: form,
-                varieties: catalogOnly.varieties ?? [],
-                varietyDetails: catalogOnly.varietyDetails ?? {},
-              });
+              setBaseline(
+                cloneDraft({
+                  name: initialName,
+                  careForm: form,
+                  varieties: catalogOnly.varieties ?? [],
+                  varietyDetails: catalogOnly.varietyDetails ?? {},
+                })
+              );
             }
             setName(initialName);
           } catch (error: unknown) {

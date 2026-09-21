@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import type { ImageSource } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { DEFAULT_ZONE } from '@/config/zones';
@@ -65,10 +65,7 @@ export function ReferenceListView({
   const insets = useSafeAreaInsets();
   const browse = useReferenceBrowse(groups);
 
-  const totalCount = useMemo(
-    () => groups.reduce((sum, g) => sum + g.entries.length, 0),
-    [groups]
-  );
+  const totalCount = useMemo(() => groups.reduce((sum, g) => sum + g.entries.length, 0), [groups]);
 
   const { setFilter, setGroupMode } = browse;
 

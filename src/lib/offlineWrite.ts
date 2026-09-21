@@ -12,6 +12,11 @@ import type { OfflineMutationInput } from '@/types/offline.types';
  * and the caller proceeds with its optimistic local-cache update. Non-network
  * errors (permission-denied, invalid-argument, …) still throw — those must
  * never be queued.
+ *
+ * `enqueueMutations` can itself throw `OfflineQueueUnavailableError` when the
+ * queue could not be read. That propagates deliberately: the mutation did not
+ * reach Firestore *or* the queue, so the caller must not report success and
+ * apply an optimistic cache update for a write that no longer exists anywhere.
  */
 
 export const isOfflineWriteError = (error: unknown): boolean => {

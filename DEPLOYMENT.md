@@ -4,8 +4,10 @@ This app uses [EAS Build](https://docs.expo.dev/build/introduction/) for buildin
 
 ## Prerequisites
 
-- Node.js 18+
-- Expo CLI: `npm install -g expo-cli`
+- Node.js 20.19.4+ (22 and 24 also supported; CI runs 24). React Native 0.86
+  will not build on Node 18.
+- Expo CLI: use the project-local CLI via `npx expo` — do **not** install the
+  deprecated global `expo-cli` package.
 - EAS CLI: `npm install -g eas-cli`
 - An [Expo account](https://expo.dev/signup) linked via `eas login`
 - Firebase project configured (see `README.md` for setup)
@@ -14,11 +16,12 @@ This app uses [EAS Build](https://docs.expo.dev/build/introduction/) for buildin
 
 Build profiles are defined in `eas.json`:
 
-| Profile       | Purpose                      | Distribution  |
-| ------------- | ---------------------------- | ------------- |
-| `development` | Dev client for local testing | Internal      |
-| `preview`     | Internal testing builds      | Internal      |
-| `production`  | Release builds               | APK (Android) |
+| Profile       | Purpose                            | Distribution  |
+| ------------- | ---------------------------------- | ------------- |
+| `development` | Dev client for local testing       | Internal      |
+| `preview`     | Internal testing builds            | Internal      |
+| `production`  | Release builds for direct download | APK (Android) |
+| `play`        | Google Play submission             | AAB (Android) |
 
 ## Building
 
@@ -42,6 +45,58 @@ eas build --profile production --platform android
 
 The production profile outputs an APK (`"buildType": "apk"` in `eas.json`). Version numbers auto-increment via `"appVersionSource": "remote"`.
 
+#### Android ABIs — why the two profiles differ
+
+An Android build packages native libraries (`.so`) once per CPU architecture.
+With nothing configured, the build produces a **universal APK carrying all four**
+— `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64` — even though any given device uses
+exactly one. That is most of the APK's size.
+
+The set is chosen by the `reactNativeArchitectures` Gradle property, which the
+React Native Gradle plugin reads to set `abiFilters`. Both profiles set it via
+`ORG_GRADLE_PROJECT_reactNativeArchitectures` in their `env` block — Gradle turns
+any `ORG_GRADLE_PROJECT_*` variable into a project property, so this needs no
+extra package and no change to the generated `android/` project.
+
+- **`production` → `arm64-v8a` only.** One 64-bit APK handed straight to users.
+  Every Android phone sold since roughly 2017 is arm64, and Play has required
+  64-bit support since 2019.
+- **`play` → all four.** Play splits an app bundle per device, so each user still
+  downloads one architecture. Keeping all four costs them nothing and preserves
+  installs on 32-bit handsets and x86 Chromebooks — so the Play build stays
+  maximally compatible even though the direct APK does not.
+
+The native payload is roughly **23 MB per architecture**, so each one dropped is
+worth about that much.
+
+| Build                                  | ABIs     | Size            |
+| -------------------------------------- | -------- | --------------- |
+| Before any of this                     | all four | 138 MB          |
+| Dropped `x86`, `x86_64` (+ icon fonts) | 2        | 88 MB           |
+| Dropped `armeabi-v7a`                  | 1        | ~65 MB expected |
+
+The remaining bulk is ~32 MB of bundled reference images, ~23 MB of native code,
+~8 MB of Hermes bytecode and ~2 MB of everything else.
+
+> **A 64-bit-only APK will not install on a 32-bit-only device.** Android reports
+> this as a generic "app not installed" failure rather than anything explanatory,
+> so if a user on an old budget handset reports a failed install, this is the first
+> thing to check. Such devices are rare and shrinking, but they are exactly the
+> kind of phone some users will have. Building `play` instead — or a one-off
+> `production` build with `armeabi-v7a` added back — covers them.
+
+If you ever need to run a `production` APK on an emulator, build `preview`
+instead, or add the x86 architectures back for that one build.
+
+### Play Store Build
+
+```bash
+eas build --profile play --platform android
+```
+
+Outputs an `.aab` for Play submission. Use this instead of `production` once the
+app is listed; `production` remains the profile for the directly downloaded APK.
+
 ### iOS Builds
 
 ```bash
@@ -60,7 +115,7 @@ Firebase config variables (`EXPO_PUBLIC_FIREBASE_*`) are read from the `.env` fi
 
 ## Pre-Deployment Checklist
 
-1. Run lint: `npm run lint`
+1. Run lint: `npm run lint` (expect 0 errors and 54 known warnings)
 2. Run type check: `npx tsc --noEmit`
 3. Run tests: `npm test`
 4. Verify Firestore security rules are deployed: `firebase deploy --only firestore:rules`
@@ -80,6 +135,15 @@ firebase deploy --only firestore:rules --project your-project-id
 ## Sentry Source Maps
 
 Sentry source maps are uploaded automatically during EAS builds when `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are set. These are configured in `.env`.
+
+The upload step is injected by the `@sentry/react-native` config plugin, which is
+declared in `app.json` (with `organization` and `project`). The plugin generates
+`android/sentry.properties` during `expo prebuild` — that file is **no longer
+tracked in git**, since `android/` and `ios/` are generated output. Do not
+recreate it by hand; change the values in the `app.json` plugin block instead.
+
+The auth token is never committed. It must be present in the build environment —
+as an EAS secret for cloud builds, or in your local `.env` for `eas build --local`.
 
 ## Updating the App
 

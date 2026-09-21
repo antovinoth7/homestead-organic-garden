@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { createEnrichedSectionStyles } from '@/styles/enrichedSectionStyles';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { DetailCard } from '@/components/plantDetail/DetailCard';

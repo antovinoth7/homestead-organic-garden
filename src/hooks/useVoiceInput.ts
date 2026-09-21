@@ -25,9 +25,8 @@ import { logger } from '@/utils/logger';
 import { voiceErrorMessage, VOICE_FALLBACK_ERROR } from '@/utils/voiceInput';
 
 // Resolved once at module load. `null` when the native module is not compiled in.
-const SpeechModule = requireOptionalNativeModule<typeof ExpoSpeechRecognitionModuleValue>(
-  'ExpoSpeechRecognition'
-);
+const SpeechModule =
+  requireOptionalNativeModule<typeof ExpoSpeechRecognitionModuleValue>('ExpoSpeechRecognition');
 
 const UNAVAILABLE_ERROR = 'Speech recognition is not available on this device.';
 
@@ -83,10 +82,24 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
   const [transcript, setTranscript] = useState('');
   const [partialTranscript, setPartialTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isAvailable, setIsAvailable] = useState(false);
-  const [unavailableReason, setUnavailableReason] = useState<VoiceUnavailableReason>(
-    SpeechModule ? 'no-recognizer' : 'no-module'
-  );
+  /**
+   * `isRecognitionAvailable()` is a synchronous native call, so availability is
+   * resolved once in a lazy initializer rather than written back from an
+   * effect — which re-rendered every form with a mic on mount.
+   */
+  const [{ isAvailable, unavailableReason }] = useState<{
+    isAvailable: boolean;
+    unavailableReason: VoiceUnavailableReason;
+  }>(() => {
+    if (!SpeechModule) return { isAvailable: false, unavailableReason: 'no-module' };
+    let available = false;
+    try {
+      available = SpeechModule.isRecognitionAvailable();
+    } catch {
+      available = false;
+    }
+    return { isAvailable: available, unavailableReason: available ? 'none' : 'no-recognizer' };
+  });
 
   // Keep the latest onResult without resubscribing native listeners.
   const onResultRef = useRef(onResult);
@@ -101,21 +114,9 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
   const sessionActiveRef = useRef(false);
 
   useEffect(() => {
-    if (!SpeechModule) {
-      setIsAvailable(false);
-      setUnavailableReason('no-module');
-      return;
-    }
+    if (!SpeechModule) return;
 
-    let available = false;
-    try {
-      available = SpeechModule.isRecognitionAvailable();
-    } catch {
-      available = false;
-    }
-    setIsAvailable(available);
-    setUnavailableReason(available ? 'none' : 'no-recognizer');
-    if (!available) {
+    if (!isAvailable) {
       logger.warn(
         'useVoiceInput: no speech recognizer on this device — the mic is shown disabled.'
       );
@@ -166,7 +167,9 @@ export function useVoiceInput({ locale, onResult }: UseVoiceInputOptions): UseVo
         // no-op
       }
     };
-  }, []);
+    // `isAvailable` comes from a lazy initializer, so it never changes for the
+    // lifetime of the hook — listing it does not resubscribe the listeners.
+  }, [isAvailable]);
 
   const stop = useCallback(() => {
     if (!SpeechModule) return;

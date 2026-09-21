@@ -27,12 +27,7 @@ import { JournalMilestoneSection } from '@/components/forms/JournalMilestoneSect
 import { createJournalEntry, updateJournalEntry, saveJournalImage } from '../services/journal';
 import { getAllPlants, updatePlant } from '../services/plants';
 import { createTaskTemplate } from '../services/tasks';
-import {
-  HealthStatus,
-  MilestoneKind,
-  Plant,
-  JournalEntryType,
-} from '../types/database.types';
+import { HealthStatus, MilestoneKind, Plant, JournalEntryType } from '../types/database.types';
 import { useBedOptions } from '@/hooks/useBedOptions';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import {
@@ -40,7 +35,7 @@ import {
   journalFormErrors,
   type JournalFieldKey,
 } from '@/hooks/journalFormValidation';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
@@ -197,6 +192,15 @@ export default function JournalFormScreen(): React.JSX.Element {
     fieldYs.current.content = e.nativeEvent.layout.y;
   }, []);
 
+  const loadPlants = async (): Promise<void> => {
+    try {
+      const data = await getAllPlants();
+      setPlants(data);
+    } catch (error: unknown) {
+      Alert.alert('Error', getErrorMessage(error));
+    }
+  };
+
   useEffect(() => {
     loadPlants();
   }, []);
@@ -221,15 +225,6 @@ export default function JournalFormScreen(): React.JSX.Element {
     }
     bedSyncedRef.current = true;
   }, [plants, selectedPlantId, selectedBedId]);
-
-  const loadPlants = async (): Promise<void> => {
-    try {
-      const data = await getAllPlants();
-      setPlants(data);
-    } catch (error: unknown) {
-      Alert.alert('Error', getErrorMessage(error));
-    }
-  };
 
   // Plants offered depend on the bed: a bed narrows to its members; no bed
   // shows only standalone (pot / unassigned) plants.
@@ -334,9 +329,7 @@ export default function JournalFormScreen(): React.JSX.Element {
       const plant = plants.find((p) => p.id === plantId);
       if (plant && plant.health_status === 'healthy') {
         const suggested: HealthStatus =
-          pestFields.severity === 'high' || pestFields.severity === 'severe'
-            ? 'sick'
-            : 'stressed';
+          pestFields.severity === 'high' || pestFields.severity === 'severe' ? 'sick' : 'stressed';
         Alert.alert(
           'Update Health Status?',
           `You logged an active ${pestFields.kind}. Change this plant's health to "${suggested}"?`,
@@ -461,7 +454,7 @@ export default function JournalFormScreen(): React.JSX.Element {
         pest_treatment_effectiveness: isPest ? pestFields.treatmentEffectiveness : null,
         pest_resolved_at: isPest
           ? pestFields.status === 'resolved'
-            ? editEntry?.pest_resolved_at ?? toLocalDateString(new Date())
+            ? (editEntry?.pest_resolved_at ?? toLocalDateString(new Date()))
             : null
           : null,
         milestone_kind: isMilestone ? milestoneKind : null,

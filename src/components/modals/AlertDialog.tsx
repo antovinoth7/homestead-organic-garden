@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Animated,
   Easing,
@@ -9,8 +9,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useAnimatedValue,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/alertDialogStyles';
 
@@ -58,7 +59,7 @@ export function AlertDialog({
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const enter = useRef(new Animated.Value(0)).current;
+  const enter = useAnimatedValue(0);
 
   const toneColors = {
     warning: { fg: theme.warning, bg: theme.warningLight },

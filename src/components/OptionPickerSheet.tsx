@@ -1,6 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, useWindowDimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  useWindowDimensions,
+} from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/optionPickerSheetStyles';
@@ -111,10 +118,7 @@ export function OptionPickerSheet({
 
   // Description lines make rows taller than ROW_HEIGHT, so the fixed-height
   // fast path only applies to plain label-only option lists.
-  const hasDescriptions = useMemo(
-    () => options.some((option) => !!option.description),
-    [options]
-  );
+  const hasDescriptions = useMemo(() => options.some((option) => !!option.description), [options]);
 
   // Bottom-sheet sizing: cap the sheet below the top inset and bound the list so
   // it scrolls instead of pushing the sheet past the screen.

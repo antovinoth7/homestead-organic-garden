@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/referenceBrowseStyles';
@@ -90,7 +90,11 @@ function ReferenceBrowseHeaderComponent({
               accessibilityLabel={searchAccessibilityLabel}
             />
             {query.length > 0 && (
-              <TouchableOpacity onPress={onClearQuery} hitSlop={8} accessibilityLabel="Clear search">
+              <TouchableOpacity
+                onPress={onClearQuery}
+                hitSlop={8}
+                accessibilityLabel="Clear search"
+              >
                 <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
               </TouchableOpacity>
             )}

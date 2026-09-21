@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Modal } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/catalogPlantDetailStyles';
@@ -57,8 +57,7 @@ export function PestDiseasePickerModal({
     const query = search.trim().toLowerCase();
     return allEntries.filter(
       (entry) =>
-        !taken.has(entry.name.toLowerCase()) &&
-        (!query || entry.name.toLowerCase().includes(query))
+        !taken.has(entry.name.toLowerCase()) && (!query || entry.name.toLowerCase().includes(query))
     );
   }, [allEntries, takenNames, search]);
 

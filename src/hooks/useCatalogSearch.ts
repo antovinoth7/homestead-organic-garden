@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getData, setData, KEYS } from '@/lib/storage';
-import {
-  buildCatalogSearchIndex,
-  pushRecentSearch,
-  searchCatalog,
-} from '@/utils/catalogSearch';
+import { buildCatalogSearchIndex, pushRecentSearch, searchCatalog } from '@/utils/catalogSearch';
 import type { CatalogSearchResult } from '@/utils/catalogSearch';
 import type { PlantProfiles, PlantType } from '@/types/database.types';
 
@@ -87,9 +83,11 @@ export function useCatalogSearch({
 
   // Latched: once search has been opened, keep indexing on catalog reloads so
   // reopening it is instant.
-  const wasEnabledRef = useRef(false);
-  if (enabled) wasEnabledRef.current = true;
-  const indexing = wasEnabledRef.current;
+  const [wasEnabled, setWasEnabled] = useState(false);
+  useEffect(() => {
+    if (enabled) setWasEnabled(true);
+  }, [enabled]);
+  const indexing = enabled || wasEnabled;
 
   // Rebuilt only when the catalog reloads — not on every keystroke.
   const index = useMemo(
