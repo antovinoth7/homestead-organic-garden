@@ -530,11 +530,14 @@ export default function CalendarScreen(): React.JSX.Element {
   useEffect(() => {
     isMountedRef.current = true;
     loadData({ force: true });
-    setTodayView();
+    // No setTodayView() here: `currentWeekStart`, `currentMonth` and
+    // `selectedDate` are already seeded to today above. Calling it built fresh
+    // Date objects that never compared equal, so the heaviest screen in the app
+    // re-rendered — and rebuilt every section — once more on every mount.
     return () => {
       isMountedRef.current = false;
     };
-  }, [setTodayView, loadData, isMountedRef]);
+  }, [loadData, isMountedRef]);
 
   // Show swipe hint banner for the first 3 visits, then auto-hide
   useEffect(() => {
@@ -1698,6 +1701,10 @@ export default function CalendarScreen(): React.JSX.Element {
             tags: ['calendar', 'scroll'],
             metadata: { from: bedSegment, to: other, counts: overdueSegmentCounts },
           });
+          // `selectSegment` writes three states, but `segmentSwitched` above
+          // makes this a one-shot per armed request, so it cannot cycle with
+          // the `listSections` rebuild that re-runs this effect.
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           selectSegment(other);
           return;
         }

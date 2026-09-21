@@ -240,9 +240,15 @@ export function usePlantFormState(): PlantFormStateReturn {
   );
   const [plantVariety, setPlantVariety] = useState(() => prefill?.name ?? '');
   const [spaceType, setSpaceType] = useState<SpaceType>(() => (prefill ? 'bed' : 'ground'));
-  const [location, setLocation] = useState('');
   const [parentLocation, setParentLocation] = useState(() => prefill?.parentLocation ?? '');
   const [childLocation, setChildLocation] = useState(() => prefill?.childLocation ?? '');
+  /**
+   * Derived, not stored: it is a pure function of the two halves above. As
+   * state it was written by an effect on every location change, costing the
+   * form a second render each time. `handleSave` builds its own
+   * `combinedLocation`, so nothing depends on this being a separate value.
+   */
+  const location = parentLocation && childLocation ? `${parentLocation} - ${childLocation}` : '';
   const [landmarks, setLandmarks] = useState('');
   const [bedId, setBedId] = useState(() => prefill?.bedId ?? '');
   const [bedName, setBedName] = useState(() => prefill?.bedName ?? '');
@@ -281,7 +287,16 @@ export function usePlantFormState(): PlantFormStateReturn {
   const [spatheCount, setSpatheCount] = useState('');
   const [nutFallCount, setNutFallCount] = useState('');
   const [lastNutFallDate, setLastNutFallDate] = useState('');
-  const [coconutAgeInfo, setCoconutAgeInfo] = useState<CoconutAgeInfo | null>(null);
+  /**
+   * Derived, not stored: `getCoconutAgeInfo` returns a fresh object each call,
+   * so writing it from an effect re-rendered the whole form on every change to
+   * the planting date. The care-default seeding below still needs an effect,
+   * because those fields stay user-editable afterwards.
+   */
+  const coconutAgeInfo = useMemo<CoconutAgeInfo | null>(
+    () => (plantType === 'coconut_tree' && plantingDate ? getCoconutAgeInfo(plantingDate) : null),
+    [plantType, plantingDate]
+  );
 
   // ── UI state ───────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
@@ -489,8 +504,6 @@ export function usePlantFormState(): PlantFormStateReturn {
         setPlantType(plant.plant_type);
         setPlantVariety(plant.plant_variety || '');
         setSpaceType(plant.space_type);
-        setLocation(plant.location);
-
         if (locationParts.length === 2) {
           setParentLocation(locationParts[0]!);
           setChildLocation(locationParts[1]!);
@@ -667,22 +680,17 @@ export function usePlantFormState(): PlantFormStateReturn {
     }
   }, [plantVariety, plantingDate, plantType]);
 
-  // Coconut age-based care defaults
+  // Coconut age-based care defaults. Seeds user-editable fields, so it stays an
+  // effect; `coconutAgeInfo` itself is derived above.
   useEffect(() => {
-    if (plantType === 'coconut_tree' && plantingDate) {
-      const info = getCoconutAgeInfo(plantingDate);
-      setCoconutAgeInfo(info);
-      if (info && !plantId) {
-        setGrowthStage(info.growthStage);
-        setWateringFrequency(info.wateringFrequencyDays.toString());
-        setFertilisingFrequency(info.fertilisingFrequencyDays.toString());
-        setPruningFrequency(info.pruningFrequencyDays.toString());
-        shouldCaptureSnapshot.current = true;
-      }
-    } else {
-      setCoconutAgeInfo(null);
+    if (coconutAgeInfo && !plantId) {
+      setGrowthStage(coconutAgeInfo.growthStage);
+      setWateringFrequency(coconutAgeInfo.wateringFrequencyDays.toString());
+      setFertilisingFrequency(coconutAgeInfo.fertilisingFrequencyDays.toString());
+      setPruningFrequency(coconutAgeInfo.pruningFrequencyDays.toString());
+      shouldCaptureSnapshot.current = true;
     }
-  }, [plantType, plantingDate, plantId]);
+  }, [coconutAgeInfo, plantId]);
 
   // Reset location defaults flag when parent location changes
   useEffect(() => {
@@ -765,15 +773,6 @@ export function usePlantFormState(): PlantFormStateReturn {
       setGrowthStage(result.stage);
     }
   }, [plantId, plantType, plantingDate, plantVariety]);
-
-  // Combine parent + child location
-  useEffect(() => {
-    if (parentLocation && childLocation) {
-      setLocation(`${parentLocation} - ${childLocation}`);
-    } else {
-      setLocation('');
-    }
-  }, [parentLocation, childLocation]);
 
   const handleBackPress = useCallback(() => {
     if (isSaving.current) return;
