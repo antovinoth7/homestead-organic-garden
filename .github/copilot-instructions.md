@@ -80,7 +80,7 @@ npm run android    # Android (prebuilds into an ignored android/)
 npm run ios        # iOS
 npm run lint       # ESLint (zero errors required; 54 warnings are the expected baseline)
 npm run typecheck  # tsc --noEmit
-npm test           # Jest (155 suites / 2027 tests)
+npm test           # Jest (156 suites / 2045 tests)
 ```
 
 The 54 lint warnings are all `react-hooks/set-state-in-effect`, deliberately demoted in `eslint.config.cjs`. The other five `eslint-plugin-react-hooks` v7 rules were triaged to zero after the SDK 57 upgrade and are back at `error`. The 54 are expected — do not "fix" them as a side task. See `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.

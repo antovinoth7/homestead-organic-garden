@@ -523,7 +523,7 @@ these block anything; they are recorded so they are not rediscovered as surprise
 - **Untested paths touched by this triage.** `usePlantFormState`, `PlantCard`,
   `CalendarScreen`, `usePlantPhotos`, `useCrossBedStatus`, `useWeatherByPlot` and
   `BedLayoutStep` have no direct test coverage, so the behavioural changes above
-  were verified by the full suite staying green (155 / 2027, no snapshot
+  were verified by the full suite staying green (155 / 2027 at the time, no snapshot
   movement) plus typecheck — not by tests exercising them. Worth a device smoke
   test of the plant form, the Plants list, the Today screen and the calendar.
 

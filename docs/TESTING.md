@@ -18,7 +18,7 @@
 
 ## Current Shape
 
-- **155 suites / 2027 tests / 5 snapshots**, all passing. Jest with the `ts-jest`
+- **156 suites / 2045 tests / 5 snapshots**, all passing. Jest with the `ts-jest`
   preset and `testEnvironment: 'node'` — **not** `jest-expo`.
 - Coverage is measured over `src/utils/**` and `src/config/**` only
   (`collectCoverageFrom` in `jest.config.js`, with `*Styles.ts` excluded). The 30%

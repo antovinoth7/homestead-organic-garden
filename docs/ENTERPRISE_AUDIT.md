@@ -8,8 +8,8 @@
 > - The lint script is `eslint .` — the `--ext` flag quoted below was dropped
 >   (ESLint 9 flat config ignores it; file coverage is unchanged at 724 files).
 > - The test script is plain `jest`, not `jest --runInBand`.
-> - Current suite: **155 suites / 2027 tests / 5 snapshots**, not 78 / 923 / 3.
-> - **The `--max-warnings=0` recommendation (finding at "Tighten lint now") is no
+> - Current suite: **156 suites / 2045 tests / 5 snapshots**, not 78 / 923 / 3.
+> - **The `--max-warnings=0` recommendation (finding at "Tighten lint now") is now
 >   partly achievable.** `eslint-config-expo` 57 brought
 >   `eslint-plugin-react-hooks` v7, whose new rules flagged 214 pre-existing call
 >   sites. Five of the six rules have since been triaged to zero and raised back
@@ -17,6 +17,12 @@
 >   valid and independent. A blanket `--max-warnings=0` still waits on the 54
 >   remaining `set-state-in-effect` warnings. Tracked in
 >   `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
+>
+> - **H-04's premise has changed.** That finding notes `expo-secure-store` is
+>   "installed but unused". It has since been **removed** as an unused dependency.
+>   The finding itself still stands — auth material and user content remain in
+>   plain AsyncStorage — but acting on it now means adding a secure-storage
+>   dependency back deliberately, not adopting one already present.
 >
 > Rerun the audit rather than editing the numbers in place — they are a record of
 > what was true on 2026-08-01.
