@@ -563,12 +563,28 @@ these block anything; they are recorded so they are not rediscovered as surprise
   delivers one architecture per device: Play users get the same small download
   with none of the compatibility loss.
 
-- **Open: R8 / resource shrinking.** Nothing sets `enableProguardInReleaseBuilds`
-  or `enableShrinkResourcesInReleaseBuilds`, and there is no mechanism to —
-  `expo-build-properties` is not installed. This only shrinks DEX and resources,
-  never `.so` files, so with native code now down to two ABIs the remaining upside
-  is smaller than it looked. It needs keep rules for Firebase, Sentry and Hermes
-  reflection, so it wants its own branch and a full device smoke test.
+- **Open: R8 / resource shrinking — now the best remaining lever.** Nothing sets
+  `enableProguardInReleaseBuilds` or `enableShrinkResourcesInReleaseBuilds`, and
+  there is no mechanism to — `expo-build-properties` is not installed.
+
+  It shrinks DEX and resources, never `.so`, which looked minor once native code
+  was down to one ABI. That undersold it: **on-device size counts the APK plus
+  ART's ahead-of-time compilation output**, and dex2oat emits roughly 1.5–3× the
+  DEX size into the app's `oat/` directory at install. An 88 MB APK installing at
+  119 MB is that ~31 MB of `.odex`/`.vdex`/`.art`. Shrinking DEX therefore saves
+  twice — once in the APK, again in what ART generates from it.
+
+  Needs keep rules for Sentry and Hermes reflection (Firebase here is the JS SDK,
+  so no native Firebase rules required). Its own branch and a full device smoke
+  test, since R8 failures surface at runtime, not build time.
+
+- **Note: install-size growth is expected, not a defect.** Every Android app
+  expands on install because of the AOT artifacts above. The bundled reference
+  images do not contribute — `REFERENCE_IMAGE_CACHE_POLICY` is `'memory'`
+  (`src/config/referenceAssets.ts:44`), so they are never written to disk cache.
+  To see the real split on a device:
+  `adb shell dumpsys diskstats`, or per-app,
+  `adb shell du -sh /data/app/*<package>*/` against its `oat/` subdirectory.
 
 - **Considered and rejected: trimming `assets/reference/`.** The 253 bundled WebP
   files are 32 MB, but all are statically required and reachable, and at 800×600
