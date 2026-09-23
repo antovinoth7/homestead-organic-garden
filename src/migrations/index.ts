@@ -20,10 +20,11 @@ import { recomputePlantDerivedFields } from './012_recompute_plant_fields';
 import { pruneRemovedCatalogPlants } from './013_prune_removed_catalog_plants';
 import { renamePalmyra } from './014_rename_palmyra';
 import { renameGrowingSeasons } from './015_rename_growing_seasons';
+import { mergeCashewNut } from './016_merge_cashew_nut';
 
 const SETTINGS_COLLECTION = 'user_settings';
 
-export const LATEST_SCHEMA_VERSION = 15;
+export const LATEST_SCHEMA_VERSION = 16;
 
 const migrations: Migration[] = [
   { version: 1, name: 'backfill_district', run: backfillDistrict },
@@ -47,6 +48,7 @@ const migrations: Migration[] = [
   { version: 13, name: 'prune_removed_catalog_plants', run: pruneRemovedCatalogPlants },
   { version: 14, name: 'rename_palmyra', run: renamePalmyra },
   { version: 15, name: 'rename_growing_seasons', run: renameGrowingSeasons },
+  { version: 16, name: 'merge_cashew_nut', run: mergeCashewNut },
 ];
 
 export async function getSchemaVersion(userId: string): Promise<number> {

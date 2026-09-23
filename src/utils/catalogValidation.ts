@@ -1,5 +1,6 @@
 import type { CareFormState } from '@/utils/catalogDraft';
 import { sanitizeName } from '@/utils/catalogDraft';
+import { isSamePlantName } from '@/utils/plantAliases';
 
 /** Section cards on the catalog detail screen, in document order. */
 export type CatalogSectionKey =
@@ -126,5 +127,25 @@ export function firstErroredField(errors: CatalogErrors): CatalogFieldKey | null
 export function sectionHasError(errors: CatalogErrors, section: CatalogSectionKey): boolean {
   return ERROR_FIELD_ORDER.some(
     (field) => errors[field] !== undefined && FIELD_TO_SECTION[field] === section
+  );
+}
+
+/**
+ * The existing catalog name `candidate` would duplicate, or null.
+ *
+ * Alias-aware, not just case-insensitive: "Cashew Nut" is the same plant as
+ * "Cashew" (`plantAliases.ts`), and a case-only check let exactly that pair
+ * sit side by side. Keeping the entry's own name (`initialName`) is never a
+ * duplicate, however it is spelled.
+ */
+export function findDuplicatePlantName(
+  candidate: string,
+  initialName: string,
+  existingNames: readonly string[]
+): string | null {
+  const trimmed = candidate.trim();
+  if (!trimmed || trimmed.toLowerCase() === initialName.trim().toLowerCase()) return null;
+  return (
+    existingNames.find((name) => name !== initialName && isSamePlantName(name, trimmed)) ?? null
   );
 }

@@ -2,6 +2,7 @@ import {
   ERROR_FIELD_ORDER,
   FIELD_TO_SECTION,
   SECTION_TO_TAB,
+  findDuplicatePlantName,
   firstErroredField,
   sectionHasError,
   validateCatalogDraft,
@@ -194,5 +195,30 @@ describe('mapping tables', () => {
         SECTION_TO_TAB[FIELD_TO_SECTION[field]]
       );
     }
+  });
+});
+
+describe('findDuplicatePlantName', () => {
+  const NAMES = ['Cashew', 'Mango', 'Tamarind'];
+
+  it('catches an alias of an existing plant, not just a case variant', () => {
+    expect(findDuplicatePlantName('Cashew Nut', '', NAMES)).toBe('Cashew');
+    expect(findDuplicatePlantName('munthiri', '', NAMES)).toBe('Cashew');
+    expect(findDuplicatePlantName('mango', '', NAMES)).toBe('Mango');
+  });
+
+  it('allows a genuinely new name', () => {
+    expect(findDuplicatePlantName('Wood Apple', '', NAMES)).toBeNull();
+  });
+
+  it('never flags an entry keeping its own name', () => {
+    expect(findDuplicatePlantName('cashew', 'Cashew', NAMES)).toBeNull();
+    expect(findDuplicatePlantName('  Mango ', 'Mango', NAMES)).toBeNull();
+  });
+
+  it('flags renaming an entry onto another plant', () => {
+    expect(findDuplicatePlantName('Cashew', 'Cashew Nut', [...NAMES, 'Cashew Nut'])).toBe(
+      'Cashew'
+    );
   });
 });

@@ -36,7 +36,11 @@ import {
   toRange,
 } from '@/utils/catalogDraft';
 import type { CareFormState, CatalogDraft } from '@/utils/catalogDraft';
-import { firstErroredField, validateCatalogDraft } from '@/utils/catalogValidation';
+import {
+  findDuplicatePlantName,
+  firstErroredField,
+  validateCatalogDraft,
+} from '@/utils/catalogValidation';
 import type { CatalogErrors, CatalogFieldKey } from '@/utils/catalogValidation';
 
 type NavProp = NativeStackNavigationProp<MoreStackParamList>;
@@ -422,11 +426,14 @@ export function useCatalogEntryForm({
     }
 
     const trimmedName = sanitizeName(name);
-    const isDuplicate =
-      trimmedName.toLowerCase() !== initialName.toLowerCase() &&
-      categoryPlants.some((p) => p.toLowerCase() === trimmedName.toLowerCase());
-    if (isDuplicate) {
-      Alert.alert('Already Exists', 'A plant with that name already exists.');
+    const duplicateOf = findDuplicatePlantName(trimmedName, initialName, categoryPlants);
+    if (duplicateOf) {
+      Alert.alert(
+        'Already Exists',
+        duplicateOf.toLowerCase() === trimmedName.toLowerCase()
+          ? 'A plant with that name already exists.'
+          : `"${trimmedName}" is the same plant as "${duplicateOf}", which is already in the catalog.`
+      );
       return null;
     }
 
