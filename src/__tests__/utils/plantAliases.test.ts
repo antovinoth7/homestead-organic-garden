@@ -108,3 +108,10 @@ describe('plantAliases', () => {
     });
   });
 });
+
+describe('Dill', () => {
+  it('resolves its Tamil name, as sold at the nattu marundhu kadai', () => {
+    expect(getCanonicalPlantKey('Sathakuppai')).toBe('dill');
+    expect(getCanonicalPlantKey('sadakuppai')).toBe('dill');
+  });
+});

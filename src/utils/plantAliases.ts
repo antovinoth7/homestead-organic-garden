@@ -166,6 +166,11 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   kothamalli: 'coriander',
   cilantro: 'coriander',
   dhania: 'coriander',
+  // Dill — சதகுப்பை; the seed is sold at nattu marundhu kadai as sathakuppai.
+  sathakuppai: 'dill',
+  sadhakuppai: 'dill',
+  sadakuppai: 'dill',
+  'sathakuppai keerai': 'dill',
   karuveppilai: 'curry leaf',
   'curry leaves': 'curry leaf',
 
