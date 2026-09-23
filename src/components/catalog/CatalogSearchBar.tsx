@@ -47,7 +47,12 @@ export const CatalogSearchBar = forwardRef<TextInput, Props>(function CatalogSea
         accessibilityLabel="Search plant catalog"
       />
       {isActive && (
-        <TouchableOpacity onPress={onClear} hitSlop={8} accessibilityLabel="Clear search">
+        <TouchableOpacity
+          onPress={onClear}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+        >
           <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
         </TouchableOpacity>
       )}

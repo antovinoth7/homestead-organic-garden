@@ -4,12 +4,10 @@ import {
   coreCareSummary,
   diseasesSummary,
   formatCount,
-  formatRangeLabel,
   growingInfoSummary,
   joinSummary,
   pestsSummary,
   plantInfoSummary,
-  plantingSummary,
   pruningSummary,
   toleranceSummary,
   varietiesSummary,
@@ -73,21 +71,6 @@ describe('joinSummary', () => {
   });
 });
 
-describe('formatRangeLabel', () => {
-  it('formats a complete range', () => {
-    expect(formatRangeLabel('75', '95', 'days')).toBe('75-95 days');
-  });
-
-  it('formats one-sided ranges', () => {
-    expect(formatRangeLabel('75', '', 'days')).toBe('From 75 days');
-    expect(formatRangeLabel('', '95', 'days')).toBe('Up to 95 days');
-  });
-
-  it('returns undefined when both sides are empty', () => {
-    expect(formatRangeLabel('', '', 'days')).toBeUndefined();
-  });
-});
-
 describe('formatCount', () => {
   it('uses the singular for one', () => {
     expect(formatCount(1, 'tip')).toBe('1 tip');
@@ -114,7 +97,7 @@ describe('section summaries', () => {
       makeCareForm({ scientificName: 'Solanum melongena', tamilName: 'கத்தரிக்காய்' }),
       { lifecycleLabel: 'Annual' }
     );
-    expect(summary).toBe('Solanum melongena • Annual • Tamil: கத்தரிக்காய்');
+    expect(summary).toBe('கத்தரிக்காய் • Annual • Solanum melongena');
   });
 
   it('digests Core Care', () => {
@@ -137,15 +120,15 @@ describe('section summaries', () => {
           spacingCm: '60',
         })
       )
-    ).toBe('Year Round • 75-95 days • Spacing 60 cm');
+    ).toBe('Year Round • Harvest in 75–95 days • Spacing 60 cm');
     expect(growingInfoSummary(makeCareForm())).toBe('Harvest timing, spacing, and germination');
   });
 
   it('digests Tolerances, including pet safety in both states', () => {
     expect(
       toleranceSummary({ heatToleranceLabel: 'High', droughtToleranceLabel: 'Low' }, true)
-    ).toBe('Heat High • Drought Low • Pet toxic');
-    expect(toleranceSummary({}, false)).toBe('Pet safe');
+    ).toBe('Heat High • Drought Low • Toxic to pets');
+    expect(toleranceSummary({}, false)).toBe('Safe for pets');
     expect(toleranceSummary({}, undefined)).toBe('Stress tolerance and safety info');
   });
 
@@ -156,10 +139,6 @@ describe('section summaries', () => {
     expect(pruningSummary(makeCareForm(), 0)).toBe('Timing and pruning guidance');
   });
 
-  it('digests Planting', () => {
-    expect(plantingSummary('Seedling')).toBe('Starts at Seedling');
-    expect(plantingSummary(undefined)).toBe('Default growth stage');
-  });
 
   it('digests the linked-list sections with their empty fallbacks', () => {
     expect(pestsSummary(7)).toBe('7 linked pests');

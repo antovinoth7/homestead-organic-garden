@@ -60,8 +60,9 @@ export function GrowingInfoSection({ editor }: Props): React.JSX.Element {
         title: 'Years to first harvest',
         value: careForm.yearsToFirstHarvest,
         onCommit: (yearsToFirstHarvest) => setForm({ yearsToFirstHarvest }),
-        keyboardType: 'numeric',
-        sanitize: sanitizeNum,
+        // 1.5 years is a real answer for papaya or banana.
+        keyboardType: 'decimal-pad',
+        sanitize: sanitizeDecimal,
         helpText: CATALOG_FIELD_HELP.yearsToFirstHarvest,
       }),
     [openText, careForm.yearsToFirstHarvest, setForm]
@@ -171,13 +172,20 @@ export function GrowingInfoSection({ editor }: Props): React.JSX.Element {
         onPress={onDaysToHarvest}
         errorText={showErrors ? errors.daysToHarvest : undefined}
       />
-      <CatalogDetailRow
-        kind="text"
-        label="Years to first harvest"
-        value={careForm.yearsToFirstHarvest}
-        helpText={CATALOG_FIELD_HELP.yearsToFirstHarvest}
-        onPress={onYearsToFirstHarvest}
-      />
+      {/* Meaningless for a crop sown and harvested within the year. */}
+      {careForm.lifecycle !== 'annual' ? (
+        <CatalogDetailRow
+          kind="text"
+          label="Years to first harvest"
+          value={
+            careForm.yearsToFirstHarvest
+              ? `${careForm.yearsToFirstHarvest} ${careForm.yearsToFirstHarvest === '1' ? 'year' : 'years'}`
+              : ''
+          }
+          helpText={CATALOG_FIELD_HELP.yearsToFirstHarvest}
+          onPress={onYearsToFirstHarvest}
+        />
+      ) : null}
       <CatalogRangeRow
         label="Height"
         min={careForm.heightCmMin}

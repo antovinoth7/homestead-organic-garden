@@ -48,5 +48,5 @@ export const CATALOG_FIELD_HELP = {
   initialGrowthStage:
     'The stage a new garden plant starts at — seedling if you sow seed, vegetative if you plant a sapling.',
   petToxicity:
-    'Whether this plant is known to be toxic to pets or livestock — dogs, cats, cattle, goats. Always confirm with a vet before letting animals graze near it.',
+    'Whether this plant is known to be toxic to household pets such as dogs and cats. It does not cover livestock — check with a vet before letting cattle or goats graze near it.',
 } as const;

@@ -14,13 +14,6 @@ export function joinSummary(parts: (string | null | undefined)[]): string | unde
   return values.length > 0 ? values.join(' • ') : undefined;
 }
 
-export function formatRangeLabel(min: string, max: string, unit: string): string | undefined {
-  if (min && max) return `${min}-${max} ${unit}`;
-  if (min) return `From ${min} ${unit}`;
-  if (max) return `Up to ${max} ${unit}`;
-  return undefined;
-}
-
 export function formatCount(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
@@ -32,16 +25,12 @@ export interface SummaryLabels {
   sunlightLabel?: string;
   heatToleranceLabel?: string;
   droughtToleranceLabel?: string;
-  growthStageLabel?: string;
 }
 
 export function plantInfoSummary(careForm: CareFormState | null, labels: SummaryLabels): string {
   return (
-    joinSummary([
-      careForm?.scientificName,
-      labels.lifecycleLabel,
-      careForm?.tamilName ? `Tamil: ${careForm.tamilName}` : undefined,
-    ]) ?? 'Name, identity, and description'
+    joinSummary([careForm?.tamilName, labels.lifecycleLabel, careForm?.scientificName]) ??
+    'Name, identity, and description'
   );
 }
 
@@ -61,10 +50,23 @@ export function growingInfoSummary(careForm: CareFormState | null): string {
   return (
     joinSummary([
       growingSeasonLabel(careForm?.growingSeason) || undefined,
-      formatRangeLabel(careForm?.daysToHarvestMin ?? '', careForm?.daysToHarvestMax ?? '', 'days'),
+      // Same wording as the list row, and in years for a slow tree.
+      harvestSummary(careForm),
       careForm?.spacingCm ? `Spacing ${careForm.spacingCm} cm` : undefined,
     ]) ?? 'Harvest timing, spacing, and germination'
   );
+}
+
+function harvestSummary(careForm: CareFormState | null): string | undefined {
+  if (!careForm) return undefined;
+  const min = parseFloat(careForm.daysToHarvestMin);
+  const max = parseFloat(careForm.daysToHarvestMax);
+  if (Number.isNaN(min) && Number.isNaN(max)) return undefined;
+  const days = formatDaysToHarvest({
+    min: Number.isNaN(min) ? max : min,
+    max: Number.isNaN(max) ? min : max,
+  });
+  return days ? `Harvest in ${days}` : undefined;
 }
 
 export function toleranceSummary(labels: SummaryLabels, petToxicity?: boolean): string {
@@ -72,7 +74,7 @@ export function toleranceSummary(labels: SummaryLabels, petToxicity?: boolean): 
     joinSummary([
       labels.heatToleranceLabel ? `Heat ${labels.heatToleranceLabel}` : undefined,
       labels.droughtToleranceLabel ? `Drought ${labels.droughtToleranceLabel}` : undefined,
-      petToxicity !== undefined ? (petToxicity ? 'Pet toxic' : 'Pet safe') : undefined,
+      petToxicity !== undefined ? (petToxicity ? 'Toxic to pets' : 'Safe for pets') : undefined,
     ]) ?? 'Stress tolerance and safety info'
   );
 }
@@ -85,10 +87,6 @@ export function pruningSummary(careForm: CareFormState | null, tipsCount: number
       careForm?.shapePruningTip ? 'Shape pruning' : undefined,
     ]) ?? 'Timing and pruning guidance'
   );
-}
-
-export function plantingSummary(growthStageLabel?: string): string {
-  return growthStageLabel ? `Starts at ${growthStageLabel}` : 'Default growth stage';
 }
 
 export function pestsSummary(count: number): string {

@@ -15,7 +15,13 @@ function RecentSearchChip({ query, onSelect }: ChipProps): React.JSX.Element {
   const handlePress = useCallback(() => onSelect(query), [onSelect, query]);
 
   return (
-    <TouchableOpacity style={styles.recentChip} onPress={handlePress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.recentChip}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Search again for ${query}`}
+    >
       <Ionicons name="arrow-undo-outline" size={13} color={theme.textTertiary} />
       <Text style={styles.recentChipText}>{query}</Text>
     </TouchableOpacity>
@@ -42,7 +48,12 @@ export function RecentSearchChips({
     <View>
       <View style={styles.recentHeaderRow}>
         <Text style={styles.sectionLabel}>Recent searches</Text>
-        <TouchableOpacity onPress={onClearAll} hitSlop={8}>
+        <TouchableOpacity
+          onPress={onClearAll}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Clear recent searches"
+        >
           <Text style={styles.recentClearText}>Clear</Text>
         </TouchableOpacity>
       </View>

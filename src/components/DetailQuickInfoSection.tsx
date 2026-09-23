@@ -52,10 +52,16 @@ export function DetailQuickInfoSection({
 
   const stats: StatItem[] = [];
 
-  // A 0–0 range is "not harvested" (timber), not a zero-day wait.
-  const harvestDays = isStatedHarvestRange(profile.daysToHarvest)
-    ? formatRange(profile.daysToHarvest, 'days')
-    : null;
+  // A 0–0 range is "not harvested" (timber), not a zero-day wait. For a tree
+  // with a years figure, its days are fruit development (Mango "90–150"), not
+  // the wait from planting, so only the years are shown.
+  const treeWithYears =
+    (plantType === 'fruit_tree' || plantType === 'coconut_tree' || plantType === 'timber_tree') &&
+    profile.yearsToFirstHarvest != null;
+  const harvestDays =
+    !treeWithYears && isStatedHarvestRange(profile.daysToHarvest)
+      ? formatRange(profile.daysToHarvest, 'days')
+      : null;
   if (harvestDays)
     stats.push({ icon: 'timer-outline', label: 'Days to Harvest', value: harvestDays });
 
@@ -80,7 +86,11 @@ export function DetailQuickInfoSection({
   if (depth) stats.push({ icon: 'arrow-down-outline', label: 'Planting Depth', value: depth });
 
   if (profile.growingSeason) {
-    stats.push({ icon: 'sunny-outline', label: 'Growing Season', value: growingSeasonLabel(profile.growingSeason) });
+    stats.push({
+      icon: 'sunny-outline',
+      label: 'Growing Season',
+      value: growingSeasonLabel(profile.growingSeason),
+    });
   }
 
   const germDays = formatRange(profile.germinationDays, 'days');

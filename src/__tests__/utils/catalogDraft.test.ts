@@ -3,6 +3,7 @@ import {
   careSeed,
   cloneDraft,
   isCatalogDraftDirty,
+  rangeStr,
   toOptNum,
   toRange,
 } from '@/utils/catalogDraft';
@@ -239,5 +240,15 @@ describe('buildCareForm — creating', () => {
     expect(careSeed('fruit_tree').initialGrowthStage).not.toBe(
       careSeed('vegetable').initialGrowthStage
     );
+  });
+});
+
+describe('rangeStr', () => {
+  it('treats a 0–0 "not applicable" range as empty', () => {
+    expect(rangeStr({ min: 0, max: 0 })).toEqual(['', '']);
+  });
+
+  it('keeps a range that starts at zero', () => {
+    expect(rangeStr({ min: 0, max: 7 })).toEqual(['0', '7']);
   });
 });

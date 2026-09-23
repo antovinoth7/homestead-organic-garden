@@ -58,10 +58,11 @@ export const createStyles = (
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
+    // 44dp throughout the header: the smallest target a thumb hits reliably.
     backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -73,9 +74,9 @@ export const createStyles = (
     },
     /** Filled primary circle, matching the Plants screen's header controls. */
     headerIconBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -132,9 +133,9 @@ export const createStyles = (
     },
     /** The chevron that collapses search, mirroring `plantsStyles`. */
     searchBackBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -432,8 +433,8 @@ export const createStyles = (
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 12,
-      paddingVertical: 7,
-      borderRadius: 20,
+      minHeight: 44,
+      borderRadius: 22,
       backgroundColor: theme.backgroundSecondary,
       borderWidth: 1,
       borderColor: theme.border,
@@ -502,9 +503,10 @@ export const createStyles = (
     },
     /** "Reset" pill — shown only while a facet is off its default. */
     sheetClearBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      borderRadius: 14,
+      paddingHorizontal: 14,
+      minHeight: 44,
+      justifyContent: 'center',
+      borderRadius: 22,
       backgroundColor: theme.errorLight,
     },
     sheetClearText: {
@@ -530,8 +532,8 @@ export const createStyles = (
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 20,
+      minHeight: 44,
+      borderRadius: 22,
       backgroundColor: theme.backgroundSecondary,
       borderWidth: 1,
       borderColor: theme.border,

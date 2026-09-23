@@ -8,7 +8,6 @@ export type CatalogSectionKey =
   | 'coreCare'
   | 'pruning'
   | 'growingInfo'
-  | 'planting'
   | 'tolerances'
   | 'pests'
   | 'diseases'
@@ -39,7 +38,6 @@ export const SECTION_TO_TAB: Record<CatalogSectionKey, CatalogTabKey> = {
   coreCare: 'care',
   pruning: 'care',
   growingInfo: 'growing',
-  planting: 'growing',
   tolerances: 'health',
   pests: 'health',
   diseases: 'health',

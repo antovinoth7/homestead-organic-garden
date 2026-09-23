@@ -10,6 +10,8 @@ import {
   FEEDING_INTENSITY_LABELS,
   FEEDING_INTENSITY_SUGGESTED_DAYS,
   FERTILISER_LABELS,
+  GROWTH_STAGE_DESCRIPTIONS,
+  GROWTH_STAGE_LABELS,
   SOIL_LABELS,
   SUNLIGHT_LABELS,
   WATER_REQUIREMENT_LABELS,
@@ -17,6 +19,7 @@ import {
 import type {
   FeedingIntensity,
   FertiliserType,
+  GrowthStage,
   SoilType,
   SunlightLevel,
   WaterRequirement,
@@ -34,6 +37,22 @@ export function CoreCareSection({ editor }: Props): React.JSX.Element {
   const sunlightOptions = useMemo(() => optionsFromLabels(SUNLIGHT_LABELS), []);
   const soilOptions = useMemo(() => optionsFromLabels(SOIL_LABELS), []);
   const fertiliserOptions = useMemo(() => optionsFromLabels(FERTILISER_LABELS), []);
+  const stageOptions = useMemo(
+    () => optionsFromLabels(GROWTH_STAGE_LABELS, GROWTH_STAGE_DESCRIPTIONS),
+    []
+  );
+
+  // Was a section of its own holding just this row.
+  const onStage = useCallback(
+    () =>
+      openPicker({
+        title: 'Stage when planted',
+        options: stageOptions,
+        selectedValue: careForm.initialGrowthStage,
+        onSelect: (value) => setForm({ initialGrowthStage: value as GrowthStage }),
+      }),
+    [openPicker, stageOptions, careForm.initialGrowthStage, setForm]
+  );
 
   const openFrequency = useCallback(
     (title: string, key: 'wateringFrequencyDays' | 'fertilisingFrequencyDays', help: string) =>
@@ -200,6 +219,14 @@ export function CoreCareSection({ editor }: Props): React.JSX.Element {
         value={FERTILISER_LABELS[careForm.preferredFertiliser]}
         helpText={CATALOG_FIELD_HELP.preferredFertiliser}
         onPress={onPreferredFertiliser}
+      />
+      <CatalogDetailRow
+        kind="picker"
+        label="Stage when planted"
+        value={GROWTH_STAGE_LABELS[careForm.initialGrowthStage]}
+        helpText={CATALOG_FIELD_HELP.initialGrowthStage}
+        helpTitle="Stage when planted"
+        onPress={onStage}
         isLast
       />
     </View>

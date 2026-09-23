@@ -177,7 +177,6 @@ describe('mapping tables', () => {
       'coreCare',
       'pruning',
       'growingInfo',
-      'planting',
       'tolerances',
       'pests',
       'diseases',

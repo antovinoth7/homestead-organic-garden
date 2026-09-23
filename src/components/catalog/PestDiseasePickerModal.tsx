@@ -11,6 +11,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { BottomSheetModal } from '@/components/BottomSheetModal';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { SheetHandle } from '@/components/SheetHandle';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getDiseaseImage, getPestImage } from '@/config/referenceAssets';
@@ -61,9 +62,13 @@ export function PestDiseasePickerModal({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [search, setSearch] = useState('');
 
+  const keyboardHeight = useKeyboardHeight();
   // Edge-to-edge modal: cap below the status bar rather than trusting a
-  // percentage of the full-screen window.
-  const sheetHeight = Math.min(windowHeight * 0.85, windowHeight - insets.top - 24);
+  // percentage of the full-screen window. The sheet rides above the keyboard
+  // while searching, so it gives up that much height rather than pushing its
+  // title off the top — otherwise the bottom rows sat under the keyboard.
+  const sheetHeight =
+    Math.min(windowHeight * 0.85, windowHeight - insets.top - 24) - keyboardHeight;
   const sheetStyle = useMemo(
     () => [styles.sheet, { height: sheetHeight, paddingBottom: Math.max(insets.bottom, 24) }],
     [styles, sheetHeight, insets.bottom]
@@ -113,7 +118,7 @@ export function PestDiseasePickerModal({
   );
 
   return (
-    <BottomSheetModal visible={visible} onClose={onClose} sheetStyle={sheetStyle}>
+    <BottomSheetModal visible={visible} onClose={onClose} sheetStyle={sheetStyle} keyboardAvoiding>
       <SheetHandle onClose={onClose}>
         <Text style={styles.sheetTitle}>{title}</Text>
       </SheetHandle>
@@ -136,6 +141,7 @@ export function PestDiseasePickerModal({
         renderItem={renderRow}
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         ListEmptyComponent={emptyState}
       />
     </BottomSheetModal>

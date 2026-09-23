@@ -37,7 +37,6 @@ import { CoreCareSection } from '@/components/catalog/sections/CoreCareSection';
 import { GrowingInfoSection } from '@/components/catalog/sections/GrowingInfoSection';
 import { PruningSection } from '@/components/catalog/sections/PruningSection';
 import { TolerancesSection } from '@/components/catalog/sections/TolerancesSection';
-import { PlantingSection } from '@/components/catalog/sections/PlantingSection';
 import type {
   CatalogEditor,
   PickerSheetConfig,
@@ -60,7 +59,6 @@ import {
   growingInfoSummary,
   pestsSummary,
   plantInfoSummary,
-  plantingSummary,
   pruningSummary,
   toleranceSummary,
   varietiesSummary,
@@ -69,7 +67,6 @@ import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { getCommonDiseases, getCommonPests } from '@/utils/plantHelpers';
 import {
   CATEGORY_LABELS,
-  GROWTH_STAGE_LABELS,
   LIFECYCLE_LABELS,
   SUNLIGHT_LABELS,
   TOLERANCE_LABELS,
@@ -98,7 +95,6 @@ const ALL_EXPANDED: Record<CatalogSectionKey, boolean> = {
   coreCare: true,
   pruning: true,
   growingInfo: true,
-  planting: true,
   tolerances: true,
   pests: true,
   diseases: true,
@@ -592,7 +588,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       droughtToleranceLabel: careForm?.droughtTolerance
         ? TOLERANCE_LABELS[careForm.droughtTolerance]
         : undefined,
-      growthStageLabel: careForm ? GROWTH_STAGE_LABELS[careForm.initialGrowthStage] : undefined,
     }),
     [careForm]
   );
@@ -767,17 +762,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
             <GrowingInfoSection editor={editor} />
           </CollapsibleSection>
 
-          <CollapsibleSection
-            title="Planting"
-            icon="leaf-outline"
-            iconTint={theme.successLight}
-            alwaysShowSummary
-            summary={plantingSummary(summaryLabels.growthStageLabel)}
-            expanded={sectionExpanded.planting}
-            onExpandedChange={setExpanded('planting')}
-          >
-            <PlantingSection editor={editor} />
-          </CollapsibleSection>
         </View>
 
         {/* ── Health ── */}
@@ -984,7 +968,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         <PestDiseasePickerModal
           visible
           onClose={closeDiseasePicker}
-          title="Link Disease"
+          title="Add Disease"
           kind="disease"
           searchPlaceholder="Search diseases…"
           groups={DISEASE_PICKER_GROUPS}

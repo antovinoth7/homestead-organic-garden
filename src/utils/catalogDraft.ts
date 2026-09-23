@@ -82,7 +82,9 @@ export const sanitizeNum = (v: string): string => v.replace(/[^0-9]/g, '');
 export const sanitizeDecimal = (v: string): string => v.replace(/[^0-9.]/g, '');
 
 export function rangeStr(val?: NumericRange): [string, string] {
-  if (!val) return ['', ''];
+  // 0–0 is how the data says "not applicable" (a grafted tree has no
+  // germination days); shown as a range it read as a real zero.
+  if (!val || (val.min === 0 && val.max === 0)) return ['', ''];
   return [String(val.min), String(val.max)];
 }
 
