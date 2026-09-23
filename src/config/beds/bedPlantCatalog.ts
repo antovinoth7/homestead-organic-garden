@@ -46,7 +46,7 @@ export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
   ],
   root_legume: [
     'Cowpea',
-    'French Beans',
+    'Beans',
     'Black Gram',
     'Pigeon Pea',
     'Groundnut',
@@ -60,14 +60,15 @@ export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
   climber_trellis: [
     'Bitter Gourd',
     'Snake Gourd',
-    'Yardlong Beans',
+    // Yardlong beans are a Cowpea variety now; the pole type is the climber.
+    'Cowpea',
     'Cucumber',
     'Bottle Gourd',
     'Ridge Gourd',
     'Passion Fruit',
     'Capsicum',
   ],
-  three_sisters: ['Maize', 'Beans', 'Pumpkin', 'Cowpea', 'Yardlong Beans'],
+  three_sisters: ['Maize', 'Beans', 'Pumpkin', 'Cowpea'],
   medicinal_guild: [
     'Drumstick',
     'Tulsi',

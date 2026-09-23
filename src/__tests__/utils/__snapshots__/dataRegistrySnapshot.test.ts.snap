@@ -2,169 +2,13 @@
 
 exports[`data registry snapshots care profiles and pruning defaults for every variety are unchanged 1`] = `
 {
-  "coconut_tree:Dwarf Coconut": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 60,
-        "min": 45,
-      },
-      "description": "Compact coconut palm ideal for small plots. Bears early (3–4 years) and produces sweet tender coconuts. Needs consistent watering and bimonthly feeding with vermicompost or groundnut cake.",
-      "droughtTolerance": "low",
-      "feedingIntensity": "heavy",
-      "fertilisingFrequencyDays": 60,
-      "germinationDays": {
-        "max": 120,
-        "min": 60,
-      },
-      "germinationTempC": {
-        "max": 35,
-        "min": 25,
-      },
-      "growingSeason": "Year Round",
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 800,
-        "min": 500,
-      },
-      "initialGrowthStage": "vegetative",
-      "lifecycle": "permanent",
-      "petToxicity": false,
-      "plantingDepthCm": 15,
-      "preferredFertiliser": "vermicompost",
-      "pruningFrequencyDays": 180,
-      "scientificName": "Cocos nucifera var. nana",
-      "soilPhRange": {
-        "max": 7,
-        "min": 5.5,
-      },
-      "soilType": "coastal_sandy",
-      "spacingCm": 500,
-      "sunlight": "full_sun",
-      "tamilName": "குட்டைத் தென்னை",
-      "taxonomicFamily": "Arecaceae",
-      "waterRequirement": "high",
-      "wateringFrequencyDays": 3,
-      "yearsToFirstHarvest": 3,
-    },
-    "pruning": {
-      "tips": [
-        "Remove dried fronds carefully",
-        "Keep 25–30 green fronds on crown",
-        "Clean inflorescence area during harvest",
-      ],
-    },
-  },
-  "coconut_tree:Hybrid Coconut": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 75,
-        "min": 50,
-      },
-      "description": "Cross between Dwarf and Tall varieties combining early bearing with high copra yield. Responds well to regular feeding and irrigation. Popular choice for commercial plots in Kanyakumari district.",
-      "droughtTolerance": "medium",
-      "feedingIntensity": "heavy",
-      "fertilisingFrequencyDays": 60,
-      "germinationDays": {
-        "max": 130,
-        "min": 75,
-      },
-      "germinationTempC": {
-        "max": 35,
-        "min": 25,
-      },
-      "growingSeason": "Year Round",
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 2000,
-        "min": 800,
-      },
-      "initialGrowthStage": "vegetative",
-      "lifecycle": "permanent",
-      "petToxicity": false,
-      "plantingDepthCm": 18,
-      "preferredFertiliser": "vermicompost",
-      "pruningFrequencyDays": 180,
-      "scientificName": "Cocos nucifera (D × T hybrid)",
-      "soilPhRange": {
-        "max": 7,
-        "min": 5.5,
-      },
-      "soilType": "coastal_sandy",
-      "spacingCm": 650,
-      "sunlight": "full_sun",
-      "tamilName": "கலப்பினத் தென்னை",
-      "taxonomicFamily": "Arecaceae",
-      "waterRequirement": "high",
-      "wateringFrequencyDays": 4,
-      "yearsToFirstHarvest": 4,
-    },
-    "pruning": {
-      "tips": [
-        "Remove dried fronds every 3–4 months",
-        "Keep crown clean for better light",
-        "Watch for bud rot during monsoon",
-      ],
-    },
-  },
-  "coconut_tree:King Coconut": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 70,
-        "min": 50,
-      },
-      "description": "Orange-skinned coconut prized for its naturally sweet water. Ornamental and functional; grows well in Kanyakumari's coastal belt. Needs steady moisture and bimonthly organic feeding.",
-      "droughtTolerance": "low",
-      "feedingIntensity": "heavy",
-      "fertilisingFrequencyDays": 60,
-      "germinationDays": {
-        "max": 120,
-        "min": 70,
-      },
-      "germinationTempC": {
-        "max": 35,
-        "min": 25,
-      },
-      "growingSeason": "Year Round",
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 1800,
-        "min": 800,
-      },
-      "initialGrowthStage": "vegetative",
-      "lifecycle": "permanent",
-      "petToxicity": false,
-      "plantingDepthCm": 15,
-      "preferredFertiliser": "vermicompost",
-      "pruningFrequencyDays": 180,
-      "scientificName": "Cocos nucifera var. aurantiaca",
-      "soilPhRange": {
-        "max": 7,
-        "min": 5.5,
-      },
-      "soilType": "coastal_sandy",
-      "spacingCm": 600,
-      "sunlight": "full_sun",
-      "tamilName": "ராஜ தென்னை",
-      "taxonomicFamily": "Arecaceae",
-      "waterRequirement": "high",
-      "wateringFrequencyDays": 4,
-      "yearsToFirstHarvest": 4,
-    },
-    "pruning": {
-      "tips": [
-        "Remove only dried fronds",
-        "Never cut green fronds",
-        "Inspect crown for pests during climbing",
-      ],
-    },
-  },
-  "coconut_tree:Tall Coconut": {
+  "coconut_tree:Coconut": {
     "profile": {
       "daysToHarvest": {
         "max": 90,
         "min": 60,
       },
-      "description": "Traditional tall coconut grown along the Kanyakumari coast. Hardy and long-lived, yielding copra-quality nuts. Tolerates coastal wind and salt spray; apply salt around base annually to boost production.",
+      "description": "Coconut palm, the Kanyakumari homestead staple. Tall types (West Coast Tall) are hardy and long-lived and bear in 6–7 years; dwarfs bear in 3–4 but need more care; hybrids fall between. Tolerates coastal wind and salt spray.",
       "droughtTolerance": "medium",
       "feedingIntensity": "medium",
       "fertilisingFrequencyDays": 90,
@@ -188,7 +32,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "plantingDepthCm": 20,
       "preferredFertiliser": "vermicompost",
       "pruningFrequencyDays": 180,
-      "scientificName": "Cocos nucifera var. typica",
+      "scientificName": "Cocos nucifera",
       "soilPhRange": {
         "max": 7,
         "min": 5.5,
@@ -196,7 +40,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "soilType": "coastal_sandy",
       "spacingCm": 750,
       "sunlight": "full_sun",
-      "tamilName": "உயரத் தென்னை",
+      "tamilName": "தென்னை",
       "taxonomicFamily": "Arecaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 7,
@@ -350,7 +194,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 25,
         "min": 15,
       },
-      "growingSeason": "Cool Dry (Jan-Feb)",
+      "growingSeason": "Winter (Jan–Feb)",
       "growthStageDurations": {
         "flowering": 30,
         "seedling": 14,
@@ -1173,7 +1017,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "soilType": "garden_soil",
       "spacingCm": 1000,
       "sunlight": "full_sun",
-      "tamilName": "பிரெட்ஃப்ரூட்",
+      "tamilName": "ஈரப்பலா",
       "taxonomicFamily": "Moraceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 5,
@@ -1334,7 +1178,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 28,
         "min": 24,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "seedling": 180,
         "vegetative": 1270,
@@ -1980,7 +1824,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 32,
         "min": 24,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "seedling": 365,
         "vegetative": 2555,
@@ -2255,7 +2099,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "soilType": "garden_soil",
       "spacingCm": 300,
       "sunlight": "full_sun",
-      "tamilName": "பேஷன் ஃப்ரூட்",
+      "tamilName": "கொடித்தோடை",
       "taxonomicFamily": "Passifloraceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 3,
@@ -2452,63 +2296,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "waterRequirement": "high",
       "wateringFrequencyDays": 3,
       "yearsToFirstHarvest": 5,
-    },
-    "pruning": {
-      "tips": [
-        "Thin crowded inner branches",
-        "Remove dead or crossing wood",
-      ],
-    },
-  },
-  "fruit_tree:Red Banana": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 400,
-        "min": 300,
-      },
-      "description": "Striking red-skinned banana variety with creamy, slightly raspberry-flavoured flesh. Grown as a temple offering fruit in Tamil Nadu; same care as regular banana with slightly longer maturation.",
-      "droughtTolerance": "low",
-      "feedingIntensity": "heavy",
-      "fertilisingFrequencyDays": 30,
-      "germinationDays": {
-        "max": 0,
-        "min": 0,
-      },
-      "germinationTempC": {
-        "max": 30,
-        "min": 20,
-      },
-      "growingSeason": "Year Round",
-      "growthStageDurations": {
-        "flowering": 30,
-        "fruiting": 95,
-        "seedling": 45,
-        "vegetative": 150,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 450,
-        "min": 200,
-      },
-      "initialGrowthStage": "vegetative",
-      "lifecycle": "perennial",
-      "petToxicity": false,
-      "plantingDepthCm": 15,
-      "preferredFertiliser": "vermicompost",
-      "pruningFrequencyDays": 90,
-      "scientificName": "Musa acuminata 'Red Dacca'",
-      "soilPhRange": {
-        "max": 7,
-        "min": 5.5,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 300,
-      "sunlight": "full_sun",
-      "tamilName": "செவ்வாழை",
-      "taxonomicFamily": "Musaceae",
-      "waterRequirement": "high",
-      "wateringFrequencyDays": 2,
-      "yearsToFirstHarvest": 1,
     },
     "pruning": {
       "tips": [
@@ -3030,7 +2817,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 28,
         "min": 18,
       },
-      "growingSeason": "Cool Dry (Oct–Feb)",
+      "growingSeason": "NE Monsoon + Winter (Oct–Feb)",
       "growthStageDurations": {
         "mature": 14,
         "seedling": 14,
@@ -3140,7 +2927,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 20,
       },
-      "growingSeason": "Cool Dry (Oct–Feb)",
+      "growingSeason": "NE Monsoon + Winter (Oct–Feb)",
       "growthStageDurations": {
         "mature": 60,
         "seedling": 21,
@@ -3164,7 +2951,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "soilType": "coastal_sandy",
       "spacingCm": 60,
       "sunlight": "full_sun",
-      "tamilName": "அஷ்வகந்தா",
+      "tamilName": "அமுக்கரா",
       "taxonomicFamily": "Solanaceae",
       "waterRequirement": "low",
       "wateringFrequencyDays": 5,
@@ -3314,7 +3101,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 32,
         "min": 24,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 60,
         "fruiting": 210,
@@ -3436,7 +3223,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 28,
         "min": 22,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "mature": 365,
         "seedling": 180,
@@ -3856,7 +3643,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 25,
         "min": 15,
       },
-      "growingSeason": "Cool Dry (Oct–Feb)",
+      "growingSeason": "NE Monsoon + Winter (Oct–Feb)",
       "growthStageDurations": {
         "mature": 20,
         "seedling": 14,
@@ -4575,7 +4362,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "soilType": "garden_soil",
       "spacingCm": 120,
       "sunlight": "full_sun",
-      "tamilName": "பூகன்வில்லியா",
+      "tamilName": "காகிதப்பூ",
       "taxonomicFamily": "Nyctaginaceae",
       "waterRequirement": "low",
       "wateringFrequencyDays": 5,
@@ -4949,7 +4736,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 28,
         "min": 18,
       },
-      "growingSeason": "Cool Dry (Oct–Feb)",
+      "growingSeason": "NE Monsoon + Winter (Oct–Feb)",
       "growthStageDurations": {
         "seedling": 10,
         "vegetative": 20,
@@ -5560,7 +5347,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "soilType": "red_laterite",
       "spacingCm": 500,
       "sunlight": "full_sun",
-      "tamilName": "ரோஸ்வுட்",
+      "tamilName": "ஈட்டி",
       "taxonomicFamily": "Fabaceae",
       "waterRequirement": "low",
       "wateringFrequencyDays": 10,
@@ -5747,7 +5534,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 25,
       },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 20,
         "fruiting": 35,
@@ -5979,7 +5766,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 25,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 10,
         "fruiting": 20,
@@ -6035,7 +5822,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 25,
       },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 14,
         "fruiting": 18,
@@ -6154,7 +5941,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 25,
         "min": 18,
       },
-      "growingSeason": "Cool Dry (Jan-Feb)",
+      "growingSeason": "Winter (Jan–Feb)",
       "growthStageDurations": {
         "mature": 25,
         "seedling": 20,
@@ -6266,7 +6053,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 25,
         "min": 15,
       },
-      "growingSeason": "Cool Dry (Jan-Feb)",
+      "growingSeason": "Winter (Jan–Feb)",
       "growthStageDurations": {
         "mature": 26,
         "seedling": 14,
@@ -6321,7 +6108,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 25,
         "min": 18,
       },
-      "growingSeason": "Cool Dry (Jan-Feb)",
+      "growingSeason": "Winter (Jan–Feb)",
       "growthStageDurations": {
         "mature": 25,
         "seedling": 20,
@@ -6674,7 +6461,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 25,
       },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "mature": 70,
         "seedling": 30,
@@ -6711,62 +6498,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "vegetable:French Beans": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 60,
-        "min": 45,
-      },
-      "description": "Bushy or climbing legume producing tender flat pods for stir-fries and curries",
-      "droughtTolerance": "low",
-      "feedingIntensity": "light",
-      "fertilisingFrequencyDays": 21,
-      "germinationDays": {
-        "max": 10,
-        "min": 5,
-      },
-      "germinationTempC": {
-        "max": 28,
-        "min": 18,
-      },
-      "growingSeason": "Year Round",
-      "growthStageDurations": {
-        "flowering": 8,
-        "fruiting": 15,
-        "seedling": 12,
-        "vegetative": 18,
-      },
-      "heatTolerance": "medium",
-      "heightCm": {
-        "max": 60,
-        "min": 30,
-      },
-      "initialGrowthStage": "seedling",
-      "lifecycle": "annual",
-      "petToxicity": false,
-      "plantingDepthCm": 3,
-      "preferredFertiliser": "compost",
-      "scientificName": "Phaseolus vulgaris",
-      "soilPhRange": {
-        "max": 7,
-        "min": 6,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 25,
-      "sunlight": "full_sun",
-      "tamilName": "பிரெஞ்சு பீன்ஸ்",
-      "taxonomicFamily": "Fabaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 2,
-    },
-    "pruning": {
-      "tips": [
-        "Remove yellowing lower leaves",
-        "Pinch tips to encourage branching",
-        "Cut diseased stems at the base",
-      ],
-    },
-  },
   "vegetable:Garlic": {
     "profile": {
       "daysToHarvest": {
@@ -6785,7 +6516,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 22,
         "min": 15,
       },
-      "growingSeason": "Cool Dry (Jan-Feb)",
+      "growingSeason": "Winter (Jan–Feb)",
       "growthStageDurations": {
         "mature": 45,
         "seedling": 20,
@@ -6840,7 +6571,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 24,
         "min": 18,
       },
-      "growingSeason": "Cool Dry (Oct–Feb)",
+      "growingSeason": "NE Monsoon + Winter (Oct–Feb)",
       "growthStageDurations": {
         "flowering": 15,
         "fruiting": 20,
@@ -6897,7 +6628,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 32,
         "min": 25,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 20,
         "fruiting": 40,
@@ -7014,7 +6745,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 28,
         "min": 18,
       },
-      "growingSeason": "Cool Dry (Oct–Feb)",
+      "growingSeason": "NE Monsoon + Winter (Oct–Feb)",
       "growthStageDurations": {
         "mature": 15,
         "seedling": 25,
@@ -7069,7 +6800,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 32,
         "min": 22,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 25,
         "fruiting": 25,
@@ -7166,67 +6897,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
-  "vegetable:Long Brinjal": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 95,
-        "min": 75,
-      },
-      "description": "Elongated purple eggplant variety favoured in South Indian sambar and stir-fries",
-      "droughtTolerance": "low",
-      "feedingIntensity": "heavy",
-      "fertilisingFrequencyDays": 14,
-      "germinationDays": {
-        "max": 14,
-        "min": 7,
-      },
-      "germinationTempC": {
-        "max": 30,
-        "min": 22,
-      },
-      "growingSeason": "Year Round",
-      "growthStageDurations": {
-        "flowering": 16,
-        "fruiting": 25,
-        "seedling": 21,
-        "vegetative": 28,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 120,
-        "min": 45,
-      },
-      "initialGrowthStage": "seedling",
-      "lifecycle": "annual",
-      "petToxicity": true,
-      "plantingDepthCm": 1,
-      "preferredFertiliser": "compost",
-      "pruningFrequencyDays": 21,
-      "scientificName": "Solanum melongena",
-      "soilPhRange": {
-        "max": 6.8,
-        "min": 5.5,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 60,
-      "sunlight": "full_sun",
-      "tamilName": "நீள கத்தரிக்காய்",
-      "taxonomicFamily": "Solanaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 2,
-    },
-    "pruning": {
-      "shapePruning": {
-        "months": "After 45 days",
-        "tip": "Keep 3–4 main branches from fork",
-      },
-      "tips": [
-        "Remove suckers below main fork",
-        "Cut off wilting lower leaves",
-        "Thin fruits — keep 3–4 per branch",
-      ],
-    },
-  },
   "vegetable:Lotus Stem": {
     "profile": {
       "daysToHarvest": {
@@ -7245,7 +6915,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 25,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 20,
         "mature": 30,
@@ -7301,7 +6971,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 20,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 14,
         "fruiting": 25,
@@ -7471,7 +7141,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 32,
         "min": 22,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 20,
         "fruiting": 40,
@@ -7497,7 +7167,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "soilType": "garden_soil",
       "spacingCm": 45,
       "sunlight": "full_sun",
-      "tamilName": "தொவரம்பருப்பு",
+      "tamilName": "துவரை",
       "taxonomicFamily": "Fabaceae",
       "waterRequirement": "low",
       "wateringFrequencyDays": 5,
@@ -7528,7 +7198,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 22,
         "min": 15,
       },
-      "growingSeason": "Cool Dry (Jan-Feb)",
+      "growingSeason": "Winter (Jan–Feb)",
       "growthStageDurations": {
         "mature": 28,
         "seedling": 15,
@@ -7583,7 +7253,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 32,
         "min": 22,
       },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 20,
         "fruiting": 35,
@@ -7700,7 +7370,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 25,
       },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 12,
         "fruiting": 13,
@@ -7814,7 +7484,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 25,
         "min": 18,
       },
-      "growingSeason": "Cool Dry (Jan-Feb)",
+      "growingSeason": "Winter (Jan–Feb)",
       "growthStageDurations": {
         "mature": 25,
         "seedling": 15,
@@ -7869,7 +7539,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 25,
       },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 14,
         "fruiting": 18,
@@ -7926,7 +7596,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 30,
         "min": 22,
       },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "mature": 30,
         "seedling": 15,
@@ -7981,7 +7651,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 34,
         "min": 24,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 25,
         "fruiting": 25,
@@ -8038,7 +7708,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 35,
         "min": 25,
       },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "mature": 90,
         "seedling": 30,
@@ -8094,7 +7764,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 30,
         "min": 22,
       },
-      "growingSeason": "Southwest Monsoon (Jun-Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "mature": 55,
         "seedling": 25,
@@ -8331,7 +8001,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 32,
         "min": 24,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "flowering": 20,
         "fruiting": 15,
@@ -8388,7 +8058,7 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "max": 32,
         "min": 25,
       },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
+      "growingSeason": "SW Monsoon (Jun–Sep)",
       "growthStageDurations": {
         "mature": 60,
         "seedling": 30,
@@ -8412,66 +8082,10 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "soilType": "garden_soil",
       "spacingCm": 90,
       "sunlight": "partial_sun",
-      "tamilName": "கிழங்கு",
+      "tamilName": "பெருவள்ளிக்கிழங்கு",
       "taxonomicFamily": "Dioscoreaceae",
       "waterRequirement": "medium",
       "wateringFrequencyDays": 4,
-    },
-    "pruning": {
-      "tips": [
-        "Remove yellowing lower leaves",
-        "Pinch tips to encourage branching",
-        "Cut diseased stems at the base",
-      ],
-    },
-  },
-  "vegetable:Yardlong Beans": {
-    "profile": {
-      "daysToHarvest": {
-        "max": 70,
-        "min": 55,
-      },
-      "description": "Vigorous climbing legume producing metre-long tender pods; fixes nitrogen",
-      "droughtTolerance": "medium",
-      "feedingIntensity": "light",
-      "fertilisingFrequencyDays": 21,
-      "germinationDays": {
-        "max": 10,
-        "min": 5,
-      },
-      "germinationTempC": {
-        "max": 32,
-        "min": 22,
-      },
-      "growingSeason": "Southwest Monsoon (Jun–Sep)",
-      "growthStageDurations": {
-        "flowering": 10,
-        "fruiting": 20,
-        "seedling": 12,
-        "vegetative": 20,
-      },
-      "heatTolerance": "high",
-      "heightCm": {
-        "max": 400,
-        "min": 200,
-      },
-      "initialGrowthStage": "seedling",
-      "lifecycle": "annual",
-      "petToxicity": false,
-      "plantingDepthCm": 2,
-      "preferredFertiliser": "compost",
-      "scientificName": "Vigna unguiculata subsp. sesquipedalis",
-      "soilPhRange": {
-        "max": 7,
-        "min": 5.5,
-      },
-      "soilType": "garden_soil",
-      "spacingCm": 30,
-      "sunlight": "full_sun",
-      "tamilName": "தட்டப்பயறு",
-      "taxonomicFamily": "Fabaceae",
-      "waterRequirement": "medium",
-      "wateringFrequencyDays": 2,
     },
     "pruning": {
       "tips": [

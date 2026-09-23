@@ -1,4 +1,10 @@
-import { STALE_TAMIL_NAMES, planTamilNameRepair } from '@/migrations/staleTamilNamesLogic';
+import {
+  STALE_TAMIL_NAMES,
+  STALE_TAMIL_NAMES_V17,
+  planTamilNameRepair,
+} from '@/migrations/staleTamilNamesLogic';
+import { PLANT_CATALOG_ENTRIES } from '@/config/plantCatalog';
+import { makePlantProfile, makePlantProfiles } from '../fixtures/plant.fixtures';
 import { DEFAULT_PLANT_CATALOG } from '@/services/plantCatalog';
 import type { PlantProfiles, PlantType } from '@/types/database.types';
 
@@ -86,5 +92,33 @@ describe('staleTamilNamesLogic', () => {
       expect(once).not.toBeNull();
       expect(planTamilNameRepair(once as PlantProfiles)).toBeNull();
     });
+  });
+});
+
+describe('migration 017 — Tamil name corrections', () => {
+  it('repairs a stored copy of a wrong bundled name', () => {
+    const profiles = makePlantProfiles([
+      makePlantProfile({ name: 'Pigeon Pea', tamilName: 'தொவரம்பருப்பு' }),
+      makePlantProfile({ plantType: 'shrub', name: 'Bougainvillea', tamilName: 'பூகன்வில்லியா' }),
+    ]);
+    const next = planTamilNameRepair(profiles, STALE_TAMIL_NAMES_V17);
+    expect(next?.vegetable['Pigeon Pea']?.tamilName).toBe('துவரை');
+    expect(next?.shrub.Bougainvillea?.tamilName).toBe('காகிதப்பூ');
+    expect(planTamilNameRepair(next!, STALE_TAMIL_NAMES_V17)).toBeNull();
+  });
+
+  it('leaves a Tamil name the user set themselves', () => {
+    const profiles = makePlantProfiles([
+      makePlantProfile({ name: 'Pigeon Pea', tamilName: 'துவரம் செடி' }),
+    ]);
+    expect(planTamilNameRepair(profiles, STALE_TAMIL_NAMES_V17)).toBeNull();
+  });
+
+  it('corrects the bundled catalog too, so new installs never see the old names', () => {
+    for (const [name, { corrected }] of Object.entries(STALE_TAMIL_NAMES_V17)) {
+      expect(PLANT_CATALOG_ENTRIES.find((entry) => entry.name === name)?.tamilName).toBe(
+        corrected
+      );
+    }
   });
 });

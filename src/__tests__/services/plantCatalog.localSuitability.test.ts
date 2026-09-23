@@ -127,15 +127,20 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
     expect(tamilNames.filter((name) => name === 'நாவல்')).toHaveLength(1);
   });
 
-  it('lists named coconut cultivars and Tamil Nadu hybrids', () => {
+  it('lists named coconut cultivars and Tamil Nadu hybrids on the one Coconut row', () => {
     const varieties = DEFAULT_PLANT_CATALOG.categories.coconut_tree.varieties;
 
-    expect(varieties['Dwarf Coconut']).toEqual(
-      expect.arrayContaining(['Chowghat Orange Dwarf', 'Chowghat Green Dwarf'])
-    );
-    expect(varieties['Tall Coconut']).toContain('West Coast Tall');
-    expect(varieties['Hybrid Coconut']).toEqual(
-      expect.arrayContaining(['VHC 1', 'VHC 2', 'VHC 3'])
+    expect(DEFAULT_PLANT_CATALOG.categories.coconut_tree.plants).toEqual(['Coconut']);
+    expect(varieties.Coconut).toEqual(
+      expect.arrayContaining([
+        'West Coast Tall',
+        'Chowghat Orange Dwarf',
+        'Chowghat Green Dwarf',
+        'VHC 1',
+        'VHC 2',
+        'VHC 3',
+        'King Coconut',
+      ])
     );
   });
 

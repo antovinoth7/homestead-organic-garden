@@ -80,14 +80,6 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
     ],
     shapePruning: { tip: 'Keep 3–4 main branches from fork', months: 'After 45 days' },
   },
-  [buildProfileKey('vegetable', 'Long Brinjal')]: {
-    tips: [
-      'Remove suckers below main fork',
-      'Cut off wilting lower leaves',
-      'Thin fruits — keep 3–4 per branch',
-    ],
-    shapePruning: { tip: 'Keep 3–4 main branches from fork', months: 'After 45 days' },
-  },
   [buildProfileKey('vegetable', 'Chilli')]: {
     tips: [
       'Pinch growing tip at 6 inches for bushiness',
@@ -309,25 +301,11 @@ const PRUNING_INFO_BY_VARIETY: Record<string, PruningInfo> = {
   },
 
   // Coconut
-  [buildProfileKey('coconut_tree', 'Dwarf Coconut')]: {
-    tips: [
-      'Remove dried fronds carefully',
-      'Keep 25–30 green fronds on crown',
-      'Clean inflorescence area during harvest',
-    ],
-  },
-  [buildProfileKey('coconut_tree', 'Tall Coconut')]: {
+  [buildProfileKey('coconut_tree', 'Coconut')]: {
     tips: [
       'Remove only fully dried fronds',
       'Never cut green or yellowing fronds',
       'Inspect for rhinoceros beetle during climbing',
-    ],
-  },
-  [buildProfileKey('coconut_tree', 'Hybrid Coconut')]: {
-    tips: [
-      'Remove dried fronds every 3–4 months',
-      'Keep crown clean for better light',
-      'Watch for bud rot during monsoon',
     ],
   },
 

@@ -41,6 +41,8 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   eggplant: 'brinjal',
   aubergine: 'brinjal',
   kathirikai: 'brinjal',
+  // Long Brinjal was its own row until migration 017 made it a variety.
+  'long brinjal': 'brinjal',
   kathirikkai: 'brinjal',
 
   // Capsicum — the catalog entry was called "Pepper" until it was renamed, which
@@ -121,6 +123,10 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   'green plantain': 'banana',
   'cooking banana': 'banana',
   vazhai: 'banana',
+  // Red Banana was its own row until migration 017 made it a variety.
+  'red banana': 'banana',
+  sevvazhai: 'banana',
+  sevvaazhai: 'banana',
   vazhakkai: 'banana',
   vaazhakkai: 'banana',
   nendran: 'banana',
@@ -141,11 +147,20 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   poosanikai: 'ash gourd',
 
   // Beans & pulses
+  // French Beans was its own row until migration 017 made it a variety.
+  'french beans': 'beans',
+  'french bean': 'beans',
+  'bush beans': 'beans',
   kothavarai: 'cluster beans',
   kothavarangai: 'cluster beans',
   guar: 'cluster beans',
   karamani: 'cowpea',
   thattapayaru: 'cowpea',
+  // Yardlong Beans was its own row until migration 017 made it a variety.
+  'yardlong beans': 'cowpea',
+  'yard long beans': 'cowpea',
+  'long beans': 'cowpea',
+  'asparagus bean': 'cowpea',
   ulundu: 'black gram',
   thuvarai: 'pigeon pea',
   'toor dal': 'pigeon pea',
@@ -281,6 +296,18 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   'rough bryony': 'madras pea pumpkin',
   'mukia maderaspatana': 'madras pea pumpkin',
 
+  // Coconut — one row since migration 017; the four palm-type rows it replaced
+  // keep resolving here.
+  'dwarf coconut': 'coconut',
+  'tall coconut': 'coconut',
+  'hybrid coconut': 'coconut',
+  'king coconut': 'coconut',
+  thennai: 'coconut',
+  thennaimaram: 'coconut',
+  thengai: 'coconut',
+  'coconut tree': 'coconut',
+  'coconut palm': 'coconut',
+
   // Homestead trees
   puli: 'tamarind',
   puliyam: 'tamarind',
@@ -344,6 +371,37 @@ export const PLANT_NAME_ALIASES: Record<string, string> = {
   makkacholam: 'maize',
   nilakadalai: 'groundnut',
   verkadalai: 'groundnut',
+
+  // Everyday romanised Tamil a grower types into search. Without these the
+  // search came up empty and offered to create a duplicate plant.
+  manjal: 'turmeric',
+  inji: 'ginger',
+  vembu: 'neem',
+  veppamaram: 'neem',
+  nellikai: 'amla',
+  nellikkai: 'amla',
+  koyya: 'guava',
+  koyyapazham: 'guava',
+  pappali: 'papaya',
+  pappaali: 'papaya',
+  maanga: 'mango',
+  mangai: 'mango',
+  maampazham: 'mango',
+  mambazham: 'mango',
+  palapazham: 'jackfruit',
+  palaa: 'jackfruit',
+  thulasi: 'tulsi',
+  tulasi: 'tulsi',
+  samanthi: 'chrysanthemum',
+  sevanthi: 'chrysanthemum',
+  elumichai: 'lemon',
+  elumichampazham: 'lemon',
+  lime: 'lemon',
+  paavakkai: 'bitter gourd',
+  parangikkai: 'pumpkin',
+  parangikai: 'pumpkin',
+  'manjal poosani': 'pumpkin',
+  'vellai poosani': 'ash gourd',
 };
 
 /**

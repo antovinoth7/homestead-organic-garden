@@ -22,7 +22,7 @@ export const SPINACH_ENTRIES: PlantCatalogEntry[] = [
     tags: ['keerai'],
     plantType: 'spinach',
     cropFamily: 'convolvulaceae',
-    tamilName: 'நீர்க் கீரை',
+    tamilName: 'வள்ளைக்கீரை',
     shortDescription:
       'Fast-growing tropical leafy vegetable for consistently moist beds; prevent escape into waterways',
     varieties: ['Broad Leaf', 'Narrow Leaf', 'Local'],

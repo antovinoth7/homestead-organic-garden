@@ -79,27 +79,33 @@ function foldInto(survivor: PlantProfile, retired: PlantProfile): PlantProfile {
 }
 
 /**
- * Moves each retired entry onto its survivor and tombstones it.
+ * Moves each retired entry onto its survivor and tombstones it — the shared
+ * engine behind migrations 016 and 017.
  *
  * `bundled` is the survivor's bundled record, passed in to keep this pure. It
  * seeds the survivor's stored entry when the user never edited it — a stored
  * entry replaces the bundled one wholesale, so it has to start complete.
+ * `varietyLabels` names the variety a retired row becomes on its survivor
+ * (Long Brinjal on Brinjal), added to a stored survivor's list too.
  *
- * Leaves an account alone when the user deleted the survivor: folding their
+ * Leaves an entry alone when the user deleted its survivor: folding their
  * plant into a row they chose to hide would make it vanish.
  *
  * Returns null when nothing changes, so a second run writes nothing.
  */
-export function planCashewNutMerge(
+export function planFoldMerge(
   profiles: PlantProfiles,
+  renames: Readonly<Record<string, string>>,
+  survivorTypes: Readonly<Record<string, PlantType>>,
   bundled: (type: PlantType, name: string) => PlantProfile | undefined,
-  now?: number
+  now?: number,
+  varietyLabels: Readonly<Record<string, string>> = {}
 ): PlantProfiles | null {
   let next = profiles;
   let changed = false;
 
-  for (const [from, to] of Object.entries(MERGED_PLANT_NAMES_V16)) {
-    const target = MERGED_SURVIVOR_TYPE_V16[to];
+  for (const [from, to] of Object.entries(renames)) {
+    const target = survivorTypes[to];
     if (!target) continue;
 
     for (const type of ALL_TYPES) {
@@ -111,14 +117,26 @@ export function planCashewNutMerge(
       const survivor = stored ?? bundled(target, to);
       if (!survivor) continue;
 
-      next = {
-        ...next,
-        [target]: { ...next[target], [to]: foldInto(survivor, retired) },
-      };
+      let folded = foldInto(survivor, retired);
+      const label = varietyLabels[from];
+      if (label) {
+        folded = { ...folded, varieties: unionNames(folded.varieties, [label]) ?? [label] };
+      }
+
+      next = { ...next, [target]: { ...next[target], [to]: folded } };
       next = applyProfileDeletion(next, type, from, now);
       changed = true;
     }
   }
 
   return changed ? next : null;
+}
+
+/** Migration 016's plan: `Cashew Nut` into `Cashew`. */
+export function planCashewNutMerge(
+  profiles: PlantProfiles,
+  bundled: (type: PlantType, name: string) => PlantProfile | undefined,
+  now?: number
+): PlantProfiles | null {
+  return planFoldMerge(profiles, MERGED_PLANT_NAMES_V16, MERGED_SURVIVOR_TYPE_V16, bundled, now);
 }

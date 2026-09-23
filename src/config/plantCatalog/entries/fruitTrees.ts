@@ -11,7 +11,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
     cropFamily: 'other',
     tamilName: 'வாழை',
     shortDescription: 'Fast-growing tropical fruit producing large bunches rich in potassium',
-    varieties: ['Nendran', 'Poovan', 'Rasthali', 'Robusta', 'Monthan'],
+    varieties: ['Nendran', 'Poovan', 'Rasthali', 'Robusta', 'Monthan', 'Red Banana'],
   },
   {
     name: 'Mango',
@@ -203,19 +203,6 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
   },
   // Kanyakumari-specific fruit trees
   {
-    name: 'Red Banana',
-    group: 'fruits',
-    subGroup: 'quick_fruits',
-    habit: 'clump',
-    tags: ['coconut_intercrop'],
-    plantType: 'fruit_tree',
-    cropFamily: 'other',
-    tamilName: 'செவ்வாழை',
-    shortDescription:
-      'Striking red-skinned banana variety with creamy, slightly raspberry-flavoured flesh',
-    varieties: ['Sevvaazhai', 'Karpura Chakkarakeli', 'Local Red'],
-  },
-  {
     name: 'Breadfruit',
     group: 'fruits',
     subGroup: 'orchard_trees',
@@ -223,7 +210,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
     tags: [],
     plantType: 'fruit_tree',
     cropFamily: 'other',
-    tamilName: 'பிரெட்ஃப்ரூட்',
+    tamilName: 'ஈரப்பலா',
     shortDescription: 'Large tropical tree producing starchy fruits used as a carbohydrate staple',
     varieties: ['Seeni Chakka', 'Yellow Skin', 'Local'],
   },
@@ -247,7 +234,7 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
     tags: ['needs_trellis'],
     plantType: 'fruit_tree',
     cropFamily: 'other',
-    tamilName: 'பேஷன் ஃப்ரூட்',
+    tamilName: 'கொடித்தோடை',
     shortDescription: 'Vigorous tropical vine producing aromatic, tangy-sweet fruits',
     varieties: ['Purple Passion', 'Yellow Passion', 'Local'],
   },

@@ -23,6 +23,24 @@ export const STALE_TAMIL_NAMES: Record<
 };
 
 /**
+ * Migration 017's corrections. A separate map because accounts past v11 never
+ * run 011 again: the wrong names were English words written in Tamil script or
+ * a word for the product rather than the plant.
+ */
+export const STALE_TAMIL_NAMES_V17: typeof STALE_TAMIL_NAMES = {
+  // The split dal (toor paruppu), not the plant.
+  'Pigeon Pea': { type: 'vegetable', stale: 'தொவரம்பருப்பு', corrected: 'துவரை' },
+  // Just "tuber"; Dioscorea alata is the greater yam.
+  Yam: { type: 'vegetable', stale: 'கிழங்கு', corrected: 'பெருவள்ளிக்கிழங்கு' },
+  'Water Spinach': { type: 'spinach', stale: 'நீர்க் கீரை', corrected: 'வள்ளைக்கீரை' },
+  Breadfruit: { type: 'fruit_tree', stale: 'பிரெட்ஃப்ரூட்', corrected: 'ஈரப்பலா' },
+  'Passion Fruit': { type: 'fruit_tree', stale: 'பேஷன் ஃப்ரூட்', corrected: 'கொடித்தோடை' },
+  Rosewood: { type: 'timber_tree', stale: 'ரோஸ்வுட்', corrected: 'ஈட்டி' },
+  Bougainvillea: { type: 'shrub', stale: 'பூகன்வில்லியா', corrected: 'காகிதப்பூ' },
+  Ashwagandha: { type: 'herb', stale: 'அஷ்வகந்தா', corrected: 'அமுக்கரா' },
+};
+
+/**
  * Repairs stored Tamil names that still hold the stale bundled string.
  *
  * Returns `null` when there is nothing to do, so the caller can skip the write
@@ -30,11 +48,14 @@ export const STALE_TAMIL_NAMES: Record<
  * is left exactly as they set it — this repairs the app's own mistake, not
  * theirs. Idempotent: a second run finds the corrected value and stops.
  */
-export function planTamilNameRepair(profiles: PlantProfiles): PlantProfiles | null {
+export function planTamilNameRepair(
+  profiles: PlantProfiles,
+  corrections: typeof STALE_TAMIL_NAMES = STALE_TAMIL_NAMES
+): PlantProfiles | null {
   let changed = false;
   const next: PlantProfiles = { ...profiles };
 
-  for (const [name, { type, stale, corrected }] of Object.entries(STALE_TAMIL_NAMES)) {
+  for (const [name, { type, stale, corrected }] of Object.entries(corrections)) {
     const entry = profiles[type]?.[name];
     if (!entry || entry.tamilName !== stale) continue;
 

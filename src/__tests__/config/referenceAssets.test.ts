@@ -67,13 +67,13 @@ describe('image resolvers', () => {
 });
 
 describe('generated map integrity (gen file must match config ids)', () => {
-  it('tracks the documented 253 bundled reference assets', () => {
+  it('tracks the documented 222 bundled reference assets', () => {
     expect(
       Object.keys(PEST_IMAGES).length +
         Object.keys(DISEASE_IMAGES).length +
         Object.keys(PLANT_IMAGES).length +
         Object.keys(ORGANIC_INPUT_IMAGES).length
-    ).toBe(253);
+    ).toBe(222);
   });
 
   it('every PEST_IMAGES key is a known pest id or imageAsset', () => {
@@ -137,9 +137,10 @@ describe('PLANT_IMAGE_ALIASES', () => {
     expect(getPlantImage('Maize')).toBe(getPlantImage('Corn'));
   });
 
-  it('keeps Long Brinjal on its own image slot instead of sharing the Brinjal photo', () => {
-    expect(resolvePlantImageKey('Long Brinjal')).toBe('long_brinjal');
-    expect(resolvePlantImageKey('Brinjal')).toBe('brinjal');
+  it('gives a merged-away row the surviving row’s photo', () => {
+    expect(resolvePlantImageKey('Long Brinjal')).toBe('brinjal');
+    expect(resolvePlantImageKey('Dwarf Coconut')).toBe('coconut');
+    expect(resolvePlantImageKey('Red Banana')).toBe('banana');
   });
 
   // The emoji map this list was previously built from had drifted 40 names

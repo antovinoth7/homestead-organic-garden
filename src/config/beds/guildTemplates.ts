@@ -260,7 +260,7 @@ export const GUILD_TEMPLATES: Record<BedType, GuildTemplate> = {
         succession_week: 1,
       },
       {
-        name: 'French Beans',
+        name: 'Beans',
         layer: 'understory',
         spacing_cm: 25,
         row_gap_cm: 45,
@@ -362,7 +362,8 @@ export const GUILD_TEMPLATES: Record<BedType, GuildTemplate> = {
         succession_week: 1,
       },
       {
-        name: 'Yardlong Beans',
+        // Yardlong (pole) cowpea — a Cowpea variety since the catalog merge.
+        name: 'Cowpea',
         layer: 'climber',
         spacing_cm: 30,
         row_gap_cm: 45,

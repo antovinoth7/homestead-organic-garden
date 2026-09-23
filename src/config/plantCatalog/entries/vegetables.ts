@@ -12,20 +12,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
     tamilName: 'கத்தரிக்காய்',
     shortDescription:
       'Versatile tropical nightshade yielding glossy purple fruit for curries and grills',
-    varieties: ['Long Purple', 'Round Green', 'Striped'],
-  },
-  {
-    name: 'Long Brinjal',
-    group: 'vegetables',
-    subGroup: 'fruit_vegetables',
-    habit: 'annual_bed',
-    tags: ['container_ok'],
-    plantType: 'vegetable',
-    cropFamily: 'solanaceae',
-    tamilName: 'நீள கத்தரிக்காய்',
-    shortDescription:
-      'Elongated purple eggplant variety favoured in South Indian sambar and stir-fries',
-    varieties: ['Long Green', 'Violet Long', 'Local'],
+    varieties: ['Long Purple', 'Round Green', 'Striped', 'Long Brinjal'],
   },
   {
     name: 'Tomato',
@@ -87,7 +74,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
     cropFamily: 'legume',
     tamilName: 'காராமணி',
     shortDescription: 'Heat-tolerant nitrogen-fixing legume yielding protein-rich pods and beans',
-    varieties: ['Bush', 'Pole', 'Red Cowpea'],
+    varieties: ['Bush', 'Pole', 'Red Cowpea', 'Yardlong Beans'],
   },
   {
     name: 'Beans',
@@ -99,7 +86,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
     cropFamily: 'legume',
     tamilName: 'பீன்ஸ்',
     shortDescription: 'Versatile climbing legume producing tender pods for stir-fries and curries',
-    varieties: ['Bush Beans', 'Pole Beans', 'Double Beans'],
+    varieties: ['Bush Beans', 'Pole Beans', 'Double Beans', 'French Beans'],
   },
   {
     name: 'Bitter Gourd',
@@ -342,18 +329,6 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
     varieties: ['CO 4', 'CO 5', 'Arka Anamika'],
   },
   // Bed-type plants — fruiting & climbing
-  {
-    name: 'Yardlong Beans',
-    group: 'vegetables',
-    subGroup: 'beans_pods',
-    habit: 'vine',
-    tags: ['pulse', 'needs_trellis'],
-    plantType: 'vegetable',
-    cropFamily: 'legume',
-    tamilName: 'தட்டப்பயறு',
-    shortDescription: 'Vigorous climbing legume producing metre-long tender pods; fixes nitrogen',
-    varieties: ['Long Green', 'Long Purple', 'Local'],
-  },
   // Bed-type plants — root & legume
   {
     name: 'Beetroot',
@@ -366,19 +341,6 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
     tamilName: 'பீட்ரூட்',
     shortDescription: 'Jewel-red root vegetable with earthy sweetness, rich in folate and iron',
     varieties: ['Detroit Dark Red', 'Crimson Globe', 'Local Red'],
-  },
-  {
-    name: 'French Beans',
-    group: 'vegetables',
-    subGroup: 'beans_pods',
-    habit: 'annual_bed',
-    tags: ['pulse'],
-    plantType: 'vegetable',
-    cropFamily: 'legume',
-    tamilName: 'பிரெஞ்சு பீன்ஸ்',
-    shortDescription:
-      'Bushy or climbing legume producing tender flat pods for stir-fries and curries',
-    varieties: ['Contender', 'Bush Blue Lake', 'Local Dwarf'],
   },
   {
     name: 'Cluster Beans',
@@ -426,7 +388,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
     tags: ['pulse', 'companion'],
     plantType: 'vegetable',
     cropFamily: 'legume',
-    tamilName: 'தொவரம்பருப்பு',
+    tamilName: 'துவரை',
     shortDescription: 'Perennial legume producing protein-rich toor dal; a staple of Tamil cuisine',
     varieties: ['CO 6', 'Vamban 1', 'Local'],
   },
@@ -438,7 +400,7 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
     tags: ['tuber'],
     plantType: 'vegetable',
     cropFamily: 'other',
-    tamilName: 'கிழங்கு',
+    tamilName: 'பெருவள்ளிக்கிழங்கு',
     shortDescription:
       'Starchy tropical vine tuber with thick bark; distinct from elephant yam in texture',
   },

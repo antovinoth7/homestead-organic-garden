@@ -43,7 +43,7 @@ export const TIMBER_TREE_ENTRIES: PlantCatalogEntry[] = [
     tags: ['timber'],
     plantType: 'timber_tree',
     cropFamily: 'other',
-    tamilName: 'ரோஸ்வுட்',
+    tamilName: 'ஈட்டி',
     shortDescription: 'Prized hardwood with dark fragrant heartwood, a nitrogen-fixing legume',
   },
   {

@@ -138,7 +138,7 @@ export const FLOWER_OVERRIDES: Record<string, PlantCareProfile> = {
     heightCm: { min: 30, max: 90 },
     spacingCm: 30,
     plantingDepthCm: 2,
-    growingSeason: 'Cool Dry (Jan-Feb)',
+    growingSeason: 'Winter (Jan–Feb)',
     germinationDays: { min: 10, max: 18 },
     germinationTempC: { min: 15, max: 25 },
     soilPhRange: { min: 6.0, max: 7.0 },

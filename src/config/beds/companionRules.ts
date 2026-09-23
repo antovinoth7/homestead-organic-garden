@@ -13,8 +13,6 @@ const ANTAGONIST_PAIRS: { a: string; b: string; reason: string }[] = [
   { a: 'Fennel', b: 'Tomato', reason: 'Fennel inhibits tomato growth and fruit set' },
   { a: 'Fennel', b: 'Coriander', reason: 'Cross-pollination causes both to bolt prematurely' },
   { a: 'Onion', b: 'Cowpea', reason: 'Alliums inhibit legume nitrogen fixation' },
-  { a: 'Onion', b: 'French Beans', reason: 'Alliums suppress bean growth' },
-  { a: 'Garlic', b: 'French Beans', reason: 'Garlic stunts bean development' },
   { a: 'Garlic', b: 'Cowpea', reason: 'Alliums inhibit legume nitrogen fixation' },
   {
     a: 'Potato',

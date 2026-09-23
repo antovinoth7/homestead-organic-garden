@@ -29,10 +29,10 @@ describe('deriveInstanceLifecycle', () => {
   });
 
   describe('on the real catalog', () => {
-    it('makes the five non-tree fruits perennial, not permanent', () => {
+    it('makes the four non-tree fruits perennial, not permanent', () => {
       // Each is replanted or ratooned, and only `perennial` plants get the
       // recurring harvest-leaves task.
-      for (const variety of ['Banana', 'Red Banana', 'Papaya', 'Pineapple', 'Passion Fruit']) {
+      for (const variety of ['Banana', 'Papaya', 'Pineapple', 'Passion Fruit']) {
         expect(forPlant(variety, 'fruit_tree')).toBe('perennial');
       }
     });

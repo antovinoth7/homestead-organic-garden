@@ -3,9 +3,9 @@ import { recomputePlantFields } from '@/migrations/recomputedPlantFieldsLogic';
 describe('recomputePlantFields', () => {
   describe('lifecycle_type — the fruit_tree/permanent bug', () => {
     it('moves the replanted and ratooned fruits off `permanent`', () => {
-      // These are the five `fruit_tree` entries that are not trees. Being
+      // These are the four `fruit_tree` entries that are not trees. Being
       // `permanent` excluded them from the recurring harvest-leaves task.
-      for (const variety of ['Banana', 'Red Banana', 'Papaya', 'Pineapple', 'Passion Fruit']) {
+      for (const variety of ['Banana', 'Papaya', 'Pineapple', 'Passion Fruit']) {
         expect(
           recomputePlantFields({
             plant_variety: variety,

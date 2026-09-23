@@ -32,9 +32,10 @@ describe('growing season vocabulary', () => {
 
   it('passes current and free-text values through unchanged', () => {
     expect(normalizeSeasonValue('SW Monsoon (Jun–Sep)')).toBe('SW Monsoon (Jun–Sep)');
-    expect(normalizeSeasonValue('Southwest Monsoon (Jun-Sep)')).toBe(
-      'Southwest Monsoon (Jun-Sep)'
+    expect(normalizeSeasonValue('June–July and October–November')).toBe(
+      'June–July and October–November'
     );
+    expect(normalizeSeasonValue('Southwest Monsoon (Jun-Sep)')).toBe('SW Monsoon (Jun–Sep)');
   });
 
   describe('growingSeasonLabel', () => {
@@ -43,7 +44,8 @@ describe('growing season vocabulary', () => {
     });
 
     it('shows free text as written instead of blanking it', () => {
-      expect(growingSeasonLabel('Cool Dry (Oct–Feb)')).toBe('Cool Dry (Oct–Feb)');
+      expect(growingSeasonLabel('Mar–Jul')).toBe('Mar–Jul');
+      expect(growingSeasonLabel('Cool Dry (Oct–Feb)')).toBe('NE Monsoon + Winter (Oct–Feb)');
     });
 
     it('is empty for a missing season', () => {

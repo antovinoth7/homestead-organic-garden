@@ -33,8 +33,8 @@ describe('plantCareDefaults A2 enrichment', () => {
       expect(profile!.scientificName).toBe('Mangifera indica');
     });
 
-    it('Dwarf Coconut has A2 fields', () => {
-      const profile = getPlantCareProfile('Dwarf Coconut', 'coconut_tree');
+    it('Coconut has A2 fields', () => {
+      const profile = getPlantCareProfile('Coconut', 'coconut_tree');
       expect(profile).toBeTruthy();
       expect(profile!.yearsToFirstHarvest).toBeGreaterThan(0);
       expect(profile!.tamilName).toBeTruthy();

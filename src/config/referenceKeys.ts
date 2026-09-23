@@ -22,103 +22,27 @@ export function slugifyReferenceKey(name: string): string {
  * slug an image file is stored under.
  */
 export const PLANT_IMAGE_ALIASES: Record<string, string> = {
-  lime: 'lemon',
+  // Catalog rows whose photo is filed under another slug. Spelling variants
+  // (Lime, Amaranth, Long Brinjal…) need no entry here: the name aliases fold
+  // them onto their catalog row before this lookup runs.
   maize: 'corn',
-  amaranth: 'amaranthus',
-  amaranth_greens: 'amaranthus',
   palak: 'spinach',
-  // 'Cashew Nut' was a reference-only name; the catalog row is 'Cashew'.
   cashew: 'cashew_nut',
 };
 
 /**
- * Reference-image coverage for names that are not rows in the visible plant
- * catalog: tropical fruit and timber species kept for their photos, and the
- * alias spellings whose slug is the canonical asset key (Palak's image lives
- * under `spinach`, Maize's under `corn`). These resolve through the same
- * slug-based asset map without adding anything to the catalog.
+ * The canonical image slot for a catalog row whose photo is filed under
+ * another name: Maize's lives under `corn`, Cashew's under `cashew_nut`,
+ * Palak's under `spinach`. Listing the slot's own name keeps it known to the
+ * manifest (so its prompt is generated) and to the asset-integrity test.
+ *
+ * Every other plant image is a catalog row's own. Images for plants the
+ * catalog no longer offers — the Mediterranean herbs, glasshouse flowers and
+ * rows merged into another (Long Brinjal, French Beans, Red Banana, Yardlong
+ * Beans, the four coconut types) — were removed rather than bundled unused;
+ * their names resolve to the surviving row's photo through the aliases.
  */
-export const EXTRA_REFERENCE_PLANT_NAMES = [
-  // Alias spellings and reference-only names that carry a bundled image of
-  // their own. They were catalog rows in the emoji map `getKnownPlantNames()`
-  // used to read; they stay known here so the WebPs are not orphaned and so
-  // both sides of every PLANT_IMAGE_ALIASES pair resolve to a known name.
-  'Amaranth',
-  'Apple',
-  'Broccoli',
-  'Coconut',
-  'Comfrey',
-  'Corn',
-  'Grape',
-  'Lime',
-  'Spinach',
-  'Tulip',
-  // Removed from the catalog in the Tamil Nadu relevance pass (Sep 2026) but
-  // their photos stay bundled: Coleus, and the Mediterranean herbs and
-  // glasshouse flowers that are not Tamil Nadu homestead plants.
-  // `Ash Plantain` joined them in migration 010, merged into `Banana`.
-  'Ash Plantain',
-  'Coleus',
-  'Parsley',
-  'Rosemary',
-  'Thyme',
-  'Oregano',
-  'Sage',
-  'Lettuce',
-  'Squash',
-  'Strawberry',
-  'Cauliflower',
-  'Taro',
-  'Sweet Potato',
-  'Turnip',
-  'Knol Khol',
-  'Green Peas',
-  'Lablab Bean',
-  'Winged Bean',
-  'Sword Bean',
-  'Muskmelon',
-  'Palak',
-  'Malabar Spinach',
-  'Water Spinach',
-  'Amaranth Greens',
-  'Ponnanganni Keerai',
-  'Manathakkali Keerai',
-  'Mustard Greens',
-  'Vallarai Keerai',
-  'Chrysanthemum',
-  'Crossandra',
-  'Ixora',
-  'Dahlia',
-  'Orchid',
-  'Lily',
-  'Jackfruit',
-  'Chikoo',
-  'Water Apple',
-  'Custard Apple',
-  'Amla',
-  'Soursop',
-  'Mangosteen',
-  'Rambutan',
-  'Red Banana',
-  'Breadfruit',
-  'Passion Fruit',
-  'Star Fruit',
-  'Fig',
-  'Lychee',
-  'Batoko Plum',
-  'Citron',
-  'Cashew Nut',
-  'Neem',
-  'Teak',
-  'Mahogany',
-  'Rosewood',
-  'Sandalwood',
-  'Wild Jack',
-  'Dwarf Coconut',
-  'Tall Coconut',
-  'Hybrid Coconut',
-  'King Coconut',
-] as const;
+export const EXTRA_REFERENCE_PLANT_NAMES = ['Corn', 'Cashew Nut', 'Spinach'] as const;
 
 /** Combines catalog-provided names with curated reference-image-only names. */
 export function getKnownReferencePlantNames(catalogNames: readonly string[]): string[] {

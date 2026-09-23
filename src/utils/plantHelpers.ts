@@ -22,11 +22,11 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Capsicum: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold'],
   Chilli: ['Basil', 'Onion', 'Spinach', 'Tomato', 'Coriander', 'Marigold', 'Turmeric'],
   Brinjal: ['Beans', 'Green Peas', 'Spinach', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
-  'Long Brinjal': ['Beans', 'Green Peas', 'Spinach', 'Marigold', 'Cowpea', 'Drumstick', 'Coriander'],
   Tapioca: ['Cowpea', 'Beans', 'Marigold'],
   Drumstick: ['Brinjal', 'Chilli', 'Coriander', 'Turmeric', 'Marigold'],
   Amaranthus: ['Onion', 'Radish', 'Beans'],
-  Cowpea: ['Cucumber', 'Corn', 'Brinjal', 'Radish'],
+  // Includes what Yardlong Beans carried before it became a Cowpea variety.
+  Cowpea: ['Cucumber', 'Corn', 'Brinjal', 'Radish', 'Carrot', 'Basil', 'Marigold'],
   'Bitter Gourd': ['Beans', 'Radish', 'Marigold'],
   'Snake Gourd': ['Beans', 'Coriander', 'Marigold'],
   'Ridge Gourd': ['Beans', 'Radish', 'Marigold'],
@@ -39,7 +39,8 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Onion: ['Carrot', 'Tomato', 'Cabbage', 'Capsicum'],
   Garlic: ['Tomato', 'Roses', 'Cabbage', 'Fruit trees'],
   Shallot: ['Carrot', 'Tomato', 'Cabbage', 'Capsicum'],
-  Beans: ['Corn', 'Cucumber', 'Cabbage', 'Carrot', 'Radish'],
+  // Includes what French Beans carried before it became a Beans variety.
+  Beans: ['Corn', 'Cucumber', 'Cabbage', 'Carrot', 'Radish', 'Beetroot'],
   'Green Peas': ['Carrot', 'Radish', 'Cucumber', 'Corn', 'Beans'],
 
   // Herbs
@@ -69,14 +70,12 @@ const COMPANION_PLANTS: Record<string, string[]> = {
   Fenugreek: ['Spinach', 'Radish', 'Onion', 'Coriander'],
   'Ladies Finger': ['Basil', 'Capsicum', 'Brinjal', 'Cucumber', 'Marigold', 'Cowpea'],
   'Pasalai Keerai': ['Radish', 'Turmeric', 'Basil'],
-  'French Beans': ['Carrot', 'Beetroot', 'Cucumber', 'Radish'],
   'Black Gram': ['Carrot', 'Radish', 'Coriander'],
   Groundnut: ['Carrot', 'Radish', 'Marigold'],
   'Pigeon Pea': ['Carrot', 'Radish', 'Maize'],
   'Cluster Beans': ['Carrot', 'Radish', 'Maize'],
   Maize: ['Beans', 'Pumpkin', 'Cowpea'],
-  'Yardlong Beans': ['Carrot', 'Basil', 'Marigold'],
-  Beetroot: ['French Beans', 'Onion', 'Coriander'],
+  Beetroot: ['Beans', 'Onion', 'Coriander'],
   Yam: ['Banana', 'Taro', 'Cowpea'],
   'Lotus Stem': ['Taro'],
   Brahmi: ['Tulsi', 'Drumstick', 'Lemongrass'],
@@ -143,12 +142,10 @@ const INCOMPATIBLE_PLANTS: Record<string, string[]> = {
   Sunflower: ['Potato'],
   Maize: ['Tomato'],
   Fennel: ['Brinjal', 'Tomato', 'Coriander'],
-  'French Beans': ['Onion', 'Garlic'],
   'Black Gram': ['Onion', 'Garlic'],
   Groundnut: ['Onion', 'Garlic'],
   'Pigeon Pea': ['Fennel'],
   Brinjal: ['Fennel', 'Potato'],
-  'Long Brinjal': ['Fennel', 'Potato'],
   Chilli: ['Fennel'],
   Capsicum: ['Fennel'],
   'Ladies Finger': ['Potato', 'Sweet Potato'],
@@ -235,9 +232,9 @@ const buildNormalizedCompanionMap = (
 const COMPANION_PLANTS_NORMALIZED = buildNormalizedCompanionMap(COMPANION_PLANTS);
 const INCOMPATIBLE_PLANTS_NORMALIZED = buildNormalizedCompanionMap(INCOMPATIBLE_PLANTS);
 /**
- * Companion data is written once for 'Coconut', but the catalog ships the four
- * cultivars instead. They are distinct entries with their own images and Tamil
- * names, so they are not name aliases — only their companion lookup folds in.
+ * The catalog has one Coconut row now; these keep garden plants still saved
+ * under the four retired palm-type names (before migration 017 reaches them)
+ * resolving to its companion data.
  */
 const COMPANION_NAME_FALLBACKS: Record<string, string> = {
   'dwarf coconut': 'coconut',

@@ -194,7 +194,7 @@ export const HERB_ENTRIES: PlantCatalogEntry[] = [
     tags: ['medicinal'],
     plantType: 'herb',
     cropFamily: 'solanaceae',
-    tamilName: 'அஷ்வகந்தா',
+    tamilName: 'அமுக்கரா',
     shortDescription:
       'Drought-tolerant medicinal shrub producing adaptogenic roots; thrives in sandy well-drained soils',
   },

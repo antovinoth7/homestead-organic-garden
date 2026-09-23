@@ -358,6 +358,11 @@ export const LEGACY_SEASON_VALUES: Readonly<Record<string, string>> = {
   'Northeast Monsoon (Oct–Dec)': 'NE Monsoon (Oct–Dec)',
   'Kharif + Rabi': 'SW + NE Monsoon (Jun–Dec)',
   'Rabi + Summer': 'Winter + Summer (Jan–May)',
+  // Older bundled spellings, normalised in the catalog after migration 015.
+  'Southwest Monsoon (Jun–Sep)': 'SW Monsoon (Jun–Sep)',
+  'Southwest Monsoon (Jun-Sep)': 'SW Monsoon (Jun–Sep)',
+  'Cool Dry (Jan-Feb)': 'Winter (Jan–Feb)',
+  'Cool Dry (Oct–Feb)': 'NE Monsoon + Winter (Oct–Feb)',
 };
 
 /** Maps a retired season value onto the current vocabulary; anything else passes through. */

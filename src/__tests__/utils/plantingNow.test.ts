@@ -46,6 +46,24 @@ describe('mapSeasonTextToIds', () => {
     );
   });
 
+  it('reads sowing windows written only in months', () => {
+    expect(new Set(mapSeasonTextToIds('June–July and October–November'))).toEqual(
+      new Set(['sw_monsoon', 'ne_monsoon'])
+    );
+    expect([...mapSeasonTextToIds('January–February')]).toEqual(['cool_dry']);
+    expect([...mapSeasonTextToIds('Jun–Aug')]).toEqual(['sw_monsoon']);
+    // Wraps the year end.
+    expect(new Set(mapSeasonTextToIds('Oct–Feb'))).toEqual(new Set(['ne_monsoon', 'cool_dry']));
+  });
+
+  it('prefers a named season over the months beside it', () => {
+    expect([...mapSeasonTextToIds('Summer (Feb–May)')]).toEqual(['summer']);
+  });
+
+  it('treats "Year-round" like "Year Round"', () => {
+    expect(mapSeasonTextToIds('Year-round in a managed home garden').size).toBe(4);
+  });
+
   it('returns empty for unknown/blank text', () => {
     expect(mapSeasonTextToIds('').size).toBe(0);
     expect(mapSeasonTextToIds('whenever').size).toBe(0);

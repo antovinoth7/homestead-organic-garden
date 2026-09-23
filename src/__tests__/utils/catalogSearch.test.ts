@@ -183,7 +183,7 @@ describe('searchCatalog', () => {
     });
 
     it('matches words given out of order', () => {
-      expect(run(index, 'brinjal long').map((result) => result.name)).toEqual(['Long Brinjal']);
+      expect(run(index, 'brinjal long').map((result) => result.name)).toContain('Long Brinjal');
     });
 
     it('still returns nothing when a word is absent', () => {
