@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { BottomSheetModal } from '@/components/BottomSheetModal';
+import { SheetHandle } from '@/components/SheetHandle';
 import { createStyles } from '@/styles/varietyDetailSheetStyles';
 import FloatingLabelInput from '@/components/FloatingLabelInput';
 import VoiceDictation from '@/components/VoiceDictation';
@@ -25,11 +25,13 @@ function SeasonPill({ label, value, active, onToggle }: SeasonPillProps): React.
 
   return (
     <TouchableOpacity
-      style={[styles.seasonPill, active && styles.seasonPillActive]}
+      style={[styles.seasonChip, active && styles.seasonChipActive]}
       onPress={handlePress}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
     >
-      <Text style={[styles.seasonPillText, active && styles.seasonPillTextActive]}>{label}</Text>
+      <Text style={[styles.seasonChipText, active && styles.seasonChipTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -41,18 +43,22 @@ interface Props {
   onNewVarietyChange: (next: string) => void;
   draft: VarietyDetail;
   onDraftChange: (updater: (prev: VarietyDetail) => VarietyDetail) => void;
-  onClose: () => void;
+  /** Done, and every dismissal — like the other catalog sheets, nothing typed is dropped. */
   onSave: () => void;
 }
 
-/** Add/edit bottom sheet for a single variety. Detail fields are all optional. */
+/**
+ * Add/edit bottom sheet for a single variety. Detail fields are all optional.
+ *
+ * Commits on Done *and* on dismissal (backdrop, handle, back button), matching
+ * `CatalogTextEditSheet`: an empty name on a new variety simply closes.
+ */
 export function VarietyDetailModal({
   editingVariety,
   newVariety,
   onNewVarietyChange,
   draft,
   onDraftChange,
-  onClose,
   onSave,
 }: Props): React.JSX.Element {
   const theme = useTheme();
@@ -61,7 +67,7 @@ export function VarietyDetailModal({
   const isAdding = editingVariety === '';
 
   const sheetStyle = useMemo(
-    () => [styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) }],
+    () => [styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }],
     [styles, insets.bottom]
   );
 
@@ -114,32 +120,12 @@ export function VarietyDetailModal({
     // useKeyboardHeight) and re-lays out on every keyboard frame. Opening this
     // editor with an auto-focused field on that path was taking the whole app
     // down with a native crash on Android (Sentry ORGANIC-GARDENING-APP-5K).
-    <BottomSheetModal visible onClose={onClose} sheetStyle={sheetStyle} keyboardAvoiding>
-      {/* Pinned outside the ScrollView so close and Done stay in frame
-          however tall the form gets or how far it is scrolled. */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-        >
-          <Ionicons name="close" size={18} color={theme.textInverse} />
-        </TouchableOpacity>
-        <View style={styles.headerText}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {isAdding ? 'Add Variety' : editingVariety}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={styles.doneButton}
-          onPress={onSave}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-        >
-          <Text style={styles.doneText}>Done</Text>
-        </TouchableOpacity>
-      </View>
+    <BottomSheetModal visible onClose={onSave} sheetStyle={sheetStyle} keyboardAvoiding>
+      <SheetHandle onClose={onSave}>
+        <Text style={styles.sheetTitle} numberOfLines={1}>
+          {isAdding ? 'Add Variety' : editingVariety}
+        </Text>
+      </SheetHandle>
 
       <ScrollView
         style={styles.scroll}
@@ -165,7 +151,7 @@ export function VarietyDetailModal({
         />
 
         <Text style={styles.fieldLabel}>Season suitability</Text>
-        <View style={styles.seasonPillRow}>
+        <View style={styles.seasonChipRow}>
           {GROWING_SEASON_OPTIONS.map((option) => (
             <SeasonPill
               key={option.value}
@@ -184,8 +170,12 @@ export function VarietyDetailModal({
           autoCorrect={false}
         />
 
-        <Text style={styles.fieldLabel}>Notes</Text>
-        <VoiceDictation value={draft.notes ?? ''} onChangeText={onNotesChange} />
+        {/* Label left, compact mic | language pill right — the catalog's
+            Description block, so dictation looks the same everywhere. */}
+        <View style={styles.notesHeader}>
+          <Text style={styles.notesLabel}>Notes</Text>
+          <VoiceDictation compact value={draft.notes ?? ''} onChangeText={onNotesChange} />
+        </View>
         <TextInput
           style={styles.notesInput}
           value={draft.notes ?? ''}
@@ -193,9 +183,18 @@ export function VarietyDetailModal({
           multiline
           numberOfLines={3}
           placeholder="Farmer observations, soil preference, yield notes..."
-          placeholderTextColor={theme.textTertiary}
+          placeholderTextColor={theme.inputPlaceholder}
         />
       </ScrollView>
+
+      <TouchableOpacity
+        style={styles.doneButton}
+        onPress={onSave}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+      >
+        <Text style={styles.doneButtonText}>Done</Text>
+      </TouchableOpacity>
     </BottomSheetModal>
   );
 }

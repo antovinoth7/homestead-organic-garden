@@ -15,11 +15,11 @@ jest.mock('react-native', () => {
     View: host('View'),
   };
 });
-jest.mock('@expo/vector-icons/Ionicons', () => {
+jest.mock('@/components/SheetHandle', () => {
   const React = jest.requireActual<typeof import('react')>('react');
   return {
-    __esModule: true,
-    default: (props: Record<string, unknown>) => React.createElement('Ionicons', props),
+    SheetHandle: ({ children, ...props }: { children?: React.ReactNode }) =>
+      React.createElement('SheetHandle', props, children),
   };
 });
 jest.mock('@/components/BottomSheetModal', () => {
@@ -36,12 +36,18 @@ jest.mock('@/components/FloatingLabelInput', () => {
     default: (props: Record<string, unknown>) => React.createElement('FloatingLabelInput', props),
   };
 });
-jest.mock('@/components/VoiceDictation', () => ({ __esModule: true, default: () => null }));
+jest.mock('@/components/VoiceDictation', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  return {
+    __esModule: true,
+    default: (props: Record<string, unknown>) => React.createElement('VoiceDictation', props),
+  };
+});
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 jest.mock('@/theme', () => ({
-  useTheme: () => ({ primary: '#26734d', textInverse: '#fff', textTertiary: '#999' }),
+  useTheme: () => ({ primary: '#26734d', textInverse: '#fff', inputPlaceholder: '#999' }),
 }));
 jest.mock('@/styles/varietyDetailSheetStyles', () => ({
   createStyles: () => new Proxy({}, { get: (_target, property) => String(property) }),
@@ -58,6 +64,8 @@ interface RenderedNode {
     label?: string;
     style?: unknown;
     keyboardAvoiding?: boolean;
+    compact?: boolean;
+    onClose?: () => void;
     onPress?: () => void;
     children?: unknown;
   };
@@ -101,7 +109,6 @@ describe('VarietyDetailModal', () => {
           onNewVarietyChange={jest.fn()}
           draft={draft}
           onDraftChange={onDraftChange}
-          onClose={jest.fn()}
           onSave={onSave}
         />
       );
@@ -114,11 +121,11 @@ describe('VarietyDetailModal', () => {
       (node) =>
         node.type === 'TouchableOpacity' &&
         Array.isArray(node.props.style) &&
-        node.props.style[0] === 'seasonPill'
+        node.props.style[0] === 'seasonChip'
     );
 
   const isActive = (pill: RenderedNode): boolean =>
-    (pill.props.style as unknown[]).includes('seasonPillActive');
+    (pill.props.style as unknown[]).includes('seasonChipActive');
 
   it('renders on the keyboard-aware bottom sheet, not a KeyboardAvoidingView modal', () => {
     const { rendered } = render('');
@@ -163,7 +170,26 @@ describe('VarietyDetailModal', () => {
     expect(updater({ seasonSuitability: ['Kharif (Jun–Sep)'] }).seasonSuitability).toEqual([]);
   });
 
-  it('saves from the header Done button', () => {
+  it('uses the catalog’s compact mic | language pill for notes', () => {
+    const { rendered } = render('PKM 1');
+    const voice = rendered.root.findAll((node) => node.type === 'VoiceDictation');
+
+    expect(voice).toHaveLength(1);
+    expect(voice[0]?.props.compact).toBe(true);
+  });
+
+  it('saves on dismissal too, like the other catalog sheets', () => {
+    const { rendered, onSave } = render('PKM 1');
+    const sheet = rendered.root.findAll((node) => node.type === 'BottomSheetModal')[0];
+    const handle = rendered.root.findAll((node) => node.type === 'SheetHandle')[0];
+
+    TestRenderer.act(() => sheet?.props.onClose?.());
+    TestRenderer.act(() => handle?.props.onClose?.());
+
+    expect(onSave).toHaveBeenCalledTimes(2);
+  });
+
+  it('saves from the Done button', () => {
     const { rendered, onSave } = render('PKM 1');
     const done = rendered.root.findAll(
       (node) => node.type === 'TouchableOpacity' && node.props.style === 'doneButton'

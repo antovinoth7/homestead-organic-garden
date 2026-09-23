@@ -429,8 +429,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     [setVarieties, setVarietyDetails]
   );
 
-  const closeVarietyModal = useCallback(() => setEditingVariety(null), []);
-
   const onSaveVariety = useCallback(() => {
     if (editingVariety === null) return;
 
@@ -952,7 +950,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
           onNewVarietyChange={setNewVariety}
           draft={varietyDraft}
           onDraftChange={setVarietyDraft}
-          onClose={closeVarietyModal}
           onSave={onSaveVariety}
         />
       )}

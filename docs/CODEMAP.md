@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-09-23 — src/: 729 files, 134,589 lines.
+> Snapshot: 2026-09-23 — src/: 729 files, 134,627 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -16,7 +16,7 @@
 - src/hooks/usePlantFormState.ts (1200)
 - src/types/database.types.ts (1145)
 - src/services/plants.ts (1140)
-- src/screens/CatalogPlantDetailScreen.tsx (1011)
+- src/screens/CatalogPlantDetailScreen.tsx (1008)
 - src/components/BedRowLayout.tsx (980)
 - src/hooks/useBedCreationWizard.ts (937)
 - src/lib/imageStorage.ts (878)
@@ -25,7 +25,7 @@
 
 ## src/
 
-### src/__tests__/components/ — 16 files, 3,305 lines
+### src/__tests__/components/ — 16 files, 3,331 lines
 
 - SeasonBlock.test.tsx (516)
 - PlotCard.test.tsx (346)
@@ -34,9 +34,9 @@
 - CatalogFilterSheet.test.tsx (275)
 - ForecastOverlay.test.tsx (224)
 - ReferenceFilterSheet.test.tsx (211)
+- VarietyDetailModal.test.tsx (203)
 - PlantFilterSheet.test.tsx (184)
 - ReferenceBrowseHeader.test.tsx (178)
-- VarietyDetailModal.test.tsx (177)
 - CatalogBrowseRow.test.tsx (141)
 - PlotCarousel.test.tsx (129)
 - bedRotationSummary.test.ts (100)
@@ -307,10 +307,10 @@
 - MonthCalendarView.tsx (142)
 - WeekCalendarView.tsx (122)
 
-### src/components/catalog/ — 20 files, 2,091 lines
+### src/components/catalog/ — 20 files, 2,090 lines
 
 - CatalogFilterSheet.tsx (209)
-- VarietyDetailModal.tsx (202)
+- VarietyDetailModal.tsx (201)
 - PestDiseasePickerModal.tsx (187)
 - CatalogDetailRow.tsx (145)
 - CatalogBrowseRow.tsx (136)
@@ -598,10 +598,10 @@
 
 - AppNavigator.tsx (197)
 
-### src/screens/ — 28 files, 11,716 lines
+### src/screens/ — 28 files, 11,713 lines
 
 - CalendarScreen.tsx (2851) ⚠️ large — Grep/search inside, do not read whole
-- CatalogPlantDetailScreen.tsx (1011) ⚠️ large — Grep/search inside, do not read whole
+- CatalogPlantDetailScreen.tsx (1008) ⚠️ large — Grep/search inside, do not read whole
 - PlantsScreen.tsx (825) ⚠️ large — Grep/search inside, do not read whole
 - JournalFormScreen.tsx (704)
 - JournalScreen.tsx (566)
@@ -659,7 +659,7 @@
 - weatherLogic.ts (100)
 - alerts.ts (19)
 
-### src/styles/ — 97 files, 20,521 lines
+### src/styles/ — 97 files, 20,537 lines
 
 - bedCreationWizardStyles.ts (1906) ⚠️ large — Grep/search inside, do not read whole
 - calendarStyles.ts (1810) ⚠️ large — Grep/search inside, do not read whole
@@ -702,13 +702,13 @@
 - plantPickerSheetStyles.ts (133)
 - pestDiseaseListStyles.ts (129)
 - bedRotationStyles.ts (124)
+- varietyDetailSheetStyles.ts (124)
 - sectionSheetStyles.ts (123)
 - optionPickerSheetStyles.ts (117)
 - bedsQuickScrollStyles.ts (113)
 - moreStyles.ts (113)
 - locationPickerSheetStyles.ts (112)
 - growthStageTimelineStyles.ts (111)
-- varietyDetailSheetStyles.ts (108)
 - profileStyles.ts (106)
 - plantAddFormStyles.ts (104)
 - taskCardStyles.ts (97)
@@ -898,7 +898,7 @@
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (911)
+- CODEMAP.md (914)
 - COMPONENTS.md (69)
 - CONVENTIONS.md (275)
 - DOMAIN_LOGIC.md (170)
