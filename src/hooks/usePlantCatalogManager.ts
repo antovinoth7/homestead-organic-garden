@@ -1,5 +1,6 @@
 import { useState, useCallback, useDeferredValue, useMemo, useRef } from 'react';
 import { Alert } from 'react-native';
+import { CACHE_KEYS, invalidate } from '@/lib/dataCache';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   DEFAULT_PLANT_PROFILES,
@@ -8,15 +9,14 @@ import {
   getPlantNamesForType,
   getMergedProfiles,
   getHiddenPlantNames,
-  dismissPlantProfile,
   restorePlantProfile,
 } from '@/services/plantProfiles';
 import { getAllPlants, getStoredPlants } from '@/services/plants';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { buildCatalogMetaLine } from '@/utils/catalogSummaries';
-import { signPlantVarietyCounts } from '@/utils/catalogCounts';
+import { countGardenPlantsByCatalogName, signPlantVarietyCounts } from '@/utils/catalogCounts';
 import { deriveInstanceLifecycle } from '@/utils/plantHelpers';
-import { LIFECYCLE_LABELS } from '@/utils/plantLabels';
+import { HABIT_LABELS, LIFECYCLE_LABELS } from '@/utils/plantLabels';
 import { ALL_GROUPS } from '@/utils/catalogListItems';
 import type {
   CatalogBrowseEntry,
@@ -26,6 +26,13 @@ import type {
 import { CatalogGroup, Plant, PlantProfiles, PlantType } from '@/types/database.types';
 import { CATALOG_GROUP_ORDER, getTaxonomy } from '@/config/plants/catalogTaxonomy';
 import { getErrorMessage, logError } from '@/utils/errorLogging';
+
+/** Trees bear years after planting; their `daysToHarvest` is fruit development. */
+const TREE_LIKE_TYPES: ReadonlySet<PlantType> = new Set<PlantType>([
+  'fruit_tree',
+  'coconut_tree',
+  'timber_tree',
+]);
 
 export interface GroupData {
   /**
@@ -80,12 +87,6 @@ export interface UsePlantCatalogManagerReturn {
   hiddenPlantNames: { name: string; plantType: PlantType }[];
   /** Un-hides a deleted bundled entry, then reloads the catalog. */
   restore: (name: string, plantType: PlantType) => Promise<void>;
-  /**
-   * Drops a hidden entry from the restore list for good. The bundled record
-   * ships with the app and cannot be erased — the hiding is what becomes
-   * permanent.
-   */
-  removePermanently: (name: string, plantType: PlantType) => Promise<void>;
 }
 
 export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
@@ -175,14 +176,10 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
       setError(null);
     } catch (err: unknown) {
       logError('network', 'usePlantCatalogManager: catalog load failed', err);
+      // Shown as a banner above the list, never as an alert: the bundled
+      // catalog still renders, so the list is never empty, and an alert on
+      // every focus was the only thing the user got.
       setError(getErrorMessage(err));
-      // A silent revalidate runs on every focus, so alerting there would pop a
-      // modal each time the user came back from a plant while offline. The
-      // screen renders the error state instead; only a load the user asked for
-      // interrupts them. Same split as PlantsScreen's loadPlants.
-      if (!options?.silent) {
-        Alert.alert('Error', getErrorMessage(err));
-      }
     } finally {
       setLoading(false);
     }
@@ -191,6 +188,9 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   const refresh = useCallback(async (): Promise<void> => {
     setRefreshing(true);
     try {
+      // A pull must reach past the 30 s cache, or it re-reads what is on screen.
+      invalidate('plantProfiles');
+      invalidate(CACHE_KEYS.ALL_PLANTS);
       await reload({ silent: true });
     } finally {
       setRefreshing(false);
@@ -206,26 +206,12 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     }, [reload])
   );
 
-  // Per-type plant counts keyed by variety name
+  // Garden plants growing per catalog row: archived ones out, aliases folded in.
   const plantCountsByType = useMemo(() => {
-    const counts: Record<PlantType, Record<string, number>> = {
-      vegetable: {},
-      herb: {},
-      flower: {},
-      fruit_tree: {},
-      timber_tree: {},
-      coconut_tree: {},
-      shrub: {},
-      spinach: {},
-    };
-    plants.forEach((plant) => {
-      const type = plant.plant_type;
-      const variety = plant.plant_variety ?? '';
-      if (!type || !variety) return;
-      counts[type][variety] = (counts[type][variety] || 0) + 1;
-    });
-    return counts;
-  }, [plants]);
+    const namesByType: Partial<Record<PlantType, string[]>> = {};
+    for (const type of PLANT_CATEGORIES) namesByType[type] = getPlantNamesForType(profiles, type);
+    return countGardenPlantsByCatalogName(plants, namesByType);
+  }, [plants, profiles]);
 
   const mergedProfiles = useMemo(() => getMergedProfiles(profiles), [profiles]);
 
@@ -254,7 +240,12 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
         // The same derivation the plant record uses, so a plant is filed under
         // the same season heading here as on its own detail screen — and the
         // meta line names that same lifecycle.
-        const lifecycle = deriveInstanceLifecycle(profile?.lifecycle, plantType);
+        // The entry first: it carries the user's own edits, which the bundled
+        // care profile knows nothing about.
+        const lifecycle = deriveInstanceLifecycle(
+          entry?.lifecycle ?? profile?.lifecycle,
+          plantType
+        );
         buckets[taxonomy.group].push({
           name,
           tamilName: entry?.tamilName,
@@ -266,12 +257,15 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
           count: counts[name] ?? 0,
           // A fact the grower can compare between rows, rather than a
           // description they cannot finish reading in one truncated line.
-          subtitle: buildCatalogMetaLine(
-            profile?.daysToHarvest,
-            LIFECYCLE_LABELS[lifecycle],
-            entry?.description,
-            entry?.varieties?.length ?? 0
-          ),
+          subtitle: buildCatalogMetaLine({
+            daysToHarvest: entry?.daysToHarvest ?? profile?.daysToHarvest,
+            yearsToFirstHarvest: entry?.yearsToFirstHarvest ?? profile?.yearsToFirstHarvest,
+            treeLike: TREE_LIKE_TYPES.has(plantType),
+            lifecycleLabel: LIFECYCLE_LABELS[lifecycle],
+            habitLabel: taxonomy.habit ? HABIT_LABELS[taxonomy.habit] : undefined,
+            description: entry?.description,
+            varietyCount: entry?.varieties?.length ?? 0,
+          }),
         });
       }
     }
@@ -321,29 +315,13 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     const result: { name: string; plantType: PlantType }[] = [];
     for (const plantType of PLANT_CATEGORIES) {
       for (const name of hidden[plantType] ?? []) {
-        if (
-          deferredGroup === ALL_GROUPS ||
-          getTaxonomy(name, plantType).group === deferredGroup
-        ) {
+        if (deferredGroup === ALL_GROUPS || getTaxonomy(name, plantType).group === deferredGroup) {
           result.push({ name, plantType });
         }
       }
     }
     return result;
   }, [profiles, deferredGroup]);
-
-  const removePermanently = useCallback(
-    async (name: string, plantType: PlantType): Promise<void> => {
-      try {
-        await dismissPlantProfile(plantType, name);
-        await reload({ silent: true });
-      } catch (err: unknown) {
-        logError('network', 'usePlantCatalogManager: permanent removal failed', err);
-        Alert.alert('Error', getErrorMessage(err));
-      }
-    },
-    [reload]
-  );
 
   const restore = useCallback(
     async (name: string, plantType: PlantType): Promise<void> => {
@@ -378,6 +356,5 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     plantCountsByType,
     hiddenPlantNames,
     restore,
-    removePermanently,
   };
 }

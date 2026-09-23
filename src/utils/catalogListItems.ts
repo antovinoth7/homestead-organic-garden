@@ -185,7 +185,9 @@ export function buildBrowseItems({ group, entries, mode }: BrowseInput): Catalog
   // deliberate sequence rather than however the data happened to be written.
   const declared = SUB_GROUP_ORDER[group];
   if (declared.length === 0) {
-    pushSection(items, SUB_GROUP_LABELS.other ?? 'Other', entries);
+    // A group with no sub-groups is one section, titled as the group itself —
+    // a lone "Other" header said nothing about what was in it.
+    pushSection(items, CATALOG_GROUP_LABELS[group], entries);
     return items;
   }
 

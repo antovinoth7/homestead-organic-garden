@@ -87,7 +87,9 @@ export function useCatalogSearch({
   useEffect(() => {
     if (enabled) setWasEnabled(true);
   }, [enabled]);
-  const indexing = enabled || wasEnabled;
+  // A non-empty query needs the index even if search was never opened this
+  // visit — a recent-search chip sets one directly.
+  const indexing = enabled || wasEnabled || query.trim() !== '';
 
   // Rebuilt only when the catalog reloads — not on every keystroke.
   const index = useMemo(

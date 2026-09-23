@@ -6,7 +6,7 @@ export const DEFAULT_CATALOG_GROUP_MODE: CatalogGroupMode = 'type';
 
 /**
  * Three questions a farmer actually asks of a plant list: what kind is it
- * (Type — gourds, keerai, tubers), when does it come and go (Season — sown each
+ * (Type — gourds, keerai, tubers), how long it stays (Lifespan — sown each
  * year or left in the ground), and where is the name (A–Z). Type leads because
  * nobody looks up a crop by its English initial; A–Z stays because sometimes you
  * do know the name, though search serves that better.
@@ -20,7 +20,9 @@ export const CATALOG_GROUP_MODES: readonly {
   { value: 'type', label: 'Type', hint: 'Group by kind of crop', icon: 'apps-outline' },
   {
     value: 'season',
-    label: 'Season',
+    // Not "Season": here that reads as a sowing season (pattam), and this
+    // groups by how long the plant lives.
+    label: 'Lifespan',
     hint: 'Group by annual, perennial or permanent',
     icon: 'calendar-outline',
   },

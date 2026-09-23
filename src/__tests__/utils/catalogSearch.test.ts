@@ -1,15 +1,13 @@
 import {
   buildCatalogSearchIndex,
+  extendPastCombiningMarks,
+  findCatalogPlant,
   pushRecentSearch,
   searchCatalog,
   splitAtSpan,
 } from '@/utils/catalogSearch';
 import type { CatalogSearchEntry, CatalogSearchResult } from '@/utils/catalogSearch';
-import {
-  makeCountsByType,
-  makePlantProfile,
-  makePlantProfiles,
-} from '../fixtures/plant.fixtures';
+import { makeCountsByType, makePlantProfile, makePlantProfiles } from '../fixtures/plant.fixtures';
 
 const brinjal = makePlantProfile({
   plantType: 'vegetable',
@@ -293,5 +291,39 @@ describe('tag search', () => {
     // "Ponnanganni Keerai" contains the word, so it must outrank plants that
     // merely carry the tag.
     expect(search('keerai')[0]).toBe('Ponnanganni Keerai');
+  });
+});
+
+describe('findCatalogPlant', () => {
+  const profiles = makePlantProfiles([
+    makePlantProfile({ name: 'Ladies Finger', tamilName: 'வெண்டைக்காய்' }),
+    makePlantProfile({ plantType: 'herb', name: 'Tulsi', tamilName: 'துளசி' }),
+  ]);
+
+  it('finds a plant by name, alias or exact Tamil name', () => {
+    expect(findCatalogPlant(profiles, 'ladies finger')?.name).toBe('Ladies Finger');
+    expect(findCatalogPlant(profiles, 'Okra')?.name).toBe('Ladies Finger');
+    expect(findCatalogPlant(profiles, 'வெண்டைக்காய்')).toEqual({
+      name: 'Ladies Finger',
+      plantType: 'vegetable',
+    });
+  });
+
+  it('finds nothing for a genuinely new plant or a blank query', () => {
+    expect(findCatalogPlant(profiles, 'Dragon Fruit')).toBeUndefined();
+    expect(findCatalogPlant(profiles, '  ')).toBeUndefined();
+  });
+});
+
+describe('extendPastCombiningMarks', () => {
+  it('keeps a Tamil vowel sign with its consonant', () => {
+    const text = 'வெண்டைக்காய்';
+    // "வெண்ட" ends on ட; the next code unit is the ை vowel sign.
+    const end = extendPastCombiningMarks(text, 'வெண்ட'.length);
+    expect(text.slice(0, end)).toBe('வெண்டை');
+  });
+
+  it('leaves a span that already ends on a full letter alone', () => {
+    expect(extendPastCombiningMarks('abc', 2)).toBe(2);
   });
 });

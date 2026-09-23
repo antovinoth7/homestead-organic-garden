@@ -1,4 +1,4 @@
-import { signPlantVarietyCounts } from '@/utils/catalogCounts';
+import { countGardenPlantsByCatalogName, signPlantVarietyCounts } from '@/utils/catalogCounts';
 import { makePlant } from '../fixtures/plant.fixtures';
 
 describe('signPlantVarietyCounts', () => {
@@ -55,5 +55,54 @@ describe('signPlantVarietyCounts', () => {
 
   it('signs an empty garden as an empty string', () => {
     expect(signPlantVarietyCounts([])).toBe('');
+  });
+});
+
+describe('countGardenPlantsByCatalogName', () => {
+  const names = { vegetable: ['Tomato', 'Capsicum'] };
+
+  it('counts only plants still growing, not cleared (archived) ones', () => {
+    const counts = countGardenPlantsByCatalogName(
+      [
+        makePlant({ id: 'a', plant_type: 'vegetable', plant_variety: 'Tomato' }),
+        makePlant({
+          id: 'b',
+          plant_type: 'vegetable',
+          plant_variety: 'Tomato',
+          archived_at: '2026-08-01T00:00:00.000Z',
+        }),
+      ],
+      names
+    );
+    expect(counts.vegetable.Tomato).toBe(1);
+  });
+
+  it('folds a plant saved under an alias into its catalog row', () => {
+    const counts = countGardenPlantsByCatalogName(
+      [
+        makePlant({ id: 'a', plant_type: 'vegetable', plant_variety: 'Pepper' }),
+        makePlant({ id: 'b', plant_type: 'vegetable', plant_variety: 'capsicum' }),
+      ],
+      names
+    );
+    expect(counts.vegetable.Capsicum).toBe(2);
+  });
+
+  it('keeps counts per plant type', () => {
+    const counts = countGardenPlantsByCatalogName(
+      [makePlant({ id: 'a', plant_type: 'herb', plant_variety: 'Tomato' })],
+      names
+    );
+    expect(counts.vegetable.Tomato).toBeUndefined();
+  });
+});
+
+describe('signPlantVarietyCounts — archiving', () => {
+  it('changes when a plant is archived', () => {
+    const growing = [makePlant({ id: 'a', plant_variety: 'Tomato' })];
+    const cleared = [
+      makePlant({ id: 'a', plant_variety: 'Tomato', archived_at: '2026-08-01T00:00:00.000Z' }),
+    ];
+    expect(signPlantVarietyCounts(cleared)).not.toBe(signPlantVarietyCounts(growing));
   });
 });

@@ -26,8 +26,14 @@ jest.mock('@/services/plants', () => ({
 }));
 jest.mock('@/utils/plantCareDefaults', () => ({ getPlantCareProfile: () => ({}) }));
 jest.mock('@/utils/catalogSummaries', () => ({ buildCatalogMetaLine: () => 'meta' }));
-jest.mock('@/utils/plantHelpers', () => ({ deriveInstanceLifecycle: () => 'annual' }));
-jest.mock('@/utils/plantLabels', () => ({ LIFECYCLE_LABELS: { annual: 'Annual' } }));
+jest.mock('@/utils/plantHelpers', () => ({
+  deriveInstanceLifecycle: () => 'annual',
+  isPlantArchived: (plant: { archived_at?: string | null }) => !!plant.archived_at,
+}));
+jest.mock('@/utils/plantLabels', () => ({
+  LIFECYCLE_LABELS: { annual: 'Annual' },
+  HABIT_LABELS: { annual_bed: 'Annual' },
+}));
 jest.mock('@/config/plants/catalogTaxonomy', () => ({
   CATALOG_GROUP_ORDER: ['vegetables', 'greens'],
   getTaxonomy: (_name: string, plantType: string) =>
@@ -243,7 +249,7 @@ describe('usePlantCatalogManager', () => {
       tree.unmount();
     });
 
-    it('alerts on a load the user asked for', async () => {
+    it('never interrupts with an alert — the screen shows a retry banner instead', async () => {
       mockProfiles.mockRejectedValue(new Error('offline'));
       const tree = await mount();
 
@@ -251,7 +257,8 @@ describe('usePlantCatalogManager', () => {
         await latest.reload();
       });
 
-      expect(mockAlert).toHaveBeenCalled();
+      expect(latest.error).toBe('offline');
+      expect(mockAlert).not.toHaveBeenCalled();
       tree.unmount();
     });
 

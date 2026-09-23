@@ -13,6 +13,8 @@ import {
   CATALOG_GROUP_MODES,
   DEFAULT_CATALOG_GROUP_MODE,
 } from '@/components/catalog/catalogGroupModes';
+import { HiddenPlantsSection } from '@/components/catalog/HiddenPlantsSection';
+import type { HiddenPlant } from '@/components/catalog/HiddenPlantsSection';
 import { ALL_GROUPS } from '@/utils/catalogListItems';
 import type { CatalogGroupFilter, CatalogGroupMode } from '@/utils/catalogListItems';
 
@@ -23,6 +25,9 @@ interface Props {
   mode: CatalogGroupMode;
   onChange: (mode: CatalogGroupMode) => void;
   onClose: () => void;
+  /** Built-in plants the user deleted, with the way back. Hidden when empty. */
+  hiddenPlants?: readonly HiddenPlant[];
+  onRestore?: (name: string, plantType: HiddenPlant['plantType']) => void;
 }
 
 /**
@@ -67,6 +72,8 @@ function CatalogFilterSheetComponent({
   mode,
   onChange,
   onClose,
+  hiddenPlants = [],
+  onRestore,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -199,6 +206,8 @@ function CatalogFilterSheetComponent({
               );
             })}
           </View>
+
+          {onRestore ? <HiddenPlantsSection plants={hiddenPlants} onRestore={onRestore} /> : null}
         </ScrollView>
       </View>
     </View>

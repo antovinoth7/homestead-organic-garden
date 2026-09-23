@@ -83,19 +83,29 @@ export const createStyles = (
     headerIconBtnActive: {
       backgroundColor: theme.accent,
     },
-    /**
-     * Dot on a header icon saying its state is no longer the default — a query
-     * still held while search is collapsed, or a non-default grouping. Accent,
-     * because the button beneath it is now filled with the primary colour.
-     */
-    headerActiveDot: {
-      position: 'absolute',
-      bottom: 6,
-      right: 6,
-      width: 7,
-      height: 7,
-      borderRadius: 4,
-      backgroundColor: theme.accent,
+    // Above the list when the user's own catalog data failed to load. The
+    // bundled plants still show, so this is a banner, not an empty state.
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      minHeight: 44,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      marginBottom: 12,
+      borderRadius: 12,
+      backgroundColor: theme.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    errorBannerText: {
+      flex: 1,
+      fontSize: 13,
+      color: theme.textSecondary,
+    },
+    errorBannerAction: {
+      fontWeight: '700',
+      color: theme.primary,
     },
     /**
      * How many facets the filter sheet has off default. The funnel now carries
@@ -221,13 +231,15 @@ export const createStyles = (
       lineHeight: 20,
       fontWeight: '600',
       color: theme.text,
-      // Shrinks rather than pushing the Tamil name off the row.
+      // The English name takes the ellipsis; the Tamil name is often the one a
+      // grower here recognises, so it keeps its width.
       flexShrink: 1,
     },
     plantTamil: {
-      fontSize: 12.5,
-      color: theme.inputPlaceholder,
-      flexShrink: 1,
+      fontSize: 13.5,
+      color: theme.textSecondary,
+      flexShrink: 0,
+      maxWidth: '50%',
     },
     plantSubtitle: {
       fontSize: 12.5,
@@ -315,7 +327,6 @@ export const createStyles = (
       marginRight: 4,
     },
     plantCountChipText: {
-      fontFamily: MONO_FONT,
       fontSize: 11,
       color: theme.primary,
       fontWeight: '600',

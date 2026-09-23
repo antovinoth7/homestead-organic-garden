@@ -122,7 +122,7 @@ describe('CatalogBrowseRow', () => {
     expect(label).toContain('Bitter Gourd');
     expect(label).toContain('பாகற்காய்');
     expect(label).toContain('55–70 days');
-    expect(label).toContain('2 in your garden');
+    expect(label).toContain('2 growing in your garden');
   });
 
   it('leaves the count out of the label when nothing is planted', () => {

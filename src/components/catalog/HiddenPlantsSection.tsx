@@ -13,14 +13,12 @@ export interface HiddenPlant {
 
 interface RowProps extends HiddenPlant {
   onRestore: (name: string, plantType: PlantType) => void;
-  onRemove: (name: string, plantType: PlantType) => void;
 }
 
-function HiddenPlantRow({ name, plantType, onRestore, onRemove }: RowProps): React.JSX.Element {
+function HiddenPlantRow({ name, plantType, onRestore }: RowProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const handleRestore = useCallback(() => onRestore(name, plantType), [onRestore, name, plantType]);
-  const handleRemove = useCallback(() => onRemove(name, plantType), [onRemove, name, plantType]);
 
   return (
     <View style={styles.row}>
@@ -28,15 +26,6 @@ function HiddenPlantRow({ name, plantType, onRestore, onRemove }: RowProps): Rea
       <Text style={styles.rowName} numberOfLines={1}>
         {name}
       </Text>
-      <TouchableOpacity
-        style={styles.removeButton}
-        onPress={handleRemove}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel={`Remove ${name} permanently`}
-      >
-        <Text style={styles.removeText}>Remove</Text>
-      </TouchableOpacity>
       <TouchableOpacity
         style={styles.restoreButton}
         onPress={handleRestore}
@@ -59,20 +48,18 @@ interface Props {
    */
   plants: readonly HiddenPlant[];
   onRestore: (name: string, plantType: PlantType) => void;
-  /** Drops the entry from this list for good — it stays hidden, unrestorably. */
-  onRemove: (name: string, plantType: PlantType) => void;
 }
 
 /**
  * Deleting a plant the app ships with hides it rather than erasing it — the
  * name would otherwise come straight back from the bundled catalog. This is the
- * way back, kept collapsed so it stays out of the way until it is wanted.
+ * way back. It lives in the filter sheet, reachable in two taps, rather than
+ * at the foot of a ~145-row list where nobody found it.
+ *
+ * Restore is the only action. A "remove permanently" that only took an
+ * already-hidden plant off this list read as a second, scarier delete.
  */
-export function HiddenPlantsSection({
-  plants,
-  onRestore,
-  onRemove,
-}: Props): React.JSX.Element | null {
+export function HiddenPlantsSection({ plants, onRestore }: Props): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [expanded, setExpanded] = useState(false);
@@ -104,7 +91,7 @@ export function HiddenPlantsSection({
         <>
           <Text style={styles.hint}>
             These come with the app, so deleting hides them instead of removing them for good.
-            Restore one to bring it back, or remove it to stop it being offered here.
+            Restore one to bring it back to the catalog.
           </Text>
           {plants.map(({ name, plantType }) => (
             <HiddenPlantRow
@@ -112,7 +99,6 @@ export function HiddenPlantsSection({
               name={name}
               plantType={plantType}
               onRestore={onRestore}
-              onRemove={onRemove}
             />
           ))}
         </>

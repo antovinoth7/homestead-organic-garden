@@ -1,7 +1,7 @@
-import { getAliasesFor } from '@/utils/plantAliases';
+import { getAliasesFor, getCanonicalPlantKey } from '@/utils/plantAliases';
 import { getTaxonomy } from '@/config/plants/catalogTaxonomy';
 import { TAG_LABELS } from '@/utils/plantLabels';
-import type { PlantProfiles, PlantType } from '@/types/database.types';
+import type { PlantProfile, PlantProfiles, PlantType } from '@/types/database.types';
 
 export interface CatalogSearchEntry {
   plantType: PlantType;
@@ -52,7 +52,7 @@ const DEFAULT_LIMIT = 60;
  * and a Turkish-locale phone maps I → ı, which is not length-preserving and
  * would shift every span after it.
  */
-function normalize(value: string): string {
+export function normalize(value: string): string {
   return value.normalize('NFC').toLocaleLowerCase('en-US');
 }
 
@@ -122,6 +122,18 @@ function haystacks(entry: CatalogSearchEntry): string[] {
   return parts;
 }
 
+/**
+ * Tamil is typed consonant first, vowel sign second, so a half-typed query
+ * often ends on a bare consonant ("வெண்ட"). Cutting the highlight there
+ * splits a letter from its vowel sign and the sign renders on a dotted circle.
+ * Grow the span over any trailing combining marks (vowel signs, virama).
+ */
+export function extendPastCombiningMarks(text: string, end: number): number {
+  let next = end;
+  while (next < text.length && /[\u0B82\u0BBE-\u0BCD\u0BD7]/.test(text[next] ?? '')) next += 1;
+  return next;
+}
+
 function scoreEntry(entry: CatalogSearchEntry, needle: string): { rank: number; result: CatalogSearchResult } | null {
   const nameIndex = normalize(entry.name).indexOf(needle);
   const tamilIndex = entry.tamilName ? normalize(entry.tamilName).indexOf(needle) : -1;
@@ -138,8 +150,11 @@ function scoreEntry(entry: CatalogSearchEntry, needle: string): { rank: number; 
         matchedField: matchedOnName ? 'name' : 'tamilName',
         nameSpan: matchedOnName ? { start: nameIndex, end: nameIndex + needle.length } : undefined,
         tamilSpan:
-          !matchedOnName && tamilIndex >= 0
-            ? { start: tamilIndex, end: tamilIndex + needle.length }
+          !matchedOnName && tamilIndex >= 0 && entry.tamilName
+            ? {
+                start: tamilIndex,
+                end: extendPastCombiningMarks(entry.tamilName, tamilIndex + needle.length),
+              }
             : undefined,
       },
     };
@@ -223,4 +238,30 @@ export function pushRecentSearch(existing: readonly string[], query: string): st
   const lower = trimmed.toLocaleLowerCase('en-US');
   const withoutDupe = existing.filter((item) => item.trim().toLocaleLowerCase('en-US') !== lower);
   return [trimmed, ...withoutDupe].slice(0, RECENT_SEARCH_LIMIT);
+}
+
+/**
+ * The catalog plant a typed name already refers to, if any: the same name, an
+ * alias of it ("Okra" is Ladies Finger), or its Tamil name typed exactly. Used
+ * before offering to create a plant, since a second entry for a known name is
+ * how the catalog's duplicates got there.
+ */
+export function findCatalogPlant(
+  profiles: PlantProfiles,
+  typed: string
+): { name: string; plantType: PlantType } | undefined {
+  const canonical = getCanonicalPlantKey(typed);
+  const typedNorm = normalize(typed.trim());
+  if (!typedNorm) return undefined;
+  for (const [plantType, byName] of Object.entries(profiles) as [
+    PlantType,
+    Record<string, PlantProfile> | undefined,
+  ][]) {
+    for (const [name, entry] of Object.entries(byName ?? {})) {
+      if (entry?.isDeleted) continue;
+      if (getCanonicalPlantKey(name) === canonical) return { name, plantType };
+      if (entry?.tamilName && normalize(entry.tamilName) === typedNorm) return { name, plantType };
+    }
+  }
+  return undefined;
 }

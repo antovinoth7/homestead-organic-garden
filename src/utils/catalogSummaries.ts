@@ -35,10 +35,7 @@ export interface SummaryLabels {
   growthStageLabel?: string;
 }
 
-export function plantInfoSummary(
-  careForm: CareFormState | null,
-  labels: SummaryLabels
-): string {
+export function plantInfoSummary(careForm: CareFormState | null, labels: SummaryLabels): string {
   return (
     joinSummary([
       careForm?.scientificName,
@@ -99,15 +96,11 @@ export function pestsSummary(count: number): string {
 }
 
 export function diseasesSummary(count: number): string {
-  return count > 0
-    ? formatCount(count, 'linked disease', 'linked diseases')
-    : 'No linked diseases';
+  return count > 0 ? formatCount(count, 'linked disease', 'linked diseases') : 'No linked diseases';
 }
 
 export function varietiesSummary(count: number): string {
-  return count > 0
-    ? formatCount(count, 'saved variety', 'saved varieties')
-    : 'No saved varieties';
+  return count > 0 ? formatCount(count, 'saved variety', 'saved varieties') : 'No saved varieties';
 }
 
 /**
@@ -129,27 +122,51 @@ export function buildCatalogSubtitle(
   return undefined;
 }
 
+export interface CatalogMetaInput {
+  daysToHarvest?: NumericRange;
+  yearsToFirstHarvest?: number;
+  /**
+   * Fruit, coconut and timber trees. Their `daysToHarvest` is how long a fruit
+   * takes to develop (Mango "90–150 days"), not how long a new sapling takes
+   * to bear, so for them the years to first harvest is the figure a grower
+   * plans around.
+   */
+  treeLike: boolean;
+  lifecycleLabel?: string;
+  /** Shown beside the meta line already; a lifecycle that repeats it is dropped. */
+  habitLabel?: string;
+  description?: string;
+  varietyCount: number;
+}
+
 /**
  * Meta line for a catalog browse row, preferred over the description.
  *
  * The row gives this one truncated line, and a description spends it on prose
- * the reader cannot finish — "Wax-coated trailing cucurbit used in…" poses a
- * question instead of answering one. A grower scanning the catalog wants a
- * fact they can compare between rows, so lead with the harvest window, fall
- * back to how long the plant lives, and only then to the description.
+ * the reader cannot finish. A grower scanning the catalog wants a fact they can
+ * compare between rows, so lead with when it gives a harvest — "Harvest in
+ * 55–70 days", or "First harvest in 5 years" for a tree — then how long the
+ * plant lives, and only then the description.
  *
- * Returns undefined when a plant carries none of the three — the row keeps its
+ * Returns undefined when a plant carries none of them — the row keeps its
  * height either way.
  */
-export function buildCatalogMetaLine(
-  daysToHarvest: NumericRange | undefined,
-  lifecycleLabel: string | undefined,
-  description: string | undefined,
-  varietyCount: number
-): string | undefined {
+export function buildCatalogMetaLine({
+  daysToHarvest,
+  yearsToFirstHarvest,
+  treeLike,
+  lifecycleLabel,
+  habitLabel,
+  description,
+  varietyCount,
+}: CatalogMetaInput): string | undefined {
+  if (treeLike && yearsToFirstHarvest && yearsToFirstHarvest > 0) {
+    return `First harvest in ${formatCount(yearsToFirstHarvest, 'year')}`;
+  }
   const days = formatDaysToHarvest(daysToHarvest);
-  if (days) return days;
-  if (lifecycleLabel) return lifecycleLabel;
+  if (days) return `Harvest in ${days}`;
+  // "Annual · Annual" said nothing twice.
+  if (lifecycleLabel && lifecycleLabel !== habitLabel) return lifecycleLabel;
   return buildCatalogSubtitle(description, varietyCount);
 }
 
@@ -157,7 +174,7 @@ export function buildCatalogMetaLine(
  * "55–70 days", or "55 days" when the range has collapsed to a point. A wait
  * of a year or more reads in years instead: "12–15 years", not "4380–5475 days".
  */
-function formatDaysToHarvest(range: NumericRange | undefined): string | undefined {
+export function formatDaysToHarvest(range: NumericRange | undefined): string | undefined {
   if (!isStatedHarvestRange(range)) return undefined;
   const years = harvestRangeInYears(range);
   const { min, max } = years ?? range;

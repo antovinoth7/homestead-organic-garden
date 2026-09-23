@@ -69,7 +69,7 @@ function CatalogBrowseRowComponent({
     tamilName,
     habit ? HABIT_LABELS[habit] : undefined,
     subtitle,
-    count > 0 ? `${count} in your garden` : undefined,
+    count > 0 ? `${count} growing in your garden` : undefined,
   ]
     .filter(Boolean)
     .join(', ');
@@ -122,7 +122,9 @@ function CatalogBrowseRowComponent({
         </View>
         {count > 0 && (
           <View style={styles.plantCountChip}>
-            <Text style={styles.plantCountChipText}>{count}</Text>
+            <Text style={styles.plantCountChipText} maxFontSizeMultiplier={MAX_CATALOG_FONT_SCALE}>
+              {count} growing
+            </Text>
           </View>
         )}
         <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
