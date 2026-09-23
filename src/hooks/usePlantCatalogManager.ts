@@ -43,18 +43,15 @@ export interface GroupData {
   group: CatalogGroupFilter;
   mode: CatalogGroupMode;
   entries: CatalogBrowseEntry[];
-  isEmpty: boolean;
 }
 
 export interface UsePlantCatalogManagerReturn {
-  profiles: PlantProfiles;
   /**
    * Bundled defaults with the user's edits, additions and deletions applied.
    * Search indexes this — `profiles` alone holds only the overrides, and is
    * empty on an install where nothing has been edited.
    */
   mergedProfiles: PlantProfiles;
-  plants: Plant[];
   /** The selected browse group, or `all`. Urgent — it marks the chosen chip. */
   activeGroup: CatalogGroupFilter;
   setActiveGroup: (group: CatalogGroupFilter) => void;
@@ -285,7 +282,7 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   const groupData = useMemo((): GroupData => {
     const entries =
       deferredGroup === ALL_GROUPS ? allEntries : (entriesByGroup[deferredGroup] ?? []);
-    return { group: deferredGroup, mode: deferredMode, entries, isEmpty: entries.length === 0 };
+    return { group: deferredGroup, mode: deferredMode, entries };
   }, [entriesByGroup, allEntries, deferredGroup, deferredMode]);
 
   /** Catalog count per group, plus the `all` total — drives the sheet chip counts. */
@@ -339,9 +336,7 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   );
 
   return {
-    profiles,
     mergedProfiles,
-    plants,
     activeGroup,
     setActiveGroup,
     groupMode,

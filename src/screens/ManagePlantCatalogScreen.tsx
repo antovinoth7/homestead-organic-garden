@@ -456,7 +456,9 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
                 />
                 {activeFilterCount > 0 && !showFilters && (
                   <View style={styles.filterBadge}>
-                    <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                    <Text style={styles.filterBadgeText} maxFontSizeMultiplier={1.2}>
+                      {activeFilterCount}
+                    </Text>
                   </View>
                 )}
               </TouchableOpacity>

@@ -62,8 +62,6 @@ export interface UseCatalogEntryFormReturn {
   loadError: string | null;
   retryLoad: () => void;
   saving: boolean;
-  profiles: PlantProfiles;
-  plants: Plant[];
   name: string;
   setName: (next: string) => void;
   careForm: CareFormState | null;
@@ -74,7 +72,6 @@ export interface UseCatalogEntryFormReturn {
   setVarietyDetails: React.Dispatch<React.SetStateAction<Record<string, VarietyDetail>>>;
   /** Live name, falling back to the route name — never stale after a rename. */
   lookupName: string;
-  currentProfile: PlantProfile | undefined;
   categoryPlants: string[];
   usageCount: number;
   /** False until the garden plants have loaded — usage counts read 0 until then. */
@@ -700,8 +697,6 @@ export function useCatalogEntryForm({
     loadError,
     retryLoad,
     saving,
-    profiles,
-    plants,
     name,
     setName,
     careForm,
@@ -711,7 +706,6 @@ export function useCatalogEntryForm({
     setVarieties,
     setVarietyDetails,
     lookupName,
-    currentProfile,
     categoryPlants,
     usageCount,
     plantsLoaded,

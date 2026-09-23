@@ -591,8 +591,9 @@ these block anything; they are recorded so they are not rediscovered as surprise
   `adb shell dumpsys diskstats`, or per-app,
   `adb shell du -sh /data/app/*<package>*/` against its `oat/` subdirectory.
 
-- **Considered and rejected: trimming `assets/reference/`.** The 253 bundled WebP
-  files are 32 MB, but all are statically required and reachable, and at 800×600
+- **Considered and rejected: trimming `assets/reference/` further.** 31 plant images
+  no catalog row could reach were removed (253 → 222 files, 32 → 28 MB); the rest
+  are statically required and reachable, and at 800×600
   they are already conservative for a full-width × 250 dp hero plus fullscreen
   preview. Tightening the 160 KB ingest cap to ~120 KB would save roughly 7 MB at a
   visible quality cost. Offloading them breaks the offline-first design they exist

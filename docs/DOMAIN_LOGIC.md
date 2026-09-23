@@ -24,6 +24,13 @@ Every Tamil Nadu zone uses the IMD meteorological boundaries: Winter (`cool_dry`
 - `growingSeason` is still free text. Many bundled profiles say e.g. `Southwest Monsoon (Jun–Sep)`. Display it with `growingSeasonLabel()`, which falls back to the raw text instead of blanking it.
 - `mapSeasonTextToIds()` (`src/utils/plantingNow.ts`) still recognises `kharif`/`rabi` in old text. `Winter` maps to `cool_dry` only, while `Rabi` and `Cool Dry` also imply `ne_monsoon`.
 
+### Catalog rows, varieties and harvest figures
+
+- **One row per crop.** A cultivar or a type of the same species is a variety, not a row: Long Brinjal is a Brinjal variety, French Beans a Beans one, Red Banana a Banana one, Yardlong Beans a Cowpea one, and there is one `Coconut` row whose varieties are the palm types (migration 017). The old names stay as search aliases and share the survivor's photo.
+- **Built-in names are fixed.** A bundled plant's catalog name cannot be edited (its pests, photo and care data are keyed by it); the local name goes in `tamilName`. Saving rejects any alias of an existing plant (`findDuplicatePlantName`).
+- **Harvest shown to farmers.** For `fruit_tree`, `coconut_tree` and `timber_tree`, `daysToHarvest` is fruit development (Mango "90–150 days"), so the list and Quick Info show `yearsToFirstHarvest` instead when set — "First harvest in 5 years". Everything else reads "Harvest in 55–70 days". A `0–0` range means "not applicable" and is shown as nothing.
+- **Linked pests and diseases** a farmer adds on a catalog entry (`customPests` / `customDiseases`) are also listed on each garden plant's care guide, after the built-in ones (`withLinkedNames`).
+
 ### Today planting and advisory model
 
 - `tamilNaduPlantingCalendar.ts` is the source-reviewed rule registry. Rules carry zone scope, establishment action, window, conditions, maturity measured from that action, evidence IDs, and review date.

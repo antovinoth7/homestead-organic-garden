@@ -62,8 +62,3 @@ export function optionsFromLabels<K extends string>(
     description: descriptions?.[value],
   }));
 }
-
-/** Builds picker options from a plain list of strings (e.g. growing seasons). */
-export function optionsFromValues(values: readonly string[]): PickerOption[] {
-  return values.map((value) => ({ value, label: value }));
-}

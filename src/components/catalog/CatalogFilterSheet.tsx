@@ -45,6 +45,48 @@ function ChipCount({
   return <Text style={count === 0 ? styles.sheetChipCountZero : undefined}> ({count})</Text>;
 }
 
+interface SheetChipProps<T extends string> {
+  value: T;
+  selected: boolean;
+  label: string;
+  hint: string;
+  icon: React.ReactNode;
+  count?: number;
+  onPick: (value: T) => void;
+  styles: ReturnType<typeof createStyles>;
+}
+
+/** One sheet chip. Its own component so each press handler is stable. */
+function SheetChip<T extends string>({
+  value,
+  selected,
+  label,
+  hint,
+  icon,
+  count,
+  onPick,
+  styles,
+}: SheetChipProps<T>): React.JSX.Element {
+  const handlePress = useCallback(() => onPick(value), [onPick, value]);
+  return (
+    <TouchableOpacity
+      style={[styles.sheetChip, selected && styles.sheetChipActive]}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+    >
+      {icon}
+      <Text style={[styles.sheetChipText, selected && styles.sheetChipTextActive]}>
+        {label}
+        {count !== undefined ? <ChipCount count={count} styles={styles} /> : null}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 /**
  * The catalog's one filter surface: which category to browse, and how that list
  * sections itself.
@@ -79,16 +121,16 @@ function CatalogFilterSheetComponent({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
-  const handleGroupPress = useCallback(
-    (next: CatalogGroupFilter) => () => {
+  const handleGroupPick = useCallback(
+    (next: CatalogGroupFilter) => {
       onGroupChange(next);
       onClose();
     },
     [onGroupChange, onClose]
   );
 
-  const handleModePress = useCallback(
-    (next: CatalogGroupMode) => () => {
+  const handleModePick = useCallback(
+    (next: CatalogGroupMode) => {
       onChange(next);
       onClose();
     },
@@ -107,7 +149,12 @@ function CatalogFilterSheetComponent({
 
   return (
     <View style={[StyleSheet.absoluteFill, styles.sheetOverlay]}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Close filters"
+      />
       <View style={[styles.sheetContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <SheetHandle onClose={onClose} />
 
@@ -130,49 +177,43 @@ function CatalogFilterSheetComponent({
             <Ionicons name="apps" size={14} color={theme.textSecondary} /> Category
           </Text>
           <View style={styles.sheetChipWrap}>
-            <TouchableOpacity
-              style={[styles.sheetChip, allSelected && styles.sheetChipActive]}
-              onPress={handleGroupPress(ALL_GROUPS)}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityState={{ selected: allSelected }}
-              accessibilityLabel="All"
-              accessibilityHint="Browse every category at once"
-            >
-              <Ionicons
-                name="layers-outline"
-                size={14}
-                color={allSelected ? theme.primary : theme.textSecondary}
-              />
-              <Text style={[styles.sheetChipText, allSelected && styles.sheetChipTextActive]}>
-                All
-                <ChipCount count={groupCounts[ALL_GROUPS] ?? 0} styles={styles} />
-              </Text>
-            </TouchableOpacity>
+            <SheetChip
+              value={ALL_GROUPS as CatalogGroupFilter}
+              selected={allSelected}
+              label="All"
+              hint="Browse every category at once"
+              icon={
+                <Ionicons
+                  name="layers-outline"
+                  size={14}
+                  color={allSelected ? theme.primary : theme.textSecondary}
+                />
+              }
+              count={groupCounts[ALL_GROUPS] ?? 0}
+              onPick={handleGroupPick}
+              styles={styles}
+            />
             {CATALOG_GROUP_ORDER.map((value) => {
               const isActive = group === value;
               const label = CATALOG_GROUP_LABELS[value];
               return (
-                <TouchableOpacity
+                <SheetChip
                   key={value}
-                  style={[styles.sheetChip, isActive && styles.sheetChipActive]}
-                  onPress={handleGroupPress(value)}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isActive }}
-                  accessibilityLabel={label}
-                  accessibilityHint={`Browse ${label} only`}
-                >
-                  <GardenIcon
-                    name={CATALOG_GROUP_ICON_KEYS[value]}
-                    size={14}
-                    color={isActive ? theme.primary : theme.textSecondary}
-                  />
-                  <Text style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}>
-                    {label}
-                    <ChipCount count={groupCounts[value] ?? 0} styles={styles} />
-                  </Text>
-                </TouchableOpacity>
+                  value={value as CatalogGroupFilter}
+                  selected={isActive}
+                  label={label}
+                  hint={`Browse ${label} only`}
+                  icon={
+                    <GardenIcon
+                      name={CATALOG_GROUP_ICON_KEYS[value]}
+                      size={14}
+                      color={isActive ? theme.primary : theme.textSecondary}
+                    />
+                  }
+                  count={groupCounts[value] ?? 0}
+                  onPick={handleGroupPick}
+                  styles={styles}
+                />
               );
             })}
           </View>
@@ -181,30 +222,24 @@ function CatalogFilterSheetComponent({
             <Ionicons name="layers" size={14} color={theme.textSecondary} /> Group By
           </Text>
           <View style={styles.sheetChipWrap}>
-            {CATALOG_GROUP_MODES.map(({ value, label, hint, icon }) => {
-              const isActive = mode === value;
-              return (
-                <TouchableOpacity
-                  key={value}
-                  style={[styles.sheetChip, isActive && styles.sheetChipActive]}
-                  onPress={handleModePress(value)}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isActive }}
-                  accessibilityLabel={label}
-                  accessibilityHint={hint}
-                >
+            {CATALOG_GROUP_MODES.map(({ value, label, hint, icon }) => (
+              <SheetChip
+                key={value}
+                value={value}
+                selected={mode === value}
+                label={label}
+                hint={hint}
+                icon={
                   <Ionicons
                     name={icon}
                     size={14}
-                    color={isActive ? theme.primary : theme.textSecondary}
+                    color={mode === value ? theme.primary : theme.textSecondary}
                   />
-                  <Text style={[styles.sheetChipText, isActive && styles.sheetChipTextActive]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                }
+                onPick={handleModePick}
+                styles={styles}
+              />
+            ))}
           </View>
 
           {onRestore ? <HiddenPlantsSection plants={hiddenPlants} onRestore={onRestore} /> : null}

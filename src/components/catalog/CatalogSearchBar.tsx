@@ -1,4 +1,4 @@
-import React, { forwardRef, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, TextInput, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
@@ -9,22 +9,17 @@ interface Props {
   onChangeText: (next: string) => void;
   onClear: () => void;
   onSubmit?: () => void;
-  placeholder?: string;
   autoFocus?: boolean;
 }
 
 /** Search field for the catalog, rendered inside the screen's header bar. */
-export const CatalogSearchBar = forwardRef<TextInput, Props>(function CatalogSearchBar(
-  {
-    value,
-    onChangeText,
-    onClear,
-    onSubmit,
-    placeholder = 'Search plants or Tamil name',
-    autoFocus = false,
-  },
-  ref
-): React.JSX.Element {
+export function CatalogSearchBar({
+  value,
+  onChangeText,
+  onClear,
+  onSubmit,
+  autoFocus = false,
+}: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const isActive = value.length > 0;
@@ -33,13 +28,12 @@ export const CatalogSearchBar = forwardRef<TextInput, Props>(function CatalogSea
     <View style={styles.searchBar}>
       <Ionicons name="search" size={16} color={theme.textSecondary} />
       <TextInput
-        ref={ref}
         autoFocus={autoFocus}
         style={styles.searchInput}
         value={value}
         onChangeText={onChangeText}
         onSubmitEditing={onSubmit}
-        placeholder={placeholder}
+        placeholder="Search plants or Tamil name"
         placeholderTextColor={theme.inputPlaceholder}
         autoCorrect={false}
         autoCapitalize="none"
@@ -58,4 +52,4 @@ export const CatalogSearchBar = forwardRef<TextInput, Props>(function CatalogSea
       )}
     </View>
   );
-});
+}

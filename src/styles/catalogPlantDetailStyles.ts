@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import type { Theme } from '../theme/colors';
+import type { Theme } from '@/theme/colors';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -69,6 +69,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 16,
       paddingBottom: 10,
       gap: 10,
+      backgroundColor: theme.tabBarBackground,
     },
     stickyHeaderTitle: {
       flex: 1,
@@ -150,72 +151,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     heroBleed: {
       marginHorizontal: -16,
     },
-    fieldGroup: {
-      marginBottom: 8,
-    },
-    input: {
-      flex: 1,
-      backgroundColor: theme.inputBackground,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      paddingHorizontal: 12,
-      height: 42,
-      fontSize: 15,
-      color: theme.inputText,
-    },
-    chipRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    chip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 9,
-      paddingVertical: 5,
-      borderRadius: 14,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    chipText: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      fontWeight: '600',
-    },
-    emptyText: {
-      fontSize: 13,
-      color: theme.textTertiary,
-      fontStyle: 'italic',
-    },
-    fieldLabelRow: {
-      marginBottom: 6,
-    },
-    rangeField: {
-      flex: 1,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: 6,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.borderLight,
-    },
-    badgeText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: theme.textInverse,
-    },
-    footer: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderTopWidth: 1,
-      borderTopColor: theme.border,
-      backgroundColor: theme.backgroundSecondary,
-    },
     sectionHeaderAction: {
       width: 30,
       height: 30,
@@ -224,7 +159,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       backgroundColor: theme.primaryLight,
       borderWidth: 1,
-      borderColor: theme.primary + '30',
+      borderColor: theme.borderLight,
     },
     savingOverlay: {
       flex: 1,
@@ -331,12 +266,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     reassignTextActive: {
       color: theme.primary,
-    },
-    chipDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: theme.primary,
     },
     modalCloseButton: {
       width: 30,

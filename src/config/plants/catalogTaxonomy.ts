@@ -26,7 +26,6 @@ import type {
   CatalogGroup,
   CatalogTaxonomyEntry,
   PlantHabit,
-  PlantTag,
   PlantType,
 } from '@/types/database.types';
 
@@ -171,9 +170,4 @@ export function getTaxonomy(plantName: string, plantType: PlantType): CatalogTax
     cropFamily: 'other',
     tags: [],
   };
-}
-
-/** Every tag on a plant, for search to match on. */
-export function getPlantTags(plantName: string, plantType: PlantType): readonly PlantTag[] {
-  return getTaxonomy(plantName, plantType).tags;
 }

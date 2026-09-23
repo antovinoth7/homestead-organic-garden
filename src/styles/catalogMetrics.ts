@@ -39,10 +39,11 @@ export function clampFontScale(scale: number): number {
  * with no meta line occupies exactly the same height as one with it.
  *
  * Only the text block grows with the font scale — the thumb and the padding are
- * fixed — so the growth applies to the 32px the two text lines occupy.
+ * fixed — so the growth applies to the 38px the two text lines occupy (a 20px
+ * name line, a 2px gap, a 16px meta line).
  */
 export function catalogRowHeight(fontScale = 1): number {
-  const textBlock = 32;
+  const textBlock = 38;
   const chrome = CATALOG_ROW_BASE_HEIGHT - textBlock;
   return Math.round(chrome + textBlock * clampFontScale(fontScale));
 }

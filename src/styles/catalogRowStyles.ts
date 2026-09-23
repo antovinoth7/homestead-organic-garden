@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
-import type { Theme } from '../theme/colors';
-import { MONO_FONT } from './typography';
+import type { Theme } from '@/theme/colors';
+import { MONO_FONT } from '@/styles/typography';
 
 /**
  * Dense "read-first" rows inside the catalog section cards: label on the left,

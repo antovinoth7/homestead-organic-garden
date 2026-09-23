@@ -1,19 +1,15 @@
 import { Dimensions, StyleSheet } from 'react-native';
-import type { Theme } from '../theme/colors';
-import { MONO_FONT } from './typography';
+import type { Theme } from '@/theme/colors';
+import { MONO_FONT } from '@/styles/typography';
 import {
   catalogRowHeight,
   catalogSectionHeaderHeight,
   clampFontScale,
-} from './catalogMetrics';
+} from '@/styles/catalogMetrics';
 
-// Re-exported so existing importers keep working; the numbers themselves live
-// in catalogMetrics, which the pure list-building util also reads.
-export {
-  catalogRowHeight,
-  catalogRowTotalHeight,
-  catalogSectionHeaderHeight,
-} from './catalogMetrics';
+// Re-exported for the screen's getItemLayout; the numbers themselves live in
+// catalogMetrics, which the pure list-building util also reads.
+export { catalogRowTotalHeight } from '@/styles/catalogMetrics';
 
 /**
  * Cached per theme, then per font scale. Both catalog row components call

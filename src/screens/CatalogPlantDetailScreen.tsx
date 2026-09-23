@@ -761,7 +761,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
           >
             <GrowingInfoSection editor={editor} />
           </CollapsibleSection>
-
         </View>
 
         {/* ── Health ── */}
@@ -884,14 +883,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       {/* Sticky bar — fades in as the hero scrolls away, so back and Save stay
           reachable from every tab. */}
       <Animated.View
-        style={[
-          styles.stickyHeader,
-          {
-            paddingTop: insets.top + 10,
-            backgroundColor: theme.tabBarBackground,
-            opacity: stickyBgOpacity,
-          },
-        ]}
+        style={[styles.stickyHeader, { paddingTop: insets.top + 10, opacity: stickyBgOpacity }]}
         onLayout={onHeaderLayout}
         pointerEvents={headerStuck ? 'auto' : 'none'}
       >
