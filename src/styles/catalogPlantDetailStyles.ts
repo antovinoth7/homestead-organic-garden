@@ -18,6 +18,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.textSecondary,
     },
+    sectionNote: {
+      fontSize: 12,
+      lineHeight: 17,
+      color: theme.textTertiary,
+      paddingHorizontal: 14,
+      paddingBottom: 12,
+    },
     loadErrorActions: {
       flexDirection: 'row',
       gap: 12,

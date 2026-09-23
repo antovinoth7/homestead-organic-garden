@@ -474,6 +474,18 @@ export function getCommonPests(
 }
 
 /**
+ * The built-in pest or disease list with the ones the farmer linked on the
+ * catalog entry appended — case-insensitively de-duplicated, built-in first.
+ * Linking a pest in the catalog used to show nowhere but the catalog itself.
+ */
+export function withLinkedNames(
+  builtIn: readonly string[],
+  linked: readonly string[] | undefined
+): string[] {
+  return mergeUnique([...builtIn, ...(linked ?? [])]);
+}
+
+/**
  * Get common diseases for a plant type
  */
 export function getCommonDiseases(

@@ -8,7 +8,7 @@ import { DetailCard } from '@/components/plantDetail/DetailCard';
 import { ExpandableBlock } from '@/components/plantDetail/ExpandableBlock';
 import { ExpandableText } from '@/components/plantDetail/ExpandableText';
 import { getPlantCareProfile, getPruningTechniques } from '@/utils/plantCareDefaults';
-import { getCommonPests, getCommonDiseases } from '@/utils/plantHelpers';
+import { getCommonPests, getCommonDiseases, withLinkedNames } from '@/utils/plantHelpers';
 import { getPestByName } from '@/config/pests';
 import { getDiseaseByName } from '@/config/diseases';
 import { getDiseaseImage, getPestImage } from '@/config/referenceAssets';
@@ -40,14 +40,32 @@ export function DetailCareGuidanceSection({
     return getPlantCareProfile(plantVariety, plantType as PlantType, overrides);
   }, [plantVariety, plantType, plantCareProfiles]);
 
+  // The farmer's own catalog links ride along with the built-in lists.
+  const catalogOverride =
+    plantType && plantVariety
+      ? plantCareProfiles[plantType as PlantType]?.[plantVariety]
+      : undefined;
+
   const pests = useMemo(
-    () => (plantType ? getCommonPests(plantType as PlantType, plantVariety || undefined) : []),
-    [plantType, plantVariety]
+    () =>
+      plantType
+        ? withLinkedNames(
+            getCommonPests(plantType as PlantType, plantVariety || undefined),
+            catalogOverride?.customPests
+          )
+        : [],
+    [plantType, plantVariety, catalogOverride?.customPests]
   );
 
   const diseases = useMemo(
-    () => (plantType ? getCommonDiseases(plantType as PlantType, plantVariety || undefined) : []),
-    [plantType, plantVariety]
+    () =>
+      plantType
+        ? withLinkedNames(
+            getCommonDiseases(plantType as PlantType, plantVariety || undefined),
+            catalogOverride?.customDiseases
+          )
+        : [],
+    [plantType, plantVariety, catalogOverride?.customDiseases]
   );
 
   const pruningInfo = useMemo(() => {

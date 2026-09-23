@@ -790,6 +790,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               <TouchableOpacity
                 style={styles.sectionHeaderAction}
                 onPress={openPestPicker}
+                hitSlop={7}
+                accessibilityRole="button"
                 accessibilityLabel="Add pest"
               >
                 <Ionicons name="add" size={18} color={theme.primary} />
@@ -801,6 +803,9 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               emptyText="No linked pests yet."
               onRemove={onRemovePest}
             />
+            <Text style={styles.sectionNote}>
+              Pests you add here also show in each garden plant&apos;s care guide.
+            </Text>
           </CollapsibleSection>
 
           <CollapsibleSection
@@ -815,6 +820,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               <TouchableOpacity
                 style={styles.sectionHeaderAction}
                 onPress={openDiseasePicker}
+                hitSlop={7}
+                accessibilityRole="button"
                 accessibilityLabel="Add disease"
               >
                 <Ionicons name="add" size={18} color={theme.primary} />
@@ -826,6 +833,9 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               emptyText="No linked diseases yet."
               onRemove={onRemoveDisease}
             />
+            <Text style={styles.sectionNote}>
+              Diseases you add here also show in each garden plant&apos;s care guide.
+            </Text>
           </CollapsibleSection>
         </View>
 
