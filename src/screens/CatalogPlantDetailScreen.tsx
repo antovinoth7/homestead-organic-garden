@@ -38,8 +38,9 @@ import type {
 } from '@/components/catalog/catalogEditor';
 import { useCatalogEntryForm } from '@/hooks/useCatalogEntryForm';
 import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
-import { getAllPests } from '@/config/pests';
-import { getAllDiseases } from '@/config/diseases';
+import { getGroupedPestEntries } from '@/config/pests';
+import { getGroupedDiseaseEntries } from '@/config/diseases';
+import type { PestDiseasePickerGroup } from '@/utils/pestDiseasePickerRows';
 import type { PlantType, VarietyDetail } from '@/types/database.types';
 import { MoreStackParamList } from '@/types/navigation.types';
 import { sanitizeName } from '@/utils/catalogDraft';
@@ -95,6 +96,14 @@ const ALL_EXPANDED: Record<CatalogSectionKey, boolean> = {
   diseases: true,
   varieties: true,
 };
+
+/** Bundled registries — static for the app's lifetime, so grouped once. */
+const PEST_PICKER_GROUPS: readonly PestDiseasePickerGroup[] = getGroupedPestEntries().map(
+  (group) => ({ label: group.label, entries: group.pests })
+);
+const DISEASE_PICKER_GROUPS: readonly PestDiseasePickerGroup[] = getGroupedDiseaseEntries().map(
+  (group) => ({ label: group.label, entries: group.diseases })
+);
 
 export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const route = useRoute<RouteParam>();
@@ -908,37 +917,45 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         />
       )}
 
-      <PestDiseasePickerModal
-        visible={showPestPicker}
-        onClose={closePestPicker}
-        title="Add Pest"
-        kind="pest"
-        searchPlaceholder="Search pests..."
-        allEntries={getAllPests()}
-        takenNames={takenPestNames}
-        onSelect={onAddPest}
-      />
+      {showPestPicker && (
+        <PestDiseasePickerModal
+          visible
+          onClose={closePestPicker}
+          title="Add Pest"
+          kind="pest"
+          searchPlaceholder="Search pests…"
+          groups={PEST_PICKER_GROUPS}
+          takenNames={takenPestNames}
+          onSelect={onAddPest}
+        />
+      )}
 
-      <PestDiseasePickerModal
-        visible={showDiseasePicker}
-        onClose={closeDiseasePicker}
-        title="Link Disease"
-        kind="disease"
-        searchPlaceholder="Search diseases..."
-        allEntries={getAllDiseases()}
-        takenNames={takenDiseaseNames}
-        onSelect={onAddDisease}
-      />
+      {showDiseasePicker && (
+        <PestDiseasePickerModal
+          visible
+          onClose={closeDiseasePicker}
+          title="Link Disease"
+          kind="disease"
+          searchPlaceholder="Search diseases…"
+          groups={DISEASE_PICKER_GROUPS}
+          takenNames={takenDiseaseNames}
+          onSelect={onAddDisease}
+        />
+      )}
 
-      <VarietyDetailModal
-        editingVariety={editingVariety}
-        newVariety={newVariety}
-        onNewVarietyChange={setNewVariety}
-        draft={varietyDraft}
-        onDraftChange={setVarietyDraft}
-        onClose={closeVarietyModal}
-        onSave={onSaveVariety}
-      />
+      {/* Mounted only while open, like the sheets above, so a closed editor
+          keeps no live tree, keyboard listener or voice session around. */}
+      {editingVariety !== null && (
+        <VarietyDetailModal
+          editingVariety={editingVariety}
+          newVariety={newVariety}
+          onNewVarietyChange={setNewVariety}
+          draft={varietyDraft}
+          onDraftChange={setVarietyDraft}
+          onClose={closeVarietyModal}
+          onSave={onSaveVariety}
+        />
+      )}
 
       <ConfirmDeleteModal
         visible={showDeleteConfirm}

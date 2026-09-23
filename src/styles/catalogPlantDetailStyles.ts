@@ -174,11 +174,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.textInverse,
     },
-    pruningTipsLabel: {
-      fontSize: 12,
-      color: theme.textTertiary,
-      marginBottom: 6,
-    },
     footer: {
       paddingHorizontal: 16,
       paddingVertical: 10,
@@ -295,123 +290,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     reassignTextActive: {
       color: theme.primary,
     },
-    pickerModalContent: {
-      maxHeight: '75%',
-      padding: 16,
-    },
-    pickerSearch: {
-      backgroundColor: theme.inputBackground,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      paddingHorizontal: 14,
-      height: 42,
-      fontSize: 14,
-      color: theme.inputText,
-      marginBottom: 10,
-    },
-    pickerList: {
-      flexGrow: 0,
-    },
-    pickerRow: {
-      paddingVertical: 12,
-      paddingHorizontal: 4,
-    },
-    pickerRowText: {
-      fontSize: 15,
-      color: theme.text,
-    },
-    pickerSeparator: {
-      height: 0,
-    },
     chipDot: {
       width: 6,
       height: 6,
       borderRadius: 3,
       backgroundColor: theme.primary,
-    },
-    seasonPillRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginBottom: 12,
-    },
-    seasonPill: {
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 14,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    seasonPillActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    seasonPillText: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
-    seasonPillTextActive: {
-      color: theme.primary,
-      fontWeight: '600',
-    },
-    /**
-     * Applied after `modalContent`, which is shared with the picker and reassign
-     * modals and so must stay untouched. Drops the card's own padding — the
-     * header owns its inset and its separator has to reach both edges — and caps
-     * the height so a keyboard can never push the header out of frame.
-     */
-    varietyCard: {
-      padding: 0,
-      maxHeight: '85%',
-      overflow: 'hidden',
-    },
-    /** Variety sheet header: close left, title centre, Done right. */
-    varietyHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.borderLight,
-    },
-    varietyHeaderText: {
-      flex: 1,
-      minWidth: 0,
-      paddingHorizontal: 8,
-    },
-    varietyHeaderTitle: {
-      fontSize: 17,
-      fontWeight: '700',
-      color: theme.text,
-      textAlign: 'center',
-    },
-    /** Restores the inset `varietyCard` gave up, now that the body scrolls. */
-    varietyScrollContent: {
-      padding: 20,
-    },
-    varietyCloseButton: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    varietyDoneButton: {
-      backgroundColor: theme.primary,
-      paddingHorizontal: 18,
-      paddingVertical: 9,
-      borderRadius: 20,
-    },
-    varietyDoneText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: theme.textInverse,
     },
     modalCloseButton: {
       width: 30,
@@ -420,17 +303,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    varietyNotesInput: {
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-      borderRadius: 8,
-      padding: 10,
-      minHeight: 72,
-      color: theme.text,
-      fontSize: 14,
-      textAlignVertical: 'top',
-      backgroundColor: theme.backgroundSecondary,
-      marginBottom: 4,
     },
   });

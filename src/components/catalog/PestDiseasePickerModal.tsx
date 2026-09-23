@@ -1,12 +1,27 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Modal } from 'react-native';
+import {
+  FlatList,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { GardenIcon } from '@/components/GardenIcon';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
-import { createStyles } from '@/styles/catalogPlantDetailStyles';
-import type { DiseaseEntry, PestDiseaseKind, PestEntry } from '@/types/database.types';
-
-type Entry = PestEntry | DiseaseEntry;
+import { BottomSheetModal } from '@/components/BottomSheetModal';
+import { SheetHandle } from '@/components/SheetHandle';
+import { ReferenceThumb } from '@/components/ReferenceThumb';
+import { getDiseaseImage, getPestImage } from '@/config/referenceAssets';
+import { createStyles } from '@/styles/plantPickerSheetStyles';
+import {
+  buildPestDiseasePickerRows,
+  type PestDiseasePickerEntry,
+  type PestDiseasePickerGroup,
+  type PestDiseasePickerRow,
+} from '@/utils/pestDiseasePickerRows';
+import type { PestDiseaseKind } from '@/types/database.types';
 
 interface Props {
   visible: boolean;
@@ -14,119 +29,158 @@ interface Props {
   title: string;
   searchPlaceholder: string;
   kind: PestDiseaseKind;
-  /** Full catalogue of entries; already-linked names are filtered out here. */
-  allEntries: readonly Entry[];
+  /** The catalogue grouped by category; already-linked names are filtered out here. */
+  groups: readonly PestDiseasePickerGroup[];
   /** Names already linked (inherited + custom), case-insensitively excluded. */
   takenNames: readonly string[];
   onSelect: (name: string) => void;
 }
 
-const keyExtractor = (item: Entry): string => item.id;
+const keyExtractor = (row: PestDiseasePickerRow): string => row.key;
 
-/** Searchable picker shared by the Known Pests and Known Diseases sections. */
+/**
+ * Searchable bottom-sheet picker shared by the Known Pests and Known Diseases
+ * sections. Same chrome as the Choose a Plant sheet (`PlantPickerSheet`):
+ * handle + title, search bar, category headers, thumbnail rows.
+ *
+ * Mount it only while open — the search starts empty on each mount.
+ */
 export function PestDiseasePickerModal({
   visible,
   onClose,
   title,
   searchPlaceholder,
   kind,
-  allEntries,
+  groups,
   takenNames,
   onSelect,
 }: Props): React.JSX.Element {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [search, setSearch] = useState('');
 
-  const close = useCallback(() => {
-    setSearch('');
-    onClose();
-  }, [onClose]);
+  // Edge-to-edge modal: cap below the status bar rather than trusting a
+  // percentage of the full-screen window.
+  const sheetHeight = Math.min(windowHeight * 0.85, windowHeight - insets.top - 24);
+  const sheetStyle = useMemo(
+    () => [styles.sheet, { height: sheetHeight, paddingBottom: Math.max(insets.bottom, 24) }],
+    [styles, sheetHeight, insets.bottom]
+  );
+
+  const rows = useMemo(
+    () => buildPestDiseasePickerRows(groups, takenNames, search),
+    [groups, takenNames, search]
+  );
 
   const handleSelect = useCallback(
     (name: string) => {
       onSelect(name);
-      setSearch('');
       onClose();
     },
     [onSelect, onClose]
   );
 
-  const available = useMemo(() => {
-    const taken = new Set(takenNames.map((n) => n.toLowerCase()));
-    const query = search.trim().toLowerCase();
-    return allEntries.filter(
-      (entry) =>
-        !taken.has(entry.name.toLowerCase()) && (!query || entry.name.toLowerCase().includes(query))
-    );
-  }, [allEntries, takenNames, search]);
-
-  const renderSeparator = useCallback(() => <View style={styles.pickerSeparator} />, [styles]);
-
   const renderRow = useCallback(
-    ({ item }: { item: Entry }) => <PickerRow item={item} kind={kind} onSelect={handleSelect} />,
-    [handleSelect, kind]
+    ({ item: row }: { item: PestDiseasePickerRow }) => {
+      if (row.kind === 'label') {
+        return <Text style={styles.categoryHeader}>{row.label}</Text>;
+      }
+      return (
+        <PickerRow
+          entry={row.entry}
+          categoryLabel={row.categoryLabel}
+          kind={kind}
+          onSelect={handleSelect}
+        />
+      );
+    },
+    [styles, kind, handleSelect]
+  );
+
+  const noun = kind === 'pest' ? 'pests' : 'diseases';
+  const emptyState = useMemo(
+    () => (
+      <View style={styles.emptyState}>
+        <Ionicons name="search-outline" size={28} color={theme.textTertiary} />
+        <Text style={styles.emptyStateText}>
+          {search.trim() ? `No ${noun} match your search.` : `Every listed ${kind} is linked.`}
+        </Text>
+      </View>
+    ),
+    [styles, theme, search, noun, kind]
   );
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      hardwareAccelerated
-      statusBarTranslucent
-      navigationBarTranslucent
-      onRequestClose={close}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, styles.pickerModalContent]}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity style={styles.modalCloseButton} onPress={close}>
-              <Ionicons name="close" size={16} color={theme.textInverse} />
-            </TouchableOpacity>
-          </View>
-          <TextInput
-            style={styles.pickerSearch}
-            placeholder={searchPlaceholder}
-            placeholderTextColor={theme.textTertiary}
-            value={search}
-            onChangeText={setSearch}
-            autoCorrect={false}
-          />
-          <FlatList
-            style={styles.pickerList}
-            keyboardShouldPersistTaps="handled"
-            data={available}
-            keyExtractor={keyExtractor}
-            ItemSeparatorComponent={renderSeparator}
-            renderItem={renderRow}
-          />
-        </View>
+    <BottomSheetModal visible={visible} onClose={onClose} sheetStyle={sheetStyle}>
+      <SheetHandle onClose={onClose}>
+        <Text style={styles.sheetTitle}>{title}</Text>
+      </SheetHandle>
+      <View style={styles.searchBarContainer}>
+        <Ionicons name="search-outline" size={16} color={theme.textTertiary} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder={searchPlaceholder}
+          placeholderTextColor={theme.textTertiary}
+          value={search}
+          onChangeText={setSearch}
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="while-editing"
+        />
       </View>
-    </Modal>
+      <FlatList
+        data={rows}
+        keyExtractor={keyExtractor}
+        renderItem={renderRow}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        ListEmptyComponent={emptyState}
+      />
+    </BottomSheetModal>
   );
 }
 
 interface RowProps {
-  item: Entry;
+  entry: PestDiseasePickerEntry;
+  categoryLabel: string;
   kind: PestDiseaseKind;
   onSelect: (name: string) => void;
 }
 
-function PickerRow({ item, kind, onSelect }: RowProps): React.JSX.Element {
+function PickerRow({ entry, categoryLabel, kind, onSelect }: RowProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const handlePress = useCallback(() => onSelect(item.name), [onSelect, item.name]);
+  const handlePress = useCallback(() => onSelect(entry.name), [onSelect, entry.name]);
+  const source =
+    kind === 'pest'
+      ? getPestImage(entry.id, entry.imageAsset)
+      : getDiseaseImage(entry.id, entry.imageAsset);
 
   return (
-    <TouchableOpacity style={styles.pickerRow} onPress={handlePress}>
-      <GardenIcon
-        name={kind === 'pest' ? 'general.pest' : 'general.disease'}
-        size={18}
-        color={theme.textSecondary}
+    <TouchableOpacity
+      style={styles.row}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Add ${entry.name}`}
+    >
+      <ReferenceThumb
+        source={source}
+        fallbackIcon={kind === 'pest' ? 'general.pest' : 'general.disease'}
+        variant="row"
+        recyclingKey={entry.id}
       />
-      <Text style={styles.pickerRowText}>{item.name}</Text>
+      <View style={styles.rowMeta}>
+        <Text style={styles.rowName}>{entry.name}</Text>
+        <View style={styles.badgeRow}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>{categoryLabel}</Text>
+          </View>
+        </View>
+      </View>
+      <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
     </TouchableOpacity>
   );
 }
