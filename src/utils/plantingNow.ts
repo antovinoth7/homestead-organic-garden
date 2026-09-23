@@ -43,22 +43,26 @@ export function mapSeasonTextToIds(text: string): Set<KKSeasonId> {
   }
 
   if (t.includes('summer')) ids.add('summer');
-  // SW monsoon / Kharif
+  // SW monsoon (Aadi pattam); "kharif" is the retired label, kept for old text.
   if (
     t.includes('southwest') ||
     t.includes('south-west') ||
     t.includes('sw monsoon') ||
+    t.includes('sw +') ||
     t.includes('kharif') ||
     t.includes('jun')
   ) {
     ids.add('sw_monsoon');
   }
-  // NE monsoon
+  // NE monsoon (Purattasi / Karthigai pattam)
   if (t.includes('northeast') || t.includes('north-east') || t.includes('ne monsoon')) {
     ids.add('ne_monsoon');
   }
-  // Rabi / winter / cool-dry (Oct–Jan spans NE monsoon + cool dry)
-  if (t.includes('rabi') || t.includes('winter') || t.includes('cool')) {
+  // Winter (Thai pattam) is the zone model's Jan–Feb cool-dry season only.
+  if (t.includes('winter')) ids.add('cool_dry');
+  // Retired "Rabi" (Oct–Jan) and the bundled "Cool Dry" phrasing span the NE
+  // monsoon and the cool-dry season.
+  if (t.includes('rabi') || t.includes('cool')) {
     ids.add('cool_dry');
     ids.add('ne_monsoon');
   }

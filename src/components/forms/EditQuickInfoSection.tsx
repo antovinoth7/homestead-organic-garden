@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { growingSeasonLabel } from '@/utils/plantLabels';
 import { createEnrichedSectionStyles } from '../../styles/enrichedSectionStyles';
 import CollapsibleSection from '../CollapsibleSection';
 import { getPlantCareProfile } from '../../utils/plantCareDefaults';
@@ -74,7 +75,7 @@ export function EditQuickInfoSection({
   if (depth) stats.push({ icon: 'arrow-down-outline', label: 'Planting Depth', value: depth });
 
   if (profile.growingSeason) {
-    stats.push({ icon: 'sunny-outline', label: 'Growing Season', value: profile.growingSeason });
+    stats.push({ icon: 'sunny-outline', label: 'Growing Season', value: growingSeasonLabel(profile.growingSeason) });
   }
 
   const germDays = formatRange(profile.germinationDays, 'days');

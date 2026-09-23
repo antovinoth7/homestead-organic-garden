@@ -16,6 +16,14 @@ Season logic, watering multipliers, and pest alerts are parameterized by zone co
 
 Every Tamil Nadu zone uses the IMD meteorological boundaries: Winter (`cool_dry`, Jan–Feb), Pre-monsoon (`summer`, Mar–May), SW Monsoon (Jun–Sep), and NE Monsoon (Oct–Dec). Crop pattam/window labels are separate planting-rule metadata and are not season names.
 
+### Catalog growing-season vocabulary
+
+`GROWING_SEASON_OPTIONS` (`src/utils/plantLabels.ts`) drives the catalog's Growing season picker and variety season pills. It uses the season model's English names, not Kharif/Rabi, which Tamil Nadu farmers don't use: Year Round, SW Monsoon (Jun–Sep), NE Monsoon (Oct–Dec), Winter (Jan–Feb), Summer (Mar–May), and three combinations. Each option carries its pattam as `description` (the picker's second line, e.g. "Aadi pattam"), plus a Tamil-script `tamilLabel` that is reserved for the Phase G toggle and not rendered yet.
+
+- Retired values (`Kharif (Jun–Sep)`, `Rabi (Oct–Jan)`, …) live in `LEGACY_SEASON_VALUES`. `normalizeSeasonValue()` maps them onto the new ones, and migration 015 rewrote the stored catalog overrides.
+- `growingSeason` is still free text. Many bundled profiles say e.g. `Southwest Monsoon (Jun–Sep)`. Display it with `growingSeasonLabel()`, which falls back to the raw text instead of blanking it.
+- `mapSeasonTextToIds()` (`src/utils/plantingNow.ts`) still recognises `kharif`/`rabi` in old text. `Winter` maps to `cool_dry` only, while `Rabi` and `Cool Dry` also imply `ne_monsoon`.
+
 ### Today planting and advisory model
 
 - `tamilNaduPlantingCalendar.ts` is the source-reviewed rule registry. Rules carry zone scope, establishment action, window, conditions, maturity measured from that action, evidence IDs, and review date.

@@ -281,15 +281,101 @@ export const LIFECYCLE_DESCRIPTIONS: Record<PlantLifecycle, string> = {
   permanent: 'A permanent farm asset — never rotated or cleared from the land',
 };
 
-export const GROWING_SEASON_OPTIONS: { label: string; value: string }[] = [
+export interface GrowingSeasonOption {
+  /** English label — also the stored value, so it reads the same everywhere. */
+  label: string;
+  value: string;
+  /**
+   * The Tamil Nadu sowing windows (pattam) the season covers, shown as the
+   * picker's secondary line. Farmers here plan by pattam, not Kharif/Rabi.
+   */
+  description?: string;
+  /** Tamil-script pattam for the Phase G interface toggle; not rendered yet. */
+  tamilLabel?: string;
+}
+
+/**
+ * Season vocabulary for `growingSeason` and variety `seasonSuitability`.
+ * English names follow the agro-climatic zone model (`src/config/zones`):
+ * SW Monsoon, NE Monsoon, Winter, Summer.
+ */
+export const GROWING_SEASON_OPTIONS: readonly GrowingSeasonOption[] = [
   { label: 'Year Round', value: 'Year Round' },
-  { label: 'Kharif — Southwest Monsoon (Jun–Sep)', value: 'Kharif (Jun–Sep)' },
-  { label: 'Rabi — Winter (Oct–Jan)', value: 'Rabi (Oct–Jan)' },
-  { label: 'Summer (Feb–May)', value: 'Summer (Feb–May)' },
-  { label: 'Northeast Monsoon (Oct–Dec)', value: 'Northeast Monsoon (Oct–Dec)' },
-  { label: 'Kharif + Rabi', value: 'Kharif + Rabi' },
-  { label: 'Rabi + Summer', value: 'Rabi + Summer' },
+  {
+    label: 'SW Monsoon (Jun–Sep)',
+    value: 'SW Monsoon (Jun–Sep)',
+    description: 'Aadi pattam',
+    tamilLabel: 'ஆடிப் பட்டம்',
+  },
+  {
+    label: 'NE Monsoon (Oct–Dec)',
+    value: 'NE Monsoon (Oct–Dec)',
+    description: 'Purattasi · Karthigai pattam',
+    tamilLabel: 'புரட்டாசிப் பட்டம் · கார்த்திகைப் பட்டம்',
+  },
+  {
+    label: 'Winter (Jan–Feb)',
+    value: 'Winter (Jan–Feb)',
+    description: 'Thai pattam',
+    tamilLabel: 'தைப் பட்டம்',
+  },
+  {
+    label: 'Summer (Mar–May)',
+    value: 'Summer (Mar–May)',
+    description: 'Masi · Chithirai pattam',
+    tamilLabel: 'மாசிப் பட்டம் · சித்திரைப் பட்டம்',
+  },
+  {
+    label: 'SW + NE Monsoon (Jun–Dec)',
+    value: 'SW + NE Monsoon (Jun–Dec)',
+    description: 'Aadi · Purattasi pattam',
+    tamilLabel: 'ஆடிப் பட்டம் · புரட்டாசிப் பட்டம்',
+  },
+  {
+    label: 'NE Monsoon + Winter (Oct–Feb)',
+    value: 'NE Monsoon + Winter (Oct–Feb)',
+    description: 'Karthigai · Thai pattam',
+    tamilLabel: 'கார்த்திகைப் பட்டம் · தைப் பட்டம்',
+  },
+  {
+    label: 'Winter + Summer (Jan–May)',
+    value: 'Winter + Summer (Jan–May)',
+    description: 'Thai · Chithirai pattam',
+    tamilLabel: 'தைப் பட்டம் · சித்திரைப் பட்டம்',
+  },
 ];
+
+/**
+ * Retired season values (the Kharif/Rabi vocabulary and older spellings)
+ * mapped onto their `GROWING_SEASON_OPTIONS` replacement. Used by migration
+ * 015 and by the display layer for anything written before it ran.
+ */
+export const LEGACY_SEASON_VALUES: Readonly<Record<string, string>> = {
+  'Kharif (Jun–Sep)': 'SW Monsoon (Jun–Sep)',
+  'Rabi (Oct–Jan)': 'NE Monsoon + Winter (Oct–Feb)',
+  'Summer (Feb–May)': 'Summer (Mar–May)',
+  'Summer (Mar-May)': 'Summer (Mar–May)',
+  'Northeast Monsoon (Oct–Dec)': 'NE Monsoon (Oct–Dec)',
+  'Kharif + Rabi': 'SW + NE Monsoon (Jun–Dec)',
+  'Rabi + Summer': 'Winter + Summer (Jan–May)',
+};
+
+/** Maps a retired season value onto the current vocabulary; anything else passes through. */
+export function normalizeSeasonValue(value: string): string {
+  return LEGACY_SEASON_VALUES[value.trim()] ?? value;
+}
+
+/**
+ * Display text for a stored season: the option label when it is one of ours,
+ * otherwise the stored text itself — many bundled profiles carry free text
+ * such as "Southwest Monsoon (Jun–Sep)" that must still be shown.
+ */
+export function growingSeasonLabel(value: string | undefined | null): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return '';
+  const normalized = normalizeSeasonValue(trimmed);
+  return GROWING_SEASON_OPTIONS.find((o) => o.value === normalized)?.label ?? trimmed;
+}
 
 export const TOLERANCE_LABELS: Record<ToleranceLevel, string> = {
   low: 'Low',

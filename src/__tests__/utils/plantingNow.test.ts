@@ -30,6 +30,22 @@ describe('mapSeasonTextToIds', () => {
     expect(ids.has('ne_monsoon')).toBe(true);
   });
 
+  it('maps the zone-model season vocabulary', () => {
+    expect([...mapSeasonTextToIds('SW Monsoon (Jun–Sep)')]).toEqual(['sw_monsoon']);
+    expect([...mapSeasonTextToIds('NE Monsoon (Oct–Dec)')]).toEqual(['ne_monsoon']);
+    expect([...mapSeasonTextToIds('Winter (Jan–Feb)')]).toEqual(['cool_dry']);
+    expect([...mapSeasonTextToIds('Summer (Mar–May)')]).toEqual(['summer']);
+    expect(new Set(mapSeasonTextToIds('SW + NE Monsoon (Jun–Dec)'))).toEqual(
+      new Set(['sw_monsoon', 'ne_monsoon'])
+    );
+    expect(new Set(mapSeasonTextToIds('NE Monsoon + Winter (Oct–Feb)'))).toEqual(
+      new Set(['ne_monsoon', 'cool_dry'])
+    );
+    expect(new Set(mapSeasonTextToIds('Winter + Summer (Jan–May)'))).toEqual(
+      new Set(['cool_dry', 'summer'])
+    );
+  });
+
   it('returns empty for unknown/blank text', () => {
     expect(mapSeasonTextToIds('').size).toBe(0);
     expect(mapSeasonTextToIds('whenever').size).toBe(0);

@@ -70,13 +70,13 @@ describe('buildPlantPickerItems', () => {
     const profiles = emptyProfiles();
     profiles.vegetable['Brinjal'] = profile({
       name: 'Brinjal',
-      growingSeason: 'Summer (Feb–May)',
+      growingSeason: 'Summer (Mar–May)',
       varieties: ['Local Purple'],
     });
 
     const items = buildPlantPickerItems(profiles);
     const brinjal = items.find((i) => i.name === 'Brinjal');
-    expect(brinjal?.seasonLabel).toBe('Summer (Feb–May)');
+    expect(brinjal?.seasonLabel).toBe('Summer (Mar–May)');
     expect(brinjal?.hasVarieties).toBe(true);
   });
 });
@@ -84,8 +84,14 @@ describe('buildPlantPickerItems', () => {
 describe('derivePlantSeasonLabel', () => {
   it('uses the plant-level growingSeason when present', () => {
     expect(derivePlantSeasonLabel(profile({ growingSeason: 'Year Round' }))).toBe('Year Round');
-    expect(derivePlantSeasonLabel(profile({ growingSeason: '  Rabi (Oct–Jan)  ' }))).toBe(
-      'Rabi (Oct–Jan)'
+    expect(
+      derivePlantSeasonLabel(profile({ growingSeason: '  NE Monsoon + Winter (Oct–Feb)  ' }))
+    ).toBe('NE Monsoon + Winter (Oct–Feb)');
+  });
+
+  it('labels a retired Kharif/Rabi value by its replacement', () => {
+    expect(derivePlantSeasonLabel(profile({ growingSeason: 'Rabi (Oct–Jan)' }))).toBe(
+      'NE Monsoon + Winter (Oct–Feb)'
     );
   });
 
@@ -101,12 +107,13 @@ describe('derivePlantSeasonLabel', () => {
       derivePlantSeasonLabel(
         profile({
           varietyDetails: {
-            A: { seasonSuitability: ['Kharif (Jun–Sep)'] },
+            A: { seasonSuitability: ['SW Monsoon (Jun–Sep)'] },
+            // A retired spelling of the same season still counts as one phrase.
             B: { seasonSuitability: ['Kharif (Jun–Sep)'] },
           },
         })
       )
-    ).toBe('Kharif (Jun–Sep)');
+    ).toBe('SW Monsoon (Jun–Sep)');
   });
 
   it('collapses mixed partial coverage to Multi-season', () => {
@@ -114,8 +121,8 @@ describe('derivePlantSeasonLabel', () => {
       derivePlantSeasonLabel(
         profile({
           varietyDetails: {
-            A: { seasonSuitability: ['Kharif (Jun–Sep)'] },
-            B: { seasonSuitability: ['Summer (Feb–May)'] },
+            A: { seasonSuitability: ['SW Monsoon (Jun–Sep)'] },
+            B: { seasonSuitability: ['Summer (Mar–May)'] },
           },
         })
       )
@@ -127,8 +134,8 @@ describe('derivePlantSeasonLabel', () => {
       derivePlantSeasonLabel(
         profile({
           varietyDetails: {
-            A: { seasonSuitability: ['Kharif (Jun–Sep)', 'Rabi (Oct–Jan)'] },
-            B: { seasonSuitability: ['Summer (Feb–May)'] },
+            A: { seasonSuitability: ['SW Monsoon (Jun–Sep)', 'NE Monsoon + Winter (Oct–Feb)'] },
+            B: { seasonSuitability: ['Summer (Mar–May)'] },
           },
         })
       )

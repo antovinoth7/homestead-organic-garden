@@ -164,7 +164,7 @@ const DEFAULT_HARVEST_SEASON_BY_TYPE: Record<PlantType, string> = {
   timber_tree: 'Year Round',
   coconut_tree: 'Year Round',
   shrub: 'Year Round',
-  spinach: 'Rabi (Oct–Jan)',
+  spinach: 'Northeast Monsoon (Oct-Dec)',
 };
 
 /**

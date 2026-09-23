@@ -1,6 +1,7 @@
 import type { CareFormState } from '@/utils/catalogDraft';
 import type { NumericRange } from '@/types/database.types';
 import { harvestRangeInYears } from '@/utils/growSpecFormat';
+import { growingSeasonLabel } from '@/utils/plantLabels';
 
 /**
  * Collapsed-card summary lines. Each section shows a one-line digest of what it
@@ -62,7 +63,7 @@ export function coreCareSummary(careForm: CareFormState | null, labels: SummaryL
 export function growingInfoSummary(careForm: CareFormState | null): string {
   return (
     joinSummary([
-      careForm?.growingSeason,
+      growingSeasonLabel(careForm?.growingSeason) || undefined,
       formatRangeLabel(careForm?.daysToHarvestMin ?? '', careForm?.daysToHarvestMax ?? '', 'days'),
       careForm?.spacingCm ? `Spacing ${careForm.spacingCm} cm` : undefined,
     ]) ?? 'Harvest timing, spacing, and germination'

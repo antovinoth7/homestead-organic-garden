@@ -78,7 +78,7 @@ export const VEGETABLE_OVERRIDES_1: Record<string, PlantCareProfile> = {
     heightCm: { min: 90, max: 180 },
     spacingCm: 45,
     plantingDepthCm: 2,
-    growingSeason: 'Summer (Mar-May)',
+    growingSeason: 'Summer (Mar–May)',
     germinationDays: { min: 5, max: 10 },
     germinationTempC: { min: 25, max: 35 },
     soilPhRange: { min: 6.0, max: 6.8 },
