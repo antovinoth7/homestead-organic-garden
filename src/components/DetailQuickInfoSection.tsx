@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { growingSeasonLabel } from '@/utils/plantLabels';
+import { isStatedHarvestRange } from '@/utils/growSpecFormat';
 import { createEnrichedSectionStyles } from '@/styles/enrichedSectionStyles';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { DetailCard } from '@/components/plantDetail/DetailCard';
@@ -51,7 +52,10 @@ export function DetailQuickInfoSection({
 
   const stats: StatItem[] = [];
 
-  const harvestDays = formatRange(profile.daysToHarvest, 'days');
+  // A 0–0 range is "not harvested" (timber), not a zero-day wait.
+  const harvestDays = isStatedHarvestRange(profile.daysToHarvest)
+    ? formatRange(profile.daysToHarvest, 'days')
+    : null;
   if (harvestDays)
     stats.push({ icon: 'timer-outline', label: 'Days to Harvest', value: harvestDays });
 

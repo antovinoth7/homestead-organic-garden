@@ -5,6 +5,10 @@ describe('formatDaysToHarvest', () => {
     expect(formatDaysToHarvest(undefined)).toBe('');
   });
 
+  it('treats a 0–0 range as no figure, not "0 d"', () => {
+    expect(formatDaysToHarvest({ min: 0, max: 0 })).toBe('');
+  });
+
   it('shows a single figure when the bounds are equal', () => {
     expect(formatDaysToHarvest({ min: 35, max: 35 })).toBe('35 d');
   });

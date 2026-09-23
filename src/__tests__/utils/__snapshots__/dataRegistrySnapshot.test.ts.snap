@@ -5367,10 +5367,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   },
   "timber_tree:Bamboo": {
     "profile": {
-      "daysToHarvest": {
-        "max": 0,
-        "min": 0,
-      },
       "description": "Giant clumping grass producing strong culms used for construction and crafts. Extremely fast-growing in Kanyakumari's monsoon months. Contain spread with a root barrier or trench.",
       "droughtTolerance": "medium",
       "feedingIntensity": "medium",
@@ -5423,10 +5419,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   },
   "timber_tree:Mahogany": {
     "profile": {
-      "daysToHarvest": {
-        "max": 0,
-        "min": 0,
-      },
       "description": "High-value tropical timber with a straight trunk and broad canopy. Grows well in Kanyakumari's warm humid climate. Requires little care once established; stake young saplings against coastal wind.",
       "droughtTolerance": "medium",
       "feedingIntensity": "light",
@@ -5479,10 +5471,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   },
   "timber_tree:Neem": {
     "profile": {
-      "daysToHarvest": {
-        "max": 0,
-        "min": 0,
-      },
       "description": "Fast-growing evergreen valued for pest-repellent properties and durable timber. Thrives in Kanyakumari's heat with minimal care. Neem cake and leaf extract are staples in organic gardening.",
       "droughtTolerance": "high",
       "feedingIntensity": "light",
@@ -5535,10 +5523,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   },
   "timber_tree:Rosewood": {
     "profile": {
-      "daysToHarvest": {
-        "max": 0,
-        "min": 0,
-      },
       "description": "Prized hardwood with dark fragrant heartwood. A nitrogen-fixing legume that enriches surrounding soil. Slow-growing but extremely drought-hardy once established in laterite soils.",
       "droughtTolerance": "high",
       "feedingIntensity": "light",
@@ -5591,10 +5575,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   },
   "timber_tree:Sandalwood": {
     "profile": {
-      "daysToHarvest": {
-        "max": 0,
-        "min": 0,
-      },
       "description": "Aromatic heartwood tree and hemi-parasite that needs a host plant nearby. Very slow-growing; thrives in well-drained laterite or rocky soils. Protect saplings from cattle and full afternoon sun.",
       "droughtTolerance": "high",
       "feedingIntensity": "light",
@@ -5647,10 +5627,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   },
   "timber_tree:Teak": {
     "profile": {
-      "daysToHarvest": {
-        "max": 0,
-        "min": 0,
-      },
       "description": "Premier hardwood timber tree with large deciduous leaves. Prefers well-drained laterite soils and seasonal dry spells. Young trees benefit from annual composting during monsoon.",
       "droughtTolerance": "high",
       "feedingIntensity": "light",
@@ -5703,10 +5679,6 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
   },
   "timber_tree:Wild Jack": {
     "profile": {
-      "daysToHarvest": {
-        "max": 0,
-        "min": 0,
-      },
       "description": "Large evergreen tree native to the Western Ghats, yielding durable timber and edible fruit. Thrives in Kanyakumari's laterite-rich foothills with moderate rainfall. Low maintenance once established.",
       "droughtTolerance": "medium",
       "feedingIntensity": "light",

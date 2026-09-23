@@ -1,6 +1,6 @@
 import type { CareFormState } from '@/utils/catalogDraft';
 import type { NumericRange } from '@/types/database.types';
-import { harvestRangeInYears } from '@/utils/growSpecFormat';
+import { harvestRangeInYears, isStatedHarvestRange } from '@/utils/growSpecFormat';
 import { growingSeasonLabel } from '@/utils/plantLabels';
 
 /**
@@ -158,8 +158,7 @@ export function buildCatalogMetaLine(
  * of a year or more reads in years instead: "12–15 years", not "4380–5475 days".
  */
 function formatDaysToHarvest(range: NumericRange | undefined): string | undefined {
-  if (!range) return undefined;
-  if (!Number.isFinite(range.min) || !Number.isFinite(range.max)) return undefined;
+  if (!isStatedHarvestRange(range)) return undefined;
   const years = harvestRangeInYears(range);
   const { min, max } = years ?? range;
   const unit = years ? (max === 1 ? 'year' : 'years') : 'days';

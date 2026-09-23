@@ -18,7 +18,6 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     tamilName: 'வேம்பு',
     description:
       "Fast-growing evergreen valued for pest-repellent properties and durable timber. Thrives in Kanyakumari's heat with minimal care. Neem cake and leaf extract are staples in organic gardening.",
-    daysToHarvest: { min: 0, max: 0 },
     heightCm: { min: 500, max: 2000 },
     spacingCm: 500,
     plantingDepthCm: 5,
@@ -47,7 +46,6 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     tamilName: 'தேக்கு',
     description:
       'Premier hardwood timber tree with large deciduous leaves. Prefers well-drained laterite soils and seasonal dry spells. Young trees benefit from annual composting during monsoon.',
-    daysToHarvest: { min: 0, max: 0 },
     heightCm: { min: 600, max: 3000 },
     spacingCm: 600,
     plantingDepthCm: 5,
@@ -76,7 +74,6 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     tamilName: 'மகாகனி',
     description:
       "High-value tropical timber with a straight trunk and broad canopy. Grows well in Kanyakumari's warm humid climate. Requires little care once established; stake young saplings against coastal wind.",
-    daysToHarvest: { min: 0, max: 0 },
     heightCm: { min: 800, max: 3500 },
     spacingCm: 600,
     plantingDepthCm: 5,
@@ -105,7 +102,6 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     tamilName: 'ரோஸ்வுட்',
     description:
       'Prized hardwood with dark fragrant heartwood. A nitrogen-fixing legume that enriches surrounding soil. Slow-growing but extremely drought-hardy once established in laterite soils.',
-    daysToHarvest: { min: 0, max: 0 },
     heightCm: { min: 600, max: 2500 },
     spacingCm: 500,
     plantingDepthCm: 5,
@@ -134,7 +130,6 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     tamilName: 'சந்தனம்',
     description:
       'Aromatic heartwood tree and hemi-parasite that needs a host plant nearby. Very slow-growing; thrives in well-drained laterite or rocky soils. Protect saplings from cattle and full afternoon sun.',
-    daysToHarvest: { min: 0, max: 0 },
     heightCm: { min: 400, max: 1200 },
     spacingCm: 400,
     plantingDepthCm: 3,
@@ -163,7 +158,6 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     tamilName: 'மூங்கில்',
     description:
       "Giant clumping grass producing strong culms used for construction and crafts. Extremely fast-growing in Kanyakumari's monsoon months. Contain spread with a root barrier or trench.",
-    daysToHarvest: { min: 0, max: 0 },
     heightCm: { min: 500, max: 2500 },
     spacingCm: 500,
     plantingDepthCm: 10,
@@ -192,7 +186,6 @@ export const TIMBER_COCONUT_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = 
     tamilName: 'ஐயன்பலா',
     description:
       "Large evergreen tree native to the Western Ghats, yielding durable timber and edible fruit. Thrives in Kanyakumari's laterite-rich foothills with moderate rainfall. Low maintenance once established.",
-    daysToHarvest: { min: 0, max: 0 },
     heightCm: { min: 600, max: 2500 },
     spacingCm: 600,
     plantingDepthCm: 5,

@@ -223,6 +223,13 @@ describe('buildCatalogMetaLine', () => {
     expect(buildCatalogMetaLine(undefined, undefined, undefined, 0)).toBeUndefined();
   });
 
+  it('falls back past a 0–0 range instead of printing "0 days"', () => {
+    // Timber trees are never harvested; older data wrote that as 0–0.
+    expect(buildCatalogMetaLine({ min: 0, max: 0 }, 'Permanent', 'Hardwood', 0)).toBe(
+      'Permanent'
+    );
+  });
+
   it('ignores a malformed range rather than printing NaN', () => {
     expect(
       buildCatalogMetaLine({ min: Number.NaN, max: 70 }, 'Annual', undefined, 0)

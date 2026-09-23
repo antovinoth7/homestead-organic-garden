@@ -12,6 +12,18 @@ import type { NumericRange } from '@/types/database.types';
 const DAYS_PER_YEAR = 365;
 
 /**
+ * Whether a harvest range states a real wait. Timber trees are never harvested,
+ * and older data (or a stored override copied from it) wrote that as `0–0`
+ * rather than leaving the field out — that must read as "no figure", not
+ * "0 days".
+ */
+export function isStatedHarvestRange(
+  range: NumericRange | null | undefined
+): range is NumericRange {
+  return !!range && Number.isFinite(range.min) && Number.isFinite(range.max) && range.max > 0;
+}
+
+/**
  * A harvest range restated in whole years, or null when its shorter bound is
  * under a year. A tree that takes 4380–5475 days reads as a number to decode;
  * 12–15 years is the figure a grower actually plans around.
@@ -31,7 +43,7 @@ export function harvestRangeInYears(range: NumericRange): NumericRange | null {
  * profiles do not carry.
  */
 export function formatDaysToHarvest(range?: NumericRange): string {
-  if (!range) return '';
+  if (!isStatedHarvestRange(range)) return '';
   const years = harvestRangeInYears(range);
   const { min, max } = years ?? range;
   const unit = years ? 'yr' : 'd';
