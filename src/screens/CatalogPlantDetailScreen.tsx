@@ -1,6 +1,14 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { Animated, View, Text, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
+import {
+  Alert,
+  Animated,
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  ActivityIndicator,
+} from 'react-native';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -148,6 +156,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const form = useCatalogEntryForm({ initialName, plantType, isCreating, anyModalOpen });
   const {
     loading,
+    loadError,
+    retryLoad,
     saving,
     name,
     setName,
@@ -160,8 +170,11 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     lookupName,
     categoryPlants,
     usageCount,
+    plantsLoaded,
+    nameLocked,
     deleteKind,
     hasOverride,
+    canReset,
     isDirty,
     errors,
     showErrors,
@@ -447,10 +460,24 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     if (editingVariety === '') {
       const variety = sanitizeName(newVariety);
       if (!variety) {
-        setEditingVariety(null);
+        if (!hasContent) {
+          setEditingVariety(null);
+          return;
+        }
+        // The sheet also saves on dismissal, so details typed without a name
+        // would otherwise vanish with no word.
+        Alert.alert('Variety name needed', 'Add a name to keep these details.', [
+          { text: 'Keep editing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => setEditingVariety(null) },
+        ]);
         return;
       }
-      if (varieties.some((v) => v.toLowerCase() === variety.toLowerCase())) {
+      const existing = varieties.find((v) => v.toLowerCase() === variety.toLowerCase());
+      if (existing) {
+        // Already listed: fold what was typed into it rather than dropping it.
+        if (hasContent) {
+          setVarietyDetails((prev) => ({ ...prev, [existing]: { ...prev[existing], ...draft } }));
+        }
         setNewVariety('');
         setEditingVariety(null);
         return;
@@ -493,12 +520,11 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       if (mode === 'confirm') {
         setShowDeleteConfirm(true);
       } else if (mode === 'reassign') {
-        const remaining = categoryPlants.filter((p) => p !== initialName);
-        setReassignReplacement(remaining[0] ?? '');
+        setReassignReplacement('');
         setShowReassign(true);
       }
     })();
-  }, [requestDelete, categoryPlants, initialName]);
+  }, [requestDelete]);
 
   /**
    * The old copy promised "This cannot be undone" for every entry, which was
@@ -547,7 +573,11 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
 
   const displayName =
     name.trim() || (isCreating ? `New ${CATEGORY_LABELS[plantType]}` : initialName);
-  const usageSummary = usageCount > 0 ? `${usageCount} in garden` : 'Not in garden yet';
+  const usageSummary = !plantsLoaded
+    ? ''
+    : usageCount > 0
+      ? `${usageCount} growing in your garden`
+      : 'Not in your garden yet';
 
   const summaryLabels = useMemo(
     () => ({
@@ -575,6 +605,26 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         .filter((tip) => tip.length > 0).length ?? 0,
     [careForm?.pruningTips]
   );
+
+  if (loadError && !loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="cloud-offline-outline" size={32} color={theme.textTertiary} />
+        <Text style={styles.loadingText}>Couldn’t load this plant.</Text>
+        <View style={styles.loadErrorActions}>
+          <TouchableOpacity style={styles.loadErrorButton} onPress={onBackPress}>
+            <Text style={styles.loadErrorButtonText}>Go back</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.loadErrorButton, styles.loadErrorButtonPrimary]}
+            onPress={retryLoad}
+          >
+            <Text style={styles.loadErrorButtonTextPrimary}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (loading || !careForm || !editor) {
     return (
@@ -667,7 +717,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               name={name}
               setName={setName}
               isCreating={isCreating}
-              hasOverride={hasOverride}
+              nameLocked={nameLocked}
               plantType={plantType}
               onPlantTypeChange={setPlantType}
             />
@@ -825,10 +875,12 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
 
           {!isCreating && (
             <CatalogDangerFooter
-              showReset={hasOverride}
+              showReset={canReset}
               onReset={resetCare}
               onDelete={onDeletePress}
               usageCount={usageCount}
+              usageKnown={plantsLoaded}
+              deleteKind={deleteKind}
               disabled={saving}
             />
           )}
@@ -971,6 +1023,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         usageCount={usageCount}
         options={categoryPlants.filter((p) => p !== initialName)}
         selected={reassignReplacement}
+        deleteKind={deleteKind}
         onSelect={setReassignReplacement}
         onConfirm={onConfirmReassign}
       />

@@ -1,5 +1,13 @@
-import { cloneDraft, isCatalogDraftDirty, toOptNum, toRange } from '@/utils/catalogDraft';
+import {
+  buildCareForm,
+  careSeed,
+  cloneDraft,
+  isCatalogDraftDirty,
+  toOptNum,
+  toRange,
+} from '@/utils/catalogDraft';
 import type { CareFormState, CatalogDraft } from '@/utils/catalogDraft';
+import { makePlantProfile, makePlantProfiles } from '../fixtures/plant.fixtures';
 
 function makeCareForm(overrides: Partial<CareFormState> = {}): CareFormState {
   return {
@@ -171,9 +179,13 @@ describe('cloneDraft', () => {
 });
 
 describe('toRange / toOptNum', () => {
-  it('returns undefined when either side is missing', () => {
-    expect(toRange('', '95')).toBeUndefined();
-    expect(toRange('75', '')).toBeUndefined();
+  it('keeps a one-sided range as a single figure instead of dropping it', () => {
+    expect(toRange('', '95')).toEqual({ min: 95, max: 95 });
+    expect(toRange('75', '')).toEqual({ min: 75, max: 75 });
+  });
+
+  it('returns undefined only when both sides are empty', () => {
+    expect(toRange('', '')).toBeUndefined();
   });
 
   it('parses a complete range, including decimals', () => {
@@ -185,5 +197,47 @@ describe('toRange / toOptNum', () => {
     expect(toOptNum('60')).toBe(60);
     expect(toOptNum('')).toBeUndefined();
     expect(toOptNum('abc')).toBeUndefined();
+  });
+});
+
+describe('buildCareForm — catalog text', () => {
+  const profiles = makePlantProfiles([]);
+  const bundledKnolKhol = makePlantProfile({ name: 'Knol Khol', tamilName: 'நூல்கோல்' });
+
+  it('shows the bundled Tamil name when the care profile carries none', () => {
+    const form = buildCareForm(profiles, 'Knol Khol', 'vegetable', false, bundledKnolKhol);
+    expect(form?.tamilName).toBe('நூல்கோல்');
+  });
+
+  it('prefers the user’s own Tamil name over the bundled one', () => {
+    const stored = makePlantProfiles([
+      makePlantProfile({ name: 'Knol Khol', tamilName: 'கோல்கோபி' }),
+    ]);
+    const form = buildCareForm(stored, 'Knol Khol', 'vegetable', false, bundledKnolKhol);
+    expect(form?.tamilName).toBe('கோல்கோபி');
+  });
+
+  it('recovers a Tamil name an earlier save wiped', () => {
+    const wiped = makePlantProfiles([makePlantProfile({ name: 'Knol Khol', tamilName: undefined })]);
+    const form = buildCareForm(wiped, 'Knol Khol', 'vegetable', false, bundledKnolKhol);
+    expect(form?.tamilName).toBe('நூல்கோல்');
+  });
+});
+
+describe('buildCareForm — creating', () => {
+  it('starts from the plant type’s defaults, so Save is not blocked by blank intervals', () => {
+    const form = buildCareForm(makePlantProfiles([]), '', 'vegetable', true);
+    const seed = careSeed('vegetable');
+
+    expect(form?.wateringFrequencyDays).toBe(seed.wateringFrequencyDays);
+    expect(form?.fertilisingFrequencyDays).toBe(seed.fertilisingFrequencyDays);
+    expect(Number(form?.wateringFrequencyDays)).toBeGreaterThan(0);
+    expect(form?.tamilName).toBe('');
+  });
+
+  it('seeds trees differently from vegetables', () => {
+    expect(careSeed('fruit_tree').initialGrowthStage).not.toBe(
+      careSeed('vegetable').initialGrowthStage
+    );
   });
 });

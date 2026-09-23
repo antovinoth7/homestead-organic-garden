@@ -18,6 +18,34 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.textSecondary,
     },
+    loadErrorActions: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 16,
+    },
+    loadErrorButton: {
+      minHeight: 44,
+      paddingHorizontal: 20,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadErrorButtonPrimary: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    loadErrorButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    loadErrorButtonTextPrimary: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.textInverse,
+    },
     /**
      * Absolute bar that fades in as the hero scrolls away, mirroring the pest
      * and disease detail screens. It overlays the ScrollView rather than sitting
@@ -254,6 +282,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     modalButtonDanger: {
       backgroundColor: theme.error,
     },
+    modalButtonDisabled: {
+      opacity: 0.45,
+    },
+    // A big category (vegetables) would otherwise push Cancel off screen.
+    reassignScroll: {
+      maxHeight: 280,
+      marginBottom: 12,
+    },
     modalButtonTextSecondary: {
       fontSize: 14,
       fontWeight: '600',
@@ -268,7 +304,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
-      marginBottom: 12,
     },
     reassignItem: {
       paddingHorizontal: 12,

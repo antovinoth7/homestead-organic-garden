@@ -11,6 +11,10 @@ interface Props {
   onDelete: () => void;
   /** Garden plants using this entry — drives the safety note under Delete. */
   usageCount: number;
+  /** False until garden plants load; the note would otherwise claim "safe" early. */
+  usageKnown: boolean;
+  /** Bundled entries are hidden (restorable), user-added ones removed. */
+  deleteKind: 'hide' | 'remove';
   disabled?: boolean;
 }
 
@@ -26,15 +30,19 @@ export function CatalogDangerFooter({
   onReset,
   onDelete,
   usageCount,
+  usageKnown,
+  deleteKind,
   disabled = false,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const safetyNote =
-    usageCount > 0
+  const action = deleteKind === 'hide' ? 'hiding' : 'deleting';
+  const safetyNote = !usageKnown
+    ? 'Checking your garden…'
+    : usageCount > 0
       ? `Used by ${usageCount} garden plant${usageCount === 1 ? '' : 's'} — you'll be asked to move ${usageCount === 1 ? 'it' : 'them'} first.`
-      : 'Not used by any garden plant — deleting is safe.';
+      : `Not used by any garden plant — ${action} is safe.`;
 
   return (
     <View style={styles.container}>
@@ -57,7 +65,9 @@ export function CatalogDangerFooter({
         activeOpacity={0.7}
       >
         <Ionicons name="trash-outline" size={17} color={theme.error} />
-        <Text style={styles.deleteText}>Delete this catalog entry</Text>
+        <Text style={styles.deleteText}>
+          {deleteKind === 'hide' ? 'Hide this plant' : 'Delete this plant'}
+        </Text>
       </TouchableOpacity>
       <Text style={styles.safetyNote}>{safetyNote}</Text>
     </View>

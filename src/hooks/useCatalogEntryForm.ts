@@ -3,6 +3,7 @@ import { Alert, BackHandler } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
+  DEFAULT_PLANT_PROFILES,
   deletePlantProfile,
   getPlantProfiles,
   isBundledPlant,
@@ -27,6 +28,8 @@ import type { MoreStackParamList } from '@/types/navigation.types';
 import { getErrorMessage, logError } from '@/utils/errorLogging';
 import {
   buildCareForm,
+  CARE_SEED_KEYS,
+  careSeed,
   cloneDraft,
   isCatalogDraftDirty,
   PRUNING_SEED_KEYS,
@@ -55,6 +58,9 @@ interface Args {
 
 export interface UseCatalogEntryFormReturn {
   loading: boolean;
+  /** Set when the entry failed to load; the screen offers `retryLoad`. */
+  loadError: string | null;
+  retryLoad: () => void;
   saving: boolean;
   profiles: PlantProfiles;
   plants: Plant[];
@@ -71,7 +77,17 @@ export interface UseCatalogEntryFormReturn {
   currentProfile: PlantProfile | undefined;
   categoryPlants: string[];
   usageCount: number;
+  /** False until the garden plants have loaded — usage counts read 0 until then. */
+  plantsLoaded: boolean;
+  /**
+   * A bundled plant's name is fixed: renaming it cut the entry off from the
+   * bundled pests, photo and care data keyed by that name. The local name goes
+   * in the Tamil name field instead. Entries the user added stay renamable.
+   */
+  nameLocked: boolean;
   hasOverride: boolean;
+  /** Reset applies only to a bundled plant the user has edited. */
+  canReset: boolean;
   isDirty: boolean;
   errors: CatalogErrors;
   /**
@@ -123,6 +139,9 @@ export function useCatalogEntryForm({
   const [varietyDetails, setVarietyDetails] = useState<Record<string, VarietyDetail>>({});
   const [showErrors, setShowErrors] = useState(false);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [plantsLoaded, setPlantsLoaded] = useState(false);
 
   /**
    * The saved draft the form is diffed against. State rather than a ref because
@@ -158,12 +177,19 @@ export function useCatalogEntryForm({
 
     const load = async (): Promise<void> => {
       setLoading(true);
+      setLoadError(null);
       try {
         const type = plantTypeRef.current;
         const profilesData = await getPlantProfiles();
         if (cancelled) return;
 
-        const form = buildCareForm(profilesData, initialName, type, isCreating);
+        const form = buildCareForm(
+          profilesData,
+          initialName,
+          type,
+          isCreating,
+          DEFAULT_PLANT_PROFILES[type]?.[initialName]
+        );
         // The merged entry, not the raw override map: the latter holds only the
         // user's own edits, so it is empty for a bundled plant nobody has
         // touched. Reading it directly showed every bundled variety list as
@@ -190,7 +216,8 @@ export function useCatalogEntryForm({
         hasLoadedRef.current = true;
       } catch (error: unknown) {
         if (!cancelled) {
-          Alert.alert('Error', getErrorMessage(error) ?? 'Failed to load plant data.');
+          logError('storage', 'useCatalogEntryForm: load failed', error);
+          setLoadError(getErrorMessage(error) ?? 'Failed to load plant data.');
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -201,7 +228,9 @@ export function useCatalogEntryForm({
     return () => {
       cancelled = true;
     };
-  }, [initialName, isCreating]);
+  }, [initialName, isCreating, loadAttempt]);
+
+  const retryLoad = useCallback(() => setLoadAttempt((n) => n + 1), []);
 
   /**
    * Garden plants feed the usage count and the rename/reassign targets — never
@@ -225,7 +254,9 @@ export function useCatalogEntryForm({
 
     plantsPromiseRef.current = promise;
     void promise.then((loaded) => {
-      if (!cancelled) setPlants(loaded);
+      if (cancelled) return;
+      setPlants(loaded);
+      setPlantsLoaded(true);
     });
 
     return () => {
@@ -234,7 +265,8 @@ export function useCatalogEntryForm({
   }, []);
 
   /**
-   * Re-seeds the pruning fields when the care model changes mid-creation. It
+   * Re-seeds the type-derived fields when the care model changes mid-creation:
+   * the pruning set (as a group) and each care default (field by field). It
    * patches rather than rebuilds: a rebuild is what used to discard everything
    * typed so far. Only fields the user has not written over move, and the
    * baseline moves with them so a re-seed never reads as an unsaved edit.
@@ -250,13 +282,18 @@ export function useCatalogEntryForm({
     const untouched = (form: CareFormState): boolean =>
       PRUNING_SEED_KEYS.every((key) => form[key] === outgoing[key]);
 
-    setCareForm((prev) => (prev && untouched(prev) ? { ...prev, ...incoming } : prev));
+    const careOutgoing = careSeed(previous);
+    const careIncoming = careSeed(plantType);
+    const reseed = (form: CareFormState): CareFormState => {
+      let next = untouched(form) ? { ...form, ...incoming } : form;
+      for (const key of CARE_SEED_KEYS) {
+        if (form[key] === careOutgoing[key]) next = { ...next, [key]: careIncoming[key] };
+      }
+      return next;
+    };
 
-    setBaseline((prev) =>
-      prev && untouched(prev.careForm)
-        ? { ...prev, careForm: { ...prev.careForm, ...incoming } }
-        : prev
-    );
+    setCareForm((prev) => (prev ? reseed(prev) : prev));
+    setBaseline((prev) => (prev ? { ...prev, careForm: reseed(prev.careForm) } : prev));
   }, [plantType, isCreating]);
 
   // ─── Derived ─────────────────────────────────────────────────────────────
@@ -290,6 +327,8 @@ export function useCatalogEntryForm({
   );
 
   const hasOverride = currentProfile?.waterRequirement !== undefined;
+  const nameLocked = !isCreating && deleteKind === 'hide';
+  const canReset = hasOverride && deleteKind === 'hide';
 
   /** Reference photos and pest lists follow the edited name, not the route param. */
   const lookupName = sanitizeName(name) || initialName;
@@ -319,15 +358,6 @@ export function useCatalogEntryForm({
       setSaving(true);
       isSavingRef.current = true;
       try {
-        if (trimmedName !== initialName && !isCreating) {
-          const targets = knownPlants.filter(
-            (p) => p.plant_type === plantType && p.plant_variety === initialName
-          );
-          for (const p of targets) {
-            await updatePlantVariety(p.id, trimmedName);
-          }
-        }
-
         const pruningDaysVal = parseInt(careForm.pruningFrequencyDays, 10);
         const pruningTips = careForm.pruningTips
           .split('\n')
@@ -391,6 +421,28 @@ export function useCatalogEntryForm({
           // catalog re-injected it locally, and a merged write could not
           // express the removal remotely either.
           await renamePlantProfile(plantType, initialName, trimmedName, profileData);
+
+          // The garden plants follow only once the entry exists under the new
+          // name: moved first, a failed profile write left them pointing at a
+          // name the catalog did not have.
+          const targets = knownPlants.filter(
+            (p) => p.plant_type === plantType && p.plant_variety === initialName
+          );
+          let failed = 0;
+          for (const p of targets) {
+            try {
+              await updatePlantVariety(p.id, trimmedName);
+            } catch (error: unknown) {
+              failed += 1;
+              logError('network', 'useCatalogEntryForm: plant rename failed', error);
+            }
+          }
+          if (failed > 0) {
+            Alert.alert(
+              'Some plants not updated',
+              `${failed} garden plant(s) still use "${initialName}". Open each and pick "${trimmedName}".`
+            );
+          }
         } else {
           await savePlantProfile(plantType, trimmedName, profileData);
         }
@@ -417,7 +469,15 @@ export function useCatalogEntryForm({
   );
 
   const attemptSave = useCallback((): CatalogFieldKey | null => {
-    if (!careForm) return null;
+    if (!careForm || isSavingRef.current) return null;
+
+    // Nothing changed: leave without writing. A clean save used to store the
+    // whole care profile as an override, flipping the entry to "custom" and
+    // freezing it against later corrections to the bundled data.
+    if (!isDirty && !isCreating) {
+      navigation.goBack();
+      return null;
+    }
 
     const blocking = firstErroredField(errors);
     if (blocking) {
@@ -442,6 +502,9 @@ export function useCatalogEntryForm({
     // moment the screen appears would otherwise count zero plants to rename,
     // skipping both the confirmation and the rename itself and stranding the
     // garden plants under the old variety name.
+    // Claimed before the plant load is awaited, so a second tap in that gap
+    // cannot start a second save.
+    isSavingRef.current = true;
     void (async () => {
       const knownPlants = (await plantsPromiseRef.current) ?? plants;
       const renameCount =
@@ -452,7 +515,13 @@ export function useCatalogEntryForm({
 
       if (renameCount > 0) {
         Alert.alert('Update Plants', `Renaming will update ${renameCount} plant(s). Continue?`, [
-          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              isSavingRef.current = false;
+            },
+          },
           { text: 'Rename', onPress: () => void doSave(trimmedName, knownPlants) },
         ]);
       } else {
@@ -460,61 +529,85 @@ export function useCatalogEntryForm({
       }
     })();
     return null;
-  }, [careForm, errors, name, initialName, categoryPlants, plants, plantType, doSave]);
+  }, [
+    careForm,
+    isDirty,
+    isCreating,
+    navigation,
+    errors,
+    name,
+    initialName,
+    categoryPlants,
+    plants,
+    plantType,
+    doSave,
+  ]);
 
   // ─── Reset / delete ──────────────────────────────────────────────────────
 
   const resetCare = useCallback((): void => {
-    if (!hasOverride) return;
-    Alert.alert('Reset Defaults', 'Remove custom care defaults and use app defaults?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reset',
-        style: 'destructive',
-        onPress: async () => {
-          setSaving(true);
-          try {
-            const catalogOnly: PlantProfile = {
-              plantType,
-              name: initialName,
-              tamilName: currentProfile?.tamilName,
-              description: currentProfile?.description,
-              varieties: currentProfile?.varieties,
-              varietyDetails: currentProfile?.varietyDetails,
-              isUserAdded: currentProfile?.isUserAdded,
-            };
-            const current = await getPlantProfiles();
-            const next: PlantProfiles = {
-              ...current,
-              [plantType]: { ...current[plantType], [initialName]: catalogOnly },
-            };
-            await savePlantProfiles(next);
-            setProfiles(next);
+    if (!canReset) return;
+    Alert.alert(
+      'Reset to app defaults?',
+      'Your care, growing and pruning edits for this plant are replaced by the app’s values. Varieties, Tamil name and linked pests are kept. Unsaved changes on this screen are discarded.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            setSaving(true);
+            try {
+              const catalogOnly: PlantProfile = {
+                plantType,
+                name: initialName,
+                tamilName: currentProfile?.tamilName,
+                description: currentProfile?.description,
+                varieties: currentProfile?.varieties,
+                varietyDetails: currentProfile?.varietyDetails,
+                isUserAdded: currentProfile?.isUserAdded,
+                customPests: currentProfile?.customPests,
+                customDiseases: currentProfile?.customDiseases,
+              };
+              const current = await getPlantProfiles();
+              const next: PlantProfiles = {
+                ...current,
+                [plantType]: { ...current[plantType], [initialName]: catalogOnly },
+              };
+              await savePlantProfiles(next);
+              setProfiles(next);
 
-            const form = buildCareForm(next, initialName, plantType, isCreating);
-            setCareForm(form);
-            setVarieties(catalogOnly.varieties ?? []);
-            setVarietyDetails(catalogOnly.varietyDetails ?? {});
-            if (form) {
-              setBaseline(
-                cloneDraft({
-                  name: initialName,
-                  careForm: form,
-                  varieties: catalogOnly.varieties ?? [],
-                  varietyDetails: catalogOnly.varietyDetails ?? {},
-                })
+              const form = buildCareForm(
+                next,
+                initialName,
+                plantType,
+                isCreating,
+                DEFAULT_PLANT_PROFILES[plantType]?.[initialName]
               );
+              setCareForm(form);
+              setVarieties(catalogOnly.varieties ?? []);
+              setVarietyDetails(catalogOnly.varietyDetails ?? {});
+              if (form) {
+                setBaseline(
+                  cloneDraft({
+                    name: initialName,
+                    careForm: form,
+                    varieties: catalogOnly.varieties ?? [],
+                    varietyDetails: catalogOnly.varietyDetails ?? {},
+                  })
+                );
+              }
+              setName(initialName);
+            } catch (error: unknown) {
+              Alert.alert('Error', getErrorMessage(error) ?? 'Failed to reset.');
+            } finally {
+              setSaving(false);
             }
-            setName(initialName);
-          } catch (error: unknown) {
-            Alert.alert('Error', getErrorMessage(error) ?? 'Failed to reset.');
-          } finally {
-            setSaving(false);
-          }
+          },
         },
-      },
-    ]);
-  }, [hasOverride, plantType, initialName, currentProfile, isCreating]);
+      ]
+    );
+  }, [canReset, plantType, initialName, currentProfile, isCreating]);
 
   const requestDelete = useCallback(async (): Promise<'confirm' | 'reassign' | null> => {
     // Counted from the settled list rather than the `usageCount` memo: the
@@ -604,6 +697,8 @@ export function useCatalogEntryForm({
 
   return {
     loading,
+    loadError,
+    retryLoad,
     saving,
     profiles,
     plants,
@@ -619,8 +714,11 @@ export function useCatalogEntryForm({
     currentProfile,
     categoryPlants,
     usageCount,
+    plantsLoaded,
+    nameLocked,
     deleteKind,
     hasOverride,
+    canReset,
     isDirty,
     errors,
     showErrors,

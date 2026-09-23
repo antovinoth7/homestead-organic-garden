@@ -1,12 +1,10 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Text } from 'react-native';
-import { useTheme } from '@/theme';
-import { createStyles } from '@/styles/catalogRowStyles';
+import { View } from 'react-native';
 import { CatalogDetailRow } from '@/components/catalog/CatalogDetailRow';
 import { CatalogTextBlock } from '@/components/catalog/CatalogTextBlock';
 import { optionsFromLabels } from '@/components/catalog/catalogEditor';
 import type { CatalogEditor } from '@/components/catalog/catalogEditor';
-import { sanitizeName } from '@/utils/catalogDraft';
+import { sanitizeLandmarkText } from '@/utils/textSanitizer';
 import { CATALOG_FIELD_HELP } from '@/utils/catalogFieldHelp';
 import {
   CATEGORY_FULL_LABELS,
@@ -15,15 +13,14 @@ import {
   LIFECYCLE_LABELS,
 } from '@/utils/plantLabels';
 import type { PlantType } from '@/types/database.types';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 interface Props {
   editor: CatalogEditor;
   name: string;
   setName: (next: string) => void;
-  /** Care-status strip is meaningless before an entry exists. */
   isCreating: boolean;
-  hasOverride: boolean;
+  /** Bundled plants keep their name; see `useCatalogEntryForm.nameLocked`. */
+  nameLocked: boolean;
   /**
    * The care model being created, and a setter — offered only while creating,
    * because it decides which growth-stage model, pest set and task cadence the
@@ -42,12 +39,10 @@ export function PlantInfoSection({
   name,
   setName,
   isCreating,
-  hasOverride,
+  nameLocked,
   plantType,
   onPlantTypeChange,
 }: Props): React.JSX.Element {
-  const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
   const { careForm, setForm, errors, showErrors, openText, openPicker } = editor;
 
   const lifecycleOptions = useMemo(
@@ -61,7 +56,9 @@ export function PlantInfoSection({
         title: 'Name',
         value: name,
         onCommit: setName,
-        sanitize: sanitizeName,
+        // Per keystroke, so no trim: trimming here ate every space as it was
+        // typed ("Long Brinjal" became "LongBrinjal"). Save trims.
+        sanitize: sanitizeLandmarkText,
         helpText: CATALOG_FIELD_HELP.name,
         autoCapitalize: 'words',
         dictation: true,
@@ -97,7 +94,7 @@ export function PlantInfoSection({
   const onTaxonomicFamily = useCallback(
     () =>
       openText({
-        title: 'Taxonomic family',
+        title: 'Plant family',
         value: careForm.taxonomicFamily,
         onCommit: (taxonomicFamily) => setForm({ taxonomicFamily }),
         helpText: CATALOG_FIELD_HELP.taxonomicFamily,
@@ -140,6 +137,7 @@ export function PlantInfoSection({
     ? `${CATALOG_FIELD_HELP.lifecycle} ${LIFECYCLE_DESCRIPTIONS[careForm.lifecycle]}`
     : CATALOG_FIELD_HELP.lifecycle;
 
+  // Farmer-facing first; the botanical identity is reference detail, last.
   return (
     <View>
       <CatalogDetailRow
@@ -148,6 +146,8 @@ export function PlantInfoSection({
         value={name}
         helpText={CATALOG_FIELD_HELP.name}
         onPress={onName}
+        disabled={nameLocked}
+        hint={nameLocked ? 'Built-in plant — add your local name under Tamil name.' : undefined}
         errorText={showErrors ? errors.name : undefined}
       />
       <CatalogDetailRow
@@ -156,41 +156,6 @@ export function PlantInfoSection({
         value={careForm.tamilName}
         helpText={CATALOG_FIELD_HELP.tamilName}
         onPress={onTamilName}
-      />
-
-      {!isCreating && (
-        <View style={styles.statusStrip}>
-          <View style={styles.statusStripRow}>
-            <Ionicons
-              name={hasOverride ? 'settings-outline' : 'leaf-outline'}
-              size={16}
-              color={theme.primary}
-            />
-            <Text style={styles.statusStripTitle}>
-              {hasOverride ? 'Custom defaults active' : 'Using shared app defaults'}
-            </Text>
-          </View>
-          <Text style={styles.statusStripNote}>
-            New garden plants created from this catalog entry will inherit these values.
-          </Text>
-        </View>
-      )}
-
-      <CatalogTextBlock
-        label="Description"
-        value={careForm.description}
-        onChangeText={onDescription}
-        placeholder="Brief description of this plant"
-        helpText={CATALOG_FIELD_HELP.description}
-        dictation
-      />
-
-      <CatalogDetailRow
-        kind="text"
-        label="Scientific name"
-        value={careForm.scientificName}
-        helpText={CATALOG_FIELD_HELP.scientificName}
-        onPress={onScientificName}
       />
       {isCreating && plantType && onPlantTypeChange ? (
         <CatalogDetailRow
@@ -202,13 +167,16 @@ export function PlantInfoSection({
           onPress={onCareModel}
         />
       ) : null}
-      <CatalogDetailRow
-        kind="text"
-        label="Taxonomic family"
-        value={careForm.taxonomicFamily}
-        helpText={CATALOG_FIELD_HELP.taxonomicFamily}
-        onPress={onTaxonomicFamily}
+
+      <CatalogTextBlock
+        label="Description"
+        value={careForm.description}
+        onChangeText={onDescription}
+        placeholder="Brief description of this plant"
+        helpText={CATALOG_FIELD_HELP.description}
+        dictation
       />
+
       <CatalogDetailRow
         kind="picker"
         label="Lifecycle"
@@ -216,6 +184,21 @@ export function PlantInfoSection({
         helpText={lifecycleHelp}
         helpTitle="Lifecycle"
         onPress={onLifecycle}
+      />
+      <CatalogDetailRow
+        kind="text"
+        label="Scientific name"
+        value={careForm.scientificName}
+        helpText={CATALOG_FIELD_HELP.scientificName}
+        onPress={onScientificName}
+      />
+      <CatalogDetailRow
+        kind="text"
+        label="Plant family"
+        value={careForm.taxonomicFamily}
+        helpText={CATALOG_FIELD_HELP.taxonomicFamily}
+        helpTitle="Plant family"
+        onPress={onTaxonomicFamily}
         isLast
       />
     </View>

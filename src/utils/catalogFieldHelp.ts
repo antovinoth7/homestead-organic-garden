@@ -3,15 +3,15 @@
  * each row.
  */
 export const CATALOG_FIELD_HELP = {
-  name: 'Primary catalog name shown in lists, details, and linked garden plants.',
+  name: 'Catalog name shown in lists, details, and linked garden plants. Built-in plants keep their name so their pests, photo and care data stay linked — put the local name in Tamil name.',
   tamilName:
-    'Tamil name stored with this catalog entry for localized views and future Tamil UI support.',
+    'The name you use for this plant locally. It is shown next to the English name and is searchable, in Tamil script or English letters.',
   description:
     'Short plain-language summary of the plant. Keep it brief so it reads well in detail views.',
   scientificName:
     'Botanical Latin name used for accurate identification and future grouping logic.',
   taxonomicFamily:
-    'Plant family, such as Solanaceae or Fabaceae. This is what crop rotation reads, so it is worth getting right.',
+    'Botanical family, such as Solanaceae (brinjal, tomato, chilli) or Fabaceae (beans, pulses). Reference only.',
   careModel:
     'Which care rules apply: growth stages, common pests, and how tasks repeat. It is separate from where the plant appears in the catalog, so a fruit that is not a tree can still be cared for as an annual. Set it now — it cannot be changed after saving.',
   lifecycle:
@@ -46,7 +46,7 @@ export const CATALOG_FIELD_HELP = {
   flowerPruningTip: 'How to prune to support flowering and bloom quality.',
   flowerPruningMonths: 'Best months or season window for flower-focused pruning.',
   initialGrowthStage:
-    'Default stage assigned when a new garden plant is created from this catalog entry.',
+    'The stage a new garden plant starts at — seedling if you sow seed, vegetative if you plant a sapling.',
   petToxicity:
-    'Whether this plant is known to be toxic or safe for common household pets such as dogs and cats. Always confirm with a vet before allowing animals near the plant.',
+    'Whether this plant is known to be toxic to pets or livestock — dogs, cats, cattle, goats. Always confirm with a vet before letting animals graze near it.',
 } as const;
