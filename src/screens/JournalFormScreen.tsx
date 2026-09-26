@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  TextInput,
   Alert,
   KeyboardAvoidingView,
   ImageStyle,
@@ -12,7 +13,7 @@ import {
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import PhotoSourceModal from '../components/modals/PhotoSourceModal';
-import FloatingLabelInput from '../components/FloatingLabelInput';
+import FieldErrorText from '../components/FieldErrorText';
 import ThemedDropdown from '../components/ThemedDropdown';
 import VoiceDictation from '@/components/VoiceDictation';
 import {
@@ -31,6 +32,7 @@ import { HealthStatus, MilestoneKind, Plant, JournalEntryType } from '../types/d
 import { useBedOptions } from '@/hooks/useBedOptions';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import {
+  CONTENT_MAX_LENGTH,
   firstJournalErrorField,
   journalFormErrors,
   type JournalFieldKey,
@@ -44,7 +46,12 @@ import {
 } from '../types/navigation.types';
 import { useTheme } from '../theme';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
-import { tagsForEntry, normalizeHarvestUnit } from '../utils/journalEntryOptions';
+import {
+  tagsForEntry,
+  normalizeHarvestUnit,
+  buildJournalPlantOptions,
+  journalPickablePlants,
+} from '../utils/journalEntryOptions';
 import { toLocalDateString } from '../utils/dateHelpers';
 import { createStyles } from '../styles/journalFormStyles';
 import { logger } from '../utils/logger';
@@ -54,6 +61,9 @@ import {
   resolveLocalImageUri,
 } from '../lib/imageStorage';
 import { getErrorMessage } from '../utils/errorLogging';
+
+/** The notes counter only appears once the limit is worth watching. */
+const CONTENT_COUNTER_FROM = 4000;
 
 type PhotoItem = {
   uri: string | null;
@@ -215,8 +225,8 @@ export default function JournalFormScreen(): React.JSX.Element {
     }
   }, [isEditing, initialEntryType, initialPlantId]);
 
-  // When a linked plant lives in a bed, surface that bed so the plant stays
-  // visible in the (bed-filtered) plant dropdown. Runs once after plants load.
+  // An older entry linked to a bed plant surfaces that bed; the plant field then
+  // hides but the plant_id is kept on save. Runs once after plants load.
   useEffect(() => {
     if (bedSyncedRef.current || plants.length === 0) return;
     if (selectedPlantId && !selectedBedId) {
@@ -226,12 +236,27 @@ export default function JournalFormScreen(): React.JSX.Element {
     bedSyncedRef.current = true;
   }, [plants, selectedPlantId, selectedBedId]);
 
-  // Plants offered depend on the bed: a bed narrows to its members; no bed
-  // shows only standalone (pot / unassigned) plants.
-  const filteredPlants = useMemo(() => {
-    if (selectedBedId) return plants.filter((p) => p.bed_id === selectedBedId);
-    return plants.filter((p) => !p.bed_id);
-  }, [plants, selectedBedId]);
+  // The plant picker offers pot and ground plants only; a bed entry links to
+  // the bed itself (see journalPickablePlants).
+  const bedItems = useMemo(
+    () => [
+      { label: 'No bed linked', value: '' },
+      ...bedList.map((b) => ({ label: b.name, value: b.id })),
+    ],
+    [bedList]
+  );
+
+  const plantItems = useMemo(() => {
+    const bedNameById = new Map(bedList.map((b) => [b.id, b.name]));
+    return [
+      { label: 'No plant linked', value: '' },
+      ...buildJournalPlantOptions(journalPickablePlants(plants, selectedPlantId), bedNameById),
+    ];
+  }, [plants, bedList, selectedPlantId]);
+
+  // Checked against the loaded beds: with no bed dropdown on screen, a stale
+  // bed id must not hide the plant field with no way to bring it back.
+  const bedLinked = !!selectedBedId && bedList.some((b) => b.id === selectedBedId);
 
   const selectedPlant = useMemo(
     () => plants.find((p) => p.id === selectedPlantId) ?? null,
@@ -241,15 +266,22 @@ export default function JournalFormScreen(): React.JSX.Element {
   const handleBedChange = useCallback(
     (value: string): void => {
       setSelectedBedId(value);
+      // Clearing the bed brings the plant field back; the linked plant stays.
+      if (!value) return;
+      // A bed entry links to the bed, so a pot/ground plant is dropped. A plant
+      // that really lives in this bed (older entries) keeps its link.
       setSelectedPlantId((prevPlantId) => {
         if (!prevPlantId) return prevPlantId;
         const plant = plants.find((p) => p.id === prevPlantId);
-        const stillValid = value ? plant?.bed_id === value : !plant?.bed_id;
-        return stillValid ? prevPlantId : null;
+        return plant?.bed_id === value ? prevPlantId : null;
       });
     },
     [plants]
   );
+
+  const handlePlantChange = useCallback((value: string): void => {
+    setSelectedPlantId(value || null);
+  }, []);
 
   const handleTypeChange = useCallback(
     (type: JournalEntryType): void => {
@@ -500,11 +532,32 @@ export default function JournalFormScreen(): React.JSX.Element {
     return BASE_TYPE_OPTIONS;
   }, [editEntry?.entry_type]);
 
+  // One stable press handler per type pill (no anonymous functions in JSX).
+  const typePressHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        typeOptions.map((opt) => [opt.value, () => handleTypeChange(opt.value)])
+      ) as Record<JournalEntryType, () => void>,
+    [typeOptions, handleTypeChange]
+  );
+
+  const handleContentChange = useCallback((text: string): void => {
+    setContent(sanitizeAlphaNumericSpaces(text));
+  }, []);
+
+  // Harvest / pest / milestone capture their own fields, so notes are optional
+  // there (mirrors journalFormErrors).
+  const notesOptional =
+    entryType === JournalEntryType.Harvest ||
+    entryType === JournalEntryType.PestDisease ||
+    entryType === JournalEntryType.Milestone;
+  const contentError = errorFor('content');
+
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={theme.textInverse} />
+          <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.title}>{isEditing ? 'Edit Entry' : 'New Entry'}</Text>
@@ -530,115 +583,36 @@ export default function JournalFormScreen(): React.JSX.Element {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: footerPaddingBottom + 24 }}
         >
-          {/* Entry Type Selector */}
-          <View style={styles.typeSelector}>
+          {/* Entry type — one row of pills */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.typeBar}
+            contentContainerStyle={styles.typeBarContent}
+          >
             {typeOptions.map((opt) => {
               const active = entryType === opt.value;
               return (
                 <TouchableOpacity
                   key={opt.value}
-                  style={[styles.typeButton, active && styles.typeButtonActive]}
-                  onPress={() => handleTypeChange(opt.value)}
+                  style={[styles.typePill, active && styles.typePillActive]}
+                  onPress={typePressHandlers[opt.value]}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
                 >
                   <Ionicons
                     name={opt.icon}
-                    size={18}
+                    size={15}
                     color={active ? theme.textInverse : theme.primary}
                   />
-                  <Text style={[styles.typeButtonText, active && styles.typeButtonTextActive]}>
+                  <Text style={[styles.typePillText, active && styles.typePillTextActive]}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>
               );
             })}
-          </View>
-
-          {photoItems.length > 0 && (
-            <View style={styles.photosGrid}>
-              {photoItems.map((item, index) =>
-                item.uri ? (
-                  <View key={index} style={styles.photoContainer}>
-                    <Image
-                      source={{ uri: item.uri }}
-                      style={styles.photoThumbnail as ImageStyle}
-                      contentFit="cover"
-                      transition={200}
-                      cachePolicy="memory-disk"
-                      recyclingKey={`journal-photo-${index}`}
-                    />
-                    <TouchableOpacity
-                      style={styles.removePhotoButton}
-                      onPress={() => removeImage(index)}
-                    >
-                      <Ionicons name="close-circle" size={24} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                ) : null
-              )}
-            </View>
-          )}
-
-          <TouchableOpacity style={styles.addPhotoButton} onPress={pickImage}>
-            <Ionicons name="camera" size={20} color={theme.primary} />
-            <Text style={styles.addPhotoText}>
-              {photoItems.length > 0 ? `Add More Photos (${photoItems.length})` : 'Add Photos'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Location — bed narrows the plant list below it */}
-          <View style={styles.locationSection}>
-            {bedList.length > 0 && (
-              <ThemedDropdown
-                items={[
-                  { label: 'No bed linked', value: '' },
-                  ...bedList.map((b) => ({ label: b.name, value: b.id })),
-                ]}
-                selectedValue={selectedBedId}
-                onValueChange={handleBedChange}
-                label="Link to bed"
-                placeholder="Link to bed (optional)"
-              />
-            )}
-            <ThemedDropdown
-              items={[
-                { label: 'No plant linked', value: '' },
-                ...filteredPlants.map((p) => ({ label: p.name, value: p.id })),
-              ]}
-              selectedValue={selectedPlantId || ''}
-              onValueChange={(value) => setSelectedPlantId(value || null)}
-              label="Link to plant"
-              placeholder="Link to plant (optional)"
-              searchable
-            />
-            {selectedBedId !== '' && (
-              <Text style={styles.locationHint}>Showing plants in the selected bed</Text>
-            )}
-          </View>
-
-          {/* Tags — only for types that expose free tags */}
-          {availableTags.length > 0 && (
-            <View style={styles.tagsSection}>
-              <Text style={styles.label}>Tags</Text>
-              <View style={styles.tagsWrap}>
-                {availableTags.map((tag) => (
-                  <TouchableOpacity
-                    key={tag}
-                    style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]}
-                    onPress={() => toggleTag(tag)}
-                  >
-                    <Text
-                      style={[
-                        styles.tagChipText,
-                        selectedTags.includes(tag) && styles.tagChipTextActive,
-                      ]}
-                    >
-                      {tag.replace(/_/g, ' ')}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
+          </ScrollView>
 
           {entryType === JournalEntryType.Harvest && (
             <View onLayout={handleHarvestLayout}>
@@ -673,22 +647,125 @@ export default function JournalFormScreen(): React.JSX.Element {
             </View>
           )}
 
-          <View style={styles.notesWrapper} onLayout={handleNotesLayout}>
-            <VoiceDictation
+          {/* Notes — label left, compact mic | language pill right */}
+          <View style={styles.notesBlock} onLayout={handleNotesLayout}>
+            <View style={styles.fieldLabelRow}>
+              <Text style={styles.fieldLabel}>{notesOptional ? 'Notes (optional)' : 'Notes'}</Text>
+              <VoiceDictation compact value={content} onChangeText={handleContentChange} />
+            </View>
+            <TextInput
+              style={[styles.notesInput, !!contentError && styles.notesInputError]}
               value={content}
-              onChangeText={(text) => setContent(sanitizeAlphaNumericSpaces(text))}
-            />
-            <FloatingLabelInput
-              label="What's happening in your garden today?"
-              value={content}
-              onChangeText={(text) => setContent(sanitizeAlphaNumericSpaces(text))}
+              onChangeText={handleContentChange}
+              placeholder="What's happening in your garden today?"
+              placeholderTextColor={theme.inputPlaceholder}
               multiline
-              numberOfLines={6}
-              maxLength={5000}
-              errorText={errorFor('content')}
+              maxLength={CONTENT_MAX_LENGTH}
+              accessibilityLabel="Journal notes"
             />
-            <Text style={styles.charCounter}>{content.length}/5000</Text>
+            <FieldErrorText message={contentError} />
+            {content.length >= CONTENT_COUNTER_FROM && (
+              <Text style={styles.charCounter}>
+                {content.length}/{CONTENT_MAX_LENGTH}
+              </Text>
+            )}
           </View>
+
+          {/* Location — a bed entry links to the bed; otherwise a pot/ground plant */}
+          <View style={styles.locationSection}>
+            {bedList.length > 0 && (
+              <ThemedDropdown
+                items={bedItems}
+                selectedValue={selectedBedId}
+                onValueChange={handleBedChange}
+                label="Link to bed"
+                placeholder="Link to bed (optional)"
+                compact
+              />
+            )}
+            {bedLinked ? (
+              <Text style={styles.locationHint}>This entry is linked to the whole bed</Text>
+            ) : (
+              <ThemedDropdown
+                items={plantItems}
+                selectedValue={selectedPlantId || ''}
+                onValueChange={handlePlantChange}
+                label="Link to plant"
+                placeholder="Link to plant (optional)"
+                searchable
+                compact
+              />
+            )}
+          </View>
+
+          {/* Tags — only for types that expose free tags */}
+          {availableTags.length > 0 && (
+            <View style={styles.tagsSection}>
+              <Text style={styles.fieldLabel}>Tags</Text>
+              <View style={styles.tagsWrap}>
+                {availableTags.map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
+                    style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]}
+                    onPress={() => toggleTag(tag)}
+                  >
+                    <Text
+                      style={[
+                        styles.tagChipText,
+                        selectedTags.includes(tag) && styles.tagChipTextActive,
+                      ]}
+                    >
+                      {tag.replace(/_/g, ' ')}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Photos — a strip led by an add tile, instead of a grid + button */}
+          <Text style={styles.fieldLabel}>
+            {photoItems.length > 0 ? `Photos (${photoItems.length})` : 'Photos'}
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.photoStrip}
+            keyboardShouldPersistTaps="handled"
+          >
+            <TouchableOpacity
+              style={styles.addPhotoTile}
+              onPress={pickImage}
+              accessibilityRole="button"
+              accessibilityLabel="Add photo"
+            >
+              <Ionicons name="camera-outline" size={22} color={theme.primary} />
+              <Text style={styles.addPhotoTileText}>Add</Text>
+            </TouchableOpacity>
+            {photoItems.map((item, index) =>
+              item.uri ? (
+                <View key={index} style={styles.photoTile}>
+                  <Image
+                    source={{ uri: item.uri }}
+                    style={styles.photoThumbnail as ImageStyle}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                    recyclingKey={`journal-photo-${index}`}
+                  />
+                  <TouchableOpacity
+                    style={styles.removePhotoButton}
+                    onPress={() => removeImage(index)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove photo"
+                  >
+                    <Ionicons name="close" size={14} color={theme.textInverse} />
+                  </TouchableOpacity>
+                </View>
+              ) : null
+            )}
+          </ScrollView>
         </ScrollView>
       </KeyboardAvoidingView>
 

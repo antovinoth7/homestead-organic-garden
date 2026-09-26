@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { GardenIcon } from '@/components/GardenIcon';
-import FloatingLabelInput from '../FloatingLabelInput';
+import { JournalMoreDetails } from './JournalMoreDetails';
 import FieldErrorText from '../FieldErrorText';
 import VoiceDictation from '@/components/VoiceDictation';
 import { HARVEST_UNITS } from '../../utils/journalEntryOptions';
@@ -57,33 +57,39 @@ export function JournalHarvestSection({
     (text: string) => onChange({ quantity: sanitizeAmount(text) }),
     [onChange]
   );
+  const handleNotesChange = useCallback(
+    (text: string) => onChange({ notes: sanitizeAlphaNumericSpaces(text) }),
+    [onChange]
+  );
+
+  const isCoconut = plantType === 'coconut_tree';
+  // Summary for the folded extras, so a filled field is visible while collapsed.
+  const moreSummary = [
+    value.notes.trim() ? 'Notes' : '',
+    value.treeNumber ? `Tree ${value.treeNumber}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <View style={styles.harvestSection}>
       <Text style={styles.sectionTitle}>Harvest Details</Text>
 
-      {/* Amount is the one thing every harvest entry needs, so it leads the
-          section as a large centered field with the unit echoed beside it. */}
-      <View style={styles.amountBlock}>
-        <Text style={styles.label}>Quantity</Text>
-        <View style={styles.amountRow}>
-          <TextInput
-            style={[styles.amountInput, !!errorText && styles.amountInputError]}
-            placeholder="0"
-            placeholderTextColor={theme.inputPlaceholder}
-            value={value.quantity}
-            onChangeText={handleAmountChange}
-            keyboardType="decimal-pad"
-            selectTextOnFocus
-            maxLength={9}
-            accessibilityLabel="Harvest quantity"
-          />
-          <Text style={styles.amountUnitSuffix} numberOfLines={1}>
-            {value.unit}
-          </Text>
-        </View>
-        <FieldErrorText message={errorText} />
-
+      {/* Amount is the one thing every harvest entry needs; its unit sits on the
+          same row so the whole measurement reads as one line. */}
+      <Text style={styles.label}>Quantity</Text>
+      <View style={styles.amountRow}>
+        <TextInput
+          style={[styles.amountInput, !!errorText && styles.amountInputError]}
+          placeholder="0"
+          placeholderTextColor={theme.inputPlaceholder}
+          value={value.quantity}
+          onChangeText={handleAmountChange}
+          keyboardType="decimal-pad"
+          selectTextOnFocus
+          maxLength={9}
+          accessibilityLabel="Harvest quantity"
+        />
         <View style={styles.unitSegments}>
           {HARVEST_UNITS.map((unit) => {
             const active = value.unit === unit;
@@ -106,9 +112,10 @@ export function JournalHarvestSection({
           })}
         </View>
       </View>
+      <FieldErrorText message={errorText} />
 
-      <Text style={styles.label}>Quality</Text>
-      <View style={styles.qualityGrid}>
+      <Text style={[styles.label, styles.labelSpaced]}>Quality</Text>
+      <View style={styles.qualityRow}>
         {QUALITY_OPTIONS.map((quality) => {
           const active = value.quality === quality.value;
           return (
@@ -121,10 +128,13 @@ export function JournalHarvestSection({
             >
               <GardenIcon
                 name={quality.iconKey}
-                size={18}
-                color={active ? theme.textInverse : theme.textSecondary}
+                size={16}
+                color={active ? theme.primary : theme.textSecondary}
               />
-              <Text style={[styles.qualityChipText, active && styles.qualityButtonTextActive]}>
+              <Text
+                style={[styles.qualityChipText, active && styles.qualityButtonTextActive]}
+                numberOfLines={1}
+              >
                 {quality.label}
               </Text>
             </TouchableOpacity>
@@ -132,35 +142,38 @@ export function JournalHarvestSection({
         })}
       </View>
 
-      <View style={[styles.notesWrapper, styles.notesWrapperMarginTop]}>
-        <VoiceDictation
+      <JournalMoreDetails
+        initiallyExpanded={!!value.notes.trim() || !!value.treeNumber}
+        summary={moreSummary}
+      >
+        <View style={styles.fieldLabelRow}>
+          <Text style={styles.fieldLabel}>Storage / Notes</Text>
+          <VoiceDictation compact value={value.notes} onChangeText={handleNotesChange} />
+        </View>
+        <TextInput
+          style={[styles.notesInput, styles.notesInputSmall]}
           value={value.notes}
-          onChangeText={(text) => onChange({ notes: sanitizeAlphaNumericSpaces(text) })}
-        />
-        <FloatingLabelInput
-          label="Storage / Notes"
-          value={value.notes}
-          onChangeText={(text) => onChange({ notes: sanitizeAlphaNumericSpaces(text) })}
+          onChangeText={handleNotesChange}
+          placeholder="Where it's stored, who it went to…"
+          placeholderTextColor={theme.inputPlaceholder}
           multiline
-          numberOfLines={3}
           maxLength={500}
         />
-        <Text style={styles.charCounter}>{value.notes.length}/500</Text>
-      </View>
 
-      {plantType === 'coconut_tree' && (
-        <View style={[styles.notesWrapper, styles.notesWrapperMarginTop]}>
-          <Text style={styles.label}>Tree no. (for groves, optional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. 3"
-            placeholderTextColor={theme.inputPlaceholder}
-            value={value.treeNumber}
-            onChangeText={(text) => onChange({ treeNumber: text.replace(/[^0-9]/g, '') })}
-            keyboardType="number-pad"
-          />
-        </View>
-      )}
+        {isCoconut && (
+          <>
+            <Text style={[styles.label, styles.labelSpaced]}>Tree no. (for groves, optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 3"
+              placeholderTextColor={theme.inputPlaceholder}
+              value={value.treeNumber}
+              onChangeText={(text) => onChange({ treeNumber: text.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad"
+            />
+          </>
+        )}
+      </JournalMoreDetails>
     </View>
   );
 }

@@ -59,11 +59,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       paddingVertical: Platform.OS === 'ios' ? 10 : 8,
     },
+    // Searchable sheets have a fixed height; the list takes what the search leaves.
+    list: {
+      flex: 1,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 32,
+      paddingHorizontal: 24,
+      gap: 8,
+    },
     emptyText: {
       fontSize: 14,
       color: theme.textTertiary,
       textAlign: 'center',
-      paddingVertical: 24,
     },
     optionRow: {
       flexDirection: 'row',

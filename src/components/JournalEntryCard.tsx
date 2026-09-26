@@ -7,7 +7,11 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/journalStyles';
 import { JournalEntry, JournalEntryType } from '@/types/database.types';
-import { getMilestoneMeta, normalizeHarvestUnit } from '@/utils/journalEntryOptions';
+import {
+  formatJournalTimestamp,
+  getMilestoneMeta,
+  normalizeHarvestUnit,
+} from '@/utils/journalEntryOptions';
 
 interface Props {
   entry: JournalEntry;
@@ -73,10 +77,15 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
         ? milestoneMeta.label
         : entry.entry_type.charAt(0).toUpperCase() + entry.entry_type.slice(1);
 
-  const entryDate = new Date(entry.created_at);
-  const date = entryDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const year = entryDate.getFullYear();
-  const time = entryDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const timestamp = formatJournalTimestamp(entry.created_at);
+  const isHarvest = entry.entry_type === JournalEntryType.Harvest;
+  const isPest = entry.entry_type === JournalEntryType.PestDisease;
+  const tags = entry.tags ?? [];
+  const hasChips =
+    !!plantName ||
+    (isHarvest && (!!entry.harvest_quantity || !!entry.harvest_quality)) ||
+    (isPest && (!!entry.pest_name || !!entry.pest_severity || !!entry.pest_status)) ||
+    tags.length > 0;
 
   const photos = entry.photo_urls ?? [];
   const visiblePhotos = photos.slice(0, MAX_THUMBS);
@@ -127,6 +136,7 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
       overshootRight={false}
       friction={2}
       rightThreshold={40}
+      containerStyle={styles.swipeContainer}
       onSwipeableOpen={() => {
         if (onSwipeableOpen && swipeableRef.current) {
           onSwipeableOpen(swipeableRef.current);
@@ -134,119 +144,115 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
       }}
     >
       <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={handlePress}>
-        <View style={[styles.cardAccent, { backgroundColor: typeColor }]} />
-
-        <View style={styles.cardBody}>
-          {/* Top row: type icon + label + date */}
-          <View style={styles.cardTopRow}>
-            <View style={[styles.typeIconCircle, { backgroundColor: typeColor + '18' }]}>
-              <Ionicons name={iconName} size={16} color={typeColor} />
-            </View>
-            <View style={styles.cardMeta}>
-              <Text style={styles.entryTypeLabel}>{entryTypeLabel}</Text>
-              <Text style={styles.dateText}>
-                {date}, {year} · {time}
-              </Text>
-            </View>
+        {/* Header: tinted type chip + compact timestamp */}
+        <View style={styles.cardTopRow}>
+          <View style={[styles.typeChip, { backgroundColor: typeColor + '1A' }]}>
+            <Ionicons name={iconName} size={13} color={typeColor} />
+            <Text style={[styles.typeChipText, { color: typeColor }]}>{entryTypeLabel}</Text>
           </View>
-
-          {/* Plant tag + per-type detail badges */}
-          {(plantName ||
-            (entry.entry_type === JournalEntryType.Harvest && entry.harvest_quantity) ||
-            entry.entry_type === JournalEntryType.PestDisease) && (
-            <View style={styles.tagsRow}>
-              {plantName && (
-                <View style={styles.plantTag}>
-                  <Ionicons name="leaf" size={11} color={theme.primary} />
-                  <Text style={styles.plantTagText}>{plantName}</Text>
-                </View>
-              )}
-              {entry.entry_type === JournalEntryType.Harvest && entry.harvest_quantity && (
-                <View style={styles.harvestBadge}>
-                  <Ionicons name="scale-outline" size={11} color={theme.warning} />
-                  <Text style={styles.harvestText}>
-                    {entry.harvest_quantity} {normalizeHarvestUnit(entry.harvest_unit)}
-                  </Text>
-                </View>
-              )}
-              {entry.entry_type === JournalEntryType.Harvest && entry.harvest_quality && (
-                <View style={[styles.qualityBadge, styles[`quality${entry.harvest_quality}`]]}>
-                  <Text style={styles.qualityText}>{entry.harvest_quality.toUpperCase()}</Text>
-                </View>
-              )}
-              {entry.entry_type === JournalEntryType.PestDisease && entry.pest_name && (
-                <View style={styles.pestNameBadge}>
-                  <Ionicons
-                    name={entry.pest_kind === 'disease' ? 'medical' : 'bug'}
-                    size={11}
-                    color={theme.error}
-                  />
-                  <Text style={styles.pestNameText}>{entry.pest_name}</Text>
-                </View>
-              )}
-              {entry.entry_type === JournalEntryType.PestDisease && entry.pest_severity && (
-                <View style={[styles.pillBadge, styles[`severity_${entry.pest_severity}`]]}>
-                  <Text style={styles.pillText}>{entry.pest_severity.toUpperCase()}</Text>
-                </View>
-              )}
-              {entry.entry_type === JournalEntryType.PestDisease && entry.pest_status && (
-                <View style={[styles.pillBadge, styles[`status_${entry.pest_status}`]]}>
-                  <Text style={styles.pillText}>{entry.pest_status.toUpperCase()}</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Journal tags */}
-          {entry.tags && entry.tags.length > 0 && (
-            <View style={styles.tagsRow}>
-              {entry.tags.map((tag) => (
-                <View key={tag} style={styles.journalTagBadge}>
-                  <Text style={styles.journalTagText}>{tag.replace(/_/g, ' ')}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Content preview */}
-          <Text style={styles.contentText} numberOfLines={2}>
-            {entry.content}
+          <Text style={styles.dateText} numberOfLines={1}>
+            {timestamp}
           </Text>
-
-          {/* Fixed thumbnail row (no horizontal scroll → no swipe-gesture conflict) */}
-          {visiblePhotos.length > 0 && (
-            <View style={styles.thumbRow}>
-              {visiblePhotos.map((photoUrl, idx) => {
-                const isLastShown = idx === MAX_THUMBS - 1;
-                const showOverlay = isLastShown && extraCount > 0;
-                return (
-                  <TouchableOpacity
-                    key={`${entry.id}-${idx}`}
-                    // `photos`, not `visiblePhotos` — the "+N" thumb must open the
-                    // viewer on a gallery containing every photo on the entry.
-                    onPress={() => onPhotoPress(photos, idx)}
-                    activeOpacity={0.8}
-                    style={showOverlay ? styles.thumbMore : undefined}
-                  >
-                    <Image
-                      source={{ uri: photoUrl }}
-                      style={styles.thumb as ImageStyle}
-                      contentFit="cover"
-                      transition={200}
-                      cachePolicy="memory-disk"
-                      recyclingKey={`journal-${entry.id}-${idx}`}
-                    />
-                    {showOverlay && (
-                      <View style={styles.thumbMoreOverlay}>
-                        <Text style={styles.thumbMoreText}>+{extraCount + 1}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
         </View>
+
+        {/* Content first — it's the journal */}
+        <Text style={styles.contentText} numberOfLines={3}>
+          {entry.content}
+        </Text>
+
+        {/* Plant, per-type details and free tags share one chip row */}
+        {hasChips && (
+          <View style={styles.chipRow}>
+            {plantName && (
+              <View style={[styles.chip, styles.chipPlant]}>
+                <Ionicons name="leaf" size={12} color={theme.primary} />
+                <Text style={[styles.chipText, styles.chipPlantText]} numberOfLines={1}>
+                  {plantName}
+                </Text>
+              </View>
+            )}
+            {isHarvest && !!entry.harvest_quantity && (
+              <View style={[styles.chip, styles.chipHarvest]}>
+                <Ionicons name="scale-outline" size={12} color={theme.warning} />
+                <Text style={[styles.chipText, styles.chipHarvestText]}>
+                  {entry.harvest_quantity} {normalizeHarvestUnit(entry.harvest_unit)}
+                </Text>
+              </View>
+            )}
+            {isHarvest && entry.harvest_quality && (
+              <View style={[styles.chip, styles[`quality${entry.harvest_quality}`]]}>
+                <Text style={[styles.chipText, styles.chipMutedText]}>
+                  {entry.harvest_quality.toUpperCase()}
+                </Text>
+              </View>
+            )}
+            {isPest && entry.pest_name && (
+              <View style={[styles.chip, styles.chipPest]}>
+                <Ionicons
+                  name={entry.pest_kind === 'disease' ? 'medical' : 'bug'}
+                  size={12}
+                  color={theme.error}
+                />
+                <Text style={[styles.chipText, styles.chipPestText]} numberOfLines={1}>
+                  {entry.pest_name}
+                </Text>
+              </View>
+            )}
+            {isPest && entry.pest_severity && (
+              <View style={[styles.chip, styles[`severity_${entry.pest_severity}`]]}>
+                <Text style={[styles.chipText, styles.chipMutedText]}>
+                  {entry.pest_severity.toUpperCase()}
+                </Text>
+              </View>
+            )}
+            {isPest && entry.pest_status && (
+              <View style={[styles.chip, styles[`status_${entry.pest_status}`]]}>
+                <Text style={[styles.chipText, styles.chipMutedText]}>
+                  {entry.pest_status.toUpperCase()}
+                </Text>
+              </View>
+            )}
+            {tags.map((tag) => (
+              <View key={tag} style={[styles.chip, styles.chipTag]}>
+                <Text style={[styles.chipText, styles.chipTagText]}>{tag.replace(/_/g, ' ')}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Fixed thumbnail row (no horizontal scroll → no swipe-gesture conflict) */}
+        {visiblePhotos.length > 0 && (
+          <View style={styles.thumbRow}>
+            {visiblePhotos.map((photoUrl, idx) => {
+              const isLastShown = idx === MAX_THUMBS - 1;
+              const showOverlay = isLastShown && extraCount > 0;
+              return (
+                <TouchableOpacity
+                  key={`${entry.id}-${idx}`}
+                  // `photos`, not `visiblePhotos` — the "+N" thumb must open the
+                  // viewer on a gallery containing every photo on the entry.
+                  onPress={() => onPhotoPress(photos, idx)}
+                  activeOpacity={0.8}
+                  style={[styles.thumbCell, visiblePhotos.length === 1 && styles.thumbCellSingle]}
+                >
+                  <Image
+                    source={{ uri: photoUrl }}
+                    style={styles.thumb as ImageStyle}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                    recyclingKey={`journal-${entry.id}-${idx}`}
+                  />
+                  {showOverlay && (
+                    <View style={styles.thumbMoreOverlay}>
+                      <Text style={styles.thumbMoreText}>+{extraCount + 1}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </TouchableOpacity>
     </Swipeable>
   );

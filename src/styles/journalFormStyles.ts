@@ -14,8 +14,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      padding: 16,
-      paddingTop: 12,
+      paddingHorizontal: 16,
+      paddingBottom: 10,
       backgroundColor: theme.tabBarBackground,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
@@ -33,43 +33,105 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       color: theme.text,
     },
-    stickySaveContainer: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      backgroundColor: theme.background,
-      borderTopWidth: 1,
-      borderTopColor: theme.borderLight,
-    },
-    stickySaveButton: {
-      backgroundColor: theme.primary,
-      borderRadius: 14,
-      paddingVertical: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    stickySaveButtonDisabled: {
-      backgroundColor: theme.borderDark,
-    },
-    stickySaveButtonText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.textInverse,
-    },
     content: {
       flex: 1,
-      padding: 16,
-      paddingBottom: 16,
+      paddingHorizontal: 12,
+      paddingTop: 12,
     },
-    photosGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+    // ─── Entry type pill bar ─────────────────────────────────────────────────
+    typeBar: {
+      flexGrow: 0,
+      marginBottom: 12,
+    },
+    typeBarContent: {
       gap: 8,
-      marginBottom: 16,
     },
-    photoContainer: {
-      position: 'relative',
-      width: '48%',
-      aspectRatio: 1,
+    typePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      height: 36,
+      paddingHorizontal: 14,
+      borderRadius: 18,
+      backgroundColor: theme.primaryLight,
+    },
+    typePillActive: {
+      backgroundColor: theme.primary,
+    },
+    typePillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.primary,
+    },
+    typePillTextActive: {
+      color: theme.textInverse,
+    },
+    // ─── Field label row (label left, compact dictation pill right) ──────────
+    fieldLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      marginBottom: 6,
+      minHeight: 28,
+    },
+    fieldLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginBottom: 6,
+    },
+    // ─── Notes ───────────────────────────────────────────────────────────────
+    notesBlock: {
+      marginBottom: 12,
+    },
+    notesInput: {
+      backgroundColor: theme.inputBackground,
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingTop: 10,
+      paddingBottom: 10,
+      fontSize: 15,
+      lineHeight: 21,
+      color: theme.inputText,
+      minHeight: 96,
+      maxHeight: 220,
+      textAlignVertical: 'top',
+    },
+    notesInputSmall: {
+      minHeight: 64,
+      maxHeight: 140,
+    },
+    notesInputError: {
+      borderColor: theme.error,
+    },
+    // ─── Photo strip ─────────────────────────────────────────────────────────
+    photoStrip: {
+      gap: 8,
+      paddingBottom: 4,
+    },
+    addPhotoTile: {
+      width: 64,
+      height: 64,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: theme.primary,
+      backgroundColor: theme.primaryLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 2,
+    },
+    addPhotoTileText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.primary,
+    },
+    photoTile: {
+      width: 64,
+      height: 64,
     },
     photoThumbnail: {
       width: '100%',
@@ -78,72 +140,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     removePhotoButton: {
       position: 'absolute',
-      top: 4,
-      right: 4,
-      backgroundColor: theme.overlay,
-      borderRadius: 12,
-    },
-    addPhotoButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 16,
-      backgroundColor: theme.primaryLight,
-      borderRadius: 12,
-      marginBottom: 16,
-    },
-    addPhotoText: {
-      fontSize: 16,
-      color: theme.primary,
-      marginLeft: 8,
-      fontWeight: '600',
-    },
-    textArea: {
-      backgroundColor: theme.inputBackground,
-      padding: 16,
-      borderRadius: 12,
-      fontSize: 16,
-      color: theme.inputText,
-      minHeight: 150,
-      maxHeight: 300,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-    },
-    typeSelector: {
-      flexDirection: 'row',
-      marginBottom: 16,
-      gap: 6,
-    },
-    typeButton: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 8,
-      paddingHorizontal: 2,
-      backgroundColor: theme.backgroundSecondary,
+      top: 3,
+      right: 3,
+      width: 20,
+      height: 20,
       borderRadius: 10,
-      borderWidth: 2,
-      borderColor: theme.primaryLight,
-      gap: 4,
+      backgroundColor: theme.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    typeButtonActive: {
-      backgroundColor: theme.primary,
-      borderColor: theme.primary,
-    },
-    typeButtonText: {
-      fontSize: 10,
-      color: theme.primary,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    typeButtonTextActive: {
-      color: theme.textInverse,
-    },
+    // ─── Type detail card (harvest / pest-disease / milestone) ───────────────
     harvestSection: {
       backgroundColor: theme.backgroundSecondary,
-      padding: 16,
+      padding: 12,
       borderRadius: 12,
-      marginBottom: 16,
+      marginBottom: 12,
       borderWidth: 1,
       borderColor: theme.border,
     },
@@ -151,31 +162,26 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.error,
     },
     sectionTitle: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '600',
       color: theme.text,
-      marginBottom: 12,
+      marginBottom: 8,
     },
-    /* Harvest capture — hero amount + unit segments + wrapping quality chips. */
-    amountBlock: {
-      marginBottom: 16,
-    },
+    /* Harvest capture — amount and unit on one row, quality in one row. */
     amountRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
       gap: 8,
-      marginTop: 4,
     },
     amountInput: {
-      minWidth: 140,
+      width: 84,
       backgroundColor: theme.inputBackground,
       borderWidth: 1,
       borderColor: theme.inputBorder,
-      borderRadius: 12,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      fontSize: 32,
+      borderRadius: 10,
+      paddingVertical: 6,
+      paddingHorizontal: 6,
+      fontSize: 22,
       fontWeight: '700',
       textAlign: 'center',
       color: theme.inputText,
@@ -183,40 +189,36 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     amountInputError: {
       borderColor: theme.error,
     },
-    amountUnitSuffix: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.textSecondary,
-      minWidth: 56,
-    },
     unitSegments: {
+      flex: 1,
       flexDirection: 'row',
-      gap: 8,
-      marginTop: 14,
+      gap: 6,
     },
-    qualityGrid: {
+    qualityRow: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
+      gap: 6,
     },
     qualityChip: {
-      width: '48%',
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 6,
-      paddingVertical: 12,
-      paddingHorizontal: 8,
+      gap: 4,
+      paddingVertical: 8,
+      paddingHorizontal: 4,
       backgroundColor: theme.background,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: theme.border,
     },
     label: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
       color: theme.textSecondary,
-      marginBottom: 8,
+      marginBottom: 6,
+    },
+    labelSpaced: {
+      marginTop: 12,
     },
     input: {
       backgroundColor: theme.inputBackground,
@@ -227,14 +229,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.inputBorder,
     },
-    unitButtons: {
-      flexDirection: 'row',
-      gap: 8,
-    },
     unitButton: {
       flex: 1,
-      paddingVertical: 12,
-      paddingHorizontal: 6,
+      paddingVertical: 9,
+      paddingHorizontal: 2,
       backgroundColor: theme.background,
       borderRadius: 8,
       alignItems: 'center',
@@ -246,7 +244,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.primary,
     },
     unitButtonText: {
-      fontSize: 13,
+      fontSize: 12,
       color: theme.textSecondary,
       fontWeight: '600',
     },
@@ -271,7 +269,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.primary,
     },
     qualityChipText: {
-      fontSize: 13,
+      fontSize: 12,
       color: theme.textSecondary,
       fontWeight: '600',
     },
@@ -283,20 +281,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     qualityButtonTextActive: {
       color: theme.primary,
     },
-    notesWrapper: {
-      marginBottom: 4,
-    },
     charCounter: {
       fontSize: 12,
       color: theme.textTertiary,
       textAlign: 'right',
-      marginTop: -6,
+      marginTop: 4,
     },
     notesWrapperMarginTop: {
       marginTop: 12,
     },
     tagsSection: {
-      marginBottom: 16,
+      marginBottom: 12,
     },
     tagsWrap: {
       flexDirection: 'row',
@@ -305,7 +300,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tagChip: {
       paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingVertical: 5,
       borderRadius: 16,
       backgroundColor: theme.background,
       borderWidth: 1,
@@ -323,9 +318,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tagChipTextActive: {
       color: theme.primary,
-    },
-    keyboardSpacer: {
-      height: 300,
     },
     // ─── Header save button ──────────────────────────────────────────────────
     headerCenter: {
@@ -351,26 +343,26 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     // ─── Location (bed → plant) ──────────────────────────────────────────────
     locationSection: {
-      marginBottom: 16,
+      marginBottom: 12,
     },
     locationHint: {
       fontSize: 12,
       color: theme.textTertiary,
-      marginTop: -4,
+      marginTop: 2,
       marginBottom: 8,
     },
     // ─── Pest/Disease kind toggle ────────────────────────────────────────────
     pdKindRow: {
       flexDirection: 'row',
       gap: 8,
-      marginBottom: 12,
+      marginBottom: 10,
     },
     pdKindChip: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 16,
-      paddingVertical: 8,
+      paddingVertical: 6,
       borderRadius: 20,
       backgroundColor: theme.background,
       borderWidth: 1,
@@ -417,7 +409,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 12,
-      paddingVertical: 8,
+      paddingVertical: 5,
       borderRadius: 16,
       backgroundColor: theme.accentLight,
     },
@@ -435,14 +427,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // ─── Occurred date button ────────────────────────────────────────────────
     dateButton: {
       backgroundColor: theme.inputBackground,
-      padding: 14,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
       borderRadius: 8,
       marginBottom: 12,
       borderWidth: 1,
       borderColor: theme.inputBorder,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: 10,
+    },
+    // Suggestions hidden — the date follows the name field directly.
+    dateButtonSpaced: {
+      marginTop: 10,
     },
     dateButtonText: {
       fontSize: 15,
@@ -465,7 +462,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 5,
       paddingHorizontal: 12,
-      paddingVertical: 8,
+      paddingVertical: 6,
       borderRadius: 16,
       backgroundColor: theme.background,
       borderWidth: 1,
@@ -538,7 +535,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     treatmentChip: {
       paddingHorizontal: 12,
-      paddingVertical: 8,
+      paddingVertical: 6,
       borderRadius: 16,
       backgroundColor: theme.background,
       borderWidth: 1,
@@ -568,7 +565,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 14,
-      paddingVertical: 10,
+      paddingVertical: 7,
       borderRadius: 20,
       backgroundColor: theme.background,
       borderWidth: 1,
@@ -585,5 +582,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     milestoneChipTextActive: {
       color: theme.primary,
+    },
+    // ─── More details disclosure (optional harvest / pest fields) ───────────
+    moreDetails: {
+      marginTop: 10,
+    },
+    moreToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 6,
+    },
+    moreToggleText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.primary,
+    },
+    moreSummary: {
+      flex: 1,
+      fontSize: 12,
+      color: theme.textTertiary,
+      marginLeft: 6,
+    },
+    moreBody: {
+      marginTop: 6,
     },
   });

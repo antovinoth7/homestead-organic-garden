@@ -28,7 +28,9 @@ import {
   AFFECTED_PARTS,
   PEST_SEVERITY_OPTIONS,
   PEST_STATUS_OPTIONS,
+  filterSuggestionGroups,
 } from '../../utils/journalEntryOptions';
+import { JournalMoreDetails } from './JournalMoreDetails';
 import { sanitizeAlphaNumericSpaces } from '../../utils/textSanitizer';
 import { toLocalDateString, formatDateDisplay } from '../../utils/dateHelpers';
 import { useTheme } from '../../theme';
@@ -113,12 +115,27 @@ export function JournalPestDiseaseSection({
       : value.kind === 'pest'
         ? getDefaultGroupedPests()
         : getDefaultGroupedDiseases();
+  // Narrow the presets to the typed name; hidden once a preset is picked.
+  const visibleGroups = filterSuggestionGroups(groups, value.name);
 
   const treatmentGroups = value.name.trim() !== '' ? getGroupedTreatments(value.name) : [];
   const allTreatmentNames = treatmentGroups.flatMap((g) => g.items.map((i) => i.name));
   const isCustom =
     customTreatmentMode || (value.treatment ? !allTreatmentNames.includes(value.treatment) : false);
   const showCustomInput = isCustom || (treatmentGroups.length === 0 && value.name.trim() !== '');
+
+  // Folded extras open on their own when any of them already holds a value.
+  const hasExtras =
+    value.affectedParts.length > 0 ||
+    value.treatment.trim() !== '' ||
+    value.treatmentEffectiveness !== null;
+  const partsCount = value.affectedParts.length;
+  const moreSummary = [
+    partsCount > 0 ? `${partsCount} ${partsCount === 1 ? 'part' : 'parts'}` : '',
+    value.treatment.trim(),
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   const toggleAffectedPart = (part: string): void => {
     const next = value.affectedParts.includes(part)
@@ -168,13 +185,13 @@ export function JournalPestDiseaseSection({
       />
 
       {/* Preset suggestions */}
-      {groups.length > 0 && (
+      {visibleGroups.length > 0 && (
         <>
-          <Text style={[styles.label, styles.notesWrapperMarginTop]}>
-            Common {value.kind === 'pest' ? 'Pests' : 'Diseases'}:
+          <Text style={[styles.label, styles.labelSpaced]}>
+            Common {value.kind === 'pest' ? 'Pests' : 'Diseases'}
           </Text>
           <View style={styles.suggestionGroupContainer}>
-            {groups.map((group) => (
+            {visibleGroups.map((group) => (
               <View key={group.category} style={styles.suggestionGroup}>
                 <View style={styles.groupLabelRow}>
                   <GardenIcon
@@ -224,8 +241,11 @@ export function JournalPestDiseaseSection({
       )}
 
       {/* Occurred date */}
-      <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
-        <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
+      <TouchableOpacity
+        style={[styles.dateButton, visibleGroups.length === 0 && styles.dateButtonSpaced]}
+        onPress={() => setShowDatePicker(true)}
+      >
+        <Ionicons name="calendar-outline" size={18} color={theme.textSecondary} />
         <Text style={value.occurredAt ? styles.dateButtonText : styles.datePlaceholder}>
           {value.occurredAt ? formatDateDisplay(value.occurredAt) : 'Occurred Date'}
         </Text>
@@ -264,7 +284,7 @@ export function JournalPestDiseaseSection({
       </View>
 
       {/* Status */}
-      <Text style={[styles.label, styles.notesWrapperMarginTop]}>Status</Text>
+      <Text style={[styles.label, styles.labelSpaced]}>Status</Text>
       <View style={styles.qualityButtons}>
         {PEST_STATUS_OPTIONS.map((opt) => {
           const active = value.status === opt.value;
@@ -282,141 +302,148 @@ export function JournalPestDiseaseSection({
         })}
       </View>
 
-      {/* Affected parts */}
-      <Text style={[styles.label, styles.notesWrapperMarginTop]}>Affected Parts</Text>
-      <View style={styles.affectedPartChips}>
-        {AFFECTED_PARTS.map((part) => {
-          const active = value.affectedParts.includes(part);
-          return (
-            <TouchableOpacity
-              key={part}
-              style={[styles.affectedPartChip, active && styles.affectedPartChipActive]}
-              onPress={() => toggleAffectedPart(part)}
-            >
-              <Text
-                style={[styles.affectedPartChipText, active && styles.affectedPartChipTextActive]}
+      <JournalMoreDetails initiallyExpanded={hasExtras} summary={moreSummary}>
+        {/* Affected parts */}
+        <Text style={styles.label}>Affected Parts</Text>
+        <View style={styles.affectedPartChips}>
+          {AFFECTED_PARTS.map((part) => {
+            const active = value.affectedParts.includes(part);
+            return (
+              <TouchableOpacity
+                key={part}
+                style={[styles.affectedPartChip, active && styles.affectedPartChipActive]}
+                onPress={() => toggleAffectedPart(part)}
               >
-                {part}
+                <Text
+                  style={[styles.affectedPartChipText, active && styles.affectedPartChipTextActive]}
+                >
+                  {part}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Recommended treatments */}
+        {treatmentGroups.length > 0 && (
+          <>
+            <Text style={styles.label}>Recommended Treatments</Text>
+            <Text style={styles.helperText}>Effort: Easy · Moderate · Advanced</Text>
+            <View style={styles.treatmentGroupContainer}>
+              {treatmentGroups.map((group) => (
+                <View key={group.method} style={styles.treatmentGroup}>
+                  <View style={styles.groupLabelRow}>
+                    <GardenIcon
+                      name={TREATMENT_ICON_KEYS[group.method]}
+                      size={14}
+                      color={theme.textSecondary}
+                    />
+                    <Text style={styles.treatmentGroupLabel}>{group.label}</Text>
+                  </View>
+                  <View style={styles.treatmentGroupChips}>
+                    {group.items.map((item) => {
+                      const active = value.treatment === item.name;
+                      return (
+                        <TouchableOpacity
+                          key={item.name}
+                          style={[styles.treatmentChip, active && styles.treatmentChipActive]}
+                          onPress={() => {
+                            setCustomTreatmentMode(false);
+                            onChange({ treatment: active ? '' : item.name });
+                          }}
+                        >
+                          <View style={styles.treatmentChipContent}>
+                            <View
+                              style={[
+                                styles.effortDot,
+                                item.effort === 'easy'
+                                  ? styles.effortEasy
+                                  : item.effort === 'moderate'
+                                    ? styles.effortModerate
+                                    : styles.effortAdvanced,
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.treatmentChipText,
+                                active && styles.treatmentChipTextActive,
+                              ]}
+                            >
+                              {item.name}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[styles.treatmentChip, isCustom && styles.treatmentChipActive]}
+              onPress={() => {
+                setCustomTreatmentMode(true);
+                onChange({ treatment: '' });
+              }}
+            >
+              <GardenIcon
+                name="general.edit"
+                size={14}
+                color={showCustomInput ? theme.primary : theme.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.treatmentChipText,
+                  showCustomInput && styles.treatmentChipTextActive,
+                ]}
+              >
+                Custom treatment...
               </Text>
             </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Recommended treatments */}
-      {treatmentGroups.length > 0 && (
-        <>
-          <Text style={styles.label}>Recommended Treatments</Text>
-          <Text style={styles.helperText}>Effort: Easy · Moderate · Advanced</Text>
-          <View style={styles.treatmentGroupContainer}>
-            {treatmentGroups.map((group) => (
-              <View key={group.method} style={styles.treatmentGroup}>
-                <View style={styles.groupLabelRow}>
-                  <GardenIcon
-                    name={TREATMENT_ICON_KEYS[group.method]}
-                    size={14}
-                    color={theme.textSecondary}
-                  />
-                  <Text style={styles.treatmentGroupLabel}>{group.label}</Text>
-                </View>
-                <View style={styles.treatmentGroupChips}>
-                  {group.items.map((item) => {
-                    const active = value.treatment === item.name;
-                    return (
-                      <TouchableOpacity
-                        key={item.name}
-                        style={[styles.treatmentChip, active && styles.treatmentChipActive]}
-                        onPress={() => {
-                          setCustomTreatmentMode(false);
-                          onChange({ treatment: active ? '' : item.name });
-                        }}
-                      >
-                        <View style={styles.treatmentChipContent}>
-                          <View
-                            style={[
-                              styles.effortDot,
-                              item.effort === 'easy'
-                                ? styles.effortEasy
-                                : item.effort === 'moderate'
-                                  ? styles.effortModerate
-                                  : styles.effortAdvanced,
-                            ]}
-                          />
-                          <Text
-                            style={[
-                              styles.treatmentChipText,
-                              active && styles.treatmentChipTextActive,
-                            ]}
-                          >
-                            {item.name}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ))}
-          </View>
-          <TouchableOpacity
-            style={[styles.treatmentChip, isCustom && styles.treatmentChipActive]}
-            onPress={() => {
-              setCustomTreatmentMode(true);
-              onChange({ treatment: '' });
-            }}
-          >
-            <GardenIcon
-              name="general.edit"
-              size={14}
-              color={showCustomInput ? theme.primary : theme.textSecondary}
+          </>
+        )}
+        {showCustomInput && (
+          <View style={styles.notesWrapperMarginTop}>
+            <FloatingLabelInput
+              label="Custom Treatment"
+              value={value.treatment}
+              onChangeText={(text) => onChange({ treatment: sanitizeAlphaNumericSpaces(text) })}
+              maxLength={500}
             />
-            <Text
-              style={[styles.treatmentChipText, showCustomInput && styles.treatmentChipTextActive]}
-            >
-              Custom treatment...
-            </Text>
-          </TouchableOpacity>
-        </>
-      )}
-      {showCustomInput && (
-        <View style={styles.notesWrapperMarginTop}>
-          <FloatingLabelInput
-            label="Custom Treatment"
-            value={value.treatment}
-            onChangeText={(text) => onChange({ treatment: sanitizeAlphaNumericSpaces(text) })}
-            maxLength={500}
-          />
-          <Text style={styles.charCounter}>{value.treatment.length}/500</Text>
-        </View>
-      )}
-
-      {/* Treatment effectiveness */}
-      {value.treatment.trim() !== '' && (
-        <>
-          <Text style={[styles.label, styles.notesWrapperMarginTop]}>Treatment Effectiveness</Text>
-          <View style={styles.affectedPartChips}>
-            {EFFECTIVENESS_OPTIONS.map((opt) => {
-              const active = value.treatmentEffectiveness === opt.value;
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[styles.affectedPartChip, active && styles[opt.activeStyle]]}
-                  onPress={() => onChange({ treatmentEffectiveness: active ? null : opt.value })}
-                >
-                  <GardenIcon
-                    name={opt.iconKey}
-                    size={15}
-                    color={active ? theme.textInverse : theme.textSecondary}
-                  />
-                  <Text style={[styles.affectedPartChipText, active && styles.effChipTextActive]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+            <Text style={styles.charCounter}>{value.treatment.length}/500</Text>
           </View>
-        </>
-      )}
+        )}
+
+        {/* Treatment effectiveness */}
+        {value.treatment.trim() !== '' && (
+          <>
+            <Text style={[styles.label, styles.notesWrapperMarginTop]}>
+              Treatment Effectiveness
+            </Text>
+            <View style={styles.affectedPartChips}>
+              {EFFECTIVENESS_OPTIONS.map((opt) => {
+                const active = value.treatmentEffectiveness === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.affectedPartChip, active && styles[opt.activeStyle]]}
+                    onPress={() => onChange({ treatmentEffectiveness: active ? null : opt.value })}
+                  >
+                    <GardenIcon
+                      name={opt.iconKey}
+                      size={15}
+                      color={active ? theme.textInverse : theme.textSecondary}
+                    />
+                    <Text style={[styles.affectedPartChipText, active && styles.effChipTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
+      </JournalMoreDetails>
     </View>
   );
 }

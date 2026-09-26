@@ -118,7 +118,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     statCard: {
       flex: 1,
-      backgroundColor: theme.backgroundSecondary,
+      backgroundColor: theme.card,
       borderRadius: 10,
       paddingVertical: 8,
       paddingHorizontal: 4,
@@ -223,156 +223,108 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
     },
     listContent: {
-      padding: 12,
-      gap: 10,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      gap: 12,
+    },
+    // Swipeable clips its children (overflow: hidden), so the rounding lives on
+    // its container — the revealed Edit/Delete actions pick up the same corners.
+    swipeContainer: {
+      borderRadius: 16,
     },
     card: {
       backgroundColor: theme.card,
-      borderRadius: 14,
-      overflow: 'hidden',
-      flexDirection: 'row',
-      borderWidth: 1,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.border,
-    },
-    cardAccent: {
-      width: 4,
-    },
-    cardBody: {
-      flex: 1,
-      padding: 11,
     },
     cardTopRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
     },
-    typeIconCircle: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+    typeChip: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
     },
-    cardMeta: {
-      flex: 1,
-      marginLeft: 10,
-    },
-    entryTypeLabel: {
-      fontSize: 14,
+    typeChipText: {
+      fontSize: 12,
       fontWeight: '700',
-      color: theme.text,
+      letterSpacing: 0.2,
     },
     dateText: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      marginTop: 1,
+      flexShrink: 1,
+      fontSize: 12,
+      color: theme.textTertiary,
     },
-    tagsRow: {
+    contentText: {
+      fontSize: 15,
+      color: theme.text,
+      lineHeight: 21,
+      marginTop: 10,
+    },
+    // One chip row: plant, harvest/pest details, then free tags.
+    chipRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 6,
-      marginTop: 8,
-    },
-    // Fixed thumbnail row (no horizontal scroll — never fights the swipe gesture)
-    thumbRow: {
-      flexDirection: 'row',
-      gap: 6,
       marginTop: 10,
     },
-    thumb: {
-      width: 72,
-      height: 72,
-      borderRadius: 8,
-      backgroundColor: theme.backgroundSecondary,
-    },
-    thumbMore: {
-      position: 'relative',
-    },
-    thumbMoreOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      borderRadius: 8,
-      backgroundColor: theme.overlay,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    thumbMoreText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.textInverse,
-    },
-    cardContent: {
-      padding: 16,
-    },
-    cardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    headerLeft: {
+    chip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: 4,
+      maxWidth: '100%',
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: 999,
     },
-    headerRight: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    date: {
-      fontSize: 14,
+    chipText: {
+      fontSize: 12,
       fontWeight: '600',
+      flexShrink: 1,
+    },
+    chipPlant: {
+      backgroundColor: theme.primaryLight,
+    },
+    chipPlantText: {
+      color: theme.primary,
+    },
+    chipHarvest: {
+      backgroundColor: theme.warningLight,
+    },
+    chipHarvestText: {
+      color: theme.warning,
+    },
+    chipPest: {
+      backgroundColor: theme.errorLight,
+    },
+    chipPestText: {
+      color: theme.error,
+    },
+    chipMutedText: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.4,
       color: theme.textSecondary,
     },
-    typeIconBadge: {
-      backgroundColor: theme.primaryLight,
-      borderRadius: 12,
-      padding: 4,
+    chipTag: {
+      backgroundColor: theme.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.border,
     },
-    iconButton: {
-      padding: 4,
+    chipTagText: {
+      fontWeight: '500',
+      color: theme.textSecondary,
+      textTransform: 'capitalize',
     },
-    plantTag: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.primaryLight,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-      gap: 4,
-    },
-    plantTagText: {
-      fontSize: 11,
-      color: theme.primary,
-      fontWeight: '600',
-    },
-    harvestDetails: {
-      flexDirection: 'row',
-      gap: 8,
-      marginBottom: 8,
-    },
-    harvestBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.warningLight,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-      gap: 4,
-    },
-    harvestText: {
-      fontSize: 11,
-      color: theme.warning,
-      fontWeight: '600',
-    },
-    qualityBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-    },
+    // Harvest quality tints (keyed by value)
     qualityexcellent: {
       backgroundColor: theme.primaryLight,
     },
@@ -385,36 +337,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     qualitypoor: {
       backgroundColor: theme.errorLight,
     },
-    qualityText: {
-      fontSize: 9,
-      fontWeight: 'bold',
-      color: theme.textSecondary,
-    },
-    // Pest/disease + milestone card badges
-    pestNameBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: theme.errorLight,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-    },
-    pestNameText: {
-      fontSize: 11,
-      color: theme.error,
-      fontWeight: '600',
-    },
-    pillBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-    },
-    pillText: {
-      fontSize: 9,
-      fontWeight: 'bold',
-      color: theme.textSecondary,
-    },
+    // Pest severity / status tints (keyed by value)
     severity_low: {
       backgroundColor: theme.infoLight,
     },
@@ -436,25 +359,41 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     status_resolved: {
       backgroundColor: theme.successLight,
     },
-    milestoneBadge: {
+    // Fixed thumbnail row (no horizontal scroll — never fights the swipe gesture).
+    // Up to three equal squares fill the width; a lone photo gets a wide frame.
+    thumbRow: {
       flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: theme.successLight,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
+      gap: 6,
+      marginTop: 12,
+    },
+    thumbCell: {
+      flex: 1,
+      aspectRatio: 1,
       borderRadius: 10,
+      overflow: 'hidden',
+      backgroundColor: theme.backgroundSecondary,
     },
-    milestoneText: {
-      fontSize: 11,
-      color: theme.success,
-      fontWeight: '600',
+    thumbCellSingle: {
+      aspectRatio: 16 / 9,
     },
-    contentText: {
-      fontSize: 13,
-      color: theme.text,
-      lineHeight: 20,
-      marginTop: 8,
+    thumb: {
+      width: '100%',
+      height: '100%',
+    },
+    thumbMoreOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: theme.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    thumbMoreText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.textInverse,
     },
     // Swipe-to-reveal actions (mirrors BedCard / bedListStyles)
     swipeActions: {
@@ -471,8 +410,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.error,
       alignItems: 'center',
       justifyContent: 'center',
-      borderTopRightRadius: 14,
-      borderBottomRightRadius: 14,
     },
     swipeActionText: {
       fontSize: 10,
@@ -509,19 +446,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       fontWeight: '600',
       color: theme.textInverse,
-    },
-    journalTagBadge: {
-      backgroundColor: theme.backgroundSecondary,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
-    journalTagText: {
-      fontSize: 10,
-      color: theme.textSecondary,
-      fontWeight: '500',
-      textTransform: 'capitalize',
     },
   });

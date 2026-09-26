@@ -13,6 +13,7 @@ import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/optionPickerSheetStyles';
 import { BottomSheetModal } from '@/components/BottomSheetModal';
 import { SheetHandle } from '@/components/SheetHandle';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 
 export interface PickerOption {
   label: string;
@@ -38,6 +39,10 @@ interface Props {
 }
 
 const ROW_HEIGHT = 52;
+/** Share of the window a searchable sheet occupies before the keyboard opens. */
+const SEARCHABLE_HEIGHT_RATIO = 0.75;
+/** Bottom padding while the keyboard is up — the safe-area inset is under it. */
+const KEYBOARD_BOTTOM_PADDING = 8;
 
 /**
  * Shared single-select bottom sheet. Extracted from `ThemedDropdown` so one
@@ -58,6 +63,7 @@ export function OptionPickerSheet({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const keyboardHeight = useKeyboardHeight();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -77,7 +83,11 @@ export function OptionPickerSheet({
   const filteredOptions = useMemo(() => {
     if (!searchable || !searchQuery.trim()) return options;
     const q = searchQuery.trim().toLowerCase();
-    return options.filter((option) => option.label.toLowerCase().includes(q));
+    return options.filter(
+      (option) =>
+        option.label.toLowerCase().includes(q) ||
+        (option.description?.toLowerCase().includes(q) ?? false)
+    );
   }, [options, searchQuery, searchable]);
 
   const renderItem = useCallback(
@@ -124,14 +134,39 @@ export function OptionPickerSheet({
   // it scrolls instead of pushing the sheet past the screen.
   const bottomInset = Math.max(insets.bottom, 24);
   const sheetMaxHeight = windowHeight - insets.top - 24;
-  const headerAllowance = (searchable ? 150 : 90) + (allowClear ? ROW_HEIGHT : 0);
+  const headerAllowance = 90 + (allowClear ? ROW_HEIGHT : 0);
   const listMaxHeight = Math.max(ROW_HEIGHT, sheetMaxHeight - headerAllowance - bottomInset);
+
+  // A searchable sheet has a fixed height and rides above the keyboard. Sized
+  // to its content, it shrank as the query narrowed to one or no rows and sank
+  // behind the keyboard, which covers the bottom of the window.
+  const searchableHeight = Math.min(
+    windowHeight * SEARCHABLE_HEIGHT_RATIO,
+    sheetMaxHeight - keyboardHeight
+  );
+  const sheetSizing = searchable
+    ? {
+        height: searchableHeight,
+        paddingBottom: keyboardHeight > 0 ? KEYBOARD_BOTTOM_PADDING : bottomInset,
+      }
+    : { maxHeight: sheetMaxHeight, paddingBottom: bottomInset };
+
+  const trimmedQuery = searchQuery.trim();
+  const listEmpty = searchable ? (
+    <View style={styles.emptyState}>
+      <Ionicons name="search-outline" size={28} color={theme.textTertiary} />
+      <Text style={styles.emptyText}>
+        {trimmedQuery ? `No matches for "${trimmedQuery}"` : 'No matches found'}
+      </Text>
+    </View>
+  ) : null;
 
   return (
     <BottomSheetModal
       visible={visible}
       onClose={close}
-      sheetStyle={[styles.sheet, { maxHeight: sheetMaxHeight, paddingBottom: bottomInset }]}
+      sheetStyle={[styles.sheet, sheetSizing]}
+      keyboardAvoiding={searchable}
     >
       <SheetHandle onClose={close}>
         <Text style={styles.sheetTitle}>{title}</Text>
@@ -161,14 +196,12 @@ export function OptionPickerSheet({
           <Text style={styles.clearRowText}>{clearLabel}</Text>
         </TouchableOpacity>
       )}
-      {searchable && filteredOptions.length === 0 && (
-        <Text style={styles.emptyText}>No matches found</Text>
-      )}
       <FlatList
         data={filteredOptions}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        style={{ maxHeight: listMaxHeight }}
+        style={searchable ? styles.list : { maxHeight: listMaxHeight }}
+        ListEmptyComponent={listEmpty}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         getItemLayout={
