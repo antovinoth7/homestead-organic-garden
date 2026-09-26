@@ -30,7 +30,9 @@ import {
   GrowthStageDurations,
   AnnualCycleDurations,
   VarietyDetail,
+  CatalogGroup,
 } from '@/types/database.types';
+import { CATALOG_GROUP_ORDER } from '@/config/plants/catalogTaxonomy';
 import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
@@ -268,6 +270,7 @@ export function toPlantCareProfilesShape(profiles: PlantProfiles): PlantCareProf
         isDeleted: _isDeleted,
         cropFamily: _cropFamily,
         layer: _layer,
+        group: _group,
         ...care
       } = p;
 
@@ -460,6 +463,7 @@ function normalizeEntry(raw: unknown): PlantProfile | null {
     entry.annualCycleDurations = r.annualCycleDurations as AnnualCycleDurations;
   if (r.cropFamily) entry.cropFamily = r.cropFamily as PlantProfile['cropFamily'];
   if (r.layer) entry.layer = r.layer as PlantProfile['layer'];
+  if (CATALOG_GROUP_ORDER.includes(r.group as CatalogGroup)) entry.group = r.group as CatalogGroup;
   return entry;
 }
 

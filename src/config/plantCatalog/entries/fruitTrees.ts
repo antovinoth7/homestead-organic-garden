@@ -384,4 +384,43 @@ export const FRUIT_TREE_ENTRIES: PlantCatalogEntry[] = [
       'Mild low-acid citrus grown for juice; needs free-draining soil and steady, even watering',
     varieties: ['Mosambi', 'Local'],
   },
+  // Homestead fruit trees that were reference-image names only until gardens
+  // grew them; migration 018 adopts the entries users had added for them.
+  {
+    name: 'Lychee',
+    group: 'fruits',
+    subGroup: 'orchard_trees',
+    habit: 'tree',
+    tags: [],
+    plantType: 'fruit_tree',
+    cropFamily: 'other',
+    tamilName: 'லிச்சி',
+    shortDescription:
+      'Evergreen tree bearing clusters of red, rough-skinned fruit with sweet translucent flesh',
+    varieties: ['Shahi', 'China', 'Local'],
+  },
+  {
+    name: 'Citron',
+    group: 'fruits',
+    subGroup: 'orchard_trees',
+    habit: 'tree',
+    tags: [],
+    plantType: 'fruit_tree',
+    cropFamily: 'other',
+    tamilName: 'நார்த்தங்காய்',
+    shortDescription: 'Thorny citrus with large, thick-rinded fruit prized for pickle',
+    varieties: ['Local'],
+  },
+  {
+    name: 'Batoko Plum',
+    group: 'fruits',
+    subGroup: 'orchard_trees',
+    habit: 'tree',
+    tags: [],
+    plantType: 'fruit_tree',
+    cropFamily: 'other',
+    tamilName: 'பட்டோகோ பிளம்',
+    shortDescription:
+      'Thornless tree bearing clusters of shiny, sour, cherry-like red fruit for pickle and jam',
+  },
 ];

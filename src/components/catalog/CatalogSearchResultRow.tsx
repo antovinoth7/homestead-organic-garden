@@ -48,7 +48,7 @@ function CatalogSearchResultRowComponent({
     result.tamilSpan
   );
 
-  const groupLabel = CATALOG_GROUP_LABELS[getTaxonomy(result.name, result.plantType).group];
+  const groupLabel = CATALOG_GROUP_LABELS[getTaxonomy(result.name, result.plantType, result.group).group];
 
   // An alias or tag hit shows the canonical name, so without this the row looks
   // unrelated to what was typed — say what actually matched. A tag match is why

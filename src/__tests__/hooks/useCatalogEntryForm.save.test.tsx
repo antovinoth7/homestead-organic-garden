@@ -39,6 +39,7 @@ jest.mock('@/utils/errorLogging', () => ({
 import React from 'react';
 import { useCatalogEntryForm } from '@/hooks/useCatalogEntryForm';
 import type { UseCatalogEntryFormReturn } from '@/hooks/useCatalogEntryForm';
+import type { CatalogGroup, PlantType } from '@/types/database.types';
 import { deletePlantProfile, savePlantProfile } from '@/services/plantProfiles';
 
 const TestRenderer = jest.requireActual('react-test-renderer') as {
@@ -51,11 +52,24 @@ const mockSave = savePlantProfile as jest.Mock;
 
 let latest: UseCatalogEntryFormReturn;
 
-function Probe({ name }: { name: string }): null {
+interface ProbeProps {
+  name: string;
+  plantType?: PlantType;
+  group?: CatalogGroup;
+  isCreating?: boolean;
+}
+
+function Probe({
+  name,
+  plantType = 'vegetable',
+  group,
+  isCreating = false,
+}: ProbeProps): null {
   const value = useCatalogEntryForm({
     initialName: name,
-    plantType: 'vegetable',
-    isCreating: false,
+    plantType,
+    group,
+    isCreating,
     anyModalOpen: false,
   });
   // Captured in an effect rather than assigned during render: reassigning an
@@ -67,10 +81,13 @@ function Probe({ name }: { name: string }): null {
   return null;
 }
 
-async function mount(name = 'Tomato'): Promise<{ unmount: () => void }> {
+async function mount(
+  name = 'Tomato',
+  props: Omit<ProbeProps, 'name'> = {}
+): Promise<{ unmount: () => void }> {
   let tree!: { unmount: () => void };
   await TestRenderer.act(async () => {
-    tree = TestRenderer.create(<Probe name={name} />);
+    tree = TestRenderer.create(<Probe name={name} {...props} />);
   });
   return tree;
 }
@@ -128,5 +145,39 @@ describe('useCatalogEntryForm — save', () => {
     const added = await mount('Grandma’s Chilli');
     expect(latest.nameLocked).toBe(false);
     added.unmount();
+  });
+
+  it('saves the chosen Category on a new entry, so it is filed there', async () => {
+    const tree = await mount('', { plantType: 'herb', group: 'spices', isCreating: true });
+
+    await TestRenderer.act(async () => {
+      latest.setName('Long Pepper');
+    });
+    await TestRenderer.act(async () => {
+      latest.attemptSave();
+      await Promise.resolve();
+    });
+
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(mockSave.mock.calls[0][0]).toBe('herb');
+    expect(mockSave.mock.calls[0][1]).toBe('Long Pepper');
+    expect(mockSave.mock.calls[0][2]).toMatchObject({ group: 'spices' });
+    tree.unmount();
+  });
+
+  it('writes no group when an existing entry is saved', async () => {
+    const tree = await mount('Tomato', { group: 'spices' });
+
+    await TestRenderer.act(async () => {
+      latest.setForm({ spacingCm: '75' });
+    });
+    await TestRenderer.act(async () => {
+      latest.attemptSave();
+      await Promise.resolve();
+    });
+
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(mockSave.mock.calls[0][2]).not.toHaveProperty('group');
+    tree.unmount();
   });
 });

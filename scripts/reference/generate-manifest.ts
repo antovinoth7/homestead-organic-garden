@@ -148,6 +148,15 @@ const PLANT_PROMPT_HABIT: Record<string, string> = {
   // Spice trees filed under `herb` — the leafy-clump framing would shrink them.
   Cinnamon: 'a young bushy evergreen tree with glossy red-flushed new leaves',
   Clove: 'a conical evergreen tree with clusters of pink-red flower buds',
+  // Flacourtia inermis, from the NParks Flora & Fauna Web description. The
+  // generic fruit-tree framing produced a mango-like tree with loose purple
+  // plums; these are the traits that tell it apart.
+  'Batoko Plum':
+    'a small thornless evergreen tree with an oval crown and a smooth trunk mottled light brown and grey; ' +
+    'glossy leathery oval leaves with finely toothed edges hanging from the branches, new leaves flushed orange-red; ' +
+    'small clusters of shiny round cherry-sized fruits borne along the twigs at the leaf bases, ripening from green ' +
+    'to bright red and deep reddish-purple, each tipped with a tiny ring of black dots; framed close enough that ' +
+    'the fruit clusters on the twigs read clearly',
   // Pandal gourds — trailed overhead, never grown as free-standing plants.
   'Bottle Gourd': 'a vine on an overhead pandal with fruit hanging below',
   'Snake Gourd': 'a vine on an overhead pandal with fruit hanging below',
@@ -248,8 +257,9 @@ function buildEntries(): ManifestEntry[] {
     byCanonical.set(canonical, names);
   }
   for (const [slug, names] of [...byCanonical.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    // Reference-only names (Apple, Batoko Plum) are not catalog rows, so they
-    // have neither a type nor a care profile — both stay undefined for them.
+    // Reference-only names (the `EXTRA_REFERENCE_PLANT_NAMES` image slots) are
+    // not catalog rows, so they have neither a type nor a care profile — both
+    // stay undefined for them.
     const typedName = names.find((name) => PLANT_TYPE_BY_NAME.has(name));
     const plantType = typedName ? PLANT_TYPE_BY_NAME.get(typedName) : undefined;
     const profile = typedName && plantType ? getPlantCareProfile(typedName, plantType) : null;

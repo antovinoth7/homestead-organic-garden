@@ -36,10 +36,13 @@ jest.mock('@/utils/plantLabels', () => ({
 }));
 jest.mock('@/config/plants/catalogTaxonomy', () => ({
   CATALOG_GROUP_ORDER: ['vegetables', 'greens'],
-  getTaxonomy: (_name: string, plantType: string) =>
-    plantType === 'vegetable'
-      ? { group: 'vegetables', subGroup: 'fruit_vegetables', habit: 'annual_bed' }
-      : { group: 'greens', subGroup: 'spinach', habit: 'annual_bed' },
+  // Stands in for a user-added entry: no catalog row, so a stored group wins.
+  getTaxonomy: (_name: string, plantType: string, storedGroup?: string) =>
+    storedGroup
+      ? { group: storedGroup, habit: 'annual_bed' }
+      : plantType === 'vegetable'
+        ? { group: 'vegetables', subGroup: 'fruit_vegetables', habit: 'annual_bed' }
+        : { group: 'greens', subGroup: 'spinach', habit: 'annual_bed' },
 }));
 jest.mock('@/utils/errorLogging', () => ({
   getErrorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
@@ -155,6 +158,22 @@ describe('usePlantCatalogManager', () => {
         latest.groupData.entries.map((entry) => [entry.name, entry.group])
       );
       expect(byName).toEqual({ Tomato: 'vegetables', Palak: 'greens' });
+      tree.unmount();
+    });
+
+    it('files an entry under the group stored on its profile', async () => {
+      mockProfiles.mockResolvedValue({
+        vegetable: { Tomato: { plantType: 'vegetable', name: 'Tomato', group: 'greens' } },
+      });
+      const tree = await mount();
+      await TestRenderer.act(async () => {
+        await latest.reload();
+      });
+
+      const byName = Object.fromEntries(
+        latest.groupData.entries.map((entry) => [entry.name, entry.group])
+      );
+      expect(byName).toEqual({ Tomato: 'greens', Palak: 'greens' });
       tree.unmount();
     });
 

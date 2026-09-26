@@ -66,7 +66,7 @@ function buildRows(
   const visible = items.filter((item) => !q || item.name.toLowerCase().includes(q));
   const byGroup = new Map<CatalogGroup, PlantPickerItem[]>();
   for (const item of visible) {
-    const group = getTaxonomy(item.name, item.plantType).group;
+    const group = getTaxonomy(item.name, item.plantType, item.group).group;
     const bucket = byGroup.get(group);
     if (bucket) bucket.push(item);
     else byGroup.set(group, [item]);
@@ -141,7 +141,7 @@ export function PlantPickerSheet({
             <View style={styles.badgeRow}>
               <View style={styles.categoryBadge}>
                 <Text style={styles.categoryBadgeText}>
-                  {CATALOG_GROUP_LABELS[getTaxonomy(item.name, item.plantType).group]}
+                  {CATALOG_GROUP_LABELS[getTaxonomy(item.name, item.plantType, item.group).group]}
                 </Text>
               </View>
               {item.seasonLabel ? (

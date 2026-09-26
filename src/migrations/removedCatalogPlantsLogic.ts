@@ -44,12 +44,15 @@ export interface RemovedPlantSeed {
  * - **`8fe36e7`** — the Kanyakumari expansion, which replaced seven placeholder
  *   `spinach` rows (they were really Palak cultivars promoted to plants) with
  *   the real keerai. Last seed: `git show 1e9f77b:src/services/plantCatalog.ts`.
- * - **no repo-era seed** — Broccoli, Spinach, Lily and Tulip were never rows in
+ * - **no repo-era seed** — Spinach, Lily and Tulip were never rows in
  *   this repo. They are inherited from the pre-git May scaffold, reached devices
  *   through migration 003's legacy-store consolidation, and are recorded in
  *   `docs/tamil-nadu-reference-audit.md` → "Still open".
  *
  * Deliberately NOT listed, each for its own reason:
+ * - `Broccoli` — the fourth scaffold name, listed here until it became a
+ *   bundled `vegetable` row (migration 018). Pruning it now would tombstone a
+ *   row the catalog offers on any install still below v13.
  * - `Amaranth`, `Apple`, `Comfrey`, `Corn`, `Grape`, `Lime`, `Cashew Nut` —
  *   reference-image and alias spellings in `EXTRA_REFERENCE_PLANT_NAMES` that
  *   were never catalog rows.
@@ -89,7 +92,6 @@ export const REMOVED_CATALOG_PLANTS_V13: Readonly<
         'Low-growing fruiting plant producing sweet red berries; companion to spinach',
       varieties: ['Sweet Charlie', 'Festival', 'Local Hill'],
     },
-    Broccoli: null,
   },
   herb: {
     Parsley: {

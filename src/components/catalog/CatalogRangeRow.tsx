@@ -38,15 +38,24 @@ export function CatalogRangeRow({
 
   return (
     <View style={[styles.rowGroup, isLast && styles.rowGroupLast, !!errorText && styles.rowError]}>
-      <TouchableOpacity
-        style={styles.row}
-        onPress={onPress}
-        activeOpacity={0.6}
-        accessibilityRole="button"
-        accessibilityLabel={`${label}, ${min || 'not set'} to ${max || 'not set'}`}
-      >
-        <View style={styles.labelWrap}>
-          <Text style={styles.label} numberOfLines={2}>
+      {/* The target sits behind the content, not around it, so FieldHelp's
+          own button is its sibling — see `rowTarget`. The content is hidden
+          from the reader because the target's label already speaks it. */}
+      <View style={styles.row}>
+        <TouchableOpacity
+          style={styles.rowTarget}
+          onPress={onPress}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel={`${label}, ${min || 'not set'} to ${max || 'not set'}`}
+        />
+        <View style={[styles.labelWrap, styles.rowPassthrough]}>
+          <Text
+            style={[styles.label, styles.rowPassive]}
+            numberOfLines={2}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
             {label}
           </Text>
           {helpText ? (
@@ -59,7 +68,11 @@ export function CatalogRangeRow({
           ) : null}
         </View>
 
-        <View style={styles.rangeValues}>
+        <View
+          style={[styles.rangeValues, styles.rowPassive]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
           <View style={styles.rangeChip}>
             <Text style={[styles.rangeChipText, !min && styles.rangeChipPlaceholder]}>
               {min || EMPTY}
@@ -74,8 +87,15 @@ export function CatalogRangeRow({
           {unit ? <Text style={styles.rangeUnit}>{unit}</Text> : null}
         </View>
 
-        <Ionicons name="chevron-forward" size={14} color={theme.textTertiary} />
-      </TouchableOpacity>
+        <Ionicons
+          name="chevron-forward"
+          size={14}
+          color={theme.textTertiary}
+          style={styles.rowPassive}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      </View>
       {errorText ? (
         <View style={styles.errorWrap}>
           <FieldErrorText message={errorText} />

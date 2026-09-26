@@ -244,6 +244,18 @@ export const VEGETABLE_ENTRIES: PlantCatalogEntry[] = [
     varieties: ['Pusa Snowball', 'CO 1', 'Early White'],
   },
   {
+    name: 'Broccoli',
+    group: 'vegetables',
+    subGroup: 'cabbage_family',
+    habit: 'annual_bed',
+    tags: [],
+    plantType: 'vegetable',
+    cropFamily: 'brassica',
+    tamilName: 'ப்ரோக்கோலி',
+    shortDescription: 'Cool-season brassica grown for its green flower head and side shoots',
+    varieties: ['Palam Samridhi', 'Green Magic', 'Local'],
+  },
+  {
     name: 'Carrot',
     group: 'vegetables',
     subGroup: 'roots_tubers',

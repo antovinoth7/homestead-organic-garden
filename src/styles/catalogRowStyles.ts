@@ -29,6 +29,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 11,
       minHeight: 44,
     },
+    // The row's "tap to edit" target fills the row behind its content rather
+    // than wrapping it: on web a button renders a real <button>, and the
+    // FieldHelp button in the label would be nested inside it.
+    rowTarget: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    // Content over the target: taps pass through to it…
+    rowPassive: {
+      pointerEvents: 'none',
+    },
+    // …except the label wrap, whose FieldHelp keeps its own tap.
+    rowPassthrough: {
+      pointerEvents: 'box-none',
+    },
     rowError: {
       backgroundColor: theme.errorLight,
     },

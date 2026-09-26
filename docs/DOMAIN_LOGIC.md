@@ -29,6 +29,7 @@ Every Tamil Nadu zone uses the IMD meteorological boundaries: Winter (`cool_dry`
 - **One row per crop.** A cultivar or a type of the same species is a variety, not a row: Long Brinjal is a Brinjal variety, French Beans a Beans one, Red Banana a Banana one, Yardlong Beans a Cowpea one, and there is one `Coconut` row whose varieties are the palm types (migration 017). The old names stay as search aliases and share the survivor's photo.
 - **Built-in names are fixed.** A bundled plant's catalog name cannot be edited (its pests, photo and care data are keyed by it); the local name goes in `tamilName`. Saving rejects any alias of an existing plant (`findDuplicatePlantName`).
 - **Harvest shown to farmers.** For `fruit_tree`, `coconut_tree` and `timber_tree`, `daysToHarvest` is fruit development (Mango "90–150 days"), so the list and Quick Info show `yearsToFirstHarvest` instead when set — "First harvest in 5 years". Everything else reads "Harvest in 55–70 days". A `0–0` range means "not applicable" and is shown as nothing.
+- **Rows adopted from users' own entries.** Lychee, Citron, Batoko Plum and Broccoli were added as rows because gardens grow them (migration 018 moves existing entries onto them). Their care figures are general horticulture, not TNAU-reviewed. Known unmodelled gap: lychee needs a cool, dry spell to flower and often stays barren in the Kanyakumari plains. The description says so, but nothing zone-aware suppresses its flowering or harvest estimates.
 - **Linked pests and diseases** a farmer adds on a catalog entry (`customPests` / `customDiseases`) are also listed on each garden plant's care guide, after the built-in ones (`withLinkedNames`).
 
 ### Today planting and advisory model
@@ -60,6 +61,14 @@ old catalog pills read wrong.
 - **`CatalogGroup` owns the pills**: Vegetables, Greens, Fruits, Spices, Herbs &
   Medicinal, Flowers, Support & Input Plants, Plantation & Timber. Purpose is the
   one axis a farmer and a cook agree on. Every group is mutually exclusive.
+- **Creating a catalog entry asks for the group, not the care model.** The new
+  entry's *Category* row lists the eight groups; its care model follows from
+  `CATALOG_GROUP_DEFAULT_TYPE`, and Fruits alone adds a *Grows as* row (Tree →
+  `fruit_tree`, Not a tree → `vegetable`). The chosen group is saved as the
+  optional `PlantProfile.group` and passed to `getTaxonomy(name, type, group)`,
+  which uses it only when no catalog row matches — so a user-added spice files
+  under Spices, not under its care model's Herbs & Medicinal. Entries saved
+  before this carry no group and still fall back to `PLANT_TYPE_TO_GROUP`.
 - **Tags carry what one hierarchy cannot.** Drumstick is a tree harvested as a
   vegetable; Agathi is green manure, keerai and living fence at once;
   `coconut_intercrop` spans six plants in four groups that together make up a

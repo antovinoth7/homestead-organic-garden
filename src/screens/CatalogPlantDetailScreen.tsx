@@ -48,7 +48,8 @@ import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
 import { getGroupedPestEntries } from '@/config/pests';
 import { getGroupedDiseaseEntries } from '@/config/diseases';
 import type { PestDiseasePickerGroup } from '@/utils/pestDiseasePickerRows';
-import type { PlantType, VarietyDetail } from '@/types/database.types';
+import type { CatalogGroup, PlantType, VarietyDetail } from '@/types/database.types';
+import { CATALOG_GROUP_DEFAULT_TYPE, PLANT_TYPE_TO_GROUP } from '@/config/plants/catalogTaxonomy';
 import { MoreStackParamList } from '@/types/navigation.types';
 import { sanitizeName } from '@/utils/catalogDraft';
 import { FIELD_TO_SECTION, SECTION_TO_TAB, sectionHasError } from '@/utils/catalogValidation';
@@ -66,7 +67,6 @@ import {
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import { getCommonDiseases, getCommonPests } from '@/utils/plantHelpers';
 import {
-  CATEGORY_LABELS,
   LIFECYCLE_LABELS,
   SUNLIGHT_LABELS,
   TOLERANCE_LABELS,
@@ -112,14 +112,29 @@ const DISEASE_PICKER_GROUPS: readonly PestDiseasePickerGroup[] = getGroupedDisea
 export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const route = useRoute<RouteParam>();
   const navigation = useNavigation();
-  const { plantName: initialName, plantType: routePlantType, isCreating = false } = route.params;
+  const {
+    plantName: initialName,
+    plantType: routePlantType,
+    isCreating = false,
+    group: routeGroup,
+  } = route.params;
 
   /**
-   * The care model. Fixed for an existing entry; while creating, the group's pill
-   * only supplies a starting guess (Fruits starts at `fruit_tree`), so the form
-   * offers a picker — see `PlantInfoSection`.
+   * The care model. Fixed for an existing entry; while creating it follows the
+   * chosen Category, and Fruits can say whether the plant grows as a tree —
+   * see `PlantInfoSection`.
    */
   const [plantType, setPlantType] = useState<PlantType>(routePlantType);
+  /** Where a new entry is filed in the catalog. Only read while creating. */
+  const [group, setGroup] = useState<CatalogGroup>(
+    routeGroup ?? PLANT_TYPE_TO_GROUP[routePlantType]
+  );
+  const onGroupChange = useCallback((next: CatalogGroup) => {
+    setGroup(next);
+    // Every category starts from its own care model; the existing re-seed in
+    // `useCatalogEntryForm` then moves the care defaults the user has not edited.
+    setPlantType(CATALOG_GROUP_DEFAULT_TYPE[next]);
+  }, []);
 
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -149,7 +164,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     showReassign ||
     editingVariety !== null;
 
-  const form = useCatalogEntryForm({ initialName, plantType, isCreating, anyModalOpen });
+  const form = useCatalogEntryForm({ initialName, plantType, group, isCreating, anyModalOpen });
   const {
     loading,
     loadError,
@@ -568,7 +583,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const previewSources = useMemo(() => (heroImage ? [heroImage] : []), [heroImage]);
 
   const displayName =
-    name.trim() || (isCreating ? `New ${CATEGORY_LABELS[plantType]}` : initialName);
+    name.trim() || (isCreating ? 'New plant' : initialName);
   const usageSummary = !plantsLoaded
     ? ''
     : usageCount > 0
@@ -715,6 +730,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               nameLocked={nameLocked}
               plantType={plantType}
               onPlantTypeChange={setPlantType}
+              group={group}
+              onGroupChange={onGroupChange}
             />
           </CollapsibleSection>
         </View>

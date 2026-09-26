@@ -7,12 +7,14 @@ import type { CatalogEditor } from '@/components/catalog/catalogEditor';
 import { sanitizeLandmarkText } from '@/utils/textSanitizer';
 import { CATALOG_FIELD_HELP } from '@/utils/catalogFieldHelp';
 import {
-  CATEGORY_FULL_LABELS,
-  CATEGORY_OPTIONS,
+  CATALOG_GROUP_DESCRIPTIONS,
+  CATALOG_GROUP_LABELS,
   LIFECYCLE_DESCRIPTIONS,
   LIFECYCLE_LABELS,
 } from '@/utils/plantLabels';
-import type { PlantType } from '@/types/database.types';
+import { CATALOG_GROUP_ORDER } from '@/config/plants/catalogTaxonomy';
+import type { PickerOption } from '@/components/OptionPickerSheet';
+import type { CatalogGroup, PlantType } from '@/types/database.types';
 
 interface Props {
   editor: CatalogEditor;
@@ -22,17 +24,44 @@ interface Props {
   /** Bundled plants keep their name; see `useCatalogEntryForm.nameLocked`. */
   nameLocked: boolean;
   /**
-   * The care model being created, and a setter — offered only while creating,
+   * The care model being created, and a setter. Offered only while creating,
    * because it decides which growth-stage model, pest set and task cadence the
    * entry gets, and changing it afterwards would strand the saved profile.
    *
-   * It exists as a field at all because browsing and caring came apart: the
-   * group's default is a starting guess (Fruits starts at `fruit_tree`), so a
-   * herbaceous quick fruit like Pineapple needs a way to say otherwise.
+   * The Category sets it; the setter is only for Fruits' "Grows as" row, since
+   * a fruit that is not a tree is cared for as a seasonal crop.
    */
   plantType?: PlantType;
   onPlantTypeChange?: (next: PlantType) => void;
+  /** Where the new entry is filed in the catalog — the same groups as the pills. */
+  group?: CatalogGroup;
+  onGroupChange?: (next: CatalogGroup) => void;
 }
+
+const CATEGORY_PICKER_OPTIONS: readonly PickerOption[] = CATALOG_GROUP_ORDER.map((value) => ({
+  value,
+  label: CATALOG_GROUP_LABELS[value],
+  description: CATALOG_GROUP_DESCRIPTIONS[value],
+}));
+
+/** Fruits is the one group whose plants are cared for two different ways. */
+const GROWS_AS_OPTIONS: readonly PickerOption[] = [
+  {
+    value: 'fruit_tree',
+    label: 'Tree',
+    description: 'Takes years to first fruit; pruned and fed as a tree',
+  },
+  {
+    value: 'vegetable',
+    label: 'Not a tree',
+    description: 'Short-lived fruit plant, cared for like a seasonal crop',
+  },
+];
+
+const GROWS_AS_LABELS: Partial<Record<PlantType, string>> = {
+  fruit_tree: 'Tree',
+  vegetable: 'Not a tree',
+};
 
 export function PlantInfoSection({
   editor,
@@ -42,6 +71,8 @@ export function PlantInfoSection({
   nameLocked,
   plantType,
   onPlantTypeChange,
+  group,
+  onGroupChange,
 }: Props): React.JSX.Element {
   const { careForm, setForm, errors, showErrors, openText, openPicker } = editor;
 
@@ -115,14 +146,22 @@ export function PlantInfoSection({
     [openPicker, lifecycleOptions, careForm.lifecycle, setForm]
   );
 
-  const onCareModel = useCallback(
+  const onCategory = useCallback(
     () =>
       openPicker({
-        title: 'Care model',
-        options: CATEGORY_OPTIONS.map((option) => ({
-          value: option.value,
-          label: option.label,
-        })),
+        title: 'Category',
+        options: CATEGORY_PICKER_OPTIONS,
+        selectedValue: group ?? '',
+        onSelect: (value) => onGroupChange?.(value as CatalogGroup),
+      }),
+    [openPicker, group, onGroupChange]
+  );
+
+  const onGrowsAs = useCallback(
+    () =>
+      openPicker({
+        title: 'Grows as',
+        options: GROWS_AS_OPTIONS,
         selectedValue: plantType ?? '',
         onSelect: (value) => onPlantTypeChange?.(value as PlantType),
       }),
@@ -157,14 +196,24 @@ export function PlantInfoSection({
         helpText={CATALOG_FIELD_HELP.tamilName}
         onPress={onTamilName}
       />
-      {isCreating && plantType && onPlantTypeChange ? (
+      {isCreating && group && onGroupChange ? (
         <CatalogDetailRow
           kind="picker"
-          label="Care model"
-          value={CATEGORY_FULL_LABELS[plantType]}
-          helpText={CATALOG_FIELD_HELP.careModel}
-          helpTitle="Care model"
-          onPress={onCareModel}
+          label="Category"
+          value={CATALOG_GROUP_LABELS[group]}
+          helpText={CATALOG_FIELD_HELP.category}
+          helpTitle="Category"
+          onPress={onCategory}
+        />
+      ) : null}
+      {isCreating && group === 'fruits' && plantType && onPlantTypeChange ? (
+        <CatalogDetailRow
+          kind="picker"
+          label="Grows as"
+          value={GROWS_AS_LABELS[plantType] ?? ''}
+          helpText={CATALOG_FIELD_HELP.growsAs}
+          helpTitle="Grows as"
+          onPress={onGrowsAs}
         />
       ) : null}
 

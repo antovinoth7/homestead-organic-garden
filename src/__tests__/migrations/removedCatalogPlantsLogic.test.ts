@@ -95,18 +95,18 @@ describe('planRemovedCatalogPrune', () => {
   });
 
   it('tombstones a scaffold name carrying only identity keys', () => {
-    const profiles = withEntry('vegetable', 'Broccoli', {
-      tamilName: 'ப்ரோக்கோலி',
-      description: 'Cool-season brassica',
+    const profiles = withEntry('flower', 'Lily', {
+      tamilName: 'லில்லி',
+      description: 'Bulb flower',
       varieties: [],
     });
     const next = planRemovedCatalogPrune(profiles, REMOVED_CATALOG_PLANTS_V13, NONE);
-    expect(next!.vegetable.Broccoli!.isDeleted).toBe(true);
+    expect(next!.flower.Lily!.isDeleted).toBe(true);
   });
 
   it('leaves a scaffold name the user has opened in the entry form', () => {
-    const profiles = withEntry('vegetable', 'Broccoli', {
-      tamilName: 'ப்ரோக்கோலி',
+    const profiles = withEntry('flower', 'Lily', {
+      tamilName: 'லில்லி',
       spacingCm: 45,
     });
     expect(planRemovedCatalogPrune(profiles, REMOVED_CATALOG_PLANTS_V13, NONE)).toBeNull();

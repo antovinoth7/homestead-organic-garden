@@ -34,7 +34,7 @@ import {
 } from '@/utils/catalogListItems';
 import type { CatalogListItem } from '@/utils/catalogListItems';
 import { CATALOG_GROUP_DEFAULT_TYPE } from '@/config/plants/catalogTaxonomy';
-import type { PlantType } from '@/types/database.types';
+import type { CatalogGroup, PlantType } from '@/types/database.types';
 
 export default function ManagePlantCatalogScreen(): React.JSX.Element {
   const moreNav = useNavigation<NativeStackNavigationProp<MoreStackParamList>>();
@@ -64,15 +64,12 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
   } = usePlantCatalogManager();
 
   /**
-   * A group spans several care models — Fruits holds both `fruit_tree` trees and
-   * herbaceous quick fruits — so a newly created entry only gets a starting type
-   * from the chosen category; the entry form lets it be corrected. Under `all`
-   * no category is chosen, so it starts from the one most plants are added to.
+   * A new entry starts in the chosen category, with that category's care model;
+   * the entry form lets both be corrected. Under `all` no category is chosen, so
+   * it starts from the one most plants are added to.
    */
-  const newPlantType =
-    activeGroup === ALL_GROUPS
-      ? CATALOG_GROUP_DEFAULT_TYPE.vegetables
-      : CATALOG_GROUP_DEFAULT_TYPE[activeGroup];
+  const newPlantGroup: CatalogGroup = activeGroup === ALL_GROUPS ? 'vegetables' : activeGroup;
+  const newPlantType = CATALOG_GROUP_DEFAULT_TYPE[newPlantGroup];
 
   // Search and the filter sheet each take over the header, so only one is
   // open at a time. No LayoutAnimation here: on the New Architecture it drives
@@ -154,8 +151,9 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       plantName: '',
       plantType: newPlantType,
       isCreating: true,
+      group: newPlantGroup,
     });
-  }, [moreNav, newPlantType]);
+  }, [moreNav, newPlantType, newPlantGroup]);
 
   // "Okra" and "Methi" are Ladies Finger and Fenugreek. Creating a second entry
   // for a name the catalog already knows is how the duplicates got there, so
@@ -182,8 +180,9 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
       plantName: trimmed,
       plantType: newPlantType,
       isCreating: true,
+      group: newPlantGroup,
     });
-  }, [moreNav, query, newPlantType, commitSearch, mergedProfiles]);
+  }, [moreNav, query, newPlantType, newPlantGroup, commitSearch, mergedProfiles]);
 
   /**
    * How many of the sheet's two facets are off default. A dot could say only

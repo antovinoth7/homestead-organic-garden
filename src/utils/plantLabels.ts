@@ -61,6 +61,18 @@ export const CATALOG_GROUP_LABELS: Record<CatalogGroup, string> = {
   plantation_timber: 'Plantation & Timber',
 };
 
+/** Familiar members of each group, shown under the label in the Category picker. */
+export const CATALOG_GROUP_DESCRIPTIONS: Record<CatalogGroup, string> = {
+  vegetables: 'Tomato, brinjal, gourds, beans',
+  greens: 'Palak and the keerai',
+  fruits: 'Mango, banana, papaya, guava',
+  spices: 'Turmeric, ginger, pepper, cardamom',
+  herbs_medicinal: 'Tulsi, curry leaf, aloe vera',
+  flowers: 'Jasmine, marigold, hibiscus',
+  farm_support: 'Green manure, live fences, pest-repellent plants',
+  plantation_timber: 'Coconut, arecanut, teak',
+};
+
 /**
  * Sub-group headers inside a group. Keyed by the sub-group ids in
  * `SUB_GROUP_ORDER`; `catalogTaxonomy.test.ts` checks the two agree.

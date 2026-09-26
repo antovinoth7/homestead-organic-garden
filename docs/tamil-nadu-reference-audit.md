@@ -344,9 +344,10 @@ Pepper now needs a bell-pepper photo of its own and appears in the missing-promp
 ### Still open
 
 - `PLANT_EMOJI_MAP` and `COMPANION_PLANTS` carry keys for plants that were never catalog rows —
-  Broccoli, Spinach, Lily, Tulip, Coconut, Elephant Foot Yam — inherited from the May scaffold.
+  Spinach, Lily, Tulip, Coconut, Elephant Foot Yam — inherited from the May scaffold.
   They are harmless (both maps fall back) but dead. The keys this pass and the last one made dead
-  were removed; these predate both and were left alone.
+  were removed; these predate both and were left alone. (Broccoli was on this list; it became
+  a catalog row in migration 018.)
 - Companion advice still names things outside the catalog (Roses, Ferns, "Most vegetables"). That
   is deliberate — advice may reference plants the app does not offer.
 - **Koorka** (Chinese potato, *Plectranthus rotundifolius*) is still absent, as noted above.

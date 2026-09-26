@@ -1,7 +1,12 @@
 import { getAliasesFor, getCanonicalPlantKey } from '@/utils/plantAliases';
 import { getTaxonomy } from '@/config/plants/catalogTaxonomy';
 import { TAG_LABELS } from '@/utils/plantLabels';
-import type { PlantProfile, PlantProfiles, PlantType } from '@/types/database.types';
+import type {
+  CatalogGroup,
+  PlantProfile,
+  PlantProfiles,
+  PlantType,
+} from '@/types/database.types';
 
 export interface CatalogSearchEntry {
   plantType: PlantType;
@@ -16,6 +21,8 @@ export interface CatalogSearchEntry {
   tagLabels: string[];
   /** How many garden plants currently use this catalog entry. */
   gardenCount: number;
+  /** A user-added entry's chosen browse group — see `PlantProfile.group`. */
+  group?: CatalogGroup;
 }
 
 /** Half-open highlight range into the *original* (un-normalized) string. */
@@ -71,7 +78,7 @@ export function buildCatalogSearchIndex(
 
   for (const [type, byName] of Object.entries(profiles) as [
     PlantType,
-    Record<string, { tamilName?: string }>,
+    Record<string, { tamilName?: string; group?: CatalogGroup }>,
   ][]) {
     if (!byName) continue;
     for (const [name, profile] of Object.entries(byName)) {
@@ -82,6 +89,7 @@ export function buildCatalogSearchIndex(
         aliases: getAliasesFor(name),
         tagLabels: getTaxonomy(name, type).tags.map((tag) => TAG_LABELS[tag]),
         gardenCount: countsByType[type]?.[name] ?? 0,
+        ...(profile?.group ? { group: profile.group } : {}),
       });
     }
   }

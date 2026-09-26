@@ -12,8 +12,10 @@ export const CATALOG_FIELD_HELP = {
     'Botanical Latin name used for accurate identification and future grouping logic.',
   taxonomicFamily:
     'Botanical family, such as Solanaceae (brinjal, tomato, chilli) or Fabaceae (beans, pulses). Reference only.',
-  careModel:
-    'Which care rules apply: growth stages, common pests, and how tasks repeat. It is separate from where the plant appears in the catalog, so a fruit that is not a tree can still be cared for as an annual. Set it now — it cannot be changed after saving.',
+  category:
+    'What you grow the plant for — the catalog tab it is listed under. It also sets the starting care rules: growth stages, common pests, and how tasks repeat. Set it now — it cannot be changed after saving.',
+  growsAs:
+    'Whether this fruit grows as a tree or as a short-lived plant. A tree is cared for over years; a plant that is not a tree is cared for like a seasonal crop. Set it now — it cannot be changed after saving.',
   lifecycle:
     'Defines whether the plant finishes its life cycle in one season, two seasons, or continues for multiple years.',
   growingSeason: 'Best sowing or growing window for Tamil Nadu and Kanyakumari conditions.',

@@ -969,6 +969,67 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       ],
     },
   },
+  "fruit_tree:Batoko Plum": {
+    "profile": {
+      "annualCycleDurations": {
+        "dormant": 245,
+        "flowering": 30,
+        "fruiting": 90,
+      },
+      "daysToHarvest": {
+        "max": 90,
+        "min": 60,
+      },
+      "description": "Thornless evergreen tree with glossy, toothed leaves that flush orange-red when new. Bears clusters of shiny, round, cherry-like fruit that ripen from green to red and reddish-purple; too sour to eat raw, it goes into pickles, jams and juice. Hardy once established.",
+      "droughtTolerance": "medium",
+      "feedingIntensity": "light",
+      "fertilisingFrequencyDays": 60,
+      "floweringStartMonth": 2,
+      "germinationDays": {
+        "max": 40,
+        "min": 20,
+      },
+      "germinationTempC": {
+        "max": 35,
+        "min": 25,
+      },
+      "growingSeason": "Jun–Sep",
+      "growthStageDurations": {
+        "seedling": 150,
+        "vegetative": 1310,
+      },
+      "heatTolerance": "high",
+      "heightCm": {
+        "max": 1500,
+        "min": 500,
+      },
+      "initialGrowthStage": "vegetative",
+      "lifecycle": "permanent",
+      "petToxicity": false,
+      "plantingDepthCm": 3,
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 365,
+      "scientificName": "Flacourtia inermis",
+      "soilPhRange": {
+        "max": 7.5,
+        "min": 5.5,
+      },
+      "soilType": "garden_soil",
+      "spacingCm": 600,
+      "sunlight": "full_sun",
+      "tamilName": "பட்டோகோ பிளம்",
+      "taxonomicFamily": "Salicaceae",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 5,
+      "yearsToFirstHarvest": 4,
+    },
+    "pruning": {
+      "tips": [
+        "Thin crowded inner branches",
+        "Remove dead or crossing wood",
+      ],
+    },
+  },
   "fruit_tree:Breadfruit": {
     "profile": {
       "annualCycleDurations": {
@@ -1150,6 +1211,68 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "waterRequirement": "medium",
       "wateringFrequencyDays": 7,
       "yearsToFirstHarvest": 5,
+    },
+    "pruning": {
+      "tips": [
+        "Thin crowded inner branches",
+        "Remove dead or crossing wood",
+      ],
+    },
+  },
+  "fruit_tree:Citron": {
+    "profile": {
+      "annualCycleDurations": {
+        "dormant": 155,
+        "flowering": 30,
+        "fruiting": 180,
+      },
+      "daysToHarvest": {
+        "max": 240,
+        "min": 150,
+      },
+      "description": "Thorny, shrubby citrus with large, thick-rinded fruit used mostly for pickle and preserves. Grows easily from cuttings; keep the collar free of standing water, which brings on foot rot.",
+      "droughtTolerance": "medium",
+      "feedingIntensity": "medium",
+      "fertilisingFrequencyDays": 45,
+      "floweringStartMonth": 2,
+      "germinationDays": {
+        "max": 0,
+        "min": 0,
+      },
+      "germinationTempC": {
+        "max": 34,
+        "min": 24,
+      },
+      "growingSeason": "Jun–Sep",
+      "growthStageDurations": {
+        "seedling": 120,
+        "vegetative": 975,
+      },
+      "heatTolerance": "high",
+      "heightCm": {
+        "max": 450,
+        "min": 250,
+      },
+      "initialGrowthStage": "vegetative",
+      "lifecycle": "perennial",
+      "petToxicity": true,
+      "plantingDepthCm": 25,
+      "preferredFertiliser": "vermicompost",
+      "pruningFrequencyDays": 180,
+      "scientificName": "Citrus medica",
+      "soilPhRange": {
+        "max": 7.5,
+        "min": 5.5,
+      },
+      "soilType": "garden_soil",
+      "spacingCm": 400,
+      "sunlight": "full_sun",
+      "tamilName": "நார்த்தங்காய்",
+      "taxonomicFamily": "Rutaceae",
+      "waterRequirement": "medium",
+      "wateringFrequencyDays": 4,
+      "waterloggingTolerance": "low",
+      "yearsToFirstHarvest": 3,
     },
     "pruning": {
       "tips": [
@@ -1671,6 +1794,68 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
       "tips": [
         "Remove thorny water sprouts",
         "Thin dense inner canopy for sunlight",
+      ],
+    },
+  },
+  "fruit_tree:Lychee": {
+    "profile": {
+      "annualCycleDurations": {
+        "dormant": 245,
+        "flowering": 30,
+        "fruiting": 90,
+      },
+      "daysToHarvest": {
+        "max": 100,
+        "min": 60,
+      },
+      "description": "Evergreen tree bearing clusters of red, rough-skinned fruit with sweet translucent flesh. It needs a cool, dry spell before flowering: in the Kanyakumari plains the tree grows well but often fails to bloom, and it sets fruit more reliably in the foothills. Air-layered plants bear in 3–5 years.",
+      "droughtTolerance": "low",
+      "feedingIntensity": "medium",
+      "fertilisingFrequencyDays": 60,
+      "floweringStartMonth": 1,
+      "germinationDays": {
+        "max": 0,
+        "min": 0,
+      },
+      "germinationTempC": {
+        "max": 30,
+        "min": 20,
+      },
+      "growingSeason": "Jun–Sep",
+      "growthStageDurations": {
+        "seedling": 180,
+        "vegetative": 1280,
+      },
+      "heatTolerance": "medium",
+      "heightCm": {
+        "max": 1200,
+        "min": 500,
+      },
+      "initialGrowthStage": "vegetative",
+      "lifecycle": "permanent",
+      "petToxicity": false,
+      "plantingDepthCm": 30,
+      "preferredFertiliser": "compost",
+      "pruningFrequencyDays": 365,
+      "scientificName": "Litchi chinensis",
+      "soilPhRange": {
+        "max": 7,
+        "min": 5.5,
+      },
+      "soilType": "garden_soil",
+      "spacingCm": 800,
+      "sunlight": "full_sun",
+      "tamilName": "லிச்சி",
+      "taxonomicFamily": "Sapindaceae",
+      "waterRequirement": "high",
+      "wateringFrequencyDays": 3,
+      "waterloggingTolerance": "low",
+      "yearsToFirstHarvest": 4,
+    },
+    "pruning": {
+      "tips": [
+        "Thin crowded inner branches",
+        "Remove dead or crossing wood",
       ],
     },
   },
@@ -5920,6 +6105,61 @@ exports[`data registry snapshots care profiles and pruning defaults for every va
         "Remove suckers below main fork",
         "Cut off wilting lower leaves",
         "Thin fruits — keep 3–4 per branch",
+      ],
+    },
+  },
+  "vegetable:Broccoli": {
+    "profile": {
+      "daysToHarvest": {
+        "max": 90,
+        "min": 60,
+      },
+      "description": "Cool-season brassica grown for its green flower head; side shoots keep coming after the main head is cut. In Kanyakumari heads form well only in the coolest months — in heat they stay small and bolt into yellow flower.",
+      "droughtTolerance": "low",
+      "feedingIntensity": "heavy",
+      "fertilisingFrequencyDays": 14,
+      "germinationDays": {
+        "max": 7,
+        "min": 4,
+      },
+      "germinationTempC": {
+        "max": 25,
+        "min": 18,
+      },
+      "growingSeason": "Winter (Jan–Feb)",
+      "growthStageDurations": {
+        "mature": 20,
+        "seedling": 20,
+        "vegetative": 40,
+      },
+      "heatTolerance": "low",
+      "heightCm": {
+        "max": 75,
+        "min": 45,
+      },
+      "initialGrowthStage": "seedling",
+      "lifecycle": "annual",
+      "petToxicity": false,
+      "plantingDepthCm": 1,
+      "preferredFertiliser": "vermicompost",
+      "scientificName": "Brassica oleracea var. italica",
+      "soilPhRange": {
+        "max": 7.5,
+        "min": 6,
+      },
+      "soilType": "garden_soil",
+      "spacingCm": 45,
+      "sunlight": "full_sun",
+      "tamilName": "ப்ரோக்கோலி",
+      "taxonomicFamily": "Brassicaceae",
+      "waterRequirement": "high",
+      "wateringFrequencyDays": 2,
+    },
+    "pruning": {
+      "tips": [
+        "Remove yellowing lower leaves",
+        "Pinch tips to encourage branching",
+        "Cut diseased stems at the base",
       ],
     },
   },

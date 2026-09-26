@@ -7,7 +7,7 @@
  * season field for every entry.
  */
 
-import { PlantProfile, PlantProfiles, PlantType } from '@/types/database.types';
+import { CatalogGroup, PlantProfile, PlantProfiles, PlantType } from '@/types/database.types';
 import { PLANT_CATEGORIES, getPlantNamesForType, getProfileEntry } from '@/services/plantProfiles';
 import { mapSeasonTextToIds, KKSeasonId } from '@/utils/plantingNow';
 import { growingSeasonLabel, normalizeSeasonValue } from '@/utils/plantLabels';
@@ -18,6 +18,8 @@ export interface PlantPickerItem {
   /** Badge text, or null when no season data exists for the plant. */
   seasonLabel: string | null;
   hasVarieties: boolean;
+  /** A user-added entry's chosen browse group — see `PlantProfile.group`. */
+  group?: CatalogGroup;
 }
 
 const ALL_SEASON_COUNT = 4;
@@ -64,6 +66,7 @@ export function buildPlantPickerItems(profiles: PlantProfiles): PlantPickerItem[
         name,
         seasonLabel: profile ? derivePlantSeasonLabel(profile) : null,
         hasVarieties: (profile?.varieties?.length ?? 0) > 0,
+        ...(profile?.group ? { group: profile.group } : {}),
       });
     }
   }

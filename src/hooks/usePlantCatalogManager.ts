@@ -231,9 +231,9 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
     for (const plantType of PLANT_CATEGORIES) {
       const counts = plantCountsByType[plantType] ?? {};
       for (const name of getPlantNamesForType(profiles, plantType)) {
-        const taxonomy = getTaxonomy(name, plantType);
-        const profile = getPlantCareProfile(name, plantType);
         const entry = mergedProfiles[plantType]?.[name];
+        const taxonomy = getTaxonomy(name, plantType, entry?.group);
+        const profile = getPlantCareProfile(name, plantType);
         // The same derivation the plant record uses, so a plant is filed under
         // the same season heading here as on its own detail screen — and the
         // meta line names that same lifecycle.

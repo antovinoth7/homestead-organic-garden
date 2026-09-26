@@ -77,11 +77,16 @@ export function CatalogDetailRow({
 
   const isEmpty = !value;
   const interactive = kind !== 'badge' && !!onPress && !disabled;
+  // On an interactive row the target's label already speaks the label and
+  // value, so the text under it is hidden from the reader.
+  const spoken = interactive
+    ? { accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' as const }
+    : {};
 
   const body = (
     <>
-      <View style={styles.labelWrap}>
-        <Text style={styles.label} numberOfLines={2}>
+      <View style={[styles.labelWrap, styles.rowPassthrough]}>
+        <Text style={[styles.label, styles.rowPassive]} numberOfLines={2} {...spoken}>
           {label}
         </Text>
         {helpText ? (
@@ -94,7 +99,7 @@ export function CatalogDetailRow({
         ) : null}
       </View>
 
-      <View style={styles.valueWrap}>
+      <View style={[styles.valueWrap, styles.rowPassive]} {...spoken}>
         {kind === 'badge' ? (
           <View
             style={[
@@ -114,25 +119,32 @@ export function CatalogDetailRow({
         )}
       </View>
 
-      {interactive && <Ionicons name="chevron-forward" size={14} color={theme.textTertiary} />}
+      {interactive && (
+        <Ionicons
+          name="chevron-forward"
+          size={14}
+          color={theme.textTertiary}
+          style={styles.rowPassive}
+          {...spoken}
+        />
+      )}
     </>
   );
 
   return (
     <View style={[styles.rowGroup, isLast && styles.rowGroupLast, !!errorText && styles.rowError]}>
-      {interactive ? (
-        <TouchableOpacity
-          style={styles.row}
-          onPress={onPress}
-          activeOpacity={0.6}
-          accessibilityRole="button"
-          accessibilityLabel={`${label}, ${value || 'not set'}`}
-        >
-          {body}
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.row}>{body}</View>
-      )}
+      <View style={styles.row}>
+        {interactive ? (
+          <TouchableOpacity
+            style={styles.rowTarget}
+            onPress={onPress}
+            activeOpacity={0.6}
+            accessibilityRole="button"
+            accessibilityLabel={`${label}, ${value || 'not set'}`}
+          />
+        ) : null}
+        {body}
+      </View>
       {errorText ? (
         <View style={styles.errorWrap}>
           <FieldErrorText message={errorText} />

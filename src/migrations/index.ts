@@ -22,10 +22,11 @@ import { renamePalmyra } from './014_rename_palmyra';
 import { renameGrowingSeasons } from './015_rename_growing_seasons';
 import { mergeCashewNut } from './016_merge_cashew_nut';
 import { mergeDuplicateRows } from './017_merge_duplicate_rows';
+import { adoptNewCatalogRows } from './018_adopt_new_catalog_rows';
 
 const SETTINGS_COLLECTION = 'user_settings';
 
-export const LATEST_SCHEMA_VERSION = 17;
+export const LATEST_SCHEMA_VERSION = 18;
 
 const migrations: Migration[] = [
   { version: 1, name: 'backfill_district', run: backfillDistrict },
@@ -51,6 +52,7 @@ const migrations: Migration[] = [
   { version: 15, name: 'rename_growing_seasons', run: renameGrowingSeasons },
   { version: 16, name: 'merge_cashew_nut', run: mergeCashewNut },
   { version: 17, name: 'merge_duplicate_rows', run: mergeDuplicateRows },
+  { version: 18, name: 'adopt_new_catalog_rows', run: adoptNewCatalogRows },
 ];
 
 export async function getSchemaVersion(userId: string): Promise<number> {

@@ -15,6 +15,7 @@ import {
 } from '@/services/plantProfiles';
 import { getAllPlants, getStoredPlants, updatePlantVariety } from '@/services/plants';
 import type {
+  CatalogGroup,
   FeedingIntensity,
   Plant,
   PlantLifecycle,
@@ -51,6 +52,8 @@ type NavProp = NativeStackNavigationProp<MoreStackParamList>;
 interface Args {
   initialName: string;
   plantType: PlantType;
+  /** The Category chosen for a new entry; saved on it so it is filed there. */
+  group?: CatalogGroup;
   isCreating: boolean;
   /** True while any modal is open — suppresses the discard guard. */
   anyModalOpen: boolean;
@@ -121,6 +124,7 @@ export interface UseCatalogEntryFormReturn {
 export function useCatalogEntryForm({
   initialName,
   plantType,
+  group,
   isCreating,
   anyModalOpen,
 }: Args): UseCatalogEntryFormReturn {
@@ -368,6 +372,9 @@ export function useCatalogEntryForm({
         const flowerTip = careForm.flowerPruningTip.trim();
 
         const profileData: Omit<PlantProfile, 'plantType' | 'name'> = {
+          // Only a new entry records its group: a bundled plant is filed by its
+          // own catalog row, and an existing entry's group is not editable here.
+          ...(isCreating && group ? { group } : {}),
           varieties: varieties.length > 0 ? varieties : undefined,
           varietyDetails: Object.keys(varietyDetails).length > 0 ? varietyDetails : undefined,
           isUserAdded: currentProfile?.isUserAdded,
@@ -458,6 +465,7 @@ export function useCatalogEntryForm({
       initialName,
       isCreating,
       plantType,
+      group,
       varieties,
       varietyDetails,
       currentProfile,

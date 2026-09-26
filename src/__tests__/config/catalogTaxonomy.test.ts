@@ -142,6 +142,16 @@ describe('getTaxonomy', () => {
     expect(entry.tags).toEqual([]);
   });
 
+  it('files a user-added plant under the group chosen when it was created', () => {
+    // Cared for as a herb, but created from the Spices tab.
+    expect(getTaxonomy('Long Pepper Local', 'herb', 'spices').group).toBe('spices');
+    expect(getTaxonomy('Long Pepper Local', 'herb').group).toBe('herbs_medicinal');
+  });
+
+  it('keeps a bundled plant under its own row whatever group is stored', () => {
+    expect(getTaxonomy('Tomato', 'vegetable', 'flowers').group).toBe('vegetables');
+  });
+
   it('maps every plant type to a group and a default type', () => {
     for (const type of PLANT_TYPES) {
       expect(CATALOG_GROUP_ORDER).toContain(PLANT_TYPE_TO_GROUP[type]);

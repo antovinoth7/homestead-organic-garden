@@ -154,16 +154,22 @@ const BY_KEY: ReadonlyMap<string, CatalogTaxonomyEntry> = new Map(
  * Where a plant sits in the browse taxonomy.
  *
  * A bundled plant resolves through its catalog row. A plant the user added
- * themselves has none, so it falls back to its `PlantType` — landing in that
+ * themselves has none, so it is filed under the group chosen when it was
+ * created (`storedGroup`, from `PlantProfile.group`) or, for an entry saved
+ * before that was recorded, under its `PlantType`'s group — landing in that
  * group's ungrouped run with no sub-group, rather than dropping off the list.
  */
-export function getTaxonomy(plantName: string, plantType: PlantType): CatalogTaxonomyEntry {
+export function getTaxonomy(
+  plantName: string,
+  plantType: PlantType,
+  storedGroup?: CatalogGroup
+): CatalogTaxonomyEntry {
   const key = getCanonicalPlantKey(plantName);
   const row = key ? BY_KEY.get(key) : undefined;
   if (row) return row;
 
   return {
-    group: PLANT_TYPE_TO_GROUP[plantType],
+    group: storedGroup ?? PLANT_TYPE_TO_GROUP[plantType],
     habit: HABIT_BY_PLANT_TYPE[plantType],
     // `other` is the honest answer for a plant the catalog does not know: the
     // rotation check treats it as "no signal" rather than as a shared family.

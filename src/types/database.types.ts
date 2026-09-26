@@ -848,6 +848,13 @@ export interface PlantProfile extends Partial<PlantCareProfile> {
   deletedAt?: number;
   cropFamily?: CropFamily;
   layer?: BedLayer;
+  /**
+   * The browse group chosen when the user created this entry. A bundled plant
+   * is filed by its own catalog row, which always wins, so this only matters
+   * for user-added entries — without it they were filed by `plantType`, and a
+   * spice (cared for as a `herb`) landed under Herbs & Medicinal.
+   */
+  group?: CatalogGroup;
 }
 
 /** Top-level unified store: PlantType → plant name → PlantProfile. */

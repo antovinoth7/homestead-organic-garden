@@ -100,6 +100,7 @@
 1. **Direct Firestore Coupling**: Every service imports from `firebase/firestore`. Not a problem now but increases cost of any backend migration (G19).
 2. **Large Hook**: `usePlantFormState` returns 120+ properties. Works but difficult to maintain.
 3. **Test Coverage Shallow Despite Breadth**: 155 test files exist, but coverage thresholds sit at 30% and only `src/utils` + `src/config` are measured; services/hooks lack emulator-backed tests, and CLAUDE.md rule #7 ("never mock Firestore — use emulator") has no emulator wired into CI. Tighten thresholds and add an emulator harness as the suite grows. _(Resolved 2026-06-20: the date-dependent `growthStage` test flakiness — `computeExpectedGrowthStage`/`computeAnnualCycleStage` dropped a day when run before local noon — is fixed by anchoring "now" to noon for a stable calendar-day count; full suite is now deterministically green.)_
+4. **Garden cards ignore a user-added entry's chosen group**: the catalog list, catalog search and Add Plant picker file a user-added catalog entry under its saved `PlantProfile.group`, but `PlantCard` and `plantFilters.groupOf` have no profile access and still call `getTaxonomy` without it — so a user-added spice reads "Herbs & Medicinal" on its garden card and under that type chip. Fix by giving those callers the merged profiles (or the stored group) when a garden screen already loads them.
 
 ---
 

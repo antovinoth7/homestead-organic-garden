@@ -131,6 +131,8 @@ export type MoreStackParamList = {
     plantName: string;
     plantType: import('./database.types').PlantType;
     isCreating?: boolean;
+    /** The catalog tab a new entry was created from — its starting Category. */
+    group?: import('./database.types').CatalogGroup;
   };
   PestList: undefined;
   PestDetail: { pestId: string };
