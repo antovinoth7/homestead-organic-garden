@@ -1932,6 +1932,19 @@ export default function CalendarScreen(): React.JSX.Element {
     setHarvestSoonExpanded((prev) => !prev);
   }, []);
 
+  const handleLogHarvest = useCallback(
+    (plantId: string) => {
+      navigation.navigate('Journal', {
+        screen: 'JournalForm',
+        params: {
+          initialEntryType: JournalEntryType.Harvest,
+          initialPlantId: plantId,
+        },
+      });
+    },
+    [navigation]
+  );
+
   const renderListItem = useCallback(
     ({ item }: { item: CalendarRow }): React.JSX.Element | null => {
       if (item.kind === 'task') {
@@ -1966,53 +1979,66 @@ export default function CalendarScreen(): React.JSX.Element {
       }
       if (item.kind === 'harvest') {
         const harvest = item.item;
+        const isOverdue = harvest.isReady && harvest.daysUntil < 0;
+        const overdueDays = Math.abs(harvest.daysUntil);
+        const status = harvest.isReady
+          ? isOverdue
+            ? `Overdue by ${overdueDays} day${overdueDays === 1 ? '' : 's'}`
+            : 'Ready to check'
+          : `Check in ${harvest.daysUntil} days`;
         return (
           <View style={styles.listRow}>
-            <View style={[styles.harvestCard, harvest.isReady && styles.harvestCardReady]}>
-              <View style={styles.harvestIcon}>
-                <ReferenceThumb
-                  source={getPlantImage(harvest.plant.name)}
-                  fallbackIcon="general.plant"
-                  variant="row"
-                  accessibilityLabel={`${harvest.plant.name} reference image`}
-                />
-              </View>
-              <View style={styles.harvestInfo}>
-                <Text style={styles.harvestPlant}>{harvest.plant.name}</Text>
-                <View style={styles.harvestStatusRow}>
-                  {harvest.isReady && (
-                    <GardenIcon name="general.success" size={14} color={theme.success} />
-                  )}
-                  <Text style={styles.harvestDate}>
-                    {harvest.isReady
-                      ? harvest.daysUntil < 0
-                        ? `Harvest check overdue by ${Math.abs(harvest.daysUntil)} days`
-                        : 'Harvest check due'
-                      : `Check in ${harvest.daysUntil} days`}
-                  </Text>
+            <View style={styles.harvestCard}>
+              <View
+                style={[
+                  styles.harvestCardBar,
+                  harvest.isReady &&
+                    (isOverdue ? styles.harvestCardBarOverdue : styles.harvestCardBarReady),
+                ]}
+              />
+              <View style={styles.harvestCardBody}>
+                <View style={styles.harvestIcon}>
+                  <ReferenceThumb
+                    source={getPlantImage(harvest.plant.name)}
+                    fallbackIcon="general.plant"
+                    variant="row"
+                    accessibilityLabel={`${harvest.plant.name} reference image`}
+                  />
                 </View>
-                <Text style={styles.harvestSource}>
-                  {harvest.source === 'farmer_date'
-                    ? 'Farmer-entered date'
-                    : 'Scheduled harvest task'}
-                </Text>
+                <View style={styles.harvestInfo}>
+                  <Text style={styles.harvestPlant} numberOfLines={1}>
+                    {harvest.plant.name}
+                  </Text>
+                  <View style={styles.harvestStatusRow}>
+                    <Text style={styles.harvestDate} numberOfLines={1}>
+                      <Text
+                        style={
+                          harvest.isReady
+                            ? isOverdue
+                              ? styles.harvestStatusOverdue
+                              : styles.harvestStatusReady
+                            : null
+                        }
+                      >
+                        {status}
+                      </Text>
+                      <Text style={styles.harvestSource}>
+                        {harvest.source === 'farmer_date' ? ' · Your date' : ' · Scheduled'}
+                      </Text>
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.harvestLogButton}
+                  onPress={() => handleLogHarvest(harvest.plant.id)}
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Log harvest for ${harvest.plant.name}`}
+                >
+                  <Ionicons name="add" size={15} color={theme.success} />
+                  <Text style={styles.harvestLogButtonText}>Log</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.harvestLogButton}
-                onPress={() =>
-                  navigation.navigate('Journal', {
-                    screen: 'JournalForm',
-                    params: {
-                      initialEntryType: JournalEntryType.Harvest,
-                      initialPlantId: harvest.plant.id,
-                    },
-                  })
-                }
-                accessibilityRole="button"
-                accessibilityLabel={`Log harvest for ${harvest.plant.name}`}
-              >
-                <Text style={styles.harvestLogButtonText}>Log harvest</Text>
-              </TouchableOpacity>
             </View>
           </View>
         );
@@ -2024,7 +2050,7 @@ export default function CalendarScreen(): React.JSX.Element {
       theme,
       renderSwipeableTask,
       renderEmptyRow,
-      navigation,
+      handleLogHarvest,
       harvestSoonExpanded,
       toggleHarvestSoon,
     ]
@@ -2068,12 +2094,7 @@ export default function CalendarScreen(): React.JSX.Element {
                 <Text style={styles.sectionCount}>{header.count}</Text>
               </View>
             ) : (
-              <Text
-                style={[
-                  styles.sectionCount,
-                  header.overdue && { backgroundColor: theme.errorLight, color: theme.error },
-                ]}
-              >
+              <Text style={[styles.sectionCount, header.overdue && styles.sectionCountOverdue]}>
                 {header.count}
               </Text>
             )}

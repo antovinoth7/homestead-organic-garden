@@ -473,28 +473,30 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingBottom: 8,
     },
     // SectionList equivalents of `section` (header top / row sides / footer bottom)
+    // The gap above a header, not a divider, carries the grouping — so the
+    // footer stays almost flat and the header does the spacing.
     listSectionHeader: {
       paddingHorizontal: 16,
-      paddingTop: 8,
+      paddingTop: 12,
     },
     listRow: {
       paddingHorizontal: 16,
     },
     listSectionFooter: {
-      height: 6,
+      height: 2,
     },
     sectionHeaderRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 8,
+      marginBottom: 6,
       gap: 8,
     },
     sectionTitle: {
-      fontSize: 14,
+      fontSize: 12,
       fontWeight: '700',
       color: theme.textSecondary,
       textTransform: 'uppercase',
-      letterSpacing: 0.8,
+      letterSpacing: 0.6,
     },
     sectionCount: {
       fontSize: 12,
@@ -505,6 +507,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 1,
       borderRadius: 8,
       overflow: 'hidden',
+    },
+    sectionCountOverdue: {
+      backgroundColor: theme.errorLight,
+      color: theme.error,
     },
     selectedDateActions: {
       flexDirection: 'row',
@@ -757,72 +763,74 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.primary,
       fontWeight: '600',
     },
+    // Compact two-line tile: title row (label, badges, due date) over a single
+    // joined meta line. Radius, margin and bar width are shared with
+    // `harvestCard` and the swipe action boxes so the whole list lines up.
     taskCard: {
       flexDirection: 'row',
       backgroundColor: theme.card,
-      borderRadius: 14,
-      marginBottom: 8,
+      borderRadius: 12,
+      marginBottom: 6,
       overflow: 'hidden',
-      borderWidth: 1.5,
+      borderWidth: 1,
       borderColor: theme.border,
       shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      elevation: 3,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 1,
     },
     taskCardOverdue: {
       borderColor: theme.error + '60',
       backgroundColor: theme.errorLight,
     },
     taskColorBar: {
-      width: 4,
+      width: 3,
     },
     taskContent: {
       flex: 1,
-      paddingVertical: 10,
-      paddingHorizontal: 12,
+      paddingVertical: 8,
+      paddingLeft: 10,
+      paddingRight: 4,
     },
     taskHeader: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     taskIconContainer: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
+      width: 30,
+      height: 30,
+      borderRadius: 8,
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 10,
     },
-    taskIconEmoji: {
-      fontSize: 22,
-    },
     taskInfo: {
       flex: 1,
+      minWidth: 0,
+    },
+    taskTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
     },
     taskTitle: {
-      fontSize: 15,
+      flexShrink: 1,
+      fontSize: 14,
       fontWeight: '600',
       color: theme.text,
-      marginBottom: 1,
     },
-    taskPlant: {
-      fontSize: 13,
+    taskMeta: {
+      flexShrink: 1,
+      fontSize: 12,
       color: theme.textSecondary,
     },
-    taskLocation: {
-      fontSize: 12,
-      color: theme.textTertiary,
-    },
-    taskBed: {
-      fontSize: 12,
+    taskMetaBed: {
       color: theme.primary,
     },
-    taskRight: {
-      alignItems: 'flex-end',
-    },
     taskTime: {
+      marginLeft: 'auto',
+      paddingLeft: 6,
       fontSize: 12,
       color: theme.textSecondary,
     },
@@ -834,18 +842,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.success,
       justifyContent: 'center',
       alignItems: 'center',
-      width: 100,
-      borderRadius: 14,
-      marginBottom: 8,
+      width: 84,
+      borderRadius: 12,
+      marginBottom: 6,
     },
     // Same box as swipeAction, but neutral — it explains rather than commits.
     swipeBlockedAction: {
       backgroundColor: theme.borderDark,
       justifyContent: 'center',
       alignItems: 'center',
-      width: 100,
-      borderRadius: 14,
-      marginBottom: 8,
+      width: 84,
+      borderRadius: 12,
+      marginBottom: 6,
     },
     swipeActionContent: {
       alignItems: 'center',
@@ -879,27 +887,39 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       flex: 1,
     },
+    // Same tile as `taskCard` so harvest rows read as part of the list. State
+    // is carried by the left bar and the status text, not by the card chrome.
     harvestCard: {
       flexDirection: 'row',
-      alignItems: 'center',
       backgroundColor: theme.card,
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 12,
+      borderRadius: 12,
+      marginBottom: 6,
+      overflow: 'hidden',
       borderWidth: 1,
-      borderColor: theme.border + '40',
+      borderColor: theme.border,
       shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.06,
-      shadowRadius: 6,
-      elevation: 2,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 1,
     },
-    harvestCardReady: {
-      borderColor: theme.success,
-      backgroundColor: theme.success + '10',
-      borderWidth: 2,
-      shadowColor: theme.success,
-      shadowOpacity: 0.15,
+    harvestCardBody: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 8,
+      paddingLeft: 10,
+      paddingRight: 10,
+    },
+    harvestCardBar: {
+      width: 3,
+      backgroundColor: theme.border,
+    },
+    harvestCardBarReady: {
+      backgroundColor: theme.success,
+    },
+    harvestCardBarOverdue: {
+      backgroundColor: theme.warning,
     },
     // Disclosure row for harvests that are still ahead. Deliberately quieter
     // than `harvestCard` — it heads a look-ahead, not work that is due.
@@ -908,12 +928,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 8,
       minHeight: 44,
-      paddingHorizontal: 14,
-      borderRadius: 14,
+      paddingHorizontal: 12,
+      borderRadius: 12,
       backgroundColor: theme.card,
       borderWidth: 1,
-      borderColor: theme.border + '40',
-      marginBottom: 12,
+      borderColor: theme.border,
+      marginBottom: 6,
     },
     harvestSoonToggleText: {
       flex: 1,
@@ -926,28 +946,36 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
     },
     harvestIcon: {
-      marginRight: 16,
-    },
-    harvestEmoji: {
-      fontSize: 36,
+      marginRight: 10,
     },
     harvestInfo: {
       flex: 1,
+      minWidth: 0,
+      marginRight: 8,
     },
     harvestPlant: {
-      fontSize: 16,
+      fontSize: 14,
       fontWeight: '600',
       color: theme.text,
-      marginBottom: 4,
     },
     harvestDate: {
-      fontSize: 14,
+      flexShrink: 1,
+      fontSize: 12,
       color: theme.textSecondary,
+    },
+    harvestStatusReady: {
+      color: theme.success,
+      fontWeight: '600',
+    },
+    harvestStatusOverdue: {
+      color: theme.warning,
+      fontWeight: '600',
     },
     harvestStatusRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 5,
+      gap: 4,
+      marginTop: 1,
     },
     modalContent: {
       backgroundColor: theme.backgroundSecondary,
@@ -1215,15 +1243,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
     },
     harvestSource: {
-      marginTop: 3,
-      fontSize: 11,
+      fontSize: 12,
       color: theme.textTertiary,
     },
+    // Compact pill; the screen adds hitSlop so the touch target stays ~44px.
     harvestLogButton: {
-      minHeight: 44,
-      justifyContent: 'center',
-      paddingHorizontal: 12,
-      borderRadius: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      minHeight: 32,
+      paddingLeft: 8,
+      paddingRight: 12,
+      borderRadius: 999,
       backgroundColor: theme.success + '18',
     },
     harvestLogButtonText: {
@@ -1280,14 +1311,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // Swipe left action (Skip) — a single action, so it owns the full reveal.
     swipeLeftActions: {
       flexDirection: 'row',
-      marginBottom: 8,
+      marginBottom: 6,
     },
     swipeSkipAction: {
       backgroundColor: theme.warning,
       justifyContent: 'center',
       alignItems: 'center',
-      width: 80,
-      borderRadius: 14,
+      width: 72,
+      borderRadius: 12,
     },
     // Skip Modal (Calendar)
     skipModalSubtext: {
@@ -1361,12 +1392,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.primary,
       backgroundColor: theme.primaryLight,
     },
+    // Own right-hand column, centred on the tile — outside the detail press area.
     taskCheckbox: {
       alignItems: 'center',
       justifyContent: 'center',
-      marginTop: 2,
+      alignSelf: 'center',
       width: 32,
       height: 32,
+      marginRight: 6,
     },
     taskCheckboxSelected: {},
     // Not selectable — the task can't be completed early. Still tappable, so it
@@ -1430,19 +1463,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskPriorityBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 6,
-      marginTop: 3,
-      alignSelf: 'flex-start',
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 5,
     },
     taskPriorityBadgeText: {
       fontSize: 10,
       fontWeight: '700',
       letterSpacing: 0.3,
     },
-    taskPreferredTime: {
-      fontSize: 11,
+    taskMetaTertiary: {
       color: theme.textTertiary,
     },
     taskCustomBadge: {
@@ -1469,12 +1499,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskRainBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 6,
-      marginTop: 3,
-      alignSelf: 'flex-start',
+      gap: 3,
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 5,
+      flexShrink: 1,
       backgroundColor: theme.info + '22',
     },
     taskRainBadgeText: {
@@ -1486,7 +1515,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskHarvestHint: {
       fontSize: 11,
       color: theme.success,
-      marginTop: 2,
     },
     weekDoneChip: {
       flexDirection: 'row',

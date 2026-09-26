@@ -89,6 +89,13 @@ function SwipeableTaskCardComponent({
   // farmer can tell *where* to act instead of a generic "General".
   const bedLabel = task.bed_id != null ? (bedMap?.get(task.bed_id) ?? null) : null;
   const displayName = task.plant_id ? plantDetails.name : (bedLabel ?? plantDetails.name);
+  const preferredTimeLabel = !task.preferred_time
+    ? null
+    : task.preferred_time === 'morning'
+      ? 'Morning'
+      : task.preferred_time === 'afternoon'
+        ? 'Afternoon'
+        : 'Evening';
 
   const priorityColor =
     effectivePriority === 'critical'
@@ -227,13 +234,15 @@ function SwipeableTaskCardComponent({
               >
                 <GardenIcon
                   name={TASK_ICON_KEYS[task.task_type]}
-                  size={20}
+                  size={18}
                   color={TASK_COLORS[task.task_type]}
                 />
               </View>
               <View style={styles.taskInfo}>
-                <View style={styles.rowCenter}>
-                  <Text style={styles.taskTitle}>{taskLabel}</Text>
+                <View style={styles.taskTitleRow}>
+                  <Text style={styles.taskTitle} numberOfLines={1}>
+                    {taskLabel}
+                  </Text>
                   {priorityColor && (
                     <View
                       style={[styles.taskPriorityBadge, { backgroundColor: priorityColor + '22' }]}
@@ -245,96 +254,77 @@ function SwipeableTaskCardComponent({
                   )}
                   {weatherAdvisory && (
                     <View style={styles.taskRainBadge}>
-                      <GardenIcon name={weatherAdvisory.iconKey} size={12} color={theme.info} />
-                      <Text style={styles.taskRainBadgeText}>{weatherAdvisory.text}</Text>
+                      <GardenIcon name={weatherAdvisory.iconKey} size={11} color={theme.info} />
+                      <Text style={styles.taskRainBadgeText} numberOfLines={1}>
+                        {weatherAdvisory.text}
+                      </Text>
                     </View>
                   )}
+                  <Text style={[styles.taskTime, isOverdue && styles.taskTimeOverdue]}>
+                    {isOverdue
+                      ? 'Overdue'
+                      : formatFarmDate(dueDate, {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                  </Text>
                 </View>
-                <Text style={styles.taskPlant}>{displayName}</Text>
-                {plantDetails.location && (
-                  <View style={styles.taskMetaLine}>
-                    <GardenIcon name="general.location" size={12} color={theme.textTertiary} />
-                    <Text style={styles.taskLocation}>{plantDetails.location}</Text>
-                  </View>
-                )}
-                {task.plant_id != null && bedLabel != null && (
-                  <View style={styles.taskMetaLine}>
-                    <Ionicons name="grid-outline" size={12} color={theme.primary} />
-                    <Text style={styles.taskBed}>{bedLabel}</Text>
-                  </View>
-                )}
-                {task.preferred_time && (
-                  <View style={styles.taskMetaLine}>
-                    <Ionicons
-                      name={task.preferred_time === 'evening' ? 'moon-outline' : 'sunny-outline'}
-                      size={12}
-                      color={theme.textTertiary}
-                    />
-                    <Text style={styles.taskPreferredTime}>
-                      {task.preferred_time === 'morning'
-                        ? 'Morning'
-                        : task.preferred_time === 'afternoon'
-                          ? 'Afternoon'
-                          : 'Evening'}
-                    </Text>
-                  </View>
-                )}
-                {task.source === 'manual' && (
-                  // A manual task can sit beside the plant's own schedule, so
-                  // one plant may list the same care type twice. Mark which one
-                  // the farmer added by hand.
-                  <View style={styles.taskMetaLine}>
+                {/* Everything that says *where* and *when* on one line, so a
+                    tile stays two lines tall however much of it is set. */}
+                <View style={styles.taskMetaLine}>
+                  <Text style={styles.taskMeta} numberOfLines={1}>
+                    {displayName}
+                    {plantDetails.location ? (
+                      <Text style={styles.taskMetaTertiary}>{` · ${plantDetails.location}`}</Text>
+                    ) : null}
+                    {task.plant_id != null && bedLabel != null ? (
+                      <Text style={styles.taskMetaBed}>{` · ${bedLabel}`}</Text>
+                    ) : null}
+                    {preferredTimeLabel ? (
+                      <Text style={styles.taskMetaTertiary}>{` · ${preferredTimeLabel}`}</Text>
+                    ) : null}
+                  </Text>
+                  {task.source === 'manual' && (
+                    // A manual task can sit beside the plant's own schedule, so
+                    // one plant may list the same care type twice. Mark which one
+                    // the farmer added by hand.
                     <Text style={styles.taskCustomBadge}>Custom</Text>
-                  </View>
-                )}
+                  )}
+                </View>
                 {harvestHint && (
                   <View style={styles.taskMetaLine}>
                     <GardenIcon name="task.harvest" size={12} color={theme.success} />
-                    <Text style={styles.taskHarvestHint}>{harvestHint}</Text>
+                    <Text style={styles.taskHarvestHint} numberOfLines={1}>
+                      {harvestHint}
+                    </Text>
                   </View>
                 )}
               </View>
-              <View style={styles.taskRight}>
-                <Text style={[styles.taskTime, isOverdue && styles.taskTimeOverdue]}>
-                  {isOverdue
-                    ? 'Overdue'
-                    : formatFarmDate(dueDate, {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.taskCheckbox,
-                    isSelected && styles.taskCheckboxSelected,
-                    isBlocked && styles.taskCheckboxBlocked,
-                  ]}
-                  onPress={() => (isBlocked ? onBlockedComplete(task) : onSelectToggle(task.id))}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  activeOpacity={0.6}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                  accessibilityLabel={
-                    isBlocked
-                      ? `Explain early completion for ${taskLabel}`
-                      : `${isSelected ? 'Deselect' : 'Select'} ${taskLabel}`
-                  }
-                >
-                  <Ionicons
-                    name={
-                      isBlocked
-                        ? 'ban-outline'
-                        : isSelected
-                          ? 'checkmark-circle'
-                          : 'ellipse-outline'
-                    }
-                    size={20}
-                    color={isSelected ? theme.primary : theme.border}
-                  />
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.taskCheckbox,
+            isSelected && styles.taskCheckboxSelected,
+            isBlocked && styles.taskCheckboxBlocked,
+          ]}
+          onPress={() => (isBlocked ? onBlockedComplete(task) : onSelectToggle(task.id))}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityState={{ selected: isSelected }}
+          accessibilityLabel={
+            isBlocked
+              ? `Explain early completion for ${taskLabel}`
+              : `${isSelected ? 'Deselect' : 'Select'} ${taskLabel}`
+          }
+        >
+          <Ionicons
+            name={isBlocked ? 'ban-outline' : isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+            size={22}
+            color={isSelected ? theme.primary : theme.border}
+          />
         </TouchableOpacity>
       </View>
     </Swipeable>
