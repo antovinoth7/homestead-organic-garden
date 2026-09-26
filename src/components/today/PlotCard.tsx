@@ -21,7 +21,9 @@
  * means one thing only — open the plot at the top of its plan — but the overdue
  * figure is a target of its own, on the same principle as the inventory rows
  * below: a count opens the list at the thing it just named, so tapping "53
- * Overdue" lands on the Care Plan's Overdue section rather than above it.
+ * Overdue" lands on the Care Plan's Overdue section rather than above it. The
+ * two targets are siblings — the row's sits behind the pills — not one nested
+ * in the other, because on web each renders a real <button>.
  *
  * The inventory is two tiles side by side: plants left, beds right. Each states
  * its total — `cropCount` over the four health counts it is the sum of,
@@ -262,26 +264,46 @@ export const PlotCard = React.memo(function PlotCard({
 
       <View style={styles.divider} />
 
-      <TouchableOpacity
-        style={styles.countsRow}
-        onPress={handlePress}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel={`${plot.name}, ${countsLabel}`}
-      >
-        {counts.length === 0 && <Text style={[styles.pill, styles.pillNone]}>Nothing Due</Text>}
+      {/* The row's target is a layer behind the pills, not a wrapper around
+          them: on web a button role renders a real <button>, and the overdue
+          button nested inside it is invalid HTML. The passive pieces let taps
+          fall through to it and leave the speaking to its label. */}
+      <View style={styles.countsRow}>
+        <TouchableOpacity
+          style={styles.countsRowTarget}
+          onPress={handlePress}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`${plot.name}, ${countsLabel}`}
+        />
+        {counts.length === 0 && (
+          <Text
+            style={[styles.pill, styles.pillNone, styles.countsPassive]}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            Nothing Due
+          </Text>
+        )}
         {counts.map((part) => {
+          const overdue = part.tone === 'overdue';
           const pill = (
             <Text
               key={part.key}
-              style={[styles.pill, part.tone === 'overdue' ? styles.pillOverdue : styles.pillDue]}
+              style={[
+                styles.pill,
+                overdue ? styles.pillOverdue : styles.pillDue,
+                !overdue && styles.countsPassive,
+              ]}
+              accessibilityElementsHidden={!overdue}
+              importantForAccessibility={overdue ? 'auto' : 'no-hide-descendants'}
             >
               {part.label}
             </Text>
           );
-          // The overdue figure takes its own tap inside the row: the row means
+          // The overdue figure takes its own tap on the row: the row means
           // "open the plot", this means "open it at the work that is late".
-          return part.tone === 'overdue' ? (
+          return overdue ? (
             <TouchableOpacity
               key={part.key}
               hitSlop={ROW_HIT_SLOP}
@@ -296,8 +318,14 @@ export const PlotCard = React.memo(function PlotCard({
             pill
           );
         })}
-        <Text style={styles.chevron}>›</Text>
-      </TouchableOpacity>
+        <Text
+          style={[styles.chevron, styles.countsPassive]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          ›
+        </Text>
+      </View>
 
       {(plot.line.headline !== null || plot.line.freshness !== null) && (
         <View style={styles.lines}>

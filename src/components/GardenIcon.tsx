@@ -1,6 +1,8 @@
 import React from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Platform } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
+import type { SvgProps } from 'react-native-svg';
 import { ICON_REGISTRY } from '@/config/iconRegistry';
 import type { CustomPlantIconType } from '@/config/iconRegistry';
 import type { BedType } from '@/types/database.types';
@@ -27,6 +29,22 @@ interface PlantTypeGlyphProps {
   accessibilityLabel?: string;
 }
 
+/**
+ * The glyph's accessibility props. On web react-native-svg forwards unknown
+ * props straight onto the DOM <svg>, where React rejects the RN names, so web
+ * gets their DOM equivalents instead.
+ */
+function glyphA11yProps(label?: string): SvgProps {
+  if (Platform.OS === 'web') {
+    return label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true };
+  }
+  return {
+    accessibilityRole: 'image',
+    accessibilityLabel: label,
+    accessibilityElementsHidden: !label,
+  };
+}
+
 /** Seven compact, single-stroke bed marks for concepts absent from Ionicons. */
 function BedGlyph({ bedType, size, color, accessibilityLabel }: BedGlyphProps): React.JSX.Element {
   const common = { stroke: color, strokeWidth: 1.7, strokeLinecap: 'round' as const };
@@ -35,9 +53,7 @@ function BedGlyph({ bedType, size, color, accessibilityLabel }: BedGlyphProps): 
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      accessibilityRole="image"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityElementsHidden={!accessibilityLabel}
+      {...glyphA11yProps(accessibilityLabel)}
     >
       <Rect x="3" y="5" width="18" height="14" rx="3" fill="none" {...common} />
       {bedType === 'leafy' && (
@@ -110,9 +126,7 @@ function PlantTypeGlyph({
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      accessibilityRole="image"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityElementsHidden={!accessibilityLabel}
+      {...glyphA11yProps(accessibilityLabel)}
     >
       {plantType === 'vegetable' && (
         <>

@@ -57,6 +57,23 @@ describe('migration 016 — Cashew Nut → Cashew', () => {
     expect(cashew?.customPests).toContain('Tea Mosquito Bug');
   });
 
+  it('writes no undefined fields when seeding from a bundled record that has them', () => {
+    // The bundled records carry explicit undefined keys; Firestore rejects them.
+    const sparse = (type: PlantType, name: string): PlantProfile | undefined =>
+      type === 'fruit_tree' && name === 'Cashew'
+        ? { ...CURATED_CASHEW, tamilName: undefined, varietyDetails: undefined }
+        : undefined;
+    const next = planCashewNutMerge(
+      makePlantProfiles([cashewNut({ varietyDetails: undefined })]),
+      sparse,
+      1000
+    );
+    const cashew = next?.fruit_tree.Cashew;
+
+    expect(cashew).toBeDefined();
+    expect(Object.values(cashew ?? {})).not.toContain(undefined);
+  });
+
   it('tombstones the retired name so it leaves the catalog', () => {
     const next = planCashewNutMerge(makePlantProfiles([cashewNut()]), bundled, 1000);
 

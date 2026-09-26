@@ -71,6 +71,23 @@ describe('migration 017 — duplicate rows become varieties', () => {
     expect(plan(next!)).toBeNull();
   });
 
+  it('writes no undefined fields when seeding from a bundled record that has them', () => {
+    const sparse = (type: PlantType, name: string): PlantProfile | undefined =>
+      type === 'vegetable' && name === 'Brinjal'
+        ? { ...BRINJAL, tamilName: undefined, varietyDetails: undefined }
+        : undefined;
+    const next = planFoldMerge(
+      makePlantProfiles([makePlantProfile({ name: 'Long Brinjal' })]),
+      MERGED_PLANT_NAMES_V17,
+      MERGED_SURVIVOR_TYPE_V17,
+      sparse,
+      1000,
+      MERGED_VARIETY_LABELS_V17
+    );
+
+    expect(Object.values(next?.vegetable.Brinjal ?? {})).not.toContain(undefined);
+  });
+
   it('adds the variety label to a survivor the user had already edited', () => {
     const profiles = makePlantProfiles([
       makePlantProfile({ name: 'Brinjal', varieties: ['Local'] }),

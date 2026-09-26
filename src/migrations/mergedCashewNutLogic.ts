@@ -50,6 +50,15 @@ function unionNames(
 }
 
 /**
+ * Drops keys whose value is `undefined`. Firestore rejects them outright, and
+ * the bundled records carry them (`tamilName: undefined`, `varietyDetails:
+ * undefined`) for rows the catalog has no data on.
+ */
+function stripUndefined<T extends object>(obj: T): T {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+}
+
+/**
  * The survivor with the user's own additions from the retired entry folded in:
  * varieties and their details, and custom pests and diseases.
  *
@@ -123,7 +132,7 @@ export function planFoldMerge(
         folded = { ...folded, varieties: unionNames(folded.varieties, [label]) ?? [label] };
       }
 
-      next = { ...next, [target]: { ...next[target], [to]: folded } };
+      next = { ...next, [target]: { ...next[target], [to]: stripUndefined(folded) } };
       next = applyProfileDeletion(next, type, from, now);
       changed = true;
     }
