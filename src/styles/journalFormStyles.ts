@@ -66,6 +66,25 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     typePillTextActive: {
       color: theme.textInverse,
     },
+    // ─── Entry date pill (under the type bar) ────────────────────────────────
+    entryDateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      gap: 6,
+      height: 34,
+      paddingHorizontal: 12,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      backgroundColor: theme.inputBackground,
+      marginBottom: 12,
+    },
+    entryDateText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.text,
+    },
     // ─── Field label row (label left, compact dictation pill right) ──────────
     fieldLabelRow: {
       flexDirection: 'row',
@@ -495,6 +514,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     effChipTextActive: {
       color: theme.textInverse,
       fontWeight: '600',
+    },
+    // ─── Pest follow-up ("After saving") ──────────────────────────────────────
+    followUpRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      minHeight: 44,
+    },
+    followUpText: {
+      flex: 1,
+      fontSize: 14,
+      color: theme.text,
+    },
+    followUpDetail: {
+      marginLeft: 32,
+      marginTop: 4,
+    },
+    followUpHint: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      marginTop: 8,
     },
     // ─── Treatment groups ────────────────────────────────────────────────────
     helperText: {

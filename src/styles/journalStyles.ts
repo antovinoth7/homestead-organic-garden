@@ -110,33 +110,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     statsHeader: {
       marginTop: 4,
+      marginBottom: 10,
+    },
+    // "All time ▾" above the stat strip — says which window the figures cover.
+    periodButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      gap: 4,
+      paddingVertical: 4,
       marginBottom: 6,
     },
-    statsRow: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-    statCard: {
-      flex: 1,
-      backgroundColor: theme.card,
-      borderRadius: 10,
-      paddingVertical: 8,
-      paddingHorizontal: 4,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    statNumber: {
-      fontSize: 15,
-      fontWeight: 'bold',
-      color: theme.text,
-      marginTop: 2,
-    },
-    statLabel: {
-      fontSize: 10,
+    periodText: {
+      fontSize: 12,
+      fontWeight: '700',
       color: theme.textSecondary,
-      marginTop: 1,
-      lineHeight: 12,
-      textAlign: 'center',
+    },
+    sheetChipLabel: {
+      flexShrink: 1,
     },
     sheetOverlay: {
       flex: 1,
@@ -258,16 +249,51 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       letterSpacing: 0.2,
     },
+    // Per-type tint for the type chip, keyed `typeChip_<JournalEntryType>`.
+    typeChip_observation: { backgroundColor: theme.primaryLight },
+    typeChip_harvest: { backgroundColor: theme.warningLight },
+    typeChip_pest_disease: { backgroundColor: theme.errorLight },
+    typeChip_issue: { backgroundColor: theme.errorLight },
+    typeChip_milestone: { backgroundColor: theme.successLight },
+    typeChip_other: { backgroundColor: theme.backgroundSecondary },
+    typeChipText_observation: { color: theme.primary },
+    typeChipText_harvest: { color: theme.warning },
+    typeChipText_pest_disease: { color: theme.error },
+    typeChipText_issue: { color: theme.error },
+    typeChipText_milestone: { color: theme.success },
+    typeChipText_other: { color: theme.textSecondary },
+    dayHeader: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.textSecondary,
+      marginTop: 8,
+      marginBottom: -4,
+    },
     dateText: {
       flexShrink: 1,
       fontSize: 12,
       color: theme.textTertiary,
+    },
+    // Built from structured fields ("Harvested 12 pcs", "Aphids on leaf").
+    headlineText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.text,
+      lineHeight: 21,
+      marginTop: 10,
     },
     contentText: {
       fontSize: 15,
       color: theme.text,
       lineHeight: 21,
       marginTop: 10,
+    },
+    // Notes beneath a headline read as supporting detail.
+    contentTextUnderHeadline: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: theme.textSecondary,
+      marginTop: 2,
     },
     // One chip row: plant, harvest/pest details, then free tags.
     chipRow: {
@@ -309,9 +335,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.error,
     },
     chipMutedText: {
-      fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 0.4,
+      fontSize: 11,
+      fontWeight: '600',
       color: theme.textSecondary,
     },
     chipTag: {
@@ -380,6 +405,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       width: '100%',
       height: '100%',
     },
+    // A device-local photo that no longer loads (reinstall, web preview):
+    // a small square placeholder instead of an empty 16:9 panel.
+    thumbBroken: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.borderLight,
+    },
     thumbMoreOverlay: {
       position: 'absolute',
       top: 0,
@@ -398,6 +431,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // Swipe-to-reveal actions (mirrors BedCard / bedListStyles)
     swipeActions: {
       flexDirection: 'row',
+    },
+    swipeResolveAction: {
+      width: 72,
+      backgroundColor: theme.success,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     swipeEditAction: {
       width: 72,

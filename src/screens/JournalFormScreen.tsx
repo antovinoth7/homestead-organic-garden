@@ -9,7 +9,9 @@ import {
   KeyboardAvoidingView,
   ImageStyle,
   LayoutChangeEvent,
+  Platform,
 } from 'react-native';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import PhotoSourceModal from '../components/modals/PhotoSourceModal';
@@ -25,10 +27,23 @@ import {
   type PestDiseaseFields,
 } from '@/components/forms/JournalPestDiseaseSection';
 import { JournalMilestoneSection } from '@/components/forms/JournalMilestoneSection';
-import { createJournalEntry, updateJournalEntry, saveJournalImage } from '../services/journal';
+import {
+  DEFAULT_RECHECK_DAYS,
+  JournalPestFollowUp,
+  referenceRecheckDays,
+  suggestedHealth,
+  type PestFollowUp,
+} from '@/components/forms/JournalPestFollowUp';
+import { AlertDialog } from '@/components/modals/AlertDialog';
+import {
+  createJournalEntry,
+  getJournalEntries,
+  updateJournalEntry,
+  saveJournalImage,
+} from '../services/journal';
 import { getAllPlants, updatePlant } from '../services/plants';
 import { createTaskTemplate } from '../services/tasks';
-import { HealthStatus, MilestoneKind, Plant, JournalEntryType } from '../types/database.types';
+import { JournalEntry, MilestoneKind, Plant, JournalEntryType } from '../types/database.types';
 import { useBedOptions } from '@/hooks/useBedOptions';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import {
@@ -39,18 +54,23 @@ import {
 } from '@/hooks/journalFormValidation';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, type NavigationAction } from '@react-navigation/native';
 import {
   JournalFormScreenNavigationProp,
   JournalFormScreenRouteProp,
 } from '../types/navigation.types';
 import { useTheme } from '../theme';
-import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
+import { sanitizeFreeText } from '../utils/textSanitizer';
 import {
+  JOURNAL_TYPE_OPTIONS,
   tagsForEntry,
   normalizeHarvestUnit,
   buildJournalPlantOptions,
+  formatEntryDateLabel,
+  journalEntryTimestamp,
   journalPickablePlants,
+  lastHarvestUnit,
+  type JournalTypeOption,
 } from '../utils/journalEntryOptions';
 import { toLocalDateString } from '../utils/dateHelpers';
 import { createStyles } from '../styles/journalFormStyles';
@@ -70,17 +90,6 @@ type PhotoItem = {
   filename: string | null;
 };
 
-const BASE_TYPE_OPTIONS: {
-  value: JournalEntryType;
-  label: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-}[] = [
-  { value: JournalEntryType.Observation, label: 'Observation', icon: 'eye' },
-  { value: JournalEntryType.Harvest, label: 'Harvest', icon: 'basket' },
-  { value: JournalEntryType.PestDisease, label: 'Pest/Disease', icon: 'bug' },
-  { value: JournalEntryType.Milestone, label: 'Milestone', icon: 'flag' },
-];
-
 export default function JournalFormScreen(): React.JSX.Element {
   const navigation = useNavigation<JournalFormScreenNavigationProp>();
   const route = useRoute<JournalFormScreenRouteProp>();
@@ -98,6 +107,14 @@ export default function JournalFormScreen(): React.JSX.Element {
     editEntry?.entry_type || initialEntryType || JournalEntryType.Observation
   );
   const [content, setContent] = useState(editEntry?.content || '');
+  // Entry date. Defaults to now; farmers often log the evening or day after
+  // ("harvested yesterday"). Only a date the user actually picks is saved, so
+  // an untouched edit never rewrites the stored timestamp.
+  const [entryDate, setEntryDate] = useState<Date>(() =>
+    editEntry ? new Date(editEntry.created_at) : new Date()
+  );
+  const [dateTouched, setDateTouched] = useState(false);
+  const [showEntryDatePicker, setShowEntryDatePicker] = useState(false);
   const buildInitialPhotoItems = (): PhotoItem[] => {
     if (!editEntry) return [];
     if (editEntry.photo_filenames && editEntry.photo_filenames.length > 0) {
@@ -144,7 +161,11 @@ export default function JournalFormScreen(): React.JSX.Element {
     notes: editEntry?.harvest_notes ?? '',
     treeNumber: editEntry?.harvest_tree_number?.toString() ?? '',
   });
+  // Once the farmer picks a unit it's theirs; until then a new harvest follows
+  // the plant's last harvest unit (see rememberedUnit below).
+  const [unitTouched, setUnitTouched] = useState(false);
   const handleHarvestChange = useCallback((patch: Partial<HarvestFields>) => {
+    if (patch.unit !== undefined) setUnitTouched(true);
     setHarvestFields((prev) => ({ ...prev, ...patch }));
   }, []);
 
@@ -162,6 +183,36 @@ export default function JournalFormScreen(): React.JSX.Element {
   const handlePestChange = useCallback((patch: Partial<PestDiseaseFields>) => {
     setPestFields((prev) => ({ ...prev, ...patch }));
   }, []);
+
+  // "After saving" options for a new, unresolved pest/disease entry.
+  const [followUp, setFollowUp] = useState<PestFollowUp>({
+    markHealth: true,
+    remind: false,
+    remindDays: null,
+  });
+  const handleFollowUpChange = useCallback((patch: Partial<PestFollowUp>) => {
+    setFollowUp((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const openEntryDatePicker = useCallback((): void => setShowEntryDatePicker(true), []);
+  const handleEntryDateChange = useCallback(
+    (_event: DateTimePickerEvent, selected?: Date): void => {
+      setShowEntryDatePicker(Platform.OS === 'ios');
+      if (!selected) return;
+      // On a new entry the pest "occurred" date follows the entry date until
+      // the farmer sets it separately (a problem can start before it's logged).
+      if (!isEditing) {
+        const previousDay = toLocalDateString(entryDate);
+        const nextDay = toLocalDateString(selected);
+        setPestFields((prev) =>
+          prev.occurredAt === previousDay ? { ...prev, occurredAt: nextDay } : prev
+        );
+      }
+      setEntryDate(selected);
+      setDateTouched(true);
+    },
+    [entryDate, isEditing]
+  );
 
   // Milestone field
   const [milestoneKind, setMilestoneKind] = useState<MilestoneKind | null>(
@@ -263,6 +314,44 @@ export default function JournalFormScreen(): React.JSX.Element {
     [plants, selectedPlantId]
   );
 
+  // Past entries, loaded only for a new harvest — to default its unit to how
+  // this plant was last measured (coconuts in pcs, tomatoes in kg). The list
+  // screen has usually just warmed the journal cache, so this rarely hits Firestore.
+  const [pastEntries, setPastEntries] = useState<JournalEntry[]>([]);
+  const pastEntriesRequested = useRef(false);
+  useEffect(() => {
+    if (isEditing || entryType !== JournalEntryType.Harvest || pastEntriesRequested.current) return;
+    pastEntriesRequested.current = true;
+    getJournalEntries()
+      .then(setPastEntries)
+      .catch((error: unknown) => logger.warn('Could not load past harvests', error as Error));
+  }, [isEditing, entryType]);
+  const rememberedUnit = useMemo(
+    () => (selectedPlantId ? lastHarvestUnit(pastEntries, selectedPlantId) : null),
+    [pastEntries, selectedPlantId]
+  );
+  const effectiveHarvestFields = useMemo(
+    () =>
+      !isEditing && !unitTouched && rememberedUnit
+        ? { ...harvestFields, unit: rememberedUnit }
+        : harvestFields,
+    [isEditing, unitTouched, rememberedUnit, harvestFields]
+  );
+
+  // Follow-up applies to a new, unresolved problem on a linked plant. The
+  // health nudge only offers itself while the plant still reads Healthy.
+  const showFollowUp =
+    !isEditing &&
+    entryType === JournalEntryType.PestDisease &&
+    pestFields.status !== 'resolved' &&
+    !!selectedPlant;
+  const healthSuggestion =
+    selectedPlant?.health_status === 'healthy' ? suggestedHealth(pestFields.severity) : null;
+  const suggestedRecheckDays = useMemo(
+    () => referenceRecheckDays(pestFields.kind, pestFields.name, pestFields.treatment),
+    [pestFields.kind, pestFields.name, pestFields.treatment]
+  );
+
   const handleBedChange = useCallback(
     (value: string): void => {
       setSelectedBedId(value);
@@ -354,64 +443,106 @@ export default function JournalFormScreen(): React.JSX.Element {
     setPhotoItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Prompts carried over from the old pest/disease modal: nudge health status
-  // and offer a recurring spray task when a new, active issue is logged.
-  const runPestSideEffects = useCallback(
-    (plantId: string): void => {
-      const plant = plants.find((p) => p.id === plantId);
-      if (plant && plant.health_status === 'healthy') {
-        const suggested: HealthStatus =
-          pestFields.severity === 'high' || pestFields.severity === 'severe' ? 'sick' : 'stressed';
-        Alert.alert(
-          'Update Health Status?',
-          `You logged an active ${pestFields.kind}. Change this plant's health to "${suggested}"?`,
-          [
-            { text: 'Keep Healthy', style: 'cancel' },
-            {
-              text: `Set ${suggested.charAt(0).toUpperCase() + suggested.slice(1)}`,
-              onPress: () => {
-                void updatePlant(plantId, { health_status: suggested }).catch((error) =>
-                  logger.warn('Failed to update plant health', error as Error)
-                );
-              },
-            },
-          ]
-        );
-      }
+  // The "After saving" choices for a new, unresolved pest/disease entry: set
+  // the plant's health and/or schedule a recurring spray reminder. Runs after
+  // the entry itself is saved; a failed reminder is reported, since the farmer
+  // would otherwise count on a reminder that never comes.
+  const runPestFollowUp = async (plantId: string): Promise<void> => {
+    const jobs: Promise<unknown>[] = [];
+    if (healthSuggestion && followUp.markHealth) {
+      jobs.push(
+        updatePlant(plantId, { health_status: healthSuggestion }).catch((error: unknown) =>
+          logger.warn('Failed to update plant health', error as Error)
+        )
+      );
+    }
+    if (followUp.remind) {
+      const days = followUp.remindDays ?? suggestedRecheckDays ?? DEFAULT_RECHECK_DAYS;
+      // Still active → spray this evening; already treated → a full interval on.
+      const dueDate = new Date();
+      if (pestFields.status === 'treated') dueDate.setDate(dueDate.getDate() + days);
+      dueDate.setHours(18, 0, 0, 0);
+      jobs.push(
+        createTaskTemplate({
+          plant_id: plantId,
+          task_type: 'spray',
+          frequency_days: days,
+          next_due_at: dueDate.toISOString(),
+          enabled: true,
+          preferred_time: null,
+          source: 'manual',
+        }).catch((error: unknown) => {
+          logger.warn('Failed to create spray reminder', error as Error);
+          Alert.alert(
+            'Reminder not created',
+            'The entry was saved, but the spray reminder failed.'
+          );
+        })
+      );
+    }
+    await Promise.all(jobs);
+  };
 
-      setTimeout(() => {
-        Alert.alert(
-          'Create Spray Task?',
-          `Would you like a recurring spray task for "${pestFields.name.trim()}"?`,
-          [
-            { text: 'No', style: 'cancel' },
-            {
-              text: 'Create Task',
-              onPress: async () => {
-                try {
-                  const dueDate = new Date();
-                  dueDate.setHours(18, 0, 0, 0);
-                  await createTaskTemplate({
-                    plant_id: plantId,
-                    task_type: 'spray',
-                    frequency_days: 7,
-                    next_due_at: dueDate.toISOString(),
-                    enabled: true,
-                    preferred_time: null,
-                    source: 'manual',
-                  });
-                  Alert.alert('Done', 'Spray task created!');
-                } catch {
-                  Alert.alert('Error', 'Could not create spray task.');
-                }
-              },
-            },
-          ]
-        );
-      }, 800);
-    },
-    [plants, pestFields.severity, pestFields.kind, pestFields.name]
+  // ─── Unsaved-work guard ──────────────────────────────────────────────────
+  // Farmers get interrupted mid-entry; a stray back swipe shouldn't lose it.
+  // A new entry counts as dirty once it holds something typed or photographed
+  // (picking a type or plant alone isn't worth a prompt). An edit is dirty when
+  // any saved field differs from how it opened.
+  const formSnapshot = useMemo(
+    () =>
+      JSON.stringify({
+        entryType,
+        content,
+        photos: photoItems.map((p) => p.filename ?? p.uri),
+        plant: selectedPlantId,
+        tags: selectedTags,
+        harvestFields,
+        pestFields,
+        milestoneKind,
+        dateTouched,
+      }),
+    [
+      entryType,
+      content,
+      photoItems,
+      selectedPlantId,
+      selectedTags,
+      harvestFields,
+      pestFields,
+      milestoneKind,
+      dateTouched,
+    ]
   );
+  const [initialSnapshot] = useState(formSnapshot);
+  const hasUserInput =
+    content.trim() !== '' ||
+    photoItems.length > 0 ||
+    harvestFields.quantity.trim() !== '' ||
+    harvestFields.notes.trim() !== '' ||
+    pestFields.name.trim() !== '' ||
+    pestFields.treatment.trim() !== '' ||
+    milestoneKind !== null;
+  const isDirty = isEditing ? formSnapshot !== initialSnapshot : hasUserInput;
+
+  const allowLeaveRef = useRef(false);
+  const [pendingLeave, setPendingLeave] = useState<NavigationAction | null>(null);
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', (e) => {
+        if (allowLeaveRef.current || !isDirty) return;
+        e.preventDefault();
+        setPendingLeave(e.data.action);
+      }),
+    [navigation, isDirty]
+  );
+  const keepEditing = useCallback((): void => setPendingLeave(null), []);
+  const discardEntry = useCallback((): void => {
+    const action = pendingLeave;
+    setPendingLeave(null);
+    if (!action) return;
+    allowLeaveRef.current = true;
+    navigation.dispatch(action);
+  }, [pendingLeave, navigation]);
 
   const handleSave = async (): Promise<void> => {
     const isHarvest = entryType === JournalEntryType.Harvest;
@@ -468,9 +599,9 @@ export default function JournalFormScreen(): React.JSX.Element {
         // array is what actually clears previously-saved tags.
         tags: selectedTags,
         harvest_quantity: isHarvest ? parseFloat(harvestFields.quantity) : null,
-        harvest_unit: isHarvest ? harvestFields.unit : null,
+        harvest_unit: isHarvest ? effectiveHarvestFields.unit : null,
         harvest_quality: isHarvest ? harvestFields.quality : null,
-        harvest_notes: isHarvest ? harvestFields.notes : null,
+        harvest_notes: isHarvest ? harvestFields.notes.trim() || null : null,
         harvest_tree_number:
           isHarvest && harvestFields.treeNumber.trim() !== ''
             ? parseInt(harvestFields.treeNumber, 10)
@@ -493,15 +624,30 @@ export default function JournalFormScreen(): React.JSX.Element {
       };
 
       if (isEditing && editEntry) {
-        await updateJournalEntry(editEntry.id, entryData);
+        await updateJournalEntry(
+          editEntry.id,
+          dateTouched
+            ? {
+                ...entryData,
+                created_at: journalEntryTimestamp(
+                  entryDate,
+                  new Date(editEntry.created_at)
+                ).toISOString(),
+              }
+            : entryData
+        );
       } else {
-        await createJournalEntry(entryData);
-        if (isPest && pestFields.status !== 'resolved' && selectedPlantId) {
-          runPestSideEffects(selectedPlantId);
+        await createJournalEntry(
+          entryData,
+          dateTouched ? { createdAt: journalEntryTimestamp(entryDate, new Date()) } : undefined
+        );
+        if (showFollowUp && selectedPlantId) {
+          await runPestFollowUp(selectedPlantId);
         }
       }
 
-      // Trigger refresh in parent screen
+      // Trigger refresh in parent screen. Saved, so leaving isn't a discard.
+      allowLeaveRef.current = true;
       navigation.navigate({
         name: 'JournalList',
         params: { refresh: Date.now() },
@@ -516,20 +662,16 @@ export default function JournalFormScreen(): React.JSX.Element {
 
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const typeOptions = useMemo(() => {
+  const typeOptions = useMemo((): readonly JournalTypeOption[] => {
     // 'Issue' is retired for new entries but must remain selectable when editing
     // a pre-existing issue so its type isn't silently changed.
     if (editEntry?.entry_type === JournalEntryType.Issue) {
       return [
-        ...BASE_TYPE_OPTIONS,
-        {
-          value: JournalEntryType.Issue,
-          label: 'Issue',
-          icon: 'alert-circle' as React.ComponentProps<typeof Ionicons>['name'],
-        },
+        ...JOURNAL_TYPE_OPTIONS,
+        { value: JournalEntryType.Issue, label: 'Issue', icon: 'alert-circle' },
       ];
     }
-    return BASE_TYPE_OPTIONS;
+    return JOURNAL_TYPE_OPTIONS;
   }, [editEntry?.entry_type]);
 
   // One stable press handler per type pill (no anonymous functions in JSX).
@@ -542,7 +684,7 @@ export default function JournalFormScreen(): React.JSX.Element {
   );
 
   const handleContentChange = useCallback((text: string): void => {
-    setContent(sanitizeAlphaNumericSpaces(text));
+    setContent(sanitizeFreeText(text));
   }, []);
 
   // Harvest / pest / milestone capture their own fields, so notes are optional
@@ -614,62 +756,26 @@ export default function JournalFormScreen(): React.JSX.Element {
             })}
           </ScrollView>
 
-          {entryType === JournalEntryType.Harvest && (
-            <View onLayout={handleHarvestLayout}>
-              <JournalHarvestSection
-                value={harvestFields}
-                onChange={handleHarvestChange}
-                plantType={selectedPlant?.plant_type ?? null}
-                errorText={errorFor('quantity')}
-              />
-            </View>
-          )}
-
-          {entryType === JournalEntryType.PestDisease && (
-            <View onLayout={handlePestLayout}>
-              <JournalPestDiseaseSection
-                value={pestFields}
-                onChange={handlePestChange}
-                plantType={selectedPlant?.plant_type ?? null}
-                plantVariety={selectedPlant?.plant_variety ?? null}
-                errorText={errorFor('pestName')}
-              />
-            </View>
-          )}
-
-          {entryType === JournalEntryType.Milestone && (
-            <View onLayout={handleMilestoneLayout}>
-              <JournalMilestoneSection
-                value={milestoneKind}
-                onChange={setMilestoneKind}
-                errorText={errorFor('milestone')}
-              />
-            </View>
-          )}
-
-          {/* Notes — label left, compact mic | language pill right */}
-          <View style={styles.notesBlock} onLayout={handleNotesLayout}>
-            <View style={styles.fieldLabelRow}>
-              <Text style={styles.fieldLabel}>{notesOptional ? 'Notes (optional)' : 'Notes'}</Text>
-              <VoiceDictation compact value={content} onChangeText={handleContentChange} />
-            </View>
-            <TextInput
-              style={[styles.notesInput, !!contentError && styles.notesInputError]}
-              value={content}
-              onChangeText={handleContentChange}
-              placeholder="What's happening in your garden today?"
-              placeholderTextColor={theme.inputPlaceholder}
-              multiline
-              maxLength={CONTENT_MAX_LENGTH}
-              accessibilityLabel="Journal notes"
+          {/* Entry date — defaults to today; backdate for late logging */}
+          <TouchableOpacity
+            style={styles.entryDateButton}
+            onPress={openEntryDatePicker}
+            accessibilityRole="button"
+            accessibilityLabel={`Entry date, ${formatEntryDateLabel(entryDate)}. Change date`}
+          >
+            <Ionicons name="calendar-outline" size={16} color={theme.primary} />
+            <Text style={styles.entryDateText}>{formatEntryDateLabel(entryDate)}</Text>
+            <Ionicons name="chevron-down" size={14} color={theme.textSecondary} />
+          </TouchableOpacity>
+          {showEntryDatePicker && (
+            <DateTimePicker
+              value={entryDate}
+              mode="date"
+              maximumDate={new Date()}
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleEntryDateChange}
             />
-            <FieldErrorText message={contentError} />
-            {content.length >= CONTENT_COUNTER_FROM && (
-              <Text style={styles.charCounter}>
-                {content.length}/{CONTENT_MAX_LENGTH}
-              </Text>
-            )}
-          </View>
+          )}
 
           {/* Location — a bed entry links to the bed; otherwise a pot/ground plant */}
           <View style={styles.locationSection}>
@@ -698,32 +804,8 @@ export default function JournalFormScreen(): React.JSX.Element {
             )}
           </View>
 
-          {/* Tags — only for types that expose free tags */}
-          {availableTags.length > 0 && (
-            <View style={styles.tagsSection}>
-              <Text style={styles.fieldLabel}>Tags</Text>
-              <View style={styles.tagsWrap}>
-                {availableTags.map((tag) => (
-                  <TouchableOpacity
-                    key={tag}
-                    style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]}
-                    onPress={() => toggleTag(tag)}
-                  >
-                    <Text
-                      style={[
-                        styles.tagChipText,
-                        selectedTags.includes(tag) && styles.tagChipTextActive,
-                      ]}
-                    >
-                      {tag.replace(/_/g, ' ')}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Photos — a strip led by an add tile, instead of a grid + button */}
+          {/* Photos — in the field the photo comes first, the words after, so
+              the strip sits above the details rather than under the keyboard. */}
           <Text style={styles.fieldLabel}>
             {photoItems.length > 0 ? `Photos (${photoItems.length})` : 'Photos'}
           </Text>
@@ -766,6 +848,99 @@ export default function JournalFormScreen(): React.JSX.Element {
               ) : null
             )}
           </ScrollView>
+
+          {entryType === JournalEntryType.Harvest && (
+            <View onLayout={handleHarvestLayout}>
+              <JournalHarvestSection
+                value={effectiveHarvestFields}
+                onChange={handleHarvestChange}
+                plantType={selectedPlant?.plant_type ?? null}
+                errorText={errorFor('quantity')}
+              />
+            </View>
+          )}
+
+          {entryType === JournalEntryType.PestDisease && (
+            <View onLayout={handlePestLayout}>
+              <JournalPestDiseaseSection
+                value={pestFields}
+                onChange={handlePestChange}
+                plantType={selectedPlant?.plant_type ?? null}
+                plantVariety={selectedPlant?.plant_variety ?? null}
+                errorText={errorFor('pestName')}
+              />
+            </View>
+          )}
+
+          {showFollowUp && (
+            <JournalPestFollowUp
+              value={followUp}
+              onChange={handleFollowUpChange}
+              healthSuggestion={healthSuggestion}
+              suggestedDays={suggestedRecheckDays}
+              treatment={pestFields.treatment}
+              status={pestFields.status}
+            />
+          )}
+
+          {entryType === JournalEntryType.Milestone && (
+            <View onLayout={handleMilestoneLayout}>
+              <JournalMilestoneSection
+                value={milestoneKind}
+                onChange={setMilestoneKind}
+                errorText={errorFor('milestone')}
+              />
+            </View>
+          )}
+
+          {/* Notes — label left, compact mic | language pill right */}
+          <View style={styles.notesBlock} onLayout={handleNotesLayout}>
+            <View style={styles.fieldLabelRow}>
+              <Text style={styles.fieldLabel}>{notesOptional ? 'Notes (optional)' : 'Notes'}</Text>
+              <VoiceDictation compact value={content} onChangeText={handleContentChange} />
+            </View>
+            <TextInput
+              style={[styles.notesInput, !!contentError && styles.notesInputError]}
+              value={content}
+              onChangeText={handleContentChange}
+              placeholder="What's happening in your garden today?"
+              placeholderTextColor={theme.inputPlaceholder}
+              multiline
+              maxLength={CONTENT_MAX_LENGTH}
+              accessibilityLabel="Journal notes"
+            />
+            <FieldErrorText message={contentError} />
+            {content.length >= CONTENT_COUNTER_FROM && (
+              <Text style={styles.charCounter}>
+                {content.length}/{CONTENT_MAX_LENGTH}
+              </Text>
+            )}
+          </View>
+
+          {/* Tags — only for types that expose free tags */}
+          {availableTags.length > 0 && (
+            <View style={styles.tagsSection}>
+              <Text style={styles.fieldLabel}>Tags</Text>
+              <View style={styles.tagsWrap}>
+                {availableTags.map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
+                    style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]}
+                    onPress={() => toggleTag(tag)}
+                  >
+                    <Text
+                      style={[
+                        styles.tagChipText,
+                        selectedTags.includes(tag) && styles.tagChipTextActive,
+                      ]}
+                    >
+                      {tag.replace(/_/g, ' ')}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -774,6 +949,23 @@ export default function JournalFormScreen(): React.JSX.Element {
         onClose={() => setShowPhotoSourceModal(false)}
         onCamera={openCamera}
         onLibrary={openImageLibrary}
+      />
+
+      <AlertDialog
+        visible={pendingLeave !== null}
+        title={isEditing ? 'Discard changes?' : 'Discard this entry?'}
+        message={
+          isEditing
+            ? 'Your edits to this entry have not been saved.'
+            : 'What you have entered has not been saved.'
+        }
+        icon="warning-outline"
+        tone="warning"
+        actions={[
+          { label: 'Keep editing', variant: 'primary', onPress: keepEditing },
+          { label: 'Discard', variant: 'ghost', onPress: discardEntry },
+        ]}
+        onDismiss={keepEditing}
       />
     </View>
   );

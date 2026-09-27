@@ -31,7 +31,7 @@ import {
   filterSuggestionGroups,
 } from '../../utils/journalEntryOptions';
 import { JournalMoreDetails } from './JournalMoreDetails';
-import { sanitizeAlphaNumericSpaces } from '../../utils/textSanitizer';
+import { sanitizeAlphaNumericSpaces, sanitizeFreeText } from '../../utils/textSanitizer';
 import { toLocalDateString, formatDateDisplay } from '../../utils/dateHelpers';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/journalFormStyles';
@@ -407,7 +407,7 @@ export function JournalPestDiseaseSection({
             <FloatingLabelInput
               label="Custom Treatment"
               value={value.treatment}
-              onChangeText={(text) => onChange({ treatment: sanitizeAlphaNumericSpaces(text) })}
+              onChangeText={(text) => onChange({ treatment: sanitizeFreeText(text) })}
               maxLength={500}
             />
             <Text style={styles.charCounter}>{value.treatment.length}/500</Text>

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import type { ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
@@ -8,24 +8,106 @@ import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/journalStyles';
 import { JournalEntry, JournalEntryType } from '@/types/database.types';
 import {
+  daysOpen,
+  formatDaysOpen,
   formatJournalTimestamp,
   getMilestoneMeta,
-  normalizeHarvestUnit,
+  isActiveProblem,
+  journalEntryHeadline,
+  journalTypeLabel,
+  type JournalLocationKind,
 } from '@/utils/journalEntryOptions';
 
 interface Props {
   entry: JournalEntry;
-  /** Resolved by the parent so the card stays pure (no plant lookup here). */
-  plantName: string | null;
+  /**
+   * The linked plant's name, else the linked bed's — resolved by the parent so
+   * the card stays pure (no plant/bed lookup here).
+   */
+  locationName: string | null;
+  locationKind: JournalLocationKind | null;
   onPress: (entry: JournalEntry) => void;
   onEdit: (entry: JournalEntry) => void;
   onDelete: (entry: JournalEntry) => void;
+  /** Shown as a swipe action only on an unresolved pest/disease entry. */
+  onResolve?: (entry: JournalEntry) => void;
   /** Receives the entry's full photo list plus the tapped index, so the viewer can swipe. */
   onPhotoPress: (uris: string[], index: number) => void;
   onSwipeableOpen?: (ref: Swipeable) => void;
 }
 
 const MAX_THUMBS = 3;
+
+/** `treated` → `Treated`; chip values are stored lower-case. */
+const titleCase = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
+
+interface ThumbProps {
+  uri: string;
+  entryId: string;
+  index: number;
+  photos: string[];
+  single: boolean;
+  /** Number of photos hidden behind this thumb's "+N" overlay (0 = none). */
+  moreCount: number;
+  onPhotoPress: (uris: string[], index: number) => void;
+  styles: ReturnType<typeof createStyles>;
+  placeholderColor: string;
+}
+
+/**
+ * One photo thumbnail. Journal photos are device-local, so a URI can stop
+ * resolving (reinstall, restore onto another phone, web preview); then a small
+ * square placeholder replaces the image rather than an empty 16:9 panel.
+ */
+const JournalThumb = React.memo(function JournalThumb({
+  uri,
+  entryId,
+  index,
+  photos,
+  single,
+  moreCount,
+  onPhotoPress,
+  styles,
+  placeholderColor,
+}: ThumbProps): React.JSX.Element {
+  const [failed, setFailed] = useState(false);
+  const handleError = useCallback(() => setFailed(true), []);
+  // `photos`, not the visible slice — the "+N" thumb must open the viewer on a
+  // gallery containing every photo on the entry.
+  const handlePress = useCallback(() => onPhotoPress(photos, index), [onPhotoPress, photos, index]);
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.8}
+      style={[
+        styles.thumbCell,
+        single && !failed && styles.thumbCellSingle,
+        failed && styles.thumbBroken,
+      ]}
+      accessibilityLabel={failed ? 'Photo unavailable' : 'Open photo'}
+    >
+      {failed ? (
+        <Ionicons name="image-outline" size={22} color={placeholderColor} />
+      ) : (
+        <Image
+          source={{ uri }}
+          style={styles.thumb as ImageStyle}
+          contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+          recyclingKey={`journal-${entryId}-${index}`}
+          onError={handleError}
+        />
+      )}
+      {moreCount > 0 && (
+        <View style={styles.thumbMoreOverlay}>
+          <Text style={styles.thumbMoreText}>+{moreCount}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+});
 
 function getEntryTypeIcon(
   type: JournalEntryType,
@@ -55,10 +137,12 @@ function getEntryTypeIcon(
 
 export const JournalEntryCard = React.memo(function JournalEntryCard({
   entry,
-  plantName,
+  locationName,
+  locationKind,
   onPress,
   onEdit,
   onDelete,
+  onResolve,
   onPhotoPress,
   onSwipeableOpen,
 }: Props): React.JSX.Element {
@@ -70,21 +154,29 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
   const isMilestone = entry.entry_type === JournalEntryType.Milestone;
   const milestoneMeta = isMilestone ? getMilestoneMeta(entry.milestone_kind) : null;
   const iconName = milestoneMeta ? milestoneMeta.icon : baseIcon;
-  const entryTypeLabel =
-    entry.entry_type === JournalEntryType.PestDisease
-      ? 'Pest/Disease'
-      : milestoneMeta
-        ? milestoneMeta.label
-        : entry.entry_type.charAt(0).toUpperCase() + entry.entry_type.slice(1);
+  const entryTypeLabel = milestoneMeta ? milestoneMeta.label : journalTypeLabel(entry.entry_type);
 
   const timestamp = formatJournalTimestamp(entry.created_at);
   const isHarvest = entry.entry_type === JournalEntryType.Harvest;
   const isPest = entry.entry_type === JournalEntryType.PestDisease;
   const tags = entry.tags ?? [];
+  // Harvest amount and pest name live in the headline, so the chips below only
+  // carry what the headline doesn't: place, quality, severity, status.
+  const headline = journalEntryHeadline(entry);
+  const notes = entry.content.trim();
+  // A missing status means active (see isActiveProblem); an open problem also
+  // says how long it has been open — "Active · 6 days".
+  const pestStatus = isPest ? (entry.pest_status ?? 'active') : null;
+  const openDays = daysOpen(entry);
+  const statusLabel = pestStatus
+    ? openDays === null
+      ? titleCase(pestStatus)
+      : `${titleCase(pestStatus)} · ${formatDaysOpen(openDays)}`
+    : null;
   const hasChips =
-    !!plantName ||
-    (isHarvest && (!!entry.harvest_quantity || !!entry.harvest_quality)) ||
-    (isPest && (!!entry.pest_name || !!entry.pest_severity || !!entry.pest_status)) ||
+    !!locationName ||
+    (isHarvest && !!entry.harvest_quality) ||
+    (isPest && (!!entry.pest_severity || !!statusLabel)) ||
     tags.length > 0;
 
   const photos = entry.photo_urls ?? [];
@@ -103,9 +195,26 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
     onDelete(entry);
   }, [onDelete, entry]);
 
+  const canResolve = !!onResolve && isActiveProblem(entry);
+  const handleResolve = useCallback(() => {
+    swipeableRef.current?.close();
+    onResolve?.(entry);
+  }, [onResolve, entry]);
+
   const renderRightActions = useCallback(
     () => (
       <View style={styles.swipeActions}>
+        {canResolve && (
+          <TouchableOpacity
+            style={styles.swipeResolveAction}
+            onPress={handleResolve}
+            accessibilityLabel="Mark as resolved"
+            accessibilityRole="button"
+          >
+            <Ionicons name="checkmark-circle-outline" size={20} color={theme.textInverse} />
+            <Text style={styles.swipeActionText}>Resolved</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.swipeEditAction}
           onPress={handleEdit}
@@ -126,7 +235,7 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
         </TouchableOpacity>
       </View>
     ),
-    [styles, theme, handleEdit, handleDelete]
+    [styles, theme, canResolve, handleResolve, handleEdit, handleDelete]
   );
 
   return (
@@ -146,70 +255,65 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
       <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={handlePress}>
         {/* Header: tinted type chip + compact timestamp */}
         <View style={styles.cardTopRow}>
-          <View style={[styles.typeChip, { backgroundColor: typeColor + '1A' }]}>
+          <View style={[styles.typeChip, styles[`typeChip_${entry.entry_type}`]]}>
             <Ionicons name={iconName} size={13} color={typeColor} />
-            <Text style={[styles.typeChipText, { color: typeColor }]}>{entryTypeLabel}</Text>
+            <Text style={[styles.typeChipText, styles[`typeChipText_${entry.entry_type}`]]}>
+              {entryTypeLabel}
+            </Text>
           </View>
           <Text style={styles.dateText} numberOfLines={1}>
             {timestamp}
           </Text>
         </View>
 
-        {/* Content first — it's the journal */}
-        <Text style={styles.contentText} numberOfLines={3}>
-          {entry.content}
-        </Text>
+        {/* Structured headline (harvest amount, pest name), then the notes.
+            Empty notes render nothing — no blank gap on a quick harvest log. */}
+        {headline && (
+          <Text style={styles.headlineText} numberOfLines={1}>
+            {headline}
+          </Text>
+        )}
+        {notes !== '' && (
+          <Text
+            style={[styles.contentText, !!headline && styles.contentTextUnderHeadline]}
+            numberOfLines={headline ? 2 : 3}
+          >
+            {notes}
+          </Text>
+        )}
 
-        {/* Plant, per-type details and free tags share one chip row */}
+        {/* Place, per-type details and free tags share one chip row */}
         {hasChips && (
           <View style={styles.chipRow}>
-            {plantName && (
+            {locationName && (
               <View style={[styles.chip, styles.chipPlant]}>
-                <Ionicons name="leaf" size={12} color={theme.primary} />
+                <Ionicons
+                  name={locationKind === 'bed' ? 'grid-outline' : 'leaf'}
+                  size={12}
+                  color={theme.primary}
+                />
                 <Text style={[styles.chipText, styles.chipPlantText]} numberOfLines={1}>
-                  {plantName}
-                </Text>
-              </View>
-            )}
-            {isHarvest && !!entry.harvest_quantity && (
-              <View style={[styles.chip, styles.chipHarvest]}>
-                <Ionicons name="scale-outline" size={12} color={theme.warning} />
-                <Text style={[styles.chipText, styles.chipHarvestText]}>
-                  {entry.harvest_quantity} {normalizeHarvestUnit(entry.harvest_unit)}
+                  {locationName}
                 </Text>
               </View>
             )}
             {isHarvest && entry.harvest_quality && (
               <View style={[styles.chip, styles[`quality${entry.harvest_quality}`]]}>
                 <Text style={[styles.chipText, styles.chipMutedText]}>
-                  {entry.harvest_quality.toUpperCase()}
-                </Text>
-              </View>
-            )}
-            {isPest && entry.pest_name && (
-              <View style={[styles.chip, styles.chipPest]}>
-                <Ionicons
-                  name={entry.pest_kind === 'disease' ? 'medical' : 'bug'}
-                  size={12}
-                  color={theme.error}
-                />
-                <Text style={[styles.chipText, styles.chipPestText]} numberOfLines={1}>
-                  {entry.pest_name}
+                  {titleCase(entry.harvest_quality)}
                 </Text>
               </View>
             )}
             {isPest && entry.pest_severity && (
               <View style={[styles.chip, styles[`severity_${entry.pest_severity}`]]}>
                 <Text style={[styles.chipText, styles.chipMutedText]}>
-                  {entry.pest_severity.toUpperCase()}
+                  {titleCase(entry.pest_severity)}
                 </Text>
               </View>
             )}
-            {isPest && entry.pest_status && (
-              <View style={[styles.chip, styles[`status_${entry.pest_status}`]]}>
-                <Text style={[styles.chipText, styles.chipMutedText]}>
-                  {entry.pest_status.toUpperCase()}
-                </Text>
+            {pestStatus && statusLabel && (
+              <View style={[styles.chip, styles[`status_${pestStatus}`]]}>
+                <Text style={[styles.chipText, styles.chipMutedText]}>{statusLabel}</Text>
               </View>
             )}
             {tags.map((tag) => (
@@ -223,34 +327,20 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
         {/* Fixed thumbnail row (no horizontal scroll → no swipe-gesture conflict) */}
         {visiblePhotos.length > 0 && (
           <View style={styles.thumbRow}>
-            {visiblePhotos.map((photoUrl, idx) => {
-              const isLastShown = idx === MAX_THUMBS - 1;
-              const showOverlay = isLastShown && extraCount > 0;
-              return (
-                <TouchableOpacity
-                  key={`${entry.id}-${idx}`}
-                  // `photos`, not `visiblePhotos` — the "+N" thumb must open the
-                  // viewer on a gallery containing every photo on the entry.
-                  onPress={() => onPhotoPress(photos, idx)}
-                  activeOpacity={0.8}
-                  style={[styles.thumbCell, visiblePhotos.length === 1 && styles.thumbCellSingle]}
-                >
-                  <Image
-                    source={{ uri: photoUrl }}
-                    style={styles.thumb as ImageStyle}
-                    contentFit="cover"
-                    transition={200}
-                    cachePolicy="memory-disk"
-                    recyclingKey={`journal-${entry.id}-${idx}`}
-                  />
-                  {showOverlay && (
-                    <View style={styles.thumbMoreOverlay}>
-                      <Text style={styles.thumbMoreText}>+{extraCount + 1}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+            {visiblePhotos.map((photoUrl, idx) => (
+              <JournalThumb
+                key={`${entry.id}-${idx}`}
+                uri={photoUrl}
+                entryId={entry.id}
+                index={idx}
+                photos={photos}
+                single={visiblePhotos.length === 1}
+                moreCount={idx === MAX_THUMBS - 1 && extraCount > 0 ? extraCount + 1 : 0}
+                onPhotoPress={onPhotoPress}
+                styles={styles}
+                placeholderColor={theme.textTertiary}
+              />
+            ))}
           </View>
         )}
       </TouchableOpacity>

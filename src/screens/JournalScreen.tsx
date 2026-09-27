@@ -15,9 +15,14 @@ import {
   Pressable,
 } from 'react-native';
 import type Swipeable from 'react-native-gesture-handler/Swipeable';
-import { getJournalEntries, deleteJournalEntry } from '../services/journal';
+import { getJournalEntries, deleteJournalEntry, updateJournalEntry } from '../services/journal';
 import { getAllPlants } from '../services/plants';
-import { JournalEntry, JournalEntryType, Plant } from '../types/database.types';
+import {
+  JournalEntry,
+  JournalEntryType,
+  Plant,
+  TreatmentEffectiveness,
+} from '../types/database.types';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
@@ -27,12 +32,33 @@ import { JournalScreenNavigationProp, JournalScreenRouteProp } from '../types/na
 import { getErrorMessage } from '../utils/errorLogging';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
 import { computeJournalStats, getDateFilterStart } from '../utils/journalStats';
-import { collectUsedTags } from '../utils/journalEntryOptions';
+import {
+  JOURNAL_TYPE_OPTIONS,
+  collectUsedLocations,
+  collectUsedTags,
+  entryMatchesLocation,
+  isActiveProblem,
+  journalEntryLocation,
+  journalTypeLabel,
+  type JournalLocation,
+} from '../utils/journalEntryOptions';
+import { buildJournalRows, type JournalRow } from '@/utils/journalSections';
+import { toLocalDateString } from '@/utils/dateHelpers';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
 import { SheetHandle } from '@/components/SheetHandle';
 import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import { JournalEntryCard } from '@/components/JournalEntryCard';
+import { StatStrip, type StatStripItem } from '@/components/StatStrip';
+import { AlertDialog, type AlertDialogAction } from '@/components/modals/AlertDialog';
+import { useBedOptions } from '@/hooks/useBedOptions';
+
+const DATE_FILTER_LABELS = {
+  all: 'All time',
+  week: 'This week',
+  month: 'This month',
+  year: 'This year',
+} as const;
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -44,11 +70,12 @@ export default function JournalScreen(): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const listRef = useRef<FlatList<JournalEntry>>(null);
+  const listRef = useRef<FlatList<JournalRow>>(null);
   const openSwipeableRef = useRef<Swipeable | null>(null);
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [plants, setPlants] = useState<Plant[]>([]);
+  const { beds } = useBedOptions();
   const [loading, setLoading] = useState(true);
 
   // Search & Filter state
@@ -56,10 +83,17 @@ export default function JournalScreen(): React.JSX.Element {
   const [searchActive, setSearchActive] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
   const [selectedType, setSelectedType] = useState<JournalEntryType | null>(null);
-  const [dateFilter, setDateFilter] = useState<'all' | 'week' | 'month' | 'year'>('week');
+  const [dateFilter, setDateFilter] = useState<'all' | 'week' | 'month' | 'year'>('all');
 
   // Tag filter state
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  // Plant/bed filter (a journalLocationKey) and "open problems only".
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [activeOnly, setActiveOnly] = useState(false);
+
+  // Pest entry awaiting the "what worked?" answer after a swipe-resolve.
+  const [resolvePrompt, setResolvePrompt] = useState<JournalEntry | null>(null);
 
   // Collapsible filter state
   const [showFilters, setShowFilters] = useState(false);
@@ -116,13 +150,12 @@ export default function JournalScreen(): React.JSX.Element {
     }
   }, [route.params, navigation]);
 
-  const getPlantName = useCallback(
-    (plantId: string | null) => {
-      if (!plantId) return null;
-      const plant = plants.find((p) => p.id === plantId);
-      return plant?.name;
-    },
-    [plants]
+  const plantById = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
+  const bedNameById = useMemo(() => new Map(beds.map((b) => [b.id, b.name])), [beds]);
+  const getLocation = useCallback(
+    (entry: JournalEntry): JournalLocation | null =>
+      journalEntryLocation(entry, plantById, bedNameById),
+    [plantById, bedNameById]
   );
 
   // Summary tiles. Entries/harvests/weight follow the date filter; active
@@ -134,6 +167,11 @@ export default function JournalScreen(): React.JSX.Element {
 
   // Tags actually present on entries, for the filter sheet.
   const usedTags = useMemo(() => collectUsedTags(entries), [entries]);
+  // Plants and beds that have entries, for the filter sheet.
+  const usedLocations = useMemo(
+    () => collectUsedLocations(entries, plantById, beds),
+    [entries, plantById, beds]
+  );
 
   // Filter and search entries
   const filteredEntries = useMemo(() => {
@@ -143,16 +181,26 @@ export default function JournalScreen(): React.JSX.Element {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((entry) => {
-        const plantName = getPlantName(entry.plant_id)?.toLowerCase() || '';
+        const place = getLocation(entry)?.label.toLowerCase() || '';
         const content = entry.content.toLowerCase();
         const pestName = entry.pest_name?.toLowerCase() || '';
-        return plantName.includes(query) || content.includes(query) || pestName.includes(query);
+        return place.includes(query) || content.includes(query) || pestName.includes(query);
       });
     }
 
     // Type filter
     if (selectedType) {
       filtered = filtered.filter((e) => e.entry_type === selectedType);
+    }
+
+    // Open problems only
+    if (activeOnly) {
+      filtered = filtered.filter(isActiveProblem);
+    }
+
+    // Plant / bed filter
+    if (selectedLocation) {
+      filtered = filtered.filter((e) => entryMatchesLocation(e, selectedLocation, plantById));
     }
 
     // Tag filter
@@ -170,15 +218,27 @@ export default function JournalScreen(): React.JSX.Element {
     filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return filtered;
-  }, [entries, searchQuery, selectedType, selectedTag, dateFilter, getPlantName]);
+  }, [
+    entries,
+    searchQuery,
+    selectedType,
+    activeOnly,
+    selectedLocation,
+    selectedTag,
+    dateFilter,
+    getLocation,
+    plantById,
+  ]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
-    if (dateFilter !== 'week') count++;
+    if (dateFilter !== 'all') count++;
     if (selectedType) count++;
     if (selectedTag) count++;
+    if (selectedLocation) count++;
+    if (activeOnly) count++;
     return count;
-  }, [dateFilter, selectedType, selectedTag]);
+  }, [dateFilter, selectedType, selectedTag, selectedLocation, activeOnly]);
 
   const toggleFilters = (): void => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -189,7 +249,15 @@ export default function JournalScreen(): React.JSX.Element {
     setSearchQuery('');
     setSelectedType(null);
     setSelectedTag(null);
-    setDateFilter('week');
+    setSelectedLocation(null);
+    setActiveOnly(false);
+    setDateFilter('all');
+  };
+
+  // "Open only" belongs to Pest/Disease; picking another type drops it.
+  const selectType = (type: JournalEntryType | null): void => {
+    setSelectedType(type);
+    if (type !== JournalEntryType.PestDisease) setActiveOnly(false);
   };
 
   const confirmDelete = async (): Promise<void> => {
@@ -227,54 +295,180 @@ export default function JournalScreen(): React.JSX.Element {
     setGallery({ uris, index });
   }, []);
 
+  // Swipe → Resolved on an open pest/disease entry; mirrors the form's
+  // resolve path (status + resolved date) without opening the form. The
+  // effectiveness answer is written only when given, so Skip keeps any earlier one.
+  const resolveEntry = useCallback(
+    async (entry: JournalEntry, effectiveness: TreatmentEffectiveness | null): Promise<void> => {
+      try {
+        await updateJournalEntry(entry.id, {
+          pest_status: 'resolved',
+          pest_resolved_at: toLocalDateString(new Date()),
+          ...(effectiveness ? { pest_treatment_effectiveness: effectiveness } : {}),
+        });
+        void loadData({ silent: true });
+      } catch (error: unknown) {
+        Alert.alert('Error', getErrorMessage(error));
+      }
+    },
+    []
+  );
+  // With a treatment on record, ask how well it worked before resolving — the
+  // farmer's own evidence for next time. Without one there is nothing to rate.
+  const handleResolve = useCallback(
+    (entry: JournalEntry): void => {
+      if (entry.pest_treatment?.trim()) {
+        setResolvePrompt(entry);
+        return;
+      }
+      void resolveEntry(entry, null);
+    },
+    [resolveEntry]
+  );
+  const dismissResolvePrompt = useCallback((): void => setResolvePrompt(null), []);
+  const resolveActions = useMemo<AlertDialogAction[]>(() => {
+    const answer = (effectiveness: TreatmentEffectiveness | null) => (): void => {
+      const entry = resolvePrompt;
+      setResolvePrompt(null);
+      if (entry) void resolveEntry(entry, effectiveness);
+    };
+    return [
+      {
+        label: 'Worked well',
+        icon: 'checkmark-circle-outline',
+        variant: 'primary',
+        onPress: answer('effective'),
+      },
+      {
+        label: 'Partly worked',
+        icon: 'remove-circle-outline',
+        variant: 'secondary',
+        onPress: answer('partially_effective'),
+      },
+      {
+        label: "Didn't work",
+        icon: 'close-circle-outline',
+        variant: 'secondary',
+        color: theme.error,
+        onPress: answer('ineffective'),
+      },
+      { label: 'Skip', variant: 'ghost', onPress: answer(null) },
+    ];
+  }, [resolvePrompt, resolveEntry, theme.error]);
+
+  // Day headings are interleaved as rows so the list stays a single FlatList.
+  const rows = useMemo(() => buildJournalRows(filteredEntries), [filteredEntries]);
+  const rowKey = useCallback((row: JournalRow): string => row.key, []);
+
   const renderItem = useCallback(
-    ({ item }: { item: JournalEntry }): React.JSX.Element => (
-      <JournalEntryCard
-        entry={item}
-        plantName={getPlantName(item.plant_id) ?? null}
-        onPress={handleCardPress}
-        onEdit={handleCardPress}
-        onDelete={requestDelete}
-        onPhotoPress={handlePhotoPress}
-        onSwipeableOpen={handleSwipeableOpen}
-      />
-    ),
-    [getPlantName, handleCardPress, requestDelete, handlePhotoPress, handleSwipeableOpen]
+    ({ item }: { item: JournalRow }): React.JSX.Element =>
+      item.kind === 'header' ? (
+        <Text style={styles.dayHeader} accessibilityRole="header">
+          {item.title}
+        </Text>
+      ) : (
+        <JournalEntryCard
+          entry={item.entry}
+          locationName={getLocation(item.entry)?.label ?? null}
+          locationKind={getLocation(item.entry)?.kind ?? null}
+          onPress={handleCardPress}
+          onEdit={handleCardPress}
+          onDelete={requestDelete}
+          onResolve={handleResolve}
+          onPhotoPress={handlePhotoPress}
+          onSwipeableOpen={handleSwipeableOpen}
+        />
+      ),
+    [
+      styles,
+      getLocation,
+      handleCardPress,
+      requestDelete,
+      handleResolve,
+      handlePhotoPress,
+      handleSwipeableOpen,
+    ]
   );
 
-  // Statistics dashboard — rendered as the list header.
+  // Tapping a stat tile toggles the matching type filter. Open issues counts
+  // unresolved problems over all time, so it filters to exactly those and
+  // widens the date window — otherwise an older unresolved problem would read
+  // "1" and filter to nothing.
+  const issuesSelected = selectedType === JournalEntryType.PestDisease && activeOnly;
+  const showAllTypes = useCallback((): void => {
+    setSelectedType(null);
+    setActiveOnly(false);
+  }, []);
+  const toggleHarvestFilter = useCallback((): void => {
+    setActiveOnly(false);
+    setSelectedType((prev) =>
+      prev === JournalEntryType.Harvest ? null : JournalEntryType.Harvest
+    );
+  }, []);
+  const toggleIssuesFilter = useCallback((): void => {
+    if (issuesSelected) {
+      setSelectedType(null);
+      setActiveOnly(false);
+      return;
+    }
+    setSelectedType(JournalEntryType.PestDisease);
+    setActiveOnly(true);
+    setDateFilter('all');
+  }, [issuesSelected]);
+
+  const statItems = useMemo<StatStripItem[]>(
+    () => [
+      {
+        key: 'entries',
+        icon: 'document-text',
+        value: stats.entries,
+        label: 'Entries',
+        tone: 'primary',
+        onPress: showAllTypes,
+      },
+      {
+        key: 'harvest',
+        icon: 'basket',
+        value: stats.harvestTotal,
+        // "0 pcs" before anything is picked reads like a measurement; a dash doesn't.
+        ...(stats.harvestCount === 0 ? { display: '—' } : {}),
+        unit: stats.harvestUnit,
+        label:
+          stats.harvestCount === 0
+            ? 'Harvest'
+            : `${stats.harvestCount} picking${stats.harvestCount === 1 ? '' : 's'}`,
+        tone: 'success',
+        selected: selectedType === JournalEntryType.Harvest,
+        onPress: toggleHarvestFilter,
+      },
+      {
+        key: 'issues',
+        icon: 'bug',
+        value: stats.activeProblems,
+        label: 'Open issues',
+        tone: 'error',
+        selected: issuesSelected,
+        onPress: toggleIssuesFilter,
+      },
+    ],
+    [stats, selectedType, issuesSelected, showAllTypes, toggleHarvestFilter, toggleIssuesFilter]
+  );
+
+  // Statistics dashboard — rendered as the list header. The period caption
+  // names the window the figures cover and opens the filter sheet to change it.
   const listHeader = (
     <View style={styles.statsHeader}>
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Ionicons name="document-text" size={18} color={theme.primary} />
-          <Text style={styles.statNumber}>{stats.entries}</Text>
-          <Text style={styles.statLabel} numberOfLines={1}>
-            Entries
-          </Text>
-        </View>
-        <View style={styles.statCard}>
-          <Ionicons name="basket" size={18} color={theme.warning} />
-          <Text style={styles.statNumber}>{stats.harvests}</Text>
-          <Text style={styles.statLabel} numberOfLines={1}>
-            Harvests
-          </Text>
-        </View>
-        <View style={styles.statCard}>
-          <Ionicons name="scale" size={18} color={theme.success} />
-          <Text style={styles.statNumber}>{stats.weightKg}</Text>
-          <Text style={styles.statLabel} numberOfLines={1}>
-            kg
-          </Text>
-        </View>
-        <View style={styles.statCard}>
-          <Ionicons name="bug" size={18} color={theme.error} />
-          <Text style={styles.statNumber}>{stats.activeProblems}</Text>
-          <Text style={styles.statLabel} numberOfLines={1}>
-            Active
-          </Text>
-        </View>
-      </View>
+      <TouchableOpacity
+        style={styles.periodButton}
+        onPress={toggleFilters}
+        accessibilityRole="button"
+        accessibilityLabel={`Showing ${DATE_FILTER_LABELS[dateFilter]}. Change period`}
+      >
+        <Ionicons name="calendar-outline" size={13} color={theme.textSecondary} />
+        <Text style={styles.periodText}>{DATE_FILTER_LABELS[dateFilter]}</Text>
+        <Ionicons name="chevron-down" size={12} color={theme.textSecondary} />
+      </TouchableOpacity>
+      <StatStrip items={statItems} />
     </View>
   );
 
@@ -301,9 +495,11 @@ export default function JournalScreen(): React.JSX.Element {
                         ? 'this month'
                         : 'this year'
                   }`
-                : selectedType
-                  ? `No ${selectedType} entries found`
-                  : 'Try adjusting your filters'}
+                : activeOnly
+                  ? 'No open problems — nothing needs follow-up'
+                  : selectedType
+                    ? `No ${journalTypeLabel(selectedType)} entries found`
+                    : 'Try adjusting your filters'}
           </Text>
           <TouchableOpacity style={styles.clearFiltersButton} onPress={clearAllFilters}>
             <Text style={styles.clearFiltersText}>Clear Filters</Text>
@@ -380,8 +576,8 @@ export default function JournalScreen(): React.JSX.Element {
 
       <FlatList
         ref={listRef}
-        data={filteredEntries}
-        keyExtractor={(item) => item.id}
+        data={rows}
+        keyExtractor={rowKey}
         renderItem={renderItem}
         style={styles.content}
         contentContainerStyle={[
@@ -465,38 +661,125 @@ export default function JournalScreen(): React.JSX.Element {
                 <Ionicons name="document-text" size={14} color={theme.textSecondary} /> Entry Type
               </Text>
               <View style={styles.sheetChipWrap}>
-                {(
-                  [
-                    [null, 'All', null],
-                    [JournalEntryType.Observation, 'Observation', 'eye-outline'],
-                    [JournalEntryType.Harvest, 'Harvest', 'basket-outline'],
-                    [JournalEntryType.PestDisease, 'Pest/Disease', 'bug-outline'],
-                    [JournalEntryType.Milestone, 'Milestone', 'flag-outline'],
-                  ] as const
-                ).map(([val, label, icon]) => (
-                  <TouchableOpacity
-                    key={val ?? 'all'}
-                    style={[styles.sheetChip, selectedType === val && styles.sheetChipActive]}
-                    onPress={() => setSelectedType(val as JournalEntryType | null)}
+                <TouchableOpacity
+                  style={[styles.sheetChip, selectedType === null && styles.sheetChipActive]}
+                  onPress={() => selectType(null)}
+                >
+                  <Text
+                    style={[
+                      styles.sheetChipText,
+                      selectedType === null && styles.sheetChipTextActive,
+                    ]}
                   >
-                    {icon && (
-                      <Ionicons
-                        name={icon}
-                        size={14}
-                        color={selectedType === val ? theme.primary : theme.textSecondary}
-                      />
-                    )}
+                    All
+                  </Text>
+                </TouchableOpacity>
+                {JOURNAL_TYPE_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.sheetChip, selectedType === opt.value && styles.sheetChipActive]}
+                    onPress={() => selectType(opt.value)}
+                  >
+                    <Ionicons
+                      name={opt.icon}
+                      size={14}
+                      color={selectedType === opt.value ? theme.primary : theme.textSecondary}
+                    />
                     <Text
                       style={[
                         styles.sheetChipText,
-                        selectedType === val && styles.sheetChipTextActive,
+                        selectedType === opt.value && styles.sheetChipTextActive,
                       ]}
                     >
-                      {label}
+                      {opt.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {/* Open problems only — the follow-up list */}
+              {selectedType === JournalEntryType.PestDisease && (
+                <>
+                  <Text style={styles.sheetSectionTitle}>
+                    <Ionicons name="pulse" size={14} color={theme.textSecondary} /> Status
+                  </Text>
+                  <View style={styles.sheetChipWrap}>
+                    <TouchableOpacity
+                      style={[styles.sheetChip, !activeOnly && styles.sheetChipActive]}
+                      onPress={() => setActiveOnly(false)}
+                    >
+                      <Text
+                        style={[styles.sheetChipText, !activeOnly && styles.sheetChipTextActive]}
+                      >
+                        All
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.sheetChip, activeOnly && styles.sheetChipActive]}
+                      onPress={() => setActiveOnly(true)}
+                    >
+                      <Text
+                        style={[styles.sheetChipText, activeOnly && styles.sheetChipTextActive]}
+                      >
+                        Open only
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
+              {/* Plant / bed — only places that actually have entries */}
+              {usedLocations.length > 0 && (
+                <>
+                  <Text style={styles.sheetSectionTitle}>
+                    <Ionicons name="leaf" size={14} color={theme.textSecondary} /> Plant / Bed
+                  </Text>
+                  <View style={styles.sheetChipWrap}>
+                    <TouchableOpacity
+                      style={[
+                        styles.sheetChip,
+                        selectedLocation === null && styles.sheetChipActive,
+                      ]}
+                      onPress={() => setSelectedLocation(null)}
+                    >
+                      <Text
+                        style={[
+                          styles.sheetChipText,
+                          selectedLocation === null && styles.sheetChipTextActive,
+                        ]}
+                      >
+                        All
+                      </Text>
+                    </TouchableOpacity>
+                    {usedLocations.map((loc) => {
+                      const active = selectedLocation === loc.key;
+                      return (
+                        <TouchableOpacity
+                          key={loc.key}
+                          style={[styles.sheetChip, active && styles.sheetChipActive]}
+                          onPress={() => setSelectedLocation(loc.key)}
+                        >
+                          <Ionicons
+                            name={loc.kind === 'bed' ? 'grid-outline' : 'leaf-outline'}
+                            size={14}
+                            color={active ? theme.primary : theme.textSecondary}
+                          />
+                          <Text
+                            style={[
+                              styles.sheetChipText,
+                              styles.sheetChipLabel,
+                              active && styles.sheetChipTextActive,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {loc.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
 
               {/* Tags — only those actually in use */}
               {usedTags.length > 0 && (
@@ -551,6 +834,17 @@ export default function JournalScreen(): React.JSX.Element {
           onClose={() => setGallery(null)}
         />
       )}
+
+      <AlertDialog
+        visible={resolvePrompt !== null}
+        title="Mark as resolved"
+        detail={resolvePrompt?.pest_treatment?.trim()}
+        message="How well did this treatment work? Your answer is saved with the entry for next time."
+        icon="checkmark-done-outline"
+        tone="info"
+        actions={resolveActions}
+        onDismiss={dismissResolvePrompt}
+      />
 
       <ConfirmDeleteModal
         visible={deleteId !== null}

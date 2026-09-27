@@ -59,9 +59,15 @@ const applyHarvestSideEffects = async (entry: JournalEntry): Promise<void> => {
 
   // Dynamic imports keep `journal` → `plants`/`tasks` off the module graph;
   // the same shortcut `plantCareProfiles.ts` takes to avoid an import cycle.
+  // A harvest logged late (backdated) must not move the plant's cycle
+  // backwards past a newer harvest it already has.
   try {
-    const { updatePlant } = await import('./plants');
-    await updatePlant(plantId, { last_harvest_date: entry.created_at });
+    const { getPlant, updatePlant } = await import('./plants');
+    const plant = await getPlant(plantId);
+    const current = plant?.last_harvest_date ? new Date(plant.last_harvest_date).getTime() : NaN;
+    if (Number.isNaN(current) || new Date(entry.created_at).getTime() > current) {
+      await updatePlant(plantId, { last_harvest_date: entry.created_at });
+    }
   } catch (error) {
     logger.warn('Failed to stamp last_harvest_date after harvest entry', error as Error);
   }
@@ -185,7 +191,9 @@ export const getJournalEntries = async (): Promise<JournalEntry[]> => {
 };
 
 export const createJournalEntry = async (
-  entry: Omit<JournalEntry, 'id' | 'user_id' | 'created_at'>
+  entry: Omit<JournalEntry, 'id' | 'user_id' | 'created_at'>,
+  /** `createdAt` backdates the entry (logged the day after); defaults to now. */
+  options?: { createdAt?: Date }
 ): Promise<JournalEntry> => {
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
@@ -207,7 +215,7 @@ export const createJournalEntry = async (
     // Ensure photo_filenames exists as array for consistency
     photo_filenames: photoFilenames,
     user_id: user.uid,
-    created_at: Timestamp.now(),
+    created_at: options?.createdAt ? Timestamp.fromDate(options.createdAt) : Timestamp.now(),
   };
   const { photo_urls: _photoUrls, photo_url: _photoUrl, ...firestoreEntry } = baseEntry;
 
@@ -292,14 +300,20 @@ export const updateJournalEntry = async (
       .map((uri) => getFilenameFromUri(uri))
       .filter((filename): filename is string => !!filename);
   }
+  // A moved entry date arrives as an ISO string; store it as a Timestamp like
+  // every other entry, or orderBy('created_at') would sort it apart from them.
+  const firestorePayload: Record<string, unknown> = { ...firestoreUpdates };
+  if (updates.created_at) {
+    firestorePayload.created_at = Timestamp.fromDate(new Date(updates.created_at));
+  }
   const { queued } = await writeOrQueue(
     {
       collection: JOURNAL_COLLECTION,
       docId: id,
       op: 'update',
-      payload: firestoreUpdates as Record<string, unknown>,
+      payload: firestorePayload,
     },
-    () => updateDoc(docRef, firestoreUpdates as Record<string, unknown>)
+    () => updateDoc(docRef, firestorePayload)
   );
 
   let result: JournalEntry;

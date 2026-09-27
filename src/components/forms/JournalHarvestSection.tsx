@@ -6,7 +6,7 @@ import FieldErrorText from '../FieldErrorText';
 import VoiceDictation from '@/components/VoiceDictation';
 import { HARVEST_UNITS } from '../../utils/journalEntryOptions';
 import { PlantType } from '../../types/database.types';
-import { sanitizeAlphaNumericSpaces } from '../../utils/textSanitizer';
+import { sanitizeFreeText } from '../../utils/textSanitizer';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/journalFormStyles';
 import { QUALITY_ICON_KEYS } from '@/config/iconRegistry';
@@ -58,7 +58,7 @@ export function JournalHarvestSection({
     [onChange]
   );
   const handleNotesChange = useCallback(
-    (text: string) => onChange({ notes: sanitizeAlphaNumericSpaces(text) }),
+    (text: string) => onChange({ notes: sanitizeFreeText(text) }),
     [onChange]
   );
 
