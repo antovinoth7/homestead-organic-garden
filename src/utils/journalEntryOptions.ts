@@ -745,3 +745,12 @@ export function filterSuggestionGroups<G extends { items: string[] }>(
     .map((g) => ({ ...g, items: g.items.filter((item) => item.toLowerCase().includes(q)) }))
     .filter((g) => g.items.length > 0);
 }
+
+/**
+ * Flattens preset groups into one ordered name list for the single suggestion
+ * row. Group order is kept (Sap-Sucking still leads), and a name listed under
+ * two categories appears once.
+ */
+export function flattenSuggestionGroups(groups: readonly { items: string[] }[]): string[] {
+  return [...new Set(groups.flatMap((g) => g.items))];
+}

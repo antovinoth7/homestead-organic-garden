@@ -82,6 +82,9 @@ export const lightTheme = {
   // Special colors
   overlay: 'rgba(0,0,0,0.5)',
   shadow: '#000',
+  // Deep forest green faded under white text on photos. The same in both
+  // themes: dark `primaryDark` is a light green that white text cannot sit on.
+  scrim: '#0f2d1a',
 
   // Card & button
   card: '#ffffff',
@@ -185,6 +188,7 @@ export const darkTheme = {
   // Special colors
   overlay: 'rgba(0,0,0,0.8)',
   shadow: '#000',
+  scrim: '#0f2d1a',
 
   // Card & button
   card: '#1e1e1e',

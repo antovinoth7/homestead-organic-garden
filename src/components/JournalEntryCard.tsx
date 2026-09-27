@@ -192,133 +192,146 @@ export const JournalEntryCard = React.memo(function JournalEntryCard({
   const handleLocation = useCallback(() => onLocationPress(entry), [onLocationPress, entry]);
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={handlePress}>
-      {/* Header: tinted type chip, compact timestamp, ⋯ actions */}
-      <View style={styles.cardTopRow}>
-        <View style={[styles.typeChip, styles[`typeChip_${entry.entry_type}`]]}>
-          <Ionicons name={iconName} size={15} color={chipColor} />
-          <Text style={[styles.typeChipText, styles[`typeChipText_${entry.entry_type}`]]}>
-            {entryTypeLabel}
-          </Text>
-        </View>
-        <Text style={styles.dateText} numberOfLines={1}>
-          {timestamp}
-        </Text>
-        <TouchableOpacity
-          style={styles.moreButton}
-          onPress={handleMore}
-          hitSlop={4}
-          accessibilityRole="button"
-          accessibilityLabel="Entry actions"
-        >
-          <Ionicons name="ellipsis-horizontal" size={20} color={theme.textSecondary} />
-        </TouchableOpacity>
+    <View style={styles.entryRow}>
+      {/* Timeline rail: the type at a glance, outside the card. Decorative —
+          the label in the pill names the type for screen readers. */}
+      <View
+        style={[styles.railIcon, styles[`typeChip_${entry.entry_type}`]]}
+        accessible={false}
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Ionicons name={iconName} size={20} color={chipColor} />
       </View>
+      <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={handlePress}>
+        {/* Header: type label, compact timestamp, ⋯ actions */}
+        <View style={styles.cardTopRow}>
+          <View style={[styles.typeChip, styles[`typeChip_${entry.entry_type}`]]}>
+            <Text style={[styles.typeChipText, styles[`typeChipText_${entry.entry_type}`]]}>
+              {entryTypeLabel}
+            </Text>
+          </View>
+          <Text style={styles.dateText} numberOfLines={1}>
+            {timestamp}
+          </Text>
+          <TouchableOpacity
+            style={styles.moreButton}
+            onPress={handleMore}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel="Entry actions"
+          >
+            <Ionicons name="ellipsis-horizontal" size={20} color={theme.textSecondary} />
+          </TouchableOpacity>
+        </View>
 
-      {/* Structured headline (harvest amount, pest name), then the notes.
+        {/* Structured headline (harvest amount, pest name), then the notes.
           Empty notes render nothing — no blank gap on a quick harvest log. */}
-      {headline && (
-        <Text style={styles.headlineText} numberOfLines={2}>
-          {headline}
-        </Text>
-      )}
-      {shownNotes !== '' && (
-        <Text style={[styles.contentText, !notes && styles.contentTextMuted]} numberOfLines={3}>
-          {shownNotes}
-        </Text>
-      )}
+        {headline && (
+          <Text style={styles.headlineText} numberOfLines={2}>
+            {headline}
+          </Text>
+        )}
+        {shownNotes !== '' && (
+          <Text style={[styles.contentText, !notes && styles.contentTextMuted]} numberOfLines={3}>
+            {shownNotes}
+          </Text>
+        )}
 
-      {/* Place, per-type details and free tags share one chip row */}
-      {hasChips && (
-        <View style={styles.chipRow}>
-          {locationName && (
-            <TouchableOpacity
-              style={[styles.chip, styles.chipPlant]}
-              onPress={handleLocation}
-              accessibilityRole="button"
-              accessibilityLabel={`Show entries for ${locationName}`}
-            >
-              <Ionicons
-                name={locationKind === 'bed' ? 'grid-outline' : 'leaf'}
-                size={13}
-                color={theme.primary}
-              />
-              <Text style={[styles.chipText, styles.chipPlantText]} numberOfLines={1}>
-                {locationName}
-              </Text>
-            </TouchableOpacity>
-          )}
-          {isHarvest && entry.harvest_quality && (
-            <View style={[styles.chip, styles.chipOutline]}>
-              <Text style={[styles.chipText, styles.chipMutedText]}>
-                {titleCase(entry.harvest_quality)}
-              </Text>
-            </View>
-          )}
-          {isPest && entry.pest_severity && (
-            <View style={[styles.chip, severe ? styles.chipSevere : styles.chipModerate]}>
-              <Text
-                style={[styles.chipText, severe ? styles.chipSevereText : styles.chipModerateText]}
+        {/* Place, per-type details and free tags share one chip row */}
+        {hasChips && (
+          <View style={styles.chipRow}>
+            {locationName && (
+              <TouchableOpacity
+                style={[styles.chip, styles.chipPlant]}
+                onPress={handleLocation}
+                accessibilityRole="button"
+                accessibilityLabel={`Show entries for ${locationName}`}
               >
-                {titleCase(entry.pest_severity)}
-              </Text>
-            </View>
-          )}
-          {pestStatus && statusLabel && (
-            <View
-              style={[
-                styles.chip,
-                pestStatus === 'resolved' ? styles.chipResolved : styles.chipOutline,
-              ]}
-            >
-              <Text
+                <Ionicons
+                  name={locationKind === 'bed' ? 'grid-outline' : 'leaf'}
+                  size={13}
+                  color={theme.primary}
+                />
+                <Text style={[styles.chipText, styles.chipPlantText]} numberOfLines={1}>
+                  {locationName}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {isHarvest && entry.harvest_quality && (
+              <View style={[styles.chip, styles.chipOutline]}>
+                <Text style={[styles.chipText, styles.chipMutedText]}>
+                  {titleCase(entry.harvest_quality)}
+                </Text>
+              </View>
+            )}
+            {isPest && entry.pest_severity && (
+              <View style={[styles.chip, severe ? styles.chipSevere : styles.chipModerate]}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    severe ? styles.chipSevereText : styles.chipModerateText,
+                  ]}
+                >
+                  {titleCase(entry.pest_severity)}
+                </Text>
+              </View>
+            )}
+            {pestStatus && statusLabel && (
+              <View
                 style={[
-                  styles.chipText,
-                  pestStatus === 'resolved' ? styles.chipResolvedText : styles.chipMutedText,
+                  styles.chip,
+                  pestStatus === 'resolved' ? styles.chipResolved : styles.chipOutline,
                 ]}
               >
-                {statusLabel}
-              </Text>
-            </View>
-          )}
-          {tags.map((tag) => (
-            <View key={tag} style={[styles.chip, styles.chipTag]}>
-              <Text style={[styles.chipText, styles.chipTagText]}>{tag.replace(/_/g, ' ')}</Text>
-            </View>
-          ))}
-        </View>
-      )}
+                <Text
+                  style={[
+                    styles.chipText,
+                    pestStatus === 'resolved' ? styles.chipResolvedText : styles.chipMutedText,
+                  ]}
+                >
+                  {statusLabel}
+                </Text>
+              </View>
+            )}
+            {tags.map((tag) => (
+              <View key={tag} style={[styles.chip, styles.chipTag]}>
+                <Text style={[styles.chipText, styles.chipTagText]}>{tag.replace(/_/g, ' ')}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
-      {visiblePhotos.length > 0 && (
-        <View style={styles.thumbRow}>
-          {visiblePhotos.map((photoUrl, idx) => (
-            <JournalThumb
-              key={`${entry.id}-${idx}`}
-              uri={photoUrl}
-              entryId={entry.id}
-              index={idx}
-              photos={photos}
-              single={visiblePhotos.length === 1}
-              moreCount={idx === MAX_THUMBS - 1 && extraCount > 0 ? extraCount + 1 : 0}
-              onPhotoPress={onPhotoPress}
-              styles={styles}
-              placeholderColor={theme.textTertiary}
-            />
-          ))}
-        </View>
-      )}
+        {visiblePhotos.length > 0 && (
+          <View style={styles.thumbRow}>
+            {visiblePhotos.map((photoUrl, idx) => (
+              <JournalThumb
+                key={`${entry.id}-${idx}`}
+                uri={photoUrl}
+                entryId={entry.id}
+                index={idx}
+                photos={photos}
+                single={visiblePhotos.length === 1}
+                moreCount={idx === MAX_THUMBS - 1 && extraCount > 0 ? extraCount + 1 : 0}
+                onPhotoPress={onPhotoPress}
+                styles={styles}
+                placeholderColor={theme.textTertiary}
+              />
+            ))}
+          </View>
+        )}
 
-      {canResolve && (
-        <TouchableOpacity
-          style={styles.resolveButton}
-          onPress={handleResolve}
-          accessibilityRole="button"
-          accessibilityLabel="Mark resolved"
-        >
-          <Ionicons name="checkmark" size={17} color={theme.primary} />
-          <Text style={styles.resolveButtonText}>Mark resolved</Text>
-        </TouchableOpacity>
-      )}
-    </TouchableOpacity>
+        {canResolve && (
+          <TouchableOpacity
+            style={styles.resolveButton}
+            onPress={handleResolve}
+            accessibilityRole="button"
+            accessibilityLabel="Mark resolved"
+          >
+            <Ionicons name="checkmark" size={17} color={theme.primary} />
+            <Text style={styles.resolveButtonText}>Mark resolved</Text>
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    </View>
   );
 });

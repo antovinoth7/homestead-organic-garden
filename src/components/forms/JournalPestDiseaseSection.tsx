@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, FlatList, type ListRenderItemInfo } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { GardenIcon } from '@/components/GardenIcon';
 import FloatingLabelInput from '../FloatingLabelInput';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
@@ -28,6 +29,7 @@ import {
   PEST_SEVERITY_OPTIONS,
   PEST_STATUS_OPTIONS,
   filterSuggestionGroups,
+  flattenSuggestionGroups,
 } from '../../utils/journalEntryOptions';
 import { JournalMoreDetails } from './JournalMoreDetails';
 import { sanitizeAlphaNumericSpaces, sanitizeFreeText } from '../../utils/textSanitizer';
@@ -90,6 +92,69 @@ const EFFECTIVENESS_OPTIONS: {
   },
 ];
 
+const keyExtractor = (name: string): string => name;
+
+interface SuggestionTileProps {
+  name: string;
+  kind: PestDiseaseKind;
+  onSelect: (name: string) => void;
+  styles: ReturnType<typeof createStyles>;
+  /** Gradient stop colour; SVG stops take props, not styles. */
+  scrimColor: string;
+}
+
+/**
+ * Square reference photo with the preset name laid over a green gradient at
+ * its foot; tapping fills the name field.
+ */
+const SuggestionTile = React.memo(function SuggestionTile({
+  name,
+  kind,
+  onSelect,
+  styles,
+  scrimColor,
+}: SuggestionTileProps): React.JSX.Element {
+  const handlePress = useCallback(() => onSelect(name), [onSelect, name]);
+  const entry = kind === 'pest' ? getPestByName(name) : getDiseaseByName(name);
+  const image = entry
+    ? kind === 'pest'
+      ? getPestImage(entry.id, entry.imageAsset)
+      : getDiseaseImage(entry.id, entry.imageAsset)
+    : undefined;
+
+  return (
+    <TouchableOpacity
+      style={styles.suggestionTile}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={name}
+    >
+      <ReferenceThumb
+        source={image}
+        fallbackIcon={kind === 'pest' ? 'general.pest' : 'general.disease'}
+        variant="square"
+        recyclingKey={name}
+      />
+      <View style={styles.suggestionTileScrim} pointerEvents="none">
+        <Svg width="100%" height="100%">
+          <Defs>
+            <SvgLinearGradient id="suggestionTileScrim" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={scrimColor} stopOpacity="0" />
+              <Stop offset="0.45" stopColor={scrimColor} stopOpacity="0.55" />
+              <Stop offset="1" stopColor={scrimColor} stopOpacity="0.9" />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect x={0} y={0} width="100%" height="100%" fill="url(#suggestionTileScrim)" />
+        </Svg>
+      </View>
+      <Text style={styles.suggestionTileName} numberOfLines={2}>
+        {name}
+      </Text>
+    </TouchableOpacity>
+  );
+});
+
 export function JournalPestDiseaseSection({
   value,
   onChange,
@@ -113,8 +178,27 @@ export function JournalPestDiseaseSection({
       : value.kind === 'pest'
         ? getDefaultGroupedPests()
         : getDefaultGroupedDiseases();
-  // Narrow the presets to the typed name; hidden once a preset is picked.
-  const visibleGroups = filterSuggestionGroups(groups, value.name);
+  // Narrow the presets to the typed name; hidden once a preset is picked, so
+  // the row never needs a selected state. One ungrouped row: the farmer
+  // matches what they saw by photo and name, not by pest category.
+  const suggestions = flattenSuggestionGroups(filterSuggestionGroups(groups, value.name));
+
+  const handleSelectSuggestion = useCallback(
+    (name: string): void => onChange({ name }),
+    [onChange]
+  );
+  const renderSuggestion = useCallback(
+    ({ item }: ListRenderItemInfo<string>): React.JSX.Element => (
+      <SuggestionTile
+        name={item}
+        kind={value.kind}
+        onSelect={handleSelectSuggestion}
+        styles={styles}
+        scrimColor={theme.scrim}
+      />
+    ),
+    [value.kind, handleSelectSuggestion, styles, theme.scrim]
+  );
 
   const treatmentGroups = value.name.trim() !== '' ? getGroupedTreatments(value.name) : [];
   const allTreatmentNames = treatmentGroups.flatMap((g) => g.items.map((i) => i.name));
@@ -181,58 +265,21 @@ export function JournalPestDiseaseSection({
       />
 
       {/* Preset suggestions */}
-      {visibleGroups.length > 0 && (
+      {suggestions.length > 0 && (
         <>
           <Text style={styles.suggestionHeading}>
             Common {value.kind === 'pest' ? 'pests' : 'diseases'}
           </Text>
-          <View style={styles.suggestionGroupContainer}>
-            {visibleGroups.map((group) => (
-              <View key={group.category} style={styles.suggestionGroup}>
-                <View style={styles.groupLabelRow}>
-                  <GardenIcon
-                    name={value.kind === 'pest' ? 'general.pest' : 'general.disease'}
-                    size={14}
-                    color={theme.textSecondary}
-                  />
-                  <Text style={styles.suggestionGroupLabel}>{group.category}</Text>
-                </View>
-                <View style={styles.suggestionGroupChips}>
-                  {group.items.map((item) => {
-                    const entry =
-                      value.kind === 'pest' ? getPestByName(item) : getDiseaseByName(item);
-                    const chipImage = entry
-                      ? value.kind === 'pest'
-                        ? getPestImage(entry.id, entry.imageAsset)
-                        : getDiseaseImage(entry.id, entry.imageAsset)
-                      : undefined;
-                    const active = value.name === item;
-                    return (
-                      <TouchableOpacity
-                        key={item}
-                        style={[styles.suggestionChip, active && styles.suggestionChipActive]}
-                        onPress={() => onChange({ name: item })}
-                      >
-                        <ReferenceThumb
-                          source={chipImage}
-                          fallbackIcon={value.kind === 'pest' ? 'general.pest' : 'general.disease'}
-                          variant="chip"
-                        />
-                        <Text
-                          style={[
-                            styles.suggestionChipText,
-                            active && styles.suggestionChipTextActive,
-                          ]}
-                        >
-                          {item}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ))}
-          </View>
+          <FlatList
+            data={suggestions}
+            horizontal
+            keyExtractor={keyExtractor}
+            renderItem={renderSuggestion}
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            style={styles.suggestionRow}
+            contentContainerStyle={styles.suggestionRowContent}
+          />
         </>
       )}
 

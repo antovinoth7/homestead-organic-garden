@@ -25,6 +25,21 @@ const picked = (theme: Theme): object => ({
   borderColor: theme.primary,
 });
 
+/** The chosen pill on a segmented track: card ground lifted off the track. */
+const raised = (theme: Theme): object => ({
+  backgroundColor: theme.card,
+  ...Platform.select({
+    ios: {
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.12,
+      shadowRadius: 3,
+    },
+    android: { elevation: 2 },
+    default: {},
+  }),
+});
+
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: {
@@ -199,19 +214,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       borderRadius: 10,
     },
-    segmentActive: {
-      backgroundColor: theme.card,
-      ...Platform.select({
-        ios: {
-          shadowColor: theme.shadow,
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.12,
-          shadowRadius: 3,
-        },
-        android: { elevation: 2 },
-        default: {},
-      }),
-    },
+    segmentActive: raised(theme),
     segmentText: {
       fontSize: 15,
       fontWeight: '600',
@@ -221,29 +224,35 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
     },
 
-    // Equal-width option tiles (quality, severity, status, remind days)
+    // Equal-width options (quality, severity, status, remind days): the
+    // compact sibling of `segmentTrack`/`segment` — one track, idle options
+    // flat on it, the pick raised — so a stack of them stays lighter than a
+    // row of bordered boxes and matches the Pest/Disease toggle above.
     optionGrid: {
       flexDirection: 'row',
-      gap: 6,
+      gap: 2,
+      padding: 3,
+      borderRadius: 12,
+      backgroundColor: theme.backgroundTertiary,
     },
     optionTile: {
       flex: 1,
       minWidth: 0,
-      height: 46,
-      borderRadius: 12,
+      height: 32,
+      borderRadius: 9,
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 2,
-      ...pickable(theme),
     },
-    optionTileActive: picked(theme),
+    optionTileActive: raised(theme),
     optionTileText: {
-      fontSize: 14,
+      fontSize: 13.5,
       fontWeight: '600',
-      color: theme.text,
+      color: theme.textSecondary,
     },
     optionTileTextActive: {
       color: theme.primary,
+      fontWeight: '700',
     },
 
     // ─── Harvest ─────────────────────────────────────────────────────────────
@@ -453,47 +462,60 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       marginTop: -6,
     },
-    suggestionGroupContainer: {
+    // Bleeds past the section card's 16pt padding so tiles scroll off the
+    // card edge instead of being clipped inside it; the content padding puts
+    // the first tile back in line with the fields above. The negative top
+    // margin pulls the row up to its heading, off the card's 16pt field gap.
+    suggestionRow: {
+      marginHorizontal: -16,
+      marginTop: -8,
+    },
+    suggestionRowContent: {
+      paddingHorizontal: 16,
       gap: 10,
     },
-    suggestionGroup: {
-      gap: 6,
+    // Fixed width, not a column share: at 360–390pt three full tiles and a
+    // sliver of the fourth show, and that sliver is the cue that the row
+    // scrolls. A 320pt screen shows two and a half. The photo fills the
+    // square unrounded; `overflow: 'hidden'` gives it the tile's corners.
+    suggestionTile: {
+      width: 96,
+      aspectRatio: 1,
+      borderRadius: 16,
+      overflow: 'hidden',
+      backgroundColor: theme.backgroundTertiary,
+    },
+    // Lower two-thirds of the tile: the gradient's clear top keeps the
+    // subject visible while its green foot carries a two-line name.
+    suggestionTileScrim: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: '65%',
+    },
+    // Laid over the scrim. The shadow is for bright photos where the
+    // gradient's lighter top reaches the second line of a wrapped name.
+    suggestionTileName: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      paddingHorizontal: 8,
+      paddingBottom: 8,
+      fontSize: 13,
+      lineHeight: 16,
+      fontWeight: '700',
+      textAlign: 'center',
+      color: theme.textInverse,
+      textShadowColor: theme.shadow,
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
     },
     groupLabelRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
-    },
-    suggestionGroupLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      letterSpacing: 0.8,
-      textTransform: 'uppercase',
-      color: theme.textTertiary,
-    },
-    suggestionGroupChips: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    suggestionChip: {
-      minHeight: 42,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 7,
-      paddingLeft: 5,
-      paddingRight: 12,
-      borderRadius: 21,
-      ...pickable(theme),
-    },
-    suggestionChipActive: picked(theme),
-    suggestionChipText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.text,
-    },
-    suggestionChipTextActive: {
-      color: theme.primary,
     },
 
     // ─── Affected parts / effectiveness chips ────────────────────────────────

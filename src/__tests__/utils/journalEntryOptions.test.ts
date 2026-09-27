@@ -24,6 +24,7 @@ import {
   withRecentGroup,
   recheckIntervalDays,
   filterSuggestionGroups,
+  flattenSuggestionGroups,
   formatEntryDateLabel,
   formatJournalTimestamp,
   getMilestoneMeta,
@@ -312,6 +313,24 @@ describe('filterSuggestionGroups', () => {
   it('does not mutate the input groups', () => {
     filterSuggestionGroups(groups, 'fly');
     expect(groups[0]?.items).toHaveLength(3);
+  });
+});
+
+describe('flattenSuggestionGroups', () => {
+  it('keeps group order and item order in one list', () => {
+    expect(
+      flattenSuggestionGroups([{ items: ['Aphids', 'Whitefly'] }, { items: ['Leaf Miner'] }])
+    ).toEqual(['Aphids', 'Whitefly', 'Leaf Miner']);
+  });
+
+  it('lists a name filed under two categories once', () => {
+    expect(flattenSuggestionGroups([{ items: ['Mites', 'Thrips'] }, { items: ['Mites'] }])).toEqual(
+      ['Mites', 'Thrips']
+    );
+  });
+
+  it('returns an empty list for no groups', () => {
+    expect(flattenSuggestionGroups([])).toEqual([]);
   });
 });
 

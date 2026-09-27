@@ -122,7 +122,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
     },
     listContent: {
-      paddingHorizontal: 20,
+      // 16, not 20: the timeline rail already takes width from every card.
+      paddingHorizontal: 16,
       paddingTop: 4,
       gap: 12,
     },
@@ -134,8 +135,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 2,
     },
 
-    // ── Entry card ──
+    // ── Entry card, with its type icon on a timeline rail to the left ──
+    entryRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+    },
+    // Tinted by the same `typeChip_<type>` style as the pill label.
+    railIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 10,
+    },
     card: {
+      flex: 1,
+      minWidth: 0,
       backgroundColor: theme.card,
       borderRadius: 16,
       paddingTop: 12,
@@ -151,11 +168,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 8,
     },
+    // Label only — the icon lives on the rail beside the card.
     typeChip: {
       height: 28,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
+      justifyContent: 'center',
       paddingHorizontal: 10,
       borderRadius: 14,
     },
