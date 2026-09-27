@@ -11,7 +11,7 @@ import {
   SpaceType,
 } from '../types/database.types';
 import type { PickerOption } from '@/components/OptionPickerSheet';
-import { parseLocation } from '@/utils/locationHelpers';
+import { locationKey, parseLocation } from '@/utils/locationHelpers';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -168,25 +168,110 @@ export function journalEntryHeadline(entry: JournalEntry): string | null {
   return null;
 }
 
-// ─── Harvest unit memory ─────────────────────────────────────────────────────
+// ─── Harvest memory ──────────────────────────────────────────────────────────
 /**
- * The unit of this plant's most recent harvest, so a new harvest defaults to
- * how the farmer always measures it (coconuts in pcs, tomatoes in kg). Null
- * when the plant has no harvest yet or its last unit is no longer offered.
+ * Is this a harvest from the given place? A plant link wins; with no plant, a
+ * bed matches only its own bed-level harvests (not ones on a single plant).
+ */
+function isHarvestFrom(
+  entry: JournalEntry,
+  plantId: string | null,
+  bedId: string | null | undefined
+): boolean {
+  if (entry.entry_type !== JournalEntryType.Harvest) return false;
+  if (plantId) return entry.plant_id === plantId;
+  return !!bedId && entry.bed_id === bedId && !entry.plant_id;
+}
+
+function latestHarvest(
+  entries: readonly JournalEntry[],
+  plantId: string | null,
+  bedId: string | null | undefined,
+  requireUnit: boolean
+): JournalEntry | null {
+  let latest: JournalEntry | null = null;
+  for (const entry of entries) {
+    if (!isHarvestFrom(entry, plantId, bedId)) continue;
+    if (requireUnit && !entry.harvest_unit) continue;
+    if (!latest || entry.created_at > latest.created_at) latest = entry;
+  }
+  return latest;
+}
+
+/**
+ * The most recent harvest from a plant (or, with no plant, a bed) — the form's
+ * "Last: 120 pcs · yesterday" hint. Null when nothing has been picked there.
+ */
+export function lastHarvest(
+  entries: readonly JournalEntry[],
+  plantId: string | null,
+  bedId?: string | null
+): JournalEntry | null {
+  return latestHarvest(entries, plantId, bedId, false);
+}
+
+/**
+ * The unit of this plant's (or bed's) most recent harvest, so a new harvest
+ * defaults to how the farmer always measures it (coconuts in pcs, tomatoes in
+ * kg). Null when there is no harvest yet or its last unit is no longer offered.
  */
 export function lastHarvestUnit(
   entries: readonly JournalEntry[],
-  plantId: string
+  plantId: string | null,
+  bedId?: string | null
 ): HarvestUnit | null {
-  let latest: JournalEntry | null = null;
-  for (const entry of entries) {
-    if (entry.entry_type !== JournalEntryType.Harvest || entry.plant_id !== plantId) continue;
-    if (!entry.harvest_unit) continue;
-    if (!latest || entry.created_at > latest.created_at) latest = entry;
-  }
+  const latest = latestHarvest(entries, plantId, bedId, true);
   if (!latest) return null;
   const unit = normalizeHarvestUnit(latest.harvest_unit);
   return HARVEST_UNITS.find((u) => u === unit) ?? null;
+}
+
+/**
+ * "Last: 120 pcs · yesterday", "Last: 3.2 kg · 12 Sep", or "First harvest here"
+ * when a place is linked but nothing has been picked there. Empty when there is
+ * no place to compare against.
+ */
+export function formatLastHarvestHint(
+  latest: JournalEntry | null,
+  hasPlace: boolean,
+  now: Date = new Date()
+): string {
+  if (!latest) return hasPlace ? 'First harvest here' : '';
+  const date = new Date(latest.created_at);
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const when = Number.isNaN(date.getTime())
+    ? ''
+    : isSameDay(date, now)
+      ? 'today'
+      : isSameDay(date, yesterday)
+        ? 'yesterday'
+        : date.toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            ...(date.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }),
+          });
+  const amount = latest.harvest_quantity
+    ? `${latest.harvest_quantity} ${normalizeHarvestUnit(latest.harvest_unit)}`
+    : 'Harvested';
+  return when ? `Last: ${amount} · ${when}` : `Last: ${amount}`;
+}
+
+/** Stepper increment for the harvest quantity, by unit. */
+export function harvestQuantityStep(unit: string): number {
+  if (unit === 'kg') return 0.5;
+  if (unit === 'g') return 100;
+  return 1;
+}
+
+/**
+ * Quantity text after one −/+ tap. Rounded to one decimal so 0.5 kg steps
+ * never drift into float noise, and never below zero.
+ */
+export function stepHarvestQuantity(current: string, unit: string, direction: 1 | -1): string {
+  const value = parseFloat(current);
+  const base = Number.isNaN(value) ? 0 : value;
+  const next = Math.max(0, Math.round((base + direction * harvestQuantityStep(unit)) * 10) / 10);
+  return String(next);
 }
 
 // ─── Milestones ──────────────────────────────────────────────────────────────
@@ -351,6 +436,158 @@ export function collectUsedLocations(
   return [...bedOptions, ...plantOptions];
 }
 
+// ─── Entry plot (parent location) ────────────────────────────────────────────
+type PlotPlantRef = Pick<Plant, 'id' | 'location' | 'bed_id'>;
+type PlotBedRef = { id: string; parent_location?: string | null };
+
+/**
+ * The plot an entry sits on — its bed's `parent_location`, else the linked
+ * plant's parent location. Resolved the same way the Plants and Beds screens
+ * group by plot (`parseLocation`), so "Kitchen garden" means one thing
+ * everywhere. Null when nothing linked resolves to a plot.
+ */
+export function journalEntryPlot(
+  entry: Pick<JournalEntry, 'plant_id' | 'bed_id'>,
+  plantById: ReadonlyMap<string, PlotPlantRef>,
+  bedById: ReadonlyMap<string, PlotBedRef>
+): string | null {
+  const plant = entry.plant_id ? plantById.get(entry.plant_id) : undefined;
+  const bedId = entry.bed_id || plant?.bed_id;
+  const bedParent = (bedId ? bedById.get(bedId)?.parent_location : null)?.trim() ?? '';
+  if (bedParent) return bedParent;
+  const plantParent = plant ? parseLocation(plant.location).parent : '';
+  return plantParent || null;
+}
+
+/** The plot of a filter-sheet place (`plant:<id>` / `bed:<id>`), or null. */
+export function journalLocationPlot(
+  key: string,
+  plantById: ReadonlyMap<string, PlotPlantRef>,
+  bedById: ReadonlyMap<string, PlotBedRef>
+): string | null {
+  const [kind, id] = key.split(':');
+  if (!id) return null;
+  return journalEntryPlot(
+    kind === 'bed' ? { plant_id: null, bed_id: id } : { plant_id: id, bed_id: null },
+    plantById,
+    bedById
+  );
+}
+
+/** Case-insensitive plot match — `Plant.location` is free text. */
+export function entryMatchesPlot(
+  entry: JournalEntry,
+  plot: string,
+  plantById: ReadonlyMap<string, PlotPlantRef>,
+  bedById: ReadonlyMap<string, PlotBedRef>
+): boolean {
+  const entryPlot = journalEntryPlot(entry, plantById, bedById);
+  return !!entryPlot && locationKey(entryPlot) === locationKey(plot);
+}
+
+/**
+ * Plots that have entries, by name, for the filter sheet's Location chips.
+ * Spellings that differ only in case collapse onto the first one seen.
+ */
+export function collectUsedPlots(
+  entries: readonly JournalEntry[],
+  plantById: ReadonlyMap<string, PlotPlantRef>,
+  bedById: ReadonlyMap<string, PlotBedRef>
+): string[] {
+  const byKey = new Map<string, string>();
+  for (const entry of entries) {
+    const plot = journalEntryPlot(entry, plantById, bedById);
+    if (plot && !byKey.has(locationKey(plot))) byKey.set(locationKey(plot), plot);
+  }
+  return Array.from(byKey.values()).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Ids of the beds or plants most recently linked on an entry, newest first —
+ * the pickers' "Recently used" group.
+ */
+export function recentLinkIds(
+  entries: readonly JournalEntry[],
+  kind: JournalLocationKind,
+  limit = 3
+): string[] {
+  const sorted = [...entries].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  const ids: string[] = [];
+  for (const entry of sorted) {
+    const id = kind === 'bed' ? entry.bed_id : entry.plant_id;
+    if (id && !ids.includes(id)) ids.push(id);
+    if (ids.length >= limit) break;
+  }
+  return ids;
+}
+
+/** Group for places whose plot is blank. */
+export const NO_PLOT_GROUP = 'No location';
+
+/**
+ * Options for the filter sheet's "Bed or plant" picker: the places that have
+ * entries, grouped by plot (limited to `plot` when one is chosen), beds before
+ * plants inside each group. Values are `journalLocationKey`s.
+ */
+export function buildJournalPlaceFilterOptions(
+  locations: readonly JournalLocationOption[],
+  plantById: ReadonlyMap<string, Plant>,
+  bedById: ReadonlyMap<string, PlotBedRef>,
+  plot: string | null
+): PickerOption[] {
+  const rows = locations.map((loc) => {
+    const id = loc.key.slice(loc.kind.length + 1);
+    const plant = loc.kind === 'plant' ? plantById.get(id) : undefined;
+    const group =
+      (loc.kind === 'bed'
+        ? bedById.get(id)?.parent_location?.trim()
+        : plant
+          ? parseLocation(plant.location).parent
+          : '') || NO_PLOT_GROUP;
+    const description =
+      loc.kind === 'bed'
+        ? 'Bed'
+        : [plant ? SPACE_LABELS[plant.space_type] : '', plant?.plant_variety]
+            .filter(Boolean)
+            .join(' · ');
+    return { label: loc.label, value: loc.key, description, group, kind: loc.kind };
+  });
+  const groupRank = (group: string): number => (group === NO_PLOT_GROUP ? 1 : 0);
+  return rows
+    .filter((row) => !plot || locationKey(row.group) === locationKey(plot))
+    .sort(
+      (a, b) =>
+        groupRank(a.group) - groupRank(b.group) ||
+        a.group.localeCompare(b.group) ||
+        (a.kind === b.kind ? 0 : a.kind === 'bed' ? -1 : 1) ||
+        a.label.localeCompare(b.label)
+    )
+    .map(({ label, value, description, group }) => ({
+      label,
+      value,
+      group,
+      ...(description ? { description } : {}),
+    }));
+}
+
+/** Section title for the "Recently used" group shared by every journal picker. */
+export const RECENT_GROUP = 'Recently used';
+
+/**
+ * Prepends a "Recently used" copy of the options whose ids are recent. The
+ * originals stay in their own group so the list reads the same every time.
+ */
+export function withRecentGroup(
+  options: readonly PickerOption[],
+  recentIds: readonly string[]
+): PickerOption[] {
+  const recent = recentIds
+    .map((id) => options.find((option) => option.value === id))
+    .filter((option): option is PickerOption => !!option)
+    .map((option) => ({ ...option, group: RECENT_GROUP }));
+  return [...recent, ...options];
+}
+
 // ─── Plant picker ────────────────────────────────────────────────────────────
 const SPACE_LABELS: Record<SpaceType, string> = {
   pot: 'Pot',
@@ -408,6 +645,31 @@ export function buildJournalPlantOptions(
       (a, b) =>
         a.label.localeCompare(b.label) || (a.description ?? '').localeCompare(b.description ?? '')
     );
+}
+
+/** Picker groups for plants, in display order. "In beds" only holds a kept legacy link. */
+const PLANT_GROUPS = ['In pots', 'In the ground', 'In beds'] as const;
+
+function plantGroup(plant: Plant): (typeof PLANT_GROUPS)[number] {
+  if (plant.bed_id || plant.space_type === 'bed') return 'In beds';
+  return plant.space_type === 'pot' ? 'In pots' : 'In the ground';
+}
+
+/**
+ * `buildJournalPlantOptions`, sectioned into "In pots" / "In the ground" so a
+ * long plant list scans by where the plant lives. Names stay sorted inside
+ * each group.
+ */
+export function buildGroupedJournalPlantOptions(
+  plants: readonly Plant[],
+  bedNameById: ReadonlyMap<string, string>
+): PickerOption[] {
+  const groupById = new Map(plants.map((plant) => [plant.id, plantGroup(plant)]));
+  const rank = (option: PickerOption): number =>
+    PLANT_GROUPS.indexOf(groupById.get(option.value) ?? 'In the ground');
+  return buildJournalPlantOptions(plants, bedNameById)
+    .map((option) => ({ ...option, group: groupById.get(option.value) ?? 'In the ground' }))
+    .sort((a, b) => rank(a) - rank(b));
 }
 
 // ─── Card timestamp ──────────────────────────────────────────────────────────

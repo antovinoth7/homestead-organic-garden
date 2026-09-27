@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { View, Text, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import FloatingLabelInput from '../FloatingLabelInput';
@@ -32,7 +31,6 @@ import {
 } from '../../utils/journalEntryOptions';
 import { JournalMoreDetails } from './JournalMoreDetails';
 import { sanitizeAlphaNumericSpaces, sanitizeFreeText } from '../../utils/textSanitizer';
-import { toLocalDateString, formatDateDisplay } from '../../utils/dateHelpers';
 import { useTheme } from '../../theme';
 import { createStyles } from '../../styles/journalFormStyles';
 
@@ -41,6 +39,7 @@ export interface PestDiseaseFields {
   name: string;
   severity: IssueSeverity;
   status: PestStatus;
+  /** YYYY-MM-DD. Follows the entry date — the form owns it, not this section. */
   occurredAt: string;
   affectedParts: string[];
   treatment: string;
@@ -100,7 +99,6 @@ export function JournalPestDiseaseSection({
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [customTreatmentMode, setCustomTreatmentMode] = useState(false);
 
   const plantGroups =
@@ -145,17 +143,15 @@ export function JournalPestDiseaseSection({
   };
 
   return (
-    <View style={styles.harvestSection}>
-      <Text style={styles.sectionTitle}>Pest / Disease Details</Text>
-
+    <View style={styles.sectionCard}>
       {/* Kind toggle */}
-      <View style={styles.pdKindRow}>
+      <View style={styles.segmentTrack}>
         {KIND_OPTIONS.map((opt) => {
           const active = value.kind === opt.value;
           return (
             <TouchableOpacity
               key={opt.value}
-              style={[styles.pdKindChip, active && styles.pdKindChipActive]}
+              style={[styles.segment, active && styles.segmentActive]}
               onPress={() => {
                 setCustomTreatmentMode(false);
                 onChange({ kind: opt.value, name: '', treatment: '' });
@@ -167,9 +163,9 @@ export function JournalPestDiseaseSection({
               <Ionicons
                 name={opt.icon}
                 size={16}
-                color={active ? theme.primary : theme.textTertiary}
+                color={active ? theme.text : theme.textTertiary}
               />
-              <Text style={[styles.pdKindChipText, active && styles.pdKindChipTextActive]}>
+              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
                 {opt.label}
               </Text>
             </TouchableOpacity>
@@ -187,8 +183,8 @@ export function JournalPestDiseaseSection({
       {/* Preset suggestions */}
       {visibleGroups.length > 0 && (
         <>
-          <Text style={[styles.label, styles.labelSpaced]}>
-            Common {value.kind === 'pest' ? 'Pests' : 'Diseases'}
+          <Text style={styles.suggestionHeading}>
+            Common {value.kind === 'pest' ? 'pests' : 'diseases'}
           </Text>
           <View style={styles.suggestionGroupContainer}>
             {visibleGroups.map((group) => (
@@ -240,71 +236,55 @@ export function JournalPestDiseaseSection({
         </>
       )}
 
-      {/* Occurred date */}
-      <TouchableOpacity
-        style={[styles.dateButton, visibleGroups.length === 0 && styles.dateButtonSpaced]}
-        onPress={() => setShowDatePicker(true)}
-      >
-        <Ionicons name="calendar-outline" size={18} color={theme.textSecondary} />
-        <Text style={value.occurredAt ? styles.dateButtonText : styles.datePlaceholder}>
-          {value.occurredAt ? formatDateDisplay(value.occurredAt) : 'Occurred Date'}
-        </Text>
-      </TouchableOpacity>
-      {showDatePicker && (
-        <DateTimePicker
-          value={value.occurredAt ? new Date(value.occurredAt) : new Date()}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(_, selectedDate) => {
-            setShowDatePicker(Platform.OS === 'ios');
-            if (selectedDate) {
-              onChange({ occurredAt: toLocalDateString(selectedDate) });
-            }
-          }}
-        />
-      )}
-
       {/* Severity */}
-      <Text style={styles.label}>Severity</Text>
-      <View style={styles.qualityButtons}>
-        {PEST_SEVERITY_OPTIONS.map((opt) => {
-          const active = value.severity === opt.value;
-          return (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.qualityButton, active && styles.qualityButtonActive]}
-              onPress={() => onChange({ severity: opt.value })}
-            >
-              <Text style={[styles.qualityButtonText, active && styles.qualityButtonTextActive]}>
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Severity</Text>
+        <View style={styles.optionGrid}>
+          {PEST_SEVERITY_OPTIONS.map((opt) => {
+            const active = value.severity === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.optionTile, active && styles.optionTileActive]}
+                onPress={() => onChange({ severity: opt.value })}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={[styles.optionTileText, active && styles.optionTileTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {/* Status */}
-      <Text style={[styles.label, styles.labelSpaced]}>Status</Text>
-      <View style={styles.qualityButtons}>
-        {PEST_STATUS_OPTIONS.map((opt) => {
-          const active = value.status === opt.value;
-          return (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.qualityButton, active && styles.qualityButtonActive]}
-              onPress={() => onChange({ status: opt.value })}
-            >
-              <Text style={[styles.qualityButtonText, active && styles.qualityButtonTextActive]}>
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Status</Text>
+        <View style={styles.optionGrid}>
+          {PEST_STATUS_OPTIONS.map((opt) => {
+            const active = value.status === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.optionTile, active && styles.optionTileActive]}
+                onPress={() => onChange({ status: opt.value })}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={[styles.optionTileText, active && styles.optionTileTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       <JournalMoreDetails initiallyExpanded={hasExtras} summary={moreSummary}>
         {/* Affected parts */}
-        <Text style={styles.label}>Affected Parts</Text>
+        <Text style={styles.label}>Affected parts</Text>
         <View style={styles.affectedPartChips}>
           {AFFECTED_PARTS.map((part) => {
             const active = value.affectedParts.includes(part);
@@ -327,8 +307,17 @@ export function JournalPestDiseaseSection({
         {/* Recommended treatments */}
         {treatmentGroups.length > 0 && (
           <>
-            <Text style={styles.label}>Recommended Treatments</Text>
-            <Text style={styles.helperText}>Effort: Easy · Moderate · Advanced</Text>
+            <View style={styles.treatmentHeader}>
+              <Text style={styles.label}>Treatment</Text>
+              <View style={styles.effortLegend}>
+                <View style={[styles.effortDot, styles.effortEasy]} />
+                <Text style={styles.effortLegendText}>Easy</Text>
+                <View style={[styles.effortDot, styles.effortModerate]} />
+                <Text style={styles.effortLegendText}>Moderate</Text>
+                <View style={[styles.effortDot, styles.effortAdvanced]} />
+                <Text style={styles.effortLegendText}>Advanced</Text>
+              </View>
+            </View>
             <View style={styles.treatmentGroupContainer}>
               {treatmentGroups.map((group) => (
                 <View key={group.method} style={styles.treatmentGroup}>
@@ -417,9 +406,7 @@ export function JournalPestDiseaseSection({
         {/* Treatment effectiveness */}
         {value.treatment.trim() !== '' && (
           <>
-            <Text style={[styles.label, styles.notesWrapperMarginTop]}>
-              Treatment Effectiveness
-            </Text>
+            <Text style={[styles.label, styles.notesWrapperMarginTop]}>Did it work?</Text>
             <View style={styles.affectedPartChips}>
               {EFFECTIVENESS_OPTIONS.map((opt) => {
                 const active = value.treatmentEffectiveness === opt.value;

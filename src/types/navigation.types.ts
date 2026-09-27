@@ -113,7 +113,8 @@ export type PlantsStackParamList = {
 };
 
 export type JournalStackParamList = {
-  JournalList: { refresh?: number } | undefined;
+  /** `savedMessage` is the form's confirmation, shown once as a toast. */
+  JournalList: { refresh?: number; savedMessage?: string } | undefined;
   JournalForm:
     | {
         entry?: JournalEntry;

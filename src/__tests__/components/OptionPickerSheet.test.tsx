@@ -187,6 +187,40 @@ describe('OptionPickerSheet', () => {
     expect(texts(rendered)).not.toContain('Chilli');
   });
 
+  it('renders a header wherever the group changes', () => {
+    let rendered!: RenderedTree;
+    TestRenderer.act(() => {
+      rendered = TestRenderer.create(
+        <OptionPickerSheet
+          visible
+          onClose={jest.fn()}
+          title="Link to plant"
+          options={[
+            { label: 'Chilli', value: 'p3', group: 'Recently used' },
+            { label: 'Curry leaf', value: 'p4', group: 'In pots' },
+            { label: 'Chilli', value: 'p3', group: 'In the ground' },
+          ]}
+          selectedValue=""
+          onSelect={jest.fn()}
+          searchable
+        />
+      );
+    });
+    expect(texts(rendered)).toEqual([
+      'Link to plant',
+      'Recently used',
+      'Chilli',
+      'In pots',
+      'Curry leaf',
+      'In the ground',
+      'Chilli',
+    ]);
+
+    // Search flattens the groups and shows a repeated option once.
+    search(rendered, 'chil');
+    expect(texts(rendered)).toEqual(['Link to plant', 'Chilli']);
+  });
+
   it('shows an empty state naming the query when nothing matches', () => {
     const rendered = render(true);
     search(rendered, 'okra');

@@ -95,8 +95,8 @@ export function JournalPestFollowUp({
   const firstReminder = status === 'treated' ? `in ${days} days` : 'today evening';
 
   return (
-    <View style={styles.harvestSection}>
-      <Text style={styles.sectionTitle}>After saving</Text>
+    <View style={styles.sectionCard}>
+      <Text style={styles.label}>After saving</Text>
 
       {healthSuggestion && (
         <TouchableOpacity
@@ -130,21 +130,19 @@ export function JournalPestFollowUp({
 
       {value.remind && (
         <View style={styles.followUpDetail}>
-          <View style={styles.qualityButtons}>
+          <View style={styles.optionGrid}>
             {dayOptions.map((option) => {
               const active = option === days;
               return (
                 <TouchableOpacity
                   key={option}
-                  style={[styles.qualityButton, active && styles.qualityButtonActive]}
+                  style={[styles.optionTile, active && styles.optionTileActive]}
                   onPress={() => onChange({ remindDays: option })}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={`Every ${option} days`}
                 >
-                  <Text
-                    style={[styles.qualityButtonText, active && styles.qualityButtonTextActive]}
-                  >
+                  <Text style={[styles.optionTileText, active && styles.optionTileTextActive]}>
                     {option}d
                   </Text>
                 </TouchableOpacity>

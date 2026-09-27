@@ -1,14 +1,27 @@
 import {
+  NO_PLOT_GROUP,
+  RECENT_GROUP,
+  buildGroupedJournalPlantOptions,
+  buildJournalPlaceFilterOptions,
+  journalLocationPlot,
   buildJournalPlantOptions,
   collectUsedLocations,
+  collectUsedPlots,
   collectUsedTags,
   daysOpen,
   entryMatchesLocation,
+  entryMatchesPlot,
   formatDaysOpen,
+  formatLastHarvestHint,
   journalEntryHeadline,
   journalEntryLocation,
+  journalEntryPlot,
   journalTypeLabel,
+  lastHarvest,
   lastHarvestUnit,
+  recentLinkIds,
+  stepHarvestQuantity,
+  withRecentGroup,
   recheckIntervalDays,
   filterSuggestionGroups,
   formatEntryDateLabel,
@@ -25,6 +38,7 @@ import {
 import { JournalEntry, JournalEntryType } from '../../types/database.types';
 import { makeJournalEntry } from '../fixtures/journal.fixtures';
 import { makePlant } from '../fixtures/plant.fixtures';
+import { makeBed } from '../fixtures/bed.fixtures';
 
 describe('normalizeHarvestUnit', () => {
   it('maps legacy "pieces" to "pcs"', () => {
@@ -444,6 +458,211 @@ describe('lastHarvestUnit', () => {
     expect(
       lastHarvestUnit([harvest('mango', 'lbs', '2026-09-01T00:00:00.000Z')], 'mango')
     ).toBeNull();
+  });
+
+  it("remembers a bed's own harvests, not those of a plant linked alongside", () => {
+    const entries = [
+      makeJournalEntry({
+        id: 'bed-kg',
+        entry_type: JournalEntryType.Harvest,
+        bed_id: 'bed-1',
+        harvest_unit: 'kg',
+        created_at: '2026-09-10T00:00:00.000Z',
+      }),
+      makeJournalEntry({
+        id: 'plant-in-bed',
+        entry_type: JournalEntryType.Harvest,
+        bed_id: 'bed-1',
+        plant_id: 'chilli',
+        harvest_unit: 'g',
+        created_at: '2026-09-20T00:00:00.000Z',
+      }),
+    ];
+    expect(lastHarvestUnit(entries, null, 'bed-1')).toBe('kg');
+    expect(lastHarvestUnit(entries, null, null)).toBeNull();
+  });
+});
+
+describe('lastHarvest / formatLastHarvestHint', () => {
+  const now = new Date(2026, 8, 27, 9, 41);
+  const coconut = (id: string, day: number, qty: number): JournalEntry =>
+    makeJournalEntry({
+      id,
+      entry_type: JournalEntryType.Harvest,
+      plant_id: 'coconut',
+      harvest_quantity: qty,
+      harvest_unit: 'pcs',
+      created_at: new Date(2026, 8, day, 7, 0).toISOString(),
+    });
+
+  it('picks the newest harvest from the place', () => {
+    const entries = [coconut('a', 1, 140), coconut('b', 26, 120)];
+    expect(lastHarvest(entries, 'coconut')?.id).toBe('b');
+    expect(lastHarvest(entries, 'mango')).toBeNull();
+  });
+
+  it('reads as a relative day, then a date', () => {
+    expect(formatLastHarvestHint(coconut('b', 26, 120), true, now)).toBe(
+      'Last: 120 pcs · yesterday'
+    );
+    expect(formatLastHarvestHint(coconut('c', 27, 60), true, now)).toBe('Last: 60 pcs · today');
+    expect(formatLastHarvestHint(coconut('a', 1, 140), true, now)).toMatch(
+      /^Last: 140 pcs · 1 Sept?$/
+    );
+  });
+
+  it('says "First harvest here" only when a place is linked', () => {
+    expect(formatLastHarvestHint(null, true, now)).toBe('First harvest here');
+    expect(formatLastHarvestHint(null, false, now)).toBe('');
+  });
+});
+
+describe('stepHarvestQuantity', () => {
+  it('steps by unit and rounds away float noise', () => {
+    expect(stepHarvestQuantity('', 'pcs', 1)).toBe('1');
+    expect(stepHarvestQuantity('1.5', 'kg', 1)).toBe('2');
+    expect(stepHarvestQuantity('0.2', 'kg', 1)).toBe('0.7');
+    expect(stepHarvestQuantity('250', 'g', -1)).toBe('150');
+  });
+
+  it('never goes below zero', () => {
+    expect(stepHarvestQuantity('0.3', 'kg', -1)).toBe('0');
+    expect(stepHarvestQuantity('abc', 'bunches', -1)).toBe('0');
+  });
+});
+
+describe('entry plots', () => {
+  const pot = makePlant({ id: 'pot', location: 'Terrace - East rail', bed_id: null });
+  const bedPlant = makePlant({ id: 'beans', location: 'Somewhere - x', bed_id: 'bed-1' });
+  const loose = makePlant({ id: 'loose', location: '', bed_id: null });
+  const plantById = new Map([pot, bedPlant, loose].map((p) => [p.id, p]));
+  const bedById = new Map([
+    ['bed-1', makeBed({ id: 'bed-1', parent_location: 'Kitchen garden' })],
+    ['bed-2', makeBed({ id: 'bed-2', parent_location: 'kitchen garden ' })],
+  ]);
+
+  it("resolves the bed's plot first, else the plant's parent location", () => {
+    expect(journalEntryPlot(makeJournalEntry({ bed_id: 'bed-1' }), plantById, bedById)).toBe(
+      'Kitchen garden'
+    );
+    expect(journalEntryPlot(makeJournalEntry({ plant_id: 'beans' }), plantById, bedById)).toBe(
+      'Kitchen garden'
+    );
+    expect(journalEntryPlot(makeJournalEntry({ plant_id: 'pot' }), plantById, bedById)).toBe(
+      'Terrace'
+    );
+    expect(
+      journalEntryPlot(makeJournalEntry({ plant_id: 'loose' }), plantById, bedById)
+    ).toBeNull();
+  });
+
+  it('matches plots case-insensitively and lists each once', () => {
+    const entries = [
+      makeJournalEntry({ id: '1', bed_id: 'bed-1' }),
+      makeJournalEntry({ id: '2', bed_id: 'bed-2' }),
+      makeJournalEntry({ id: '3', plant_id: 'pot' }),
+      makeJournalEntry({ id: '4', plant_id: 'loose' }),
+    ];
+    expect(collectUsedPlots(entries, plantById, bedById)).toEqual(['Kitchen garden', 'Terrace']);
+    expect(entryMatchesPlot(entries[1]!, 'KITCHEN GARDEN', plantById, bedById)).toBe(true);
+    expect(entryMatchesPlot(entries[3]!, 'Terrace', plantById, bedById)).toBe(false);
+  });
+});
+
+describe('place filter options', () => {
+  const pot = makePlant({
+    id: 'plum',
+    name: 'Plum 01',
+    space_type: 'pot',
+    plant_variety: 'Santa Rosa',
+    location: 'Terrace - Rail',
+    bed_id: null,
+  });
+  const loose = makePlant({ id: 'loose', name: 'Aloe', space_type: 'ground', location: '' });
+  const plantById = new Map([pot, loose].map((p) => [p.id, p]));
+  const bedById = new Map([
+    ['bed-1', makeBed({ id: 'bed-1', parent_location: 'Terrace' })],
+    ['bed-2', makeBed({ id: 'bed-2', parent_location: 'Kitchen garden' })],
+  ]);
+  const locations = [
+    { key: 'plant:plum', kind: 'plant' as const, label: 'Plum 01' },
+    { key: 'plant:loose', kind: 'plant' as const, label: 'Aloe' },
+    { key: 'bed:bed-1', kind: 'bed' as const, label: 'Terrace bed' },
+    { key: 'bed:bed-2', kind: 'bed' as const, label: 'Bed 2' },
+  ];
+
+  it('groups by plot, beds first, with unplaced places last', () => {
+    expect(
+      buildJournalPlaceFilterOptions(locations, plantById, bedById, null).map((o) => [
+        o.group,
+        o.label,
+        o.description,
+      ])
+    ).toEqual([
+      ['Kitchen garden', 'Bed 2', 'Bed'],
+      ['Terrace', 'Terrace bed', 'Bed'],
+      ['Terrace', 'Plum 01', 'Pot · Santa Rosa'],
+      [NO_PLOT_GROUP, 'Aloe', 'Ground'],
+    ]);
+  });
+
+  it('limits the list to the chosen plot', () => {
+    expect(
+      buildJournalPlaceFilterOptions(locations, plantById, bedById, 'terrace').map((o) => o.value)
+    ).toEqual(['bed:bed-1', 'plant:plum']);
+  });
+
+  it('resolves the plot of a place key', () => {
+    expect(journalLocationPlot('bed:bed-2', plantById, bedById)).toBe('Kitchen garden');
+    expect(journalLocationPlot('plant:plum', plantById, bedById)).toBe('Terrace');
+    expect(journalLocationPlot('plant:loose', plantById, bedById)).toBeNull();
+    expect(journalLocationPlot('junk', plantById, bedById)).toBeNull();
+  });
+});
+
+describe('recent links and grouped plant options', () => {
+  const entries = [
+    makeJournalEntry({ id: '1', plant_id: 'a', created_at: '2026-09-01T00:00:00.000Z' }),
+    makeJournalEntry({ id: '2', plant_id: 'b', created_at: '2026-09-03T00:00:00.000Z' }),
+    makeJournalEntry({ id: '3', plant_id: 'a', created_at: '2026-09-05T00:00:00.000Z' }),
+    makeJournalEntry({ id: '4', bed_id: 'bed-1', created_at: '2026-09-04T00:00:00.000Z' }),
+  ];
+
+  it('lists the most recently linked ids, newest first, without repeats', () => {
+    expect(recentLinkIds(entries, 'plant')).toEqual(['a', 'b']);
+    expect(recentLinkIds(entries, 'bed')).toEqual(['bed-1']);
+    expect(recentLinkIds(entries, 'plant', 1)).toEqual(['a']);
+  });
+
+  it('groups plants as pots, then ground, sorted by name inside each', () => {
+    const options = buildGroupedJournalPlantOptions(
+      [
+        makePlant({ id: 'g2', name: 'Mango', space_type: 'ground', bed_id: null }),
+        makePlant({ id: 'p1', name: 'Curry leaf', space_type: 'pot', bed_id: null }),
+        makePlant({ id: 'g1', name: 'Banana', space_type: 'ground', bed_id: null }),
+      ],
+      new Map()
+    );
+    expect(options.map((o) => [o.group, o.label])).toEqual([
+      ['In pots', 'Curry leaf'],
+      ['In the ground', 'Banana'],
+      ['In the ground', 'Mango'],
+    ]);
+  });
+
+  it('prepends recent copies without removing the originals', () => {
+    const options = withRecentGroup(
+      [
+        { label: 'Bed 1', value: 'bed-1' },
+        { label: 'Bed 2', value: 'bed-2' },
+      ],
+      ['bed-2', 'gone']
+    );
+    expect(options).toEqual([
+      { label: 'Bed 2', value: 'bed-2', group: RECENT_GROUP },
+      { label: 'Bed 1', value: 'bed-1' },
+      { label: 'Bed 2', value: 'bed-2' },
+    ]);
   });
 });
 
