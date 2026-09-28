@@ -12,7 +12,7 @@ export interface TextSheetConfig {
   helpText?: string;
   maxLength?: number;
   autoCapitalize?: 'none' | 'sentences' | 'words';
-  /** Shows the தமிழ்/English + mic control above the input. */
+  /** Shows the தமிழ்/English + mic control above the input. The language is app-wide. */
   dictation?: boolean;
 }
 
@@ -61,9 +61,4 @@ export function optionsFromLabels<K extends string>(
     label: labels[value],
     description: descriptions?.[value],
   }));
-}
-
-/** Builds picker options from a plain list of strings (e.g. growing seasons). */
-export function optionsFromValues(values: readonly string[]): PickerOption[] {
-  return values.map((value) => ({ value, label: value }));
 }

@@ -2,6 +2,7 @@ import {
   coalesceQueue,
   encodeTimestamps,
   decodeTimestamps,
+  hasPendingWriteFor,
   isEncodedTimestamp,
 } from '@/utils/offlineQueueLogic';
 import type { OfflineMutation, OfflineMutationOp } from '@/types/offline.types';
@@ -122,5 +123,26 @@ describe('timestamp encoding', () => {
     expect(isEncodedTimestamp(encoded.when)).toBe(true);
     expect(encoded.count).toBe(3);
     expect(encoded.note).toBeNull();
+  });
+});
+
+
+describe('hasPendingWriteFor', () => {
+  const queued = makeMutation({ collection: 'user_settings', docId: 'user-1' });
+
+  it('finds an unsent write for the document', () => {
+    expect(hasPendingWriteFor([queued], 'user_settings', 'user-1')).toBe(true);
+  });
+
+  it('ignores another document in the same collection', () => {
+    expect(hasPendingWriteFor([queued], 'user_settings', 'user-2')).toBe(false);
+  });
+
+  it('ignores the same id in another collection', () => {
+    expect(hasPendingWriteFor([queued], 'plants', 'user-1')).toBe(false);
+  });
+
+  it('is false for an empty queue, so a clean device still syncs', () => {
+    expect(hasPendingWriteFor([], 'user_settings', 'user-1')).toBe(false);
   });
 });

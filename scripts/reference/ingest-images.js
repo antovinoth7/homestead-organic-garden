@@ -6,7 +6,8 @@
  *    to learn the valid ids per kind.
  * 2. Converts every image in assets-src/{pests,diseases,plants,organic-inputs}/ to a
  *    800×600 cover-cropped WebP ≤ 160 KB in assets/reference/<kind>/<id>.webp
- *    (quality starts at 80 and steps down by 5 to a floor of 60).
+ *    (quality starts at 80 and steps down by 5 to a floor of 60; encoded at
+ *    sharp's maximum effort, which is slower but a few KB smaller).
  * 3. Regenerates src/config/referenceImages.gen.ts from the WebP files that
  *    exist on disk — the gen file must be committed after every run.
  *
@@ -68,7 +69,7 @@ async function encodeUnderLimit(inputPath, outputPath) {
   for (let quality = QUALITY_START; quality >= QUALITY_FLOOR; quality -= QUALITY_STEP) {
     const buffer = await sharp(inputPath)
       .resize(WIDTH, HEIGHT, { fit: 'cover' })
-      .webp({ quality })
+      .webp({ quality, effort: 6 })
       .toBuffer();
     if (buffer.length <= MAX_BYTES) {
       fs.writeFileSync(outputPath, buffer);

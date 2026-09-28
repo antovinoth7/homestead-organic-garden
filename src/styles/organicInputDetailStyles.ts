@@ -55,13 +55,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.backgroundTertiary,
     },
     heroWatermark: {
-      ...StyleSheet.absoluteFillObject,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       alignItems: 'center',
       justifyContent: 'center',
       opacity: 0.14,
     },
     heroImage: {
-      ...StyleSheet.absoluteFillObject,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
     },
     heroImageInner: {
       width: '100%',

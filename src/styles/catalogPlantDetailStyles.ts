@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import type { Theme } from '../theme/colors';
+import type { Theme } from '@/theme/colors';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -18,6 +18,41 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.textSecondary,
     },
+    sectionNote: {
+      fontSize: 12,
+      lineHeight: 17,
+      color: theme.textTertiary,
+      paddingHorizontal: 14,
+      paddingBottom: 12,
+    },
+    loadErrorActions: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 16,
+    },
+    loadErrorButton: {
+      minHeight: 44,
+      paddingHorizontal: 20,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadErrorButtonPrimary: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    loadErrorButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    loadErrorButtonTextPrimary: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.textInverse,
+    },
     /**
      * Absolute bar that fades in as the hero scrolls away, mirroring the pest
      * and disease detail screens. It overlays the ScrollView rather than sitting
@@ -34,6 +69,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 16,
       paddingBottom: 10,
       gap: 10,
+      backgroundColor: theme.tabBarBackground,
     },
     stickyHeaderTitle: {
       flex: 1,
@@ -115,107 +151,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     heroBleed: {
       marginHorizontal: -16,
     },
-    evidenceCard: {
-      padding: 13,
-      borderRadius: 12,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.successBorder,
-      backgroundColor: theme.successLight,
-      gap: 5,
-    },
-    evidenceTitleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 7,
-    },
-    evidenceTitle: {
-      fontSize: 13.5,
-      lineHeight: 18,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    evidenceText: {
-      fontSize: 12.5,
-      lineHeight: 18,
-      color: theme.textSecondary,
-    },
-    evidenceLink: {
-      fontSize: 12.5,
-      lineHeight: 18,
-      fontWeight: '600',
-      color: theme.primary,
-    },
-    fieldGroup: {
-      marginBottom: 8,
-    },
-    input: {
-      flex: 1,
-      backgroundColor: theme.inputBackground,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      paddingHorizontal: 12,
-      height: 42,
-      fontSize: 15,
-      color: theme.inputText,
-    },
-    chipRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    chip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 9,
-      paddingVertical: 5,
-      borderRadius: 14,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    chipText: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      fontWeight: '600',
-    },
-    emptyText: {
-      fontSize: 13,
-      color: theme.textTertiary,
-      fontStyle: 'italic',
-    },
-    fieldLabelRow: {
-      marginBottom: 6,
-    },
-    rangeField: {
-      flex: 1,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: 6,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.borderLight,
-    },
-    badgeText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: theme.textInverse,
-    },
-    pruningTipsLabel: {
-      fontSize: 12,
-      color: theme.textTertiary,
-      marginBottom: 6,
-    },
-    footer: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderTopWidth: 1,
-      borderTopColor: theme.border,
-      backgroundColor: theme.backgroundSecondary,
-    },
     sectionHeaderAction: {
       width: 30,
       height: 30,
@@ -224,7 +159,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       backgroundColor: theme.primaryLight,
       borderWidth: 1,
-      borderColor: theme.primary + '30',
+      borderColor: theme.borderLight,
     },
     savingOverlay: {
       flex: 1,
@@ -289,6 +224,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     modalButtonDanger: {
       backgroundColor: theme.error,
     },
+    modalButtonDisabled: {
+      opacity: 0.45,
+    },
+    // A big category (vegetables) would otherwise push Cancel off screen.
+    reassignScroll: {
+      maxHeight: 280,
+      marginBottom: 12,
+    },
     modalButtonTextSecondary: {
       fontSize: 14,
       fontWeight: '600',
@@ -303,7 +246,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
-      marginBottom: 12,
     },
     reassignItem: {
       paddingHorizontal: 12,
@@ -325,124 +267,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     reassignTextActive: {
       color: theme.primary,
     },
-    pickerModalContent: {
-      maxHeight: '75%',
-      padding: 16,
-    },
-    pickerSearch: {
-      backgroundColor: theme.inputBackground,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      paddingHorizontal: 14,
-      height: 42,
-      fontSize: 14,
-      color: theme.inputText,
-      marginBottom: 10,
-    },
-    pickerList: {
-      flexGrow: 0,
-    },
-    pickerRow: {
-      paddingVertical: 12,
-      paddingHorizontal: 4,
-    },
-    pickerRowText: {
-      fontSize: 15,
-      color: theme.text,
-    },
-    pickerSeparator: {
-      height: 0,
-    },
-    chipDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: theme.primary,
-    },
-    seasonPillRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginBottom: 12,
-    },
-    seasonPill: {
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 14,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    seasonPillActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    seasonPillText: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
-    seasonPillTextActive: {
-      color: theme.primary,
-      fontWeight: '600',
-    },
-    /**
-     * Applied after `modalContent`, which is shared with the picker and reassign
-     * modals and so must stay untouched. Drops the card's own padding — the
-     * header owns its inset and its separator has to reach both edges — and caps
-     * the height so a keyboard can never push the header out of frame.
-     */
-    varietyCard: {
-      padding: 0,
-      maxHeight: '85%',
-      overflow: 'hidden',
-    },
-    /** Variety sheet header: close left, title centre, Done right. */
-    varietyHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.borderLight,
-    },
-    varietyHeaderText: {
-      flex: 1,
-      minWidth: 0,
-      paddingHorizontal: 8,
-    },
-    varietyHeaderTitle: {
-      fontSize: 17,
-      fontWeight: '700',
-      color: theme.text,
-      textAlign: 'center',
-    },
-    /** Restores the inset `varietyCard` gave up, now that the body scrolls. */
-    varietyScrollContent: {
-      padding: 20,
-    },
-    varietyCloseButton: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    varietyDoneButton: {
-      backgroundColor: theme.primary,
-      paddingHorizontal: 18,
-      paddingVertical: 9,
-      borderRadius: 20,
-    },
-    varietyDoneText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: theme.textInverse,
-    },
     modalCloseButton: {
       width: 30,
       height: 30,
@@ -450,17 +274,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    varietyNotesInput: {
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-      borderRadius: 8,
-      padding: 10,
-      minHeight: 72,
-      color: theme.text,
-      fontSize: 14,
-      textAlignVertical: 'top',
-      backgroundColor: theme.backgroundSecondary,
-      marginBottom: 4,
     },
   });

@@ -16,9 +16,12 @@ jest.mock('react-native', () => {
     StyleSheet: { absoluteFill: {} },
   };
 });
-jest.mock('@expo/vector-icons', () => {
+jest.mock('@expo/vector-icons/Ionicons', () => {
   const React = jest.requireActual<typeof import('react')>('react');
-  return { Ionicons: (props: Record<string, unknown>) => React.createElement('Ionicons', props) };
+  return {
+    __esModule: true,
+    default: (props: Record<string, unknown>) => React.createElement('Ionicons', props),
+  };
 });
 jest.mock('@/components/GardenIcon', () => {
   const React = jest.requireActual<typeof import('react')>('react');
@@ -129,7 +132,11 @@ function render(overrides: Partial<CareTaskFilterSheetProps> = {}): RenderedTree
 }
 
 /** A serialised node from `toJSON()` — plain data, unlike the fiber tree. */
-type JsonNode = { type: string; props: Record<string, unknown>; children: (JsonNode | string)[] | null };
+type JsonNode = {
+  type: string;
+  props: Record<string, unknown>;
+  children: (JsonNode | string)[] | null;
+};
 
 const isJsonNode = (node: JsonNode | string): node is JsonNode => typeof node !== 'string';
 
@@ -272,9 +279,8 @@ describe('CareTaskFilterSheet', () => {
 
   it('shows Clear All only when something is active', () => {
     const hasClear = (rendered: RenderedTree): boolean =>
-      rendered.root.findAll(
-        (node) => node.type === 'Text' && node.props.children === 'Clear All'
-      ).length > 0;
+      rendered.root.findAll((node) => node.type === 'Text' && node.props.children === 'Clear All')
+        .length > 0;
     expect(hasClear(render())).toBe(false);
     expect(hasClear(render({ hasActiveFilters: true }))).toBe(true);
   });

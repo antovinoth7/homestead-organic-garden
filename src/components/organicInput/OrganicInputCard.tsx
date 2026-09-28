@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import type { ImageStyle } from 'react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/organicInputListStyles';

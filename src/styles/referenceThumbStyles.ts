@@ -77,6 +77,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       backgroundColor: theme.backgroundTertiary,
     },
+    // Full-width square with no rounding of its own: for a tile whose photo
+    // sits below other content, where the tile's `overflow: 'hidden'` clips
+    // whichever corners meet its edge.
+    squareImage: {
+      width: '100%',
+      aspectRatio: 1,
+      backgroundColor: theme.backgroundTertiary,
+    },
+    squareFallback: {
+      width: '100%',
+      aspectRatio: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.backgroundTertiary,
+    },
   });
 
   styleCache.set(theme, styles);

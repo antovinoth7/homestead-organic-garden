@@ -160,6 +160,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       minHeight: 34,
     },
+    // The row's "open the plot" target, filling the row behind the pills so the
+    // overdue pill's own target is its sibling rather than nested inside it.
+    countsRowTarget: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    // The due pill, "Nothing Due" and the chevron: taps pass through them to
+    // the row target behind.
+    countsPassive: {
+      pointerEvents: 'none',
+    },
     pill: {
       overflow: 'hidden',
       borderRadius: 999,

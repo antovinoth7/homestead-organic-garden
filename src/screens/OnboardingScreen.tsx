@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ListRenderItemInfo,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationProp, ParamListBase, useNavigation } from '@react-navigation/native';
 import { useTheme } from '@/theme';
@@ -55,9 +55,7 @@ const WELCOME_BULLETS: { icon: keyof typeof Ionicons.glyphMap; title: string; te
   },
 ];
 
-export default function OnboardingScreen({
-  onComplete,
-}: OnboardingScreenProps): React.JSX.Element {
+export default function OnboardingScreen({ onComplete }: OnboardingScreenProps): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -89,13 +87,10 @@ export default function OnboardingScreen({
     };
   }, []);
 
-  const seasonLabel = useMemo(
-    () => {
-      const zone = resolveActiveZone({ district });
-      return zone ? getSeasonLabel(undefined, zone) : 'Location needed';
-    },
-    [district]
-  );
+  const seasonLabel = useMemo(() => {
+    const zone = resolveActiveZone({ district });
+    return zone ? getSeasonLabel(undefined, zone) : 'Location needed';
+  }, [district]);
 
   const persistConfig = useCallback(async (): Promise<void> => {
     try {
@@ -235,7 +230,9 @@ export default function OnboardingScreen({
                 </TouchableOpacity>
               </View>
             </View>
-            <Text style={styles.helperText}>~4 people per family · {families * 4} people total</Text>
+            <Text style={styles.helperText}>
+              ~4 people per family · {families * 4} people total
+            </Text>
 
             <Text style={styles.sectionLabel}>Farm Goals</Text>
             <View style={styles.chipRow}>

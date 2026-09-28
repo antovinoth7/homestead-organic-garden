@@ -13,15 +13,21 @@ const ANTAGONIST_PAIRS: { a: string; b: string; reason: string }[] = [
   { a: 'Fennel', b: 'Tomato', reason: 'Fennel inhibits tomato growth and fruit set' },
   { a: 'Fennel', b: 'Coriander', reason: 'Cross-pollination causes both to bolt prematurely' },
   { a: 'Onion', b: 'Cowpea', reason: 'Alliums inhibit legume nitrogen fixation' },
-  { a: 'Onion', b: 'French Beans', reason: 'Alliums suppress bean growth' },
-  { a: 'Garlic', b: 'French Beans', reason: 'Garlic stunts bean development' },
   { a: 'Garlic', b: 'Cowpea', reason: 'Alliums inhibit legume nitrogen fixation' },
   {
     a: 'Potato',
     b: 'Tomato',
     reason: 'Same family (Solanaceae) — share Late Blight and other diseases',
   },
-  { a: 'Basil', b: 'Sage', reason: 'Sage inhibits basil growth when planted in close proximity' },
+];
+
+/**
+ * Both halves of every antagonist pair. Exported for the coverage guard in
+ * `src/__tests__`: a pair naming a plant the catalog no longer offers can
+ * never fire, and nothing else would notice.
+ */
+export const ANTAGONIST_PAIR_NAMES: string[] = [
+  ...new Set(ANTAGONIST_PAIRS.flatMap((pair) => [pair.a, pair.b])),
 ];
 
 function normalize(name: string): string {

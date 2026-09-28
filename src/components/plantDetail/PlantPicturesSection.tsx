@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import type { ImageStyle } from 'react-native';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/plantPicturesTabStyles';
 import { ImageZoomModal } from '@/components/ImageZoomModal';

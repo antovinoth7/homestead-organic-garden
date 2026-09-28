@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { useBedData, BedWithCoverage } from '@/hooks/useBedData';
@@ -43,9 +43,7 @@ export default function BedRotationScreen(): React.JSX.Element {
         <View style={styles.emptyState}>
           <Ionicons name="sync-outline" size={56} color={theme.textSecondary} />
           <Text style={styles.emptyTitle}>No beds to rotate</Text>
-          <Text style={styles.emptySubtitle}>
-            Create a garden bed to see its rotation status
-          </Text>
+          <Text style={styles.emptySubtitle}>Create a garden bed to see its rotation status</Text>
         </View>
       ) : (
         <BedRotationView beds={beds} onOpenBed={openBed} />

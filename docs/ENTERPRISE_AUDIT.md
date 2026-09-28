@@ -1,5 +1,32 @@
 # Enterprise-Readiness Validation Audit
 
+> **⚠️ Superseded in part — this audit predates the Expo SDK 54 → 57 upgrade (2026-09-21).**
+> The findings and recommendations below still stand, but the recorded command
+> output is a snapshot of SDK 54 and should not be used as a current baseline:
+>
+> - Stack is now Expo SDK 57 / React Native 0.86 / React 19.2 / TypeScript 6.
+> - The lint script is `eslint .` — the `--ext` flag quoted below was dropped
+>   (ESLint 9 flat config ignores it; file coverage is unchanged at 724 files).
+> - The test script is plain `jest`, not `jest --runInBand`.
+> - Current suite: **156 suites / 2045 tests / 5 snapshots**, not 78 / 923 / 3.
+> - **The `--max-warnings=0` recommendation (finding at "Tighten lint now") is now
+>   partly achievable.** `eslint-config-expo` 57 brought
+>   `eslint-plugin-react-hooks` v7, whose new rules flagged 214 pre-existing call
+>   sites. Five of the six rules have since been triaged to zero and raised back
+>   to `error`, so they already fail the build. Making `any` an error is still
+>   valid and independent. A blanket `--max-warnings=0` still waits on the 54
+>   remaining `set-state-in-effect` warnings. Tracked in
+>   `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
+>
+> - **H-04's premise has changed.** That finding notes `expo-secure-store` is
+>   "installed but unused". It has since been **removed** as an unused dependency.
+>   The finding itself still stands — auth material and user content remain in
+>   plain AsyncStorage — but acting on it now means adding a secure-storage
+>   dependency back deliberately, not adopting one already present.
+>
+> Rerun the audit rather than editing the numbers in place — they are a record of
+> what was true on 2026-08-01.
+
 **Audit date:** 2026-08-01  
 **Scope:** React Native + Expo SDK 54 application, Firebase Auth, Firestore rules and data access, local-first cache/outbox, migrations, tests/CI, performance, and operations.  
 **Method:** Static review of the repository and Git history, targeted searches, plus full lint, typecheck, Jest, and coverage runs. No application code was changed.

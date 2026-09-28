@@ -110,13 +110,42 @@ describe('deleting a bundled catalog entry', () => {
 });
 
 describe('deleting a user-added entry', () => {
-  it('removes it outright rather than tombstoning it', async () => {
+  /**
+   * This used to drop the key outright. It now tombstones, because the profiles
+   * map reaches Firestore through a merged write, which cannot express a
+   * removed key — so a hard delete never left the device and the next sync
+   * brought the plant back. From the user's side nothing changed: a user-added
+   * tombstone is filtered out of every list and offers no Restore row.
+   */
+  it('tombstones it, and it reads as gone everywhere', async () => {
     const added = await savePlantProfile('vegetable', 'Backyard Gourd', { isUserAdded: true });
     expect(getPlantNamesForType(added, 'vegetable')).toContain('Backyard Gourd');
 
     const after = await deletePlantProfile('vegetable', 'Backyard Gourd');
-    expect(after.vegetable['Backyard Gourd']).toBeUndefined();
+
+    expect(after.vegetable['Backyard Gourd']?.isDeleted).toBe(true);
+    expect(getPlantNamesForType(after, 'vegetable')).not.toContain('Backyard Gourd');
+    expect(getProfileEntry(after, 'vegetable', 'Backyard Gourd')).toBeUndefined();
     expect(getHiddenPlantNames(after).vegetable).toEqual([]);
+  });
+
+  it('stays deleted across a storage round trip', async () => {
+    await savePlantProfile('vegetable', 'Backyard Gourd', { isUserAdded: true });
+    await deletePlantProfile('vegetable', 'Backyard Gourd');
+
+    cache.clear();
+    const reread = await getPlantProfiles();
+
+    expect(getPlantNamesForType(reread, 'vegetable')).not.toContain('Backyard Gourd');
+  });
+
+  it('comes back if the user creates the same name again', async () => {
+    await savePlantProfile('vegetable', 'Backyard Gourd', { isUserAdded: true });
+    await deletePlantProfile('vegetable', 'Backyard Gourd');
+
+    const recreated = await savePlantProfile('vegetable', 'Backyard Gourd', { isUserAdded: true });
+
+    expect(getPlantNamesForType(recreated, 'vegetable')).toContain('Backyard Gourd');
   });
 });
 

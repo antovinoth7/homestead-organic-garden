@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import type { Theme } from '../theme/colors';
+import type { Theme } from '@/theme/colors';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -11,7 +11,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      paddingVertical: 10,
+      minHeight: 44,
     },
     toggleLabel: {
       flex: 1,
@@ -46,9 +46,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 14,
+      paddingHorizontal: 14,
+      minHeight: 44,
+      borderRadius: 22,
       backgroundColor: theme.primaryLight,
     },
     restoreText: {

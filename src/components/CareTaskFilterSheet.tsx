@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from './GardenIcon';
 import { SheetHandle } from './SheetHandle';
 import { TAB_BAR_HEIGHT } from './FloatingTabBar';

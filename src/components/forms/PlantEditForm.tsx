@@ -1,5 +1,10 @@
 import React, { useMemo, useCallback, useState, useRef } from 'react';
-import type { ImageStyle, LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import type {
+  ImageStyle,
+  LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+} from 'react-native';
 import {
   View,
   Text,
@@ -9,7 +14,7 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { PlantFormStateReturn, NOTES_MAX_LENGTH } from '../../hooks/usePlantFormState';
 import type { FormSectionKey } from '../../hooks/usePlantFormState';
@@ -320,7 +325,6 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
               </Text>
             </View>
           </View>
-
         </ScrollView>
 
         {/* Pinned overlay tab bar: appears just below the header once the

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { PlantFormStateReturn, sanitizeNumberText } from '@/hooks/usePlantFormState';
 import { useBedOptions } from '@/hooks/useBedOptions';
 import { createStyles } from '@/styles/plantFormStyles';
@@ -168,13 +168,11 @@ export function AddPlantPlacementSection({ formState }: Props): React.JSX.Elemen
         </View>
 
         <View style={formStyles.spaceSegmentRow}>
-          {(
-            [
-              { value: 'ground' as SpaceType, icon: 'earth' as const, label: 'Ground' },
-              { value: 'bed' as SpaceType, icon: 'apps' as const, label: 'Raised Bed' },
-              { value: 'pot' as SpaceType, icon: 'cube-outline' as const, label: 'Pot' },
-            ]
-          ).map((opt, i) => (
+          {[
+            { value: 'ground' as SpaceType, icon: 'earth' as const, label: 'Ground' },
+            { value: 'bed' as SpaceType, icon: 'apps' as const, label: 'Raised Bed' },
+            { value: 'pot' as SpaceType, icon: 'cube-outline' as const, label: 'Pot' },
+          ].map((opt, i) => (
             <React.Fragment key={opt.value}>
               {i > 0 && <View style={formStyles.spaceSegmentDivider} />}
               <TouchableOpacity

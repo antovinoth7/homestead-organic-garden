@@ -132,8 +132,12 @@ const transplant = (
  * sowing month; that was the source of the former over-broad August list.
  */
 export const TAMIL_NADU_PLANTING_RULES: TamilNaduPlantingRule[] = [
-  direct('Amaranthus', [2, 3], 'February–March window', { min: 25, max: 30 }),
-  direct('Amaranthus', [7, 8], 'July–August window', { min: 25, max: 30 }),
+  direct('Amaranthus', [2, 3], 'February–March window', { min: 25, max: 30 }, {
+    plantType: 'spinach',
+  }),
+  direct('Amaranthus', [7, 8], 'July–August window', { min: 25, max: 30 }, {
+    plantType: 'spinach',
+  }),
   direct('Beetroot', [10, 11, 12], 'October–December window', { min: 90, max: 100 }),
   direct('Bitter Gourd', [2, 3], 'February–March window', { min: 55, max: 60 }, {
     spacingLabel: '1.5–2 m apart with a trellis',
@@ -149,7 +153,9 @@ export const TAMIL_NADU_PLANTING_RULES: TamilNaduPlantingRule[] = [
     spacingLabel: '45 cm apart',
   }),
   direct('Cucumber', [2, 3], 'February–March window', { min: 45, max: 50 }),
-  direct('Fenugreek', [9, 10, 11, 12], 'September–December window', { min: 45, max: 50 }),
+  direct('Fenugreek', [9, 10, 11, 12], 'September–December window', { min: 45, max: 50 }, {
+    plantType: 'spinach',
+  }),
   direct('Ladies Finger', [6, 7], 'Aadi pattam · June–July', { min: 30, max: 35 }),
   transplant('Onion', [6, 7], 'Aadi pattam · June–July', { min: 75, max: 80 }, '10 cm apart in rows 15 cm apart'),
   transplant('Onion', [10, 11], 'October–November window', { min: 75, max: 80 }, '10 cm apart in rows 15 cm apart'),
@@ -161,7 +167,6 @@ export const TAMIL_NADU_PLANTING_RULES: TamilNaduPlantingRule[] = [
   }),
   transplant('Tomato', [12, 1], 'December–January window', { min: 60, max: 65 }, '60 cm apart'),
   transplant('Tomato', [6, 7], 'Aadi pattam · June–July', { min: 60, max: 65 }, '60 cm apart'),
-  direct('Turnip', [9, 10], 'Purattasi pattam · September–October', { min: 40, max: 45 }),
 ];
 
 export interface TamilNaduPlantingWindows {

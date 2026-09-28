@@ -2,6 +2,7 @@ import type { Ionicons } from '@expo/vector-icons';
 import type {
   BedLayer,
   BedType,
+  CatalogGroup,
   FarmAlertType,
   GrowthStage,
   PlantType,
@@ -116,6 +117,23 @@ export const PLANT_TYPE_ICON_KEYS: Record<PlantType, VisualIconKey> = {
   timber_tree: 'plant.timber_tree',
   flower: 'plant.flower',
   shrub: 'plant.shrub',
+};
+
+/**
+ * Icons for the catalog's browse groups. Reuses the plant-type artwork — the
+ * groups are a re-slicing of the same plants, so new drawings would say nothing
+ * new. `spices` borrows the herb leaf, `farm_support` the shrub, and
+ * `plantation_timber` the coconut palm as the most recognisable of its members.
+ */
+export const CATALOG_GROUP_ICON_KEYS: Record<CatalogGroup, VisualIconKey> = {
+  vegetables: 'plant.vegetable',
+  greens: 'plant.spinach',
+  fruits: 'plant.fruit_tree',
+  spices: 'plant.herb',
+  herbs_medicinal: 'plant.herb',
+  flowers: 'plant.flower',
+  farm_support: 'plant.shrub',
+  plantation_timber: 'plant.coconut_tree',
 };
 
 export const BED_TYPE_ICON_KEYS: Record<BedType, VisualIconKey> = {

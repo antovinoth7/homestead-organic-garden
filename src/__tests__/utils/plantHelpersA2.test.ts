@@ -25,7 +25,7 @@ describe('plantHelpers A2 enrichment', () => {
     });
 
     it('returns a harvest date for a coconut tree', () => {
-      const result = calculateExpectedHarvestDate('Dwarf Coconut', '2024-01-01', 'coconut_tree');
+      const result = calculateExpectedHarvestDate('Coconut', '2024-01-01', 'coconut_tree');
       expect(result).toBeTruthy();
     });
 

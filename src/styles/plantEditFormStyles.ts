@@ -52,7 +52,11 @@ export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.cre
       marginTop: 1,
     },
     dataLoadingOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       backgroundColor: theme.background,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,

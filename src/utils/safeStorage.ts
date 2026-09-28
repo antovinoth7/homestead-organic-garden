@@ -67,47 +67,70 @@ const storageQueue = new StorageQueue();
 const _getStorageQueueSize = (): number => storageQueue.getQueueSize();
 
 /**
- * Safe get with error handling and retry logic
+ * Outcome of a strict read. `ok: false` distinguishes "the read failed" from
+ * "the key holds an empty array", which `safeGetData` cannot express.
+ *
+ * - `shape`   — the stored value parsed but was not an array
+ * - `corrupt` — the stored value was not valid JSON
+ * - `io`      — AsyncStorage kept failing after every retry
  */
-export const safeGetData = async <T>(key: string, retries = 2): Promise<T[]> => {
+export type StorageRead<T> =
+  | { ok: true; data: T[] }
+  | { ok: false; reason: 'shape' | 'corrupt' | 'io' };
+
+/** Move a bad blob aside instead of deleting it, so it stays recoverable. */
+const quarantine = async (key: string, label: string): Promise<void> => {
+  const quarantineKey = `${key}__${label}_${Date.now()}`;
+  logger.error(`Unreadable data at ${key}, quarantining to ${quarantineKey}`);
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    if (raw !== null) await AsyncStorage.setItem(quarantineKey, raw);
+    await AsyncStorage.removeItem(key);
+  } catch (clearError) {
+    logger.error(`Failed to quarantine data at ${key}:`, clearError as Error);
+  }
+};
+
+/**
+ * Strict read: reports *why* a read produced nothing.
+ *
+ * Callers holding the only durable copy of user data — notably the offline
+ * mutation queue — must use this rather than `safeGetData`, because they
+ * read-modify-write and a failed read flattened to `[]` would persist an empty
+ * queue over pending writes.
+ */
+export const safeReadData = async <T>(key: string, retries = 2): Promise<StorageRead<T>> => {
   return storageQueue.add(async () => {
     for (let i = 0; i <= retries; i++) {
       try {
         const jsonValue = await AsyncStorage.getItem(key);
-        if (jsonValue === null) return [];
+        if (jsonValue === null) return { ok: true as const, data: [] as T[] };
 
         const parsed = JSON.parse(jsonValue);
 
-        // Validate that parsed data is an array
+        // A non-array value is as unreadable as bad JSON, and for a
+        // durability-critical key it is the only copy — quarantine, don't drop.
         if (!Array.isArray(parsed)) {
-          logger.warn(`Data at key ${key} is not an array, returning empty array`);
-          return [];
+          logger.warn(`Data at key ${key} is not an array`);
+          await quarantine(key, 'notarray');
+          return { ok: false as const, reason: 'shape' as const };
         }
 
-        return parsed;
+        return { ok: true as const, data: parsed as T[] };
       } catch (e: unknown) {
         logger.error(`Error reading ${key} (attempt ${i + 1}/${retries + 1}):`, e as Error);
 
-        // If JSON parse error, data is corrupted. Quarantine rather than delete:
-        // for keys like the offline queue the corrupt blob is the only copy of
-        // writes that never reached Firestore, so it must stay recoverable.
+        // JSON parse error: the data is corrupted. Quarantine rather than
+        // delete — for keys like the offline queue the corrupt blob is the only
+        // copy of writes that never reached Firestore.
         if (e instanceof SyntaxError || (e instanceof Error && e.message?.includes('JSON'))) {
-          const quarantineKey = `${key}__corrupt_${Date.now()}`;
-          logger.error(`Corrupted data at ${key}, quarantining to ${quarantineKey}`, e as Error);
-          try {
-            const raw = await AsyncStorage.getItem(key);
-            if (raw !== null) await AsyncStorage.setItem(quarantineKey, raw);
-            await AsyncStorage.removeItem(key);
-          } catch (clearError) {
-            logger.error(`Failed to quarantine corrupted data at ${key}:`, clearError as Error);
-          }
-          return [];
+          await quarantine(key, 'corrupt');
+          return { ok: false as const, reason: 'corrupt' as const };
         }
 
-        // On last retry, return empty array instead of throwing
         if (i === retries) {
-          logger.error(`All retries exhausted for ${key}, returning empty array`);
-          return [];
+          logger.error(`All retries exhausted for ${key}`);
+          return { ok: false as const, reason: 'io' as const };
         }
 
         // Wait before retry with exponential backoff
@@ -116,8 +139,19 @@ export const safeGetData = async <T>(key: string, retries = 2): Promise<T[]> => 
     }
 
     logger.error(`Failed to read ${key} after ${retries + 1} attempts`);
-    return [];
+    return { ok: false as const, reason: 'io' as const };
   });
+};
+
+/**
+ * Lenient read: flattens any failure to `[]`.
+ *
+ * Correct for caches, which can be refetched. Anything that read-modify-writes
+ * the only durable copy of user data must use `safeReadData` instead.
+ */
+export const safeGetData = async <T>(key: string, retries = 2): Promise<T[]> => {
+  const result = await safeReadData<T>(key, retries);
+  return result.ok ? result.data : [];
 };
 
 /**

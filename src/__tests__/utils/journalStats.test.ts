@@ -37,25 +37,44 @@ describe('computeJournalStats', () => {
       created_at: createdAt,
     });
 
-  it('sums only weight units into kg, ignoring pcs/bunches/pieces', () => {
+  it('totals in kg when anything was weighed, still counting every harvest', () => {
     const entries = [
       harvest(2, 'kg', '2026-07-10T00:00:00.000Z'),
       harvest(500, 'g', '2026-07-10T00:00:00.000Z'), // 0.5 kg
-      harvest(10, 'pcs', '2026-07-10T00:00:00.000Z'), // ignored
-      harvest(3, 'bunches', '2026-07-10T00:00:00.000Z'), // ignored
-      harvest(4, 'pieces', '2026-07-10T00:00:00.000Z'), // legacy count, ignored
+      harvest(10, 'pcs', '2026-07-10T00:00:00.000Z'), // off-basis
+      harvest(3, 'bunches', '2026-07-10T00:00:00.000Z'), // off-basis
+      harvest(4, 'pieces', '2026-07-10T00:00:00.000Z'), // legacy count, off-basis
     ];
     const stats = computeJournalStats(entries, null);
-    expect(stats.weightKg).toBe(2.5);
-    expect(stats.harvests).toBe(5);
+    expect(stats.harvestUnit).toBe('kg');
+    expect(stats.harvestTotal).toBe(2.5);
+    expect(stats.harvestCount).toBe(5);
+  });
+
+  it('totals a count when nothing was weighed (coconuts do not read 0 kg)', () => {
+    const entries = [
+      harvest(40, 'pcs', '2026-07-10T00:00:00.000Z'),
+      harvest(2, 'bunches', '2026-07-11T00:00:00.000Z'),
+    ];
+    const stats = computeJournalStats(entries, null);
+    expect(stats.harvestUnit).toBe('pcs');
+    expect(stats.harvestTotal).toBe(42);
+    expect(stats.harvestCount).toBe(2);
+  });
+
+  it('reports zero harvest when there are no harvests', () => {
+    const stats = computeJournalStats([makeJournalEntry()], null);
+    expect(stats.harvestCount).toBe(0);
+    expect(stats.harvestTotal).toBe(0);
   });
 
   it('converts legacy lbs into kg', () => {
     const stats = computeJournalStats([harvest(1, 'lbs', '2026-07-10T00:00:00.000Z')], null);
-    expect(stats.weightKg).toBeCloseTo(0.5, 1);
+    expect(stats.harvestUnit).toBe('kg');
+    expect(stats.harvestTotal).toBeCloseTo(0.5, 1);
   });
 
-  it('scopes entries/harvests/weight to the window but not active problems', () => {
+  it('scopes entries and harvest figures to the window but not active problems', () => {
     const entries = [
       harvest(5, 'kg', '2026-07-17T00:00:00.000Z'), // in week
       harvest(5, 'kg', '2026-01-01T00:00:00.000Z'), // out of week
@@ -68,8 +87,8 @@ describe('computeJournalStats', () => {
     const start = getDateFilterStart('week', new Date('2026-07-18T12:00:00.000Z'));
     const stats = computeJournalStats(entries, start);
     expect(stats.entries).toBe(1);
-    expect(stats.harvests).toBe(1);
-    expect(stats.weightKg).toBe(5);
+    expect(stats.harvestCount).toBe(1);
+    expect(stats.harvestTotal).toBe(5);
     expect(stats.activeProblems).toBe(1);
   });
 

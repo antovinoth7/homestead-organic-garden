@@ -2,23 +2,23 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import {
   View,
   Text,
-  ScrollView,
   FlatList,
-  StyleSheet,
   TouchableOpacity,
   RefreshControl,
   Alert,
   TextInput,
-  LayoutAnimation,
   Platform,
   UIManager,
-  Pressable,
 } from 'react-native';
-import type Swipeable from 'react-native-gesture-handler/Swipeable';
-import { getJournalEntries, deleteJournalEntry } from '../services/journal';
+import { getJournalEntries, deleteJournalEntry, updateJournalEntry } from '../services/journal';
 import { getAllPlants } from '../services/plants';
-import { JournalEntry, JournalEntryType, Plant } from '../types/database.types';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  JournalEntry,
+  JournalEntryType,
+  Plant,
+  TreatmentEffectiveness,
+} from '../types/database.types';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import { createStyles } from '../styles/journalStyles';
@@ -27,16 +27,59 @@ import { JournalScreenNavigationProp, JournalScreenRouteProp } from '../types/na
 import { getErrorMessage } from '../utils/errorLogging';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
 import { computeJournalStats, getDateFilterStart } from '../utils/journalStats';
-import { collectUsedTags } from '../utils/journalEntryOptions';
+import {
+  JOURNAL_TYPE_OPTIONS,
+  buildJournalPlaceFilterOptions,
+  collectUsedLocations,
+  collectUsedPlots,
+  collectUsedTags,
+  daysOpen,
+  entryMatchesPlot,
+  formatDaysOpen,
+  isActiveProblem,
+  journalEntryHeadline,
+  journalEntryLocation,
+  journalLocationKey,
+  journalLocationPlot,
+  journalTypeLabel,
+  type JournalLocation,
+} from '../utils/journalEntryOptions';
+import {
+  EMPTY_JOURNAL_FILTERS,
+  countActiveJournalFilters,
+  filterJournalEntries,
+  journalEmptySubtext,
+  journalEntriesTileLabel,
+  type JournalFilterContext,
+  type JournalFilters,
+} from '@/utils/journalListHelpers';
+import { buildJournalRows, type JournalRow } from '@/utils/journalSections';
+import { toLocalDateString } from '@/utils/dateHelpers';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
-import { SheetHandle } from '@/components/SheetHandle';
-import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import { JournalEntryCard } from '@/components/JournalEntryCard';
+import { StatusToast } from '@/components/StatusToast';
+import { OptionPickerSheet } from '@/components/OptionPickerSheet';
+import { JournalActionSheet } from '@/components/journal/JournalActionSheet';
+import { JournalResolveSheet } from '@/components/journal/JournalResolveSheet';
+import { JournalStatTiles, type JournalStatTile } from '@/components/journal/JournalStatTiles';
+import {
+  JournalFilterSheet,
+  type JournalFilterCount,
+} from '@/components/journal/JournalFilterSheet';
+import { useBedOptions } from '@/hooks/useBedOptions';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+/**
+ * iOS can't present a Modal while another is still dismissing — the second
+ * never appears. Swapping one journal sheet for another waits out the fade.
+ */
+const SHEET_SWAP_DELAY_MS = Platform.OS === 'ios' ? 320 : 0;
+
+type OpenSheet = 'filter' | 'place' | null;
 
 export default function JournalScreen(): React.JSX.Element {
   const navigation = useNavigation<JournalScreenNavigationProp>();
@@ -44,29 +87,30 @@ export default function JournalScreen(): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const listRef = useRef<FlatList<JournalEntry>>(null);
-  const openSwipeableRef = useRef<Swipeable | null>(null);
+  const listRef = useRef<FlatList<JournalRow>>(null);
+  const searchInputRef = useRef<TextInput>(null);
+  const swapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [plants, setPlants] = useState<Plant[]>([]);
+  const { beds } = useBedOptions();
   const [loading, setLoading] = useState(true);
 
-  // Search & Filter state
-  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<JournalFilters>(EMPTY_JOURNAL_FILTERS);
   const [searchActive, setSearchActive] = useState(false);
-  const searchInputRef = useRef<TextInput>(null);
-  const [selectedType, setSelectedType] = useState<JournalEntryType | null>(null);
-  const [dateFilter, setDateFilter] = useState<'all' | 'week' | 'month' | 'year'>('week');
-
-  // Tag filter state
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-
-  // Collapsible filter state
-  const [showFilters, setShowFilters] = useState(false);
-
+  const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
+  // Entry whose ⋯ menu is open, and the problem awaiting its "what worked?" answer.
+  const [actionTarget, setActionTarget] = useState<JournalEntry | null>(null);
+  const [resolvePrompt, setResolvePrompt] = useState<JournalEntry | null>(null);
   // Gallery modal state — the tapped entry's photos plus the photo to open on.
   const [gallery, setGallery] = useState<{ uris: string[]; index: number } | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  // Resolve/delete confirmations; the form's save message arrives as a param.
+  const [localToast, setLocalToast] = useState<string | null>(null);
+  const toast = localToast ?? route.params?.savedMessage ?? null;
+
+  const updateFilters = useCallback((patch: Partial<JournalFilters>): void => {
+    setFilters((prev) => ({ ...prev, ...patch }));
+  }, []);
 
   const loadData = async (options?: { silent?: boolean }): Promise<void> => {
     if (!options?.silent) {
@@ -116,102 +160,132 @@ export default function JournalScreen(): React.JSX.Element {
     }
   }, [route.params, navigation]);
 
-  const getPlantName = useCallback(
-    (plantId: string | null) => {
-      if (!plantId) return null;
-      const plant = plants.find((p) => p.id === plantId);
-      return plant?.name;
+  useEffect(
+    () => () => {
+      if (swapTimer.current) clearTimeout(swapTimer.current);
     },
-    [plants]
+    []
+  );
+
+  /** Close whatever sheet is open, then run `next` once it has faded. */
+  const afterSheetCloses = useCallback((next: () => void): void => {
+    if (swapTimer.current) clearTimeout(swapTimer.current);
+    if (SHEET_SWAP_DELAY_MS === 0) {
+      next();
+      return;
+    }
+    swapTimer.current = setTimeout(next, SHEET_SWAP_DELAY_MS);
+  }, []);
+
+  const plantById = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
+  const bedById = useMemo(() => new Map(beds.map((b) => [b.id, b])), [beds]);
+  const bedNameById = useMemo(() => new Map(beds.map((b) => [b.id, b.name])), [beds]);
+  const getLocation = useCallback(
+    (entry: JournalEntry): JournalLocation | null =>
+      journalEntryLocation(entry, plantById, bedNameById),
+    [plantById, bedNameById]
+  );
+  const filterContext = useMemo<JournalFilterContext>(
+    () => ({
+      plantById,
+      bedById,
+      placeLabel: (entry) => getLocation(entry)?.label ?? null,
+    }),
+    [plantById, bedById, getLocation]
   );
 
   // Summary tiles. Entries/harvests/weight follow the date filter; active
   // problems is a current-state count over all entries (see computeJournalStats).
   const stats = useMemo(
-    () => computeJournalStats(entries, getDateFilterStart(dateFilter)),
-    [entries, dateFilter]
+    () => computeJournalStats(entries, getDateFilterStart(filters.period)),
+    [entries, filters.period]
   );
 
-  // Tags actually present on entries, for the filter sheet.
-  const usedTags = useMemo(() => collectUsedTags(entries), [entries]);
+  const filteredEntries = useMemo(
+    () => filterJournalEntries(entries, filters, filterContext),
+    [entries, filters, filterContext]
+  );
 
-  // Filter and search entries
-  const filteredEntries = useMemo(() => {
-    let filtered = [...entries];
+  // ─── Filter sheet data — each chip counts what picking it would show ────
+  const typeCounts = useMemo<JournalFilterCount[]>(() => {
+    const base = filterJournalEntries(entries, filters, filterContext, 'type');
+    return [
+      { value: '', count: base.length },
+      ...JOURNAL_TYPE_OPTIONS.map((option) => ({
+        value: option.value,
+        count: base.filter((e) => e.entry_type === option.value).length,
+      })),
+    ];
+  }, [entries, filters, filterContext]);
+  const plotCounts = useMemo<JournalFilterCount[]>(() => {
+    const base = filterJournalEntries(entries, filters, filterContext, 'plot');
+    return collectUsedPlots(entries, plantById, bedById).map((plot) => ({
+      value: plot,
+      count: base.filter((e) => entryMatchesPlot(e, plot, plantById, bedById)).length,
+    }));
+  }, [entries, filters, filterContext, plantById, bedById]);
+  const tagCounts = useMemo<JournalFilterCount[]>(() => {
+    const base = filterJournalEntries(entries, filters, filterContext, 'tag');
+    return collectUsedTags(entries).map((tag) => ({
+      value: tag,
+      count: base.filter((e) => (e.tags ?? []).includes(tag)).length,
+    }));
+  }, [entries, filters, filterContext]);
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((entry) => {
-        const plantName = getPlantName(entry.plant_id)?.toLowerCase() || '';
-        const content = entry.content.toLowerCase();
-        const pestName = entry.pest_name?.toLowerCase() || '';
-        return plantName.includes(query) || content.includes(query) || pestName.includes(query);
-      });
-    }
+  // Plants and beds that have entries, grouped by plot, for the place picker.
+  const usedLocations = useMemo(
+    () => collectUsedLocations(entries, plantById, beds),
+    [entries, plantById, beds]
+  );
+  const placeOptions = useMemo(
+    () => buildJournalPlaceFilterOptions(usedLocations, plantById, bedById, filters.plot),
+    [usedLocations, plantById, bedById, filters.plot]
+  );
+  const placeLabel = useMemo(
+    () => usedLocations.find((loc) => loc.key === filters.location)?.label ?? null,
+    [usedLocations, filters.location]
+  );
+  const placePlot = useMemo(
+    () => (filters.location ? journalLocationPlot(filters.location, plantById, bedById) : null),
+    [filters.location, plantById, bedById]
+  );
 
-    // Type filter
-    if (selectedType) {
-      filtered = filtered.filter((e) => e.entry_type === selectedType);
-    }
+  const activeFilterCount = countActiveJournalFilters(filters);
+  // The place picker is part of filtering, so the funnel stays lit while it is open.
+  const filterSheetOpen = openSheet !== null;
 
-    // Tag filter
-    if (selectedTag) {
-      filtered = filtered.filter((e) => e.tags && e.tags.includes(selectedTag));
-    }
-
-    // Date filter
-    const filterStart = getDateFilterStart(dateFilter);
-    if (filterStart) {
-      filtered = filtered.filter((e) => new Date(e.created_at) >= filterStart);
-    }
-
-    // Sort by newest first
-    filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-    return filtered;
-  }, [entries, searchQuery, selectedType, selectedTag, dateFilter, getPlantName]);
-
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (dateFilter !== 'week') count++;
-    if (selectedType) count++;
-    if (selectedTag) count++;
-    return count;
-  }, [dateFilter, selectedType, selectedTag]);
-
-  const toggleFilters = (): void => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setShowFilters((prev) => !prev);
-  };
-
-  const clearAllFilters = (): void => {
-    setSearchQuery('');
-    setSelectedType(null);
-    setSelectedTag(null);
-    setDateFilter('week');
-  };
-
-  const confirmDelete = async (): Promise<void> => {
-    if (!deleteId) return;
-    const id = deleteId;
-    setDeleteId(null);
-    try {
-      await deleteJournalEntry(id);
-      loadData();
-    } catch (error: unknown) {
-      Alert.alert('Error', getErrorMessage(error));
-    }
-  };
-
-  // Keep only one row swiped open at a time (mirrors BedListScreen).
-  const handleSwipeableOpen = useCallback((ref: Swipeable) => {
-    if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
-      openSwipeableRef.current.close();
-    }
-    openSwipeableRef.current = ref;
+  const clearAllFilters = useCallback((): void => {
+    setFilters(EMPTY_JOURNAL_FILTERS);
+    setSearchActive(false);
   }, []);
+  const clearSheetFilters = useCallback((): void => {
+    setFilters((prev) => ({ ...EMPTY_JOURNAL_FILTERS, query: prev.query }));
+  }, []);
+  // ─── Header ──────────────────────────────────────────────────────────────
+  const openSearch = useCallback((): void => setSearchActive(true), []);
+  // Back closes the field but keeps the query, as on Plants and Beds.
+  const closeSearch = useCallback((): void => setSearchActive(false), []);
+  const clearQuery = useCallback((): void => updateFilters({ query: '' }), [updateFilters]);
+  const handleQueryChange = useCallback(
+    (text: string): void => updateFilters({ query: sanitizeAlphaNumericSpaces(text) }),
+    [updateFilters]
+  );
+  const openFilters = useCallback((): void => setOpenSheet('filter'), []);
+  const closeSheet = useCallback((): void => setOpenSheet(null), []);
+  const openPlacePicker = useCallback((): void => {
+    setOpenSheet(null);
+    afterSheetCloses(() => setOpenSheet('place'));
+  }, [afterSheetCloses]);
+  const backToFilters = useCallback((): void => {
+    setOpenSheet(null);
+    afterSheetCloses(() => setOpenSheet('filter'));
+  }, [afterSheetCloses]);
+  const selectPlace = useCallback(
+    (value: string): void => updateFilters({ location: value || null }),
+    [updateFilters]
+  );
 
+  // ─── Entry actions ───────────────────────────────────────────────────────
   const handleCardPress = useCallback(
     (entry: JournalEntry): void => {
       navigation.navigate('JournalForm', { entry });
@@ -219,69 +293,218 @@ export default function JournalScreen(): React.JSX.Element {
     [navigation]
   );
 
-  const requestDelete = useCallback((entry: JournalEntry): void => {
-    setDeleteId(entry.id);
-  }, []);
-
   const handlePhotoPress = useCallback((uris: string[], index: number): void => {
     setGallery({ uris, index });
   }, []);
 
-  const renderItem = useCallback(
-    ({ item }: { item: JournalEntry }): React.JSX.Element => (
-      <JournalEntryCard
-        entry={item}
-        plantName={getPlantName(item.plant_id) ?? null}
-        onPress={handleCardPress}
-        onEdit={handleCardPress}
-        onDelete={requestDelete}
-        onPhotoPress={handlePhotoPress}
-        onSwipeableOpen={handleSwipeableOpen}
-      />
-    ),
-    [getPlantName, handleCardPress, requestDelete, handlePhotoPress, handleSwipeableOpen]
+  const handleLocationPress = useCallback(
+    (entry: JournalEntry): void => {
+      const location = getLocation(entry);
+      const id = location?.kind === 'plant' ? entry.plant_id : entry.bed_id;
+      if (!location || !id) return;
+      updateFilters({ location: journalLocationKey(location.kind, id) });
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    },
+    [getLocation, updateFilters]
   );
 
-  // Statistics dashboard — rendered as the list header.
+  // Mirrors the form's resolve path (status + resolved date) without opening
+  // the form. The effectiveness answer is written only when given, so Skip
+  // keeps any earlier one.
+  const resolveEntry = useCallback(
+    async (entry: JournalEntry, effectiveness: TreatmentEffectiveness | null): Promise<void> => {
+      try {
+        await updateJournalEntry(entry.id, {
+          pest_status: 'resolved',
+          pest_resolved_at: toLocalDateString(new Date()),
+          ...(effectiveness ? { pest_treatment_effectiveness: effectiveness } : {}),
+        });
+        setLocalToast(
+          effectiveness ? 'Marked resolved. Treatment rating saved.' : 'Marked resolved'
+        );
+        void loadData({ silent: true });
+      } catch (error: unknown) {
+        Alert.alert('Error', getErrorMessage(error));
+      }
+    },
+    []
+  );
+  // With a treatment on record, ask how well it worked before resolving — the
+  // farmer's own evidence for next time. Without one there is nothing to rate.
+  const handleResolve = useCallback(
+    (entry: JournalEntry): void => {
+      if (entry.pest_treatment?.trim()) {
+        setResolvePrompt(entry);
+        return;
+      }
+      void resolveEntry(entry, null);
+    },
+    [resolveEntry]
+  );
+  const dismissResolvePrompt = useCallback((): void => setResolvePrompt(null), []);
+  const answerResolvePrompt = useCallback(
+    (effectiveness: TreatmentEffectiveness | null): void => {
+      const entry = resolvePrompt;
+      setResolvePrompt(null);
+      if (entry) void resolveEntry(entry, effectiveness);
+    },
+    [resolvePrompt, resolveEntry]
+  );
+
+  const openActions = useCallback((entry: JournalEntry): void => setActionTarget(entry), []);
+  const closeActions = useCallback((): void => setActionTarget(null), []);
+  const resolveFromActions = useCallback((): void => {
+    const entry = actionTarget;
+    setActionTarget(null);
+    if (entry) afterSheetCloses(() => handleResolve(entry));
+  }, [actionTarget, afterSheetCloses, handleResolve]);
+  const editFromActions = useCallback((): void => {
+    const entry = actionTarget;
+    setActionTarget(null);
+    if (entry) navigation.navigate('JournalForm', { entry });
+  }, [actionTarget, navigation]);
+  const deleteFromActions = useCallback(async (): Promise<void> => {
+    const entry = actionTarget;
+    setActionTarget(null);
+    if (!entry) return;
+    try {
+      await deleteJournalEntry(entry.id);
+      setLocalToast('Entry deleted');
+      void loadData({ silent: true });
+    } catch (error: unknown) {
+      Alert.alert('Error', getErrorMessage(error));
+    }
+  }, [actionTarget]);
+  const handleDeleteConfirmed = useCallback((): void => {
+    void deleteFromActions();
+  }, [deleteFromActions]);
+
+  const hideToast = useCallback((): void => {
+    setLocalToast(null);
+    if (route.params?.savedMessage) navigation.setParams({ savedMessage: undefined });
+  }, [route.params?.savedMessage, navigation]);
+
+  const openNewEntry = useCallback((): void => navigation.navigate('JournalForm'), [navigation]);
+  const closeGallery = useCallback((): void => setGallery(null), []);
+
+  // Day headings are interleaved as rows so the list stays a single FlatList.
+  const rows = useMemo(() => buildJournalRows(filteredEntries), [filteredEntries]);
+  const rowKey = useCallback((row: JournalRow): string => row.key, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: JournalRow }): React.JSX.Element => {
+      if (item.kind === 'header') {
+        return (
+          <Text style={styles.dayHeader} accessibilityRole="header">
+            {item.title}
+          </Text>
+        );
+      }
+      const location = getLocation(item.entry);
+      return (
+        <JournalEntryCard
+          entry={item.entry}
+          locationName={location?.label ?? null}
+          locationKind={location?.kind ?? null}
+          onPress={handleCardPress}
+          onMore={openActions}
+          onResolve={handleResolve}
+          onLocationPress={handleLocationPress}
+          onPhotoPress={handlePhotoPress}
+        />
+      );
+    },
+    [
+      styles,
+      getLocation,
+      handleCardPress,
+      openActions,
+      handleResolve,
+      handleLocationPress,
+      handlePhotoPress,
+    ]
+  );
+
+  // Tapping a stat tile toggles the matching type filter. Open issues counts
+  // unresolved problems over all time, so it filters to exactly those and
+  // widens the date window — otherwise an older unresolved problem would read
+  // "1" and filter to nothing.
+  const issuesSelected = filters.type === JournalEntryType.PestDisease && filters.openOnly;
+  const showAllTypes = useCallback(
+    (): void => updateFilters({ type: null, openOnly: false }),
+    [updateFilters]
+  );
+  const toggleHarvestFilter = useCallback((): void => {
+    setFilters((prev) => ({
+      ...prev,
+      openOnly: false,
+      type: prev.type === JournalEntryType.Harvest ? null : JournalEntryType.Harvest,
+    }));
+  }, []);
+  const toggleIssuesFilter = useCallback((): void => {
+    setFilters((prev) =>
+      prev.type === JournalEntryType.PestDisease && prev.openOnly
+        ? { ...prev, type: null, openOnly: false }
+        : { ...prev, type: JournalEntryType.PestDisease, openOnly: true, period: 'all' }
+    );
+  }, []);
+
+  const statTiles = useMemo<JournalStatTile[]>(
+    () => [
+      {
+        key: 'entries',
+        value: String(stats.entries),
+        label: journalEntriesTileLabel(filters.period),
+        tone: 'neutral',
+        muted: stats.entries === 0,
+        onPress: showAllTypes,
+      },
+      {
+        key: 'harvest',
+        // "0 pcs" before anything is picked reads like a measurement; a dash doesn't.
+        value: stats.harvestCount === 0 ? '—' : String(stats.harvestTotal),
+        ...(stats.harvestCount === 0 ? {} : { unit: stats.harvestUnit }),
+        label:
+          stats.harvestCount === 0
+            ? 'Harvest'
+            : `${stats.harvestCount} picking${stats.harvestCount === 1 ? '' : 's'}`,
+        tone: 'harvest',
+        muted: stats.harvestCount === 0,
+        selected: filters.type === JournalEntryType.Harvest,
+        onPress: toggleHarvestFilter,
+      },
+      {
+        key: 'issues',
+        value: String(stats.activeProblems),
+        label: 'Open issues',
+        tone: 'issues',
+        muted: stats.activeProblems === 0,
+        selected: issuesSelected,
+        onPress: toggleIssuesFilter,
+      },
+    ],
+    [
+      stats,
+      filters.period,
+      filters.type,
+      issuesSelected,
+      showAllTypes,
+      toggleHarvestFilter,
+      toggleIssuesFilter,
+    ]
+  );
+
+  // The tiles name their own period, so there is no caption row above them.
   const listHeader = (
     <View style={styles.statsHeader}>
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Ionicons name="document-text" size={18} color={theme.primary} />
-          <Text style={styles.statNumber}>{stats.entries}</Text>
-          <Text style={styles.statLabel} numberOfLines={1}>
-            Entries
-          </Text>
-        </View>
-        <View style={styles.statCard}>
-          <Ionicons name="basket" size={18} color={theme.warning} />
-          <Text style={styles.statNumber}>{stats.harvests}</Text>
-          <Text style={styles.statLabel} numberOfLines={1}>
-            Harvests
-          </Text>
-        </View>
-        <View style={styles.statCard}>
-          <Ionicons name="scale" size={18} color={theme.success} />
-          <Text style={styles.statNumber}>{stats.weightKg}</Text>
-          <Text style={styles.statLabel} numberOfLines={1}>
-            kg
-          </Text>
-        </View>
-        <View style={styles.statCard}>
-          <Ionicons name="bug" size={18} color={theme.error} />
-          <Text style={styles.statNumber}>{stats.activeProblems}</Text>
-          <Text style={styles.statLabel} numberOfLines={1}>
-            Active
-          </Text>
-        </View>
-      </View>
+      <JournalStatTiles tiles={statTiles} />
     </View>
   );
 
   // Empty state — hidden while the first load is in flight to avoid a flash.
   const listEmpty = loading ? null : (
     <View style={styles.emptyState}>
-      <Ionicons name="book-outline" size={64} color={theme.border} />
+      <Ionicons name="book-outline" size={56} color={theme.border} />
       {entries.length === 0 ? (
         <>
           <Text style={styles.emptyText}>No journal entries yet</Text>
@@ -290,98 +513,112 @@ export default function JournalScreen(): React.JSX.Element {
       ) : (
         <>
           <Text style={styles.emptyText}>No entries found</Text>
-          <Text style={styles.emptySubtext}>
-            {searchQuery
-              ? `No results for "${searchQuery}"`
-              : dateFilter !== 'all'
-              ? `No entries in ${
-                  dateFilter === 'week'
-                    ? 'the past week'
-                    : dateFilter === 'month'
-                    ? 'this month'
-                    : 'this year'
-                }`
-              : selectedType
-              ? `No ${selectedType} entries found`
-              : 'Try adjusting your filters'}
-          </Text>
+          <Text style={styles.emptySubtext}>{journalEmptySubtext(filters)}</Text>
           <TouchableOpacity style={styles.clearFiltersButton} onPress={clearAllFilters}>
-            <Text style={styles.clearFiltersText}>Clear Filters</Text>
+            <Text style={styles.clearFiltersText}>Clear filters</Text>
           </TouchableOpacity>
         </>
       )}
     </View>
   );
 
+  const resolveName = resolvePrompt?.pest_name?.trim() || 'problem';
+  const resolveOpenDays = resolvePrompt ? daysOpen(resolvePrompt) : null;
+  const resolveSubtitle = resolvePrompt
+    ? [
+        getLocation(resolvePrompt)?.label,
+        resolveOpenDays === null ? null : `open ${formatDaysOpen(resolveOpenDays)}`,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
+  const actionTitle = actionTarget
+    ? (journalEntryHeadline(actionTarget) ??
+      (actionTarget.content.trim().slice(0, 40) || journalTypeLabel(actionTarget.entry_type)))
+    : '';
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.headerTop}>
-          {searchActive ? (
-            <View style={styles.searchExpandedRow}>
-              <TouchableOpacity
-                style={styles.searchBackBtn}
-                onPress={() => {
-                  setSearchActive(false);
-                  if (!searchQuery.trim()) setSearchQuery('');
-                }}
-              >
-                <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-              </TouchableOpacity>
-              <View style={styles.searchExpandedWrapper}>
-                <Ionicons name="search" size={16} color={theme.textSecondary} />
-                <TextInput
-                  ref={searchInputRef}
-                  style={styles.searchExpandedInput}
-                  placeholder="Search journal..."
-                  placeholderTextColor={theme.inputPlaceholder}
-                  value={searchQuery}
-                  onChangeText={(text) => setSearchQuery(sanitizeAlphaNumericSpaces(text))}
-                  autoFocus
-                  returnKeyType="search"
-                />
-                {searchQuery !== '' && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
-                  </TouchableOpacity>
-                )}
-              </View>
+        {searchActive ? (
+          <View style={styles.searchExpandedRow}>
+            <TouchableOpacity
+              style={styles.searchBackBtn}
+              onPress={closeSearch}
+              accessibilityRole="button"
+              accessibilityLabel="Close search"
+            >
+              <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
+            </TouchableOpacity>
+            <View style={styles.searchExpandedWrapper}>
+              <Ionicons name="search" size={16} color={theme.textSecondary} />
+              <TextInput
+                ref={searchInputRef}
+                style={styles.searchExpandedInput}
+                placeholder="Search journal..."
+                placeholderTextColor={theme.inputPlaceholder}
+                value={filters.query}
+                onChangeText={handleQueryChange}
+                autoFocus
+                returnKeyType="search"
+                accessibilityLabel="Search journal"
+              />
+              {filters.query !== '' && (
+                <TouchableOpacity
+                  onPress={clearQuery}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search"
+                >
+                  <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
+                </TouchableOpacity>
+              )}
             </View>
-          ) : (
-            <>
-              <Text style={styles.headerTitle}>Journal</Text>
-              <View style={styles.headerActions}>
-                <TouchableOpacity
-                  style={styles.searchIconBtn}
-                  onPress={() => setSearchActive(true)}
-                >
-                  <Ionicons name="search" size={20} color={theme.textInverse} />
-                  {searchQuery !== '' && <View style={styles.searchActiveDot} />}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.filterToggleButton,
-                    showFilters && styles.filterToggleButtonActive,
-                  ]}
-                  onPress={toggleFilters}
-                >
-                  <Ionicons name="funnel" size={20} color={theme.textInverse} />
-                  {activeFilterCount > 0 && !showFilters && (
-                    <View style={styles.filterBadge}>
-                      <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-        </View>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.headerTitle} accessibilityRole="header">
+              Journal
+            </Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.headerIconBtn}
+                onPress={openSearch}
+                accessibilityRole="button"
+                accessibilityLabel="Search journal"
+              >
+                <Ionicons name="search" size={20} color={theme.textInverse} />
+                {filters.query.trim() !== '' && <View style={styles.searchActiveDot} />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.headerIconBtn, filterSheetOpen && styles.headerIconBtnActive]}
+                onPress={openFilters}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  activeFilterCount > 0
+                    ? `Filter journal, ${activeFilterCount} active`
+                    : 'Filter journal'
+                }
+              >
+                <Ionicons
+                  name="funnel"
+                  size={20}
+                  color={filterSheetOpen ? theme.primary : theme.textInverse}
+                />
+                {activeFilterCount > 0 && !filterSheetOpen && (
+                  <View style={styles.filterBadge}>
+                    <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </View>
 
       <FlatList
         ref={listRef}
-        data={filteredEntries}
-        keyExtractor={(item) => item.id}
+        data={rows}
+        keyExtractor={rowKey}
         renderItem={renderItem}
         style={styles.content}
         contentContainerStyle={[
@@ -391,156 +628,73 @@ export default function JournalScreen(): React.JSX.Element {
         onScroll={onTabBarScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={listEmpty}
       />
 
-      {/* Floating Action Button */}
-      <AnimatedFAB onPress={() => navigation.navigate('JournalForm')} />
+      <AnimatedFAB onPress={openNewEntry} />
 
-      {/* Filter Bottom Sheet */}
-      {showFilters && (
-        <View style={[StyleSheet.absoluteFill, styles.sheetOverlay]}>
-          {/* Backdrop */}
-          <Pressable style={StyleSheet.absoluteFill} onPress={toggleFilters} />
+      <StatusToast
+        message={toast}
+        onHide={hideToast}
+        bottomOffset={TAB_BAR_HEIGHT + Math.max(insets.bottom, 12) + 84}
+      />
 
-          {/* Sheet */}
-          <View
-            style={[
-              styles.sheetContainer,
-              { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) },
-            ]}
-          >
-            <SheetHandle onClose={toggleFilters} />
+      <JournalFilterSheet
+        visible={openSheet === 'filter'}
+        filters={filters}
+        onChange={updateFilters}
+        onClearAll={clearSheetFilters}
+        onClose={closeSheet}
+        activeCount={activeFilterCount}
+        typeCounts={typeCounts}
+        openCount={stats.activeProblems}
+        plotCounts={plotCounts}
+        tagCounts={tagCounts}
+        placeLabel={placeLabel}
+        placePlot={placePlot}
+        onOpenPlacePicker={openPlacePicker}
+        resultCount={filteredEntries.length}
+      />
 
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Filter Journal</Text>
-              {activeFilterCount > 0 && (
-                <TouchableOpacity onPress={clearAllFilters} style={styles.sheetClearBtn}>
-                  <Text style={styles.sheetClearText}>Clear All</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+      <OptionPickerSheet
+        visible={openSheet === 'place'}
+        onClose={backToFilters}
+        title="Bed or plant"
+        subtitle={
+          filters.plot
+            ? `Showing ${filters.plot} only. Change Location to see more.`
+            : 'Grouped by location.'
+        }
+        options={placeOptions}
+        selectedValue={filters.location ?? ''}
+        onSelect={selectPlace}
+        searchable
+        searchPlaceholder="Search bed, plant or crop"
+        allowClear
+        clearLabel="Any bed or plant"
+      />
 
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              style={styles.sheetScroll}
-              contentContainerStyle={styles.sheetScrollContent}
-              bounces={false}
-              nestedScrollEnabled
-            >
-              {/* Date Range */}
-              <Text style={styles.sheetSectionTitle}>
-                <Ionicons name="calendar" size={14} color={theme.textSecondary} /> Date Range
-              </Text>
-              <View style={styles.sheetChipWrap}>
-                {(
-                  [
-                    ['all', 'All Time'],
-                    ['week', 'This Week'],
-                    ['month', 'This Month'],
-                    ['year', 'This Year'],
-                  ] as const
-                ).map(([val, label]) => (
-                  <TouchableOpacity
-                    key={val}
-                    style={[styles.sheetChip, dateFilter === val && styles.sheetChipActive]}
-                    onPress={() => setDateFilter(val)}
-                  >
-                    <Text
-                      style={[
-                        styles.sheetChipText,
-                        dateFilter === val && styles.sheetChipTextActive,
-                      ]}
-                    >
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+      <JournalActionSheet
+        visible={actionTarget !== null}
+        title={actionTitle}
+        canResolve={!!actionTarget && isActiveProblem(actionTarget)}
+        onResolve={resolveFromActions}
+        onEdit={editFromActions}
+        onDelete={handleDeleteConfirmed}
+        onClose={closeActions}
+      />
 
-              {/* Entry Type */}
-              <Text style={styles.sheetSectionTitle}>
-                <Ionicons name="document-text" size={14} color={theme.textSecondary} /> Entry Type
-              </Text>
-              <View style={styles.sheetChipWrap}>
-                {(
-                  [
-                    [null, 'All', null],
-                    [JournalEntryType.Observation, 'Observation', 'eye-outline'],
-                    [JournalEntryType.Harvest, 'Harvest', 'basket-outline'],
-                    [JournalEntryType.PestDisease, 'Pest/Disease', 'bug-outline'],
-                    [JournalEntryType.Milestone, 'Milestone', 'flag-outline'],
-                  ] as const
-                ).map(([val, label, icon]) => (
-                  <TouchableOpacity
-                    key={val ?? 'all'}
-                    style={[styles.sheetChip, selectedType === val && styles.sheetChipActive]}
-                    onPress={() => setSelectedType(val as JournalEntryType | null)}
-                  >
-                    {icon && (
-                      <Ionicons
-                        name={icon}
-                        size={14}
-                        color={selectedType === val ? theme.primary : theme.textSecondary}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.sheetChipText,
-                        selectedType === val && styles.sheetChipTextActive,
-                      ]}
-                    >
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Tags — only those actually in use */}
-              {usedTags.length > 0 && (
-                <>
-                  <Text style={styles.sheetSectionTitle}>
-                    <Ionicons name="pricetag" size={14} color={theme.textSecondary} /> Tag
-                  </Text>
-                  <View style={styles.sheetChipWrap}>
-                    <TouchableOpacity
-                      style={[styles.sheetChip, selectedTag === null && styles.sheetChipActive]}
-                      onPress={() => setSelectedTag(null)}
-                    >
-                      <Text
-                        style={[
-                          styles.sheetChipText,
-                          selectedTag === null && styles.sheetChipTextActive,
-                        ]}
-                      >
-                        All
-                      </Text>
-                    </TouchableOpacity>
-                    {usedTags.map((tag) => (
-                      <TouchableOpacity
-                        key={tag}
-                        style={[styles.sheetChip, selectedTag === tag && styles.sheetChipActive]}
-                        onPress={() => setSelectedTag(tag)}
-                      >
-                        <Text
-                          style={[
-                            styles.sheetChipText,
-                            selectedTag === tag && styles.sheetChipTextActive,
-                          ]}
-                        >
-                          {tag.replace(/_/g, ' ')}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      )}
+      <JournalResolveSheet
+        visible={resolvePrompt !== null}
+        name={resolveName}
+        subtitle={resolveSubtitle}
+        treatment={resolvePrompt?.pest_treatment?.trim() ?? ''}
+        onAnswer={answerResolvePrompt}
+        onClose={dismissResolvePrompt}
+      />
 
       {/* Fullscreen swipeable image viewer with pinch/pan/double-tap zoom */}
       {gallery && (
@@ -548,18 +702,9 @@ export default function JournalScreen(): React.JSX.Element {
           visible
           sources={gallery.uris}
           initialIndex={gallery.index}
-          onClose={() => setGallery(null)}
+          onClose={closeGallery}
         />
       )}
-
-      <ConfirmDeleteModal
-        visible={deleteId !== null}
-        title="Delete entry?"
-        message="This journal entry will be permanently removed. This can't be undone."
-        confirmLabel="Delete"
-        onCancel={() => setDeleteId(null)}
-        onConfirm={confirmDelete}
-      />
     </View>
   );
 }

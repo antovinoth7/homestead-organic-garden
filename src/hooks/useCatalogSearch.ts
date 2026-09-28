@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getData, setData, KEYS } from '@/lib/storage';
-import {
-  buildCatalogSearchIndex,
-  pushRecentSearch,
-  searchCatalog,
-} from '@/utils/catalogSearch';
+import { buildCatalogSearchIndex, pushRecentSearch, searchCatalog } from '@/utils/catalogSearch';
 import type { CatalogSearchResult } from '@/utils/catalogSearch';
 import type { PlantProfiles, PlantType } from '@/types/database.types';
 
@@ -14,6 +10,13 @@ const DEBOUNCE_MS = 120;
 interface Args {
   profiles: PlantProfiles;
   plantCountsByType: Record<PlantType, Record<string, number>>;
+  /**
+   * Whether the user has reached for search yet. Building the index walks every
+   * catalog entry resolving aliases and taxonomy tags, which is pure waste on
+   * the majority of visits that only browse. Latching it means collapsing the
+   * search bar doesn't throw the index away.
+   */
+  enabled?: boolean;
 }
 
 export interface UseCatalogSearchReturn {
@@ -38,6 +41,7 @@ export interface UseCatalogSearchReturn {
 export function useCatalogSearch({
   profiles,
   plantCountsByType,
+  enabled = false,
 }: Args): UseCatalogSearchReturn {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -77,10 +81,20 @@ export function useCatalogSearch({
     void setData(KEYS.CATALOG_RECENT_SEARCHES, recentSearches);
   }, [recentSearches]);
 
+  // Latched: once search has been opened, keep indexing on catalog reloads so
+  // reopening it is instant.
+  const [wasEnabled, setWasEnabled] = useState(false);
+  useEffect(() => {
+    if (enabled) setWasEnabled(true);
+  }, [enabled]);
+  // A non-empty query needs the index even if search was never opened this
+  // visit — a recent-search chip sets one directly.
+  const indexing = enabled || wasEnabled || query.trim() !== '';
+
   // Rebuilt only when the catalog reloads — not on every keystroke.
   const index = useMemo(
-    () => buildCatalogSearchIndex(profiles, plantCountsByType),
-    [profiles, plantCountsByType]
+    () => (indexing ? buildCatalogSearchIndex(profiles, plantCountsByType) : []),
+    [indexing, profiles, plantCountsByType]
   );
 
   const outcome = useMemo(() => searchCatalog(index, debouncedQuery), [index, debouncedQuery]);

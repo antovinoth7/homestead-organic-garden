@@ -147,13 +147,9 @@ export function useTodayBrief(): UseTodayBriefResult {
 
   // ─── Derived ───────────────────────────────────────────────────────────────
 
-  const { tasks, logs, allTemplates, plants, beds, locationConfig, farmConfig, profiles } =
-    sources;
+  const { tasks, logs, allTemplates, plants, beds, locationConfig, farmConfig, profiles } = sources;
   const district = farmConfig.district ?? null;
-  const activeZone = useMemo(
-    () => resolveActiveZone(farmConfig),
-    [farmConfig]
-  );
+  const activeZone = useMemo(() => resolveActiveZone(farmConfig), [farmConfig]);
 
   const plantsByBedId = useMemo(() => {
     const map: Record<string, typeof plants> = {};
@@ -274,7 +270,7 @@ export function useTodayBrief(): UseTodayBriefResult {
       // request above. They never borrow another plot's private GPS forecast.
       const matched = weatherPlotByKey.get(locationKey(group.name));
       const weatherPlot = matched ?? fallbackWeatherPlot;
-      const forecast = weatherPlot ? byPlotName.get(weatherPlot.name) ?? null : null;
+      const forecast = weatherPlot ? (byPlotName.get(weatherPlot.name) ?? null) : null;
       const today = selectForecastDays(forecast).today;
       const description = describeDay(today);
       const fetchedAt = forecast?.fetched_at ?? null;
@@ -311,6 +307,10 @@ export function useTodayBrief(): UseTodayBriefResult {
           conditionLabel: description.label,
           conditionIconKey: description.iconKey,
           fetched_at: fetchedAt,
+          // Deliberately impure: staleness is a function of elapsed time, so it
+          // must be re-read rather than frozen. Freezing it at mount would leave
+          // a Today screen open past WEATHER_FRESH_MS (3h) claiming fresh data.
+          // eslint-disable-next-line react-hooks/purity
           stale: fetchedAt ? Date.now() - new Date(fetchedAt).getTime() > WEATHER_FRESH_MS : false,
           // Covers revalidation, not just the cold fetch: the overlay's stale
           // banner only exists when a forecast is already painted, so gating
@@ -343,10 +343,7 @@ export function useTodayBrief(): UseTodayBriefResult {
   );
 
   const windows = useMemo(
-    () =>
-      activeZone
-        ? getTamilNaduPlantingWindows(activeZone.id as AgroClimaticZoneId)
-        : null,
+    () => (activeZone ? getTamilNaduPlantingWindows(activeZone.id as AgroClimaticZoneId) : null),
     [activeZone]
   );
 
@@ -377,10 +374,12 @@ export function useTodayBrief(): UseTodayBriefResult {
 
   const plantNow = useMemo<PlantNowRecommendation[]>(() => {
     if (!windows) return [];
-    const closingKeys = new Set(
-      windows.closing.map((entry) => `${entry.plantType}:${entry.plantName}`)
-    );
-    return toPlantNowChips(windows.current, {
+    // Destructured because `windows.current` is a sowing-window field, not a
+    // React ref — reading it through the object makes the compiler treat it as
+    // one and give up on memoizing this.
+    const { current: currentWindows, closing } = windows;
+    const closingKeys = new Set(closing.map((entry) => `${entry.plantType}:${entry.plantName}`));
+    return toPlantNowChips(currentWindows, {
       lookup: lookupProfile,
       closingKeys,
     });
@@ -475,10 +474,7 @@ export function useTodayBrief(): UseTodayBriefResult {
 
   // The same set `summarizeTodayTasks` builds internally, so the overlay's day
   // counts and the plot card's due count subtract completed work identically.
-  const completedTemplateIds = useMemo(
-    () => new Set(logs.map((log) => log.template_id)),
-    [logs]
-  );
+  const completedTemplateIds = useMemo(() => new Set(logs.map((log) => log.template_id)), [logs]);
 
   const jobsByDateFor = useCallback(
     (plotId: string): ReadonlyMap<string, DayJobs> => {

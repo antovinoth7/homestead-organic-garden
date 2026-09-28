@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import type { BedLayer } from '@/types/database.types';
 import { Step6Data, WizardStepData } from '@/hooks/useBedCreationWizard';
@@ -43,7 +43,7 @@ export function BedConfirmStep({ stepData, data, onChange }: Props): React.JSX.E
     const inputs = mapPlantEntriesToRowInputs(entries, tpl);
     if (inputs.length === 0) return null;
     return computeRowLayout(inputs, s3.width_m, s3.length_m, s1.bed_type, s2?.construction_type);
-  }, [s1?.bed_type, s3, entries, s2?.construction_type]);
+  }, [s1, s3, entries, s2?.construction_type]);
 
   const plantsLabel = useMemo(() => {
     if (entries.length === 0) return null;

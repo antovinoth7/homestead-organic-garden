@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   useFocusEffect,
   useNavigation,
@@ -84,7 +84,7 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
     }
     return [...byBed.entries()].map(([bedId, data]) => ({
       bedId,
-      title: bedId === NO_BED_KEY ? 'No bed' : bedNames[bedId] ?? 'Deleted bed',
+      title: bedId === NO_BED_KEY ? 'No bed' : (bedNames[bedId] ?? 'Deleted bed'),
       bedDeleted: bedId !== NO_BED_KEY && deletedBedIds.has(bedId),
       data,
     }));

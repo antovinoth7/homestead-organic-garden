@@ -1,5 +1,6 @@
 import type { SoilType, CropFamily, PestHistoryItem, BedType } from '@/types/database.types';
 import { getGreenManureForMonth } from './greenManureEngine';
+import { REST_BY_PREV_CROP } from './cropFamilyRotation';
 
 export interface PrepStep {
   number: string;
@@ -86,14 +87,6 @@ const SOIL_BASE_STEPS: Partial<Record<SoilType, { text: string; detail: string }
   ],
 };
 
-const REST_BY_PREV_CROP: Record<string, { days: string; reason: string }> = {
-  solanaceae: { days: '14 days', reason: 'clear solanaceae soil pathogens' },
-  cucurbit: { days: '10 days', reason: 'remove vine debris and reset fungal load' },
-  brassica: { days: '7 days', reason: 'brassica debris mildly inhibits next planting' },
-  allium: { days: '14 days', reason: 'allium residue inhibits legume germination' },
-  legume: { days: '3 days', reason: 'excellent rotation — minimal rest needed' },
-  other: { days: '5 days', reason: 'standard rest between crop families' },
-};
 
 const PEST_ADDITIONS: Record<string, { text: string; detail: string }> = {
   'Root Knot Nematode': {

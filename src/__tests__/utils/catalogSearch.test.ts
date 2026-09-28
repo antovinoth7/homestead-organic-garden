@@ -1,15 +1,13 @@
 import {
   buildCatalogSearchIndex,
+  extendPastCombiningMarks,
+  findCatalogPlant,
   pushRecentSearch,
   searchCatalog,
   splitAtSpan,
 } from '@/utils/catalogSearch';
 import type { CatalogSearchEntry, CatalogSearchResult } from '@/utils/catalogSearch';
-import {
-  makeCountsByType,
-  makePlantProfile,
-  makePlantProfiles,
-} from '../fixtures/plant.fixtures';
+import { makeCountsByType, makePlantProfile, makePlantProfiles } from '../fixtures/plant.fixtures';
 
 const brinjal = makePlantProfile({
   plantType: 'vegetable',
@@ -111,6 +109,7 @@ describe('searchCatalog', () => {
         name: 'Keerai',
         tamilName: 'Keerai',
         aliases: [],
+        tagLabels: [],
         gardenCount: 0,
       },
     ];
@@ -163,7 +162,7 @@ describe('searchCatalog', () => {
     it('ranks a direct name hit above an alias hit', () => {
       const withOkraEntry: CatalogSearchEntry[] = [
         ...index,
-        { plantType: 'vegetable', name: 'Okra Bush', aliases: [], gardenCount: 0 },
+        { plantType: 'vegetable', name: 'Okra Bush', aliases: [], tagLabels: [], gardenCount: 0 },
       ];
       expect(run(withOkraEntry, 'okra').map((result) => result.name)).toEqual([
         'Okra Bush',
@@ -184,7 +183,7 @@ describe('searchCatalog', () => {
     });
 
     it('matches words given out of order', () => {
-      expect(run(index, 'brinjal long').map((result) => result.name)).toEqual(['Long Brinjal']);
+      expect(run(index, 'brinjal long').map((result) => result.name)).toContain('Long Brinjal');
     });
 
     it('still returns nothing when a word is absent', () => {
@@ -195,8 +194,8 @@ describe('searchCatalog', () => {
   describe('ranking', () => {
     it('puts plants already in the garden first within a tier', () => {
       const entries: CatalogSearchEntry[] = [
-        { plantType: 'vegetable', name: 'Test Alpha', aliases: [], gardenCount: 0 },
-        { plantType: 'vegetable', name: 'Test Beta', aliases: [], gardenCount: 4 },
+        { plantType: 'vegetable', name: 'Test Alpha', aliases: [], tagLabels: [], gardenCount: 0 },
+        { plantType: 'vegetable', name: 'Test Beta', aliases: [], tagLabels: [], gardenCount: 4 },
       ];
       expect(run(entries, 'test').map((result) => result.name)).toEqual([
         'Test Beta',
@@ -206,8 +205,8 @@ describe('searchCatalog', () => {
 
     it('falls back to alphabetical when garden counts tie', () => {
       const entries: CatalogSearchEntry[] = [
-        { plantType: 'vegetable', name: 'Test Beta', aliases: [], gardenCount: 0 },
-        { plantType: 'vegetable', name: 'Test Alpha', aliases: [], gardenCount: 0 },
+        { plantType: 'vegetable', name: 'Test Beta', aliases: [], tagLabels: [], gardenCount: 0 },
+        { plantType: 'vegetable', name: 'Test Alpha', aliases: [], tagLabels: [], gardenCount: 0 },
       ];
       expect(run(entries, 'test').map((result) => result.name)).toEqual([
         'Test Alpha',
@@ -244,5 +243,87 @@ describe('pushRecentSearch', () => {
   it('caps the list at six entries', () => {
     const existing = ['a', 'b', 'c', 'd', 'e', 'f'];
     expect(pushRecentSearch(existing, 'g')).toEqual(['g', 'a', 'b', 'c', 'd', 'e']);
+  });
+});
+
+describe('tag search', () => {
+  /** The real index, so the tags come from the taxonomy rather than a fixture. */
+  const realIndex = buildCatalogSearchIndex(
+    {
+      spinach: { Amaranthus: {}, 'Ponnanganni Keerai': {}, Palak: {} },
+      farm_support: {},
+      vegetable: { Drumstick: {}, 'Bitter Gourd': {} },
+      herb: {},
+      flower: {},
+      fruit_tree: {},
+      timber_tree: {},
+      coconut_tree: {},
+      shrub: { Agathi: {}, Aavaram: {} },
+    } as never,
+    {} as never
+  );
+
+  const search = (needle: string): string[] =>
+    searchCatalog(realIndex, needle).results.map((result) => result.name);
+
+  it('finds the greens by what they are, not what they are called', () => {
+    const hits = search('keerai');
+    expect(hits).toContain('Amaranthus');
+    expect(hits).toContain('Ponnanganni Keerai');
+    // Drumstick is a vegetable, but its leaves are keerai — the tag is why it
+    // shows up here at all.
+    expect(hits).toContain('Drumstick');
+  });
+
+  it('finds the green-manure plants', () => {
+    const hits = search('green manure');
+    expect(hits).toContain('Agathi');
+    expect(hits).toContain('Aavaram');
+  });
+
+  it('says which tag matched, so the row does not look unrelated', () => {
+    const [first] = searchCatalog(realIndex, 'green manure').results;
+    expect(first?.matchedField).toBe('tag');
+    expect(first?.matchedTag).toBe('Green Manure');
+  });
+
+  it('ranks a name hit above a tag hit', () => {
+    // "Ponnanganni Keerai" contains the word, so it must outrank plants that
+    // merely carry the tag.
+    expect(search('keerai')[0]).toBe('Ponnanganni Keerai');
+  });
+});
+
+describe('findCatalogPlant', () => {
+  const profiles = makePlantProfiles([
+    makePlantProfile({ name: 'Ladies Finger', tamilName: 'வெண்டைக்காய்' }),
+    makePlantProfile({ plantType: 'herb', name: 'Tulsi', tamilName: 'துளசி' }),
+  ]);
+
+  it('finds a plant by name, alias or exact Tamil name', () => {
+    expect(findCatalogPlant(profiles, 'ladies finger')?.name).toBe('Ladies Finger');
+    expect(findCatalogPlant(profiles, 'Okra')?.name).toBe('Ladies Finger');
+    expect(findCatalogPlant(profiles, 'வெண்டைக்காய்')).toEqual({
+      name: 'Ladies Finger',
+      plantType: 'vegetable',
+    });
+  });
+
+  it('finds nothing for a genuinely new plant or a blank query', () => {
+    expect(findCatalogPlant(profiles, 'Dragon Fruit')).toBeUndefined();
+    expect(findCatalogPlant(profiles, '  ')).toBeUndefined();
+  });
+});
+
+describe('extendPastCombiningMarks', () => {
+  it('keeps a Tamil vowel sign with its consonant', () => {
+    const text = 'வெண்டைக்காய்';
+    // "வெண்ட" ends on ட; the next code unit is the ை vowel sign.
+    const end = extendPastCombiningMarks(text, 'வெண்ட'.length);
+    expect(text.slice(0, end)).toBe('வெண்டை');
+  });
+
+  it('leaves a span that already ends on a full letter alone', () => {
+    expect(extendPastCombiningMarks('abc', 2)).toBe(2);
   });
 });

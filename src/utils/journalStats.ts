@@ -1,5 +1,6 @@
 import { JournalEntry, JournalEntryType } from '../types/database.types';
-import { harvestWeightKg, isActiveProblem } from './journalEntryOptions';
+import { isActiveProblem } from './journalEntryOptions';
+import { summarizeHarvests, type HarvestBasis } from './harvestStats';
 
 export type JournalDateFilter = 'all' | 'week' | 'month' | 'year';
 
@@ -26,18 +27,27 @@ export function getDateFilterStart(
 export interface JournalStats {
   /** Entries within the selected window. */
   entries: number;
-  /** Harvest entries within the window. */
-  harvests: number;
-  /** Kilograms harvested within the window (weight units only). */
-  weightKg: number;
+  /** Harvest entries within the window, whatever unit they were recorded in. */
+  harvestCount: number;
+  /** Amount harvested within the window, on `harvestUnit`'s basis. */
+  harvestTotal: number;
+  /** `'kg'` if any harvest in the window was weighed, else `'pcs'` (a count). */
+  harvestUnit: HarvestBasis;
   /** Unresolved pest/disease entries — a current-state count, ignores the window. */
   activeProblems: number;
 }
 
 /**
- * Journal summary tiles. Entries/harvests/weight are scoped to `filterStart`
- * (null = all time); activeProblems always reflects all entries so the count
- * of open issues doesn't shrink just because an older date filter is applied.
+ * Journal summary tiles. Entries and harvest figures are scoped to
+ * `filterStart` (null = all time); activeProblems always reflects all entries
+ * so the count of open issues doesn't shrink just because an older date filter
+ * is applied.
+ *
+ * The harvest amount uses `summarizeHarvests`, the same basis rule as the
+ * plant-detail harvest history: kg if anything was weighed, otherwise a count.
+ * So a week of coconuts reads "40 pcs" rather than "0 kg". A window mixing
+ * weighed and counted harvests shows the kg total only — the counted ones are
+ * still in `harvestCount`.
  */
 export function computeJournalStats(
   allEntries: JournalEntry[],
@@ -48,25 +58,25 @@ export function computeJournalStats(
     startMs === null || new Date(entry.created_at).getTime() >= startMs;
 
   let entries = 0;
-  let harvests = 0;
-  let weightKg = 0;
   let activeProblems = 0;
+  const harvests: JournalEntry[] = [];
 
   for (const entry of allEntries) {
     if (isActiveProblem(entry)) activeProblems++;
     if (!inWindow(entry)) continue;
     entries++;
-    if (entry.entry_type === JournalEntryType.Harvest) {
-      harvests++;
-      const kg = harvestWeightKg(entry.harvest_quantity, entry.harvest_unit);
-      if (kg !== null) weightKg += kg;
-    }
+    if (entry.entry_type === JournalEntryType.Harvest) harvests.push(entry);
   }
+
+  const harvest = summarizeHarvests(harvests);
+  const harvestTotal =
+    harvest.unit === 'kg' ? Math.round(harvest.total * 10) / 10 : Math.round(harvest.total);
 
   return {
     entries,
-    harvests,
-    weightKg: Math.round(weightKg * 10) / 10,
+    harvestCount: harvest.count,
+    harvestTotal,
+    harvestUnit: harvest.unit,
     activeProblems,
   };
 }

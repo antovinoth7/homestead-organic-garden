@@ -7,6 +7,14 @@ import { HERB_OVERRIDES } from './herbs';
 import { HERB_SPICE_OVERRIDES } from './herbsSpices';
 import { INTERCROP_FRUIT_TREE_OVERRIDES } from './intercropFruitTrees';
 import { NEW_SHRUB_OVERRIDES } from './newShrubs';
+import {
+  TAMIL_NADU_EDIBLE_FRUIT_TREE_OVERRIDES,
+  TAMIL_NADU_EDIBLE_GREENS_OVERRIDES,
+  TAMIL_NADU_EDIBLE_SPICE_OVERRIDES,
+  TAMIL_NADU_EDIBLE_VEGETABLE_OVERRIDES,
+} from './tamilNaduEdibles';
+import { TAMIL_NADU_AGRONOMY_GAP_OVERRIDES } from './tamilNaduAgronomyGaps';
+import { TAMIL_NADU_HERB_OVERRIDES, TAMIL_NADU_SHRUB_OVERRIDES } from './tamilNaduPlants';
 import { TIMBER_COCONUT_SHRUB_OVERRIDES } from './timberCoconutShrubs';
 import { VEGETABLE_OVERRIDES_1 } from './vegetables1';
 import { VEGETABLE_OVERRIDES_2 } from './vegetables2';
@@ -25,7 +33,17 @@ export const PLANT_CARE_OVERRIDES: Record<string, PlantCareProfile> = {
   ...BED_VEGETABLE_OVERRIDES,
   ...HERB_SPICE_OVERRIDES,
   ...NEW_SHRUB_OVERRIDES,
+  ...TAMIL_NADU_SHRUB_OVERRIDES,
+  ...TAMIL_NADU_HERB_OVERRIDES,
   ...INTERCROP_FRUIT_TREE_OVERRIDES,
+  ...TAMIL_NADU_EDIBLE_VEGETABLE_OVERRIDES,
+  ...TAMIL_NADU_EDIBLE_GREENS_OVERRIDES,
+  ...TAMIL_NADU_EDIBLE_SPICE_OVERRIDES,
+  ...TAMIL_NADU_EDIBLE_FRUIT_TREE_OVERRIDES,
+  // Last: the nine plants that carried identity but no agronomy. Nothing above
+  // declares them, so the position is not a precedence claim — it just keeps the
+  // merge order reading as the order the passes happened.
+  ...TAMIL_NADU_AGRONOMY_GAP_OVERRIDES,
 };
 
 for (const [key, correction] of Object.entries(TODAY_RECOMMENDATION_CROP_OVERRIDES)) {

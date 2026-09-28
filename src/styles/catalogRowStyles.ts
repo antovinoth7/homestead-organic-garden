@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
-import type { Theme } from '../theme/colors';
-import { MONO_FONT } from './typography';
+import type { Theme } from '@/theme/colors';
+import { MONO_FONT } from '@/styles/typography';
 
 /**
  * Dense "read-first" rows inside the catalog section cards: label on the left,
@@ -28,6 +28,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 14,
       paddingVertical: 11,
       minHeight: 44,
+    },
+    // The row's "tap to edit" target fills the row behind its content rather
+    // than wrapping it: on web a button renders a real <button>, and the
+    // FieldHelp button in the label would be nested inside it.
+    rowTarget: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    // Content over the target: taps pass through to it…
+    rowPassive: {
+      pointerEvents: 'none',
+    },
+    // …except the label wrap, whose FieldHelp keeps its own tap.
+    rowPassthrough: {
+      pointerEvents: 'box-none',
     },
     rowError: {
       backgroundColor: theme.errorLight,
@@ -131,15 +149,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     blockLast: {
       borderBottomWidth: 0,
     },
+    // The dictation pill rides at the trailing edge of this row rather than
+    // owning a row of its own. With no pill (or when VoiceDictation renders
+    // nothing) the lone child sits at flex-start, exactly as it used to.
     blockHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      justifyContent: 'space-between',
+      gap: 8,
       marginBottom: 8,
+    },
+    // Keeps the help icon pinned to its label instead of drifting across to
+    // the pill when the row has spare width.
+    blockHeaderMain: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexShrink: 1,
+      minWidth: 0,
     },
     blockLabel: {
       fontSize: 12.5,
       color: theme.textSecondary,
+      flexShrink: 1,
     },
     blockInput: {
       backgroundColor: theme.background,

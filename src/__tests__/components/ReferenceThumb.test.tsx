@@ -29,6 +29,8 @@ jest.mock('@/styles/referenceThumbStyles', () => ({
     heroFallback: 'heroFallback',
     tileImage: 'tileImage',
     tileFallback: 'tileFallback',
+    squareImage: 'squareImage',
+    squareFallback: 'squareFallback',
   }),
 }));
 
@@ -93,5 +95,17 @@ describe('ReferenceThumb', () => {
 
     expect(rendered.root.findAllByType('Image')).toHaveLength(0);
     expect(rendered.root.findAllByType('GardenIcon')[0]?.props.name).toBe('general.plant');
+  });
+
+  it('uses the unrounded square styles for a photo below a tile label', () => {
+    let photo!: ReturnType<typeof TestRenderer.create>;
+    let fallback!: ReturnType<typeof TestRenderer.create>;
+    TestRenderer.act(() => {
+      photo = TestRenderer.create(<ReferenceThumb variant="square" source={{ uri: 'pest' }} />);
+      fallback = TestRenderer.create(<ReferenceThumb variant="square" />);
+    });
+
+    expect(photo.root.findAllByType('Image')[0]?.props.style).toBe('squareImage');
+    expect(fallback.root.findAllByType('View')[0]?.props.style).toBe('squareFallback');
   });
 });

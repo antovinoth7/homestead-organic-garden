@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useTheme } from '@/theme';
@@ -153,7 +153,10 @@ export const BedCard = React.memo(function BedCard({
               {bed.name}
             </Text>
             <View
-              style={[styles.statusPill, { backgroundColor: theme[LIFECYCLE_PILL_BG_TOKEN[status.lifecycle]] }]}
+              style={[
+                styles.statusPill,
+                { backgroundColor: theme[LIFECYCLE_PILL_BG_TOKEN[status.lifecycle]] },
+              ]}
             >
               <Ionicons
                 name={LIFECYCLE_ICON[status.lifecycle]}
@@ -161,7 +164,10 @@ export const BedCard = React.memo(function BedCard({
                 color={theme[LIFECYCLE_PILL_TEXT_TOKEN[status.lifecycle]]}
               />
               <Text
-                style={[styles.statusPillText, { color: theme[LIFECYCLE_PILL_TEXT_TOKEN[status.lifecycle]] }]}
+                style={[
+                  styles.statusPillText,
+                  { color: theme[LIFECYCLE_PILL_TEXT_TOKEN[status.lifecycle]] },
+                ]}
                 numberOfLines={1}
               >
                 {pillLabel}
@@ -179,11 +185,15 @@ export const BedCard = React.memo(function BedCard({
           <View style={styles.occupancyRow}>
             <View style={styles.occupancyTrack}>
               <View
-                style={[styles.occupancyFill, { width: `${Math.round(occupancy.fraction * 100)}%` }]}
+                style={[
+                  styles.occupancyFill,
+                  { width: `${Math.round(occupancy.fraction * 100)}%` },
+                ]}
               />
             </View>
             <Text style={styles.occupancyText} numberOfLines={1}>
-              {occupancy.count} plant{occupancy.count === 1 ? '' : 's'} · {bed.dimensions.area_sqm} m²
+              {occupancy.count} plant{occupancy.count === 1 ? '' : 's'} · {bed.dimensions.area_sqm}{' '}
+              m²
             </Text>
           </View>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { BottomSheetModal } from '../BottomSheetModal';
 import ThemedDropdown from '../ThemedDropdown';
@@ -96,7 +96,7 @@ export default function CreateTaskModal({
     const initialKey = initialStartDate ? calendarDateKey(initialStartDate) : null;
     const todayKey = calendarDateKey(today);
     setStartDate(
-      initialKey && todayKey && initialKey >= todayKey ? initialStartDate ?? today : today
+      initialKey && todayKey && initialKey >= todayKey ? (initialStartDate ?? today) : today
     );
   }, [visible, initialStartDate]);
 

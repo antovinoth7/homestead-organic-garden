@@ -5,6 +5,7 @@ import type {
   NumericRange,
   PlantCareProfile,
   PlantLifecycle,
+  PlantProfile,
   PlantProfiles,
   PlantType,
   SoilType,
@@ -14,6 +15,7 @@ import type {
   WaterRequirement,
 } from '@/types/database.types';
 import { getPlantCareProfile, getStaticPruningDefaults } from '@/utils/plantCareDefaults';
+import { DEFAULT_PROFILES_BY_TYPE } from '@/utils/plantCareDefaults/typeDefaults';
 import { sanitizeLandmarkText } from '@/utils/textSanitizer';
 
 /**
@@ -80,15 +82,23 @@ export const sanitizeNum = (v: string): string => v.replace(/[^0-9]/g, '');
 export const sanitizeDecimal = (v: string): string => v.replace(/[^0-9.]/g, '');
 
 export function rangeStr(val?: NumericRange): [string, string] {
-  if (!val) return ['', ''];
+  // 0–0 is how the data says "not applicable" (a grafted tree has no
+  // germination days); shown as a range it read as a real zero.
+  if (!val || (val.min === 0 && val.max === 0)) return ['', ''];
   return [String(val.min), String(val.max)];
 }
 
+/**
+ * Form strings to a stored range. One filled side stands for both: the summary
+ * already reads "From 75 days", and dropping it on save lost what was typed.
+ */
 export function toRange(min: string, max: string): NumericRange | undefined {
   const mn = parseFloat(min);
   const mx = parseFloat(max);
-  if (Number.isNaN(mn) || Number.isNaN(mx)) return undefined;
-  return { min: mn, max: mx };
+  const hasMin = !Number.isNaN(mn);
+  const hasMax = !Number.isNaN(mx);
+  if (!hasMin && !hasMax) return undefined;
+  return { min: hasMin ? mn : mx, max: hasMax ? mx : mn };
 }
 
 export function toOptNum(s: string): number | undefined {
@@ -97,16 +107,64 @@ export function toOptNum(s: string): number | undefined {
 }
 
 /**
- * Seeds used when creating a brand-new catalog entry, where there is no static
- * profile to merge against.
+ * The care fields a new entry is seeded with from its plant type's defaults, so
+ * watering and feeding start filled rather than blocking Save. Shared with the
+ * detail screen, which re-seeds any of them still untouched when the care
+ * model changes mid-creation.
  */
-const CREATE_DEFAULTS: PlantCareProfile = {
-  waterRequirement: 'medium',
-  sunlight: 'full_sun',
-  soilType: 'garden_soil',
-  preferredFertiliser: 'compost',
-  initialGrowthStage: 'seedling',
-};
+export const CARE_SEED_KEYS = [
+  'waterRequirement',
+  'wateringFrequencyDays',
+  'fertilisingFrequencyDays',
+  'pruningFrequencyDays',
+  'sunlight',
+  'soilType',
+  'preferredFertiliser',
+  'initialGrowthStage',
+] as const;
+
+export type CareSeed = Pick<CareFormState, (typeof CARE_SEED_KEYS)[number]>;
+
+export function careSeed(plantType: PlantType): CareSeed {
+  const d = DEFAULT_PROFILES_BY_TYPE[plantType];
+  return {
+    waterRequirement: d.waterRequirement,
+    wateringFrequencyDays: d.wateringFrequencyDays?.toString() ?? '',
+    fertilisingFrequencyDays: d.fertilisingFrequencyDays?.toString() ?? '',
+    pruningFrequencyDays: d.pruningFrequencyDays?.toString() ?? '',
+    sunlight: d.sunlight,
+    soilType: d.soilType,
+    preferredFertiliser: d.preferredFertiliser,
+    initialGrowthStage: d.initialGrowthStage,
+  };
+}
+
+/**
+ * The pruning fields a form is seeded with while the user has written none of
+ * their own. Shared with the catalog detail screen, which re-seeds exactly
+ * these when the care model changes mid-creation — they are the only part of a
+ * new entry's form that is derived from the plant type.
+ */
+export const PRUNING_SEED_KEYS = [
+  'pruningTips',
+  'shapePruningTip',
+  'shapePruningMonths',
+  'flowerPruningTip',
+  'flowerPruningMonths',
+] as const;
+
+export type PruningSeed = Pick<CareFormState, (typeof PRUNING_SEED_KEYS)[number]>;
+
+export function pruningSeed(plantType: PlantType, plantName?: string): PruningSeed {
+  const info = getStaticPruningDefaults(plantType, plantName);
+  return {
+    pruningTips: info.tips.join('\n'),
+    shapePruningTip: info.shapePruning?.tip ?? '',
+    shapePruningMonths: info.shapePruning?.months ?? '',
+    flowerPruningTip: info.flowerPruning?.tip ?? '',
+    flowerPruningMonths: info.flowerPruning?.months ?? '',
+  };
+}
 
 /**
  * Merges the static care defaults for a plant with any saved profile overrides
@@ -121,17 +179,31 @@ export function buildCareForm(
   profiles: PlantProfiles,
   plantName: string,
   plantType: PlantType,
-  isCreating: boolean
+  isCreating: boolean,
+  /**
+   * The bundled catalog record for this name, if any. Its Tamil name is the
+   * one the catalog list shows; nine care profiles (keerai, beans) carry none,
+   * so seeding from the care profile alone showed a blank Tamil name and then
+   * saved that blank over the list's.
+   */
+  bundledEntry?: PlantProfile
 ): CareFormState | null {
   const base = isCreating ? null : getPlantCareProfile(plantName, plantType);
   if (!base && !isCreating) return null;
 
   const profileEntry = isCreating ? undefined : profiles[plantType]?.[plantName];
-  const merged: PlantCareProfile = base ? { ...base, ...(profileEntry ?? {}) } : CREATE_DEFAULTS;
+  const merged: PlantCareProfile = base
+    ? { ...base, ...(profileEntry ?? {}) }
+    : { ...DEFAULT_PROFILES_BY_TYPE[plantType] };
+  // Stored first (the user's own), then the bundled catalog, then the care
+  // profile. `||` not `??`: an earlier save could have wiped it to undefined.
+  const tamilName = isCreating
+    ? ''
+    : ((profileEntry?.tamilName || bundledEntry?.tamilName || base?.tamilName) ?? '');
 
   const hasUserPruning =
     profileEntry?.pruningTips || profileEntry?.shapePruningTip || profileEntry?.flowerPruningTip;
-  const staticPruning = getStaticPruningDefaults(plantType, plantName);
+  const staticPruning = pruningSeed(plantType, plantName);
 
   const [dthMin, dthMax] = rangeStr(merged.daysToHarvest);
   const [htMin, htMax] = rangeStr(merged.heightCm);
@@ -150,25 +222,25 @@ export function buildCareForm(
     initialGrowthStage: merged.initialGrowthStage,
     pruningTips: hasUserPruning
       ? (profileEntry?.pruningTips ?? []).join('\n')
-      : staticPruning.tips.join('\n'),
+      : staticPruning.pruningTips,
     shapePruningTip: hasUserPruning
-      ? profileEntry?.shapePruningTip ?? ''
-      : staticPruning.shapePruning?.tip ?? '',
+      ? (profileEntry?.shapePruningTip ?? '')
+      : staticPruning.shapePruningTip,
     shapePruningMonths: hasUserPruning
-      ? profileEntry?.shapePruningMonths ?? ''
-      : staticPruning.shapePruning?.months ?? '',
+      ? (profileEntry?.shapePruningMonths ?? '')
+      : staticPruning.shapePruningMonths,
     flowerPruningTip: hasUserPruning
-      ? profileEntry?.flowerPruningTip ?? ''
-      : staticPruning.flowerPruning?.tip ?? '',
+      ? (profileEntry?.flowerPruningTip ?? '')
+      : staticPruning.flowerPruningTip,
     flowerPruningMonths: hasUserPruning
-      ? profileEntry?.flowerPruningMonths ?? ''
-      : staticPruning.flowerPruning?.months ?? '',
+      ? (profileEntry?.flowerPruningMonths ?? '')
+      : staticPruning.flowerPruningMonths,
     // Botanical identity
     scientificName: merged.scientificName ?? '',
     taxonomicFamily: merged.taxonomicFamily ?? '',
     lifecycle: merged.lifecycle ?? '',
     description: merged.description ?? '',
-    tamilName: merged.tamilName ?? '',
+    tamilName,
     // Growing parameters
     growingSeason: merged.growingSeason ?? '',
     daysToHarvestMin: dthMin,
@@ -246,10 +318,7 @@ function varietyDetailsEqual(
  * follows insertion, so a stringify-based diff reports a change after any
  * edit-then-revert.
  */
-export function isCatalogDraftDirty(
-  baseline: CatalogDraft | null,
-  current: CatalogDraft
-): boolean {
+export function isCatalogDraftDirty(baseline: CatalogDraft | null, current: CatalogDraft): boolean {
   if (!baseline) return false;
 
   if (sanitizeName(baseline.name) !== sanitizeName(current.name)) return true;

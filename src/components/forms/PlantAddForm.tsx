@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, KeyboardAvoidingView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { PlantFormStateReturn } from '@/hooks/usePlantFormState';
 import { createStyles } from '@/styles/plantFormStyles';
 import { createAddFormStyles } from '@/styles/plantAddFormStyles';

@@ -45,7 +45,7 @@ async function migrateGardenPlants(userId: string): Promise<void> {
   if (snapshot.empty) return;
 
   const targets = snapshot.docs
-    .map((snap) => ({ ref: snap.ref, to: plannedVarietyRename(snap.data().plant_variety) }))
+    .map((snap) => ({ ref: snap.ref, to: plannedVarietyRename(snap.data().plant_variety, MERGED_PLANT_NAMES) }))
     .filter((item): item is { ref: typeof item.ref; to: string } => item.to !== null);
 
   for (let i = 0; i < targets.length; i += BATCH_LIMIT) {
@@ -69,7 +69,7 @@ async function migrateStoredProfiles(userId: string): Promise<void> {
   const remote = snapshot.data()[PLANT_PROFILES_FIELD] as PlantProfiles | undefined;
   if (!remote) return;
 
-  const merged = planProfileMerge(remote);
+  const merged = planProfileMerge(remote, MERGED_PLANT_NAMES);
   if (!merged) return;
 
   await withTimeoutAndRetry(
@@ -81,7 +81,7 @@ async function migrateStoredProfiles(userId: string): Promise<void> {
   // from AsyncStorage before the Firestore sync lands.
   const stored = await getData<PlantProfiles>(KEYS.PLANT_PROFILES);
   if (stored.length > 0 && stored[0]) {
-    const localMerged = planProfileMerge(stored[0]);
+    const localMerged = planProfileMerge(stored[0], MERGED_PLANT_NAMES);
     if (localMerged) await setData(KEYS.PLANT_PROFILES, [localMerged]);
   }
 

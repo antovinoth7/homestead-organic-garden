@@ -14,9 +14,10 @@ interface Props {
   fallbackIcon?: VisualIconKey;
   /**
    * row: 36×36 list rows; chip: 20×20 suggestion chips; hero: 44×44 headers;
-   * tile: full-width 4:3 photo for a grid tile, rounded on its own.
+   * tile: full-width square photo leading a tile, top corners rounded;
+   * square: full-width square, unrounded, for a photo below a tile's label.
    */
-  variant?: 'row' | 'chip' | 'hero' | 'tile';
+  variant?: 'row' | 'chip' | 'hero' | 'tile' | 'square';
   accessibilityLabel?: string;
   /** Pass the entry id when rendered inside FlatList/SectionList rows. */
   recyclingKey?: string;
@@ -53,6 +54,11 @@ export function ReferenceThumb({
         tile: {
           image: styles.tileImage,
           fallback: styles.tileFallback,
+          iconSize: 34,
+        },
+        square: {
+          image: styles.squareImage,
+          fallback: styles.squareFallback,
           iconSize: 34,
         },
       })[variant],

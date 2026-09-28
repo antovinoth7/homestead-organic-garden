@@ -16,6 +16,7 @@ import {
   PlantProfile,
   PlantType,
 } from '@/types/database.types';
+import { isStatedHarvestRange } from '@/utils/growSpecFormat';
 
 export interface PlantNowCandidate {
   plantType: PlantType;
@@ -44,7 +45,7 @@ export interface PlantNowContext {
  * null rather than a placeholder so the tile can drop the line entirely.
  */
 function formatDaysToHarvest(range: NumericRange | undefined): string | null {
-  if (!range) return null;
+  if (!isStatedHarvestRange(range)) return null;
   return range.min === range.max
     ? `${range.max} days`
     : `${range.min}–${range.max} days`;

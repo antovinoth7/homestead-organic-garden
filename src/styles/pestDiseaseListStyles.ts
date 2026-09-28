@@ -2,117 +2,18 @@ import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 
 /**
- * Pest & disease browse list — chip-filtered flat list.
- * The organic-input list follows the same layout but keeps its own sheet
- * (`organicInputListStyles`) because its cards carry different metadata.
+ * Pest & disease browse list — cards, count line and empty state.
+ *
+ * The header bar, filter sheet and section dividers live in
+ * `referenceBrowseStyles`, shared with the organic-input list. What stays here
+ * is what genuinely differs between the two: these cards carry a seasonal risk
+ * badge and an affected-plants label.
  */
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.background,
-    },
-
-    // Header block — back button, title + subtitle, search field
-    headerBlock: {
-      paddingHorizontal: 18,
-      paddingBottom: 16,
-      backgroundColor: theme.background,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.borderLight,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitleGroup: {
-      flex: 1,
-      minWidth: 0,
-    },
-    headerTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    headerSubtitle: {
-      fontSize: 12,
-      color: theme.inputPlaceholder,
-      marginTop: 1,
-    },
-    searchField: {
-      marginTop: 14,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 9,
-      backgroundColor: theme.inputBackground,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      borderRadius: 13,
-      paddingHorizontal: 13,
-    },
-    searchInput: {
-      flex: 1,
-      paddingVertical: 11,
-      fontSize: 14,
-      color: theme.inputText,
-    },
-
-    // Chip row — the ScrollView must not grow into the list's vertical space
-    chipScroll: {
-      flexGrow: 0,
-      flexShrink: 0,
-    },
-    chipRow: {
-      paddingHorizontal: 18,
-      paddingTop: 14,
-      gap: 7,
-      alignItems: 'center',
-    },
-    chip: {
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      borderRadius: 20,
-      backgroundColor: theme.backgroundTertiary,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
-    chipActive: {
-      backgroundColor: theme.primary,
-      borderColor: theme.primary,
-    },
-    chipText: {
-      fontSize: 12.5,
-      fontWeight: '600',
-      color: theme.textTertiary,
-    },
-    chipTextActive: {
-      color: theme.textInverse,
-    },
-
-    // Count line
-    countRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 18,
-      paddingTop: 16,
-      paddingBottom: 6,
-    },
-    countText: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.9,
-      textTransform: 'uppercase',
-      color: theme.textTertiary,
     },
 
     // List

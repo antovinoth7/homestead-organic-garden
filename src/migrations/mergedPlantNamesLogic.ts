@@ -16,10 +16,20 @@ export const MERGED_PLANT_NAMES: Record<string, string> = {
   Colocasia: 'Taro',
 };
 
-/** The removed name a garden plant is still on, or null if it needs no change. */
-export function plannedVarietyRename(plantVariety: string | null | undefined): string | null {
+/**
+ * The name a garden plant should move to, or null if it needs no change.
+ *
+ * `merges` is passed in rather than read off `MERGED_PLANT_NAMES` directly:
+ * that constant is migration 007's, and an account already past schema v7
+ * never runs 007 again, so a later pass that merges more names has to carry
+ * its own map (see migration 009).
+ */
+export function plannedVarietyRename(
+  plantVariety: string | null | undefined,
+  merges: Record<string, string>
+): string | null {
   if (!plantVariety) return null;
-  return MERGED_PLANT_NAMES[plantVariety.trim()] ?? null;
+  return merges[plantVariety.trim()] ?? null;
 }
 
 /**
@@ -31,14 +41,17 @@ export function plannedVarietyRename(plantVariety: string | null | undefined): s
  * exists. Returns null when nothing needed to change, so the caller can skip
  * the write.
  */
-export function planProfileMerge(profiles: PlantProfiles): PlantProfiles | null {
+export function planProfileMerge(
+  profiles: PlantProfiles,
+  merges: Record<string, string>
+): PlantProfiles | null {
   let changed = false;
   const next = {} as PlantProfiles;
 
   for (const type of CATEGORY_OPTIONS.map((opt) => opt.value) as PlantType[]) {
     const byName = { ...(profiles[type] ?? {}) };
 
-    for (const [removed, kept] of Object.entries(MERGED_PLANT_NAMES)) {
+    for (const [removed, kept] of Object.entries(merges)) {
       const entry = byName[removed];
       if (!entry) continue;
 

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
@@ -82,7 +82,10 @@ export function BedFilterSheet({
     <View style={[StyleSheet.absoluteFill, styles.sheetOverlay]}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       <View
-        style={[styles.sheetContainer, { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) }]}
+        style={[
+          styles.sheetContainer,
+          { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) },
+        ]}
       >
         <SheetHandle onClose={onClose} />
 

@@ -21,7 +21,7 @@ interface Props {
   helpText?: string;
   maxLength?: number;
   autoCapitalize?: 'none' | 'sentences' | 'words';
-  /** Renders the தமிழ்/English + mic control above the input. */
+  /** Renders the தமிழ்/English + mic control above the input. The language is app-wide. */
   dictation?: boolean;
 }
 

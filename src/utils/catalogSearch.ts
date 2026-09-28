@@ -1,5 +1,12 @@
-import { getAliasesFor } from '@/utils/plantAliases';
-import type { PlantProfiles, PlantType } from '@/types/database.types';
+import { getAliasesFor, getCanonicalPlantKey } from '@/utils/plantAliases';
+import { getTaxonomy } from '@/config/plants/catalogTaxonomy';
+import { TAG_LABELS } from '@/utils/plantLabels';
+import type {
+  CatalogGroup,
+  PlantProfile,
+  PlantProfiles,
+  PlantType,
+} from '@/types/database.types';
 
 export interface CatalogSearchEntry {
   plantType: PlantType;
@@ -7,8 +14,15 @@ export interface CatalogSearchEntry {
   tamilName?: string;
   /** Other names for this plant — "Okra" for Ladies Finger, "Methi" for Fenugreek. */
   aliases: string[];
+  /**
+   * Tag labels, so a search for what a plant *is for* finds it: "keerai" reaches
+   * the greens, "green manure" reaches Agathi, "trellis" reaches the climbers.
+   */
+  tagLabels: string[];
   /** How many garden plants currently use this catalog entry. */
   gardenCount: number;
+  /** A user-added entry's chosen browse group — see `PlantProfile.group`. */
+  group?: CatalogGroup;
 }
 
 /** Half-open highlight range into the *original* (un-normalized) string. */
@@ -20,9 +34,11 @@ export interface MatchSpan {
 export interface CatalogSearchResult extends CatalogSearchEntry {
   nameSpan?: MatchSpan;
   tamilSpan?: MatchSpan;
-  matchedField: 'name' | 'tamilName' | 'alias' | 'tokens';
+  matchedField: 'name' | 'tamilName' | 'alias' | 'tag' | 'tokens';
   /** The alias that matched, when `matchedField` is 'alias' — shown on the row. */
   matchedAlias?: string;
+  /** The tag that matched, when `matchedField` is 'tag' — shown on the row. */
+  matchedTag?: string;
 }
 
 export interface CatalogSearchOutcome {
@@ -43,7 +59,7 @@ const DEFAULT_LIMIT = 60;
  * and a Turkish-locale phone maps I → ı, which is not length-preserving and
  * would shift every span after it.
  */
-function normalize(value: string): string {
+export function normalize(value: string): string {
   return value.normalize('NFC').toLocaleLowerCase('en-US');
 }
 
@@ -62,7 +78,7 @@ export function buildCatalogSearchIndex(
 
   for (const [type, byName] of Object.entries(profiles) as [
     PlantType,
-    Record<string, { tamilName?: string }>,
+    Record<string, { tamilName?: string; group?: CatalogGroup }>,
   ][]) {
     if (!byName) continue;
     for (const [name, profile] of Object.entries(byName)) {
@@ -71,7 +87,9 @@ export function buildCatalogSearchIndex(
         name,
         tamilName: profile?.tamilName,
         aliases: getAliasesFor(name),
+        tagLabels: getTaxonomy(name, type).tags.map((tag) => TAG_LABELS[tag]),
         gardenCount: countsByType[type]?.[name] ?? 0,
+        ...(profile?.group ? { group: profile.group } : {}),
       });
     }
   }
@@ -89,7 +107,9 @@ const RANK_TAMIL_PREFIX = 1;
 const RANK_NAME_SUBSTRING = 2;
 const RANK_TAMIL_SUBSTRING = 3;
 const RANK_ALIAS = 4;
-const RANK_TOKENS = 5;
+/** Below an alias: a tag says what a plant is for, not what it is called. */
+const RANK_TAG = 5;
+const RANK_TOKENS = 6;
 
 function rankOf(nameIndex: number, tamilIndex: number): number | null {
   if (nameIndex === 0) return RANK_NAME_PREFIX;
@@ -101,9 +121,25 @@ function rankOf(nameIndex: number, tamilIndex: number): number | null {
 
 /** Every string a token match is allowed to look in. */
 function haystacks(entry: CatalogSearchEntry): string[] {
-  const parts = [normalize(entry.name), ...entry.aliases.map(normalize)];
+  const parts = [
+    normalize(entry.name),
+    ...entry.aliases.map(normalize),
+    ...entry.tagLabels.map(normalize),
+  ];
   if (entry.tamilName) parts.push(normalize(entry.tamilName));
   return parts;
+}
+
+/**
+ * Tamil is typed consonant first, vowel sign second, so a half-typed query
+ * often ends on a bare consonant ("வெண்ட"). Cutting the highlight there
+ * splits a letter from its vowel sign and the sign renders on a dotted circle.
+ * Grow the span over any trailing combining marks (vowel signs, virama).
+ */
+export function extendPastCombiningMarks(text: string, end: number): number {
+  let next = end;
+  while (next < text.length && /[\u0B82\u0BBE-\u0BCD\u0BD7]/.test(text[next] ?? '')) next += 1;
+  return next;
 }
 
 function scoreEntry(entry: CatalogSearchEntry, needle: string): { rank: number; result: CatalogSearchResult } | null {
@@ -122,8 +158,11 @@ function scoreEntry(entry: CatalogSearchEntry, needle: string): { rank: number; 
         matchedField: matchedOnName ? 'name' : 'tamilName',
         nameSpan: matchedOnName ? { start: nameIndex, end: nameIndex + needle.length } : undefined,
         tamilSpan:
-          !matchedOnName && tamilIndex >= 0
-            ? { start: tamilIndex, end: tamilIndex + needle.length }
+          !matchedOnName && tamilIndex >= 0 && entry.tamilName
+            ? {
+                start: tamilIndex,
+                end: extendPastCombiningMarks(entry.tamilName, tamilIndex + needle.length),
+              }
             : undefined,
       },
     };
@@ -134,6 +173,13 @@ function scoreEntry(entry: CatalogSearchEntry, needle: string): { rank: number; 
   const alias = entry.aliases.find((item) => normalize(item).includes(needle));
   if (alias) {
     return { rank: RANK_ALIAS, result: { ...entry, matchedField: 'alias', matchedAlias: alias } };
+  }
+
+  // "keerai" → every green; "green manure" → Agathi and Aavaram. Ranked below an
+  // alias, since a tag answers what the plant is *for* rather than its name.
+  const tag = entry.tagLabels.find((item) => normalize(item).includes(needle));
+  if (tag) {
+    return { rank: RANK_TAG, result: { ...entry, matchedField: 'tag', matchedTag: tag } };
   }
 
   // Last resort: every word present somewhere, in any order across any field.
@@ -200,4 +246,30 @@ export function pushRecentSearch(existing: readonly string[], query: string): st
   const lower = trimmed.toLocaleLowerCase('en-US');
   const withoutDupe = existing.filter((item) => item.trim().toLocaleLowerCase('en-US') !== lower);
   return [trimmed, ...withoutDupe].slice(0, RECENT_SEARCH_LIMIT);
+}
+
+/**
+ * The catalog plant a typed name already refers to, if any: the same name, an
+ * alias of it ("Okra" is Ladies Finger), or its Tamil name typed exactly. Used
+ * before offering to create a plant, since a second entry for a known name is
+ * how the catalog's duplicates got there.
+ */
+export function findCatalogPlant(
+  profiles: PlantProfiles,
+  typed: string
+): { name: string; plantType: PlantType } | undefined {
+  const canonical = getCanonicalPlantKey(typed);
+  const typedNorm = normalize(typed.trim());
+  if (!typedNorm) return undefined;
+  for (const [plantType, byName] of Object.entries(profiles) as [
+    PlantType,
+    Record<string, PlantProfile> | undefined,
+  ][]) {
+    for (const [name, entry] of Object.entries(byName ?? {})) {
+      if (entry?.isDeleted) continue;
+      if (getCanonicalPlantKey(name) === canonical) return { name, plantType };
+      if (entry?.tamilName && normalize(entry.tamilName) === typedNorm) return { name, plantType };
+    }
+  }
+  return undefined;
 }

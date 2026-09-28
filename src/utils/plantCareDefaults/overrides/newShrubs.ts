@@ -1,9 +1,16 @@
 import { PlantCareProfile } from '@/types/database.types';
 import { buildProfileKey } from '@/utils/plantCareDefaults/profileKey';
 
+/**
+ * Agathi and Castor. Neither is filed under `shrub` any more — agathi keerai
+ * sits with the other keerai under `spinach`, and Castor moved to `herb`,
+ * filed by its medicinal and pest-input use like the other homestead
+ * medicinals. They are still the same pair of fast-growing chop-and-drop
+ * plants this file was added for, so the profiles stay together rather than
+ * being split across two files for the sake of the filename.
+ */
 export const NEW_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
-  // ── New Shrub Plants ────────────────────────────────────────────────────
-  [buildProfileKey('shrub', 'Agathi')]: {
+  [buildProfileKey('spinach', 'Agathi')]: {
     waterRequirement: 'low',
     wateringFrequencyDays: 5,
     fertilisingFrequencyDays: 30,
@@ -17,7 +24,7 @@ export const NEW_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
     lifecycle: 'perennial',
     tamilName: 'அகத்தி',
     description:
-      'Fast-growing nitrogen-fixing shrub with edible leaves and flowers; dynamic accumulator for chop-and-drop',
+      'Tall nitrogen-fixing legume picked over for agathi keerai and its edible flowers; also a chop-and-drop dynamic accumulator',
     daysToHarvest: { min: 45, max: 90 },
     heightCm: { min: 300, max: 800 },
     spacingCm: 200,
@@ -32,7 +39,7 @@ export const NEW_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
     feedingIntensity: 'light',
     growthStageDurations: { seedling: 21, vegetative: 45, mature: 24 },
   },
-  [buildProfileKey('shrub', 'Castor')]: {
+  [buildProfileKey('herb', 'Castor')]: {
     waterRequirement: 'low',
     wateringFrequencyDays: 7,
     fertilisingFrequencyDays: 45,
@@ -60,35 +67,6 @@ export const NEW_SHRUB_OVERRIDES: Record<string, PlantCareProfile> = {
     petToxicity: true,
     feedingIntensity: 'light',
     growthStageDurations: { seedling: 21, vegetative: 60, mature: 39 },
-  },
-  [buildProfileKey('shrub', 'Coleus')]: {
-    waterRequirement: 'medium',
-    wateringFrequencyDays: 3,
-    fertilisingFrequencyDays: 30,
-    pruningFrequencyDays: 30,
-    sunlight: 'partial_sun',
-    soilType: 'potting_mix',
-    preferredFertiliser: 'compost',
-    initialGrowthStage: 'vegetative',
-    scientificName: 'Plectranthus amboinicus',
-    taxonomicFamily: 'Lamiaceae',
-    lifecycle: 'perennial',
-    tamilName: 'கொல்லியஸ்',
-    description:
-      'Ornamental shade-tolerant shrub used as living mulch in coconut intercrop systems',
-    daysToHarvest: { min: 60, max: 90 },
-    heightCm: { min: 30, max: 80 },
-    spacingCm: 40,
-    plantingDepthCm: 2,
-    growingSeason: 'Year Round',
-    germinationDays: { min: 7, max: 14 },
-    germinationTempC: { min: 22, max: 30 },
-    soilPhRange: { min: 6.0, max: 7.0 },
-    heatTolerance: 'medium',
-    droughtTolerance: 'medium',
-    petToxicity: false,
-    feedingIntensity: 'light',
-    growthStageDurations: { seedling: 21, vegetative: 45, mature: 24 },
   },
 
 };

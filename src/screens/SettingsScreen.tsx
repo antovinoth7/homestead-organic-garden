@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   exportImagesOnly,
   importImagesOnly,
@@ -536,9 +536,9 @@ export default function SettingsScreen(): React.JSX.Element {
               </Text>
             </TouchableOpacity>
             <Text style={styles.helpText}>
-              Recreates watering, fertilising and harvest tasks from each plant&apos;s care settings.
-              Use this if the Care Plan looks emptier than it should. Nothing is deleted — existing
-              tasks are kept and their due dates refreshed.
+              Recreates watering, fertilising and harvest tasks from each plant&apos;s care
+              settings. Use this if the Care Plan looks emptier than it should. Nothing is deleted —
+              existing tasks are kept and their due dates refreshed.
             </Text>
           </View>
         </View>

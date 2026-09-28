@@ -1,18 +1,24 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/hiddenPlantsStyles';
+import type { PlantType } from '@/types/database.types';
 
-interface RowProps {
+/** A hidden entry and the care model it was filed under. */
+export interface HiddenPlant {
   name: string;
-  onRestore: (name: string) => void;
+  plantType: PlantType;
 }
 
-function HiddenPlantRow({ name, onRestore }: RowProps): React.JSX.Element {
+interface RowProps extends HiddenPlant {
+  onRestore: (name: string, plantType: PlantType) => void;
+}
+
+function HiddenPlantRow({ name, plantType, onRestore }: RowProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const handlePress = useCallback(() => onRestore(name), [onRestore, name]);
+  const handleRestore = useCallback(() => onRestore(name, plantType), [onRestore, name, plantType]);
 
   return (
     <View style={styles.row}>
@@ -22,7 +28,7 @@ function HiddenPlantRow({ name, onRestore }: RowProps): React.JSX.Element {
       </Text>
       <TouchableOpacity
         style={styles.restoreButton}
-        onPress={handlePress}
+        onPress={handleRestore}
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel={`Restore ${name}`}
@@ -35,24 +41,33 @@ function HiddenPlantRow({ name, onRestore }: RowProps): React.JSX.Element {
 }
 
 interface Props {
-  names: readonly string[];
-  onRestore: (name: string) => void;
+  /**
+   * Each entry carries its own `plantType`: a browse group spans several care
+   * models, so restoring needs the type the entry was filed under rather than
+   * whatever the active pill happens to be.
+   */
+  plants: readonly HiddenPlant[];
+  onRestore: (name: string, plantType: PlantType) => void;
 }
 
 /**
  * Deleting a plant the app ships with hides it rather than erasing it — the
  * name would otherwise come straight back from the bundled catalog. This is the
- * way back, kept collapsed so it stays out of the way until it is wanted.
+ * way back. It lives in the filter sheet, reachable in two taps, rather than
+ * at the foot of a ~145-row list where nobody found it.
+ *
+ * Restore is the only action. A "remove permanently" that only took an
+ * already-hidden plant off this list read as a second, scarier delete.
  */
-export function HiddenPlantsSection({ names, onRestore }: Props): React.JSX.Element | null {
+export function HiddenPlantsSection({ plants, onRestore }: Props): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [expanded, setExpanded] = useState(false);
   const toggle = useCallback(() => setExpanded((prev) => !prev), []);
 
-  if (names.length === 0) return null;
+  if (plants.length === 0) return null;
 
-  const label = `${names.length} hidden plant${names.length === 1 ? '' : 's'}`;
+  const label = `${plants.length} hidden plant${plants.length === 1 ? '' : 's'}`;
 
   return (
     <View style={styles.container}>
@@ -76,9 +91,15 @@ export function HiddenPlantsSection({ names, onRestore }: Props): React.JSX.Elem
         <>
           <Text style={styles.hint}>
             These come with the app, so deleting hides them instead of removing them for good.
+            Restore one to bring it back to the catalog.
           </Text>
-          {names.map((name) => (
-            <HiddenPlantRow key={name} name={name} onRestore={onRestore} />
+          {plants.map(({ name, plantType }) => (
+            <HiddenPlantRow
+              key={`${plantType}:${name}`}
+              name={name}
+              plantType={plantType}
+              onRestore={onRestore}
+            />
           ))}
         </>
       ) : null}

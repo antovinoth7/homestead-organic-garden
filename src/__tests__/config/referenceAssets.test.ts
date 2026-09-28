@@ -20,6 +20,7 @@ import {
 import { getAllDiseases } from '@/config/diseases';
 import { getAllOrganicInputs } from '@/config/organicInputs';
 import { getAllPests } from '@/config/pests';
+import { DEFAULT_PLANT_CATALOG } from '@/services/plantCatalog';
 import { getKnownPlantNames } from '@/utils/plantHelpers';
 
 const KNOWN_REFERENCE_PLANT_NAMES = getKnownReferencePlantNames(getKnownPlantNames());
@@ -66,13 +67,13 @@ describe('image resolvers', () => {
 });
 
 describe('generated map integrity (gen file must match config ids)', () => {
-  it('tracks the documented 225 bundled reference assets', () => {
+  it('tracks the documented 226 bundled reference assets', () => {
     expect(
       Object.keys(PEST_IMAGES).length +
         Object.keys(DISEASE_IMAGES).length +
         Object.keys(PLANT_IMAGES).length +
         Object.keys(ORGANIC_INPUT_IMAGES).length
-    ).toBe(225);
+    ).toBe(226);
   });
 
   it('every PEST_IMAGES key is a known pest id or imageAsset', () => {
@@ -136,9 +137,22 @@ describe('PLANT_IMAGE_ALIASES', () => {
     expect(getPlantImage('Maize')).toBe(getPlantImage('Corn'));
   });
 
-  it('keeps Long Brinjal on its own image slot instead of sharing the Brinjal photo', () => {
-    expect(resolvePlantImageKey('Long Brinjal')).toBe('long_brinjal');
-    expect(resolvePlantImageKey('Brinjal')).toBe('brinjal');
+  it('gives a merged-away row the surviving row’s photo', () => {
+    expect(resolvePlantImageKey('Long Brinjal')).toBe('brinjal');
+    expect(resolvePlantImageKey('Dwarf Coconut')).toBe('coconut');
+    expect(resolvePlantImageKey('Red Banana')).toBe('banana');
+  });
+
+  // The emoji map this list was previously built from had drifted 40 names
+  // behind the catalog, so Betel Leaf, Nandiyavattai, Bougainvillea, Lantana
+  // and Gardenia got neither a generated prompt nor a usable image slot.
+  it('gives every catalog plant a reference-image name', () => {
+    const known = new Set(KNOWN_REFERENCE_PLANT_NAMES);
+    for (const category of Object.values(DEFAULT_PLANT_CATALOG.categories)) {
+      for (const name of category.plants) {
+        expect(known).toContain(name);
+      }
+    }
   });
 
   it('includes all curated supplemental plants in the reference-image name set', () => {

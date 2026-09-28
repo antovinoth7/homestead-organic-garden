@@ -23,8 +23,13 @@
  * - Can be backed up/synced manually by the user
  */
 
+// Both imports are pinned to `/legacy` deliberately. As of SDK 57 the default
+// exports of expo-file-system and expo-media-library are new object-oriented
+// APIs; the imperative functions used below live under /legacy. This file has no
+// test coverage, so do not switch these as a side effect of other work — see
+// docs/IMAGE_STORAGE.md and the Post-Upgrade Backlog in the roadmap.
 import * as FileSystem from 'expo-file-system/legacy';
-import * as MediaLibrary from 'expo-media-library';
+import * as MediaLibrary from 'expo-media-library/legacy';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { logger } from '../utils/logger';

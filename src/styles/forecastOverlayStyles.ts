@@ -24,7 +24,11 @@ import { CARD_GUTTER } from './todayScreenStyles';
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     overlay: {
-      ...StyleSheet.absoluteFillObject,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       backgroundColor: theme.background,
       zIndex: 2,
     },

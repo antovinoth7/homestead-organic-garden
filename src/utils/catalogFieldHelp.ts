@@ -3,15 +3,19 @@
  * each row.
  */
 export const CATALOG_FIELD_HELP = {
-  name: 'Primary catalog name shown in lists, details, and linked garden plants.',
+  name: 'Catalog name shown in lists, details, and linked garden plants. Built-in plants keep their name so their pests, photo and care data stay linked — put the local name in Tamil name.',
   tamilName:
-    'Tamil name stored with this catalog entry for localized views and future Tamil UI support.',
+    'The name you use for this plant locally. It is shown next to the English name and is searchable, in Tamil script or English letters.',
   description:
     'Short plain-language summary of the plant. Keep it brief so it reads well in detail views.',
   scientificName:
     'Botanical Latin name used for accurate identification and future grouping logic.',
   taxonomicFamily:
-    'Plant family, such as Solanaceae or Fabaceae. Useful for related-crop and rotation features.',
+    'Botanical family, such as Solanaceae (brinjal, tomato, chilli) or Fabaceae (beans, pulses). Reference only.',
+  category:
+    'What you grow the plant for — the catalog tab it is listed under. It also sets the starting care rules: growth stages, common pests, and how tasks repeat. Set it now — it cannot be changed after saving.',
+  growsAs:
+    'Whether this fruit grows as a tree or as a short-lived plant. A tree is cared for over years; a plant that is not a tree is cared for like a seasonal crop. Set it now — it cannot be changed after saving.',
   lifecycle:
     'Defines whether the plant finishes its life cycle in one season, two seasons, or continues for multiple years.',
   growingSeason: 'Best sowing or growing window for Tamil Nadu and Kanyakumari conditions.',
@@ -44,7 +48,7 @@ export const CATALOG_FIELD_HELP = {
   flowerPruningTip: 'How to prune to support flowering and bloom quality.',
   flowerPruningMonths: 'Best months or season window for flower-focused pruning.',
   initialGrowthStage:
-    'Default stage assigned when a new garden plant is created from this catalog entry.',
+    'The stage a new garden plant starts at — seedling if you sow seed, vegetative if you plant a sapling.',
   petToxicity:
-    'Whether this plant is known to be toxic or safe for common household pets such as dogs and cats. Always confirm with a vet before allowing animals near the plant.',
+    'Whether this plant is known to be toxic to household pets such as dogs and cats. It does not cover livestock — check with a vet before letting cattle or goats graze near it.',
 } as const;

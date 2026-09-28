@@ -11,3 +11,19 @@ export const sanitizeLandmarkText = (value: string): string => {
   const sanitized = value.replace(/[^\p{L}\p{N}\p{M},.\-()/]+/gu, ' ');
   return sanitized.replace(/\s+/g, ' ');
 };
+
+// Invisible C0 control characters and DEL. Tab, LF and CR are left out of the
+// class so pasted and multi-line notes survive.
+const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+
+/**
+ * For free-text notes (journal content, harvest notes, treatments). Keeps
+ * punctuation, digits, line breaks, Tamil and emoji — "Neem oil 5ml/L, pH 6.5"
+ * must survive — and strips only invisible control characters. Whitespace is
+ * not collapsed: this runs on every keystroke, and collapsing would fight the
+ * cursor; the save path trims.
+ */
+export const sanitizeFreeText = (value: string): string => {
+  if (!value) return '';
+  return value.replace(CONTROL_CHARS, '');
+};

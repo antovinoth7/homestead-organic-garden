@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
 import { useTheme } from '@/theme';
@@ -291,8 +291,7 @@ export default function MyFarmScreen(): React.JSX.Element {
   const closeDeleteConfirm = useCallback(() => setDeleteConfirm(null), [setDeleteConfirm]);
 
   const handleAddPlot = useCallback(
-    () =>
-      setEditModal({ type: 'parent', original: '', value: '', shortName: '', profile: {} }),
+    () => setEditModal({ type: 'parent', original: '', value: '', shortName: '', profile: {} }),
     [setEditModal]
   );
 

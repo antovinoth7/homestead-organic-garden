@@ -57,11 +57,7 @@ describe('Tamil Nadu Today planting rules', () => {
       'Chilli',
       'Cluster Beans',
     ]);
-    expect(windows.openingNext.map((rule) => rule.plantName)).toEqual([
-      'Fenugreek',
-      'Palak',
-      'Turnip',
-    ]);
+    expect(windows.openingNext.map((rule) => rule.plantName)).toEqual(['Fenugreek', 'Palak']);
     // Named, not just counted: the card says "Plant in September".
     expect(windows.openingNextMonth).toBe(9);
   });

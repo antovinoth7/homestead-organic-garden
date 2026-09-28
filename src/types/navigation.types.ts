@@ -113,7 +113,8 @@ export type PlantsStackParamList = {
 };
 
 export type JournalStackParamList = {
-  JournalList: { refresh?: number } | undefined;
+  /** `savedMessage` is the form's confirmation, shown once as a toast. */
+  JournalList: { refresh?: number; savedMessage?: string } | undefined;
   JournalForm:
     | {
         entry?: JournalEntry;
@@ -131,6 +132,8 @@ export type MoreStackParamList = {
     plantName: string;
     plantType: import('./database.types').PlantType;
     isCreating?: boolean;
+    /** The catalog tab a new entry was created from — its starting Category. */
+    group?: import('./database.types').CatalogGroup;
   };
   PestList: undefined;
   PestDetail: { pestId: string };

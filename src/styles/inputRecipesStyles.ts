@@ -52,7 +52,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 1,
     },
 
-    // Recipe tabs — chip row on a light surface, mirroring ReferenceFilterChips
+    // Recipe tabs — chip row on a light surface. These are navigation tabs, not
+    // filters, so they stayed put when the browse screens moved their category
+    // chips into `ReferenceFilterSheet`.
     tabScroll: {
       flexGrow: 0,
       flexShrink: 0,

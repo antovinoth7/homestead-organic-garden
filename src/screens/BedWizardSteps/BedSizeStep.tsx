@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { Step2Data, Step3Data } from '@/hooks/useBedCreationWizard';
 import { BedType } from '@/types/database.types';
@@ -144,7 +144,7 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
   const { min: plantsMin, max: plantsMax } = estimatePlantCapacity(
     bedType ?? null,
     data.width_m,
-    data.length_m,
+    data.length_m
   );
   const coeff = bedType ? (HARVEST_COEFF[bedType] ?? DEFAULT_HARVEST_COEFF) : DEFAULT_HARVEST_COEFF;
   const harvestKg = (Math.round(data.area_sqm * coeff * 10) / 10).toFixed(1);
@@ -186,7 +186,11 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
             </Text>
             <Text style={styles.szSizeSep}> × </Text>
             <Text style={styles.szSizeValue}>
-              {unit === 'ft' ? toFt(rec.length_m) : unit === 'cm' ? toCm(rec.length_m) : rec.length_m}
+              {unit === 'ft'
+                ? toFt(rec.length_m)
+                : unit === 'cm'
+                  ? toCm(rec.length_m)
+                  : rec.length_m}
             </Text>
             <Text style={styles.szSizeUnit}> {displayUnit}</Text>
           </View>
@@ -223,21 +227,27 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
             onPress={() => setUnit('m')}
             activeOpacity={0.7}
           >
-            <Text style={[styles.szUnitBtnText, unit === 'm' && styles.szUnitBtnTextActive]}>m</Text>
+            <Text style={[styles.szUnitBtnText, unit === 'm' && styles.szUnitBtnTextActive]}>
+              m
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.szUnitBtn, unit === 'cm' && styles.szUnitBtnActive]}
             onPress={() => setUnit('cm')}
             activeOpacity={0.7}
           >
-            <Text style={[styles.szUnitBtnText, unit === 'cm' && styles.szUnitBtnTextActive]}>cm</Text>
+            <Text style={[styles.szUnitBtnText, unit === 'cm' && styles.szUnitBtnTextActive]}>
+              cm
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.szUnitBtn, unit === 'ft' && styles.szUnitBtnActive]}
             onPress={() => setUnit('ft')}
             activeOpacity={0.7}
           >
-            <Text style={[styles.szUnitBtnText, unit === 'ft' && styles.szUnitBtnTextActive]}>ft</Text>
+            <Text style={[styles.szUnitBtnText, unit === 'ft' && styles.szUnitBtnTextActive]}>
+              ft
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -245,7 +255,8 @@ export function BedSizeStep({ data, onChange, bedType, step2 }: Props): React.JS
       <View style={styles.szArmReachHint}>
         <Ionicons name="bulb-outline" size={17} color={theme.warning} />
         <Text style={styles.szArmReachText}>
-          Keep width ≤ {unit === 'ft' ? '4 ft' : unit === 'cm' ? '120 cm' : '1.2 m'} — reach the centre without stepping in
+          Keep width ≤ {unit === 'ft' ? '4 ft' : unit === 'cm' ? '120 cm' : '1.2 m'} — reach the
+          centre without stepping in
         </Text>
       </View>
 

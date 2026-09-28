@@ -2,8 +2,17 @@ import { Bed, Plant, CropFamily, RotationRule } from '@/types/database.types';
 import { bedExpectsLegumes } from './legumeRelevance';
 import { DYNAMIC_ACCUMULATORS } from './dynamicAccumulators';
 import { LOW_LEGUME_THRESHOLD } from '@/utils/filterAndSortBeds';
+import { REST_BY_PREV_CROP } from './cropFamilyRotation';
 
-const SOLANACEAE_REST_SEASONS = 2;
+/**
+ * Seasons a family must stay out of the bed. Read from the shared rotation table
+ * so the figure lives next to the reason for it, and so families other than
+ * solanaceae can state one — Zingiberaceae needs three, because rhizome rot does
+ * not clear in a fortnight.
+ */
+function restSeasonsFor(family: CropFamily): number | undefined {
+  return REST_BY_PREV_CROP[family]?.restSeasons;
+}
 const MIN_LEGUME_COVERAGE_PCT = LOW_LEGUME_THRESHOLD;
 const _MAX_SAME_FAMILY_CONSECUTIVE = 3;
 
@@ -11,7 +20,14 @@ const _MAX_SAME_FAMILY_CONSECUTIVE = 3;
 const ACCUMULATOR_NAMES = DYNAMIC_ACCUMULATORS.map((a) => a.name);
 
 // Families that must rest before replanting same-family in the same row.
-const ROW_REST_FAMILIES: CropFamily[] = ['solanaceae', 'cucurbit'];
+/**
+ * Families that must stay out of a row for a season count, derived from the
+ * shared rotation table rather than listed here — so adding a family with a
+ * `restSeasons` enrols it in the per-row check automatically.
+ */
+function rowRestSeasons(family: CropFamily): number | undefined {
+  return REST_BY_PREV_CROP[family]?.restSeasons;
+}
 
 export interface RowRotationCheck {
   ok: boolean;
@@ -35,11 +51,12 @@ export function validateRowRotation(
     .filter((h) => h.row_index === rowIndex)
     .sort((a, b) => (a.planted_at < b.planted_at ? 1 : -1))[0];
   if (!lastInRow) return { ok: true };
-  if (!ROW_REST_FAMILIES.includes(candidateFamily)) return { ok: true };
+  const seasons = rowRestSeasons(candidateFamily);
+  if (seasons === undefined) return { ok: true };
   if (lastInRow.crop_families.includes(candidateFamily)) {
     return {
       ok: false,
-      reason: `Row ${rowIndex} grew ${candidateFamily} last season — rest ${SOLANACEAE_REST_SEASONS} seasons before replanting same family.`,
+      reason: `Row ${rowIndex} grew ${candidateFamily} last season — rest ${seasons} seasons before replanting same family.`,
     };
   }
   return { ok: true };
@@ -86,8 +103,13 @@ function hasNoPestRecurrence(bed: Bed): boolean {
  * solanaceae-specific rule: this catches replanting ANY family (e.g. cucurbit after cucurbit).
  */
 function hasFamilyRotation(bed: Bed, plants: Plant[]): boolean {
-  if (!bed.prev_crop_family) return true;
-  return !plants.some((p) => p.crop_family === bed.prev_crop_family);
+  const prev = bed.prev_crop_family;
+  // `other` means "no rotation signal" — it is where tree, palm and every
+  // family with no bed crop in it lands — not a family two plants can share.
+  // Counting it as one flagged a false repeat between any two unrelated plants
+  // that both fell through to it.
+  if (!prev || prev === 'other') return true;
+  return !plants.some((p) => p.crop_family === prev);
 }
 
 export function checkRotationRules(input: RotationCheckInput): RotationRule[] {
@@ -147,7 +169,7 @@ export function checkRotationRules(input: RotationCheckInput): RotationRule[] {
       passed: hasFamilyRotation(bed, plants),
       description: hasFamilyRotation(bed, plants)
         ? "This season's crops differ from last season's family — good rotation."
-        : `Bed still grows ${bed.prev_crop_family} like last season — rotate to a different family or rest ${SOLANACEAE_REST_SEASONS} seasons.`,
+        : `Bed still grows ${bed.prev_crop_family} like last season — rotate to a different family or rest ${restSeasonsFor(bed.prev_crop_family!) ?? 2} seasons.`,
     }
   );
 

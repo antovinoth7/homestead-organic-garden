@@ -5,7 +5,11 @@ import { CatalogRangeRow } from '@/components/catalog/CatalogRangeRow';
 import type { CatalogEditor } from '@/components/catalog/catalogEditor';
 import { sanitizeDecimal, sanitizeNum } from '@/utils/catalogDraft';
 import { CATALOG_FIELD_HELP } from '@/utils/catalogFieldHelp';
-import { GROWING_SEASON_OPTIONS } from '@/utils/plantLabels';
+import {
+  GROWING_SEASON_OPTIONS,
+  growingSeasonLabel,
+  normalizeSeasonValue,
+} from '@/utils/plantLabels';
 
 interface Props {
   editor: CatalogEditor;
@@ -14,11 +18,12 @@ interface Props {
 export function GrowingInfoSection({ editor }: Props): React.JSX.Element {
   const { careForm, setForm, errors, showErrors, openText, openPicker, openRange } = editor;
 
-  // Already {label, value} — the stored value is the short form, the label the
-  // long one, so they must not be collapsed into each other.
+  // {label, value, description}: the description is the season's pattam,
+  // shown as the picker's second line.
   const seasonOptions = GROWING_SEASON_OPTIONS;
+  // Free-text seasons on bundled profiles are shown as written, not blanked.
   const seasonLabel = useMemo(
-    () => GROWING_SEASON_OPTIONS.find((o) => o.value === careForm.growingSeason)?.label ?? '',
+    () => growingSeasonLabel(careForm.growingSeason),
     [careForm.growingSeason]
   );
 
@@ -27,7 +32,7 @@ export function GrowingInfoSection({ editor }: Props): React.JSX.Element {
       openPicker({
         title: 'Growing season',
         options: seasonOptions,
-        selectedValue: careForm.growingSeason,
+        selectedValue: normalizeSeasonValue(careForm.growingSeason),
         onSelect: (growingSeason) => setForm({ growingSeason }),
         allowClear: true,
       }),
@@ -55,8 +60,9 @@ export function GrowingInfoSection({ editor }: Props): React.JSX.Element {
         title: 'Years to first harvest',
         value: careForm.yearsToFirstHarvest,
         onCommit: (yearsToFirstHarvest) => setForm({ yearsToFirstHarvest }),
-        keyboardType: 'numeric',
-        sanitize: sanitizeNum,
+        // 1.5 years is a real answer for papaya or banana.
+        keyboardType: 'decimal-pad',
+        sanitize: sanitizeDecimal,
         helpText: CATALOG_FIELD_HELP.yearsToFirstHarvest,
       }),
     [openText, careForm.yearsToFirstHarvest, setForm]
@@ -166,13 +172,20 @@ export function GrowingInfoSection({ editor }: Props): React.JSX.Element {
         onPress={onDaysToHarvest}
         errorText={showErrors ? errors.daysToHarvest : undefined}
       />
-      <CatalogDetailRow
-        kind="text"
-        label="Years to first harvest"
-        value={careForm.yearsToFirstHarvest}
-        helpText={CATALOG_FIELD_HELP.yearsToFirstHarvest}
-        onPress={onYearsToFirstHarvest}
-      />
+      {/* Meaningless for a crop sown and harvested within the year. */}
+      {careForm.lifecycle !== 'annual' ? (
+        <CatalogDetailRow
+          kind="text"
+          label="Years to first harvest"
+          value={
+            careForm.yearsToFirstHarvest
+              ? `${careForm.yearsToFirstHarvest} ${careForm.yearsToFirstHarvest === '1' ? 'year' : 'years'}`
+              : ''
+          }
+          helpText={CATALOG_FIELD_HELP.yearsToFirstHarvest}
+          onPress={onYearsToFirstHarvest}
+        />
+      ) : null}
       <CatalogRangeRow
         label="Height"
         min={careForm.heightCmMin}

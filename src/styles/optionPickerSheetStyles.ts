@@ -38,6 +38,26 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 16,
       paddingVertical: 8,
     },
+    sheetSubtitle: {
+      fontSize: 13.5,
+      lineHeight: 19,
+      color: theme.textTertiary,
+      textAlign: 'center' as const,
+      paddingHorizontal: 20,
+      marginTop: -4,
+      marginBottom: 10,
+    },
+    // Section header inside a grouped list ("Recently used", "In pots").
+    groupHeader: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.9,
+      paddingHorizontal: 20,
+      paddingTop: 14,
+      paddingBottom: 6,
+    },
     searchContainer: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -59,11 +79,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       paddingVertical: Platform.OS === 'ios' ? 10 : 8,
     },
+    // Searchable sheets have a fixed height; the list takes what the search leaves.
+    list: {
+      flex: 1,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 32,
+      paddingHorizontal: 24,
+      gap: 8,
+    },
     emptyText: {
       fontSize: 14,
       color: theme.textTertiary,
       textAlign: 'center',
-      paddingVertical: 24,
     },
     optionRow: {
       flexDirection: 'row',

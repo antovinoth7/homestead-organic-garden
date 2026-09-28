@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { ReferenceListView } from '@/components/reference/ReferenceListView';
 import type { ReferenceEntry, ReferenceGroup } from '@/components/reference/types';
-import { getGroupedDiseaseEntries, CATEGORY_DESCRIPTIONS } from '@/config/diseases';
+import { getGroupedDiseaseEntries } from '@/config/diseases';
 import { getDiseaseImage } from '@/config/referenceAssets';
 import type { DiseaseListScreenNavigationProp } from '@/types/navigation.types';
 
@@ -37,7 +37,6 @@ export default function DiseaseListScreen(): React.JSX.Element {
       searchPlaceholder="What are you seeing?"
       itemNoun="disease"
       groups={groups}
-      categoryDescriptions={CATEGORY_DESCRIPTIONS}
       getImage={getImage}
       fallbackIcon="general.disease"
       onSelect={handleSelect}

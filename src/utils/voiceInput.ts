@@ -32,3 +32,12 @@ export const appendVoiceTranscript = (prev: string, text: string): string => {
   if (!clean) return prev;
   return prev ? `${prev} ${clean}` : clean;
 };
+
+/**
+ * Screen-reader label for a mic toggle. Shared by both `VoiceDictation`
+ * layouts so their accessibility contract cannot drift apart.
+ */
+export const micAccessibilityLabel = (isListening: boolean, unavailable: boolean): string => {
+  if (unavailable) return 'Voice input unavailable on this device';
+  return isListening ? 'Stop voice input' : 'Start voice input';
+};

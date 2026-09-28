@@ -1,11 +1,19 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, useWindowDimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  useWindowDimensions,
+} from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/optionPickerSheetStyles';
 import { BottomSheetModal } from '@/components/BottomSheetModal';
 import { SheetHandle } from '@/components/SheetHandle';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 
 export interface PickerOption {
   label: string;
@@ -13,6 +21,12 @@ export interface PickerOption {
   color?: string;
   /** Secondary line under the label (e.g. a lifecycle explanation). */
   description?: string;
+  /**
+   * Section header this option sits under. Options must arrive ordered by
+   * group — a header renders wherever the group changes. A value may repeat
+   * across groups (a "Recently used" copy); search collapses the copies.
+   */
+  group?: string;
 }
 
 interface Props {
@@ -28,9 +42,21 @@ interface Props {
   /** Renders a "clear" row above the options, for optional enum fields. */
   allowClear?: boolean;
   clearLabel?: string;
+  /** Overrides the "Search <title>..." placeholder. */
+  searchPlaceholder?: string;
+  /** One explanatory line under the title (e.g. why bed plants are absent). */
+  subtitle?: string;
 }
 
+type PickerRow =
+  | { kind: 'header'; key: string; title: string }
+  | { kind: 'option'; key: string; option: PickerOption };
+
 const ROW_HEIGHT = 52;
+/** Share of the window a searchable sheet occupies before the keyboard opens. */
+const SEARCHABLE_HEIGHT_RATIO = 0.75;
+/** Bottom padding while the keyboard is up — the safe-area inset is under it. */
+const KEYBOARD_BOTTOM_PADDING = 8;
 
 /**
  * Shared single-select bottom sheet. Extracted from `ThemedDropdown` so one
@@ -47,10 +73,13 @@ export function OptionPickerSheet({
   searchable = false,
   allowClear = false,
   clearLabel = 'Clear selection',
+  searchPlaceholder,
+  subtitle,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const keyboardHeight = useKeyboardHeight();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -67,14 +96,54 @@ export function OptionPickerSheet({
     [onSelect, close]
   );
 
-  const filteredOptions = useMemo(() => {
-    if (!searchable || !searchQuery.trim()) return options;
-    const q = searchQuery.trim().toLowerCase();
-    return options.filter((option) => option.label.toLowerCase().includes(q));
-  }, [options, searchQuery, searchable]);
+  const grouped = useMemo(() => options.some((option) => !!option.group), [options]);
+
+  const rows = useMemo<PickerRow[]>(() => {
+    const q = searchable ? searchQuery.trim().toLowerCase() : '';
+    if (q) {
+      // Search results are one flat list; a "Recently used" copy collapses
+      // onto its original so a match never shows twice.
+      const seen = new Set<string>();
+      const hits: PickerRow[] = [];
+      for (const option of options) {
+        const matches =
+          option.label.toLowerCase().includes(q) ||
+          (option.description?.toLowerCase().includes(q) ?? false);
+        if (!matches || seen.has(option.value)) continue;
+        seen.add(option.value);
+        hits.push({ kind: 'option', key: option.value, option });
+      }
+      return hits;
+    }
+    if (!grouped) {
+      return options.map((option, index) => ({
+        kind: 'option',
+        key: `${option.value}-${index}`,
+        option,
+      }));
+    }
+    const out: PickerRow[] = [];
+    let currentGroup: string | undefined;
+    options.forEach((option, index) => {
+      if (option.group && option.group !== currentGroup) {
+        out.push({ kind: 'header', key: `header-${option.group}-${index}`, title: option.group });
+      }
+      currentGroup = option.group;
+      out.push({ kind: 'option', key: `${option.group ?? ''}:${option.value}`, option });
+    });
+    return out;
+  }, [options, searchQuery, searchable, grouped]);
 
   const renderItem = useCallback(
-    ({ item }: { item: PickerOption }) => {
+    ({ item: row }: { item: PickerRow }) => {
+      if (row.kind === 'header') {
+        return (
+          <Text style={styles.groupHeader} accessibilityRole="header">
+            {row.title}
+          </Text>
+        );
+      }
+      const item = row.option;
       const isSelected = item.value === selectedValue;
       return (
         <TouchableOpacity
@@ -102,42 +171,65 @@ export function OptionPickerSheet({
     [selectedValue, handleSelect, styles, theme.primary]
   );
 
-  const keyExtractor = useCallback(
-    (item: PickerOption, index: number) => `${item.value}-${index}`,
-    []
-  );
+  const keyExtractor = useCallback((row: PickerRow) => row.key, []);
 
   const handleClear = useCallback(() => handleSelect(''), [handleSelect]);
 
-  // Description lines make rows taller than ROW_HEIGHT, so the fixed-height
-  // fast path only applies to plain label-only option lists.
-  const hasDescriptions = useMemo(
-    () => options.some((option) => !!option.description),
-    [options]
+  // Description lines and group headers make rows differ from ROW_HEIGHT, so
+  // the fixed-height fast path only applies to plain label-only option lists.
+  const hasVariableRows = useMemo(
+    () => grouped || options.some((option) => !!option.description),
+    [options, grouped]
   );
 
   // Bottom-sheet sizing: cap the sheet below the top inset and bound the list so
   // it scrolls instead of pushing the sheet past the screen.
   const bottomInset = Math.max(insets.bottom, 24);
   const sheetMaxHeight = windowHeight - insets.top - 24;
-  const headerAllowance = (searchable ? 150 : 90) + (allowClear ? ROW_HEIGHT : 0);
+  const headerAllowance = 90 + (allowClear ? ROW_HEIGHT : 0);
   const listMaxHeight = Math.max(ROW_HEIGHT, sheetMaxHeight - headerAllowance - bottomInset);
+
+  // A searchable sheet has a fixed height and rides above the keyboard. Sized
+  // to its content, it shrank as the query narrowed to one or no rows and sank
+  // behind the keyboard, which covers the bottom of the window.
+  const searchableHeight = Math.min(
+    windowHeight * SEARCHABLE_HEIGHT_RATIO,
+    sheetMaxHeight - keyboardHeight
+  );
+  const sheetSizing = searchable
+    ? {
+        height: searchableHeight,
+        paddingBottom: keyboardHeight > 0 ? KEYBOARD_BOTTOM_PADDING : bottomInset,
+      }
+    : { maxHeight: sheetMaxHeight, paddingBottom: bottomInset };
+
+  const trimmedQuery = searchQuery.trim();
+  const listEmpty = searchable ? (
+    <View style={styles.emptyState}>
+      <Ionicons name="search-outline" size={28} color={theme.textTertiary} />
+      <Text style={styles.emptyText}>
+        {trimmedQuery ? `No matches for "${trimmedQuery}"` : 'No matches found'}
+      </Text>
+    </View>
+  ) : null;
 
   return (
     <BottomSheetModal
       visible={visible}
       onClose={close}
-      sheetStyle={[styles.sheet, { maxHeight: sheetMaxHeight, paddingBottom: bottomInset }]}
+      sheetStyle={[styles.sheet, sheetSizing]}
+      keyboardAvoiding={searchable}
     >
       <SheetHandle onClose={close}>
         <Text style={styles.sheetTitle}>{title}</Text>
       </SheetHandle>
+      {subtitle ? <Text style={styles.sheetSubtitle}>{subtitle}</Text> : null}
       {searchable && (
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={18} color={theme.textTertiary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder={`Search ${title.toLowerCase()}...`}
+            placeholder={searchPlaceholder ?? `Search ${title.toLowerCase()}...`}
             placeholderTextColor={theme.inputPlaceholder}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -157,18 +249,16 @@ export function OptionPickerSheet({
           <Text style={styles.clearRowText}>{clearLabel}</Text>
         </TouchableOpacity>
       )}
-      {searchable && filteredOptions.length === 0 && (
-        <Text style={styles.emptyText}>No matches found</Text>
-      )}
       <FlatList
-        data={filteredOptions}
+        data={rows}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        style={{ maxHeight: listMaxHeight }}
+        style={searchable ? styles.list : { maxHeight: listMaxHeight }}
+        ListEmptyComponent={listEmpty}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         getItemLayout={
-          hasDescriptions
+          hasVariableRows
             ? undefined
             : (_, index) => ({ length: ROW_HEIGHT, offset: ROW_HEIGHT * index, index })
         }

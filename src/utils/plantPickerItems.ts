@@ -7,9 +7,10 @@
  * season field for every entry.
  */
 
-import { PlantProfile, PlantProfiles, PlantType } from '@/types/database.types';
+import { CatalogGroup, PlantProfile, PlantProfiles, PlantType } from '@/types/database.types';
 import { PLANT_CATEGORIES, getPlantNamesForType, getProfileEntry } from '@/services/plantProfiles';
 import { mapSeasonTextToIds, KKSeasonId } from '@/utils/plantingNow';
+import { growingSeasonLabel, normalizeSeasonValue } from '@/utils/plantLabels';
 
 export interface PlantPickerItem {
   plantType: PlantType;
@@ -17,6 +18,8 @@ export interface PlantPickerItem {
   /** Badge text, or null when no season data exists for the plant. */
   seasonLabel: string | null;
   hasVarieties: boolean;
+  /** A user-added entry's chosen browse group — see `PlantProfile.group`. */
+  group?: CatalogGroup;
 }
 
 const ALL_SEASON_COUNT = 4;
@@ -29,13 +32,13 @@ const ALL_SEASON_COUNT = 4;
  */
 export function derivePlantSeasonLabel(profile: PlantProfile): string | null {
   const growingSeason = profile.growingSeason?.trim();
-  if (growingSeason) return growingSeason;
+  if (growingSeason) return growingSeasonLabel(growingSeason);
 
   const phrases = new Set<string>();
   for (const detail of Object.values(profile.varietyDetails ?? {})) {
     for (const phrase of detail.seasonSuitability ?? []) {
       const trimmed = phrase.trim();
-      if (trimmed) phrases.add(trimmed);
+      if (trimmed) phrases.add(normalizeSeasonValue(trimmed));
     }
   }
   if (phrases.size === 0) return null;
@@ -45,7 +48,7 @@ export function derivePlantSeasonLabel(profile: PlantProfile): string | null {
     for (const id of mapSeasonTextToIds(phrase)) seasonIds.add(id);
   }
   if (seasonIds.size === ALL_SEASON_COUNT) return 'Year Round';
-  if (phrases.size === 1) return [...phrases][0] ?? null;
+  if (phrases.size === 1) return growingSeasonLabel([...phrases][0]) || null;
   return 'Multi-season';
 }
 
@@ -63,6 +66,7 @@ export function buildPlantPickerItems(profiles: PlantProfiles): PlantPickerItem[
         name,
         seasonLabel: profile ? derivePlantSeasonLabel(profile) : null,
         hasVarieties: (profile?.varieties?.length ?? 0) > 0,
+        ...(profile?.group ? { group: profile.group } : {}),
       });
     }
   }

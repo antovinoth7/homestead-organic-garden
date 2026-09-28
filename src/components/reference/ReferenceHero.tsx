@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import type { ImageStyle, LayoutChangeEvent } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
 import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { REFERENCE_IMAGE_CACHE_POLICY } from '@/config/referenceAssets';

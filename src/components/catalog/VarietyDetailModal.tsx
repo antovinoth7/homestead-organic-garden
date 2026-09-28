@@ -1,21 +1,14 @@
 import React, { useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
-import { createStyles } from '@/styles/catalogPlantDetailStyles';
+import { BottomSheetModal } from '@/components/BottomSheetModal';
+import { SheetHandle } from '@/components/SheetHandle';
+import { createStyles } from '@/styles/varietyDetailSheetStyles';
 import FloatingLabelInput from '@/components/FloatingLabelInput';
 import VoiceDictation from '@/components/VoiceDictation';
 import { sanitizeNum } from '@/utils/catalogDraft';
-import { GROWING_SEASON_OPTIONS } from '@/utils/plantLabels';
+import { GROWING_SEASON_OPTIONS, normalizeSeasonValue } from '@/utils/plantLabels';
 import type { VarietyDetail } from '@/types/database.types';
 
 interface SeasonPillProps {
@@ -32,39 +25,51 @@ function SeasonPill({ label, value, active, onToggle }: SeasonPillProps): React.
 
   return (
     <TouchableOpacity
-      style={[styles.seasonPill, active && styles.seasonPillActive]}
+      style={[styles.seasonChip, active && styles.seasonChipActive]}
       onPress={handlePress}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
     >
-      <Text style={[styles.seasonPillText, active && styles.seasonPillTextActive]}>{label}</Text>
+      <Text style={[styles.seasonChipText, active && styles.seasonChipTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 interface Props {
-  /** null = closed, '' = adding a new variety, otherwise the name being edited. */
-  editingVariety: string | null;
+  /** '' = adding a new variety, otherwise the name being edited. Mount only while open. */
+  editingVariety: string;
   newVariety: string;
   onNewVarietyChange: (next: string) => void;
   draft: VarietyDetail;
   onDraftChange: (updater: (prev: VarietyDetail) => VarietyDetail) => void;
-  onClose: () => void;
+  /** Done, and every dismissal — like the other catalog sheets, nothing typed is dropped. */
   onSave: () => void;
 }
 
-/** Add/edit sheet for a single variety. Detail fields are all optional. */
+/**
+ * Add/edit bottom sheet for a single variety. Detail fields are all optional.
+ *
+ * Commits on Done *and* on dismissal (backdrop, handle, back button), matching
+ * `CatalogTextEditSheet`: an empty name on a new variety simply closes.
+ */
 export function VarietyDetailModal({
   editingVariety,
   newVariety,
   onNewVarietyChange,
   draft,
   onDraftChange,
-  onClose,
   onSave,
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
   const isAdding = editingVariety === '';
+
+  const sheetStyle = useMemo(
+    () => [styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }],
+    [styles, insets.bottom]
+  );
 
   const onDaysChange = useCallback(
     (raw: string) => {
@@ -80,7 +85,9 @@ export function VarietyDetailModal({
   const onToggleSeason = useCallback(
     (value: string) => {
       onDraftChange((prev) => {
-        const current = prev.seasonSuitability ?? [];
+        // Normalised first so a retired value (e.g. Kharif) toggles as its
+        // replacement instead of lingering beside it.
+        const current = [...new Set((prev.seasonSuitability ?? []).map(normalizeSeasonValue))];
         return {
           ...prev,
           seasonSuitability: current.includes(value)
@@ -90,6 +97,11 @@ export function VarietyDetailModal({
       });
     },
     [onDraftChange]
+  );
+
+  const activeSeasons = useMemo(
+    () => new Set((draft.seasonSuitability ?? []).map(normalizeSeasonValue)),
+    [draft.seasonSuitability]
   );
 
   const onSeedSourceChange = useCallback(
@@ -103,103 +115,86 @@ export function VarietyDetailModal({
   );
 
   return (
-    <Modal
-      visible={editingVariety !== null}
-      transparent
-      animationType="fade"
-      hardwareAccelerated
-      statusBarTranslucent
-      navigationBarTranslucent
-      onRequestClose={onClose}
-    >
-      <KeyboardAvoidingView
-        style={styles.modalOverlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    // The shared bottom sheet, not an RN Modal wrapping a KeyboardAvoidingView:
+    // KAV mis-measures inside a transparent, statusBarTranslucent modal (see
+    // useKeyboardHeight) and re-lays out on every keyboard frame. Opening this
+    // editor with an auto-focused field on that path was taking the whole app
+    // down with a native crash on Android (Sentry ORGANIC-GARDENING-APP-5K).
+    <BottomSheetModal visible onClose={onSave} sheetStyle={sheetStyle} keyboardAvoiding>
+      <SheetHandle onClose={onSave}>
+        <Text style={styles.sheetTitle} numberOfLines={1}>
+          {isAdding ? 'Add Variety' : editingVariety}
+        </Text>
+      </SheetHandle>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.modalContent, styles.varietyCard]}>
-          {/* The app's shared editor bar — filled-primary close left, centred
-              title, primary action right — as used by the plot editor and the
-              task modals. Pinned outside the ScrollView so both controls stay
-              in frame however tall the form gets or how far it is scrolled. */}
-          <View style={styles.varietyHeader}>
-            <TouchableOpacity
-              style={styles.varietyCloseButton}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-            >
-              <Ionicons name="close" size={18} color={theme.textInverse} />
-            </TouchableOpacity>
-            <View style={styles.varietyHeaderText}>
-              <Text style={styles.varietyHeaderTitle} numberOfLines={1}>
-                {isAdding ? 'Add Variety' : editingVariety}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.varietyDoneButton}
-              onPress={onSave}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.varietyDoneText}>Done</Text>
-            </TouchableOpacity>
-          </View>
+        {isAdding && (
+          <FloatingLabelInput
+            label="Variety name *"
+            value={newVariety}
+            onChangeText={onNewVarietyChange}
+            autoFocus
+            autoCorrect={false}
+          />
+        )}
 
-          <ScrollView
-            contentContainerStyle={styles.varietyScrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {isAdding && (
-              <FloatingLabelInput
-                label="Variety name *"
-                value={newVariety}
-                onChangeText={onNewVarietyChange}
-                autoFocus
-                autoCorrect={false}
-              />
-            )}
+        <FloatingLabelInput
+          label="Days to maturity"
+          keyboardType="numeric"
+          value={draft.daysToMaturity !== undefined ? String(draft.daysToMaturity) : ''}
+          onChangeText={onDaysChange}
+        />
 
-            <FloatingLabelInput
-              label="Days to maturity"
-              keyboardType="numeric"
-              value={draft.daysToMaturity !== undefined ? String(draft.daysToMaturity) : ''}
-              onChangeText={onDaysChange}
+        <Text style={styles.fieldLabel}>Season suitability</Text>
+        <View style={styles.seasonChipRow}>
+          {GROWING_SEASON_OPTIONS.map((option) => (
+            <SeasonPill
+              key={option.value}
+              label={option.label}
+              value={option.value}
+              active={activeSeasons.has(option.value)}
+              onToggle={onToggleSeason}
             />
-
-            <Text style={styles.pruningTipsLabel}>Season suitability</Text>
-            <View style={styles.seasonPillRow}>
-              {GROWING_SEASON_OPTIONS.map((option) => (
-                <SeasonPill
-                  key={option.value}
-                  label={option.label}
-                  value={option.value}
-                  active={(draft.seasonSuitability ?? []).includes(option.value)}
-                  onToggle={onToggleSeason}
-                />
-              ))}
-            </View>
-
-            <FloatingLabelInput
-              label="Seed source (e.g. TNAU, saved seed)"
-              value={draft.seedSource ?? ''}
-              onChangeText={onSeedSourceChange}
-              autoCorrect={false}
-            />
-
-            <Text style={styles.pruningTipsLabel}>Notes</Text>
-            <VoiceDictation value={draft.notes ?? ''} onChangeText={onNotesChange} />
-            <TextInput
-              style={styles.varietyNotesInput}
-              value={draft.notes ?? ''}
-              onChangeText={onNotesChange}
-              multiline
-              numberOfLines={3}
-              placeholder="Farmer observations, soil preference, yield notes..."
-              placeholderTextColor={theme.textTertiary}
-            />
-          </ScrollView>
+          ))}
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+
+        <FloatingLabelInput
+          label="Seed source (e.g. TNAU, saved seed)"
+          value={draft.seedSource ?? ''}
+          onChangeText={onSeedSourceChange}
+          autoCorrect={false}
+        />
+
+        {/* Label left, compact mic | language pill right — the catalog's
+            Description block, so dictation looks the same everywhere. */}
+        <View style={styles.notesHeader}>
+          <Text style={styles.notesLabel}>Notes</Text>
+          <VoiceDictation compact value={draft.notes ?? ''} onChangeText={onNotesChange} />
+        </View>
+        <TextInput
+          style={styles.notesInput}
+          value={draft.notes ?? ''}
+          onChangeText={onNotesChange}
+          multiline
+          numberOfLines={3}
+          placeholder="Farmer observations, soil preference, yield notes..."
+          placeholderTextColor={theme.inputPlaceholder}
+        />
+      </ScrollView>
+
+      <TouchableOpacity
+        style={styles.doneButton}
+        onPress={onSave}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+      >
+        <Text style={styles.doneButtonText}>Done</Text>
+      </TouchableOpacity>
+    </BottomSheetModal>
   );
 }

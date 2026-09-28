@@ -33,6 +33,7 @@ import { makePlotBrief } from '../fixtures/today.fixtures';
 interface RenderedNode {
   type: unknown;
   props: { onPress?: () => void; children?: unknown; style?: unknown };
+  parent: RenderedNode | null;
 }
 
 interface RenderedTree {
@@ -205,12 +206,15 @@ describe('PlotCard health footer', () => {
       { onPress, onPressOverdue }
     );
 
+    const overdue = rendered.root.findByProps({
+      accessibilityLabel: '5 overdue tasks in North Plot. Opens the care plan at Overdue.',
+    });
+    // Web renders each target as a <button>; one inside another is invalid HTML.
+    for (let node = overdue.parent; node; node = node.parent) {
+      expect(node.type).not.toBe('TouchableOpacity');
+    }
     TestRenderer.act(() => {
-      rendered.root
-        .findByProps({
-          accessibilityLabel: '5 overdue tasks in North Plot. Opens the care plan at Overdue.',
-        })
-        .props.onPress?.();
+      overdue.props.onPress?.();
     });
     expect(onPressOverdue).toHaveBeenCalledWith('north-plot');
     // The nested target must not also fire the row it sits in.
@@ -219,7 +223,8 @@ describe('PlotCard health footer', () => {
     // Everything else on the row — the due pill, the chevron — still opens the
     // plot at the top of its plan.
     const row = rendered.root.findAll(
-      (node) => node.type === 'TouchableOpacity' && baseStyle(node.props.style) === 'countsRow'
+      (node) =>
+        node.type === 'TouchableOpacity' && baseStyle(node.props.style) === 'countsRowTarget'
     );
     expect(row).toHaveLength(1);
     TestRenderer.act(() => {

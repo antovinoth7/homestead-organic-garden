@@ -12,7 +12,7 @@ interface Props {
   placeholder?: string;
   helpText?: string;
   helpTitle?: string;
-  /** Renders the தமிழ்/English + mic control above the input. */
+  /** Renders the split mic/language dictation pill at the end of the label row. */
   dictation?: boolean;
   numberOfLines?: number;
   isLast?: boolean;
@@ -40,17 +40,21 @@ export function CatalogTextBlock({
   return (
     <View style={[styles.block, isLast && styles.blockLast]}>
       <View style={styles.blockHeader}>
-        <Text style={styles.blockLabel}>{label}</Text>
-        {helpText ? (
-          <FieldHelp
-            accessibilityLabel={`More information about ${helpTitle ?? label}`}
-            compact
-            description={helpText}
-            title={helpTitle ?? label}
-          />
-        ) : null}
+        <View style={styles.blockHeaderMain}>
+          <Text style={styles.blockLabel} numberOfLines={1}>
+            {label}
+          </Text>
+          {helpText ? (
+            <FieldHelp
+              accessibilityLabel={`More information about ${helpTitle ?? label}`}
+              compact
+              description={helpText}
+              title={helpTitle ?? label}
+            />
+          ) : null}
+        </View>
+        {dictation && <VoiceDictation compact value={value} onChangeText={onChangeText} />}
       </View>
-      {dictation && <VoiceDictation value={value} onChangeText={onChangeText} />}
       <TextInput
         style={styles.blockInput}
         value={value}

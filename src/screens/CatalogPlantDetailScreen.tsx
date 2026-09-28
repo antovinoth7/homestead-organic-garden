@@ -1,20 +1,20 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import {
+  Alert,
   Animated,
   View,
   Text,
   TouchableOpacity,
   Modal,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '@/theme';
 import { getPlantImage } from '@/config/referenceAssets';
-import { getTodayCropEvidence } from '@/config/tamilNaduPlantingCalendar';
 import { createStyles } from '@/styles/catalogPlantDetailStyles';
 import CollapsibleSection from '@/components/CollapsibleSection';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
@@ -37,7 +37,6 @@ import { CoreCareSection } from '@/components/catalog/sections/CoreCareSection';
 import { GrowingInfoSection } from '@/components/catalog/sections/GrowingInfoSection';
 import { PruningSection } from '@/components/catalog/sections/PruningSection';
 import { TolerancesSection } from '@/components/catalog/sections/TolerancesSection';
-import { PlantingSection } from '@/components/catalog/sections/PlantingSection';
 import type {
   CatalogEditor,
   PickerSheetConfig,
@@ -46,16 +45,14 @@ import type {
 } from '@/components/catalog/catalogEditor';
 import { useCatalogEntryForm } from '@/hooks/useCatalogEntryForm';
 import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
-import { getAllPests } from '@/config/pests';
-import { getAllDiseases } from '@/config/diseases';
-import type { VarietyDetail } from '@/types/database.types';
+import { getGroupedPestEntries } from '@/config/pests';
+import { getGroupedDiseaseEntries } from '@/config/diseases';
+import type { PestDiseasePickerGroup } from '@/utils/pestDiseasePickerRows';
+import type { CatalogGroup, PlantType, VarietyDetail } from '@/types/database.types';
+import { CATALOG_GROUP_DEFAULT_TYPE, PLANT_TYPE_TO_GROUP } from '@/config/plants/catalogTaxonomy';
 import { MoreStackParamList } from '@/types/navigation.types';
 import { sanitizeName } from '@/utils/catalogDraft';
-import {
-  FIELD_TO_SECTION,
-  SECTION_TO_TAB,
-  sectionHasError,
-} from '@/utils/catalogValidation';
+import { FIELD_TO_SECTION, SECTION_TO_TAB, sectionHasError } from '@/utils/catalogValidation';
 import type { CatalogSectionKey, CatalogTabKey } from '@/utils/catalogValidation';
 import {
   coreCareSummary,
@@ -63,19 +60,13 @@ import {
   growingInfoSummary,
   pestsSummary,
   plantInfoSummary,
-  plantingSummary,
   pruningSummary,
   toleranceSummary,
   varietiesSummary,
 } from '@/utils/catalogSummaries';
 import { getPlantCareProfile } from '@/utils/plantCareDefaults';
+import { getCommonDiseases, getCommonPests } from '@/utils/plantHelpers';
 import {
-  getCommonDiseases,
-  getCommonPests,
-} from '@/utils/plantHelpers';
-import {
-  CATEGORY_LABELS,
-  GROWTH_STAGE_LABELS,
   LIFECYCLE_LABELS,
   SUNLIGHT_LABELS,
   TOLERANCE_LABELS,
@@ -99,39 +90,51 @@ const HERO_HEIGHT = 250;
 /** Where the sticky bar starts taking over from the hero's own controls. */
 const STICKY_THRESHOLD = HERO_HEIGHT - 80;
 
-interface EvidenceLinkProps {
-  title: string;
-  url: string;
-  styles: ReturnType<typeof createStyles>;
-}
-
-function EvidenceLink({ title, url, styles }: EvidenceLinkProps): React.JSX.Element {
-  const handlePress = useCallback(() => {
-    void Linking.openURL(url);
-  }, [url]);
-  return (
-    <TouchableOpacity onPress={handlePress} accessibilityRole="link" activeOpacity={0.7}>
-      <Text style={styles.evidenceLink}>{title} ›</Text>
-    </TouchableOpacity>
-  );
-}
-
 const ALL_EXPANDED: Record<CatalogSectionKey, boolean> = {
   plantInfo: true,
   coreCare: true,
   pruning: true,
   growingInfo: true,
-  planting: true,
   tolerances: true,
   pests: true,
   diseases: true,
   varieties: true,
 };
 
+/** Bundled registries — static for the app's lifetime, so grouped once. */
+const PEST_PICKER_GROUPS: readonly PestDiseasePickerGroup[] = getGroupedPestEntries().map(
+  (group) => ({ label: group.label, entries: group.pests })
+);
+const DISEASE_PICKER_GROUPS: readonly PestDiseasePickerGroup[] = getGroupedDiseaseEntries().map(
+  (group) => ({ label: group.label, entries: group.diseases })
+);
+
 export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const route = useRoute<RouteParam>();
   const navigation = useNavigation();
-  const { plantName: initialName, plantType, isCreating = false } = route.params;
+  const {
+    plantName: initialName,
+    plantType: routePlantType,
+    isCreating = false,
+    group: routeGroup,
+  } = route.params;
+
+  /**
+   * The care model. Fixed for an existing entry; while creating it follows the
+   * chosen Category, and Fruits can say whether the plant grows as a tree —
+   * see `PlantInfoSection`.
+   */
+  const [plantType, setPlantType] = useState<PlantType>(routePlantType);
+  /** Where a new entry is filed in the catalog. Only read while creating. */
+  const [group, setGroup] = useState<CatalogGroup>(
+    routeGroup ?? PLANT_TYPE_TO_GROUP[routePlantType]
+  );
+  const onGroupChange = useCallback((next: CatalogGroup) => {
+    setGroup(next);
+    // Every category starts from its own care model; the existing re-seed in
+    // `useCatalogEntryForm` then moves the care defaults the user has not edited.
+    setPlantType(CATALOG_GROUP_DEFAULT_TYPE[next]);
+  }, []);
 
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -161,9 +164,11 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     showReassign ||
     editingVariety !== null;
 
-  const form = useCatalogEntryForm({ initialName, plantType, isCreating, anyModalOpen });
+  const form = useCatalogEntryForm({ initialName, plantType, group, isCreating, anyModalOpen });
   const {
     loading,
+    loadError,
+    retryLoad,
     saving,
     name,
     setName,
@@ -176,7 +181,11 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     lookupName,
     categoryPlants,
     usageCount,
+    plantsLoaded,
+    nameLocked,
+    deleteKind,
     hasOverride,
+    canReset,
     isDirty,
     errors,
     showErrors,
@@ -197,7 +206,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const [headerStuck, setHeaderStuck] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const tabBarYRef = useRef(0);
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useAnimatedValue(0);
   const [sectionExpanded, setSectionExpanded] =
     useState<Record<CatalogSectionKey, boolean>>(ALL_EXPANDED);
 
@@ -260,6 +269,10 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
 
   const handleScrollEvent = useMemo(
     () =>
+      // `handleScroll` reads `tabBarYRef.current`, so the compiler treats handing
+      // it to Animated.event as a render-time ref read. Animated.event only
+      // stores the listener — it is invoked on scroll, never during render.
+      // eslint-disable-next-line react-hooks/refs
       Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
         useNativeDriver: true,
         listener: handleScroll,
@@ -313,10 +326,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const baseProfile = useMemo(
     () => getPlantCareProfile(lookupName, plantType),
     [lookupName, plantType]
-  );
-  const todayEvidence = useMemo(
-    () => getTodayCropEvidence(plantType, lookupName),
-    [plantType, lookupName]
   );
 
   const pestChips = useMemo<CatalogChip[]>(
@@ -444,8 +453,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     [setVarieties, setVarietyDetails]
   );
 
-  const closeVarietyModal = useCallback(() => setEditingVariety(null), []);
-
   const onSaveVariety = useCallback(() => {
     if (editingVariety === null) return;
 
@@ -464,10 +471,24 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
     if (editingVariety === '') {
       const variety = sanitizeName(newVariety);
       if (!variety) {
-        setEditingVariety(null);
+        if (!hasContent) {
+          setEditingVariety(null);
+          return;
+        }
+        // The sheet also saves on dismissal, so details typed without a name
+        // would otherwise vanish with no word.
+        Alert.alert('Variety name needed', 'Add a name to keep these details.', [
+          { text: 'Keep editing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => setEditingVariety(null) },
+        ]);
         return;
       }
-      if (varieties.some((v) => v.toLowerCase() === variety.toLowerCase())) {
+      const existing = varieties.find((v) => v.toLowerCase() === variety.toLowerCase());
+      if (existing) {
+        // Already listed: fold what was typed into it rather than dropping it.
+        if (hasContent) {
+          setVarietyDetails((prev) => ({ ...prev, [existing]: { ...prev[existing], ...draft } }));
+        }
         setNewVariety('');
         setEditingVariety(null);
         return;
@@ -503,15 +524,40 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
   }, [attemptSave, scrollToKey]);
 
   const onDeletePress = useCallback(() => {
-    const mode = requestDelete();
-    if (mode === 'confirm') {
-      setShowDeleteConfirm(true);
-    } else if (mode === 'reassign') {
-      const remaining = categoryPlants.filter((p) => p !== initialName);
-      setReassignReplacement(remaining[0] ?? '');
-      setShowReassign(true);
-    }
-  }, [requestDelete, categoryPlants, initialName]);
+    // Async because the garden plants load in the background and decide whether
+    // this is a plain delete or a reassignment.
+    void (async () => {
+      const mode = await requestDelete();
+      if (mode === 'confirm') {
+        setShowDeleteConfirm(true);
+      } else if (mode === 'reassign') {
+        setReassignReplacement('');
+        setShowReassign(true);
+      }
+    })();
+  }, [requestDelete]);
+
+  /**
+   * The old copy promised "This cannot be undone" for every entry, which was
+   * untrue of the plants the app ships: those are hidden, not removed, and the
+   * catalog list offers them back. The wording deliberately echoes
+   * `HiddenPlantsSection` so the two surfaces read as one idea.
+   */
+  const deleteCopy = useMemo(
+    () =>
+      deleteKind === 'hide'
+        ? {
+            title: 'Hide plant?',
+            message: `"${initialName}" comes with the app, so deleting hides it instead of removing it for good. You can bring it back from "hidden plants" at the bottom of the catalog.`,
+            confirmLabel: 'Hide',
+          }
+        : {
+            title: 'Delete plant?',
+            message: `Remove "${initialName}" from the catalog? This cannot be undone.`,
+            confirmLabel: 'Delete',
+          },
+    [deleteKind, initialName]
+  );
 
   const onConfirmDelete = useCallback(() => {
     setShowDeleteConfirm(false);
@@ -537,8 +583,12 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
   const previewSources = useMemo(() => (heroImage ? [heroImage] : []), [heroImage]);
 
   const displayName =
-    name.trim() || (isCreating ? `New ${CATEGORY_LABELS[plantType]}` : initialName);
-  const usageSummary = usageCount > 0 ? `${usageCount} in garden` : 'Not in garden yet';
+    name.trim() || (isCreating ? 'New plant' : initialName);
+  const usageSummary = !plantsLoaded
+    ? ''
+    : usageCount > 0
+      ? `${usageCount} growing in your garden`
+      : 'Not in your garden yet';
 
   const summaryLabels = useMemo(
     () => ({
@@ -553,7 +603,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       droughtToleranceLabel: careForm?.droughtTolerance
         ? TOLERANCE_LABELS[careForm.droughtTolerance]
         : undefined,
-      growthStageLabel: careForm ? GROWTH_STAGE_LABELS[careForm.initialGrowthStage] : undefined,
     }),
     [careForm]
   );
@@ -566,6 +615,26 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         .filter((tip) => tip.length > 0).length ?? 0,
     [careForm?.pruningTips]
   );
+
+  if (loadError && !loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="cloud-offline-outline" size={32} color={theme.textTertiary} />
+        <Text style={styles.loadingText}>Couldn’t load this plant.</Text>
+        <View style={styles.loadErrorActions}>
+          <TouchableOpacity style={styles.loadErrorButton} onPress={onBackPress}>
+            <Text style={styles.loadErrorButtonText}>Go back</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.loadErrorButton, styles.loadErrorButtonPrimary]}
+            onPress={retryLoad}
+          >
+            <Text style={styles.loadErrorButtonTextPrimary}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (loading || !careForm || !editor) {
     return (
@@ -641,26 +710,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
           {tabBar}
         </View>
 
-        {todayEvidence.length > 0 && (
-          <View style={styles.evidenceCard}>
-            <View style={styles.evidenceTitleRow}>
-              <Ionicons name="shield-checkmark-outline" size={17} color={theme.primary} />
-              <Text style={styles.evidenceTitle}>Tamil Nadu guidance</Text>
-            </View>
-            <Text style={styles.evidenceText}>
-              {hasOverride
-                ? 'This entry includes your saved edits. The sources below support the app defaults, not user-supplied changes.'
-                : `Source-reviewed for Tamil Nadu home gardens · reviewed ${todayEvidence[0]?.reviewedOn}.`}
-            </Text>
-            <Text style={styles.evidenceText}>
-              The crop image is illustrative and must not be used to diagnose a plant problem.
-            </Text>
-            {todayEvidence.map((source) => (
-              <EvidenceLink key={source.id} title={source.title} url={source.url} styles={styles} />
-            ))}
-          </View>
-        )}
-
         {/* ── Basics ── */}
         <View onLayout={registerSection('basics')}>
           <CollapsibleSection
@@ -678,7 +727,11 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               name={name}
               setName={setName}
               isCreating={isCreating}
-              hasOverride={hasOverride}
+              nameLocked={nameLocked}
+              plantType={plantType}
+              onPlantTypeChange={setPlantType}
+              group={group}
+              onGroupChange={onGroupChange}
             />
           </CollapsibleSection>
         </View>
@@ -725,18 +778,6 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
           >
             <GrowingInfoSection editor={editor} />
           </CollapsibleSection>
-
-          <CollapsibleSection
-            title="Planting"
-            icon="leaf-outline"
-            iconTint={theme.successLight}
-            alwaysShowSummary
-            summary={plantingSummary(summaryLabels.growthStageLabel)}
-            expanded={sectionExpanded.planting}
-            onExpandedChange={setExpanded('planting')}
-          >
-            <PlantingSection editor={editor} />
-          </CollapsibleSection>
         </View>
 
         {/* ── Health ── */}
@@ -765,6 +806,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               <TouchableOpacity
                 style={styles.sectionHeaderAction}
                 onPress={openPestPicker}
+                hitSlop={7}
+                accessibilityRole="button"
                 accessibilityLabel="Add pest"
               >
                 <Ionicons name="add" size={18} color={theme.primary} />
@@ -776,6 +819,9 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               emptyText="No linked pests yet."
               onRemove={onRemovePest}
             />
+            <Text style={styles.sectionNote}>
+              Pests you add here also show in each garden plant&apos;s care guide.
+            </Text>
           </CollapsibleSection>
 
           <CollapsibleSection
@@ -790,6 +836,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               <TouchableOpacity
                 style={styles.sectionHeaderAction}
                 onPress={openDiseasePicker}
+                hitSlop={7}
+                accessibilityRole="button"
                 accessibilityLabel="Add disease"
               >
                 <Ionicons name="add" size={18} color={theme.primary} />
@@ -801,6 +849,9 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
               emptyText="No linked diseases yet."
               onRemove={onRemoveDisease}
             />
+            <Text style={styles.sectionNote}>
+              Diseases you add here also show in each garden plant&apos;s care guide.
+            </Text>
           </CollapsibleSection>
         </View>
 
@@ -834,10 +885,12 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
 
           {!isCreating && (
             <CatalogDangerFooter
-              showReset={hasOverride}
+              showReset={canReset}
               onReset={resetCare}
               onDelete={onDeletePress}
               usageCount={usageCount}
+              usageKnown={plantsLoaded}
+              deleteKind={deleteKind}
               disabled={saving}
             />
           )}
@@ -847,14 +900,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       {/* Sticky bar — fades in as the hero scrolls away, so back and Save stay
           reachable from every tab. */}
       <Animated.View
-        style={[
-          styles.stickyHeader,
-          {
-            paddingTop: insets.top + 10,
-            backgroundColor: theme.tabBarBackground,
-            opacity: stickyBgOpacity,
-          },
-        ]}
+        style={[styles.stickyHeader, { paddingTop: insets.top + 10, opacity: stickyBgOpacity }]}
         onLayout={onHeaderLayout}
         pointerEvents={headerStuck ? 'auto' : 'none'}
       >
@@ -875,11 +921,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
       {tabsStuck && <View style={[styles.pinnedTabBar, { top: headerHeight }]}>{tabBar}</View>}
 
       {heroImage && (
-        <ImageZoomModal
-          visible={previewVisible}
-          sources={previewSources}
-          onClose={closePreview}
-        />
+        <ImageZoomModal visible={previewVisible} sources={previewSources} onClose={closePreview} />
       )}
 
       {/* ── Sheets & modals ── */}
@@ -928,43 +970,51 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         />
       )}
 
-      <PestDiseasePickerModal
-        visible={showPestPicker}
-        onClose={closePestPicker}
+      {showPestPicker && (
+        <PestDiseasePickerModal
+          visible
+          onClose={closePestPicker}
           title="Add Pest"
           kind="pest"
-        searchPlaceholder="Search pests..."
-        allEntries={getAllPests()}
-        takenNames={takenPestNames}
-        onSelect={onAddPest}
-      />
+          searchPlaceholder="Search pests…"
+          groups={PEST_PICKER_GROUPS}
+          takenNames={takenPestNames}
+          onSelect={onAddPest}
+        />
+      )}
 
-      <PestDiseasePickerModal
-        visible={showDiseasePicker}
-        onClose={closeDiseasePicker}
-          title="Link Disease"
+      {showDiseasePicker && (
+        <PestDiseasePickerModal
+          visible
+          onClose={closeDiseasePicker}
+          title="Add Disease"
           kind="disease"
-        searchPlaceholder="Search diseases..."
-        allEntries={getAllDiseases()}
-        takenNames={takenDiseaseNames}
-        onSelect={onAddDisease}
-      />
+          searchPlaceholder="Search diseases…"
+          groups={DISEASE_PICKER_GROUPS}
+          takenNames={takenDiseaseNames}
+          onSelect={onAddDisease}
+        />
+      )}
 
-      <VarietyDetailModal
-        editingVariety={editingVariety}
-        newVariety={newVariety}
-        onNewVarietyChange={setNewVariety}
-        draft={varietyDraft}
-        onDraftChange={setVarietyDraft}
-        onClose={closeVarietyModal}
-        onSave={onSaveVariety}
-      />
+      {/* Mounted only while open, like the sheets above, so a closed editor
+          keeps no live tree, keyboard listener or voice session around. */}
+      {editingVariety !== null && (
+        <VarietyDetailModal
+          editingVariety={editingVariety}
+          newVariety={newVariety}
+          onNewVarietyChange={setNewVariety}
+          draft={varietyDraft}
+          onDraftChange={setVarietyDraft}
+          onSave={onSaveVariety}
+        />
+      )}
 
       <ConfirmDeleteModal
         visible={showDeleteConfirm}
-        title="Delete plant?"
-        message={`Remove "${initialName}" from the catalog? This cannot be undone.`}
-        confirmLabel="Delete"
+        title={deleteCopy.title}
+        message={deleteCopy.message}
+        confirmLabel={deleteCopy.confirmLabel}
+        busy={saving}
         onCancel={closeDeleteConfirm}
         onConfirm={onConfirmDelete}
       />
@@ -976,6 +1026,7 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
         usageCount={usageCount}
         options={categoryPlants.filter((p) => p !== initialName)}
         selected={reassignReplacement}
+        deleteKind={deleteKind}
         onSelect={setReassignReplacement}
         onConfirm={onConfirmReassign}
       />

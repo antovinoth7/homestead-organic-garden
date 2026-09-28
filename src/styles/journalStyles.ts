@@ -1,24 +1,35 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+
+const cardShadow = (theme: Theme): object =>
+  Platform.select({
+    ios: {
+      shadowColor: theme.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 3,
+    },
+    android: { elevation: 1 },
+    default: {},
+  });
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.backgroundSecondary,
+      backgroundColor: theme.background,
     },
+
+    // ── Header — same bar, icon buttons and search field as Plants / Beds ──
     header: {
-      backgroundColor: theme.tabBarBackground,
-      paddingTop: 12,
-      paddingHorizontal: 16,
-      paddingBottom: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    headerTop: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingBottom: 12,
+      backgroundColor: theme.tabBarBackground,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
     },
     headerTitle: {
       fontSize: 22,
@@ -30,13 +41,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 8,
     },
-    searchIconBtn: {
+    headerIconBtn: {
       width: 40,
       height: 40,
       borderRadius: 20,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    headerIconBtnActive: {
+      backgroundColor: theme.accent,
     },
     searchActiveDot: {
       position: 'absolute',
@@ -47,6 +61,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 4,
       backgroundColor: theme.accent,
     },
+    filterBadge: {
+      position: 'absolute',
+      top: 1,
+      right: 1,
+      minWidth: 14,
+      height: 14,
+      borderRadius: 7,
+      backgroundColor: theme.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 2,
+    },
+    filterBadgeText: {
+      fontSize: 9,
+      color: theme.buttonText,
+      fontWeight: '700',
+      lineHeight: 14,
+    },
     searchExpandedRow: {
       flex: 1,
       flexDirection: 'row',
@@ -54,9 +86,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 8,
     },
     searchBackBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 38,
+      height: 38,
+      borderRadius: 19,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -79,445 +111,272 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       padding: 0,
     },
-    filterToggleButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.primary,
-    },
-    filterToggleButtonActive: {
-      backgroundColor: theme.accent,
-    },
-    filterBadge: {
-      position: 'absolute',
-      top: 1,
-      right: 1,
-      minWidth: 14,
-      height: 14,
-      borderRadius: 7,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 2,
-    },
-    filterBadgeText: {
-      fontSize: 9,
-      color: theme.buttonText,
-      fontWeight: '700',
-      lineHeight: 14,
-    },
+
+    // ── List header: the stat tiles ──
     statsHeader: {
-      marginTop: 4,
-      marginBottom: 6,
+      paddingTop: 8,
+      marginBottom: 2,
     },
-    statsRow: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-    statCard: {
-      flex: 1,
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 10,
-      paddingVertical: 8,
-      paddingHorizontal: 4,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    statNumber: {
-      fontSize: 15,
-      fontWeight: 'bold',
-      color: theme.text,
-      marginTop: 2,
-    },
-    statLabel: {
-      fontSize: 10,
-      color: theme.textSecondary,
-      marginTop: 1,
-      lineHeight: 12,
-      textAlign: 'center',
-    },
-    sheetOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'flex-end',
-      zIndex: 1000,
-      elevation: 1000,
-    },
-    sheetContainer: {
-      backgroundColor: theme.background,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-    },
-    sheetHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingBottom: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    sheetTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    sheetClearBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      borderRadius: 14,
-      backgroundColor: theme.errorLight,
-    },
-    sheetClearText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.error,
-    },
-    sheetScroll: {
-      paddingHorizontal: 20,
-    },
-    sheetScrollContent: {
-      paddingBottom: 20,
-    },
-    sheetSectionTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      marginTop: 16,
-      marginBottom: 8,
-    },
-    sheetChipWrap: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    sheetChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 20,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    sheetChipActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    sheetChipText: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
-    sheetChipTextActive: {
-      color: theme.primary,
-      fontWeight: '600',
-    },
+
     content: {
       flex: 1,
     },
     listContent: {
-      padding: 12,
+      // 16, not 20: the timeline rail already takes width from every card.
+      paddingHorizontal: 16,
+      paddingTop: 4,
+      gap: 12,
+    },
+    dayHeader: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: theme.text,
+      paddingTop: 10,
+      paddingHorizontal: 2,
+    },
+
+    // ── Entry card, with its type icon on a timeline rail to the left ──
+    entryRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
       gap: 10,
     },
+    // Tinted by the same `typeChip_<type>` style as the pill label.
+    railIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 10,
+    },
     card: {
-      backgroundColor: theme.card,
-      borderRadius: 14,
-      overflow: 'hidden',
-      flexDirection: 'row',
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    cardAccent: {
-      width: 4,
-    },
-    cardBody: {
       flex: 1,
-      padding: 11,
+      minWidth: 0,
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      paddingTop: 12,
+      paddingHorizontal: 14,
+      paddingBottom: 14,
+      gap: 8,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.border,
+      ...cardShadow(theme),
     },
     cardTopRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      gap: 8,
     },
-    typeIconCircle: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+    // Label only — the icon lives on the rail beside the card.
+    typeChip: {
+      height: 28,
+      justifyContent: 'center',
+      paddingHorizontal: 10,
+      borderRadius: 14,
+    },
+    typeChipText: {
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    // Per-type tint for the type chip, keyed `typeChip_<JournalEntryType>`.
+    typeChip_observation: { backgroundColor: theme.primaryLight },
+    typeChip_harvest: { backgroundColor: theme.warningLight },
+    typeChip_pest_disease: { backgroundColor: theme.errorLight },
+    typeChip_issue: { backgroundColor: theme.errorLight },
+    typeChip_milestone: { backgroundColor: theme.purpleLight },
+    typeChip_other: { backgroundColor: theme.backgroundTertiary },
+    typeChipText_observation: { color: theme.primary },
+    typeChipText_harvest: { color: theme.warningDark },
+    typeChipText_pest_disease: { color: theme.errorDark },
+    typeChipText_issue: { color: theme.errorDark },
+    typeChipText_milestone: { color: theme.purpleDark },
+    typeChipText_other: { color: theme.textSecondary },
+    dateText: {
+      flex: 1,
+      minWidth: 0,
+      textAlign: 'right',
+      fontSize: 13,
+      fontWeight: '500',
+      color: theme.textTertiary,
+    },
+    moreButton: {
+      width: 36,
+      height: 36,
+      marginVertical: -4,
+      marginRight: -8,
+      borderRadius: 18,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    cardMeta: {
-      flex: 1,
-      marginLeft: 10,
-    },
-    entryTypeLabel: {
-      fontSize: 14,
+    // Built from structured fields ("Harvested 12 pcs", "Aphids on leaf").
+    headlineText: {
+      fontSize: 17,
       fontWeight: '700',
+      lineHeight: 21,
       color: theme.text,
     },
-    dateText: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      marginTop: 1,
+    contentText: {
+      fontSize: 15,
+      lineHeight: 22,
+      color: theme.text,
     },
-    tagsRow: {
+    // Harvest storage notes stand in when the entry has no notes of its own.
+    contentTextMuted: {
+      color: theme.textSecondary,
+    },
+    chipRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 6,
-      marginTop: 8,
     },
-    // Fixed thumbnail row (no horizontal scroll — never fights the swipe gesture)
+    chip: {
+      height: 28,
+      maxWidth: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 10,
+      borderRadius: 14,
+    },
+    chipText: {
+      flexShrink: 1,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    chipPlant: {
+      backgroundColor: theme.primaryLight,
+    },
+    chipPlantText: {
+      color: theme.primary,
+    },
+    chipOutline: {
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.borderDark,
+    },
+    chipMutedText: {
+      color: theme.textSecondary,
+    },
+    chipSevere: {
+      backgroundColor: theme.errorLight,
+    },
+    chipSevereText: {
+      color: theme.errorDark,
+    },
+    chipModerate: {
+      backgroundColor: theme.warningLight,
+    },
+    chipModerateText: {
+      color: theme.warningDark,
+    },
+    chipResolved: {
+      backgroundColor: theme.successLight,
+    },
+    chipResolvedText: {
+      color: theme.successDark,
+    },
+    chipTag: {
+      backgroundColor: theme.backgroundTertiary,
+    },
+    chipTagText: {
+      color: theme.textSecondary,
+      textTransform: 'capitalize',
+    },
+    // Up to three equal squares fill the width; a lone photo gets a tall frame.
     thumbRow: {
       flexDirection: 'row',
       gap: 6,
-      marginTop: 10,
+      paddingTop: 2,
+    },
+    thumbCell: {
+      flex: 1,
+      borderRadius: 12,
+      overflow: 'hidden',
+      backgroundColor: theme.backgroundTertiary,
+    },
+    thumbCellSquare: {
+      aspectRatio: 1,
+    },
+    thumbCellSingle: {
+      height: 170,
     },
     thumb: {
-      width: 72,
-      height: 72,
-      borderRadius: 8,
-      backgroundColor: theme.backgroundSecondary,
+      width: '100%',
+      height: '100%',
     },
-    thumbMore: {
-      position: 'relative',
+    // A device-local photo that no longer loads (reinstall, web preview):
+    // a small square placeholder instead of an empty wide panel.
+    thumbBroken: {
+      flex: 0,
+      width: 76,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.borderLight,
     },
     thumbMoreOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      borderRadius: 8,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       backgroundColor: theme.overlay,
       alignItems: 'center',
       justifyContent: 'center',
     },
     thumbMoreText: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: '700',
       color: theme.textInverse,
     },
-    cardContent: {
-      padding: 16,
-    },
-    cardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    headerLeft: {
+    resolveButton: {
+      alignSelf: 'flex-start',
+      minHeight: 40,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-    },
-    headerRight: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    date: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-    typeIconBadge: {
-      backgroundColor: theme.primaryLight,
+      gap: 6,
+      paddingHorizontal: 14,
       borderRadius: 12,
-      padding: 4,
+      borderWidth: 1,
+      borderColor: theme.primary,
     },
-    iconButton: {
-      padding: 4,
-    },
-    plantTag: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.primaryLight,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-      gap: 4,
-    },
-    plantTagText: {
-      fontSize: 11,
+    resolveButtonText: {
+      fontSize: 14.5,
+      fontWeight: '600',
       color: theme.primary,
-      fontWeight: '600',
     },
-    harvestDetails: {
-      flexDirection: 'row',
-      gap: 8,
-      marginBottom: 8,
-    },
-    harvestBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.warningLight,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-      gap: 4,
-    },
-    harvestText: {
-      fontSize: 11,
-      color: theme.warning,
-      fontWeight: '600',
-    },
-    qualityBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-    },
-    qualityexcellent: {
-      backgroundColor: theme.primaryLight,
-    },
-    qualitygood: {
-      backgroundColor: theme.primaryLight,
-    },
-    qualityfair: {
-      backgroundColor: theme.warningLight,
-    },
-    qualitypoor: {
-      backgroundColor: theme.errorLight,
-    },
-    qualityText: {
-      fontSize: 9,
-      fontWeight: 'bold',
-      color: theme.textSecondary,
-    },
-    // Pest/disease + milestone card badges
-    pestNameBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: theme.errorLight,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-    },
-    pestNameText: {
-      fontSize: 11,
-      color: theme.error,
-      fontWeight: '600',
-    },
-    pillBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-    },
-    pillText: {
-      fontSize: 9,
-      fontWeight: 'bold',
-      color: theme.textSecondary,
-    },
-    severity_low: {
-      backgroundColor: theme.infoLight,
-    },
-    severity_medium: {
-      backgroundColor: theme.warningLight,
-    },
-    severity_high: {
-      backgroundColor: theme.errorLight,
-    },
-    severity_severe: {
-      backgroundColor: theme.errorLight,
-    },
-    status_active: {
-      backgroundColor: theme.errorLight,
-    },
-    status_treated: {
-      backgroundColor: theme.warningLight,
-    },
-    status_resolved: {
-      backgroundColor: theme.successLight,
-    },
-    milestoneBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: theme.successLight,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-    },
-    milestoneText: {
-      fontSize: 11,
-      color: theme.success,
-      fontWeight: '600',
-    },
-    contentText: {
-      fontSize: 13,
-      color: theme.text,
-      lineHeight: 20,
-      marginTop: 8,
-    },
-    // Swipe-to-reveal actions (mirrors BedCard / bedListStyles)
-    swipeActions: {
-      flexDirection: 'row',
-    },
-    swipeEditAction: {
-      width: 72,
-      backgroundColor: theme.info,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    swipeDeleteAction: {
-      width: 72,
-      backgroundColor: theme.error,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderTopRightRadius: 14,
-      borderBottomRightRadius: 14,
-    },
-    swipeActionText: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: theme.textInverse,
-      marginTop: 2,
-    },
+
+    // ── Empty state ──
     emptyState: {
       alignItems: 'center',
       justifyContent: 'center',
-      padding: 48,
-      marginTop: 48,
+      gap: 8,
+      paddingVertical: 36,
+      paddingHorizontal: 16,
     },
     emptyText: {
-      fontSize: 20,
-      fontWeight: '600',
+      fontSize: 17,
+      fontWeight: '700',
       color: theme.text,
-      marginTop: 16,
+      marginTop: 8,
     },
     emptySubtext: {
-      fontSize: 14,
+      fontSize: 15,
       color: theme.textSecondary,
-      marginTop: 4,
       textAlign: 'center',
     },
     clearFiltersButton: {
-      marginTop: 16,
-      paddingVertical: 10,
+      marginTop: 6,
+      minHeight: 48,
+      justifyContent: 'center',
       paddingHorizontal: 20,
+      borderRadius: 12,
       backgroundColor: theme.primary,
-      borderRadius: 8,
     },
     clearFiltersText: {
-      fontSize: 14,
+      fontSize: 16,
       fontWeight: '600',
       color: theme.textInverse,
-    },
-    journalTagBadge: {
-      backgroundColor: theme.backgroundSecondary,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
-    journalTagText: {
-      fontSize: 10,
-      color: theme.textSecondary,
-      fontWeight: '500',
-      textTransform: 'capitalize',
     },
   });

@@ -1,33 +1,29 @@
 import {
+  CatalogGroup,
   FeedingIntensity,
   FertiliserType,
   GrowthStage,
   HealthStatus,
+  PlantHabit,
   PlantLifecycle,
+  PlantTag,
   PlantType,
   SoilType,
   SunlightLevel,
   ToleranceLevel,
   WaterRequirement,
 } from '../types/database.types';
+import { PLANT_CATEGORIES } from './plantCategories';
 // Type-only — erased at build time, so this cannot create an import cycle.
 import type { GrowthStageSource } from './plantHelpers';
 
-const CATEGORY_ORDER: PlantType[] = [
-  'vegetable',
-  'fruit_tree',
-  'spinach',
-  'coconut_tree',
-  'herb',
-  'timber_tree',
-  'flower',
-  'shrub',
-];
+/** The shared order — see `plantCategories.ts`. Aliased for the call sites below. */
+const CATEGORY_ORDER = PLANT_CATEGORIES;
 
 export const CATEGORY_LABELS: Record<PlantType, string> = {
   vegetable: 'Vegetable',
   fruit_tree: 'Fruit',
-  spinach: 'Spinach',
+  spinach: 'Greens',
   coconut_tree: 'Coconut Tree',
   herb: 'Herb',
   flower: 'Flower',
@@ -39,7 +35,7 @@ export const CATEGORY_LABELS: Record<PlantType, string> = {
 export const CATEGORY_FULL_LABELS: Record<PlantType, string> = {
   vegetable: 'Vegetable',
   fruit_tree: 'Fruit Tree',
-  spinach: 'Spinach',
+  spinach: 'Greens',
   coconut_tree: 'Coconut Tree',
   herb: 'Herb',
   timber_tree: 'Timber Tree',
@@ -47,16 +43,125 @@ export const CATEGORY_FULL_LABELS: Record<PlantType, string> = {
   shrub: 'Shrub',
 };
 
-export const CATEGORY_SHORT_LABELS: Record<PlantType, string> = {
-  vegetable: 'Veg',
-  herb: 'Herb',
-  flower: 'Flwr',
-  fruit_tree: 'Fruit',
-  timber_tree: 'Tmbr',
-  coconut_tree: 'Coco',
-  shrub: 'Shrb',
-  spinach: 'Spinach',
+/**
+ * Browse-group labels — the catalog pills and the Add Plant picker headers.
+ *
+ * Separate from `CATEGORY_LABELS`, which names a `PlantType` (the care model).
+ * Both exist on purpose: a plant is browsed under "Fruits" while its care model
+ * is still `fruit_tree`.
+ */
+export const CATALOG_GROUP_LABELS: Record<CatalogGroup, string> = {
+  vegetables: 'Vegetables',
+  greens: 'Greens',
+  fruits: 'Fruits',
+  spices: 'Spices',
+  herbs_medicinal: 'Herbs & Medicinal',
+  flowers: 'Flowers',
+  farm_support: 'Support & Input Plants',
+  plantation_timber: 'Plantation & Timber',
 };
+
+/** Familiar members of each group, shown under the label in the Category picker. */
+export const CATALOG_GROUP_DESCRIPTIONS: Record<CatalogGroup, string> = {
+  vegetables: 'Tomato, brinjal, gourds, beans',
+  greens: 'Palak and the keerai',
+  fruits: 'Mango, banana, papaya, guava',
+  spices: 'Turmeric, ginger, pepper, cardamom',
+  herbs_medicinal: 'Tulsi, curry leaf, aloe vera',
+  flowers: 'Jasmine, marigold, hibiscus',
+  farm_support: 'Green manure, live fences, pest-repellent plants',
+  plantation_timber: 'Coconut, arecanut, teak',
+};
+
+/**
+ * Sub-group headers inside a group. Keyed by the sub-group ids in
+ * `SUB_GROUP_ORDER`; `catalogTaxonomy.test.ts` checks the two agree.
+ */
+export const SUB_GROUP_LABELS: Record<string, string> = {
+  // vegetables
+  gourds_melons: 'Gourds & Melons',
+  fruit_vegetables: 'Fruit Vegetables',
+  beans_pods: 'Beans & Pods',
+  pulses_oilseeds_cereals: 'Pulses, Oilseeds & Cereals',
+  roots_tubers: 'Roots & Tubers',
+  onion_family: 'Onion Family',
+  cabbage_family: 'Cabbage Family',
+  other: 'Other',
+  // greens
+  spinach: 'Spinach',
+  keerai: 'Keerai & Leafy Greens',
+  // fruits
+  quick_fruits: 'Quick Fruits',
+  orchard_trees: 'Orchard Trees',
+  // spices
+  rhizome: 'Rhizome Spices',
+  vine_tree: 'Vine & Tree Spices',
+  seed_clump: 'Seed & Clump Spices',
+  // herbs_medicinal
+  kitchen_herbs: 'Kitchen Herbs',
+  medicinal: 'Medicinal',
+  // flowers
+  seasonal_flowers: 'Seasonal Flowers',
+  flowering_shrubs: 'Flowering Shrubs & Climbers',
+  // plantation_timber
+  plantation_crops: 'Plantation Crops',
+  timber_utility: 'Timber & Utility Trees',
+};
+
+/** Growth-habit badge text on a catalog row. */
+export const HABIT_LABELS: Record<PlantHabit, string> = {
+  annual_bed: 'Annual',
+  perennial: 'Perennial',
+  shrub: 'Shrub',
+  tree: 'Tree',
+  vine: 'Vine',
+  palm: 'Palm',
+  clump: 'Clump',
+  aquatic: 'Aquatic',
+};
+
+/** Tag chip text. Also what catalog search matches on. */
+export const TAG_LABELS: Record<PlantTag, string> = {
+  keerai: 'Keerai',
+  gourd: 'Gourd',
+  pulse: 'Pulse',
+  oilseed: 'Oilseed',
+  cereal: 'Cereal',
+  spice: 'Spice',
+  medicinal: 'Medicinal',
+  puja: 'Puja',
+  companion: 'Companion',
+  pest_repellent: 'Pest Repellent',
+  green_manure: 'Green Manure',
+  living_fence: 'Living Fence',
+  coconut_intercrop: 'Coconut Intercrop',
+  masticatory: 'Betel & Nut',
+  container_ok: 'Grows in Pots',
+  needs_trellis: 'Needs Trellis',
+  tuber: 'Tuber',
+  plantation: 'Plantation',
+  timber: 'Timber',
+  fruit: 'Fruit',
+};
+
+/**
+ * Section headers for the catalog's Season grouping mode. Worded for what the
+ * farmer does about it, not just the botanical term — rotation is the point.
+ */
+export const LIFECYCLE_SECTION_LABELS: Record<PlantLifecycle, string> = {
+  annual: 'Annual — sow each season',
+  biennial: 'Biennial — two seasons',
+  perennial: 'Perennial — stays in the bed',
+  permanent: 'Permanent — never cleared',
+};
+
+/** The order Season-mode sections appear in: shortest-lived first. */
+export const LIFECYCLE_SECTION_ORDER: readonly PlantLifecycle[] = [
+  'annual',
+  'biennial',
+  'perennial',
+  'permanent',
+];
 
 export const WATER_REQUIREMENT_LABELS: Record<WaterRequirement, string> = {
   low: 'Low',
@@ -188,15 +293,106 @@ export const LIFECYCLE_DESCRIPTIONS: Record<PlantLifecycle, string> = {
   permanent: 'A permanent farm asset — never rotated or cleared from the land',
 };
 
-export const GROWING_SEASON_OPTIONS: { label: string; value: string }[] = [
+export interface GrowingSeasonOption {
+  /** English label — also the stored value, so it reads the same everywhere. */
+  label: string;
+  value: string;
+  /**
+   * The Tamil Nadu sowing windows (pattam) the season covers, shown as the
+   * picker's secondary line. Farmers here plan by pattam, not Kharif/Rabi.
+   */
+  description?: string;
+  /** Tamil-script pattam for the Phase G interface toggle; not rendered yet. */
+  tamilLabel?: string;
+}
+
+/**
+ * Season vocabulary for `growingSeason` and variety `seasonSuitability`.
+ * English names follow the agro-climatic zone model (`src/config/zones`):
+ * SW Monsoon, NE Monsoon, Winter, Summer.
+ */
+export const GROWING_SEASON_OPTIONS: readonly GrowingSeasonOption[] = [
   { label: 'Year Round', value: 'Year Round' },
-  { label: 'Kharif — Southwest Monsoon (Jun–Sep)', value: 'Kharif (Jun–Sep)' },
-  { label: 'Rabi — Winter (Oct–Jan)', value: 'Rabi (Oct–Jan)' },
-  { label: 'Summer (Feb–May)', value: 'Summer (Feb–May)' },
-  { label: 'Northeast Monsoon (Oct–Dec)', value: 'Northeast Monsoon (Oct–Dec)' },
-  { label: 'Kharif + Rabi', value: 'Kharif + Rabi' },
-  { label: 'Rabi + Summer', value: 'Rabi + Summer' },
+  {
+    label: 'SW Monsoon (Jun–Sep)',
+    value: 'SW Monsoon (Jun–Sep)',
+    description: 'Aadi pattam',
+    tamilLabel: 'ஆடிப் பட்டம்',
+  },
+  {
+    label: 'NE Monsoon (Oct–Dec)',
+    value: 'NE Monsoon (Oct–Dec)',
+    description: 'Purattasi · Karthigai pattam',
+    tamilLabel: 'புரட்டாசிப் பட்டம் · கார்த்திகைப் பட்டம்',
+  },
+  {
+    label: 'Winter (Jan–Feb)',
+    value: 'Winter (Jan–Feb)',
+    description: 'Thai pattam',
+    tamilLabel: 'தைப் பட்டம்',
+  },
+  {
+    label: 'Summer (Mar–May)',
+    value: 'Summer (Mar–May)',
+    description: 'Masi · Chithirai pattam',
+    tamilLabel: 'மாசிப் பட்டம் · சித்திரைப் பட்டம்',
+  },
+  {
+    label: 'SW + NE Monsoon (Jun–Dec)',
+    value: 'SW + NE Monsoon (Jun–Dec)',
+    description: 'Aadi · Purattasi pattam',
+    tamilLabel: 'ஆடிப் பட்டம் · புரட்டாசிப் பட்டம்',
+  },
+  {
+    label: 'NE Monsoon + Winter (Oct–Feb)',
+    value: 'NE Monsoon + Winter (Oct–Feb)',
+    description: 'Karthigai · Thai pattam',
+    tamilLabel: 'கார்த்திகைப் பட்டம் · தைப் பட்டம்',
+  },
+  {
+    label: 'Winter + Summer (Jan–May)',
+    value: 'Winter + Summer (Jan–May)',
+    description: 'Thai · Chithirai pattam',
+    tamilLabel: 'தைப் பட்டம் · சித்திரைப் பட்டம்',
+  },
 ];
+
+/**
+ * Retired season values (the Kharif/Rabi vocabulary and older spellings)
+ * mapped onto their `GROWING_SEASON_OPTIONS` replacement. Used by migration
+ * 015 and by the display layer for anything written before it ran.
+ */
+export const LEGACY_SEASON_VALUES: Readonly<Record<string, string>> = {
+  'Kharif (Jun–Sep)': 'SW Monsoon (Jun–Sep)',
+  'Rabi (Oct–Jan)': 'NE Monsoon + Winter (Oct–Feb)',
+  'Summer (Feb–May)': 'Summer (Mar–May)',
+  'Summer (Mar-May)': 'Summer (Mar–May)',
+  'Northeast Monsoon (Oct–Dec)': 'NE Monsoon (Oct–Dec)',
+  'Kharif + Rabi': 'SW + NE Monsoon (Jun–Dec)',
+  'Rabi + Summer': 'Winter + Summer (Jan–May)',
+  // Older bundled spellings, normalised in the catalog after migration 015.
+  'Southwest Monsoon (Jun–Sep)': 'SW Monsoon (Jun–Sep)',
+  'Southwest Monsoon (Jun-Sep)': 'SW Monsoon (Jun–Sep)',
+  'Cool Dry (Jan-Feb)': 'Winter (Jan–Feb)',
+  'Cool Dry (Oct–Feb)': 'NE Monsoon + Winter (Oct–Feb)',
+};
+
+/** Maps a retired season value onto the current vocabulary; anything else passes through. */
+export function normalizeSeasonValue(value: string): string {
+  return LEGACY_SEASON_VALUES[value.trim()] ?? value;
+}
+
+/**
+ * Display text for a stored season: the option label when it is one of ours,
+ * otherwise the stored text itself — many bundled profiles carry free text
+ * such as "Southwest Monsoon (Jun–Sep)" that must still be shown.
+ */
+export function growingSeasonLabel(value: string | undefined | null): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return '';
+  const normalized = normalizeSeasonValue(trimmed);
+  return GROWING_SEASON_OPTIONS.find((o) => o.value === normalized)?.label ?? trimmed;
+}
 
 export const TOLERANCE_LABELS: Record<ToleranceLevel, string> = {
   low: 'Low',

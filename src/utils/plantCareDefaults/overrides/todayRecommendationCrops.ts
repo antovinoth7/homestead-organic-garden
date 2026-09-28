@@ -10,7 +10,7 @@ export const TODAY_RECOMMENDATION_CROP_OVERRIDES: Record<
   string,
   Partial<PlantCareProfile>
 > = {
-  [buildProfileKey('vegetable', 'Amaranthus')]: {
+  [buildProfileKey('spinach', 'Amaranthus')]: {
     daysToHarvest: { min: 25, max: 30 },
     growingSeason: 'February–March and July–August',
     waterloggingTolerance: 'low',
@@ -56,7 +56,7 @@ export const TODAY_RECOMMENDATION_CROP_OVERRIDES: Record<
     description: 'Warm-season climbing vegetable grown for crisp fruits; provide support, even moisture, and free drainage.',
     waterloggingTolerance: 'low',
   },
-  [buildProfileKey('vegetable', 'Fenugreek')]: {
+  [buildProfileKey('spinach', 'Fenugreek')]: {
     daysToHarvest: { min: 45, max: 50 },
     growingSeason: 'September–December',
     waterloggingTolerance: 'low',
@@ -85,33 +85,6 @@ export const TODAY_RECOMMENDATION_CROP_OVERRIDES: Record<
     spacingCm: 60,
     growingSeason: 'December–January and June–July',
     waterloggingTolerance: 'low',
-  },
-  [buildProfileKey('vegetable', 'Turnip')]: {
-    waterRequirement: 'medium',
-    wateringFrequencyDays: 2,
-    fertilisingFrequencyDays: 21,
-    sunlight: 'full_sun',
-    soilType: 'garden_soil',
-    preferredFertiliser: 'compost',
-    initialGrowthStage: 'seedling',
-    scientificName: 'Brassica rapa subsp. rapa',
-    taxonomicFamily: 'Brassicaceae',
-    lifecycle: 'biennial',
-    tamilName: 'டர்னிப்',
-    description: 'Cool-season brassica grown for its swollen root and edible leaves in loose, well-drained soil.',
-    daysToHarvest: { min: 40, max: 45 },
-    heightCm: { min: 25, max: 45 },
-    spacingCm: 10,
-    plantingDepthCm: 1.5,
-    growingSeason: 'September–October',
-    germinationDays: { min: 3, max: 10 },
-    germinationTempC: { min: 10, max: 30 },
-    soilPhRange: { min: 5.5, max: 7.5 },
-    heatTolerance: 'low',
-    droughtTolerance: 'low',
-    waterloggingTolerance: 'low',
-    petToxicity: false,
-    feedingIntensity: 'medium',
   },
   [buildProfileKey('spinach', 'Palak')]: {
     waterRequirement: 'medium',

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import { TAB_BAR_HEIGHT } from '../components/FloatingTabBar';
@@ -87,7 +87,7 @@ export default function MoreScreen(): React.JSX.Element {
           <View style={styles.menuIcon}>
             <Ionicons name="list-outline" size={20} color={theme.primary} />
           </View>
-          <Text style={styles.menuText}>Manage Plant Catalog</Text>
+          <Text style={styles.menuText}>Plant Catalog</Text>
           <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('PestList')}>
