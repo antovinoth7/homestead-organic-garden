@@ -183,3 +183,54 @@ carried the 180–270 day spike-to-ripe-berry window and was corrected on
 (900–1095). The season-length figure belongs in `growthStageDurations.fruiting`.
 `yearsToFirstHarvest` is set alongside it, but is read only for fruit and
 coconut trees, so on a herb it is display-only.
+
+## Care Plan field timing
+
+### Best-time windows
+
+`TASK_BEST_TIME` in `src/utils/taskTimeWindow.ts` is the one table behind the
+small clock chip on each Care Plan card and the "Best time" row of the task
+detail sheet. It is general organic-gardening field practice for hot, humid
+Tamil Nadu conditions — not a sourced agronomy claim, and not zone- or
+crop-parameterised:
+
+| Task | Window | Why (shown in the detail sheet) |
+|---|---|---|
+| Water | Before 10 AM | Less water is lost to heat and wind in the cool morning |
+| Water set for evening | After 4 PM | Suits plants that wilt in the afternoon heat |
+| Spray | After 4 PM | Organic sprays such as neem break down in strong sun; bees are less active |
+| Fertilise | After watering | Feed on moist soil so roots take it up and do not burn |
+| Harvest / Harvest Leaves | Before 9 AM | Produce stays fresh; leaves are crisp before the sun wilts them |
+| Transplanting | After 4 PM | Seedlings settle overnight with less wilting |
+| Prune | Dry weather | Cuts heal faster and fungus spreads less |
+
+Repot, mulch, weeding and cultivating carry no window. The farmer's own
+`preferred_time` wins: a clock window that clashes with it (a harvest set for the
+evening) is dropped and the card names the farmer's time instead. Condition
+windows (`slot: 'any'`) never clash.
+
+### Rain-moved watering
+
+Each plot section on the Care Plan shows that plot's own forecast
+(`buildPlotRainBanner` in `src/utils/plotRainMove.ts`), because rain is local. It
+looks at today and the next two days for the first day with at least showers
+(`SHOWERS_MM`, 2 mm):
+
+- under `RAIN_MOVE_MIN_MM` (10 mm) the banner says the rain is too light and
+  watering stays as planned;
+- at 10 mm or more, the plot's water tasks due on that day can be moved — the
+  farmer taps **Move N**, nothing moves on its own — to the rain day plus
+  `RAIN_MOVE_DAYS` (2), through the same `computeSkipDate` rule as a reschedule;
+- **Undo** puts the moved tasks back on their previous due dates for the rest of
+  the session.
+
+The banner appears on a plot's `Today · <plot>` section, so a plot with nothing
+due today shows no banner. There is no covered/protected-pot flag yet: a potted
+plant under a roof is moved like any other — exclude it by leaving it unmoved
+(reschedule the others individually) until such a field exists.
+
+### Planned amounts
+
+`TaskTemplate.amount` is optional free text the farmer writes ("2 kg compost",
+"Neem oil 5 ml/L"). Nothing derives or validates a dose — the app does not hold
+per-plant dose data — so a card without one simply omits it.

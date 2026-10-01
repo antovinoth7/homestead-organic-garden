@@ -81,7 +81,7 @@ utils/ — Pure utilities
 npm start          # Expo dev server
 npm run android    # Android
 npm run ios        # iOS
-npm run lint       # ESLint (zero errors required; 54 warnings are expected — see below)
+npm run lint       # ESLint (zero errors required; 53 warnings are expected — see below)
 npm test           # Jest
 ````
 
@@ -90,8 +90,8 @@ npm test           # Jest
 - Read `docs/CODEMAP.md` (generated; `npm run codemap` to refresh) before exploring `src/` — it lists every file with line counts.
 - Files over 800 lines (flagged ⚠️ in the codemap, e.g. `src/utils/plantHelpers.ts`, `src/screens/CatalogPlantDetailScreen.tsx`, `src/styles/plantFormStyles.ts`) — Grep/search inside them; do not read them whole.
 - Scoped checks: `npm run lint:file -- <path>` lints one file; `npm test -- <path-or-pattern>` runs one test file. Prefer these while iterating; run full `npm run lint` + `npm test` before finishing.
-- **Lint baseline: 0 errors, 54 warnings.** The `eslint-plugin-react-hooks` v7 rules that arrived with `eslint-config-expo` 57 were triaged after the upgrade. `refs` (142), `preserve-manual-memoization` (8), `globals` (3), `immutability` (3), `purity` (2) and the lone `exhaustive-deps` warning are all at zero and those five rules are back at **`error`** in `eslint.config.cjs` — reintroducing one fails the build. The remaining 54 are `set-state-in-effect`, still demoted on purpose: they are prop-to-state sync on sheet open and async loaders whose only synchronous write is a no-op `setLoading(true)`. **That is the expected state — do not "fix" these as a side task.** Remaining triage is in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog. Only a *new* warning or any error is a regression.
-- Test baseline: 175 suites / 2245 tests / 5 snapshots passing.
+- **Lint baseline: 0 errors, 53 warnings.** The `eslint-plugin-react-hooks` v7 rules that arrived with `eslint-config-expo` 57 were triaged after the upgrade. `refs` (142), `preserve-manual-memoization` (8), `globals` (3), `immutability` (3), `purity` (2) and the lone `exhaustive-deps` warning are all at zero and those five rules are back at **`error`** in `eslint.config.cjs` — reintroducing one fails the build. The remaining 53 are `set-state-in-effect`, still demoted on purpose: they are prop-to-state sync on sheet open and async loaders whose only synchronous write is a no-op `setLoading(true)`. **That is the expected state — do not "fix" these as a side task.** Remaining triage is in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog. Only a *new* warning or any error is a regression.
+- Test baseline: 181 suites / 2324 tests / 5 snapshots passing.
 
 ## New Feature Order
 

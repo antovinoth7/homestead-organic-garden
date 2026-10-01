@@ -11,7 +11,7 @@ import { resolveTaskBedId, isBedLevelOrphanTask } from '../utils/taskBed';
 import { logger } from '../utils/logger';
 import { addDaysToDateKey, calendarDateKey, farmDateKey, farmToday } from '@/utils/farmDate';
 import { getErrorMessage } from '@/utils/errorLogging';
-import { groupByPlot, UNASSIGNED_PLOT_NAME, type PlotResolution } from '@/utils/plotGrouping';
+import { groupByPlot, type PlotResolution } from '@/utils/plotGrouping';
 import {
   countCareFacets,
   filterCareTasks,
@@ -22,8 +22,6 @@ import {
   type TaskPriority,
   type TaskSortOption,
 } from '@/utils/careTaskFilters';
-
-type GroupBy = 'none' | 'location' | 'type' | 'plant' | 'bed';
 
 // Re-exported so the Care Plan keeps importing it from the hook it renders from.
 export type { HarvestReadyItem };
@@ -57,7 +55,6 @@ export interface UseCalendarDataReturn {
   todayTasks: TaskTemplate[];
   weekTasks: TaskTemplate[];
   tasksForDisplay: TaskTemplate[];
-  groupedTasks: Record<string, TaskTemplate[]>;
   /** Chip counts for the filter sheet — each category counted against the rest. */
   facetCounts: CareTaskFacetCounts;
   /**
@@ -71,7 +68,6 @@ export interface UseCalendarDataReturn {
   getPlantDetails: (plantId: string | null) => { name: string; location: string; type: string };
   /** Effective priority, resolved once per task (care profile + growth stage). */
   getTaskPriority: (task: TaskTemplate) => TaskPriority;
-  groupTasks: (taskList: TaskTemplate[]) => Record<string, TaskTemplate[]>;
   sortTasks: (taskList: TaskTemplate[]) => TaskTemplate[];
 }
 
@@ -80,7 +76,6 @@ interface UseCalendarDataOptions {
   normalizeSearchText: (value: string) => string;
   currentWeekStart: Date;
   selectedDate: Date | null;
-  groupBy: GroupBy;
   sortBy?: TaskSortOption;
   filters: CareTaskFilters;
   /** Beds drive the plot join, the bed filter and the bed group labels. */
@@ -96,7 +91,6 @@ export function useCalendarData({
   normalizeSearchText,
   currentWeekStart,
   selectedDate,
-  groupBy,
   sortBy = 'due',
   filters,
   beds,
@@ -281,11 +275,6 @@ export function useCalendarData({
     [parentLocations, fallbackPlotName, plants, beds, visibleTasks]
   );
 
-  const plotNameById = useMemo(
-    () => new Map(plotResolution.groups.map((group) => [group.id, group.name])),
-    [plotResolution]
-  );
-
   // Resolved once per task, not inside a comparator: `calculateTaskPriority`
   // loads a care profile and computes a growth stage per call, so re-deriving it
   // on every comparison would make the priority sort O(n log n) profile lookups.
@@ -345,67 +334,6 @@ export function useCalendarData({
   const sortTasks = React.useCallback(
     (taskList: TaskTemplate[]) => sortCareTasks(taskList, sortBy, careCtx),
     [sortBy, careCtx]
-  );
-
-  const groupTasks = React.useCallback(
-    (taskList: TaskTemplate[]) => {
-      const sorted = sortTasks(taskList);
-
-      if (groupBy === 'none') return { '': sorted };
-
-      // Main location only. The old key was the whole free-text
-      // "Parent - Child" string, so every direction became its own header and a
-      // farm with several sub-areas per plot fragmented into one-task sections;
-      // bed-level tasks, having no plant, all fell into a single "General".
-      // Seeded from `plotResolution.groups` so configured plots keep their
-      // configured order, unrecognised parents follow, and Unassigned is last —
-      // the same order the Today screen's plot cards use.
-      if (groupBy === 'location') {
-        const present = new Set(sorted.map((task) => plotResolution.resolveTaskPlotId(task)));
-        const acc: Record<string, TaskTemplate[]> = {};
-        for (const group of plotResolution.groups) {
-          if (present.has(group.id)) acc[group.name] = [];
-        }
-        for (const task of sorted) {
-          const name =
-            plotNameById.get(plotResolution.resolveTaskPlotId(task)) ?? UNASSIGNED_PLOT_NAME;
-          if (!acc[name]) acc[name] = [];
-          acc[name].push(task);
-        }
-        return acc;
-      }
-
-      if (groupBy === 'type') {
-        return sorted.reduce<Record<string, TaskTemplate[]>>((acc, task) => {
-          const type = task.task_type;
-          if (!acc[type]) acc[type] = [];
-          acc[type].push(task);
-          return acc;
-        }, {});
-      }
-
-      if (groupBy === 'plant') {
-        return sorted.reduce<Record<string, TaskTemplate[]>>((acc, task) => {
-          const plantName = getPlantDetails(task.plant_id).name || 'General';
-          if (!acc[plantName]) acc[plantName] = [];
-          acc[plantName].push(task);
-          return acc;
-        }, {});
-      }
-
-      if (groupBy === 'bed') {
-        return sorted.reduce<Record<string, TaskTemplate[]>>((acc, task) => {
-          const bedId = resolveBedId(task);
-          const label = bedId ? (bedNames.get(bedId) ?? 'Bed') : 'Unassigned';
-          if (!acc[label]) acc[label] = [];
-          acc[label].push(task);
-          return acc;
-        }, {});
-      }
-
-      return { '': sorted };
-    },
-    [sortTasks, getPlantDetails, groupBy, resolveBedId, bedNames, plotResolution, plotNameById]
   );
 
   const isSearching = normalizedSearchQuery.length > 0;
@@ -562,8 +490,6 @@ export function useCalendarData({
     });
   }, [isSearching, filteredTasks, weekTasks, selectedDate]);
 
-  const groupedTasks = useMemo(() => groupTasks(tasksForDisplay), [tasksForDisplay, groupTasks]);
-
   return {
     // Raw state — orphaned (deleted-bed) tasks excluded so they never surface
     tasks: visibleTasks,
@@ -589,7 +515,6 @@ export function useCalendarData({
     todayTasks,
     weekTasks,
     tasksForDisplay,
-    groupedTasks,
     facetCounts,
     plotResolution,
     isSearching,
@@ -598,7 +523,6 @@ export function useCalendarData({
     getRawTasksForDate,
     getPlantDetails,
     getTaskPriority,
-    groupTasks,
     sortTasks,
   };
 }

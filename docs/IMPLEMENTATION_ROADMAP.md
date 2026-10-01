@@ -503,7 +503,7 @@ these block anything; they are recorded so they are not rediscovered as surprise
   baseline without the dirty check recomputing and leave the discard prompt
   reading a stale value. It is state now.
 
-- **Remaining: 54 `react-hooks/set-state-in-effect` warnings**, still demoted on
+- **Remaining: 53 `react-hooks/set-state-in-effect` warnings** (54 until the Care Plan v7 redesign removed the segment auto-select effect), still demoted on
   purpose. The 11 genuine findings are fixed — state that was a pure function of
   other state, written back by an effect, costing a second render per change
   (`usePlantFormState`'s `location` and `coconutAgeInfo`, `PlantCard`'s
@@ -511,7 +511,7 @@ these block anything; they are recorded so they are not rediscovered as surprise
   mount reset, and five effects that allocated a fresh empty collection instead
   of bailing).
 
-  The 54 that remain are benign and fall into two shapes:
+  The 53 that remain are benign and fall into two shapes:
   - **Prop-to-state sync on open** (~14) — `useEffect(() => { if (visible) setX(prop) }, [visible, prop])`
     in sheets and modals. Clearing these means restructuring each sheet around a
     `key`-prop remount, which is its own piece of work and carries real UI risk.
@@ -524,7 +524,7 @@ these block anything; they are recorded so they are not rediscovered as surprise
 
 - `docs/ENTERPRISE_AUDIT.md` recommends running lint with `--max-warnings=0`.
   Now partly satisfied — the five promoted rules already fail the build. A
-  blanket `--max-warnings=0` still waits on the 54 above.
+  blanket `--max-warnings=0` still waits on the 53 above.
 
 - **Untested paths touched by this triage.** `usePlantFormState`, `PlantCard`,
   `CalendarScreen`, `usePlantPhotos`, `useCrossBedStatus`, `useWeatherByPlot` and

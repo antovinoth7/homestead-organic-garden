@@ -444,12 +444,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 8,
-      paddingLeft: 10,
+      paddingVertical: 10,
+      paddingLeft: 12,
       paddingRight: 10,
     },
+    // Same 5 px bar as the task cards, so a harvest check reads as one of them.
     harvestCardBar: {
-      width: 3,
+      width: 5,
       backgroundColor: theme.border,
     },
     harvestCardBarReady: {
@@ -491,13 +492,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginRight: 8,
     },
     harvestPlant: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontSize: 15,
+      fontWeight: '700',
       color: theme.text,
     },
     harvestDate: {
       flexShrink: 1,
-      fontSize: 12,
+      fontSize: 13,
       color: theme.textSecondary,
     },
     harvestStatusReady: {

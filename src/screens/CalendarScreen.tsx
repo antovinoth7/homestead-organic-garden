@@ -4,6 +4,7 @@ import {
   Text,
   SectionList,
   TouchableOpacity,
+  Pressable,
   TextInput,
   Alert,
   Animated,
@@ -28,14 +29,18 @@ import {
 import { JournalEntryType, TaskTemplate, TaskType, WeatherForecast } from '../types/database.types';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GardenIcon } from '@/components/GardenIcon';
-import { TASK_LABELS, EARLY_COMPLETION_BLOCK_REASON } from '../utils/taskConstants';
+import {
+  TASK_LABELS,
+  TASK_TYPE_ORDER,
+  EARLY_COMPLETION_BLOCK_REASON,
+} from '../utils/taskConstants';
 import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
 import { CalendarScreenRouteProp, CalendarScreenNavigationProp } from '../types/navigation.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import { createStyles, getStartOfWeek, COLLAPSED_STRIP_HEIGHT } from '../styles/calendarStyles';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
-import { useCalendarData, HarvestReadyItem } from '../hooks/useCalendarData';
+import { useCalendarData } from '../hooks/useCalendarData';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { useBedOptions } from '@/hooks/useBedOptions';
 import { useWeatherLocations } from '@/hooks/useWeatherLocations';
@@ -50,13 +55,15 @@ import SkipTaskModal from '../components/modals/SkipTaskModal';
 import { AlertDialog, type AlertDialogAction } from '../components/modals/AlertDialog';
 import WeekCalendarView from '../components/calendar/WeekCalendarView';
 import { MonthCalendarSheet } from '@/components/calendar/MonthCalendarSheet';
-import { CarePlanTaskCard } from '@/components/calendar/CarePlanTaskCard';
+import {
+  CarePlanTaskCard,
+  type CarePlanCardDoneState,
+} from '@/components/calendar/CarePlanTaskCard';
 import { TaskDetailSheet } from '@/components/calendar/TaskDetailSheet';
 import { UndoToast } from '@/components/UndoToast';
 import { usePendingCompletions, type CompletionSaveResult } from '@/hooks/usePendingCompletions';
 import { getErrorMessage } from '../utils/errorLogging';
 import { logger } from '../utils/logger';
-import type { VisualIconKey } from '@/types/visual.types';
 import { getPlantImage } from '@/config/referenceAssets';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { tapFeedback } from '../utils/haptics';
@@ -82,6 +89,18 @@ import {
   type TaskTimeOfDay,
 } from '@/utils/careTaskFilters';
 import { getTaskWeatherAdvisory, resolveTaskForecast } from '@/utils/taskWeatherAdvisory';
+import { buildPlotRainBanner, RAIN_MOVE_DAYS, type PlotRainBanner } from '@/utils/plotRainMove';
+import { locationKey } from '@/utils/locationHelpers';
+import { createStyles as createSectionStyles } from '@/styles/carePlanSectionStyles';
+import {
+  buildCarePlanSections,
+  groupTasksBy,
+  summarizeToday,
+  type CarePlanDoneItem,
+  type CarePlanRow,
+  type CarePlanSection,
+  type CarePlanTaskGroup,
+} from '@/utils/carePlanSections';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -91,44 +110,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 // The task area renders through a SectionList so long schedules stay windowed
 // instead of mounting every task card at once.
 
-type CalendarEmptyVariant =
-  | 'loadError'
-  | 'selectedDateFiltered'
-  | 'selectedDateNone'
-  | 'searchNone'
-  | 'filtersNone'
-  | 'noUpcoming';
-
-type CalendarRow =
-  | { key: string; kind: 'task'; task: TaskTemplate }
-  | { key: string; kind: 'harvest'; item: HarvestReadyItem }
-  /** Disclosure row heading the look-ahead harvests; `fromDays`/`toDays` are its span. */
-  | { key: string; kind: 'harvestSoonToggle'; count: number; fromDays: number; toDays: number }
-  | {
-      key: string;
-      kind: 'empty';
-      variant: CalendarEmptyVariant;
-      rawCount?: number;
-      isToday?: boolean;
-    };
-
-interface CalendarSectionHeader {
-  title: string;
-  iconKey?: VisualIconKey;
-  count: number;
-  /** Tasks driving the select-all checkbox; omitted for headers without one */
-  checkboxTasks?: TaskTemplate[];
-  overdue?: boolean;
-  showDoneChip?: boolean;
-  /** Title stretches to push the count right (default true) */
-  titleFlex?: boolean;
-}
-
-interface CalendarListSection {
-  key: string;
-  header: CalendarSectionHeader | null;
-  data: CalendarRow[];
-}
+type CalendarRow = CarePlanRow;
+type CalendarListSection = CarePlanSection;
 
 /**
  * A section another screen can send the plan to. The value is a section `key`
@@ -182,7 +165,23 @@ type NotDueDialog = {
 } | null;
 
 /** How the plan is grouped until the farmer picks otherwise in View Options. */
-const DEFAULT_GROUP_BY: CareGroupByOption = 'none';
+const DEFAULT_GROUP_BY: CareGroupByOption = 'location';
+
+/**
+ * A finished one-off is disabled by its own completion and no longer loads, so
+ * its Done today row is drawn from the log: enough to name the job and subject.
+ */
+const doneStandIn = (item: CarePlanDoneItem): TaskTemplate => ({
+  id: item.taskId,
+  user_id: '',
+  plant_id: item.plantId,
+  task_type: item.taskType,
+  frequency_days: 0,
+  preferred_time: null,
+  enabled: false,
+  next_due_at: new Date().toISOString(),
+  created_at: '',
+});
 
 const sanitizeDecimalText = (value: string): string => {
   const cleaned = value.replace(/[^0-9.]/g, '');
@@ -200,6 +199,7 @@ export default function CalendarScreen(): React.JSX.Element {
   const navigation = useNavigation<CalendarScreenNavigationProp>();
   const theme = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const sectionStyles = React.useMemo(() => createSectionStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
@@ -267,13 +267,18 @@ export default function CalendarScreen(): React.JSX.Element {
   const [skipReason, setSkipReason] = useState('');
   const [skippingTask, setSkippingTask] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
-  const [sessionCompletedCount, setSessionCompletedCount] = useState(0);
   const [skipDays, setSkipDays] = useState(1);
   const [scheduleMode, setScheduleMode] = useState<'skip' | 'reschedule'>('skip');
   // Look-ahead harvests start folded away. Deliberately not reset on focus:
   // re-collapsing it under the farmer every time they return to the tab would
   // be more surprising than remembering that they opened it.
   const [harvestSoonExpanded, setHarvestSoonExpanded] = useState(false);
+  // Later days and Done today start folded; opened ones stay open across focus.
+  const [openSections, setOpenSections] = useState<ReadonlySet<string>>(() => new Set());
+  // Per plot (by `locationKey`): the waterings moved past coming rain, with
+  // their old due dates so Undo can put them back. Session-only — cleared on focus.
+  const [rainMoves, setRainMoves] = useState<Record<string, Record<string, string>>>({});
+  const [rainMoveBusy, setRainMoveBusy] = useState<string | null>(null);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [detailTask, setDetailTask] = useState<TaskTemplate | null>(null);
   const [notDueDialog, setNotDueDialog] = useState<NotDueDialog>(null);
@@ -293,7 +298,6 @@ export default function CalendarScreen(): React.JSX.Element {
     sanitizeAlphaNumericSpaces(value).trim().toLowerCase();
   const normalizedSearchQuery = normalizeSearchText(searchQuery);
 
-  const taskLabel = useCallback((type: TaskType): string => TASK_LABELS[type], []);
   const compactTodayAction = screenWidth < 390;
 
   const {
@@ -312,9 +316,7 @@ export default function CalendarScreen(): React.JSX.Element {
     harvestsReadyNow,
     harvestsSoon,
     todayTasks,
-    weekTasks,
     tasksForDisplay,
-    groupedTasks,
     facetCounts,
     plotResolution,
     overdueTasks,
@@ -323,12 +325,14 @@ export default function CalendarScreen(): React.JSX.Element {
     getRawTasksForDate,
     getPlantDetails,
     getTaskPriority,
+    sortTasks,
+    todayLogs,
+    templatesById,
   } = useCalendarData({
     normalizedSearchQuery,
     normalizeSearchText,
     currentWeekStart,
     selectedDate,
-    groupBy: effectiveGroupBy,
     sortBy,
     filters,
     beds: bedList,
@@ -418,41 +422,6 @@ export default function CalendarScreen(): React.JSX.Element {
       return next.size === previous.size ? previous : next;
     });
   }, [tasksForDisplay, overdueTasks, todayTasks]);
-
-  const overdueIdSet = React.useMemo(() => new Set(overdueTasks.map((t) => t.id)), [overdueTasks]);
-
-  const dayGroupedTasks = React.useMemo(() => {
-    if (effectiveGroupBy !== 'none' || isSearching) return null;
-    const todayKey = calendarDateKey(farmToday());
-    const grouped: Record<string, TaskTemplate[]> = {};
-    for (const task of tasksForDisplay) {
-      if (!task.next_due_at || overdueIdSet.has(task.id)) continue;
-      const key = farmDateKey(task.next_due_at);
-      if (!key) continue;
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(task);
-    }
-    const sortedKeys = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
-    return sortedKeys.flatMap((key) => {
-      const date = calendarDateFromKey(key);
-      if (!date) return [];
-      const isToday = key === todayKey;
-      return [
-        {
-          dateKey: key,
-          label: isToday
-            ? 'Today'
-            : formatFarmDate(date, {
-                weekday: 'long',
-                month: 'short',
-                day: 'numeric',
-              }),
-          tasks: grouped[key],
-          isToday,
-        },
-      ];
-    });
-  }, [effectiveGroupBy, isSearching, tasksForDisplay, overdueIdSet]);
 
   const setTodayView = React.useCallback(() => {
     const today = farmToday();
@@ -572,7 +541,7 @@ export default function CalendarScreen(): React.JSX.Element {
       // by plot, which a picked "Today" would flatten into one section.
       setSelectedDate(null);
       setCurrentWeekStart(getStartOfWeek(farmToday()));
-      setSessionCompletedCount(0);
+      setRainMoves({});
       setSelectedTaskIds(new Set());
       if (route.params?.resetFilters) {
         setFilters(emptyCareTaskFilters());
@@ -659,7 +628,6 @@ export default function CalendarScreen(): React.JSX.Element {
   // the farmer leaves the tab), so Undo never has to reverse a write.
   const handleCompletionsSaved = useCallback(
     async ({ succeeded, failed }: CompletionSaveResult): Promise<void> => {
-      if (isMountedRef.current) setSessionCompletedCount((prev) => prev + succeeded);
       await loadData({ force: true });
       if (failed > 0 && isMountedRef.current) {
         Alert.alert(
@@ -780,7 +748,6 @@ export default function CalendarScreen(): React.JSX.Element {
       setSelectedTask(null);
       setTaskNotes('');
       setProductUsed('');
-      setSessionCompletedCount((prev) => prev + 1);
       loadData({ force: true });
       // Completing a harvest task records the schedule but no yield, so on its
       // own it loses what was actually picked. Hand straight over to the journal
@@ -1295,8 +1262,22 @@ export default function CalendarScreen(): React.JSX.Element {
     [selectionMode, handleCardPress, handleTaskComplete]
   );
 
+  // A Done today tick takes the task back only while its save is still waiting.
+  const { undoOne: undoOneCompletion } = completions;
+  const handleDoneTick = useCallback(
+    (task: TaskTemplate) => {
+      tapFeedback();
+      undoOneCompletion(task.id);
+    },
+    [undoOneCompletion]
+  );
+
   const renderTaskCard = useCallback(
-    (task: TaskTemplate, showPlot: boolean): React.JSX.Element | null => {
+    (
+      task: TaskTemplate,
+      showPlot: boolean,
+      done: CarePlanCardDoneState | null = null
+    ): React.JSX.Element | null => {
       if (!task.next_due_at) return null;
       const overdueDays = calendarDaysOverdue(task);
       const plotName = showPlot ? taskPlotName(task) : null;
@@ -1324,14 +1305,16 @@ export default function CalendarScreen(): React.JSX.Element {
           harvestHint={computeHarvestHint(task)}
           selectionMode={selectionMode}
           selected={selectedTaskIds.has(task.id)}
-          blocked={isEarlyCompletionBlocked(task)}
+          blocked={done === null && isEarlyCompletionBlocked(task)}
+          done={done}
           onPress={handleCardPress}
           onLongPress={handleCardLongPress}
-          onTick={handleCardTick}
+          onTick={done === null ? handleCardTick : handleDoneTick}
         />
       );
     },
     [
+      handleDoneTick,
       taskPlotName,
       bedMap,
       getForecastForTask,
@@ -1346,288 +1329,266 @@ export default function CalendarScreen(): React.JSX.Element {
     ]
   );
 
-  // Build the virtualized section model for the task area. Mirrors the
-  // previous ScrollView layout: selected date → search empty → harvest ready
-  // → overdue → today → day-grouped week view / grouped views / empty states.
+  // ─── Section model ─────────────────────────────────────────────────────────
+  // The screen filters, sorts and windows; `buildCarePlanSections` only
+  // arranges: harvest checks → overdue → today plot by plot → harvest soon →
+  // later days (folded) → done today. Ticked tasks leave the open lists at once.
+  const isOpen = useCallback((task: TaskTemplate) => !completedIds.has(task.id), [completedIds]);
+  const plotOrder = useMemo(
+    () => plotResolution.groups.map((group) => group.name),
+    [plotResolution]
+  );
+
+  const openOverdue = useMemo(
+    () => sortTasks(overdueTasks.filter(isOpen)),
+    [overdueTasks, isOpen, sortTasks]
+  );
+  const openToday = useMemo(
+    () => sortTasks(todayTasks.filter(isOpen)),
+    [todayTasks, isOpen, sortTasks]
+  );
+
+  const doneItems = useMemo((): CarePlanDoneItem[] => {
+    const items: CarePlanDoneItem[] = [];
+    const seen = new Set<string>();
+    for (const task of [...completions.pending, ...completions.saving]) {
+      if (seen.has(task.id)) continue;
+      seen.add(task.id);
+      items.push({
+        taskId: task.id,
+        taskType: task.task_type,
+        plantId: task.plant_id,
+        task,
+        pending: completions.pending.includes(task),
+      });
+    }
+    const logs = [...todayLogs].sort((a, b) => b.done_at.localeCompare(a.done_at));
+    for (const log of logs) {
+      if (seen.has(log.template_id)) continue;
+      seen.add(log.template_id);
+      items.push({
+        taskId: log.template_id,
+        taskType: log.task_type,
+        plantId: log.plant_id,
+        task: templatesById.get(log.template_id) ?? null,
+        pending: false,
+      });
+    }
+    return items;
+  }, [completions.pending, completions.saving, todayLogs, templatesById]);
+
+  const todaySummary = useMemo(() => {
+    const dueNow = [...openOverdue, ...openToday];
+    const plots = new Set(dueNow.map((task) => taskPlotName(task) ?? ''));
+    return summarizeToday(dueNow, openOverdue.length, plots.size, doneItems.length);
+  }, [openOverdue, openToday, taskPlotName, doneItems.length]);
+
   const listSections = useMemo((): CalendarListSection[] => {
-    const sections: CalendarListSection[] = [];
-    if (loadError && tasks.length === 0 && !initialLoading) {
-      return [
-        {
-          key: 'load-error',
-          header: null,
-          data: [{ key: 'load-error', kind: 'empty', variant: 'loadError' }],
-        },
-      ];
-    }
     const todayKey = calendarDateKey(farmToday());
-    const selectedIsToday = !!selectedDate && calendarDateKey(selectedDate) === todayKey;
-    // Ticked tasks leave the list at once, before their save lands.
-    const taskRows = (prefix: string, sectionTasks: TaskTemplate[]): CalendarRow[] =>
-      sectionTasks
-        .filter((task) => !completedIds.has(task.id))
-        .map((task) => ({ key: `${prefix}-${task.id}`, kind: 'task' as const, task }));
+    const tomorrowKey = todayKey ? addDaysToDateKey(todayKey, 1) : null;
+    const selectedKey = selectedDate ? calendarDateKey(selectedDate) : null;
+    const plotOf = (task: TaskTemplate): string => taskPlotName(task) ?? 'Unassigned';
 
-    // Selected Date Tasks
-    if (!isSearching && selectedDate) {
-      const selectedDateTasks = getTasksForDate(selectedDate);
-      const rawSelectedDateTasks = getRawTasksForDate(selectedDate);
-      const hiddenByFilter =
-        selectedDateTasks.length === 0 && rawSelectedDateTasks.length > 0 && isFilterActive;
-      if (selectedDateTasks.length > 0) {
-        sections.push({
-          key: 'selected-date',
-          header: {
-            title: selectedIsToday
-              ? 'Today'
-              : formatFarmDate(selectedDate, {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                }),
-            checkboxTasks: selectedDateTasks,
-            count: selectedDateTasks.length,
-          },
-          data: taskRows('selected', selectedDateTasks),
-        });
-      } else if (hiddenByFilter && !initialLoading) {
-        sections.push({
-          key: 'selected-date-empty',
-          header: null,
-          data: [
-            {
-              key: 'selected-date-empty',
-              kind: 'empty',
-              variant: 'selectedDateFiltered',
-              rawCount: rawSelectedDateTasks.length,
-            },
-          ],
-        });
-      } else if (!initialLoading) {
-        sections.push({
-          key: 'selected-date-empty',
-          header: null,
-          data: [
-            {
-              key: 'selected-date-empty',
-              kind: 'empty',
-              variant: 'selectedDateNone',
-              isToday: selectedIsToday,
-            },
-          ],
-        });
-      }
-    }
+    const todayGroups: CarePlanTaskGroup[] =
+      openToday.length === 0
+        ? []
+        : effectiveGroupBy === 'location'
+          ? groupTasksBy(openToday, plotOf, plotOrder).map(({ key, tasks: plotTasks }) => ({
+              key,
+              title: `Today · ${key}`,
+              iconKey: 'general.location' as const,
+              plot: key,
+              tasks: plotTasks,
+            }))
+          : [{ key: 'all', title: 'Today', tasks: openToday }];
 
-    // Search with no results
-    if (isSearching && filteredTasks.length === 0 && !initialLoading) {
-      sections.push({
-        key: 'search-empty',
-        header: null,
-        data: [{ key: 'search-empty', kind: 'empty', variant: 'searchNone' }],
-      });
-    }
+    // The rest of the week: neither late, nor today, nor the picked day.
+    const overdueIds = new Set(overdueTasks.map((task) => task.id));
+    const rest = sortTasks(
+      tasksForDisplay.filter((task) => {
+        if (!isOpen(task) || overdueIds.has(task.id)) return false;
+        const dueKey = farmDateKey(task.next_due_at);
+        return dueKey !== todayKey && dueKey !== selectedKey;
+      })
+    );
 
-    // Harvest check: only explicit farmer dates or enabled harvest tasks, and
-    // only the ones actually due or overdue. Everything still ahead moves to the
-    // "Harvest soon" disclosure below Today — a crop 12 days out has no business
-    // outranking work that is late today.
-    if (harvestsReadyNow.length > 0) {
-      sections.push({
-        key: 'harvest-ready',
-        header: {
-          title: 'Harvest Ready',
-          iconKey: 'task.harvest',
-          count: harvestsReadyNow.length,
-          titleFlex: false,
-        },
-        data: harvestsReadyNow.map((item) => ({
-          key: `harvest-${item.plant.id}`,
-          kind: 'harvest' as const,
-          item,
-        })),
-      });
-    }
-
-    // Overdue — pinned above Today
-    if (!isSearching && overdueTasks.length > 0) {
-      sections.push({
-        key: 'overdue',
-        header: {
-          title: 'Overdue',
-          iconKey: 'general.warning',
-          checkboxTasks: overdueTasks,
-          count: overdueTasks.length,
-          overdue: true,
-        },
-        data: taskRows('overdue', overdueTasks),
-      });
-    }
-
-    // Today's Tasks — hidden when today is already the selected date
-    if (todayTasks.length > 0 && !selectedIsToday) {
-      sections.push({
-        key: 'today',
-        header: {
-          title: 'Today',
-          checkboxTasks: todayTasks,
-          count: todayTasks.length,
-          showDoneChip: true,
-        },
-        data: taskRows('today', todayTasks),
-      });
-    }
-
-    // Harvest look-ahead — below the due work, folded away behind one row. The
-    // list arrives sorted, so its first and last entries are the day span.
-    if (harvestsSoon.length > 0) {
-      const first = harvestsSoon[0];
-      const last = harvestsSoon[harvestsSoon.length - 1];
-      if (first && last) {
-        sections.push({
-          key: 'harvest-soon',
-          header: null,
-          data: [
-            {
-              key: 'harvest-soon-toggle',
-              kind: 'harvestSoonToggle' as const,
-              count: harvestsSoon.length,
-              fromDays: first.daysUntil,
-              toDays: last.daysUntil,
-            },
-            // Keyed apart from the pinned section's `harvest-<id>`: a
-            // cut-and-come-again crop can legitimately appear in neither, either
-            // or — after a re-render — the other.
-            ...(harvestSoonExpanded
-              ? harvestsSoon.map((item) => ({
-                  key: `harvest-soon-${item.plant.id}`,
-                  kind: 'harvest' as const,
-                  item,
-                }))
-              : []),
-          ],
-        });
-      }
-    }
-
-    const upcomingEmpty = (): void => {
-      if (!isSearching && todayTasks.length === 0 && overdueTasks.length === 0 && !initialLoading) {
-        sections.push({
-          key: 'upcoming-empty',
-          header: null,
-          data: [
-            {
-              key: 'upcoming-empty',
-              kind: 'empty',
-              variant: isFilterActive ? 'filtersNone' : 'noUpcoming',
-            },
-          ],
-        });
-      }
-    };
-
-    // Day-by-day week view OR grouped tasks
-    if (dayGroupedTasks) {
-      if (dayGroupedTasks.length > 0) {
-        for (const { dateKey, label, tasks: dayTasks } of dayGroupedTasks) {
-          const isToday = dateKey === todayKey;
-          if (isToday && todayTasks.length > 0 && !selectedIsToday) continue;
-          sections.push({
-            key: `day-${dateKey}`,
-            header: {
-              title: label,
-              checkboxTasks: dayTasks ?? [],
-              count: (dayTasks ?? []).length,
-            },
-            data: taskRows(`day-${dateKey}`, dayTasks ?? []),
-          });
-        }
-      } else {
-        upcomingEmpty();
-      }
-    } else if (
-      Object.keys(groupedTasks).length > 0 &&
-      Object.values(groupedTasks).some((arr) => arr.length > 0)
-    ) {
-      for (const groupName of Object.keys(groupedTasks)) {
-        const nonOverdue = (groupedTasks[groupName] ?? []).filter((t) => !overdueIdSet.has(t.id));
-        if (nonOverdue.length === 0) continue;
-        const fallbackTitle = 'This Week';
-        const title = groupName
-          ? effectiveGroupBy === 'location'
-            ? groupName
-            : effectiveGroupBy === 'type'
-              ? taskLabel(groupName as TaskType) ||
-                groupName.charAt(0).toUpperCase() + groupName.slice(1)
-              : effectiveGroupBy === 'plant'
-                ? groupName
-                : fallbackTitle
-          : isSearching
-            ? 'Search Results'
-            : fallbackTitle;
-        sections.push({
-          key: `group-${groupName || 'all'}`,
-          header: {
-            title,
-            iconKey:
-              effectiveGroupBy === 'location'
-                ? 'general.location'
-                : effectiveGroupBy === 'plant'
-                  ? 'general.plant'
-                  : undefined,
-            checkboxTasks: nonOverdue,
-            count: groupName
-              ? nonOverdue.length
-              : isSearching
-                ? tasksForDisplay.length
-                : weekTasks.length,
-            showDoneChip: !groupName && !isSearching,
-          },
-          data: taskRows(`group-${groupName || 'all'}`, nonOverdue),
-        });
-      }
+    let restGroups: CarePlanTaskGroup[];
+    if (effectiveGroupBy === 'type') {
+      restGroups = groupTasksBy(rest, (task) => task.task_type, TASK_TYPE_ORDER).map(
+        ({ key, tasks: typeTasks }) => ({
+          key: `type-${key}`,
+          title: TASK_LABELS[key as TaskType] ?? key,
+          tasks: typeTasks,
+        })
+      );
+    } else if (effectiveGroupBy === 'plant') {
+      restGroups = groupTasksBy(rest, taskSubjectLabel)
+        .sort((a, b) => a.key.localeCompare(b.key))
+        .map(({ key, tasks: plantTasks }) => ({
+          key: `plant-${key}`,
+          title: key,
+          iconKey: 'general.plant' as const,
+          tasks: plantTasks,
+        }));
     } else {
-      upcomingEmpty();
+      // No grouping or by plot: one folded row per later day, in date order.
+      restGroups = groupTasksBy(rest, (task) => farmDateKey(task.next_due_at) ?? '')
+        .sort((a, b) => a.key.localeCompare(b.key))
+        .map(({ key, tasks: dayTasks }) => {
+          const date = calendarDateFromKey(key);
+          return {
+            key,
+            title:
+              key === tomorrowKey
+                ? 'Tomorrow'
+                : date
+                  ? formatFarmDate(date, { weekday: 'short', month: 'short', day: 'numeric' })
+                  : key,
+            collapsible: true,
+            tasks: dayTasks,
+          };
+        });
     }
 
-    // Both empty cards fire on the same condition — nothing due today — so an
-    // empty garden showed "All caught up" stacked on top of "No upcoming tasks".
-    // The full card says the same thing and carries the Create Task action, so
-    // the compact one is the one to drop. `selectedDateFiltered` is left alone:
-    // its "hidden by filters / Clear" affordance is not duplicated anywhere.
-    const hasVariant = (section: CalendarListSection, variant: CalendarEmptyVariant): boolean => {
-      const row = section.data[0];
-      return row?.kind === 'empty' && row.variant === variant;
-    };
-    if (sections.some((s) => hasVariant(s, 'noUpcoming'))) {
-      return sections.filter((s) => !hasVariant(s, 'selectedDateNone'));
-    }
-
-    return sections;
+    return buildCarePlanSections({
+      loadFailed: Boolean(loadError) && tasks.length === 0 && !initialLoading,
+      initialLoading,
+      isSearching,
+      searchResults: isSearching ? sortTasks(filteredTasks.filter(isOpen)) : [],
+      filtersActive: isFilterActive,
+      selectedDate:
+        !isSearching && selectedDate && selectedKey
+          ? {
+              key: selectedKey,
+              title:
+                selectedKey === todayKey
+                  ? 'Today'
+                  : formatFarmDate(selectedDate, {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                    }),
+              isToday: selectedKey === todayKey,
+              tasks: sortTasks(getTasksForDate(selectedDate).filter(isOpen)),
+              rawCount: getRawTasksForDate(selectedDate).length,
+            }
+          : null,
+      harvestsReadyNow,
+      harvestsSoon: isSearching ? [] : harvestsSoon,
+      harvestSoonExpanded,
+      overdue: isSearching ? [] : openOverdue,
+      todayGroups: isSearching ? [] : todayGroups,
+      restGroups: isSearching ? [] : restGroups,
+      done: isSearching ? [] : doneItems,
+      openSections,
+    });
   }, [
-    isSearching,
     selectedDate,
+    taskPlotName,
+    openToday,
+    openOverdue,
+    effectiveGroupBy,
+    plotOrder,
+    overdueTasks,
+    sortTasks,
+    tasksForDisplay,
+    isOpen,
+    taskSubjectLabel,
+    loadError,
+    tasks.length,
+    initialLoading,
+    isSearching,
+    filteredTasks,
+    isFilterActive,
     getTasksForDate,
     getRawTasksForDate,
-    isFilterActive,
-    initialLoading,
-    filteredTasks,
     harvestsReadyNow,
     harvestsSoon,
     harvestSoonExpanded,
-    overdueTasks,
-    todayTasks,
-    dayGroupedTasks,
-    groupedTasks,
-    overdueIdSet,
-    effectiveGroupBy,
-    tasksForDisplay,
-    weekTasks,
-    loadError,
-    tasks.length,
-    taskLabel,
-    completedIds,
+    doneItems,
+    openSections,
   ]);
+
+  // ─── Rain moves ────────────────────────────────────────────────────────────
+  const rainBannerByPlot = useMemo(() => {
+    const banners = new Map<string, PlotRainBanner>();
+    const now = new Date();
+    for (const [plotName, forecast] of weatherByPlotName) {
+      const key = locationKey(plotName);
+      const plotTasks = filteredTasks.filter(
+        (task) => isOpen(task) && locationKey(taskPlotName(task) ?? '') === key
+      );
+      const movedIds = Object.keys(rainMoves[key] ?? {});
+      const banner = buildPlotRainBanner(forecast, plotTasks, movedIds, now);
+      if (banner) banners.set(key, banner);
+    }
+    return banners;
+  }, [weatherByPlotName, filteredTasks, isOpen, taskPlotName, rainMoves]);
+
+  const handleRainMove = useCallback(
+    async (plot: string, taskIds: string[]): Promise<void> => {
+      const targets = tasks.filter((task) => taskIds.includes(task.id));
+      if (targets.length === 0 || rainMoveBusy) return;
+      setRainMoveBusy(plot);
+      try {
+        const previous: Record<string, string> = {};
+        await Promise.all(
+          targets.map((task) => {
+            previous[task.id] = task.next_due_at;
+            return updateTaskTemplate(task.id, {
+              next_due_at: computeSkipDate(task, RAIN_MOVE_DAYS).toISOString(),
+            });
+          })
+        );
+        setRainMoves((prev) => ({ ...prev, [locationKey(plot)]: previous }));
+        await loadData({ force: true });
+      } catch (error: unknown) {
+        Alert.alert('Watering not moved', getErrorMessage(error));
+        void loadData({ force: true });
+      } finally {
+        setRainMoveBusy(null);
+      }
+    },
+    [tasks, rainMoveBusy, loadData]
+  );
+
+  const handleRainUndo = useCallback(
+    async (plot: string): Promise<void> => {
+      const previous = rainMoves[locationKey(plot)];
+      if (!previous || rainMoveBusy) return;
+      setRainMoveBusy(plot);
+      try {
+        await Promise.all(
+          Object.entries(previous).map(([id, dueAt]) =>
+            updateTaskTemplate(id, { next_due_at: dueAt })
+          )
+        );
+        setRainMoves((prev) => {
+          const next = { ...prev };
+          delete next[locationKey(plot)];
+          return next;
+        });
+        await loadData({ force: true });
+      } catch (error: unknown) {
+        Alert.alert('Watering not moved back', getErrorMessage(error));
+        void loadData({ force: true });
+      } finally {
+        setRainMoveBusy(null);
+      }
+    },
+    [rainMoves, rainMoveBusy, loadData]
+  );
+
+  const toggleSection = useCallback((key: string) => {
+    tapFeedback();
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   // ─── Opening the plan at a section ─────────────────────────────────────────
   // Another screen can ask for one by name (the Today card's overdue count), and
@@ -1922,8 +1883,20 @@ export default function CalendarScreen(): React.JSX.Element {
     }): React.JSX.Element | null => {
       if (item.kind === 'task') {
         // Plot-grouped sections already name the plot in their header.
-        const showPlot = section.header?.iconKey !== 'general.location';
+        const showPlot = !section.header?.plot;
         return <View style={styles.listRow}>{renderTaskCard(item.task, showPlot)}</View>;
+      }
+      if (item.kind === 'done') {
+        const { item: done } = item;
+        return (
+          <View style={styles.listRow}>
+            {renderTaskCard(
+              done.task ?? doneStandIn(done),
+              true,
+              done.pending ? 'pending' : 'saved'
+            )}
+          </View>
+        );
       }
       if (item.kind === 'harvestSoonToggle') {
         const { count, fromDays, toDays } = item;
@@ -2031,55 +2004,136 @@ export default function CalendarScreen(): React.JSX.Element {
     ]
   );
 
+  const renderPlotBanner = useCallback(
+    (plot: string): React.JSX.Element | null => {
+      const banner = rainBannerByPlot.get(locationKey(plot));
+      if (!banner) return null;
+      const busy = rainMoveBusy === plot;
+      return (
+        <View style={sectionStyles.banner} accessibilityRole="summary">
+          <GardenIcon
+            name={banner.kind === 'light' ? 'weather.showers' : 'weather.rain'}
+            size={20}
+            color={theme.infoDark}
+          />
+          <Text style={sectionStyles.bannerText}>
+            {banner.head ? <Text style={sectionStyles.bannerHead}>{`${banner.head} `}</Text> : null}
+            {banner.text}
+          </Text>
+          {banner.kind === 'move' && (
+            <TouchableOpacity
+              style={sectionStyles.bannerButton}
+              onPress={() => void handleRainMove(plot, banner.taskIds)}
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityLabel={`${banner.buttonLabel} waterings past the rain`}
+            >
+              <Text style={sectionStyles.bannerButtonText}>
+                {busy ? 'Moving…' : banner.buttonLabel}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {banner.kind === 'moved' && (
+            <TouchableOpacity
+              style={sectionStyles.bannerUndo}
+              onPress={() => void handleRainUndo(plot)}
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityLabel="Undo moving the watering"
+            >
+              <Text style={sectionStyles.bannerUndoText}>Undo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    },
+    [rainBannerByPlot, rainMoveBusy, sectionStyles, theme, handleRainMove, handleRainUndo]
+  );
+
   const renderListSectionHeader = useCallback(
     ({ section }: { section: CalendarListSection }): React.JSX.Element | null => {
       const header = section.header;
       if (!header) return null;
+      const collapsible = header.collapsible === true;
+      const headerRow = (
+        <View style={styles.sectionHeaderRow}>
+          {selectionMode && header.selectableTasks
+            ? renderSectionCheckbox(header.selectableTasks)
+            : null}
+          {header.iconKey ? (
+            <GardenIcon
+              name={header.iconKey}
+              size={17}
+              color={header.overdue ? theme.error : theme.primary}
+            />
+          ) : null}
+          <Text
+            style={[
+              styles.sectionTitle,
+              header.overdue
+                ? styles.sectionTitleOverdue
+                : header.titleFlex !== false
+                  ? styles.sectionTitleFlex
+                  : null,
+            ]}
+          >
+            {header.title}
+          </Text>
+          {header.showDoneChip && doneItems.length > 0 && (
+            <View style={styles.weekDoneChip}>
+              <Ionicons name="checkmark" size={13} color={theme.success} />
+              <Text style={styles.weekDoneChipText}>{doneItems.length} done</Text>
+            </View>
+          )}
+          <Text style={[styles.sectionCount, header.overdue && styles.sectionCountOverdue]}>
+            {header.count}
+          </Text>
+          {collapsible && (
+            <Ionicons
+              name={header.expanded ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color={theme.textSecondary}
+              style={sectionStyles.chevron}
+            />
+          )}
+        </View>
+      );
       return (
         <View style={styles.listSectionHeader}>
-          <View style={styles.sectionHeaderRow}>
-            {selectionMode && header.checkboxTasks
-              ? renderSectionCheckbox(header.checkboxTasks)
-              : null}
-            {header.iconKey ? (
-              <GardenIcon
-                name={header.iconKey}
-                size={17}
-                color={header.overdue ? theme.error : theme.primary}
-              />
-            ) : null}
-            <Text
-              style={[
-                styles.sectionTitle,
-                header.overdue
-                  ? styles.sectionTitleOverdue
-                  : header.titleFlex !== false
-                    ? styles.sectionTitleFlex
-                    : null,
-              ]}
+          {collapsible ? (
+            <Pressable
+              style={sectionStyles.headerPressable}
+              onPress={() => toggleSection(section.key)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: header.expanded === true }}
+              accessibilityLabel={`${header.title}, ${header.count} task${
+                header.count === 1 ? '' : 's'
+              }${header.preview ? `: ${header.preview}` : ''}`}
             >
-              {header.title}
-            </Text>
-            {header.showDoneChip ? (
-              <View style={styles.rowCenterGap8}>
-                {sessionCompletedCount > 0 && (
-                  <View style={styles.weekDoneChip}>
-                    <Ionicons name="checkmark" size={13} color={theme.success} />
-                    <Text style={styles.weekDoneChipText}>{sessionCompletedCount} done</Text>
-                  </View>
-                )}
-                <Text style={styles.sectionCount}>{header.count}</Text>
-              </View>
-            ) : (
-              <Text style={[styles.sectionCount, header.overdue && styles.sectionCountOverdue]}>
-                {header.count}
-              </Text>
-            )}
-          </View>
+              {headerRow}
+              {header.preview ? (
+                <Text style={sectionStyles.preview} numberOfLines={1}>
+                  {header.preview}
+                </Text>
+              ) : null}
+            </Pressable>
+          ) : (
+            headerRow
+          )}
+          {header.plot ? renderPlotBanner(header.plot) : null}
         </View>
       );
     },
-    [styles, theme, renderSectionCheckbox, sessionCompletedCount, selectionMode]
+    [
+      styles,
+      sectionStyles,
+      theme,
+      renderSectionCheckbox,
+      selectionMode,
+      doneItems.length,
+      toggleSection,
+      renderPlotBanner,
+    ]
   );
 
   const renderListSectionFooter = useCallback(
@@ -2290,6 +2344,14 @@ export default function CalendarScreen(): React.JSX.Element {
                     >
                       <Text style={styles.staleBannerRetryText}>Retry</Text>
                     </TouchableOpacity>
+                  </View>
+                )}
+                {!isSearching && !initialLoading && (
+                  <View style={sectionStyles.summary} accessibilityRole="header">
+                    <Text style={sectionStyles.summaryTitle}>{todaySummary.title}</Text>
+                    {todaySummary.subtitle !== '' && (
+                      <Text style={sectionStyles.summarySubtitle}>{todaySummary.subtitle}</Text>
+                    )}
                   </View>
                 )}
               </>
