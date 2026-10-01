@@ -70,10 +70,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 22,
       backgroundColor: theme.infoDark,
     },
+    // The banner's own ground as the label colour: dark on the light blue
+    // button in dark mode, white on the deep blue one in light mode.
     bannerButtonText: {
       fontSize: 13,
       fontWeight: '700',
-      color: theme.textInverse,
+      color: theme.infoSurface,
     },
     bannerUndo: {
       minHeight: 44,

@@ -7,7 +7,10 @@ import { forecastDateKey } from '@/utils/weatherWords';
 
 export interface TaskWeatherAdvisory {
   iconKey: VisualIconKey;
+  /** The full advice, for the task detail sheet. */
   text: string;
+  /** One word for the card chip — the plot banner and the sheet carry the rest. */
+  label: 'Rain' | 'Wind';
 }
 
 /** Joins forecasts to tasks through the shared plot resolver—never by list order. */
@@ -41,6 +44,7 @@ export function getTaskWeatherAdvisory(
     return {
       iconKey: 'general.warning',
       text: 'Strong wind expected — review spraying',
+      label: 'Wind',
     };
   }
 
@@ -56,5 +60,5 @@ export function getTaskWeatherAdvisory(
   };
 
   const text = textByType[taskType];
-  return text ? { iconKey: 'weather.rain', text } : null;
+  return text ? { iconKey: 'weather.rain', text, label: 'Rain' } : null;
 }

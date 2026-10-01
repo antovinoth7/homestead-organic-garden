@@ -25,7 +25,7 @@ export interface CarePlanTaskCardProps {
   dueText: string;
   overdue: boolean;
   priority: TaskPriority;
-  /** Weather advisory for the due day, e.g. "Rain expected — check soil first". */
+  /** One-word weather flag for the due day ("Rain" / "Wind"); the sheet has the advice. */
   advisoryText?: string | null;
   advisoryIcon?: VisualIconKey | null;
   harvestHint?: string | null;

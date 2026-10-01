@@ -1054,8 +1054,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sectionTitleFlex: {
       flex: 1,
     },
+    // Narrow so the header text keeps its place; hitSlop restores 44 px.
     sectionSelectButton: {
-      width: 44,
+      width: 28,
       height: 44,
       alignItems: 'center',
       justifyContent: 'center',

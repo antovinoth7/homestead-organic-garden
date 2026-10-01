@@ -86,6 +86,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     valueWarning: {
       color: theme.warning,
     },
+    valueInfo: {
+      color: theme.infoDark,
+    },
     valueAction: {
       color: theme.primary,
     },

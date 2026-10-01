@@ -1018,14 +1018,11 @@ export default function CalendarScreen(): React.JSX.Element {
         >
           <Ionicons
             name={
-              state === 'all'
-                ? 'checkmark-circle'
-                : state === 'partial'
-                  ? 'remove-circle'
-                  : 'ellipse-outline'
+              // Boxes, like the cards' ticks while selecting.
+              state === 'all' ? 'checkbox' : state === 'partial' ? 'stop' : 'square-outline'
             }
-            size={20}
-            color={state === 'none' ? theme.border : theme.primary}
+            size={22}
+            color={state === 'none' ? theme.textTertiary : theme.primary}
           />
         </TouchableOpacity>
       );
@@ -1300,7 +1297,7 @@ export default function CalendarScreen(): React.JSX.Element {
           }
           overdue={overdueDays !== null}
           priority={getTaskPriority(task)}
-          advisoryText={advisory?.text ?? null}
+          advisoryText={advisory?.label ?? null}
           advisoryIcon={advisory?.iconKey ?? null}
           harvestHint={computeHarvestHint(task)}
           selectionMode={selectionMode}
@@ -1577,6 +1574,18 @@ export default function CalendarScreen(): React.JSX.Element {
       }
     },
     [rainMoves, rainMoveBusy, loadData]
+  );
+
+  // Strip and month counts: what is still to do on each day ahead. Late work
+  // lives under today, so past days carry no count.
+  const getOpenTasksForDate = useCallback(
+    (date: Date): TaskTemplate[] => {
+      const key = calendarDateKey(date);
+      const todayKey = calendarDateKey(farmToday());
+      if (!key || !todayKey || key < todayKey) return [];
+      return getTasksForDate(date).filter(isOpen);
+    },
+    [getTasksForDate, isOpen]
   );
 
   const toggleSection = useCallback((key: string) => {
@@ -2369,7 +2378,7 @@ export default function CalendarScreen(): React.JSX.Element {
               <WeekCalendarView
                 currentWeekStart={currentWeekStart}
                 selectedDate={selectedDate}
-                getTasksForDate={getTasksForDate}
+                getTasksForDate={getOpenTasksForDate}
                 onSelectDate={handleSelectDate}
                 onNavigateWeek={handleNavigateWeek}
               />
@@ -2488,7 +2497,7 @@ export default function CalendarScreen(): React.JSX.Element {
           visible={showMonthSheet}
           anchorDate={selectedDate}
           selectedDate={selectedDate}
-          getTasksForDate={getTasksForDate}
+          getTasksForDate={getOpenTasksForDate}
           onSelectDate={handlePickMonthDate}
           onGoToToday={handleMonthGoToToday}
           onClose={closeMonthSheet}
@@ -2591,6 +2600,13 @@ export default function CalendarScreen(): React.JSX.Element {
               detailTask.task_type,
               detailTask.frequency_days
             )}
+            weatherNote={
+              getTaskWeatherAdvisory(
+                detailTask.task_type,
+                getForecastForTask(detailTask),
+                new Date(detailTask.next_due_at)
+              )?.text ?? null
+            }
             blocked={isEarlyCompletionBlocked(detailTask)}
             future={isSkipBlocked(detailTask)}
             bottomPadding={TAB_BAR_HEIGHT + Math.max(insets.bottom, 16)}

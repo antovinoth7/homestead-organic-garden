@@ -34,6 +34,10 @@ describe('getTaskWeatherAdvisory', () => {
     expect(getTaskWeatherAdvisory(taskType, forecast, dueAt)?.text).toContain(words);
   });
 
+  it('gives the card a one-word label', () => {
+    expect(getTaskWeatherAdvisory('water', forecast, dueAt)?.label).toBe('Rain');
+  });
+
   it('never treats an unavailable forecast as no rain advice', () => {
     expect(getTaskWeatherAdvisory('water', null, dueAt)).toBeNull();
   });

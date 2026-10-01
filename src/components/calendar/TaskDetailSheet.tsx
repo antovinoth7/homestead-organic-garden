@@ -31,6 +31,8 @@ interface Props {
   overdueDays: number | null;
   /** Water cycles rarely run at the base interval — what this one is and why. */
   wateringCycle: { iconKey: VisualIconKey; text: string } | null;
+  /** Full weather advice for the due day, when the forecast has any. */
+  weatherNote: string | null;
   /** Not due yet and harmful to do early (water / fertilise / spray). */
   blocked: boolean;
   /** Not due yet, so Skip becomes Reschedule. */
@@ -56,6 +58,7 @@ export function TaskDetailSheet({
   priority,
   overdueDays,
   wateringCycle,
+  weatherNote,
   blocked,
   future,
   bottomPadding,
@@ -226,6 +229,15 @@ export function TaskDetailSheet({
               </Text>
             </View>
           </View>
+
+          {weatherNote ? (
+            <View style={styles.row}>
+              <Text style={styles.label}>Weather</Text>
+              <View style={styles.valueBlock}>
+                <Text style={[styles.value, styles.valueInfo]}>{weatherNote}</Text>
+              </View>
+            </View>
+          ) : null}
 
           {task.last_skipped_at ? (
             <View style={styles.row}>
