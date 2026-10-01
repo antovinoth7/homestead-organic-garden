@@ -78,9 +78,9 @@ export const TASK_SORT_LABELS: Record<TaskSortOption, string> = {
 };
 
 /**
- * Every dimension the task list is narrowed by, apart from the search box, the
- * Pots & Ground / Beds segment and the week/month window — those three are
- * applied elsewhere in the pipeline and are not user-clearable filters.
+ * Every dimension the task list is narrowed by, apart from the search box and
+ * the week window — those two are applied elsewhere in the pipeline and are not
+ * user-clearable filters.
  *
  * An empty set means "all", never "none", so the cleared state shows everything.
  */
@@ -317,51 +317,6 @@ export function sortCareTasks(
     if (nameDiff !== 0) return nameDiff;
     return byDue(a, b);
   });
-}
-
-/** Which half of the plan a segment shows: bed-level work, or everything else. */
-export type BedSegment = 'bed' | 'other';
-
-/**
- * Whether a task belongs to the given segment.
- *
- * The Care Plan splits its list in two — Beds shows bed-level work, Pots &
- * Ground everything else — and the visible list, the segment badges and the
- * filter chip counts must all apply this one rule. When the chips counted
- * against a different scope than the list, a chip read "Watering (30)" in a
- * segment that then showed 12 rows.
- */
-export function matchesBedSegment(bedId: string | null, segment: BedSegment): boolean {
-  return segment === 'bed' ? bedId !== null : bedId === null;
-}
-
-/**
- * Overdue work either side of the bed/other split, counted *before* the segment
- * narrows the list to one of them.
- *
- * The Care Plan's Overdue section only ever holds the open segment's share,
- * while the counts that send a farmer to it — the Today plot card's "N Overdue"
- * — are the whole farm's. This is what lets the plan tell "there is no overdue
- * work" from "it is all in the segment you are not looking at", and follow it.
- *
- * `resolveBedId` is the caller's, because a task's bed is derived (a bed-level
- * task carries one; a bed *plant's* task resolves through its plant) and that
- * resolution lives in React-facing code. `now` is injectable for the tests.
- */
-export function countOverdueBySegment(
-  tasks: TaskTemplate[],
-  resolveBedId: (task: TaskTemplate) => string | null,
-  now?: Date
-): { bed: number; other: number } {
-  const at = now ?? new Date();
-  let bed = 0;
-  let other = 0;
-  for (const task of tasks) {
-    if (calendarDaysOverdue(task, at) === null) continue;
-    if (resolveBedId(task) !== null) bed += 1;
-    else other += 1;
-  }
-  return { bed, other };
 }
 
 /** How many filters are narrowing the list — drives the toolbar's badge. */

@@ -43,11 +43,25 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.text,
     },
+    // Search and the month calendar are quiet outline buttons; only the filter
+    // stays solid, so the one control that changes the list stands out.
     searchIconBtn: {
       width: 44,
       height: 44,
-      borderRadius: 20,
-      backgroundColor: theme.primary,
+      borderRadius: 22,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerOutlineButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -97,24 +111,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 8,
       flexShrink: 0,
-    },
-    viewToggleHitTarget: {
-      minHeight: 44,
-      justifyContent: 'center',
-    },
-    viewToggle: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      backgroundColor: theme.primary,
-      borderRadius: 16,
-    },
-    viewToggleText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.textInverse,
     },
     todayButton: {
       minHeight: 44,
@@ -260,180 +256,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sheetChipCountZero: {
       color: theme.textTertiary,
     },
-    weekView: {
-      backgroundColor: theme.card,
-      marginHorizontal: 12,
-      marginVertical: 6,
-      borderRadius: 16,
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      elevation: 3,
-    },
-    weekNavBtn: {
-      width: 44,
-      height: 52,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    weekDaysRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 4,
-      paddingVertical: 8,
-      gap: 2,
-    },
-    weekDay: {
-      flex: 1,
-      minHeight: 52,
-      alignItems: 'center',
-      paddingVertical: 6,
-      paddingHorizontal: 2,
-      borderRadius: 10,
-      backgroundColor: theme.background,
-    },
-    weekDayToday: {
-      backgroundColor: theme.primary,
-    },
-    weekDaySelected: {
-      backgroundColor: theme.accent,
-    },
-    weekDayName: {
-      fontSize: 10,
-      color: theme.textSecondary,
-      marginBottom: 2,
-    },
-    weekDayNameToday: {
-      color: theme.textInverse,
-    },
-    weekDayNameSelected: {
-      color: theme.textInverse,
-    },
-    weekDayNumber: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: theme.text,
-      marginBottom: 2,
-    },
-    weekDayNumberToday: {
-      color: theme.textInverse,
-    },
-    weekDayNumberSelected: {
-      color: theme.textInverse,
-    },
-    weekDayDots: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      gap: 2,
-      minHeight: 8,
-    },
-    weekDayDot: {
-      width: 4,
-      height: 4,
-      borderRadius: 2,
-    },
-    weekDayMore: {
-      fontSize: 8,
-      color: theme.textTertiary,
-    },
-    monthView: {
-      backgroundColor: theme.card,
-      marginHorizontal: 12,
-      marginVertical: 6,
-      borderRadius: 16,
-      padding: 10,
-      paddingBottom: 8,
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      elevation: 3,
-    },
-    monthHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 6,
-      paddingBottom: 6,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border + '30',
-    },
-    monthTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    monthWeekdays: {
-      flexDirection: 'row',
-      marginBottom: 2,
-    },
-    monthWeekday: {
-      flexBasis: '13.5%',
-      flexGrow: 0,
-      flexShrink: 0,
-      marginHorizontal: '0.35%',
-      textAlign: 'center',
-      fontSize: 10,
-      fontWeight: '700',
-      color: theme.textSecondary,
-      textTransform: 'uppercase',
-    },
-    monthGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-    },
-    monthCell: {
-      flexBasis: '13.5%',
-      flexGrow: 0,
-      flexShrink: 0,
-      height: 32,
-      padding: 2,
-      marginHorizontal: '0.35%',
-      marginVertical: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 6,
-      backgroundColor: undefined,
-    },
-    monthCellToday: {
-      backgroundColor: theme.primary + '20',
-      borderWidth: 1.5,
-      borderColor: theme.primary,
-    },
-    monthCellSelected: {
-      backgroundColor: theme.primary,
-      shadowColor: theme.primary,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.3,
-      shadowRadius: 3,
-      elevation: 2,
-    },
-    monthCellNumber: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.text,
-    },
-    monthCellNumberToday: {
-      color: theme.primary,
-      fontWeight: '700',
-    },
-    monthCellNumberSelected: {
-      color: theme.textInverse,
-      fontWeight: '700',
-    },
-    monthCellBar: {
-      width: 14,
-      height: 3,
-      borderRadius: 1.5,
-      marginTop: 1,
-    },
-    monthCellBarDefault: {
-      backgroundColor: theme.primary,
-    },
-    monthCellBarSelected: {
-      backgroundColor: theme.textInverse,
-    },
     content: {
       // Bottom clearance lives on contentContainerStyle so the list scrolls
       // *under* the floating tab bar instead of ending 120px short of it.
@@ -512,34 +334,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.errorLight,
       color: theme.error,
     },
-    selectedDateActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    completeAllBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: theme.primary,
-      paddingVertical: 8,
-      paddingHorizontal: 14,
-      borderRadius: 8,
-      minHeight: 36,
-    },
-    completeAllBtnDisabled: {
-      opacity: 0.6,
-    },
-    completeAllText: {
-      color: theme.textInverse,
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    completeAllProgress: {
-      color: theme.textInverse,
-      fontSize: 12,
-      fontWeight: '700',
-    },
     completeAllOverlay: {
       flex: 1,
       backgroundColor: theme.overlay,
@@ -585,93 +379,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       height: 6,
       backgroundColor: theme.primary,
       borderRadius: 3,
-    },
-    completeAllActions: {
-      flexDirection: 'row',
-      gap: 12,
-      width: '100%',
-    },
-    completeAllCancelBtn: {
-      flex: 1,
-      padding: 14,
-      borderRadius: 12,
-      alignItems: 'center',
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    completeAllCancelText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-    completeAllConfirmBtn: {
-      flex: 1,
-      padding: 14,
-      borderRadius: 12,
-      alignItems: 'center',
-      backgroundColor: theme.primary,
-      flexDirection: 'row',
-      justifyContent: 'center',
-      gap: 6,
-    },
-    completeAllConfirmText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.textInverse,
-    },
-    // Complete-all checklist styles
-    caSelectAllRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 10,
-      alignSelf: 'flex-start',
-    },
-    caSelectAllText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.primary,
-    },
-    caTaskList: {
-      width: '100%',
-      maxHeight: 260,
-      marginBottom: 16,
-    },
-    caTaskRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      paddingVertical: 9,
-      paddingHorizontal: 8,
-      borderRadius: 10,
-      marginBottom: 4,
-      backgroundColor: theme.background,
-    },
-    caTaskRowDeselected: {
-      opacity: 0.45,
-    },
-    caCheckboxMuted: {
-      color: theme.textSecondary,
-    },
-    caTaskEmoji: {
-      fontSize: 16,
-    },
-    caTaskInfo: {
-      flex: 1,
-    },
-    caTaskName: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.text,
-    },
-    caTaskNameDeselected: {
-      textDecorationLine: 'line-through',
-    },
-    caTaskType: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      textTransform: 'capitalize',
     },
     emptyState: {
       alignItems: 'center',
@@ -864,28 +571,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       fontWeight: '600',
       marginTop: 4,
-    },
-    swipeHintBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.primaryLight,
-      borderRadius: 12,
-      paddingVertical: 10,
-      paddingHorizontal: 14,
-      marginHorizontal: 16,
-      marginBottom: 8,
-      gap: 10,
-    },
-    swipeHintBannerContent: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    swipeHintBannerText: {
-      fontSize: 13,
-      color: theme.text,
-      flex: 1,
     },
     // Same tile as `taskCard` so harvest rows read as part of the list. State
     // is carried by the left bar and the status text, not by the card chrome.
@@ -1200,12 +885,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.textSecondary,
     },
-    monthNavBtn: {
-      width: 44,
-      height: 44,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
     staleBanner: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1374,20 +1053,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     skipReasonChipTextActive: {
       color: theme.primary,
     },
-    selectedDateTaskBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      backgroundColor: theme.primaryLight,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 12,
-    },
-    selectedDateTaskCount: {
-      fontSize: 13,
-      color: theme.primary,
-      fontWeight: '700',
-    },
     taskCardSelected: {
       borderColor: theme.primary,
       backgroundColor: theme.primaryLight,
@@ -1532,24 +1197,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700',
       color: theme.success,
     },
-    taskDetailOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'flex-end',
-    },
     taskDetailSheet: {
       backgroundColor: theme.backgroundSecondary,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       paddingTop: 12,
-    },
-    taskDetailHandle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.border,
-      alignSelf: 'center',
-      marginBottom: 16,
     },
     taskDetailHeader: {
       flexDirection: 'row',
@@ -1656,12 +1308,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       color: theme.textInverse,
     },
-    taskDetailActionBtnDisabled: {
-      backgroundColor: theme.borderDark,
-    },
-    taskDetailActionBtnTextDisabled: {
-      color: theme.textTertiary,
-    },
     // Tinted fill only — a border on top of the tint read as a second, competing
     // outline next to the solid primary action.
     selectionBarSecondaryBtn: {
@@ -1706,19 +1352,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     skipDayChipTextActive: {
       color: theme.warning,
     },
-    weekProgressRow: {
-      paddingHorizontal: 16,
-      paddingBottom: 4,
-      alignItems: 'flex-start',
-    },
     flexOne: {
       flex: 1,
-    },
-    rowCenter: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      flexWrap: 'wrap',
     },
     rowCenterGap8: {
       flexDirection: 'row',
@@ -1758,12 +1393,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     taskDetailValueSkip: {
       color: theme.warning,
     },
-    chipWrapMarginTop: {
-      marginTop: 8,
-    },
-    sheetSectionTitleMarginTop: {
-      marginTop: 20,
-    },
     sectionTitleOverdue: {
       color: theme.error,
       flex: 1,
@@ -1771,67 +1400,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sectionTitleFlex: {
       flex: 1,
     },
-    // All / Beds / Pots & Ground segmented control (mirrors plantsStyles)
-    segmentRow: {
-      flexDirection: 'row',
-      alignSelf: 'stretch',
-      gap: 2,
-      marginHorizontal: 16,
-      marginBottom: 8,
-      padding: 2,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.backgroundSecondary,
-      overflow: 'hidden',
-    },
-    // Height comes from the padding + the 18px badge, same as plantsStyles — the
-    // chips carry a vertical hitSlop so the tap target stays ~44px.
-    segmentChip: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 4,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 12,
-    },
-    segmentChipActive: {
-      backgroundColor: theme.primaryLight,
-    },
-    segmentChipText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
-    segmentChipTextActive: {
-      color: theme.primary,
-    },
     sectionSelectButton: {
       width: 44,
       height: 44,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    segmentBadge: {
-      minWidth: 18,
-      height: 18,
-      borderRadius: 9,
-      backgroundColor: theme.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 4,
-    },
-    segmentBadgeActive: {
-      backgroundColor: theme.primary,
-    },
-    segmentBadgeText: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: theme.textTertiary,
-    },
-    segmentBadgeTextActive: {
-      color: theme.textInverse,
     },
   });

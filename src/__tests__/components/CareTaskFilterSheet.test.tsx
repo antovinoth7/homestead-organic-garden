@@ -232,7 +232,7 @@ describe('CareTaskFilterSheet', () => {
     ]);
   });
 
-  // The Pots & Ground segment holds no bed tasks, so the screen passes none.
+  // The screen passes only beds that carry a task, so a bedless farm gets none.
   it('shows the Bed section only when beds are supplied', () => {
     expect(testIDs(render(), 'care-filter-bed-')).toEqual([]);
     const beds = [makeBed({ id: 'b1', name: 'Bed 1' }), makeBed({ id: 'b2', name: 'Bed 2' })];

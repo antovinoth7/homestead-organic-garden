@@ -1,24 +1,27 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { TaskTemplate, TaskType } from '../../types/database.types';
+import { TaskTemplate } from '../../types/database.types';
 import { useTheme } from '../../theme';
-import { createStyles } from '../../styles/calendarStyles';
+import { createStyles } from '@/styles/carePlanCalendarStyles';
 import { addCalendarDays, calendarDateKey, farmToday, formatFarmDate } from '@/utils/farmDate';
 
 interface WeekCalendarViewProps {
   currentWeekStart: Date;
   selectedDate: Date | null;
-  taskColors: Record<TaskType, string>;
   getTasksForDate: (date: Date) => TaskTemplate[];
   onSelectDate: (date: Date) => void;
   onNavigateWeek: (newStart: Date) => void;
 }
 
+/**
+ * The slim week strip heading the Care Plan: weekday letter, date and how many
+ * tasks fall on it. Today is filled green, the picked day amber. The month grid
+ * lives in its own sheet (`MonthCalendarSheet`), so this stays one row tall.
+ */
 export default function WeekCalendarView({
   currentWeekStart,
   selectedDate,
-  taskColors,
   getTasksForDate,
   onSelectDate,
   onNavigateWeek,
@@ -26,35 +29,42 @@ export default function WeekCalendarView({
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const weekDays = Array.from({ length: 7 }).map((_, i) => {
-    return addCalendarDays(currentWeekStart, i);
-  });
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addCalendarDays(currentWeekStart, i)),
+    [currentWeekStart]
+  );
+  const todayKey = calendarDateKey(farmToday());
+  const selectedKey = selectedDate ? calendarDateKey(selectedDate) : null;
+
+  const goPrevious = useCallback(
+    () => onNavigateWeek(addCalendarDays(currentWeekStart, -7)),
+    [currentWeekStart, onNavigateWeek]
+  );
+  const goNext = useCallback(
+    () => onNavigateWeek(addCalendarDays(currentWeekStart, 7)),
+    [currentWeekStart, onNavigateWeek]
+  );
 
   return (
-    <View style={styles.weekView}>
-      <View style={styles.weekDaysRow}>
+    <View style={styles.weekCard}>
+      <View style={styles.weekRow}>
         <TouchableOpacity
-          style={styles.weekNavBtn}
+          style={styles.weekNav}
           accessibilityRole="button"
           accessibilityLabel="Previous week"
-          onPress={() => {
-            const newDate = new Date(currentWeekStart);
-            newDate.setDate(newDate.getDate() - 7);
-            onNavigateWeek(newDate);
-          }}
+          onPress={goPrevious}
         >
           <Ionicons name="chevron-back" size={18} color={theme.textSecondary} />
         </TouchableOpacity>
-        {weekDays.map((date, index) => {
-          const dayTasks = getTasksForDate(date);
-          const isToday = calendarDateKey(date) === calendarDateKey(farmToday());
-          const isSelected = selectedDate
-            ? calendarDateKey(selectedDate) === calendarDateKey(date)
-            : false;
-
+        {weekDays.map((date) => {
+          const key = calendarDateKey(date);
+          const count = getTasksForDate(date).length;
+          const isToday = key === todayKey;
+          const isSelected = key !== null && key === selectedKey;
+          const onFill = isToday || isSelected;
           return (
             <TouchableOpacity
-              key={index}
+              key={key ?? date.toISOString()}
               style={[
                 styles.weekDay,
                 isToday && styles.weekDayToday,
@@ -67,51 +77,35 @@ export default function WeekCalendarView({
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
-              })}, ${dayTasks.length} task${dayTasks.length === 1 ? '' : 's'}`}
+              })}, ${count} task${count === 1 ? '' : 's'}`}
             >
-              <Text
-                style={[
-                  styles.weekDayName,
-                  isToday && styles.weekDayNameToday,
-                  isSelected && styles.weekDayNameSelected,
-                ]}
-              >
+              <Text style={[styles.weekDayName, onFill && styles.weekDayTextOnFill]}>
                 {formatFarmDate(date, { weekday: 'narrow' })}
               </Text>
-              <Text
-                style={[
-                  styles.weekDayNumber,
-                  isToday && styles.weekDayNumberToday,
-                  isSelected && styles.weekDayNumberSelected,
-                ]}
-              >
+              <Text style={[styles.weekDayNumber, onFill && styles.weekDayTextOnFill]}>
                 {date.getDate()}
               </Text>
-              {dayTasks.length > 0 && (
-                <View style={styles.weekDayDots}>
-                  {dayTasks.slice(0, 3).map((task, idx) => (
-                    <View
-                      key={idx}
-                      style={[styles.weekDayDot, { backgroundColor: taskColors[task.task_type] }]}
-                    />
-                  ))}
-                  {dayTasks.length > 3 && (
-                    <Text style={styles.weekDayMore}>+{dayTasks.length - 3}</Text>
-                  )}
-                </View>
+              {count > 0 ? (
+                <Text
+                  style={[
+                    styles.weekDayCount,
+                    isToday && !isSelected && styles.weekDayCountOnToday,
+                    isSelected && styles.weekDayCountOnSelected,
+                  ]}
+                >
+                  {count}
+                </Text>
+              ) : (
+                <View style={styles.weekDayCountSpacer} />
               )}
             </TouchableOpacity>
           );
         })}
         <TouchableOpacity
-          style={styles.weekNavBtn}
+          style={styles.weekNav}
           accessibilityRole="button"
           accessibilityLabel="Next week"
-          onPress={() => {
-            const newDate = new Date(currentWeekStart);
-            newDate.setDate(newDate.getDate() + 7);
-            onNavigateWeek(newDate);
-          }}
+          onPress={goNext}
         >
           <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
         </TouchableOpacity>

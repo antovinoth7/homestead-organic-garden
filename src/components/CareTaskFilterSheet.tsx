@@ -78,7 +78,7 @@ export interface CareTaskFilterSheetProps {
   sortBy: TaskSortOption;
   /** Plots that actually hold tasks, in configured order. */
   plotGroups: PlotGroup[];
-  /** Beds offered by the bed filter — empty outside the Beds segment. */
+  /** Beds offered by the bed filter — only those carrying a task. */
   beds: Bed[];
   /** False when nothing on the plan names a time, so the section is pointless. */
   showTimeFilter: boolean;
@@ -302,7 +302,7 @@ export function CareTaskFilterSheet({
             </>
           )}
 
-          {/* Bed — only supplied in the Beds segment, where every task has one. */}
+          {/* Bed — offered whenever some task sits on a bed. */}
           {beds.length > 0 && (
             <>
               <Text style={styles.sheetSectionTitle}>

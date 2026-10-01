@@ -2,10 +2,8 @@ import { TaskTemplate, UNASSIGNED_PLOT_ID } from '../../types/database.types';
 import {
   countActiveCareFilters,
   countCareFacets,
-  countOverdueBySegment,
   emptyCareTaskFilters,
   filterCareTasks,
-  matchesBedSegment,
   sortCareTasks,
   taskDueStatus,
   taskTimeOfDay,
@@ -565,86 +563,5 @@ describe('toggleSetValue', () => {
     expect([...added]).toEqual(['a', 'b']);
     expect([...toggleSetValue(added, 'a')]).toEqual(['b']);
     expect([...source]).toEqual(['a']);
-  });
-});
-
-describe('matchesBedSegment', () => {
-  // The Care Plan shows bed work and everything else as two separate lists.
-  // The visible list, the segment badges and the filter chip counts all read
-  // this one rule; when the chips used a different scope, a chip advertised
-  // rows its own segment would never show.
-  it('puts a task with a bed in the Beds segment only', () => {
-    expect(matchesBedSegment('bed-1', 'bed')).toBe(true);
-    expect(matchesBedSegment('bed-1', 'other')).toBe(false);
-  });
-
-  it('puts a task with no bed in Pots & Ground only', () => {
-    expect(matchesBedSegment(null, 'other')).toBe(true);
-    expect(matchesBedSegment(null, 'bed')).toBe(false);
-  });
-
-  it('assigns every task to exactly one segment', () => {
-    for (const bedId of ['bed-1', null]) {
-      const inBoth =
-        Number(matchesBedSegment(bedId, 'bed')) + Number(matchesBedSegment(bedId, 'other'));
-      expect(inBoth).toBe(1);
-    }
-  });
-});
-
-// The Overdue section only ever holds the open segment's share of the late
-// work, while the count that sends a farmer to it — the Today plot card's
-// "N Overdue" — is the whole farm's. This is what lets the Care Plan tell
-// "nothing is late" from "it is all in the segment you are not looking at".
-describe('countOverdueBySegment', () => {
-  const bedPlant = makePlant({ id: 'p-bed', name: 'Brinjal', bed_id: 'b1' });
-  const potPlant = makePlant({ id: 'p-pot', name: 'Tulsi', bed_id: null });
-  const plantMap = new Map([bedPlant, potPlant].map((p) => [p.id, p]));
-  const resolveBedId = (task: TaskTemplate): string | null => resolveTaskBedId(task, plantMap);
-
-  // NOW is 2026-03-10; due dates are stamped at 6 PM, so a task due *yesterday
-  // evening* is a full calendar day late — the most common overdue case, and
-  // the one a raw timestamp subtraction would miss.
-  const overdue = (id: string, plantId: string): TaskTemplate =>
-    makeTaskTemplate({ id, plant_id: plantId, next_due_at: '2026-03-09T18:00:00.000Z' });
-  const dueToday = (id: string, plantId: string): TaskTemplate =>
-    makeTaskTemplate({ id, plant_id: plantId, next_due_at: '2026-03-10T18:00:00.000Z' });
-
-  it('splits the late work by the segment it will show up in', () => {
-    const tasks = [
-      overdue('t1', 'p-bed'),
-      overdue('t2', 'p-bed'),
-      overdue('t3', 'p-pot'),
-      // A bed-level task carries its own bed and has no plant to resolve through.
-      makeTaskTemplate({
-        id: 't4',
-        plant_id: null,
-        bed_id: 'b1',
-        next_due_at: '2026-03-09T18:00:00.000Z',
-      }),
-    ];
-    expect(countOverdueBySegment(tasks, resolveBedId, NOW)).toEqual({ bed: 3, other: 1 });
-  });
-
-  // The case that started this: the farm has late work, the plan opens on Pots
-  // & Ground, and every overdue task is on a bed plant. A zero here is what
-  // tells the plan to follow the work into the Beds segment rather than sit on
-  // a list showing none of what was tapped.
-  it('reports zero for the segment with nothing late', () => {
-    const tasks = [overdue('t1', 'p-bed'), dueToday('t2', 'p-pot')];
-    expect(countOverdueBySegment(tasks, resolveBedId, NOW)).toEqual({ bed: 1, other: 0 });
-  });
-
-  it('counts only what is actually late', () => {
-    const tasks = [
-      dueToday('t1', 'p-bed'),
-      // Due tomorrow — ahead of the farm, not behind it.
-      makeTaskTemplate({
-        id: 't2',
-        plant_id: 'p-pot',
-        next_due_at: '2026-03-11T18:00:00.000Z',
-      }),
-    ];
-    expect(countOverdueBySegment(tasks, resolveBedId, NOW)).toEqual({ bed: 0, other: 0 });
   });
 });

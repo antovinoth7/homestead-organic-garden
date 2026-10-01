@@ -14,11 +14,8 @@ import { getErrorMessage } from '@/utils/errorLogging';
 import { groupByPlot, UNASSIGNED_PLOT_NAME, type PlotResolution } from '@/utils/plotGrouping';
 import {
   countCareFacets,
-  countOverdueBySegment,
   filterCareTasks,
-  matchesBedSegment,
   sortCareTasks,
-  type BedSegment,
   type CareTaskContext,
   type CareTaskFacetCounts,
   type CareTaskFilters,
@@ -28,18 +25,18 @@ import {
 
 type GroupBy = 'none' | 'location' | 'type' | 'plant' | 'bed';
 
-export type { BedSegment };
-
-export interface BedSegmentCounts {
-  bed: number;
-  other: number;
-}
-
 // Re-exported so the Care Plan keeps importing it from the hook it renders from.
 export type { HarvestReadyItem };
 
 export interface UseCalendarDataReturn {
   tasks: TaskTemplate[];
+  /**
+   * Every template as loaded, disabled ones included — a finished one-off is
+   * disabled by its own completion, and "Done today" still has to name it.
+   */
+  templatesById: Map<string, TaskTemplate>;
+  /** Today's completion logs — the saved half of "Done today". */
+  todayLogs: TaskLog[];
   plants: Plant[];
   initialLoading: boolean;
   refreshing: boolean;
@@ -61,15 +58,6 @@ export interface UseCalendarDataReturn {
   weekTasks: TaskTemplate[];
   tasksForDisplay: TaskTemplate[];
   groupedTasks: Record<string, TaskTemplate[]>;
-  segmentCounts: BedSegmentCounts;
-  /**
-   * Overdue work either side of the segment split, counted before the segment
-   * is applied. `overdueTasks` only ever holds the active segment's share, so a
-   * caller that means to *show* the overdue work — the Today card's count opens
-   * the plan at it — needs this to tell "there is none" from "it is in the
-   * other segment".
-   */
-  overdueSegmentCounts: BedSegmentCounts;
   /** Chip counts for the filter sheet — each category counted against the rest. */
   facetCounts: CareTaskFacetCounts;
   /**
@@ -88,14 +76,11 @@ export interface UseCalendarDataReturn {
 interface UseCalendarDataOptions {
   normalizedSearchQuery: string;
   normalizeSearchText: (value: string) => string;
-  selectedView: 'week' | 'month';
   currentWeekStart: Date;
-  currentMonth: Date;
   selectedDate: Date | null;
   groupBy: GroupBy;
   sortBy?: TaskSortOption;
   filters: CareTaskFilters;
-  bedSegment?: BedSegment;
   /** Beds drive the plot join, the bed filter and the bed group labels. */
   beds?: Bed[];
   /** Configured plot names, in display order — from `useWeatherLocations`. */
@@ -107,19 +92,17 @@ interface UseCalendarDataOptions {
 export function useCalendarData({
   normalizedSearchQuery,
   normalizeSearchText,
-  selectedView,
   currentWeekStart,
-  currentMonth,
   selectedDate,
   groupBy,
   sortBy = 'due',
   filters,
-  bedSegment = 'other',
   beds,
   parentLocations,
   fallbackPlotName,
 }: UseCalendarDataOptions): UseCalendarDataReturn {
   const [tasks, setTasks] = useState<TaskTemplate[]>([]);
+  const [allTemplates, setAllTemplates] = useState<TaskTemplate[]>([]);
   const [plants, setPlants] = useState<Plant[]>([]);
   const [todayLogs, setTodayLogs] = useState<TaskLog[]>([]);
   const [harvestEntries, setHarvestEntries] = useState<JournalEntry[]>([]);
@@ -175,6 +158,7 @@ export function useCalendarData({
       );
 
       setTasks(filteredTasks);
+      setAllTemplates(tasksData);
       setPlants(plantsData);
       setTodayLogs(todayLogsData);
       setHarvestEntries(harvestEntriesData);
@@ -219,6 +203,11 @@ export function useCalendarData({
       }
     }
   }, [loadData]);
+
+  const templatesById = useMemo(
+    () => new Map(allTemplates.map((template) => [template.id, template])),
+    [allTemplates]
+  );
 
   // O(1) plant lookup map instead of O(n) .find() per task
   const plantMap = useMemo(() => {
@@ -397,7 +386,7 @@ export function useCalendarData({
       if (groupBy === 'bed') {
         return sorted.reduce<Record<string, TaskTemplate[]>>((acc, task) => {
           const bedId = resolveBedId(task);
-          const label = bedId ? bedNames.get(bedId) ?? 'Bed' : 'Unassigned';
+          const label = bedId ? (bedNames.get(bedId) ?? 'Bed') : 'Unassigned';
           if (!acc[label]) acc[label] = [];
           acc[label].push(task);
           return acc;
@@ -417,90 +406,19 @@ export function useCalendarData({
     [visibleTasks, filterTasksBySearch]
   );
 
-  // The one segment rule, shared by the visible list and the chip counts so a
-  // chip can never promise rows the segment will not show.
-  const matchesSegment = React.useCallback(
-    (task: TaskTemplate): boolean => matchesBedSegment(resolveBedId(task), bedSegment),
-    [resolveBedId, bedSegment]
-  );
-
-  // Search + type/overdue/bed filters, before the All/Beds/Other segment is applied —
-  // drives the segment counts so they reflect the active search and filters.
-  const preSegmentTasks = useMemo(
+  // Search + every View Options filter — the one list the plan is built from.
+  const filteredTasks = useMemo(
     () => filterCareTasks(searchFilteredTasks, filters, careCtx),
     [searchFilteredTasks, filters, careCtx]
   );
 
   // Chip counts answer "how many would I get if I picked this?", so they run
   // against the search-filtered list rather than the already-filtered one — a
-  // chip must not narrow its own count to zero.
-  //
-  // The segment *is* applied, because the two segments are separate lists rather
-  // than two views of one: counting across both made a chip read "Watering (30)"
-  // in Pots & Ground and then produce 12 rows. The week/month window stays
-  // unapplied — a filter narrows the whole plan, not just the page on screen.
-  const segmentScopedTasks = useMemo(
-    () => searchFilteredTasks.filter(matchesSegment),
-    [searchFilteredTasks, matchesSegment]
-  );
-
+  // chip must not narrow its own count to zero. The week window stays
+  // unapplied: a filter narrows the whole plan, not just the page on screen.
   const facetCounts = useMemo(
-    () => countCareFacets(segmentScopedTasks, filters, careCtx),
-    [segmentScopedTasks, filters, careCtx]
-  );
-
-  // Tasks visible in the current view = overdue OR within the current week/month window
-  // (mirrors overdueTasks + weekTasks below). Drives accurate, non-misleading segment counts.
-  // When searching, the view isn't windowed, so count all matches (mirrors tasksForDisplay).
-  const windowTasks = useMemo(() => {
-    if (isSearching) return preSegmentTasks;
-    const todayKey = farmDateKey(new Date());
-    if (!todayKey) return [];
-
-    let inWindow: (dueKey: string) => boolean;
-    if (selectedView === 'week') {
-      const weekStartKey = calendarDateKey(currentWeekStart);
-      const weekEndKey = weekStartKey ? addDaysToDateKey(weekStartKey, 7) : null;
-      inWindow = (dueKey) =>
-        weekStartKey !== null &&
-        weekEndKey !== null &&
-        dueKey >= weekStartKey &&
-        dueKey < weekEndKey;
-    } else {
-      const monthPrefix = `${currentMonth.getFullYear()}-${String(
-        currentMonth.getMonth() + 1
-      ).padStart(2, '0')}`;
-      inWindow = (dueKey) => dueKey.startsWith(monthPrefix);
-    }
-
-    return preSegmentTasks.filter((t) => {
-      const dueKey = farmDateKey(t.next_due_at);
-      return dueKey !== null && (dueKey < todayKey || inWindow(dueKey));
-    });
-  }, [isSearching, preSegmentTasks, selectedView, currentWeekStart, currentMonth]);
-
-  // Templates already completed today — excluded from the segment badge so the
-  // count visibly drops the moment a task is marked done (a completed recurring
-  // task only reschedules forward and would otherwise stay inside the window).
-  const completedTodayIds = useMemo(
-    () => new Set(todayLogs.map((log) => log.template_id)),
-    [todayLogs]
-  );
-
-  const segmentCounts = useMemo<BedSegmentCounts>(() => {
-    let bed = 0;
-    let other = 0;
-    for (const t of windowTasks) {
-      if (completedTodayIds.has(t.id)) continue;
-      if (resolveBedId(t) != null) bed += 1;
-      else other += 1;
-    }
-    return { bed, other };
-  }, [windowTasks, resolveBedId, completedTodayIds]);
-
-  const filteredTasks = useMemo(
-    () => preSegmentTasks.filter(matchesSegment),
-    [preSegmentTasks, matchesSegment]
+    () => countCareFacets(searchFilteredTasks, filters, careCtx),
+    [searchFilteredTasks, filters, careCtx]
   );
 
   // Pre-build a date→tasks map so calendar cells do O(1) lookups instead of O(tasks) per cell
@@ -568,13 +486,6 @@ export function useCalendarData({
     [filteredTasks]
   );
 
-  // Counted off `preSegmentTasks` — filters applied, segment not — so this says
-  // where the farm's late work is rather than what the open segment shows.
-  const overdueSegmentCounts = useMemo<BedSegmentCounts>(
-    () => countOverdueBySegment(preSegmentTasks, resolveBedId),
-    [preSegmentTasks, resolveBedId]
-  );
-
   const filteredHarvestsReady = useMemo(
     () =>
       normalizedSearchQuery
@@ -615,33 +526,21 @@ export function useCalendarData({
   }, [isSearching, filteredTasks]);
 
   const weekTasks = useMemo(() => {
-    if (selectedView === 'week') {
-      if (!filteredTasks || filteredTasks.length === 0) return [];
-      const weekStartKey = calendarDateKey(currentWeekStart);
-      const weekEndKey = weekStartKey ? addDaysToDateKey(weekStartKey, 7) : null;
-
-      return filteredTasks.filter((task) => {
-        if (!task || !task.next_due_at) return false;
-        const dueKey = farmDateKey(task.next_due_at);
-        return (
-          dueKey !== null &&
-          weekStartKey !== null &&
-          weekEndKey !== null &&
-          dueKey >= weekStartKey &&
-          dueKey < weekEndKey
-        );
-      });
-    } else {
-      const monthPrefix = `${currentMonth.getFullYear()}-${String(
-        currentMonth.getMonth() + 1
-      ).padStart(2, '0')}`;
-
-      return filteredTasks.filter((task) => {
-        const dueKey = farmDateKey(task.next_due_at);
-        return dueKey !== null && dueKey.startsWith(monthPrefix);
-      });
-    }
-  }, [selectedView, filteredTasks, currentWeekStart, currentMonth]);
+    if (!filteredTasks || filteredTasks.length === 0) return [];
+    const weekStartKey = calendarDateKey(currentWeekStart);
+    const weekEndKey = weekStartKey ? addDaysToDateKey(weekStartKey, 7) : null;
+    return filteredTasks.filter((task) => {
+      if (!task || !task.next_due_at) return false;
+      const dueKey = farmDateKey(task.next_due_at);
+      return (
+        dueKey !== null &&
+        weekStartKey !== null &&
+        weekEndKey !== null &&
+        dueKey >= weekStartKey &&
+        dueKey < weekEndKey
+      );
+    });
+  }, [filteredTasks, currentWeekStart]);
 
   const tasksForDisplay = useMemo(() => {
     if (isSearching) return filteredTasks;
@@ -658,6 +557,8 @@ export function useCalendarData({
   return {
     // Raw state — orphaned (deleted-bed) tasks excluded so they never surface
     tasks: visibleTasks,
+    templatesById,
+    todayLogs,
     plants,
     initialLoading,
     refreshing,
@@ -679,8 +580,6 @@ export function useCalendarData({
     weekTasks,
     tasksForDisplay,
     groupedTasks,
-    segmentCounts,
-    overdueSegmentCounts,
     facetCounts,
     plotResolution,
     isSearching,
