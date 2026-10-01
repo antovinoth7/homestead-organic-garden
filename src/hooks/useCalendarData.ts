@@ -69,6 +69,8 @@ export interface UseCalendarDataReturn {
   getTasksForDate: (date: Date) => TaskTemplate[];
   getRawTasksForDate: (date: Date) => TaskTemplate[];
   getPlantDetails: (plantId: string | null) => { name: string; location: string; type: string };
+  /** Effective priority, resolved once per task (care profile + growth stage). */
+  getTaskPriority: (task: TaskTemplate) => TaskPriority;
   groupTasks: (taskList: TaskTemplate[]) => Record<string, TaskTemplate[]>;
   sortTasks: (taskList: TaskTemplate[]) => TaskTemplate[];
 }
@@ -298,6 +300,14 @@ export function useCalendarData({
     }
     return map;
   }, [visibleTasks, plantMap]);
+
+  const getTaskPriority = React.useCallback(
+    (task: TaskTemplate): TaskPriority =>
+      priorityByTaskId.get(task.id) ??
+      task.priority_level ??
+      calculateTaskPriority(task, (task.plant_id ? plantMap.get(task.plant_id) : null) ?? null),
+    [priorityByTaskId, plantMap]
+  );
 
   const careCtx = useMemo<CareTaskContext>(
     () => ({
@@ -587,6 +597,7 @@ export function useCalendarData({
     getTasksForDate,
     getRawTasksForDate,
     getPlantDetails,
+    getTaskPriority,
     groupTasks,
     sortTasks,
   };

@@ -334,52 +334,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.errorLight,
       color: theme.error,
     },
-    completeAllOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 32,
-    },
-    completeAllCard: {
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 20,
-      padding: 24,
-      width: '100%',
-      maxWidth: 340,
-      alignItems: 'center',
-    },
-    completeAllIconRow: {
-      marginBottom: 12,
-    },
-    completeAllIconCircle: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    completeAllTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: theme.text,
-      marginBottom: 16,
-      textAlign: 'center',
-    },
-    progressBarOuter: {
-      width: '100%',
-      height: 6,
-      backgroundColor: theme.border,
-      borderRadius: 3,
-      overflow: 'hidden',
-      marginBottom: 16,
-    },
-    progressBarInner: {
-      height: 6,
-      backgroundColor: theme.primary,
-      borderRadius: 3,
-    },
     emptyState: {
       alignItems: 'center',
       padding: 32,
@@ -469,108 +423,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.primary,
       fontWeight: '600',
-    },
-    // Compact two-line tile: title row (label, badges, due date) over a single
-    // joined meta line. Radius, margin and bar width are shared with
-    // `harvestCard` and the swipe action boxes so the whole list lines up.
-    taskCard: {
-      flexDirection: 'row',
-      backgroundColor: theme.card,
-      borderRadius: 12,
-      marginBottom: 6,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: theme.border,
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 1,
-    },
-    taskCardOverdue: {
-      borderColor: theme.error + '60',
-      backgroundColor: theme.errorLight,
-    },
-    taskColorBar: {
-      width: 3,
-    },
-    taskContent: {
-      flex: 1,
-      paddingVertical: 8,
-      paddingLeft: 10,
-      paddingRight: 4,
-    },
-    taskHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    taskIconContainer: {
-      width: 30,
-      height: 30,
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: 10,
-    },
-    taskInfo: {
-      flex: 1,
-      minWidth: 0,
-    },
-    taskTitleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    taskTitle: {
-      flexShrink: 1,
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.text,
-    },
-    taskMeta: {
-      flexShrink: 1,
-      fontSize: 12,
-      color: theme.textSecondary,
-    },
-    taskMetaBed: {
-      color: theme.primary,
-    },
-    taskTime: {
-      marginLeft: 'auto',
-      paddingLeft: 6,
-      fontSize: 12,
-      color: theme.textSecondary,
-    },
-    taskTimeOverdue: {
-      color: theme.error,
-      fontWeight: '600',
-    },
-    swipeAction: {
-      backgroundColor: theme.success,
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: 84,
-      borderRadius: 12,
-      marginBottom: 6,
-    },
-    // Same box as swipeAction, but neutral — it explains rather than commits.
-    swipeBlockedAction: {
-      backgroundColor: theme.borderDark,
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: 84,
-      borderRadius: 12,
-      marginBottom: 6,
-    },
-    swipeActionContent: {
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    swipeActionText: {
-      color: theme.backgroundSecondary,
-      fontSize: 12,
-      fontWeight: '600',
-      marginTop: 4,
     },
     // Same tile as `taskCard` so harvest rows read as part of the list. State
     // is carried by the left bar and the status text, not by the card chrome.
@@ -987,18 +839,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     notesInput: {
       minHeight: 80,
     },
-    // Swipe left action (Skip) — a single action, so it owns the full reveal.
-    swipeLeftActions: {
-      flexDirection: 'row',
-      marginBottom: 6,
-    },
-    swipeSkipAction: {
-      backgroundColor: theme.warning,
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: 72,
-      borderRadius: 12,
-    },
     // Skip Modal (Calendar)
     skipModalSubtext: {
       fontSize: 14,
@@ -1053,25 +893,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     skipReasonChipTextActive: {
       color: theme.primary,
     },
-    taskCardSelected: {
-      borderColor: theme.primary,
-      backgroundColor: theme.primaryLight,
-    },
-    // Own right-hand column, centred on the tile — outside the detail press area.
-    taskCheckbox: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      alignSelf: 'center',
-      width: 32,
-      height: 32,
-      marginRight: 6,
-    },
-    taskCheckboxSelected: {},
-    // Not selectable — the task can't be completed early. Still tappable, so it
-    // can explain why instead of swallowing the press.
-    taskCheckboxBlocked: {
-      opacity: 0.4,
-    },
     // Full-width, `pointerEvents="box-none"` layer whose only job is to centre
     // the pill — taps either side of it fall through to the list.
     selectionBarWrap: {
@@ -1117,69 +938,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 18,
       borderRadius: 999,
     },
-    selectionBarBtnDisabled: {
-      opacity: 0.6,
-    },
     selectionBarBtnText: {
       color: theme.textInverse,
       fontSize: 13,
       fontWeight: '700',
     },
-    taskPriorityBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 5,
-      paddingVertical: 1,
-      borderRadius: 5,
-    },
-    taskPriorityBadgeText: {
-      fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 0.3,
-    },
-    taskMetaTertiary: {
-      color: theme.textTertiary,
-    },
-    taskCustomBadge: {
-      fontSize: 10,
-      fontWeight: '600',
-      color: theme.textSecondary,
-      backgroundColor: theme.background,
-      borderRadius: 4,
-      paddingHorizontal: 5,
-      paddingVertical: 1,
-      overflow: 'hidden',
-    },
     previewTitleRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
-    },
-    taskMetaLine: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      marginTop: 2,
-    },
-    taskRainBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      paddingHorizontal: 5,
-      paddingVertical: 1,
-      borderRadius: 5,
-      flexShrink: 1,
-      backgroundColor: theme.info + '22',
-    },
-    taskRainBadgeText: {
-      fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 0.3,
-      color: theme.info,
-    },
-    taskHarvestHint: {
-      fontSize: 11,
-      color: theme.success,
     },
     weekDoneChip: {
       flexDirection: 'row',
@@ -1196,117 +963,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 11,
       fontWeight: '700',
       color: theme.success,
-    },
-    taskDetailSheet: {
-      backgroundColor: theme.backgroundSecondary,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      paddingTop: 12,
-    },
-    taskDetailHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingBottom: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-      gap: 14,
-    },
-    taskDetailEmoji: {
-      width: 52,
-      height: 52,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.background,
-      borderRadius: 14,
-      overflow: 'hidden',
-    },
-    taskDetailTitleBlock: {
-      flex: 1,
-    },
-    taskDetailTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.text,
-      marginBottom: 2,
-    },
-    taskDetailSubtitle: {
-      fontSize: 14,
-      color: theme.textSecondary,
-    },
-    taskDetailBody: {
-      paddingHorizontal: 20,
-      paddingTop: 12,
-    },
-    taskDetailRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: 10,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: theme.borderLight,
-    },
-    taskDetailLabel: {
-      fontSize: 13,
-      color: theme.textSecondary,
-      fontWeight: '500',
-    },
-    taskDetailValue: {
-      fontSize: 13,
-      color: theme.text,
-      fontWeight: '600',
-      textAlign: 'right',
-      flex: 1,
-      marginLeft: 16,
-    },
-    taskDetailValueRow: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'flex-end',
-      gap: 5,
-      marginLeft: 16,
-    },
-    taskDetailValueInline: {
-      fontSize: 13,
-      color: theme.text,
-      fontWeight: '600',
-    },
-    // Stacks the value over its explanatory note, both right-aligned against the
-    // row's label. Carries the flex and left margin itself, so the value inside
-    // uses `taskDetailValueInline` (no flex of its own) rather than
-    // `taskDetailValue`, whose `flex: 1` would stretch inside this column.
-    taskDetailValueBlock: {
-      flex: 1,
-      marginLeft: 16,
-      alignItems: 'flex-end',
-      gap: 3,
-    },
-    taskDetailValueNote: {
-      fontSize: 11,
-      color: theme.textTertiary,
-      fontWeight: '500',
-    },
-    taskDetailActions: {
-      flexDirection: 'row',
-      gap: 10,
-      paddingHorizontal: 20,
-      paddingTop: 16,
-      paddingBottom: 8,
-    },
-    taskDetailActionBtn: {
-      flex: 1,
-      paddingVertical: 13,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
-      gap: 6,
-    },
-    taskDetailActionBtnText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.textInverse,
     },
     // Tinted fill only — a border on top of the tint read as a second, competing
     // outline next to the solid primary action.
@@ -1389,9 +1045,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       right: 0,
       bottom: 0,
       backgroundColor: theme.card,
-    },
-    taskDetailValueSkip: {
-      color: theme.warning,
     },
     sectionTitleOverdue: {
       color: theme.error,
