@@ -78,6 +78,16 @@ export const lightTheme = {
   purpleLight: '#F3E5F5',
   purpleBorder: '#E1BEE7',
   purpleDark: '#7B1FA2',
+  // Plot weather banner ground on the Care Plan — paler than `infoLight` so the
+  // `infoDark` text and button on it read as one calm block.
+  infoSurface: '#eaf4fd',
+
+  // Best-time chips on Care Plan cards: warm for morning / any-time windows,
+  // cool for the evening ones. Background + text pairs, AA on both.
+  timeWarmBg: '#fff4e0',
+  timeWarmText: '#9a5b00',
+  timeCoolBg: '#ede7f6',
+  timeCoolText: '#5e35b1',
 
   // Special colors
   overlay: 'rgba(0,0,0,0.5)',
@@ -184,6 +194,12 @@ export const darkTheme = {
   purpleLight: '#3a1a4a',
   purpleBorder: '#4a2a5a',
   purpleDark: '#ce93d8',
+  infoSurface: '#16263a',
+
+  timeWarmBg: '#3a2c14',
+  timeWarmText: '#ffcc80',
+  timeCoolBg: '#2a2140',
+  timeCoolText: '#b39ddb',
 
   // Special colors
   overlay: 'rgba(0,0,0,0.8)',
