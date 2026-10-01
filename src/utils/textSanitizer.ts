@@ -27,3 +27,18 @@ export const sanitizeFreeText = (value: string): string => {
   if (!value) return '';
   return value.replace(CONTROL_CHARS, '');
 };
+
+/** Longest amount a card can carry on its second line. */
+export const TASK_AMOUNT_MAX_LENGTH = 40;
+
+/**
+ * For a task's planned amount — "2 kg compost", "Neem oil 5 ml/L", "1.5 L",
+ * "10–15 cm". One line, so line breaks become spaces; the units and ranges a
+ * dose is written in survive (`. , / % - – × ( )`), anything else is dropped.
+ * Spaces are collapsed but not trimmed, so typing "2 kg " keeps its cursor.
+ */
+export const sanitizeAmountText = (value: string): string => {
+  if (!value) return '';
+  const sanitized = value.replace(/[^\p{L}\p{N}\p{M}\s.,/%\-–×()]+/gu, '').replace(/\s+/g, ' ');
+  return sanitized.slice(0, TASK_AMOUNT_MAX_LENGTH);
+};

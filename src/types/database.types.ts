@@ -1007,6 +1007,15 @@ export interface TaskTemplate {
    * behaving exactly as it does now. Read it through `isSyncOwnedTemplate()`.
    */
   source?: 'auto' | 'manual' | null;
+  /**
+   * How much to apply, in the farmer's own words — "2 kg compost", "20 L",
+   * "Neem oil 5 ml/L". Shown on the Care Plan card and detail sheet.
+   *
+   * Optional and free text, so no migration: absent on every template written
+   * before it existed, and nothing derives it. Plant sync only ever sends
+   * partial updates, so a stored amount survives re-syncs.
+   */
+  amount?: string | null;
   created_at: string;
 }
 

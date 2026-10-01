@@ -11,6 +11,7 @@ import { Plant, TaskType, Bed, TaskTemplate } from '../../types/database.types';
 import { findDuplicateTemplate } from '@/services/taskSchedulingLogic';
 import { getErrorMessage } from '../../utils/errorLogging';
 import { sanitizeNumberText } from '../../utils/plantFormConstants';
+import { sanitizeAmountText, TASK_AMOUNT_MAX_LENGTH } from '@/utils/textSanitizer';
 import { createStyles } from '../../styles/calendarStyles';
 import { useTheme } from '../../theme';
 import {
@@ -87,6 +88,7 @@ export default function CreateTaskModal({
   const [preferredTime, setPreferredTime] = useState<'morning' | 'afternoon' | 'evening' | null>(
     null
   );
+  const [amount, setAmount] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -137,6 +139,7 @@ export default function CreateTaskModal({
     setIsOneTimeTask(false);
     setStartDate(farmToday());
     setPreferredTime(null);
+    setAmount('');
   };
 
   const handleClose = (): void => {
@@ -202,6 +205,7 @@ export default function CreateTaskModal({
         next_due_at: dueDate.toISOString(),
         enabled: true,
         preferred_time: preferredTime,
+        amount: amount.trim() || null,
         source: 'manual',
       });
       Alert.alert('Success', 'Task created successfully!');
@@ -288,6 +292,15 @@ export default function CreateTaskModal({
           <Text style={styles.helperText}>
             Leave both blank for a general task that isn&apos;t tied to a plant or bed.
           </Text>
+
+          <Text style={styles.label}>Amount (Optional)</Text>
+          <FloatingLabelInput
+            label="How much, e.g. 2 kg compost or 20 L"
+            value={amount}
+            onChangeText={(text) => setAmount(sanitizeAmountText(text))}
+            maxLength={TASK_AMOUNT_MAX_LENGTH}
+            returnKeyType="done"
+          />
 
           <Text style={styles.label}>Start Date</Text>
           <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
@@ -478,6 +491,9 @@ export default function CreateTaskModal({
                     })}
                     {preferredTime && ` (${preferredTime})`}
                   </Text>
+                  {amount.trim() !== '' && (
+                    <Text style={styles.previewText}>• Amount: {amount.trim()}</Text>
+                  )}
                   <Text style={styles.previewText}>
                     • Next task:{' '}
                     {formatFarmDate(addCalendarDays(startDate, parseInt(frequencyDays)), {
@@ -507,6 +523,9 @@ export default function CreateTaskModal({
                 })}
                 {preferredTime && ` (${preferredTime})`}
               </Text>
+              {amount.trim() !== '' && (
+                <Text style={styles.previewText}>• Amount: {amount.trim()}</Text>
+              )}
               <Text style={styles.previewText}>• Will not repeat after completion</Text>
             </View>
           )}
