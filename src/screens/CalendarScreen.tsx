@@ -413,15 +413,22 @@ export default function CalendarScreen(): React.JSX.Element {
     setSelectedTaskIds((previous) => (previous.size === 0 ? previous : new Set()));
   }, [currentWeekStart, selectedDate, groupBy, sortBy, normalizedSearchQuery, filters]);
 
+  // Drop selected tasks that left the plan. A picked day's tasks count as
+  // visible: `tasksForDisplay` leaves them out because they head the list.
   useEffect(() => {
     const visibleIds = new Set(
-      [...tasksForDisplay, ...overdueTasks, ...todayTasks].map((task) => task.id)
+      [
+        ...tasksForDisplay,
+        ...overdueTasks,
+        ...todayTasks,
+        ...(selectedDate ? getTasksForDate(selectedDate) : []),
+      ].map((task) => task.id)
     );
     setSelectedTaskIds((previous) => {
       const next = new Set([...previous].filter((id) => visibleIds.has(id)));
       return next.size === previous.size ? previous : next;
     });
-  }, [tasksForDisplay, overdueTasks, todayTasks]);
+  }, [tasksForDisplay, overdueTasks, todayTasks, selectedDate, getTasksForDate]);
 
   const setTodayView = React.useCallback(() => {
     const today = farmToday();
