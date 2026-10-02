@@ -119,6 +119,10 @@ describe('CarePlanTaskCard', () => {
     expect(shown).toContain('Fertilise · 2 kg compost · Coconut Plot');
   });
 
+  it('drops the best-time chip inside a time band, which already says when', () => {
+    expect(text(render({ showBestTime: false }).tree)).not.toContain('After watering');
+  });
+
   it('shows the best-time chip for the task type', () => {
     expect(text(render().tree)).toContain('After watering');
   });

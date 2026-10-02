@@ -53,7 +53,8 @@ export interface UseCalendarDataReturn {
   /** Still ahead (8–30 days) — the collapsed "Harvest soon" row below Today. */
   harvestsSoon: HarvestReadyItem[];
   todayTasks: TaskTemplate[];
-  weekTasks: TaskTemplate[];
+  /** Open work from today through the next six days — the plan's rolling window. */
+  upcomingTasks: TaskTemplate[];
   tasksForDisplay: TaskTemplate[];
   /** Chip counts for the filter sheet — each category counted against the rest. */
   facetCounts: CareTaskFacetCounts;
@@ -74,7 +75,6 @@ export interface UseCalendarDataReturn {
 interface UseCalendarDataOptions {
   normalizedSearchQuery: string;
   normalizeSearchText: (value: string) => string;
-  currentWeekStart: Date;
   selectedDate: Date | null;
   sortBy?: TaskSortOption;
   filters: CareTaskFilters;
@@ -89,7 +89,6 @@ interface UseCalendarDataOptions {
 export function useCalendarData({
   normalizedSearchQuery,
   normalizeSearchText,
-  currentWeekStart,
   selectedDate,
   sortBy = 'due',
   filters,
@@ -463,32 +462,30 @@ export function useCalendarData({
     });
   }, [isSearching, filteredTasks]);
 
-  const weekTasks = useMemo(() => {
+  // A rolling seven days from today rather than a Sun–Sat week: the plan never
+  // spends its later-days rows on days already gone. Recomputed whenever the
+  // task list reloads, which the focus effect does, so it rolls over at midnight.
+  const upcomingTasks = useMemo(() => {
     if (!filteredTasks || filteredTasks.length === 0) return [];
-    const weekStartKey = calendarDateKey(currentWeekStart);
-    const weekEndKey = weekStartKey ? addDaysToDateKey(weekStartKey, 7) : null;
+    const startKey = calendarDateKey(farmToday());
+    const endKey = startKey ? addDaysToDateKey(startKey, 7) : null;
+    if (!startKey || !endKey) return [];
     return filteredTasks.filter((task) => {
       if (!task || !task.next_due_at) return false;
       const dueKey = farmDateKey(task.next_due_at);
-      return (
-        dueKey !== null &&
-        weekStartKey !== null &&
-        weekEndKey !== null &&
-        dueKey >= weekStartKey &&
-        dueKey < weekEndKey
-      );
+      return dueKey !== null && dueKey >= startKey && dueKey < endKey;
     });
-  }, [filteredTasks, currentWeekStart]);
+  }, [filteredTasks]);
 
   const tasksForDisplay = useMemo(() => {
     if (isSearching) return filteredTasks;
-    if (!selectedDate) return weekTasks;
+    if (!selectedDate) return upcomingTasks;
     const selectedKey = calendarDateKey(selectedDate);
-    return weekTasks.filter((t) => {
+    return upcomingTasks.filter((t) => {
       if (!t.next_due_at) return true;
       return farmDateKey(t.next_due_at) !== selectedKey;
     });
-  }, [isSearching, filteredTasks, weekTasks, selectedDate]);
+  }, [isSearching, filteredTasks, upcomingTasks, selectedDate]);
 
   return {
     // Raw state — orphaned (deleted-bed) tasks excluded so they never surface
@@ -513,7 +510,7 @@ export function useCalendarData({
     harvestsReadyNow,
     harvestsSoon,
     todayTasks,
-    weekTasks,
+    upcomingTasks,
     tasksForDisplay,
     facetCounts,
     plotResolution,

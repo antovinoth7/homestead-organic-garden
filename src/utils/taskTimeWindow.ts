@@ -128,3 +128,66 @@ export function showPreferredTimeInMeta(
   const best = taskBestTime(task);
   return !best || best.slot === 'any';
 }
+
+/**
+ * The part of today a task is listed under on the Care Plan. A task with no
+ * window, or with a preferred time that clashes with its window (afternoon),
+ * goes under "Any time" — the plan makes no claim about when to do it.
+ */
+export type TimeBand = BestTimeSlot;
+
+export function taskTimeBand(task: Pick<TaskTemplate, 'task_type' | 'preferred_time'>): TimeBand {
+  return taskBestTime(task)?.slot ?? 'any';
+}
+
+export interface TimeBandInfo {
+  title: string;
+  /** One line under the band title: why the work in it goes then. */
+  subtitle: string;
+}
+
+/** The Care Plan's three bands for today, in the order the day runs. */
+export const TIME_BAND_ORDER: readonly TimeBand[] = ['morning', 'any', 'evening'];
+
+export const TIME_BANDS: Record<TimeBand, TimeBandInfo> = {
+  morning: {
+    title: 'Before 10 AM',
+    subtitle: 'Water while it is cool. Less is lost to heat and wind.',
+  },
+  any: {
+    title: 'Any time',
+    subtitle: 'Fertilise after watering. Prune in dry weather.',
+  },
+  evening: {
+    title: 'After 4 PM',
+    subtitle: 'Neem breaks down in strong sun, and bees are less active in the evening.',
+  },
+};
+
+/** Farm offset from UTC in minutes — India Standard Time has no DST. */
+const FARM_UTC_OFFSET_MINUTES = 330;
+
+/** Minutes past midnight on the farm clock, whatever zone the device is in. */
+export function farmMinuteOfDay(now: Date): number {
+  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  return (utcMinutes + FARM_UTC_OFFSET_MINUTES) % (24 * 60);
+}
+
+/**
+ * The band the farm clock is in now: before 10:00 is the morning band, from
+ * 16:00 the evening band, and the hours between belong to "Any time".
+ */
+export function currentTimeBand(now: Date): TimeBand {
+  const hour = Math.floor(farmMinuteOfDay(now) / 60);
+  if (hour < 10) return 'morning';
+  if (hour >= 16) return 'evening';
+  return 'any';
+}
+
+/** "6:23" — the 12-hour farm clock for the band's NOW marker. */
+export function farmClockLabel(now: Date): string {
+  const minuteOfDay = farmMinuteOfDay(now);
+  const hour24 = Math.floor(minuteOfDay / 60);
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  return `${hour12}:${String(minuteOfDay % 60).padStart(2, '0')}`;
+}

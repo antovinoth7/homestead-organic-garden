@@ -209,6 +209,43 @@ Repot, mulch, weeding and cultivating carry no window. The farmer's own
 evening) is dropped and the card names the farmer's time instead. Condition
 windows (`slot: 'any'`) never clash.
 
+### Time bands (the Care Plan's default layout)
+
+With Group by set to **Time of day** (the default), today's open work is laid
+out in three bands. Each task goes into the band of its window
+(`taskTimeBand`):
+
+| Band | Holds | Subtitle |
+|---|---|---|
+| Before 10 AM | `slot: 'morning'` — water, harvest | Water while it is cool… |
+| Any time | `slot: 'any'`, no window, or an afternoon preference | Fertilise after watering… |
+| After 4 PM | `slot: 'evening'` — spray, transplanting, evening watering | Neem breaks down in strong sun… |
+
+- **NOW marker.** The band holding the farm clock carries a "NOW · h:mm" chip
+  (`currentTimeBand`). The clock is IST: before 10:00 is morning, 10:00–15:59 is
+  "any", and from 16:00 is evening. The device timezone is ignored.
+- **Inside the morning band.** It holds the plots' rain banners, each prefixed
+  with its plot name, and the folded **Harvest round** card: "N ready · Pick
+  before 9 AM · K are N days late". Opened, the round lists each crop with
+  **+ Log**, then **Harvest soon** (upcoming checks), which folds behind its own
+  row.
+- **Card chips.** Cards in a time band drop their best-time chip, because the
+  band already says when.
+
+The bands sit in this order:
+
+1. A **picked day**, when there is one, with **+ Add**.
+2. **Catch up** (overdue), ordered by priority (critical → low) and then by days
+   late. With more than two tasks it folds to the two most urgent, under
+   **Show all N** and **Select all N**.
+3. Today's three time bands.
+4. Later days, folded one per day.
+5. **Done today**.
+
+Later days come from a rolling window of today and the next six days
+(`upcomingTasks` in `useCalendarData`), not a Sun–Sat week. Past days cannot be
+picked: late work is already under Catch up.
+
 ### Rain-moved watering
 
 Each plot section on the Care Plan shows that plot's own forecast
@@ -224,8 +261,10 @@ looks at today and the next two days for the first day with at least showers
 - **Undo** puts the moved tasks back on their previous due dates for the rest of
   the session.
 
-The banner appears on a plot's `Today · <plot>` section, so a plot with nothing
-due today shows no banner. There is no covered/protected-pot flag yet: a potted
+In the time layout, every plot's banner sits in the Before 10 AM band and is
+prefixed with the plot's name. Grouped by plot, it sits on that plot's
+`Today · <plot>` section. In either layout the band stays visible while it has
+a banner, even with nothing left due, so **Undo** stays in reach. There is no covered/protected-pot flag yet: a potted
 plant under a roof is moved like any other — exclude it by leaving it unmoved
 (reschedule the others individually) until such a field exists.
 

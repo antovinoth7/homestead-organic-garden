@@ -36,6 +36,8 @@ export interface CarePlanTaskCardProps {
   blocked: boolean;
   /** Set for the Done today rows. Only a pending one can still be undone. */
   done?: CarePlanCardDoneState | null;
+  /** False inside a time band, which already says when — the chip would repeat it. */
+  showBestTime?: boolean;
   onPress: (task: TaskTemplate) => void;
   onLongPress: (task: TaskTemplate) => void;
   onTick: (task: TaskTemplate) => void;
@@ -55,6 +57,7 @@ function CarePlanTaskCardComponent({
   selected,
   blocked,
   done,
+  showBestTime = true,
   onPress,
   onLongPress,
   onTick,
@@ -65,7 +68,7 @@ function CarePlanTaskCardComponent({
   const isDone = done != null;
   const label = TASK_LABELS[task.task_type];
   const amount = task.amount?.trim() ?? '';
-  const bestTime = isDone ? null : taskBestTime(task);
+  const bestTime = isDone || !showBestTime ? null : taskBestTime(task);
   const timeLabel = showPreferredTimeInMeta(task) ? preferredTimeLabel(task.preferred_time) : null;
   const barColor = overdue && !isDone ? theme.error : TASK_COLORS[task.task_type];
   const showBadge = !isDone && (priority === 'critical' || priority === 'high');

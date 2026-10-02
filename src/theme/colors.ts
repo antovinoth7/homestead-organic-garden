@@ -89,6 +89,10 @@ export const lightTheme = {
   timeCoolBg: '#ede7f6',
   timeCoolText: '#5e35b1',
 
+  // Month-sheet day dots: a few tasks, a busy day (4+). Today with overdue work uses `error`.
+  calendarDotLight: '#81c784',
+  calendarDotBusy: '#1a4a2e',
+
   // Special colors
   overlay: 'rgba(0,0,0,0.5)',
   shadow: '#000',
@@ -200,6 +204,9 @@ export const darkTheme = {
   timeWarmText: '#ffcc80',
   timeCoolBg: '#2a2140',
   timeCoolText: '#b39ddb',
+
+  calendarDotLight: '#3f7a43',
+  calendarDotBusy: '#a5d6a7',
 
   // Special colors
   overlay: 'rgba(0,0,0,0.8)',

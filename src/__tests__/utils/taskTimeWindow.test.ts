@@ -1,8 +1,13 @@
 import {
   TASK_BEST_TIME,
+  TIME_BANDS,
+  TIME_BAND_ORDER,
+  currentTimeBand,
+  farmClockLabel,
   preferredTimeLabel,
   showPreferredTimeInMeta,
   taskBestTime,
+  taskTimeBand,
 } from '@/utils/taskTimeWindow';
 import type { TaskType } from '@/types/database.types';
 
@@ -91,5 +96,48 @@ describe('showPreferredTimeInMeta', () => {
 
   it('has nothing to show without a time', () => {
     expect(showPreferredTimeInMeta(task('mulch'))).toBe(false);
+  });
+});
+
+describe('taskTimeBand', () => {
+  it.each<[TaskType, string | null, string]>([
+    ['water', null, 'morning'],
+    ['harvest', null, 'morning'],
+    ['spray', null, 'evening'],
+    ['water', 'evening', 'evening'],
+    ['fertilise', null, 'any'],
+    ['mulch', null, 'any'],
+    ['water', 'afternoon', 'any'],
+  ])('puts %s (preferred %s) in the %s band', (type, preferred, band) => {
+    expect(taskTimeBand(task(type, preferred))).toBe(band);
+  });
+
+  it('names every band in order', () => {
+    expect(TIME_BAND_ORDER.map((band) => TIME_BANDS[band].title)).toEqual([
+      'Before 10 AM',
+      'Any time',
+      'After 4 PM',
+    ]);
+  });
+});
+
+describe('currentTimeBand', () => {
+  // The farm clock is IST (UTC+5:30): 04:29 UTC is 09:59 on the farm.
+  it.each<[string, string]>([
+    ['2026-10-03T00:53:00.000Z', 'morning'],
+    ['2026-10-03T04:29:00.000Z', 'morning'],
+    ['2026-10-03T04:30:00.000Z', 'any'],
+    ['2026-10-03T10:29:00.000Z', 'any'],
+    ['2026-10-03T10:30:00.000Z', 'evening'],
+    ['2026-10-03T18:29:00.000Z', 'evening'],
+    ['2026-10-03T18:30:00.000Z', 'morning'],
+  ])('at %s is %s', (iso, band) => {
+    expect(currentTimeBand(new Date(iso))).toBe(band);
+  });
+
+  it('labels the farm clock in 12-hour time', () => {
+    expect(farmClockLabel(new Date('2026-10-03T00:53:00.000Z'))).toBe('6:23');
+    expect(farmClockLabel(new Date('2026-10-03T10:35:00.000Z'))).toBe('4:05');
+    expect(farmClockLabel(new Date('2026-10-03T18:30:00.000Z'))).toBe('12:00');
   });
 });

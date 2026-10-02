@@ -245,6 +245,7 @@ describe('CareTaskFilterSheet', () => {
   it('offers Group By and Sort By options', () => {
     const rendered = render();
     expect(testIDs(rendered, 'care-group-')).toEqual([
+      'care-group-time',
       'care-group-none',
       'care-group-location',
       'care-group-type',

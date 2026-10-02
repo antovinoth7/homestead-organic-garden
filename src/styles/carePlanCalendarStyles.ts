@@ -1,94 +1,26 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
 
-/** Height of a day cell in the week strip — the strip's whole visual height. */
-export const WEEK_STRIP_CELL_HEIGHT = 48;
+/** A day cell's date disc — the grid's visual unit. */
+const DAY_DISC = 32;
 
 /**
- * The Care Plan's calendar: the slim week strip that heads the list, and the
- * month grid that opens in a sheet from the header's calendar button.
+ * The Care Plan's month grid, which opens in a sheet from the date line in the
+ * header. Busy days carry a dot under the date; the legend explains the colours.
  */
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
-    // ── Week strip ───────────────────────────────────────────────────────────
-    weekCard: {
-      marginHorizontal: 12,
-      marginVertical: 4,
-      backgroundColor: theme.card,
-      borderRadius: 16,
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      elevation: 3,
-    },
-    weekRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 2,
-      paddingHorizontal: 2,
-      paddingVertical: 4,
-    },
-    weekNav: {
-      width: 28,
-      height: 44,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    weekDay: {
-      flex: 1,
-      minWidth: 0,
-      height: WEEK_STRIP_CELL_HEIGHT,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 1,
-      borderRadius: 10,
-      backgroundColor: theme.background,
-    },
-    weekDayToday: { backgroundColor: theme.primary },
-    weekDaySelected: { backgroundColor: theme.accent },
-    weekDayName: {
-      fontSize: 10,
-      lineHeight: 11,
-      fontWeight: '500',
-      color: theme.textSecondary,
-    },
-    weekDayNumber: {
-      fontSize: 15,
-      lineHeight: 17,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    weekDayTextOnFill: { color: theme.textInverse },
-    weekDayCount: {
-      minWidth: 14,
-      height: 12,
-      paddingHorizontal: 4,
-      borderRadius: 6,
-      overflow: 'hidden',
-      fontSize: 9,
-      lineHeight: 12,
-      fontWeight: '700',
-      textAlign: 'center',
-      color: theme.primary,
-      backgroundColor: theme.primaryLight,
-    },
-    weekDayCountSpacer: { height: 12 },
-    weekDayCountOnToday: { backgroundColor: theme.card, color: theme.primary },
-    weekDayCountOnSelected: { backgroundColor: theme.card, color: theme.accent },
-
-    // ── Month sheet ──────────────────────────────────────────────────────────
     monthSheet: {
       backgroundColor: theme.card,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      paddingHorizontal: 20,
+      paddingHorizontal: 18,
     },
     monthHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 10,
+      gap: 4,
+      marginBottom: 6,
     },
     monthNav: {
       width: 44,
@@ -97,6 +29,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
     },
     monthTitle: {
+      flex: 1,
       fontSize: 18,
       fontWeight: '700',
       color: theme.text,
@@ -109,70 +42,73 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       textAlign: 'center',
       fontSize: 11,
-      fontWeight: '700',
-      color: theme.textSecondary,
+      fontWeight: '600',
+      color: theme.textTertiary,
     },
     monthGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
     },
-    // A seventh of the row each; the inner cell carries the gap as padding so
-    // seven always fit regardless of rounding.
+    // A seventh of the row each, so seven always fit regardless of rounding.
     monthSlot: {
       width: `${100 / 7}%`,
-      padding: 2,
     },
     monthCell: {
       height: 46,
-      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 2,
     },
-    monthCellToday: {
-      backgroundColor: theme.primaryLight,
+    monthDisc: {
+      width: DAY_DISC,
+      height: DAY_DISC,
+      borderRadius: DAY_DISC / 2,
       borderWidth: 1.5,
-      borderColor: theme.primary,
+      // The sheet's own ground: an invisible ring keeps every disc the same size.
+      borderColor: theme.card,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    monthCellSelected: { backgroundColor: theme.primary },
+    monthDiscToday: { borderColor: theme.primary },
+    monthDiscSelected: { backgroundColor: theme.primary, borderColor: theme.primary },
     monthCellNumber: {
-      fontSize: 15,
-      lineHeight: 17,
+      fontSize: 14,
       fontWeight: '600',
       color: theme.text,
     },
-    monthCellNumberToday: { color: theme.primary, fontWeight: '700' },
+    monthCellNumberPast: { color: theme.textTertiary, opacity: 0.6 },
     monthCellNumberSelected: { color: theme.textInverse, fontWeight: '700' },
-    monthCellCount: {
-      minHeight: 10,
-      fontSize: 10,
-      lineHeight: 10,
-      fontWeight: '700',
-      color: theme.accent,
+    // Overlaps the disc's lower edge so the dot reads as part of the date.
+    monthDot: {
+      width: 5,
+      height: 5,
+      borderRadius: 3,
+      marginTop: -4,
     },
-    monthCellCountSelected: { color: theme.textInverse },
-    monthFooter: {
+    monthDotSpacer: { height: 5, marginTop: -4 },
+    monthDotLight: { backgroundColor: theme.calendarDotLight },
+    monthDotBusy: { backgroundColor: theme.calendarDotBusy },
+    monthDotOverdue: { backgroundColor: theme.error },
+    monthDotOnSelected: { backgroundColor: theme.textInverse },
+    legend: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      columnGap: 14,
+      rowGap: 4,
+      marginTop: 10,
+    },
+    legendItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-      marginTop: 14,
+      gap: 5,
     },
-    monthFooterNote: {
-      flex: 1,
+    legendDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    legendText: {
       fontSize: 12,
+      fontWeight: '500',
       color: theme.textSecondary,
-    },
-    monthTodayButton: {
-      minHeight: 44,
-      justifyContent: 'center',
-      paddingHorizontal: 16,
-      borderRadius: 22,
-      backgroundColor: theme.primaryLight,
-    },
-    monthTodayButtonText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.primary,
     },
   });

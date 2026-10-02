@@ -1,24 +1,22 @@
 /**
- * The Care Plan's list model — which sections the task list shows, in what
- * order, and what each header says.
+ * The Care Plan's list model — which bands the task list shows, in what order,
+ * and what each header says.
  *
  * The screen hands in lists it has already filtered, sorted and windowed; this
  * module only arranges them. Keeping the arrangement pure means the order the
- * farmer walks the list in (harvest checks → overdue → today plot by plot →
+ * farmer walks the list in (a picked day → catch up → today band by band →
  * later days → done) is pinned by unit tests rather than by a 300-line memo.
  *
  * Pure — no React, no services.
  */
 
 import type { TaskTemplate, TaskType } from '@/types/database.types';
-import type { VisualIconKey } from '@/types/visual.types';
 import type { HarvestReadyItem } from '@/utils/harvestStats';
 import { TASK_LABELS, TASK_TYPE_ORDER } from '@/utils/taskConstants';
 
 export type CarePlanEmptyVariant =
   | 'loadError'
   | 'selectedDateFiltered'
-  | 'selectedDateNone'
   | 'searchNone'
   | 'filtersNone'
   | 'noUpcoming';
@@ -35,56 +33,100 @@ export interface CarePlanDoneItem {
   pending: boolean;
 }
 
+/**
+ * Where a row sits in the harvest-round card, which spans several rows: the
+ * first one rounds its top corners, the last one its bottom corners.
+ */
+interface RoundEdges {
+  first: boolean;
+  last: boolean;
+}
+
 export type CarePlanRow =
   | { key: string; kind: 'task'; task: TaskTemplate }
   | { key: string; kind: 'done'; item: CarePlanDoneItem }
-  | { key: string; kind: 'harvest'; item: HarvestReadyItem }
+  /** Head of the harvest-round card: the ready checks, folded until opened. */
+  | ({
+      key: string;
+      kind: 'harvestRound';
+      readyCount: number;
+      /** Ready checks already past their date, and the oldest one's days late. */
+      lateCount: number;
+      maxLateDays: number;
+      expanded: boolean;
+    } & RoundEdges)
+  | ({ key: string; kind: 'harvest'; item: HarvestReadyItem } & RoundEdges)
   /** Disclosure row heading the look-ahead harvests; `fromDays`/`toDays` are its span. */
-  | { key: string; kind: 'harvestSoonToggle'; count: number; fromDays: number; toDays: number }
+  | ({
+      key: string;
+      kind: 'harvestSoonToggle';
+      count: number;
+      fromDays: number;
+      toDays: number;
+      expanded: boolean;
+    } & RoundEdges)
   | {
       key: string;
       kind: 'empty';
       variant: CarePlanEmptyVariant;
       rawCount?: number;
-      isToday?: boolean;
     };
+
+/**
+ * How a band reads on the timeline: the gutter dot, the title colour and
+ * whether the band sits on a tinted panel.
+ */
+export type CarePlanBandTone = 'picked' | 'overdue' | 'band' | 'later' | 'done' | 'plain';
 
 export interface CarePlanSectionHeader {
   title: string;
-  iconKey?: VisualIconKey;
+  /** Tasks in the band — shown beside the title; 0 shows nothing. */
   count: number;
+  tone: CarePlanBandTone;
+  /** One line under the title: why the band, or what a folded band holds. */
+  subtitle?: string;
   /** Tasks the select-all box covers in selection mode; omitted when it has none. */
   selectableTasks?: TaskTemplate[];
-  overdue?: boolean;
-  /** Carries the "✓ N done" chip — the first Today section only. */
-  showDoneChip?: boolean;
-  /** Title stretches to push the count right (default true). */
-  titleFlex?: boolean;
   /** The header taps to open / close its rows. */
   collapsible?: boolean;
   expanded?: boolean;
-  /** One-line type summary shown under a closed header, e.g. "Water ×2 · Spray". */
-  preview?: string;
-  /** Plot name for the per-plot weather banner. */
+  /** The farm clock is inside this band's window — it carries the NOW marker. */
+  isNow?: boolean;
+  /** Plots whose rain banner sits under this header. */
+  rainPlots?: string[];
+  /** Plot name when every task in the band is on that plot — cards then omit it. */
   plot?: string;
+  /** The header carries "+ Add", which creates a task on the picked day. */
+  addAction?: boolean;
+}
+
+/** The Catch-up band's "Show all N / Select all N" row under its last card. */
+export interface CarePlanOverdueFooter {
+  expanded: boolean;
+  total: number;
 }
 
 export interface CarePlanSection {
   key: string;
   header: CarePlanSectionHeader | null;
   data: CarePlanRow[];
+  footer?: CarePlanOverdueFooter;
 }
 
-/** A run of tasks the screen has already grouped (one plot, one day, one type…). */
+/** A run of tasks the screen has already grouped (one band, one plot, one day…). */
 export interface CarePlanTaskGroup {
   key: string;
   title: string;
   tasks: TaskTemplate[];
-  iconKey?: VisualIconKey;
+  subtitle?: string;
   /** Later days fold away behind one row each; today's groups never do. */
   collapsible?: boolean;
-  /** Plot name when the group is one plot — drives the weather banner. */
+  /** Plot name when the group is one plot — cards then omit it. */
   plot?: string;
+  rainPlots?: string[];
+  isNow?: boolean;
+  /** Emit the band even with no tasks — it still has a rain banner to show. */
+  keepWhenEmpty?: boolean;
 }
 
 export interface CarePlanSectionsInput {
@@ -95,19 +137,27 @@ export interface CarePlanSectionsInput {
   /** All matches while searching (sorted). */
   searchResults: TaskTemplate[];
   filtersActive: boolean;
-  /** The day picked on the calendar, when it is not part of the normal flow. */
+  /** The day picked from the date line or month sheet, when it is not today. */
   selectedDate: {
     key: string;
     title: string;
-    isToday: boolean;
     tasks: TaskTemplate[];
     rawCount: number;
   } | null;
   harvestsReadyNow: HarvestReadyItem[];
   harvestsSoon: HarvestReadyItem[];
   harvestSoonExpanded: boolean;
+  /**
+   * Today's group the harvest round goes in (the morning band). When no such
+   * group is emitted, the round stands on its own at the top.
+   */
+  harvestHostKey?: string;
+  /** Overdue work, most urgent first — the Catch-up band shows the head of it. */
   overdue: TaskTemplate[];
-  /** Today's open work — one group, or one per plot when grouped by location. */
+  /** Days late of the oldest overdue task, and how many are critical. */
+  overdueOldestDays: number;
+  overdueCriticalCount: number;
+  /** Today's open work — one group per time band, per plot, or one in all. */
   todayGroups: CarePlanTaskGroup[];
   /** Everything after today in the window — per day, or per group. */
   restGroups: CarePlanTaskGroup[];
@@ -116,9 +166,13 @@ export interface CarePlanSectionsInput {
   openSections: ReadonlySet<string>;
 }
 
-/** Section key of the overdue block — also a deep-link target. */
+/** Section key of the Catch-up band — also a deep-link target. */
 export const OVERDUE_SECTION_KEY = 'overdue';
 export const DONE_SECTION_KEY = 'done-today';
+/** `openSections` key of the harvest-round card. */
+export const HARVEST_ROUND_KEY = 'harvest-round';
+/** Overdue cards the folded Catch-up band still shows. */
+export const CATCH_UP_PREVIEW_COUNT = 2;
 
 /**
  * "Water ×2 · Spray" — what a folded section holds, in the fixed task-type
@@ -138,12 +192,16 @@ export function taskTypePreview(tasks: readonly Pick<TaskTemplate, 'task_type'>[
 export interface TodaySummary {
   title: string;
   subtitle: string;
+  /** "3 of 12 done" — today's done work against all of today's work. */
+  progressLabel: string;
+  /** 0–1 share of today's work that is done. */
+  progress: number;
 }
 
 /**
- * The line at the top of the list: how much is on today, and the shape of it.
- * Overdue work counts as today's — it is due now, and it is what the farmer has
- * to get through before the day is done.
+ * The progress card at the top of the list: how much is on today, and the
+ * shape of it. Overdue work counts as today's — it is due now, and it is what
+ * the farmer has to get through before the day is done.
  */
 export function summarizeToday(
   dueNow: readonly TaskTemplate[],
@@ -160,13 +218,19 @@ export function summarizeToday(
   ]
     .filter(Boolean)
     .join(' · ');
-  return { title, subtitle };
+  const total = n + doneCount;
+  return {
+    title,
+    subtitle,
+    progressLabel: `${doneCount} of ${total} done`,
+    progress: total > 0 ? doneCount / total : 0,
+  };
 }
 
 /**
  * Splits tasks into one group per key, keeping the order keys first appear in
  * `order` and then in the list itself. Used for plots (configured order), days
- * (chronological) and types (fixed order).
+ * (chronological), types (fixed order) and time bands.
  */
 export function groupTasksBy(
   tasks: readonly TaskTemplate[],
@@ -192,12 +256,72 @@ const taskRows = (prefix: string, tasks: readonly TaskTemplate[]): CarePlanRow[]
 const emptySection = (
   key: string,
   variant: CarePlanEmptyVariant,
-  extra: { rawCount?: number; isToday?: boolean } = {}
+  extra: { rawCount?: number } = {}
 ): CarePlanSection => ({
   key,
   header: null,
   data: [{ key, kind: 'empty', variant, ...extra }],
 });
+
+/**
+ * The harvest-round card as rows: its head, then (when open) every ready check
+ * and the look-ahead toggle with its crops. With nothing ready, the look-ahead
+ * toggle stands alone as the card. Edges are set last, once the rows are known.
+ */
+export function harvestRoundRows(
+  ready: readonly HarvestReadyItem[],
+  soon: readonly HarvestReadyItem[],
+  roundExpanded: boolean,
+  soonExpanded: boolean
+): CarePlanRow[] {
+  type RoundRow = Extract<CarePlanRow, { kind: 'harvestRound' | 'harvest' | 'harvestSoonToggle' }>;
+  // Distributes over the union — a plain `Omit` would merge its members.
+  type WithoutEdges<T> = T extends unknown ? Omit<T, 'first' | 'last'> : never;
+  const rows: WithoutEdges<RoundRow>[] = [];
+
+  const soonRows = (): void => {
+    const firstSoon = soon[0];
+    const lastSoon = soon[soon.length - 1];
+    if (!firstSoon || !lastSoon) return;
+    rows.push({
+      key: 'harvest-soon-toggle',
+      kind: 'harvestSoonToggle',
+      count: soon.length,
+      fromDays: firstSoon.daysUntil,
+      toDays: lastSoon.daysUntil,
+      expanded: soonExpanded,
+    });
+    if (!soonExpanded) return;
+    // Keyed apart from the ready rows' `harvest-<id>`: a crop can legitimately
+    // move between the two lists across a re-render.
+    for (const item of soon) {
+      rows.push({ key: `harvest-soon-${item.plant.id}`, kind: 'harvest', item });
+    }
+  };
+
+  if (ready.length > 0) {
+    const late = ready.filter((item) => item.daysUntil < 0);
+    rows.push({
+      key: HARVEST_ROUND_KEY,
+      kind: 'harvestRound',
+      readyCount: ready.length,
+      lateCount: late.length,
+      maxLateDays: late.reduce((max, item) => Math.max(max, -item.daysUntil), 0),
+      expanded: roundExpanded,
+    });
+    if (roundExpanded) {
+      for (const item of ready)
+        rows.push({ key: `harvest-${item.plant.id}`, kind: 'harvest', item });
+      soonRows();
+    }
+  } else {
+    soonRows();
+  }
+
+  return rows.map(
+    (row, index) => ({ ...row, first: index === 0, last: index === rows.length - 1 }) as RoundRow
+  );
+}
 
 /** Builds the full section list for the Care Plan's SectionList. */
 export function buildCarePlanSections(input: CarePlanSectionsInput): CarePlanSection[] {
@@ -211,7 +335,10 @@ export function buildCarePlanSections(input: CarePlanSectionsInput): CarePlanSec
     harvestsReadyNow,
     harvestsSoon,
     harvestSoonExpanded,
+    harvestHostKey,
     overdue,
+    overdueOldestDays,
+    overdueCriticalCount,
     todayGroups,
     restGroups,
     done,
@@ -221,18 +348,21 @@ export function buildCarePlanSections(input: CarePlanSectionsInput): CarePlanSec
   if (loadFailed) return [emptySection('load-error', 'loadError')];
 
   const sections: CarePlanSection[] = [];
+  const roundOpen = openSections.has(HARVEST_ROUND_KEY);
 
   // Search replaces the whole plan with one flat result list.
   if (isSearching) {
-    if (harvestsReadyNow.length > 0) sections.push(harvestReadySection(harvestsReadyNow));
+    const round = harvestRoundRows(harvestsReadyNow, [], roundOpen, false);
+    if (round.length > 0) sections.push({ key: HARVEST_ROUND_KEY, header: null, data: round });
     if (searchResults.length === 0) {
       if (!initialLoading) sections.push(emptySection('search-empty', 'searchNone'));
     } else {
       sections.push({
         key: 'search-results',
         header: {
-          title: 'Search Results',
+          title: 'Search results',
           count: searchResults.length,
+          tone: 'plain',
           selectableTasks: searchResults,
         },
         data: taskRows('search', searchResults),
@@ -241,90 +371,89 @@ export function buildCarePlanSections(input: CarePlanSectionsInput): CarePlanSec
     return sections;
   }
 
-  // A picked day sits on top, so the jump from the calendar lands somewhere.
+  // A picked day sits on top, so the jump from the date line lands somewhere.
   if (selectedDate) {
-    if (selectedDate.tasks.length > 0) {
-      sections.push({
-        key: 'selected-date',
-        header: {
-          title: selectedDate.title,
-          count: selectedDate.tasks.length,
-          selectableTasks: selectedDate.tasks,
-          showDoneChip: selectedDate.isToday,
-        },
-        data: taskRows('selected', selectedDate.tasks),
-      });
-    } else if (!initialLoading) {
-      sections.push(
-        selectedDate.rawCount > 0 && filtersActive
-          ? emptySection('selected-date-empty', 'selectedDateFiltered', {
-              rawCount: selectedDate.rawCount,
-            })
-          : emptySection('selected-date-empty', 'selectedDateNone', {
-              isToday: selectedDate.isToday,
-            })
-      );
-    }
-  }
-
-  // Harvest checks that are due: only the ready half earns a pinned section.
-  if (harvestsReadyNow.length > 0) sections.push(harvestReadySection(harvestsReadyNow));
-
-  if (overdue.length > 0) {
+    const { tasks } = selectedDate;
     sections.push({
-      key: OVERDUE_SECTION_KEY,
+      key: 'selected-date',
       header: {
-        title: 'Overdue',
-        iconKey: 'general.warning',
-        count: overdue.length,
-        selectableTasks: overdue,
-        overdue: true,
+        title: selectedDate.title,
+        count: tasks.length,
+        tone: 'picked',
+        subtitle:
+          tasks.length > 0
+            ? 'The day you picked. Today’s work is below.'
+            : 'Nothing planned for this date.',
+        selectableTasks: tasks.length > 0 ? tasks : undefined,
+        addAction: true,
       },
-      data: taskRows('overdue', overdue),
+      data:
+        tasks.length === 0 && selectedDate.rawCount > 0 && filtersActive && !initialLoading
+          ? [
+              {
+                key: 'selected-date-empty',
+                kind: 'empty',
+                variant: 'selectedDateFiltered',
+                rawCount: selectedDate.rawCount,
+              },
+            ]
+          : taskRows('selected', tasks),
     });
   }
 
-  todayGroups.forEach((group, index) => {
+  const round = harvestRoundRows(harvestsReadyNow, harvestsSoon, roundOpen, harvestSoonExpanded);
+  const emittedToday = todayGroups.filter(
+    (group) =>
+      group.tasks.length > 0 ||
+      group.keepWhenEmpty === true ||
+      (group.key === harvestHostKey && round.length > 0)
+  );
+  const roundHosted = round.length > 0 && emittedToday.some((g) => g.key === harvestHostKey);
+
+  // No band to carry it: the round stands at the top, as harvest checks did.
+  if (round.length > 0 && !roundHosted) {
+    sections.push({ key: HARVEST_ROUND_KEY, header: null, data: round });
+  }
+
+  if (overdue.length > 0) {
+    const foldable = overdue.length > CATCH_UP_PREVIEW_COUNT;
+    const expanded = !foldable || openSections.has(OVERDUE_SECTION_KEY);
+    const oldest = `Oldest ${overdueOldestDays} day${overdueOldestDays === 1 ? '' : 's'}`;
+    const critical = overdueCriticalCount > 0 ? ` · ${overdueCriticalCount} critical` : '';
+    sections.push({
+      key: OVERDUE_SECTION_KEY,
+      header: {
+        title: 'Catch up',
+        count: overdue.length,
+        tone: 'overdue',
+        subtitle:
+          foldable && !expanded
+            ? `${oldest}${critical} · most urgent shown`
+            : 'All overdue work, most urgent first.',
+        selectableTasks: overdue,
+        collapsible: foldable,
+        expanded,
+      },
+      data: taskRows('overdue', expanded ? overdue : overdue.slice(0, CATCH_UP_PREVIEW_COUNT)),
+      footer: foldable ? { expanded, total: overdue.length } : undefined,
+    });
+  }
+
+  for (const group of emittedToday) {
+    const hostsRound = roundHosted && group.key === harvestHostKey;
     sections.push({
       key: `today-${group.key}`,
       header: {
         title: group.title,
-        iconKey: group.iconKey,
         count: group.tasks.length,
-        selectableTasks: group.tasks,
-        showDoneChip: index === 0,
+        tone: 'band',
+        subtitle: group.subtitle,
+        selectableTasks: group.tasks.length > 0 ? group.tasks : undefined,
+        isNow: group.isNow,
+        rainPlots: group.rainPlots,
         plot: group.plot,
       },
-      data: taskRows(`today-${group.key}`, group.tasks),
-    });
-  });
-
-  // Look-ahead harvests — below the due work, folded behind one row. The list
-  // arrives sorted, so its first and last entries are the day span.
-  const firstSoon = harvestsSoon[0];
-  const lastSoon = harvestsSoon[harvestsSoon.length - 1];
-  if (firstSoon && lastSoon) {
-    sections.push({
-      key: 'harvest-soon',
-      header: null,
-      data: [
-        {
-          key: 'harvest-soon-toggle',
-          kind: 'harvestSoonToggle',
-          count: harvestsSoon.length,
-          fromDays: firstSoon.daysUntil,
-          toDays: lastSoon.daysUntil,
-        },
-        // Keyed apart from the pinned section's `harvest-<id>`: a crop can
-        // legitimately appear in either list across a re-render.
-        ...(harvestSoonExpanded
-          ? harvestsSoon.map((item) => ({
-              key: `harvest-soon-${item.plant.id}`,
-              kind: 'harvest' as const,
-              item,
-            }))
-          : []),
-      ],
+      data: [...(hostsRound ? round : []), ...taskRows(`today-${group.key}`, group.tasks)],
     });
   }
 
@@ -336,12 +465,12 @@ export function buildCarePlanSections(input: CarePlanSectionsInput): CarePlanSec
       key,
       header: {
         title: group.title,
-        iconKey: group.iconKey,
         count: group.tasks.length,
+        tone: 'later',
+        subtitle: group.subtitle ?? (collapsible ? taskTypePreview(group.tasks) : undefined),
         selectableTasks: expanded ? group.tasks : undefined,
         collapsible,
         expanded,
-        preview: collapsible && !expanded ? taskTypePreview(group.tasks) : undefined,
         plot: group.plot,
       },
       data: expanded ? taskRows(key, group.tasks) : [],
@@ -351,33 +480,27 @@ export function buildCarePlanSections(input: CarePlanSectionsInput): CarePlanSec
   const hasOpenWork =
     overdue.length > 0 ||
     todayGroups.some((group) => group.tasks.length > 0) ||
-    restGroups.some((group) => group.tasks.length > 0);
+    restGroups.some((group) => group.tasks.length > 0) ||
+    (selectedDate?.tasks.length ?? 0) > 0;
 
   if (!hasOpenWork && !initialLoading) {
     sections.push(emptySection('upcoming-empty', filtersActive ? 'filtersNone' : 'noUpcoming'));
-    // Both empty cards fire on "nothing due" — the full card says the same and
-    // carries the Create action, so the compact one is the one to drop.
-    const withoutCompact = sections.filter(
-      (section) =>
-        !section.data.some((row) => row.kind === 'empty' && row.variant === 'selectedDateNone')
-    );
-    sections.length = 0;
-    sections.push(...withoutCompact);
   }
 
   if (done.length > 0) {
     const expanded = openSections.has(DONE_SECTION_KEY);
+    const anyPending = done.some((item) => item.pending);
     sections.push({
       key: DONE_SECTION_KEY,
       header: {
         title: 'Done today',
-        iconKey: 'general.success',
         count: done.length,
+        tone: 'done',
+        subtitle: anyPending
+          ? 'Undo works until the toast closes.'
+          : taskTypePreview(done.map((item) => ({ task_type: item.taskType }))),
         collapsible: true,
         expanded,
-        preview: expanded
-          ? undefined
-          : taskTypePreview(done.map((item) => ({ task_type: item.taskType }))),
       },
       data: expanded
         ? done.map((item) => ({ key: `done-${item.taskId}`, kind: 'done' as const, item }))
@@ -386,21 +509,4 @@ export function buildCarePlanSections(input: CarePlanSectionsInput): CarePlanSec
   }
 
   return sections;
-}
-
-function harvestReadySection(items: HarvestReadyItem[]): CarePlanSection {
-  return {
-    key: 'harvest-ready',
-    header: {
-      title: 'Harvest Ready',
-      iconKey: 'task.harvest',
-      count: items.length,
-      titleFlex: false,
-    },
-    data: items.map((item) => ({
-      key: `harvest-${item.plant.id}`,
-      kind: 'harvest' as const,
-      item,
-    })),
-  };
 }

@@ -4,7 +4,6 @@ import {
   Text,
   SectionList,
   TouchableOpacity,
-  Pressable,
   TextInput,
   Alert,
   Animated,
@@ -13,8 +12,6 @@ import {
   RefreshControl,
   LayoutAnimation,
   UIManager,
-  LayoutChangeEvent,
-  useWindowDimensions,
 } from 'react-native';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -34,11 +31,11 @@ import {
   TASK_TYPE_ORDER,
   EARLY_COMPLETION_BLOCK_REASON,
 } from '../utils/taskConstants';
-import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused, useRoute, useNavigation } from '@react-navigation/native';
 import { CalendarScreenRouteProp, CalendarScreenNavigationProp } from '../types/navigation.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
-import { createStyles, getStartOfWeek, COLLAPSED_STRIP_HEIGHT } from '../styles/calendarStyles';
+import { createStyles } from '../styles/calendarStyles';
 import { sanitizeAlphaNumericSpaces } from '../utils/textSanitizer';
 import { useCalendarData } from '../hooks/useCalendarData';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
@@ -53,8 +50,16 @@ import CreateTaskModal from '../components/modals/CreateTaskModal';
 import TaskCompletionModal from '../components/modals/TaskCompletionModal';
 import SkipTaskModal from '../components/modals/SkipTaskModal';
 import { AlertDialog, type AlertDialogAction } from '../components/modals/AlertDialog';
-import WeekCalendarView from '../components/calendar/WeekCalendarView';
 import { MonthCalendarSheet } from '@/components/calendar/MonthCalendarSheet';
+import { CarePlanDateNav } from '@/components/calendar/CarePlanDateNav';
+import { CarePlanProgressCard } from '@/components/calendar/CarePlanProgressCard';
+import {
+  CarePlanBandFooter,
+  CarePlanBandFrame,
+  CarePlanBandHeader,
+} from '@/components/calendar/CarePlanBand';
+import { HarvestRoundRow } from '@/components/calendar/HarvestRoundRow';
+import { useMinuteClock } from '@/hooks/useMinuteClock';
 import {
   CarePlanTaskCard,
   type CarePlanCardDoneState,
@@ -64,8 +69,6 @@ import { UndoToast } from '@/components/UndoToast';
 import { usePendingCompletions, type CompletionSaveResult } from '@/hooks/usePendingCompletions';
 import { getErrorMessage } from '../utils/errorLogging';
 import { logger } from '../utils/logger';
-import { getPlantImage } from '@/config/referenceAssets';
-import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { tapFeedback } from '../utils/haptics';
 import {
   addCalendarDays,
@@ -92,7 +95,10 @@ import { getTaskWeatherAdvisory, resolveTaskForecast } from '@/utils/taskWeather
 import { buildPlotRainBanner, RAIN_MOVE_DAYS, type PlotRainBanner } from '@/utils/plotRainMove';
 import { locationKey } from '@/utils/locationHelpers';
 import { createStyles as createSectionStyles } from '@/styles/carePlanSectionStyles';
+import { createStyles as createBandStyles } from '@/styles/carePlanBandStyles';
 import {
+  HARVEST_ROUND_KEY,
+  OVERDUE_SECTION_KEY,
   buildCarePlanSections,
   groupTasksBy,
   summarizeToday,
@@ -101,6 +107,14 @@ import {
   type CarePlanSection,
   type CarePlanTaskGroup,
 } from '@/utils/carePlanSections';
+import {
+  TIME_BANDS,
+  TIME_BAND_ORDER,
+  currentTimeBand,
+  farmClockLabel,
+  taskTimeBand,
+  type TimeBand,
+} from '@/utils/taskTimeWindow';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -165,7 +179,18 @@ type NotDueDialog = {
 } | null;
 
 /** How the plan is grouped until the farmer picks otherwise in View Options. */
-const DEFAULT_GROUP_BY: CareGroupByOption = 'location';
+const DEFAULT_GROUP_BY: CareGroupByOption = 'time';
+
+/** Today's band that carries the harvest round — picking is a cool-hours job. */
+const HARVEST_HOST_BAND: TimeBand = 'morning';
+
+/** Priority order for Catch up: the band shows the head of this list folded. */
+const PRIORITY_RANK: Record<TaskPriority, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
 
 /**
  * A finished one-off is disabled by its own completion and no longer loads, so
@@ -200,9 +225,12 @@ export default function CalendarScreen(): React.JSX.Element {
   const theme = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
   const sectionStyles = React.useMemo(() => createSectionStyles(theme), [theme]);
+  const bandStyles = React.useMemo(() => createBandStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
+  // Drives the NOW marker on today's time band; idle while another tab is up.
+  const isFocused = useIsFocused();
+  const now = useMinuteClock(isFocused);
   const scrollViewRef = useRef<SectionList<CalendarRow, CalendarListSection>>(null);
   // A section the plan was asked to open at, held until that section exists.
   // The request lives in a ref because callbacks read it (`scrollToTop` parks
@@ -216,7 +244,6 @@ export default function CalendarScreen(): React.JSX.Element {
   /** Releases the request once the scroll has settled — see `scrollToSection`. */
   const scrollSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [skipBulkTasks, setSkipBulkTasks] = useState<TaskTemplate[] | null>(null);
-  const [currentWeekStart, setCurrentWeekStart] = useState(getStartOfWeek(farmToday()));
   const [showMonthSheet, setShowMonthSheet] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [createTaskInitialDate, setCreateTaskInitialDate] = useState<Date | undefined>(undefined);
@@ -289,16 +316,10 @@ export default function CalendarScreen(): React.JSX.Element {
   // the state change alone would make the pill vanish rather than slide away.
   const [selectionBarMounted, setSelectionBarMounted] = useState(false);
   const selectionBarAnim = useAnimatedValue(0);
-  // Collapsible-header state. `scrollY` is fed straight from the list's native
-  // scroll event, so the collapse runs entirely on the UI thread.
-  const scrollY = useAnimatedValue(0);
-  const [headerHeight, setHeaderHeight] = useState(0);
   const searchInputRef = React.useRef<TextInput>(null);
   const normalizeSearchText = (value: string): string =>
     sanitizeAlphaNumericSpaces(value).trim().toLowerCase();
   const normalizedSearchQuery = normalizeSearchText(searchQuery);
-
-  const compactTodayAction = screenWidth < 390;
 
   const {
     tasks,
@@ -331,7 +352,6 @@ export default function CalendarScreen(): React.JSX.Element {
   } = useCalendarData({
     normalizedSearchQuery,
     normalizeSearchText,
-    currentWeekStart,
     selectedDate,
     sortBy,
     filters,
@@ -411,7 +431,7 @@ export default function CalendarScreen(): React.JSX.Element {
     // filters object, so this runs on most renders, and an unconditional
     // `new Set()` would re-render the list every time.
     setSelectedTaskIds((previous) => (previous.size === 0 ? previous : new Set()));
-  }, [currentWeekStart, selectedDate, groupBy, sortBy, normalizedSearchQuery, filters]);
+  }, [selectedDate, groupBy, sortBy, normalizedSearchQuery, filters]);
 
   // Drop selected tasks that left the plan. A picked day's tasks count as
   // visible: `tasksForDisplay` leaves them out because they head the list.
@@ -430,19 +450,15 @@ export default function CalendarScreen(): React.JSX.Element {
     });
   }, [tasksForDisplay, overdueTasks, todayTasks, selectedDate, getTasksForDate]);
 
+  // No day picked is "today": the plan is laid out band by band, which a
+  // picked "Today" would flatten into one section.
   const setTodayView = React.useCallback(() => {
-    const today = farmToday();
     setSelectedDate(null);
-    setCurrentWeekStart(getStartOfWeek(today));
   }, []);
 
   useEffect(() => {
     isMountedRef.current = true;
     loadData({ force: true });
-    // No setTodayView() here: `currentWeekStart` and `selectedDate` are
-    // already seeded above. Calling it built fresh
-    // Date objects that never compared equal, so the heaviest screen in the app
-    // re-rendered — and rebuilt every section — once more on every mount.
     return () => {
       isMountedRef.current = false;
     };
@@ -466,63 +482,15 @@ export default function CalendarScreen(): React.JSX.Element {
     return () => animation.stop();
   }, [hasSelection, selectionBarAnim]);
 
-  // How far the header travels before it is fully collapsed: everything above
-  // the strip. Guarded to ≥1 so the interpolations stay valid before measurement.
-  const collapseRange = Math.max(1, headerHeight - COLLAPSED_STRIP_HEIGHT);
-
-  // diffClamp accumulates the scroll delta and clamps it to [0, collapseRange]:
-  // scrolling down grows it (header slides away), scrolling up shrinks it
-  // immediately at any offset — so a small upward flick brings the calendar
-  // back rather than requiring a scroll all the way to the top.
-  const collapse = useMemo(
-    () => Animated.diffClamp(scrollY, 0, collapseRange),
-    [scrollY, collapseRange]
-  );
-
-  const headerTranslateY = collapse.interpolate({
-    inputRange: [0, collapseRange],
-    outputRange: [0, -collapseRange],
-    extrapolate: 'clamp',
-  });
-  const calendarOpacity = collapse.interpolate({
-    inputRange: [0, collapseRange * 0.6],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-  // Slides the strip up from its clipped parking spot below the header, so it
-  // arrives exactly as the calendar finishes fading out.
-  const stripTranslateY = collapse.interpolate({
-    inputRange: [0, collapseRange],
-    outputRange: [COLLAPSED_STRIP_HEIGHT, 0],
-    extrapolate: 'clamp',
-  });
-
-  const handleContentScroll = useMemo(
-    () =>
-      Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-        useNativeDriver: true,
-        // The tab bar hide/show still needs a JS callback; it drives its own
-        // native-driver translate, so no layout work happens here either.
-        listener: onTabBarScroll,
-      }),
-    [scrollY, onTabBarScroll]
-  );
-
-  const handleHeaderLayout = useCallback((event: LayoutChangeEvent) => {
-    const { height } = event.nativeEvent.layout;
-    // Ignore sub-pixel jitter so a re-measure can't loop through setState.
-    setHeaderHeight((prev) => (Math.abs(prev - height) > 1 ? height : prev));
-  }, []);
-
-  // The header floats above the list, so the list reserves room for it via
-  // padding rather than by being pushed down in layout.
   const listContentStyle = useMemo(
-    () => ({
-      paddingTop: headerHeight,
-      paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16,
-    }),
-    [headerHeight, insets.bottom]
+    () => ({ paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 }),
+    [insets.bottom]
   );
+
+  // A section scroll waits for this: before the first layout nothing is
+  // measured, and `scrollToLocation` would quietly do nothing.
+  const [listLaidOut, setListLaidOut] = useState(false);
+  const handleListLayout = useCallback(() => setListLaidOut(true), []);
 
   // Parks itself while a section scroll is in flight. Arming one changes the
   // route params, which re-runs the focus effect below — and that effect opens
@@ -533,21 +501,13 @@ export default function CalendarScreen(): React.JSX.Element {
     scrollViewRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated });
   }, []);
 
-  // Tapping the collapsed strip just returns to the top — `collapse` unwinds to
-  // 0 on its own as the offset drops, so there is no separate animation to run.
-  const expandCalendar = useCallback(() => {
-    scrollToTop(true);
-  }, [scrollToTop]);
-
   // Reset view and refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       scrollToTop(false);
       resetTabBar();
-      // Back to today's week with no day picked: today's work is laid out plot
-      // by plot, which a picked "Today" would flatten into one section.
+      // Back to today with no day picked.
       setSelectedDate(null);
-      setCurrentWeekStart(getStartOfWeek(farmToday()));
       setRainMoves({});
       setSelectedTaskIds(new Set());
       if (route.params?.resetFilters) {
@@ -562,6 +522,12 @@ export default function CalendarScreen(): React.JSX.Element {
       // the tab bar, or back out of a task — does not scroll the plan again.
       if (route.params?.scrollTo) {
         const target = route.params.scrollTo;
+        // Arrive with Catch up open: the farmer came here for all of it.
+        if (target === OVERDUE_SECTION_KEY) {
+          setOpenSections((prev) =>
+            prev.has(OVERDUE_SECTION_KEY) ? prev : new Set(prev).add(OVERDUE_SECTION_KEY)
+          );
+        }
         scrollRequestRef.current = {
           target,
           since: Date.now(),
@@ -1280,7 +1246,8 @@ export default function CalendarScreen(): React.JSX.Element {
     (
       task: TaskTemplate,
       showPlot: boolean,
-      done: CarePlanCardDoneState | null = null
+      done: CarePlanCardDoneState | null = null,
+      showBestTime = true
     ): React.JSX.Element | null => {
       if (!task.next_due_at) return null;
       const overdueDays = calendarDaysOverdue(task);
@@ -1311,6 +1278,7 @@ export default function CalendarScreen(): React.JSX.Element {
           selected={selectedTaskIds.has(task.id)}
           blocked={done === null && isEarlyCompletionBlocked(task)}
           done={done}
+          showBestTime={showBestTime}
           onPress={handleCardPress}
           onLongPress={handleCardLongPress}
           onTick={done === null ? handleCardTick : handleDoneTick}
@@ -1335,8 +1303,9 @@ export default function CalendarScreen(): React.JSX.Element {
 
   // ─── Section model ─────────────────────────────────────────────────────────
   // The screen filters, sorts and windows; `buildCarePlanSections` only
-  // arranges: harvest checks → overdue → today plot by plot → harvest soon →
-  // later days (folded) → done today. Ticked tasks leave the open lists at once.
+  // arranges: a picked day → Catch up → today band by band (harvest round in
+  // the morning band) → later days (folded) → done today. Ticked tasks leave
+  // the open lists at once.
   const isOpen = useCallback((task: TaskTemplate) => !completedIds.has(task.id), [completedIds]);
   const plotOrder = useMemo(
     () => plotResolution.groups.map((group) => group.name),
@@ -1387,26 +1356,99 @@ export default function CalendarScreen(): React.JSX.Element {
     return summarizeToday(dueNow, openOverdue.length, plots.size, doneItems.length);
   }, [openOverdue, openToday, taskPlotName, doneItems.length]);
 
+  // Catch up leads with what matters most: priority first, then the oldest.
+  // Stable, so equal tasks keep the farmer's chosen sort.
+  const catchUp = useMemo(() => {
+    const daysLate = (task: TaskTemplate): number => calendarDaysOverdue(task) ?? 0;
+    const tasksByUrgency = [...openOverdue].sort(
+      (a, b) =>
+        PRIORITY_RANK[getTaskPriority(a)] - PRIORITY_RANK[getTaskPriority(b)] ||
+        daysLate(b) - daysLate(a)
+    );
+    return {
+      tasks: tasksByUrgency,
+      oldestDays: tasksByUrgency.reduce((max, task) => Math.max(max, daysLate(task)), 0),
+      criticalCount: tasksByUrgency.filter((task) => getTaskPriority(task) === 'critical').length,
+    };
+  }, [openOverdue, getTaskPriority]);
+
+  // ─── Rain moves ────────────────────────────────────────────────────────────
+  const rainBannerByPlot = useMemo(() => {
+    const banners = new Map<string, PlotRainBanner>();
+    const at = new Date();
+    for (const [plotName, forecast] of weatherByPlotName) {
+      const key = locationKey(plotName);
+      const plotTasks = filteredTasks.filter(
+        (task) => isOpen(task) && locationKey(taskPlotName(task) ?? '') === key
+      );
+      const movedIds = Object.keys(rainMoves[key] ?? {});
+      const banner = buildPlotRainBanner(forecast, plotTasks, movedIds, at);
+      if (banner) banners.set(key, banner);
+    }
+    return banners;
+  }, [weatherByPlotName, filteredTasks, isOpen, taskPlotName, rainMoves]);
+
+  /** Plots carrying a rain banner, by display name, in the farm's plot order. */
+  const rainPlots = useMemo(
+    () => [...weatherByPlotName.keys()].filter((name) => rainBannerByPlot.has(locationKey(name))),
+    [weatherByPlotName, rainBannerByPlot]
+  );
+
+  // Only the band changes the model; the minute ticks just redraw the NOW chip.
+  const nowBand = currentTimeBand(now);
+  const nowLabel = farmClockLabel(now);
+  const timeLayout = !isSearching && effectiveGroupBy === 'time';
+
   const listSections = useMemo((): CalendarListSection[] => {
     const todayKey = calendarDateKey(farmToday());
     const tomorrowKey = todayKey ? addDaysToDateKey(todayKey, 1) : null;
     const selectedKey = selectedDate ? calendarDateKey(selectedDate) : null;
     const plotOf = (task: TaskTemplate): string => taskPlotName(task) ?? 'Unassigned';
 
-    const todayGroups: CarePlanTaskGroup[] =
-      openToday.length === 0
-        ? []
-        : effectiveGroupBy === 'location'
-          ? groupTasksBy(openToday, plotOf, plotOrder).map(({ key, tasks: plotTasks }) => ({
-              key,
-              title: `Today · ${key}`,
-              iconKey: 'general.location' as const,
-              plot: key,
-              tasks: plotTasks,
-            }))
-          : [{ key: 'all', title: 'Today', tasks: openToday }];
+    let todayGroups: CarePlanTaskGroup[];
+    if (effectiveGroupBy === 'time') {
+      // Today in the order the day runs. The morning band stays even when
+      // empty if it carries rain banners; the builder keeps it for the
+      // harvest round too.
+      const byBand = new Map<TimeBand, TaskTemplate[]>(TIME_BAND_ORDER.map((band) => [band, []]));
+      for (const task of openToday) byBand.get(taskTimeBand(task))?.push(task);
+      todayGroups = TIME_BAND_ORDER.map((band) => ({
+        key: band,
+        title: TIME_BANDS[band].title,
+        subtitle: TIME_BANDS[band].subtitle,
+        tasks: byBand.get(band) ?? [],
+        isNow: band === nowBand,
+        rainPlots: band === HARVEST_HOST_BAND && rainPlots.length > 0 ? rainPlots : undefined,
+        keepWhenEmpty: band === HARVEST_HOST_BAND && rainPlots.length > 0,
+      }));
+    } else if (effectiveGroupBy === 'location') {
+      // A plot with a rain banner and nothing left today still shows, so its
+      // Undo stays in reach after every watering there was moved.
+      const groups = groupTasksBy(openToday, plotOf, plotOrder);
+      for (const plot of rainPlots) {
+        if (!groups.some((group) => group.key === plot)) groups.push({ key: plot, tasks: [] });
+      }
+      todayGroups = groups.map(({ key, tasks: plotTasks }) => ({
+        key,
+        title: `Today · ${key}`,
+        plot: key,
+        rainPlots: rainPlots.includes(key) ? [key] : undefined,
+        keepWhenEmpty: rainPlots.includes(key),
+        tasks: plotTasks,
+      }));
+    } else {
+      todayGroups = [
+        {
+          key: 'all',
+          title: 'Today',
+          tasks: openToday,
+          rainPlots: rainPlots.length > 0 ? rainPlots : undefined,
+          keepWhenEmpty: rainPlots.length > 0,
+        },
+      ];
+    }
 
-    // The rest of the week: neither late, nor today, nor the picked day.
+    // The rest of the window: neither late, nor today, nor the picked day.
     const overdueIds = new Set(overdueTasks.map((task) => task.id));
     const rest = sortTasks(
       tasksForDisplay.filter((task) => {
@@ -1431,11 +1473,10 @@ export default function CalendarScreen(): React.JSX.Element {
         .map(({ key, tasks: plantTasks }) => ({
           key: `plant-${key}`,
           title: key,
-          iconKey: 'general.plant' as const,
           tasks: plantTasks,
         }));
     } else {
-      // No grouping or by plot: one folded row per later day, in date order.
+      // By time, by plot or none: one folded band per later day, in date order.
       restGroups = groupTasksBy(rest, (task) => farmDateKey(task.next_due_at) ?? '')
         .sort((a, b) => a.key.localeCompare(b.key))
         .map(({ key, tasks: dayTasks }) => {
@@ -1461,18 +1502,14 @@ export default function CalendarScreen(): React.JSX.Element {
       searchResults: isSearching ? sortTasks(filteredTasks.filter(isOpen)) : [],
       filtersActive: isFilterActive,
       selectedDate:
-        !isSearching && selectedDate && selectedKey
+        !isSearching && selectedDate && selectedKey && selectedKey !== todayKey
           ? {
               key: selectedKey,
-              title:
-                selectedKey === todayKey
-                  ? 'Today'
-                  : formatFarmDate(selectedDate, {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                    }),
-              isToday: selectedKey === todayKey,
+              title: formatFarmDate(selectedDate, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              }),
               tasks: sortTasks(getTasksForDate(selectedDate).filter(isOpen)),
               rawCount: getRawTasksForDate(selectedDate).length,
             }
@@ -1480,7 +1517,10 @@ export default function CalendarScreen(): React.JSX.Element {
       harvestsReadyNow,
       harvestsSoon: isSearching ? [] : harvestsSoon,
       harvestSoonExpanded,
-      overdue: isSearching ? [] : openOverdue,
+      harvestHostKey: effectiveGroupBy === 'time' ? HARVEST_HOST_BAND : undefined,
+      overdue: isSearching ? [] : catchUp.tasks,
+      overdueOldestDays: catchUp.oldestDays,
+      overdueCriticalCount: catchUp.criticalCount,
       todayGroups: isSearching ? [] : todayGroups,
       restGroups: isSearching ? [] : restGroups,
       done: isSearching ? [] : doneItems,
@@ -1490,8 +1530,10 @@ export default function CalendarScreen(): React.JSX.Element {
     selectedDate,
     taskPlotName,
     openToday,
-    openOverdue,
+    catchUp,
     effectiveGroupBy,
+    nowBand,
+    rainPlots,
     plotOrder,
     overdueTasks,
     sortTasks,
@@ -1512,22 +1554,6 @@ export default function CalendarScreen(): React.JSX.Element {
     doneItems,
     openSections,
   ]);
-
-  // ─── Rain moves ────────────────────────────────────────────────────────────
-  const rainBannerByPlot = useMemo(() => {
-    const banners = new Map<string, PlotRainBanner>();
-    const now = new Date();
-    for (const [plotName, forecast] of weatherByPlotName) {
-      const key = locationKey(plotName);
-      const plotTasks = filteredTasks.filter(
-        (task) => isOpen(task) && locationKey(taskPlotName(task) ?? '') === key
-      );
-      const movedIds = Object.keys(rainMoves[key] ?? {});
-      const banner = buildPlotRainBanner(forecast, plotTasks, movedIds, now);
-      if (banner) banners.set(key, banner);
-    }
-    return banners;
-  }, [weatherByPlotName, filteredTasks, isOpen, taskPlotName, rainMoves]);
 
   const handleRainMove = useCallback(
     async (plot: string, taskIds: string[]): Promise<void> => {
@@ -1583,16 +1609,17 @@ export default function CalendarScreen(): React.JSX.Element {
     [rainMoves, rainMoveBusy, loadData]
   );
 
-  // Strip and month counts: what is still to do on each day ahead. Late work
-  // lives under today, so past days carry no count.
+  // Month-sheet dots: what is still to do on each day ahead. Late work counts
+  // as today's (it is due now), so past days carry no dot.
   const getOpenTasksForDate = useCallback(
     (date: Date): TaskTemplate[] => {
       const key = calendarDateKey(date);
       const todayKey = calendarDateKey(farmToday());
       if (!key || !todayKey || key < todayKey) return [];
-      return getTasksForDate(date).filter(isOpen);
+      const open = getTasksForDate(date).filter(isOpen);
+      return key === todayKey ? [...openOverdue, ...open] : open;
     },
-    [getTasksForDate, isOpen]
+    [getTasksForDate, isOpen, openOverdue]
   );
 
   const toggleSection = useCallback((key: string) => {
@@ -1616,10 +1643,6 @@ export default function CalendarScreen(): React.JSX.Element {
   // inside a virtualized cell, so its own `onLayout` y is relative to that cell
   // and says nothing about where it sits in the list.
   //
-  // The offset is the collapsed strip, not `headerHeight`. The floating header
-  // is driven by `Animated.diffClamp` over the scroll delta, so any scroll
-  // longer than `collapseRange` folds it away entirely — reserving its full
-  // height would land the section under a header that is no longer there.
 
   // The current section model, for the scroll timers to resolve an index
   // against when they fire rather than from the render that scheduled them —
@@ -1637,7 +1660,7 @@ export default function CalendarScreen(): React.JSX.Element {
     scrollViewRef.current?.scrollToLocation({
       sectionIndex,
       itemIndex: 0, // the section header itself
-      viewOffset: COLLAPSED_STRIP_HEIGHT,
+      viewOffset: 0,
       animated: true,
     });
     // React Native reports a refusal synchronously from that call, so by now a
@@ -1666,9 +1689,8 @@ export default function CalendarScreen(): React.JSX.Element {
   // all, so a rebuild minutes later can't jump the list under the farmer.
   useEffect(() => {
     const request = scrollRequestRef.current;
-    // `headerHeight` is the list's own top padding; before it is measured there
-    // is nothing laid out to scroll to yet.
-    if (request === null || headerHeight === 0) return;
+    // Before the list has laid out there is nothing measured to scroll to yet.
+    if (request === null || !listLaidOut) return;
     const sectionIndex = listSections.findIndex((section) => section.key === request.target);
 
     if (sectionIndex < 0) {
@@ -1705,7 +1727,7 @@ export default function CalendarScreen(): React.JSX.Element {
       scrollTimerRef.current = null;
       attemptSectionScroll();
     }, SCROLL_RETRY_DELAY_MS);
-  }, [scrollArm, listSections, headerHeight, attemptSectionScroll]);
+  }, [scrollArm, listSections, listLaidOut, attemptSectionScroll]);
 
   // Only the unmount case: a pending attempt must not fire into a dead list.
   useEffect(
@@ -1741,7 +1763,7 @@ export default function CalendarScreen(): React.JSX.Element {
       // Approximate on purpose: this only has to bring the target into the
       // rendered window. The retry below is what lands it exactly.
       scrollViewRef.current?.getScrollResponder()?.scrollTo({
-        y: Math.max(0, info.averageItemLength * info.index - COLLAPSED_STRIP_HEIGHT),
+        y: Math.max(0, info.averageItemLength * info.index),
         animated: false,
       });
       if (scrollTimerRef.current !== null) clearTimeout(scrollTimerRef.current);
@@ -1786,30 +1808,6 @@ export default function CalendarScreen(): React.JSX.Element {
               </TouchableOpacity>
             </View>
           );
-        case 'selectedDateNone':
-          return (
-            <View style={styles.emptyStateCompact}>
-              <Ionicons name="calendar-outline" size={28} color={theme.border} />
-              <View style={styles.emptyStateCompactBody}>
-                <Text style={styles.emptyStateCompactText}>
-                  {row.isToday ? 'All caught up' : 'No tasks scheduled'}
-                </Text>
-                <Text style={styles.emptyStateCompactSubtext}>
-                  {row.isToday ? 'Nothing left for today' : 'Nothing planned for this date'}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.emptyStateCompactAction}
-                onPress={() => {
-                  setCreateTaskInitialDate(selectedDate ?? undefined);
-                  setShowModal(true);
-                }}
-              >
-                <Ionicons name="add" size={16} color={theme.primary} />
-                <Text style={styles.emptyStateCompactActionText}>Add</Text>
-              </TouchableOpacity>
-            </View>
-          );
         case 'searchNone':
           return (
             <View style={styles.emptyState}>
@@ -1847,12 +1845,9 @@ export default function CalendarScreen(): React.JSX.Element {
           return (
             <View style={styles.emptyState}>
               <Ionicons name="checkbox-outline" size={48} color={theme.border} />
-              {/* Covers today *and* the rest of the window — this card replaces
-                  the compact "All caught up" one when both would show. */}
+              {/* Covers today *and* the rest of the rolling week. */}
               <Text style={styles.emptyStateText}>All caught up</Text>
-              <Text style={styles.emptyStateSubtext}>
-                Nothing due today or the rest of this week
-              </Text>
+              <Text style={styles.emptyStateSubtext}>Nothing due today or in the next 7 days</Text>
               <TouchableOpacity
                 style={styles.addTaskButton}
                 onPress={() => {
@@ -1867,7 +1862,7 @@ export default function CalendarScreen(): React.JSX.Element {
           );
       }
     },
-    [styles, theme, clearFilters, selectedDate, tasks.length, searchQuery, handleRefresh]
+    [styles, theme, clearFilters, tasks.length, searchQuery, handleRefresh]
   );
 
   const toggleHarvestSoon = useCallback(() => {
@@ -1889,6 +1884,64 @@ export default function CalendarScreen(): React.JSX.Element {
     [navigation]
   );
 
+  const toggleHarvestRound = useCallback(() => toggleSection(HARVEST_ROUND_KEY), [toggleSection]);
+  const toggleCatchUp = useCallback(() => toggleSection(OVERDUE_SECTION_KEY), [toggleSection]);
+
+  // "Select all N" under Catch up: every overdue task, folded ones included.
+  const selectAllOverdue = useCallback(() => {
+    tapFeedback();
+    const ids = catchUp.tasks.filter((task) => !isEarlyCompletionBlocked(task)).map((t) => t.id);
+    setSelectedTaskIds((prev) => new Set([...prev, ...ids]));
+  }, [catchUp.tasks]);
+
+  // "+ Add" on a picked day creates the task on that day.
+  const handleAddForPickedDay = useCallback(() => {
+    setCreateTaskInitialDate(selectedDate ?? undefined);
+    setShowModal(true);
+  }, [selectedDate]);
+
+  const renderRowContent = useCallback(
+    (item: CalendarRow, section: CalendarListSection): React.JSX.Element | null => {
+      switch (item.kind) {
+        case 'task':
+          // A plot band already names its plot; a time band already says when.
+          return renderTaskCard(
+            item.task,
+            !section.header?.plot,
+            null,
+            !(timeLayout && section.header?.tone === 'band')
+          );
+        case 'done':
+          return renderTaskCard(
+            item.item.task ?? doneStandIn(item.item),
+            true,
+            item.item.pending ? 'pending' : 'saved'
+          );
+        case 'harvestRound':
+        case 'harvest':
+        case 'harvestSoonToggle':
+          return (
+            <HarvestRoundRow
+              row={item}
+              onToggleRound={toggleHarvestRound}
+              onToggleSoon={toggleHarvestSoon}
+              onLogHarvest={handleLogHarvest}
+            />
+          );
+        case 'empty':
+          return renderEmptyRow(item);
+      }
+    },
+    [
+      renderTaskCard,
+      timeLayout,
+      toggleHarvestRound,
+      toggleHarvestSoon,
+      handleLogHarvest,
+      renderEmptyRow,
+    ]
+  );
+
   const renderListItem = useCallback(
     ({
       item,
@@ -1897,143 +1950,41 @@ export default function CalendarScreen(): React.JSX.Element {
       item: CalendarRow;
       section: CalendarListSection;
     }): React.JSX.Element | null => {
-      if (item.kind === 'task') {
-        // Plot-grouped sections already name the plot in their header.
-        const showPlot = !section.header?.plot;
-        return <View style={styles.listRow}>{renderTaskCard(item.task, showPlot)}</View>;
-      }
-      if (item.kind === 'done') {
-        const { item: done } = item;
+      const content = renderRowContent(item, section);
+      if (!section.header) {
+        // No band: the harvest round standing alone, or a whole-list state card.
+        const first = !('first' in item) || item.first;
         return (
-          <View style={styles.listRow}>
-            {renderTaskCard(
-              done.task ?? doneStandIn(done),
-              true,
-              done.pending ? 'pending' : 'saved'
-            )}
+          <View style={[bandStyles.standaloneRow, first && bandStyles.standaloneRowFirst]}>
+            {content}
           </View>
         );
       }
-      if (item.kind === 'harvestSoonToggle') {
-        const { count, fromDays, toDays } = item;
-        const span = fromDays === toDays ? `in ${fromDays} days` : `in ${fromDays}–${toDays} days`;
-        const summary = `Harvest soon · ${count} crop${count === 1 ? '' : 's'}`;
-        return (
-          <View style={styles.listRow}>
-            <TouchableOpacity
-              style={styles.harvestSoonToggle}
-              onPress={toggleHarvestSoon}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: harvestSoonExpanded }}
-              accessibilityLabel={`${summary}, ${span}`}
-              accessibilityHint={harvestSoonExpanded ? 'Hides the list' : 'Shows the list'}
-            >
-              <GardenIcon name="task.harvest" size={17} color={theme.textSecondary} />
-              <Text style={styles.harvestSoonToggleText}>{summary}</Text>
-              <Text style={styles.harvestSoonToggleMeta}>{span}</Text>
-              <Ionicons
-                name={harvestSoonExpanded ? 'chevron-up' : 'chevron-down'}
-                size={18}
-                color={theme.textTertiary}
-              />
-            </TouchableOpacity>
-          </View>
-        );
-      }
-      if (item.kind === 'harvest') {
-        const harvest = item.item;
-        const isOverdue = harvest.isReady && harvest.daysUntil < 0;
-        const overdueDays = Math.abs(harvest.daysUntil);
-        const status = harvest.isReady
-          ? isOverdue
-            ? `Overdue by ${overdueDays} day${overdueDays === 1 ? '' : 's'}`
-            : 'Ready to check'
-          : `Check in ${harvest.daysUntil} days`;
-        return (
-          <View style={styles.listRow}>
-            <View style={styles.harvestCard}>
-              <View
-                style={[
-                  styles.harvestCardBar,
-                  harvest.isReady &&
-                    (isOverdue ? styles.harvestCardBarOverdue : styles.harvestCardBarReady),
-                ]}
-              />
-              <View style={styles.harvestCardBody}>
-                <View style={styles.harvestIcon}>
-                  <ReferenceThumb
-                    source={getPlantImage(harvest.plant.name)}
-                    fallbackIcon="general.plant"
-                    variant="row"
-                    accessibilityLabel={`${harvest.plant.name} reference image`}
-                  />
-                </View>
-                <View style={styles.harvestInfo}>
-                  <Text style={styles.harvestPlant} numberOfLines={1}>
-                    {harvest.plant.name}
-                  </Text>
-                  <View style={styles.harvestStatusRow}>
-                    <Text style={styles.harvestDate} numberOfLines={1}>
-                      <Text
-                        style={
-                          harvest.isReady
-                            ? isOverdue
-                              ? styles.harvestStatusOverdue
-                              : styles.harvestStatusReady
-                            : null
-                        }
-                      >
-                        {status}
-                      </Text>
-                      <Text style={styles.harvestSource}>
-                        {harvest.source === 'farmer_date' ? ' · Your date' : ' · Scheduled'}
-                      </Text>
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={styles.harvestLogButton}
-                  onPress={() => handleLogHarvest(harvest.plant.id)}
-                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Log harvest for ${harvest.plant.name}`}
-                >
-                  <Ionicons name="add" size={15} color={theme.success} />
-                  <Text style={styles.harvestLogButtonText}>Log</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        );
-      }
-      return <View style={styles.listRow}>{renderEmptyRow(item)}</View>;
+      return (
+        <CarePlanBandFrame tone={section.header.tone} part="row">
+          {content}
+        </CarePlanBandFrame>
+      );
     },
-    [
-      styles,
-      theme,
-      renderTaskCard,
-      renderEmptyRow,
-      handleLogHarvest,
-      harvestSoonExpanded,
-      toggleHarvestSoon,
-    ]
+    [renderRowContent, bandStyles]
   );
 
   const renderPlotBanner = useCallback(
-    (plot: string): React.JSX.Element | null => {
+    (plot: string, showPlotName: boolean): React.JSX.Element | null => {
       const banner = rainBannerByPlot.get(locationKey(plot));
       if (!banner) return null;
       const busy = rainMoveBusy === plot;
+      // A band that is not one plot's own names the plot the rain is over.
+      const head = [showPlotName ? `${plot}:` : '', banner.head].filter(Boolean).join(' ');
       return (
-        <View style={sectionStyles.banner} accessibilityRole="summary">
+        <View key={plot} style={sectionStyles.banner} accessibilityRole="summary">
           <GardenIcon
             name={banner.kind === 'light' ? 'weather.showers' : 'weather.rain'}
             size={20}
             color={theme.infoDark}
           />
           <Text style={sectionStyles.bannerText}>
-            {banner.head ? <Text style={sectionStyles.bannerHead}>{`${banner.head} `}</Text> : null}
+            {head ? <Text style={sectionStyles.bannerHead}>{`${head} `}</Text> : null}
             {banner.text}
           </Text>
           {banner.kind === 'move' && (
@@ -2042,7 +1993,7 @@ export default function CalendarScreen(): React.JSX.Element {
               onPress={() => void handleRainMove(plot, banner.taskIds)}
               disabled={busy}
               accessibilityRole="button"
-              accessibilityLabel={`${banner.buttonLabel} waterings past the rain`}
+              accessibilityLabel={`${banner.buttonLabel} waterings on ${plot} past the rain`}
             >
               <Text style={sectionStyles.bannerButtonText}>
                 {busy ? 'Moving…' : banner.buttonLabel}
@@ -2055,7 +2006,7 @@ export default function CalendarScreen(): React.JSX.Element {
               onPress={() => void handleRainUndo(plot)}
               disabled={busy}
               accessibilityRole="button"
-              accessibilityLabel="Undo moving the watering"
+              accessibilityLabel={`Undo moving the watering on ${plot}`}
             >
               <Text style={sectionStyles.bannerUndoText}>Undo</Text>
             </TouchableOpacity>
@@ -2070,135 +2021,86 @@ export default function CalendarScreen(): React.JSX.Element {
     ({ section }: { section: CalendarListSection }): React.JSX.Element | null => {
       const header = section.header;
       if (!header) return null;
-      const collapsible = header.collapsible === true;
-      const headerRow = (
-        <View style={styles.sectionHeaderRow}>
-          {selectionMode && header.selectableTasks
-            ? renderSectionCheckbox(header.selectableTasks)
-            : null}
-          {header.iconKey ? (
-            <GardenIcon
-              name={header.iconKey}
-              size={17}
-              color={header.overdue ? theme.error : theme.primary}
-            />
-          ) : null}
-          <Text
-            style={[
-              styles.sectionTitle,
-              header.overdue
-                ? styles.sectionTitleOverdue
-                : header.titleFlex !== false
-                  ? styles.sectionTitleFlex
-                  : null,
-            ]}
-          >
-            {header.title}
-          </Text>
-          {header.showDoneChip && doneItems.length > 0 && (
-            <View style={styles.weekDoneChip}>
-              <Ionicons name="checkmark" size={13} color={theme.success} />
-              <Text style={styles.weekDoneChipText}>{doneItems.length} done</Text>
-            </View>
-          )}
-          <Text style={[styles.sectionCount, header.overdue && styles.sectionCountOverdue]}>
-            {header.count}
-          </Text>
-          {collapsible && (
-            <Ionicons
-              name={header.expanded ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color={theme.textSecondary}
-              style={sectionStyles.chevron}
-            />
-          )}
-        </View>
-      );
       return (
-        <View style={styles.listSectionHeader}>
-          {collapsible ? (
-            <Pressable
-              style={sectionStyles.headerPressable}
-              onPress={() => toggleSection(section.key)}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: header.expanded === true }}
-              accessibilityLabel={`${header.title}, ${header.count} task${
-                header.count === 1 ? '' : 's'
-              }${header.preview ? `: ${header.preview}` : ''}`}
-            >
-              {headerRow}
-              {header.preview ? (
-                <Text style={sectionStyles.preview} numberOfLines={1}>
-                  {header.preview}
-                </Text>
-              ) : null}
-            </Pressable>
-          ) : (
-            headerRow
-          )}
-          {header.plot ? renderPlotBanner(header.plot) : null}
-        </View>
+        <CarePlanBandHeader
+          header={header}
+          selectBox={
+            selectionMode && header.selectableTasks
+              ? renderSectionCheckbox(header.selectableTasks)
+              : null
+          }
+          nowLabel={nowLabel}
+          onToggle={() => toggleSection(section.key)}
+          onAdd={handleAddForPickedDay}
+          banners={header.rainPlots?.map((plot) => renderPlotBanner(plot, header.plot !== plot))}
+        />
       );
     },
     [
-      styles,
-      sectionStyles,
-      theme,
-      renderSectionCheckbox,
       selectionMode,
-      doneItems.length,
+      renderSectionCheckbox,
+      nowLabel,
       toggleSection,
+      handleAddForPickedDay,
       renderPlotBanner,
     ]
   );
 
   const renderListSectionFooter = useCallback(
-    (): React.JSX.Element => <View style={styles.listSectionFooter} />,
-    [styles]
+    ({ section }: { section: CalendarListSection }): React.JSX.Element | null =>
+      section.header ? (
+        <CarePlanBandFooter
+          tone={section.header.tone}
+          footer={section.footer}
+          selectionMode={selectionMode}
+          onToggle={toggleCatchUp}
+          onSelectAll={selectAllOverdue}
+        />
+      ) : null,
+    [selectionMode, toggleCatchUp, selectAllOverdue]
   );
 
   const listKeyExtractor = useCallback((row: CalendarRow): string => row.key, []);
 
-  // "Today" is an escape hatch, so it has to appear whenever the farmer is
-  // looking at anything else — a picked day, or another week.
-  const isViewingToday = React.useMemo(() => {
-    if (selectedDate) return false;
-    const todayWeekStart = getStartOfWeek(farmToday());
-    return calendarDateKey(currentWeekStart) === calendarDateKey(todayWeekStart);
-  }, [currentWeekStart, selectedDate]);
+  // ─── Day navigation ────────────────────────────────────────────────────────
+  // No day picked means today. Picking today is the same as picking nothing,
+  // so today always keeps its band-by-band layout.
+  const today = farmToday();
+  const isViewingToday = selectedDate === null;
 
-  // Tapping today on the strip is the same as having nothing picked: today's
-  // work stays laid out plot by plot rather than collapsing into one section.
-  const handleSelectDate = useCallback((date: Date) => {
-    const isToday = calendarDateKey(date) === calendarDateKey(farmToday());
-    setSelectedDate(isToday ? null : date);
-  }, []);
+  const handleSelectDate = useCallback(
+    (date: Date) => {
+      const isToday = calendarDateKey(date) === calendarDateKey(farmToday());
+      setSelectedDate(isToday ? null : date);
+      scrollToTop(true);
+    },
+    [scrollToTop]
+  );
 
-  const handleNavigateWeek = useCallback((newStart: Date) => {
-    setSelectedDate(null);
-    setCurrentWeekStart(newStart);
-  }, []);
+  // There is no stepping into the past: late work already sits under Catch up.
+  const handlePreviousDay = useCallback(() => {
+    if (selectedDate) handleSelectDate(addCalendarDays(selectedDate, -1));
+  }, [selectedDate, handleSelectDate]);
+
+  const handleNextDay = useCallback(() => {
+    handleSelectDate(addCalendarDays(selectedDate ?? farmToday(), 1));
+  }, [selectedDate, handleSelectDate]);
+
+  const handleGoToToday = useCallback(() => {
+    setTodayView();
+    scrollToTop(true);
+  }, [setTodayView, scrollToTop]);
 
   const openMonthSheet = useCallback(() => setShowMonthSheet(true), []);
   const closeMonthSheet = useCallback(() => setShowMonthSheet(false), []);
 
-  // A date picked in the month sheet moves the strip to its week and puts the
-  // day on top of the list.
   const handlePickMonthDate = useCallback(
     (date: Date) => {
       setShowMonthSheet(false);
-      setCurrentWeekStart(getStartOfWeek(date));
       handleSelectDate(date);
-      scrollToTop(true);
     },
-    [handleSelectDate, scrollToTop]
+    [handleSelectDate]
   );
-
-  const handleMonthGoToToday = useCallback(() => {
-    setShowMonthSheet(false);
-    setTodayView();
-    scrollToTop(true);
-  }, [setTodayView, scrollToTop]);
 
   return (
     <GestureHandlerRootView style={styles.flexOne}>
@@ -2237,16 +2139,35 @@ export default function CalendarScreen(): React.JSX.Element {
               </View>
             ) : (
               <>
-                <Text
-                  style={styles.headerTitle}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.82}
-                >
-                  Care Plan
-                </Text>
+                <View style={bandStyles.headerTitleBlock}>
+                  <Text
+                    style={styles.headerTitle}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.82}
+                  >
+                    Care Plan
+                  </Text>
+                  <CarePlanDateNav
+                    selectedDate={selectedDate}
+                    today={today}
+                    onPrevious={handlePreviousDay}
+                    onNext={handleNextDay}
+                    onOpenMonth={openMonthSheet}
+                  />
+                </View>
                 <View style={styles.headerActions}>
+                  {!isViewingToday && (
+                    <TouchableOpacity
+                      style={bandStyles.todayPill}
+                      onPress={handleGoToToday}
+                      accessibilityRole="button"
+                      accessibilityLabel="Back to today"
+                    >
+                      <Text style={bandStyles.todayPillText}>Today</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={styles.searchIconBtn}
                     onPress={() => setSearchActive(true)}
@@ -2255,28 +2176,6 @@ export default function CalendarScreen(): React.JSX.Element {
                   >
                     <Ionicons name="search" size={20} color={theme.primary} />
                     {searchQuery.trim() !== '' && <View style={styles.searchActiveDot} />}
-                  </TouchableOpacity>
-                  {!isViewingToday && (
-                    <TouchableOpacity
-                      style={compactTodayAction ? styles.todayIconButton : styles.todayButton}
-                      onPress={setTodayView}
-                      accessibilityRole="button"
-                      accessibilityLabel="Today"
-                    >
-                      {compactTodayAction ? (
-                        <Ionicons name="today-outline" size={20} color={theme.warning} />
-                      ) : (
-                        <Text style={styles.todayButtonText}>Today</Text>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    style={styles.headerOutlineButton}
-                    onPress={openMonthSheet}
-                    accessibilityRole="button"
-                    accessibilityLabel="Open month calendar"
-                  >
-                    <Ionicons name="calendar-outline" size={20} color={theme.primary} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -2302,11 +2201,10 @@ export default function CalendarScreen(): React.JSX.Element {
           </View>
         </View>
 
-        {/* The list fills this area; the calendar header floats above it and
-            slides away on a pure GPU transform, so scrolling never triggers a
-            layout pass on the list below. */}
+        {/* No week row: the date line in the header reaches any day, so the
+            list starts right under it and keeps that height for task cards. */}
         <View style={styles.listArea}>
-          <Animated.SectionList
+          <SectionList
             ref={scrollViewRef}
             style={styles.content}
             sections={listSections}
@@ -2316,19 +2214,14 @@ export default function CalendarScreen(): React.JSX.Element {
             renderSectionFooter={renderListSectionFooter}
             stickySectionHeadersEnabled={false}
             onScrollToIndexFailed={handleScrollToIndexFailed}
+            onLayout={handleListLayout}
             contentContainerStyle={listContentStyle}
-            onScroll={handleContentScroll}
+            onScroll={onTabBarScroll}
             scrollEventThrottle={16}
             nestedScrollEnabled
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={initialLoading || refreshing}
-                onRefresh={handleRefresh}
-                progressViewOffset={headerHeight}
-              />
-            }
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
             initialNumToRender={12}
             maxToRenderPerBatch={10}
             windowSize={7}
@@ -2362,72 +2255,30 @@ export default function CalendarScreen(): React.JSX.Element {
                     </TouchableOpacity>
                   </View>
                 )}
-                {!isSearching && !initialLoading && (
-                  <View style={sectionStyles.summary} accessibilityRole="header">
-                    <Text style={sectionStyles.summaryTitle}>{todaySummary.title}</Text>
-                    {todaySummary.subtitle !== '' && (
-                      <Text style={sectionStyles.summarySubtitle}>{todaySummary.subtitle}</Text>
-                    )}
+                {initialLoading && tasks.length === 0 && (
+                  <View
+                    style={bandStyles.skeleton}
+                    accessibilityRole="progressbar"
+                    accessibilityLabel="Loading the care plan"
+                  >
+                    <View style={[bandStyles.skeletonBlock, bandStyles.skeletonSummary]} />
+                    <View style={[bandStyles.skeletonBlock, bandStyles.skeletonBand]} />
+                    <View style={[bandStyles.skeletonBlock, bandStyles.skeletonCard]} />
+                    <View
+                      style={[
+                        bandStyles.skeletonBlock,
+                        bandStyles.skeletonCard,
+                        bandStyles.skeletonFaded,
+                      ]}
+                    />
                   </View>
+                )}
+                {!isSearching && !initialLoading && !(loadError && tasks.length === 0) && (
+                  <CarePlanProgressCard summary={todaySummary} />
                 )}
               </>
             }
           />
-
-          {/* Collapsible calendar header. The strip is anchored to this block's
-              bottom edge, so once the block has slid up by (height − strip
-              height) the strip lands flush under the app bar. */}
-          <Animated.View
-            style={[styles.collapsibleHeader, { transform: [{ translateY: headerTranslateY }] }]}
-            onLayout={handleHeaderLayout}
-          >
-            <Animated.View style={{ opacity: calendarOpacity }}>
-              <WeekCalendarView
-                currentWeekStart={currentWeekStart}
-                selectedDate={selectedDate}
-                getTasksForDate={getOpenTasksForDate}
-                onSelectDate={handleSelectDate}
-                onNavigateWeek={handleNavigateWeek}
-              />
-            </Animated.View>
-
-            <Animated.View
-              style={[
-                styles.collapsedStripOverlay,
-                { transform: [{ translateY: stripTranslateY }] },
-              ]}
-            >
-              <TouchableOpacity
-                style={styles.collapsedStrip}
-                onPress={expandCalendar}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Show calendar"
-              >
-                <Text style={styles.collapsedStripText}>
-                  {selectedDate
-                    ? formatFarmDate(selectedDate, {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      })
-                    : `${formatFarmDate(currentWeekStart, {
-                        month: 'short',
-                        day: 'numeric',
-                      })} – ${formatFarmDate(addCalendarDays(currentWeekStart, 6), {
-                        month: 'short',
-                        day: 'numeric',
-                      })}`}
-                </Text>
-                {selectedDate && (
-                  <Text style={styles.collapsedStripCount}>
-                    {getTasksForDate(selectedDate).length}
-                  </Text>
-                )}
-                <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
-              </TouchableOpacity>
-            </Animated.View>
-          </Animated.View>
         </View>
 
         {/* Floating selection pill — sits at the same height as the FAB */}
@@ -2502,11 +2353,10 @@ export default function CalendarScreen(): React.JSX.Element {
 
         <MonthCalendarSheet
           visible={showMonthSheet}
-          anchorDate={selectedDate}
           selectedDate={selectedDate}
           getTasksForDate={getOpenTasksForDate}
+          todayHasOverdue={openOverdue.length > 0}
           onSelectDate={handlePickMonthDate}
-          onGoToToday={handleMonthGoToToday}
           onClose={closeMonthSheet}
           bottomInset={insets.bottom}
         />

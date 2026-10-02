@@ -1,22 +1,6 @@
 import { Dimensions, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 
-/**
- * Height of the collapsed date strip. The Care Plan's collapse animation
- * derives its translate distance from this, so it must stay a fixed number
- * rather than being implied by padding.
- */
-export const COLLAPSED_STRIP_HEIGHT = 44;
-
-export function getStartOfWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day;
-  d.setDate(diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: {
@@ -46,16 +30,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // Search and the month calendar are quiet outline buttons; only the filter
     // stays solid, so the one control that changes the list stands out.
     searchIconBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.card,
-      borderWidth: 1,
-      borderColor: theme.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerOutlineButton: {
       width: 44,
       height: 44,
       borderRadius: 22,
@@ -111,31 +85,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 8,
       flexShrink: 0,
-    },
-    todayButton: {
-      minHeight: 44,
-      justifyContent: 'center',
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 16,
-      backgroundColor: theme.warning + '20',
-      borderWidth: 1,
-      borderColor: theme.warning,
-    },
-    todayButtonText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: theme.warning,
-    },
-    todayIconButton: {
-      width: 44,
-      height: 44,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 22,
-      backgroundColor: theme.warning + '20',
-      borderWidth: 1,
-      borderColor: theme.warning,
     },
     groupMenuButton: {
       width: 44,
@@ -261,79 +210,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       // *under* the floating tab bar instead of ending 120px short of it.
       flex: 1,
     },
-    collapsedStrip: {
-      // Fixed height — the collapse translate distance is derived from it.
-      height: COLLAPSED_STRIP_HEIGHT,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 16,
-      gap: 8,
-      backgroundColor: theme.card,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border + '40',
-    },
-    collapsedStripText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.text,
-      flex: 1,
-    },
-    collapsedStripCount: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: theme.primary,
-      backgroundColor: theme.primaryLight,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
-      overflow: 'hidden',
-    },
-    section: {
-      paddingHorizontal: 16,
-      paddingTop: 10,
-      paddingBottom: 8,
-    },
-    // SectionList equivalents of `section` (header top / row sides / footer bottom)
-    // The gap above a header, not a divider, carries the grouping — so the
-    // footer stays almost flat and the header does the spacing.
-    listSectionHeader: {
-      paddingHorizontal: 16,
-      paddingTop: 12,
-    },
-    listRow: {
-      paddingHorizontal: 16,
-    },
-    listSectionFooter: {
-      height: 2,
-    },
-    sectionHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 6,
-      gap: 8,
-    },
-    sectionTitle: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: theme.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.6,
-    },
-    sectionCount: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: theme.primary,
-      backgroundColor: theme.primaryLight,
-      paddingHorizontal: 7,
-      paddingVertical: 1,
-      borderRadius: 8,
-      overflow: 'hidden',
-    },
-    sectionCountOverdue: {
-      backgroundColor: theme.errorLight,
-      color: theme.error,
-    },
     emptyState: {
       alignItems: 'center',
       padding: 32,
@@ -423,97 +299,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.primary,
       fontWeight: '600',
-    },
-    // Same tile as `taskCard` so harvest rows read as part of the list. State
-    // is carried by the left bar and the status text, not by the card chrome.
-    harvestCard: {
-      flexDirection: 'row',
-      backgroundColor: theme.card,
-      borderRadius: 12,
-      marginBottom: 6,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: theme.border,
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 1,
-    },
-    harvestCardBody: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 10,
-      paddingLeft: 12,
-      paddingRight: 10,
-    },
-    // Same 5 px bar as the task cards, so a harvest check reads as one of them.
-    harvestCardBar: {
-      width: 5,
-      backgroundColor: theme.border,
-    },
-    harvestCardBarReady: {
-      backgroundColor: theme.success,
-    },
-    harvestCardBarOverdue: {
-      backgroundColor: theme.warning,
-    },
-    // Disclosure row for harvests that are still ahead. Deliberately quieter
-    // than `harvestCard` — it heads a look-ahead, not work that is due.
-    harvestSoonToggle: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      minHeight: 44,
-      paddingHorizontal: 12,
-      borderRadius: 12,
-      backgroundColor: theme.card,
-      borderWidth: 1,
-      borderColor: theme.border,
-      marginBottom: 6,
-    },
-    harvestSoonToggleText: {
-      flex: 1,
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.text,
-    },
-    harvestSoonToggleMeta: {
-      fontSize: 12,
-      color: theme.textTertiary,
-    },
-    harvestIcon: {
-      marginRight: 10,
-    },
-    harvestInfo: {
-      flex: 1,
-      minWidth: 0,
-      marginRight: 8,
-    },
-    harvestPlant: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    harvestDate: {
-      flexShrink: 1,
-      fontSize: 13,
-      color: theme.textSecondary,
-    },
-    harvestStatusReady: {
-      color: theme.success,
-      fontWeight: '600',
-    },
-    harvestStatusOverdue: {
-      color: theme.warning,
-      fontWeight: '600',
-    },
-    harvestStatusRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      marginTop: 1,
     },
     modalContent: {
       backgroundColor: theme.backgroundSecondary,
@@ -774,26 +559,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       fontWeight: '700',
     },
-    harvestSource: {
-      fontSize: 12,
-      color: theme.textTertiary,
-    },
-    // Compact pill; the screen adds hitSlop so the touch target stays ~44px.
-    harvestLogButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      minHeight: 32,
-      paddingLeft: 8,
-      paddingRight: 12,
-      borderRadius: 999,
-      backgroundColor: theme.success + '18',
-    },
-    harvestLogButtonText: {
-      color: theme.success,
-      fontSize: 12,
-      fontWeight: '700',
-    },
     earlyCompletionNotice: {
       minHeight: 48,
       flexDirection: 'row',
@@ -949,22 +714,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 5,
     },
-    weekDoneChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      backgroundColor: theme.success + '20',
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.success + '60',
-    },
-    weekDoneChipText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: theme.success,
-    },
     // Tinted fill only — a border on top of the tint read as a second, competing
     // outline next to the solid primary action.
     selectionBarSecondaryBtn: {
@@ -1022,37 +771,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     listArea: {
       flex: 1,
       overflow: 'hidden',
-    },
-    // Absolutely positioned over the list so collapsing it is a GPU transform
-    // rather than a per-frame layout pass on the SectionList below.
-    collapsibleHeader: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 2,
-      backgroundColor: theme.card,
-      // Clips the strip out of bounds while the calendar is expanded. Both
-      // platforms stop hit-testing subviews outside a parent's bounds, so this
-      // is also what keeps the strip from stealing taps from the date cells.
-      overflow: 'hidden',
-    },
-    // Parked one strip-height below the header's bottom edge (i.e. clipped) and
-    // slid up into place as the header collapses. Opaque, so it covers the
-    // calendar it replaces instead of ghosting over it.
-    collapsedStripOverlay: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: theme.card,
-    },
-    sectionTitleOverdue: {
-      color: theme.error,
-      flex: 1,
-    },
-    sectionTitleFlex: {
-      flex: 1,
     },
     // Narrow so the header text keeps its place; hitSlop restores 44 px.
     sectionSelectButton: {

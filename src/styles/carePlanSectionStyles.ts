@@ -7,38 +7,6 @@ import type { Theme } from '@/theme/colors';
  */
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
-    summary: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      alignItems: 'baseline',
-      columnGap: 10,
-      rowGap: 4,
-      marginHorizontal: 16,
-      marginTop: 10,
-      marginBottom: 4,
-    },
-    summaryTitle: {
-      fontSize: 19,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    summarySubtitle: {
-      fontSize: 13,
-      fontWeight: '500',
-      color: theme.textSecondary,
-    },
-    headerPressable: {
-      minHeight: 32,
-    },
-    chevron: {
-      marginLeft: 2,
-    },
-    preview: {
-      marginTop: -4,
-      marginBottom: 6,
-      fontSize: 12,
-      color: theme.textTertiary,
-    },
     banner: {
       flexDirection: 'row',
       alignItems: 'center',

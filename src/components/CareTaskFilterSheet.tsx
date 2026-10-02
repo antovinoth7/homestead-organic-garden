@@ -31,7 +31,7 @@ import {
 import type { Bed, TaskType } from '../types/database.types';
 import type { PlotGroup } from '../utils/plotGrouping';
 
-export type CareGroupByOption = 'none' | 'location' | 'type' | 'plant';
+export type CareGroupByOption = 'time' | 'none' | 'location' | 'type' | 'plant';
 type Styles = ReturnType<typeof createStyles>;
 
 const SORT_OPTIONS: readonly {
@@ -44,6 +44,7 @@ const SORT_OPTIONS: readonly {
 ];
 
 const GROUP_OPTIONS: readonly { value: CareGroupByOption; label: string }[] = [
+  { value: 'time', label: 'Time of day' },
   { value: 'none', label: 'No Grouping' },
   { value: 'location', label: 'Location' },
   { value: 'type', label: 'Type' },
