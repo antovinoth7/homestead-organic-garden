@@ -100,10 +100,11 @@ export interface CarePlanSectionHeader {
   addAction?: boolean;
 }
 
-/** The Catch-up band's "Show all N / Select all N" row under its last card. */
+/** The Catch-up band's "+N more / Show less" row under its cards. */
 export interface CarePlanOverdueFooter {
   expanded: boolean;
-  total: number;
+  /** Cards the folded preview leaves out. */
+  hiddenCount: number;
 }
 
 export interface CarePlanSection {
@@ -438,7 +439,9 @@ export function buildCarePlanSections(input: CarePlanSectionsInput): CarePlanSec
         expanded,
       },
       data: taskRows('overdue', expanded ? overdue : overdue.slice(0, CATCH_UP_PREVIEW_COUNT)),
-      footer: foldable ? { expanded, total: overdue.length } : undefined,
+      footer: foldable
+        ? { expanded, hiddenCount: overdue.length - CATCH_UP_PREVIEW_COUNT }
+        : undefined,
     });
   }
 

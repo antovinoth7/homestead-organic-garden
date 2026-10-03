@@ -8,9 +8,25 @@ jest.mock('react-native', () => {
       return React.createElement(name, props, children);
     };
   return {
+    ScrollView: host('ScrollView'),
     Text: host('Text'),
     TouchableOpacity: host('TouchableOpacity'),
     View: host('View'),
+  };
+});
+jest.mock('react-native-svg', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  const host = (name: string) =>
+    function Host({ children, ...props }: { children?: React.ReactNode }) {
+      return React.createElement(name, props, children);
+    };
+  return {
+    __esModule: true,
+    default: host('Svg'),
+    Defs: host('Defs'),
+    LinearGradient: host('LinearGradient'),
+    Stop: host('Stop'),
+    Rect: host('Rect'),
   };
 });
 jest.mock('@/theme', () => ({ useTheme: () => ({}) }));
@@ -327,14 +343,14 @@ describe('SeasonBlock crop tiles', () => {
   });
 
 
-  it('leads every tile with the crop photo at grid size', () => {
+  it('leads every tile with the square crop photo', () => {
     const rendered = render();
     const thumbs = rendered.root.findAll((node) => node.type === 'ReferenceThumb');
     expect(thumbs).toHaveLength(3);
     expect(thumbs.map((node) => (node.props as { variant?: string }).variant)).toEqual([
-      'tile',
-      'tile',
-      'tile',
+      'square',
+      'square',
+      'square',
     ]);
   });
 

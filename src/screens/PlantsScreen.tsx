@@ -32,6 +32,8 @@ import { logger } from '../utils/logger';
 import { getErrorMessage } from '../utils/errorLogging';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { PlantFilterSheet } from '../components/PlantFilterSheet';
+import { HeaderIconButton } from '@/components/header/HeaderIconButton';
+import { HeaderSearchField } from '@/components/header/HeaderSearchField';
 import { UndoToast } from '../components/UndoToast';
 import { ConfirmDeleteModal } from '../components/modals/ConfirmDeleteModal';
 import { useBedOptions } from '@/hooks/useBedOptions';
@@ -156,7 +158,36 @@ export default function PlantsScreen(): React.JSX.Element {
     }, 300);
   }, []);
 
-  const loadPlants = useCallback(async (options?: { silent?: boolean }) => {
+  const openSearch = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSearchActive(true);
+  }, []);
+
+  // Collapsing keeps a real query in force (the magnifier's dot says so) and
+  // drops one that is only whitespace.
+  const closeSearch = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSearchActive(false);
+    if (!searchInput.trim()) {
+      setSearchInput('');
+      setSearchQuery('');
+    }
+  }, [searchInput]);
+
+  const clearSearch = useCallback(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    setSearchInput('');
+    setSearchQuery('');
+  }, []);
+
+  const submitSearch = useCallback(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    setSearchQuery(searchInput);
+  }, [searchInput]);
+
+  const openArchived = useCallback(() => navigation.navigate('ArchivedPlants'), [navigation]);
+
+  const loadPlants =useCallback(async (options?: { silent?: boolean }) => {
     if (!options?.silent) {
       setLoading(true);
     }
@@ -605,83 +636,40 @@ export default function PlantsScreen(): React.JSX.Element {
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         {searchActive ? (
-          <View style={styles.searchExpandedRow}>
-            <TouchableOpacity
-              style={styles.searchBackBtn}
-              onPress={() => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setSearchActive(false);
-                if (!searchInput.trim()) {
-                  setSearchInput('');
-                  setSearchQuery('');
-                }
-              }}
-            >
-              <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-            </TouchableOpacity>
-            <View style={styles.searchExpandedWrapper}>
-              <Ionicons name="search" size={16} color={theme.textSecondary} />
-              <TextInput
-                ref={searchInputRef}
-                style={styles.searchExpandedInput}
-                placeholder="Search plants..."
-                value={searchInput}
-                onChangeText={handleSearchChange}
-                placeholderTextColor={theme.inputPlaceholder}
-                autoFocus
-                returnKeyType="search"
-                onSubmitEditing={() => {
-                  if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-                  setSearchQuery(searchInput);
-                }}
-              />
-              {searchInput.trim() !== '' && (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSearchInput('');
-                    setSearchQuery('');
-                  }}
-                >
-                  <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
+          <HeaderSearchField
+            inputRef={searchInputRef}
+            value={searchInput}
+            onChangeText={handleSearchChange}
+            onClear={clearSearch}
+            onClose={closeSearch}
+            onSubmitEditing={submitSearch}
+            placeholder="Search plants..."
+            accessibilityLabel="Search plants"
+          />
         ) : (
           <>
-            <Text style={styles.headerTitle}>Plants</Text>
+            <Text style={styles.headerTitle} accessibilityRole="header">
+              Plants
+            </Text>
             <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={styles.headerIconBtn}
-                onPress={() => {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                  setSearchActive(true);
-                }}
-              >
-                <Ionicons name="search" size={20} color={theme.textInverse} />
-                {searchInput.trim() !== '' && <View style={styles.searchActiveDot} />}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.headerIconBtn}
-                onPress={() => navigation.navigate('ArchivedPlants')}
-              >
-                <Ionicons name="archive" size={20} color={theme.textInverse} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.headerIconBtn, showFilters && styles.headerIconBtnActive]}
+              <HeaderIconButton
+                icon="search"
+                onPress={openSearch}
+                accessibilityLabel="Search plants"
+                showDot={searchInput.trim() !== ''}
+              />
+              <HeaderIconButton
+                icon="archive"
+                onPress={openArchived}
+                accessibilityLabel="Archived plants"
+              />
+              <HeaderIconButton
+                icon="funnel"
                 onPress={toggleFilters}
-              >
-                <Ionicons
-                  name="funnel"
-                  size={20}
-                  color={showFilters ? theme.primary : theme.textInverse}
-                />
-                {activeFilterCount > 0 && !showFilters && (
-                  <View style={styles.filterBadge}>
-                    <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+                accessibilityLabel="Sort and filter plants"
+                active={showFilters}
+                badgeCount={activeFilterCount}
+              />
             </View>
           </>
         )}

@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/referenceBrowseStyles';
+import { HeaderIconButton } from '@/components/header/HeaderIconButton';
+import { HeaderSearchField } from '@/components/header/HeaderSearchField';
 
 interface Props {
   /** Screen title — "Pests", "Diseases", "Organic inputs". */
@@ -40,8 +42,8 @@ interface Props {
  * is what the dot on the magnifier is for, since a filtered list with no
  * visible cause is the thing this layout risks.
  *
- * The field is inlined rather than reusing `CatalogSearchBar`, which is bound to
- * `managePlantCatalogStyles`.
+ * The buttons and the field are the shared `HeaderIconButton` and
+ * `HeaderSearchField`, so this bar matches every other browse header.
  */
 function ReferenceBrowseHeaderComponent({
   title,
@@ -66,40 +68,14 @@ function ReferenceBrowseHeaderComponent({
   return (
     <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
       {searchActive ? (
-        <View style={styles.searchExpandedRow}>
-          <TouchableOpacity
-            onPress={onCloseSearch}
-            style={styles.searchBackBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Close search"
-          >
-            <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-          </TouchableOpacity>
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={16} color={theme.textSecondary} />
-            <TextInput
-              autoFocus
-              style={styles.searchInput}
-              value={query}
-              onChangeText={onQueryChange}
-              placeholder={searchPlaceholder}
-              placeholderTextColor={theme.inputPlaceholder}
-              autoCorrect={false}
-              autoCapitalize="none"
-              returnKeyType="search"
-              accessibilityLabel={searchAccessibilityLabel}
-            />
-            {query.length > 0 && (
-              <TouchableOpacity
-                onPress={onClearQuery}
-                hitSlop={8}
-                accessibilityLabel="Clear search"
-              >
-                <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+        <HeaderSearchField
+          value={query}
+          onChangeText={onQueryChange}
+          onClear={onClearQuery}
+          onClose={onCloseSearch}
+          placeholder={searchPlaceholder}
+          accessibilityLabel={searchAccessibilityLabel}
+        />
       ) : (
         <>
           <TouchableOpacity
@@ -120,32 +96,19 @@ function ReferenceBrowseHeaderComponent({
             </Text>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.headerIconBtn}
+            <HeaderIconButton
+              icon="search"
               onPress={onOpenSearch}
-              accessibilityRole="button"
               accessibilityLabel={searchAccessibilityLabel}
-            >
-              <Ionicons name="search" size={20} color={theme.textInverse} />
-              {query.trim() !== '' && <View style={styles.headerActiveDot} />}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerIconBtn, showFilters && styles.headerIconBtnActive]}
+              showDot={query.trim() !== ''}
+            />
+            <HeaderIconButton
+              icon="funnel"
               onPress={onToggleFilters}
-              accessibilityRole="button"
               accessibilityLabel={`Filter ${title.toLowerCase()}`}
-            >
-              <Ionicons
-                name="funnel"
-                size={20}
-                color={showFilters ? theme.primary : theme.textInverse}
-              />
-              {activeFilterCount > 0 && !showFilters && (
-                <View style={styles.filterBadge}>
-                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+              active={showFilters}
+              badgeCount={activeFilterCount}
+            />
           </View>
         </>
       )}

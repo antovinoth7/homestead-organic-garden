@@ -15,7 +15,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme';
 import { createStyles, catalogRowTotalHeight } from '@/styles/managePlantCatalogStyles';
 import { MoreStackParamList } from '@/types/navigation.types';
-import { CatalogSearchBar } from '@/components/catalog/CatalogSearchBar';
+import { HeaderIconButton } from '@/components/header/HeaderIconButton';
+import { HeaderSearchField } from '@/components/header/HeaderSearchField';
 import { CatalogBrowseRow } from '@/components/catalog/CatalogBrowseRow';
 import { CatalogSkeletonRows } from '@/components/catalog/CatalogSkeletonRows';
 import { CatalogSearchResultRow } from '@/components/catalog/CatalogSearchResultRow';
@@ -405,23 +406,15 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         {searchActive ? (
-          <View style={styles.searchExpandedRow}>
-            <TouchableOpacity
-              onPress={closeSearch}
-              style={styles.searchBackBtn}
-              accessibilityRole="button"
-              accessibilityLabel="Close search"
-            >
-              <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-            </TouchableOpacity>
-            <CatalogSearchBar
-              autoFocus
-              value={query}
-              onChangeText={setQuery}
-              onClear={clearQuery}
-              onSubmit={onSubmitSearch}
-            />
-          </View>
+          <HeaderSearchField
+            value={query}
+            onChangeText={setQuery}
+            onClear={clearQuery}
+            onClose={closeSearch}
+            onSubmitEditing={onSubmitSearch}
+            placeholder="Search plants or Tamil name"
+            accessibilityLabel="Search plant catalog"
+          />
         ) : (
           <>
             <TouchableOpacity
@@ -434,33 +427,18 @@ export default function ManagePlantCatalogScreen(): React.JSX.Element {
             </TouchableOpacity>
             <Text style={styles.title}>Plant Catalog</Text>
             <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={styles.headerIconBtn}
+              <HeaderIconButton
+                icon="search"
                 onPress={openSearch}
-                accessibilityRole="button"
                 accessibilityLabel="Search plant catalog"
-              >
-                <Ionicons name="search" size={20} color={theme.textInverse} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.headerIconBtn, showFilters && styles.headerIconBtnActive]}
+              />
+              <HeaderIconButton
+                icon="funnel"
                 onPress={toggleFilters}
-                accessibilityRole="button"
                 accessibilityLabel="Filter plants"
-              >
-                <Ionicons
-                  name="funnel"
-                  size={20}
-                  color={showFilters ? theme.primary : theme.textInverse}
-                />
-                {activeFilterCount > 0 && !showFilters && (
-                  <View style={styles.filterBadge}>
-                    <Text style={styles.filterBadgeText} maxFontSizeMultiplier={1.2}>
-                      {activeFilterCount}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+                active={showFilters}
+                badgeCount={activeFilterCount}
+              />
             </View>
           </>
         )}

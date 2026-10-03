@@ -13,8 +13,10 @@
  *
  * Every crop is a tap target into its catalog entry: a name alone is not a
  * decision, and the spacing and days-to-harvest that make it one already live
- * there. The tile is a card — the crop's photo, the fastest way to recognise
- * one, over its name and the two figures that decide whether it fits a bed.
+ * there. The tile is the crop's photo, the fastest way to recognise one, with
+ * its name and the two figures that decide whether it fits a bed laid over its
+ * foot on a gradient. Each group scrolls sideways as one row, like the
+ * suggestion row on the journal's new-entry form.
  *
  * Two figures and no more. The window the crop opens in is what the card's own
  * header already establishes, month and season both; the harvest month is
@@ -42,8 +44,8 @@
  *
  * Next month's crops close the planting section as a labelled block rather than
  * as a trailing sentence. They are still context and not work — no photos, no
- * tap targets, one line of names — but set as bare tertiary type under two
- * photo tiles they read as debris left over from the grid rather than as
+ * tap targets, one line of names — but set as bare tertiary type under a
+ * row of photo tiles they read as debris left over from the row rather than as
  * something the card meant to say. The card already owns a recipe for context
  * that closes a section, the one perennial care uses: a rule, an uppercase
  * label, and a line of body text. This is that recipe, and it names the month
@@ -61,7 +63,8 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { GardenIcon } from '@/components/GardenIcon';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { getPlantImage } from '@/config/referenceAssets';
@@ -125,6 +128,7 @@ interface CropTileProps {
   item: PlantNowRecommendation;
   onPress: (plantName: string, plantType: PlantType) => void;
   styles: ReturnType<typeof createStyles>;
+  scrimColor: string;
 }
 
 /**
@@ -152,6 +156,7 @@ const CropTile = React.memo(function CropTile({
   item,
   onPress,
   styles,
+  scrimColor,
 }: CropTileProps): React.JSX.Element {
   const handlePress = useCallback(
     () => onPress(item.label, item.plantType),
@@ -185,8 +190,24 @@ const CropTile = React.memo(function CropTile({
       accessibilityRole="button"
       accessibilityLabel={`${spoken}. Opens the catalog entry.`}
     >
-      <ReferenceThumb source={getPlantImage(item.label)} variant="tile" recyclingKey={item.key} />
-      <View style={styles.tileBody}>
+      <ReferenceThumb
+        source={getPlantImage(item.label)}
+        variant="square"
+        recyclingKey={item.key}
+      />
+      <View style={styles.tileScrim} pointerEvents="none">
+        <Svg width="100%" height="100%">
+          <Defs>
+            <SvgLinearGradient id="cropTileScrim" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={scrimColor} stopOpacity="0" />
+              <Stop offset="0.45" stopColor={scrimColor} stopOpacity="0.55" />
+              <Stop offset="1" stopColor={scrimColor} stopOpacity="0.9" />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect x={0} y={0} width="100%" height="100%" fill="url(#cropTileScrim)" />
+        </Svg>
+      </View>
+      <View style={styles.tileBody} pointerEvents="none">
         <Text style={styles.tileName} numberOfLines={1}>
           {item.label}
         </Text>
@@ -243,11 +264,22 @@ export const SeasonBlock = React.memo(function SeasonBlock({
       <View style={styles.plantGroup}>
         <Text style={styles.plantAction}>{ACTION_TITLE[action]}</Text>
         <Text style={styles.plantActionHint}>{ACTION_HINT[action]}</Text>
-        <View style={styles.tileGrid}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tileRow}
+          contentContainerStyle={styles.tileRowContent}
+        >
           {items.map((item) => (
-            <CropTile key={item.key} item={item} onPress={onPressCrop} styles={styles} />
+            <CropTile
+              key={item.key}
+              item={item}
+              onPress={onPressCrop}
+              styles={styles}
+              scrimColor={theme.scrim}
+            />
           ))}
-        </View>
+        </ScrollView>
       </View>
     );
   };

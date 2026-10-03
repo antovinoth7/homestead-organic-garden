@@ -14,14 +14,10 @@
  * Its day and week counts sit beneath it rather than inside it, because a 8pt
  * bar cannot hold type and a bar with a number in it is a gauge, not a rule.
  *
- * Each crop tile is a card of its own: photo flush to its top edge, then the
- * name and one line of figures on the card's own ground. The edge is what makes
- * the pair read as one crop — without it, two columns of photo-name-figures run
- * together into a single column of loose text at the seam.
- *
- * They are a two-column wrap sized by `TILE_BASIS` rather than `flex: 1`, so a
- * lone tile in a group keeps the column width instead of stretching across the
- * card and reading as a banner.
+ * Each crop tile is a square photo with its name and one line of figures laid
+ * over a gradient at its foot, the same tile the journal's new-entry form uses
+ * for pest suggestions. A group is one horizontal row of them, bleeding past
+ * the card's padding so the tiles scroll off its edge.
  */
 
 import { StyleSheet } from 'react-native';
@@ -29,13 +25,11 @@ import type { Theme } from '../theme/colors';
 import { CARD_GUTTER } from './todayScreenStyles';
 
 /**
- * Two columns with one `tileGrid` gap between them. Read together with that
- * gap: the pair only fits while `gap ≤ (1 - 2 × basis) × innerWidth`, and the
- * card's inner width is `screenWidth - 62` (gutter 16 ×2 + padding 15 ×2). At
- * 47% a 12px gap clears every phone size; at 48% it would collapse a 320pt
- * screen to a single column.
+ * Fixed width, not a column share. 148 matches the old two-column tile at
+ * 375–390pt (`(width − 62) × 47%`), so the photo keeps its size; two tiles and a
+ * sliver of a third show, and the sliver is the cue that the row scrolls.
  */
-const TILE_BASIS = '47%';
+const TILE_SIZE = 148;
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -169,33 +163,48 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       marginTop: 2,
     },
-    tileGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 12,
+    // Bleeds past the card's 15pt padding; the content padding puts the first
+    // tile back in line with the text above it.
+    tileRow: {
+      marginHorizontal: -15,
       marginTop: 11,
+    },
+    tileRowContent: {
+      paddingHorizontal: 15,
+      gap: 12,
     },
     // `overflow: 'hidden'` is what lets the photo meet the card's top edge: the
     // image rounds its own top corners, and this clips anything the radius
     // leaves over.
+    // `overflow: 'hidden'` gives the unrounded square photo the tile's corners.
     tile: {
-      flexBasis: TILE_BASIS,
-      flexGrow: 0,
-      backgroundColor: theme.card,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.borderLight,
+      width: TILE_SIZE,
+      aspectRatio: 1,
+      backgroundColor: theme.backgroundTertiary,
       borderRadius: 14,
       overflow: 'hidden',
       elevation: 1,
+    },
+    // Lower part of the tile: the gradient's clear top keeps the subject
+    // visible while its foot carries the name and figures.
+    tileScrim: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: '55%',
     },
     // Tighter than a flat inset: with a square photo above it, the padding
     // should not compete with the picture for the tile's height. The extra
     // point at the foot keeps the meta line off the card's bottom radius.
     tileBody: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
       gap: 2,
       paddingHorizontal: 10,
-      paddingTop: 9,
-      paddingBottom: 11,
+      paddingBottom: 9,
     },
     // One line: with only two lines of type under the photo, a name that
     // wrapped on one card and not its neighbour would leave the row ragged.
@@ -203,7 +212,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 13,
       lineHeight: 18,
       fontWeight: '600',
-      color: theme.text,
+      color: theme.textInverse,
+      textShadowColor: theme.shadow,
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
     },
     // Days to harvest and spacing on one line. At the narrowest phone the body
     // is about 101pt wide — `(320 − 62) × 47% − 20` — which "25–40 days · 15 cm"
@@ -211,7 +223,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tileMeta: {
       fontSize: 11.5,
       lineHeight: 16,
-      color: theme.textSecondary,
+      color: theme.textInverse,
+      textShadowColor: theme.shadow,
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
     },
 
     // Next month is context, not work, so it takes the same shape as perennial

@@ -243,8 +243,8 @@ The bands sit in this order:
 
 1. A **picked day**, when there is one, with **+ Add**.
 2. **Catch up** (overdue), ordered by priority (critical → low) and then by days
-   late. With more than two tasks it folds to the two most urgent, under
-   **Show all N** and **Select all N**.
+   late. With more than two tasks it folds to the two most urgent, with a
+   **+N more overdue** row (or a tap on the header) to open the rest.
 3. Today's three time bands.
 4. Later days, folded one per day.
 5. **Done today**.

@@ -193,53 +193,38 @@ describe('CarePlanBandHeader', () => {
 });
 
 describe('CarePlanBandFooter', () => {
-  const footerProps = {
-    selectionMode: false,
-    onToggle: jest.fn(),
-    onSelectAll: jest.fn(),
-  };
-
-  it('offers Show all and Select all under a folded Catch up', () => {
+  it('says how many a folded Catch up holds back, and opens on tap', () => {
     const onToggle = jest.fn();
-    const onSelectAll = jest.fn();
     const tree = render(
       <CarePlanBandFooter
-        {...footerProps}
         tone="overdue"
-        footer={{ expanded: false, total: 52 }}
+        footer={{ expanded: false, hiddenCount: 48 }}
         onToggle={onToggle}
-        onSelectAll={onSelectAll}
       />
     );
-    expect(text(tree)).toBe('Show all 52Select all 52');
-    const [showAll, selectAll] = touchables(tree);
-    showAll?.props.onPress?.();
-    selectAll?.props.onPress?.();
+    expect(text(tree)).toBe('+48 more overdue');
+    const [more] = touchables(tree);
+    expect(more?.props.accessibilityState).toEqual({ expanded: false });
+    more?.props.onPress?.();
     expect(onToggle).toHaveBeenCalled();
-    expect(onSelectAll).toHaveBeenCalled();
   });
 
   it('says Show less once open', () => {
     const tree = render(
-      <CarePlanBandFooter {...footerProps} tone="overdue" footer={{ expanded: true, total: 52 }} />
+      <CarePlanBandFooter tone="overdue" footer={{ expanded: true, hiddenCount: 48 }} />
     );
-    expect(text(tree)).toContain('Show less');
+    expect(text(tree)).toBe('Show less');
   });
 
-  it('keeps out of the way while selecting', () => {
-    const tree = render(
-      <CarePlanBandFooter
-        {...footerProps}
-        selectionMode
-        tone="overdue"
-        footer={{ expanded: false, total: 52 }}
-      />
-    );
+  it('rounds off a panel that folds nothing, with no row of its own', () => {
+    const tree = render(<CarePlanBandFooter tone="overdue" />);
+    expect(tree.toJSON()).not.toBeNull();
+    expect(text(tree)).toBe('');
     expect(touchables(tree)).toHaveLength(0);
   });
 
   it('draws nothing under a band without a panel', () => {
-    const tree = render(<CarePlanBandFooter {...footerProps} tone="band" footer={undefined} />);
+    const tree = render(<CarePlanBandFooter tone="band" />);
     expect(tree.toJSON()).toBeNull();
   });
 });

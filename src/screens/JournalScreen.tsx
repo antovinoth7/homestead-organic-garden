@@ -58,6 +58,8 @@ import { toLocalDateString } from '@/utils/dateHelpers';
 import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
 import { JournalEntryCard } from '@/components/JournalEntryCard';
+import { HeaderIconButton } from '@/components/header/HeaderIconButton';
+import { HeaderSearchField } from '@/components/header/HeaderSearchField';
 import { StatusToast } from '@/components/StatusToast';
 import { OptionPickerSheet } from '@/components/OptionPickerSheet';
 import { JournalActionSheet } from '@/components/journal/JournalActionSheet';
@@ -541,75 +543,34 @@ export default function JournalScreen(): React.JSX.Element {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         {searchActive ? (
-          <View style={styles.searchExpandedRow}>
-            <TouchableOpacity
-              style={styles.searchBackBtn}
-              onPress={closeSearch}
-              accessibilityRole="button"
-              accessibilityLabel="Close search"
-            >
-              <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-            </TouchableOpacity>
-            <View style={styles.searchExpandedWrapper}>
-              <Ionicons name="search" size={16} color={theme.textSecondary} />
-              <TextInput
-                ref={searchInputRef}
-                style={styles.searchExpandedInput}
-                placeholder="Search journal..."
-                placeholderTextColor={theme.inputPlaceholder}
-                value={filters.query}
-                onChangeText={handleQueryChange}
-                autoFocus
-                returnKeyType="search"
-                accessibilityLabel="Search journal"
-              />
-              {filters.query !== '' && (
-                <TouchableOpacity
-                  onPress={clearQuery}
-                  accessibilityRole="button"
-                  accessibilityLabel="Clear search"
-                >
-                  <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
+          <HeaderSearchField
+            inputRef={searchInputRef}
+            value={filters.query}
+            onChangeText={handleQueryChange}
+            onClear={clearQuery}
+            onClose={closeSearch}
+            placeholder="Search journal..."
+            accessibilityLabel="Search journal"
+          />
         ) : (
           <>
             <Text style={styles.headerTitle} accessibilityRole="header">
               Journal
             </Text>
             <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={styles.headerIconBtn}
+              <HeaderIconButton
+                icon="search"
                 onPress={openSearch}
-                accessibilityRole="button"
                 accessibilityLabel="Search journal"
-              >
-                <Ionicons name="search" size={20} color={theme.textInverse} />
-                {filters.query.trim() !== '' && <View style={styles.searchActiveDot} />}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.headerIconBtn, filterSheetOpen && styles.headerIconBtnActive]}
+                showDot={filters.query.trim() !== ''}
+              />
+              <HeaderIconButton
+                icon="funnel"
                 onPress={openFilters}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  activeFilterCount > 0
-                    ? `Filter journal, ${activeFilterCount} active`
-                    : 'Filter journal'
-                }
-              >
-                <Ionicons
-                  name="funnel"
-                  size={20}
-                  color={filterSheetOpen ? theme.primary : theme.textInverse}
-                />
-                {activeFilterCount > 0 && !filterSheetOpen && (
-                  <View style={styles.filterBadge}>
-                    <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+                accessibilityLabel="Filter journal"
+                active={filterSheetOpen}
+                badgeCount={activeFilterCount}
+              />
             </View>
           </>
         )}

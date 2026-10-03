@@ -28,9 +28,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomColor: theme.border,
     },
     backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -60,97 +60,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-    },
-    /** Filled primary circle, matching the catalog and Plants headers. */
-    headerIconBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerIconBtnActive: {
-      backgroundColor: theme.accent,
-    },
-    /**
-     * Dot saying the search icon hides a query that is still in force — the bar
-     * collapses without clearing what was typed. Accent, because the button
-     * beneath it is filled with the primary colour.
-     */
-    headerActiveDot: {
-      position: 'absolute',
-      bottom: 6,
-      right: 6,
-      width: 7,
-      height: 7,
-      borderRadius: 4,
-      backgroundColor: theme.accent,
-    },
-    /**
-     * How many of the sheet's facets are off default. A plain dot could say only
-     * that something was filtered, never whether one facet or all four were
-     * responsible for the list on screen.
-     */
-    filterBadge: {
-      position: 'absolute',
-      top: 1,
-      right: 1,
-      minWidth: 14,
-      height: 14,
-      borderRadius: 7,
-      backgroundColor: theme.accent,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 2,
-    },
-    filterBadgeText: {
-      fontSize: 9,
-      color: theme.textInverse,
-      fontWeight: '700',
-      lineHeight: 14,
-    },
-
-    // ---- Expanded search --------------------------------------------------
-    /** The chevron that collapses search, in place of the back button. */
-    searchBackBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    /** Takes over the whole bar — title and both actions step aside for it. */
-    searchExpandedRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flex: 1,
-    },
-    /**
-     * The flex is what makes the pill fill the row beside the chevron; without
-     * it the field shrinks to its placeholder and runs past the header's right
-     * edge on a narrow screen.
-     */
-    searchBar: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      minHeight: 40,
-      borderRadius: 24,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.primary,
-    },
-    searchInput: {
-      flex: 1,
-      fontSize: 16,
-      color: theme.inputText,
-      padding: 0,
     },
 
     // ---- Section divider --------------------------------------------------

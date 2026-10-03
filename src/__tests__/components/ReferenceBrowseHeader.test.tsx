@@ -27,6 +27,9 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@/theme', () => ({
   useTheme: () => ({ primary: '#26734d', textInverse: '#fff', textSecondary: '#4a3828' }),
 }));
+jest.mock('@/styles/headerActionStyles', () => ({
+  createStyles: () => new Proxy({}, { get: (_target, property) => String(property) }),
+}));
 jest.mock('@/styles/referenceBrowseStyles', () => ({
   createStyles: () => new Proxy({}, { get: (_target, property) => String(property) }),
 }));
@@ -134,7 +137,7 @@ describe('ReferenceBrowseHeader', () => {
     expect(hosts(tree, 'Search pests')).toHaveLength(1);
     expect(hosts(tree, 'Filter pests')).toHaveLength(1);
     // The field itself is not mounted until search is opened.
-    expect(hasStyle(tree, 'searchBar')).toBe(false);
+    expect(hasStyle(tree, 'searchField')).toBe(false);
   });
 
   it('opens search rather than filtering when the magnifier is pressed', () => {
@@ -146,26 +149,26 @@ describe('ReferenceBrowseHeader', () => {
 
   it('replaces the title row with the field once search is open', () => {
     const { tree } = render({ searchActive: true });
-    expect(hasStyle(tree, 'searchBar')).toBe(true);
+    expect(hasStyle(tree, 'searchField')).toBe(true);
     expect(hasStyle(tree, 'title')).toBe(false);
     expect(hosts(tree, 'Close search')).toHaveLength(1);
   });
 
   it('marks a query still in force behind a collapsed bar', () => {
-    expect(hasStyle(render({ query: 'aphid' }).tree, 'headerActiveDot')).toBe(true);
-    expect(hasStyle(render({ query: '' }).tree, 'headerActiveDot')).toBe(false);
+    expect(hasStyle(render({ query: 'aphid' }).tree, 'dot')).toBe(true);
+    expect(hasStyle(render({ query: '' }).tree, 'dot')).toBe(false);
     // Whitespace alone is not a query worth flagging.
-    expect(hasStyle(render({ query: '   ' }).tree, 'headerActiveDot')).toBe(false);
+    expect(hasStyle(render({ query: '   ' }).tree, 'dot')).toBe(false);
   });
 
   it('badges how many facets are off default', () => {
     const { tree } = render({ activeFilterCount: 3 });
-    expect(textOf(byLabel(tree, 'Filter pests'))).toContain('3');
+    expect(textOf(byLabel(tree, 'Filter pests, 3 active'))).toContain('3');
   });
 
   it('drops the badge while the sheet is open, since the facets are on screen', () => {
     const { tree } = render({ activeFilterCount: 3, showFilters: true });
-    expect(hasStyle(tree, 'filterBadge')).toBe(false);
+    expect(hasStyle(tree, 'badge')).toBe(false);
   });
 
   it('offers no clear button until something is typed', () => {

@@ -268,7 +268,7 @@ describe('buildCarePlanSections', () => {
   describe('Catch up', () => {
     const overdue = [t('o1'), t('o2'), t('o3'), t('o4')];
 
-    it('folds to the most urgent cards and offers Show all / Select all', () => {
+    it('folds to the most urgent cards and says how many more', () => {
       const [section] = buildCarePlanSections(
         base({ overdue, overdueOldestDays: 6, overdueCriticalCount: 1 })
       );
@@ -283,7 +283,7 @@ describe('buildCarePlanSections', () => {
         subtitle: 'Oldest 6 days · 1 critical · most urgent shown',
       });
       expect(section?.header?.selectableTasks).toHaveLength(4);
-      expect(section?.footer).toEqual({ expanded: false, total: 4 });
+      expect(section?.footer).toEqual({ expanded: false, hiddenCount: 2 });
     });
 
     it('opens to all of it', () => {
@@ -292,7 +292,7 @@ describe('buildCarePlanSections', () => {
       );
       expect(section?.data).toHaveLength(4);
       expect(section?.header?.subtitle).toBe('All overdue work, most urgent first.');
-      expect(section?.footer).toEqual({ expanded: true, total: 4 });
+      expect(section?.footer).toEqual({ expanded: true, hiddenCount: 2 });
     });
 
     it('does not fold two or fewer', () => {

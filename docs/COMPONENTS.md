@@ -19,6 +19,7 @@
 
 - `CollapsibleSection` — expandable section wrapper
 - `ScreenHeader` — standard screen header
+- `header/HeaderIconButton` + `header/HeaderSearchField` (`headerActionStyles`) — the search / filter controls of every browse header (Plants, Beds, Journal, Care Plan, Plant Catalog, and `ReferenceBrowseHeader` for Pests / Diseases / Organic inputs). New browse screens must use them rather than restyling their own; see **Header actions** under UI Conventions
 - `FloatingLabelInput` — animated label text input
 - `ThemedDropdown` — themed dropdown picker
 - `FloatingTabBar` (includes `AnimatedFAB` and `FloatingTabBarProvider`) — tab bar with scroll-hide
@@ -37,7 +38,7 @@
 
 - **Plant detail sections** (`PlantDetailScreen`): `PlantKeyInfoSection`, `CareScheduleSection`, `GrowthStageSection` (+ `GrowthStageTimeline`, `PinGrowthStageModal`), `HarvestInfoSection`, `HarvestHistorySection` (+ `HarvestYieldChart`), `CompanionPlantingSection`, `CoconutSection`, `PestDiseaseHistorySection`, `PlantNotesSection`, `PlantTasksSection`, `DetailSection`, `PlantInfoRow`
 - **Catalog detail sections** (`CatalogPlantDetailScreen`): `DetailQuickInfoSection`, `DetailNutritionSection`, `DetailCareGuidanceSection`, `PlantCatalogList`
-- **Catalog browse** (`ManagePlantCatalogScreen`): `CatalogSearchBar`, `CatalogBrowseRow`, `CatalogSectionHeader`, `CatalogSkeletonRows`, `CatalogSearchResultRow`, `RecentSearchChips`, `HiddenPlantsSection`, `CatalogFilterSheet`. The header carries search and a funnel only — `CatalogFilterSheet` owns both facets, the category (an `All` chip plus one per `CATALOG_GROUP_ORDER` entry, `All` being the default) and the grouping mode. The category pill rail that used to sit above the list is gone; the funnel badge counts how many facets are off their default.
+- **Catalog browse** (`ManagePlantCatalogScreen`): `CatalogBrowseRow`, `CatalogSectionHeader`, `CatalogSkeletonRows`, `CatalogSearchResultRow`, `RecentSearchChips`, `HiddenPlantsSection`, `CatalogFilterSheet`. The header carries search and a funnel only — `CatalogFilterSheet` owns both facets, the category (an `All` chip plus one per `CATALOG_GROUP_ORDER` entry, `All` being the default) and the grouping mode. The category pill rail that used to sit above the list is gone; the funnel badge counts how many facets are off their default.
 - **Reference browse** (`PestListScreen`, `DiseaseListScreen`, `OrganicInputListScreen`): `ReferenceListView` (pests + diseases) and `OrganicInputListView` share `ReferenceBrowseHeader`, `ReferenceFilterSheet` and `ReferenceSectionHeader`, all styled from `referenceBrowseStyles`. The header matches the catalog's — a magnifier that expands in place and a funnel with a badge counting the facets off default; the always-visible search field and the category pill rail are gone, along with `ReferenceFilterChips`. `ReferenceFilterSheet` is the catalog sheet generalised to a declarative `FacetSection[]`, so each domain supplies its own facets: pests and diseases offer Category, Risk now, Treatment effort and Group By (Category / Risk / A–Z), organic inputs offer Category, DIY recipe and Group By (Category / A–Z). Facet logic is pure and lives in `utils/referenceFilters.ts` and `utils/organicInputFilters.ts` (both follow `plantFilters.ts`, counting each facet against every *other* one); state lives in `useReferenceBrowse` / `useOrganicInputBrowse`. Risk reuses `getCurrentRisk` so the chip and `ReferenceListCard`'s "HIGH NOW" badge can never disagree; effort reduces an entry's treatments to the gentlest via `easiestEffort`, so each entry lands in exactly one bucket. There is no count line above the list: the total is stated by the header subtitle, each group by its section header, and each facet by its chip in the sheet. That row also carried the only `FieldHelp` on `CATEGORY_DESCRIPTIONS`, so those descriptions are no longer surfaced anywhere in the UI (the tables stay in `config/*`); if they are wanted back, the natural home is each category chip's `accessibilityHint`. The hooks take the grouped registry bundle the three screens already build, which is what carries the canonical category order.
 - **Plant forms** (`src/components/forms/`): `PlantAddWizard` + `WizardStep1/2/3`; `PlantEditForm` + `Edit*Section` (BasicInfo, Location, CareSchedule, Coconut, QuickInfo, Nutrition, Relationships, CareGuidance, Safety, Beneficials)
 - **Beds**: `BedCard`, `BedTopDownMap`, `BedLayerStack`, `BedRowLayout`, `BedSuccessionTimeline`, `BedZoneIllustration`, `BedRotationView`, `RotationStatusCard`, `BedContextSection`, `BedFilterSheet`, `BedPlantPickerSheet`, `DraggablePlantRow`, `ClearBedCta`, `PlantEntryResolverSheet`
@@ -50,7 +51,7 @@
   - `CarePlanBand`:
     - `CarePlanBandFrame`, the timeline gutter (dot and line) plus the band body, with a tinted panel for Catch up and a picked day.
     - `CarePlanBandHeader`: the select-all box, title, "NOW · h:mm" chip, "+ Add", count and chevron, then the subtitle and rain banners.
-    - `CarePlanBandFooter`: "Show all N" and "Select all N" under Catch up.
+    - `CarePlanBandFooter`: closes a tinted panel (Catch up, a picked day). Under a folded Catch up it carries a slim "+N more overdue / Show less" row.
   - `HarvestRoundRow`: one row of the multi-row harvest-round card. It is the head, a crop with "+ Log", or the "Harvest soon" toggle. "+ Log" completes the harvest task behind the check (`HarvestReadyItem.taskId`) and opens the journal harvest form; that task is not also listed as a card.
   - `CarePlanTaskCard`: the plant or bed is the title, with the job and `amount` on the second line. It carries the best-time chip from `utils/taskTimeWindow`, hidden inside a time band through `showBestTime={false}`. A 5 px type bar turns red with "3d late" when the task is overdue, and the tick is 44 px.
   - `TaskDetailSheet`: subject, editable Amount, Best time with its reason, Done / Skip-Reschedule, and "Done with notes…", which opens `TaskCompletionModal`.
@@ -85,3 +86,17 @@ When adding complex data logic to a screen, extract it into a custom hook in `sr
 - Main tabs: `Home`, `Plants`, `Care Plan`, `Journal`, `More`.
 - Nested stacks exist for Plants, Journal, and More. Keep existing route names unchanged unless you update all callers.
 - Providers wrap the app: `ErrorBoundary` → `SafeAreaProvider` → `ThemeProvider`.
+
+### Header actions
+
+Every browse header draws search and filter the same way, through `HeaderIconButton` and `HeaderSearchField`:
+
+| State | Look |
+| --- | --- |
+| Idle | 44px circle, `primary` fill, 20px icon in `textInverse` |
+| Panel open (`active`) | `accent` fill, icon in `primary` |
+| Filters applied (`badgeCount`) | Button stays `primary`; `accent` count badge ringed in `tabBarBackground`. Hidden while the panel is open. The label gains ", N active". |
+| Query behind a collapsed bar (`showDot`) | `accent` dot, same ring |
+| Search open | 44px `primary` chevron, then a `background` pill with a `primary` border |
+
+The fill means "panel open" and nothing else — applied filters are the badge's job, so never recolour the button for them. Care Plan folds a non-default Group By into its badge count for that reason. Collapsing search keeps the query (hence the dot) on every screen except the Plant Catalog, whose results list is tied to the field being open and so clears it.

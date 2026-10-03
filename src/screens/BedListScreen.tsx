@@ -24,6 +24,8 @@ import { BedFilterSheet, BedCounts } from '@/components/BedFilterSheet';
 import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import { AnimatedFAB, useTabBarScroll, TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { HeaderIconButton } from '@/components/header/HeaderIconButton';
+import { HeaderSearchField } from '@/components/header/HeaderSearchField';
 import { UndoToast } from '@/components/UndoToast';
 import { createStyles } from '@/styles/bedListStyles';
 import {
@@ -90,7 +92,34 @@ export default function BedListScreen(): React.JSX.Element {
     }, 200);
   }, []);
 
-  const beds = useMemo(() => bedsData.filter((b) => !deletedIds.has(b.id)), [bedsData, deletedIds]);
+  const openSearch = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSearchActive(true);
+  }, []);
+
+  // Collapsing keeps a real query in force (the magnifier's dot says so) and
+  // drops one that is only whitespace.
+  const closeSearch = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSearchActive(false);
+    if (!searchInput.trim()) {
+      setSearchInput('');
+      setSearchQuery('');
+    }
+  }, [searchInput]);
+
+  const clearSearch = useCallback(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    setSearchInput('');
+    setSearchQuery('');
+  }, []);
+
+  const submitSearch = useCallback(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    setSearchQuery(searchInput);
+  }, [searchInput]);
+
+  const beds =useMemo(() => bedsData.filter((b) => !deletedIds.has(b.id)), [bedsData, deletedIds]);
 
   const visibleBeds = useMemo(
     () => filterAndSortBeds(beds, filters, sortBy, searchQuery),
@@ -369,80 +398,35 @@ export default function BedListScreen(): React.JSX.Element {
     <View style={styles.container}>
       {searchActive ? (
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <View style={styles.searchExpandedRow}>
-            <TouchableOpacity
-              style={styles.searchBackBtn}
-              onPress={() => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setSearchActive(false);
-                if (!searchInput.trim()) {
-                  setSearchInput('');
-                  setSearchQuery('');
-                }
-              }}
-            >
-              <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-            </TouchableOpacity>
-            <View style={styles.searchExpandedWrapper}>
-              <Ionicons name="search" size={16} color={theme.textSecondary} />
-              <TextInput
-                ref={searchInputRef}
-                style={styles.searchExpandedInput}
-                placeholder="Search beds..."
-                value={searchInput}
-                onChangeText={handleSearchChange}
-                placeholderTextColor={theme.inputPlaceholder}
-                autoFocus
-                returnKeyType="search"
-                onSubmitEditing={() => {
-                  if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-                  setSearchQuery(searchInput);
-                }}
-              />
-              {searchInput.trim() !== '' && (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSearchInput('');
-                    setSearchQuery('');
-                  }}
-                >
-                  <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
+          <HeaderSearchField
+            inputRef={searchInputRef}
+            value={searchInput}
+            onChangeText={handleSearchChange}
+            onClear={clearSearch}
+            onClose={closeSearch}
+            onSubmitEditing={submitSearch}
+            placeholder="Search beds..."
+            accessibilityLabel="Search beds"
+          />
         </View>
       ) : (
         <ScreenHeader
           title="Beds"
           right={
             <>
-              <TouchableOpacity
-                style={styles.headerIconBtn}
-                onPress={() => {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                  setSearchActive(true);
-                }}
-              >
-                <Ionicons name="search" size={20} color={theme.textInverse} />
-                {searchInput.trim() !== '' && <View style={styles.searchActiveDot} />}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.headerIconBtn, showFilters && styles.headerIconBtnActive]}
+              <HeaderIconButton
+                icon="search"
+                onPress={openSearch}
+                accessibilityLabel="Search beds"
+                showDot={searchInput.trim() !== ''}
+              />
+              <HeaderIconButton
+                icon="funnel"
                 onPress={toggleFilters}
                 accessibilityLabel="Sort and filter beds"
-              >
-                <Ionicons
-                  name="funnel"
-                  size={20}
-                  color={showFilters ? theme.primary : theme.textInverse}
-                />
-                {activeFilterCount > 0 && !showFilters && (
-                  <View style={styles.filterBadge}>
-                    <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+                active={showFilters}
+                badgeCount={activeFilterCount}
+              />
             </>
           }
         />

@@ -69,17 +69,6 @@ export const createStyles = (
       gap: 8,
     },
     /** Filled primary circle, matching the Plants screen's header controls. */
-    headerIconBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerIconBtnActive: {
-      backgroundColor: theme.accent,
-    },
     // Above the list when the user's own catalog data failed to load. The
     // bundled plants still show, so this is a banner, not an empty state.
     errorBanner: {
@@ -104,45 +93,8 @@ export const createStyles = (
       fontWeight: '700',
       color: theme.primary,
     },
-    /**
-     * How many facets the filter sheet has off default. The funnel now carries
-     * two — category and grouping — so a plain dot could no longer say whether
-     * one or both were in force.
-     */
-    filterBadge: {
-      position: 'absolute',
-      top: 1,
-      right: 1,
-      minWidth: 14,
-      height: 14,
-      borderRadius: 7,
-      backgroundColor: theme.accent,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 2,
-    },
-    filterBadgeText: {
-      fontSize: 9,
-      color: theme.textInverse,
-      fontWeight: '700',
-      lineHeight: 14,
-    },
     /** The chevron that collapses search, mirroring `plantsStyles`. */
-    searchBackBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
     /** Expanded search row — takes the place of the title in the header bar. */
-    searchExpandedRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flex: 1,
-    },
     title: {
       fontSize: 20,
       fontWeight: '700',
@@ -150,32 +102,6 @@ export const createStyles = (
     },
 
     // ---- Search bar -------------------------------------------------------
-    /**
-     * The field lives inside the header bar, so it carries no outer margins —
-     * the header owns its padding. `flex: 1` is what makes it fill the row
-     * beside the back chevron; without it the pill shrank to its placeholder
-     * and ran past the header's right edge on a narrow screen. Geometry copied
-     * from `plantsStyles.searchExpandedWrapper` so the two screens match.
-     */
-    searchBar: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      minHeight: 40,
-      borderRadius: 24,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.primary,
-    },
-    searchInput: {
-      flex: 1,
-      fontSize: 16,
-      color: theme.inputText,
-      padding: 0,
-    },
 
     // ---- List -------------------------------------------------------------
     contentWrapper: {

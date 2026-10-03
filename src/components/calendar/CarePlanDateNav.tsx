@@ -20,6 +20,9 @@ const LABEL_FORMAT: Intl.DateTimeFormatOptions = {
   day: 'numeric',
 };
 
+/** The row is 28px tall; the slop brings each control back up to a 44px target. */
+const DATE_HIT_SLOP = { top: 8, bottom: 8 };
+
 /**
  * The line under the Care Plan title: "‹ Today · Sat, Oct 3 ⌄ ›". Tapping the
  * date opens the month sheet; the arrows step a day. There is no stepping into
@@ -49,7 +52,7 @@ export function CarePlanDateNav({
         accessibilityRole="button"
         accessibilityLabel="Previous day"
         accessibilityState={{ disabled: onToday }}
-        hitSlop={{ top: 4, bottom: 4 }}
+        hitSlop={DATE_HIT_SLOP}
       >
         <Ionicons name="chevron-back" size={18} color={theme.textTertiary} />
       </TouchableOpacity>
@@ -58,7 +61,7 @@ export function CarePlanDateNav({
         onPress={onOpenMonth}
         accessibilityRole="button"
         accessibilityLabel={`${label}. Open month calendar`}
-        hitSlop={{ top: 4, bottom: 4 }}
+        hitSlop={DATE_HIT_SLOP}
       >
         <Text style={[styles.dateLabel, !onToday && styles.dateLabelPicked]} numberOfLines={1}>
           {label}
@@ -70,7 +73,7 @@ export function CarePlanDateNav({
         onPress={onNext}
         accessibilityRole="button"
         accessibilityLabel="Next day"
-        hitSlop={{ top: 4, bottom: 4 }}
+        hitSlop={DATE_HIT_SLOP}
       >
         <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
       </TouchableOpacity>

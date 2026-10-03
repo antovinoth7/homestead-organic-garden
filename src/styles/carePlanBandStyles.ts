@@ -43,7 +43,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     dateStep: {
       width: 32,
-      height: 36,
+      height: 28,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -52,7 +52,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      minHeight: 36,
+      minHeight: 28,
       flexShrink: 1,
     },
     dateLabel: {
@@ -242,32 +242,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
     },
 
-    // ── Catch-up footer ────────────────────────────────────────────────────
-    footerActions: {
+    // ── Catch-up more row ──────────────────────────────────────────────────
+    moreRow: {
       flexDirection: 'row',
-      gap: 8,
-      marginBottom: 6,
-    },
-    footerButton: {
-      flex: 1,
-      minHeight: 44,
       alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 12,
-      backgroundColor: theme.card,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.border,
+      alignSelf: 'flex-start',
+      gap: 4,
+      minHeight: 32,
+      paddingHorizontal: 2,
     },
-    footerButtonText: {
+    moreRowText: {
       fontSize: 13,
       fontWeight: '700',
-      color: theme.text,
+      color: theme.error,
     },
-    footerButtonStrong: {
-      backgroundColor: theme.error,
-      borderColor: theme.error,
-    },
-    footerButtonStrongText: { color: theme.textInverse },
 
     // ── Harvest round ──────────────────────────────────────────────────────
     // One card across several list rows: each row paints the card's ground,

@@ -52,6 +52,8 @@ import SkipTaskModal from '../components/modals/SkipTaskModal';
 import { AlertDialog, type AlertDialogAction } from '../components/modals/AlertDialog';
 import { MonthCalendarSheet } from '@/components/calendar/MonthCalendarSheet';
 import { CarePlanDateNav } from '@/components/calendar/CarePlanDateNav';
+import { HeaderIconButton } from '@/components/header/HeaderIconButton';
+import { HeaderSearchField } from '@/components/header/HeaderSearchField';
 import { CarePlanProgressCard } from '@/components/calendar/CarePlanProgressCard';
 import {
   CarePlanBandFooter,
@@ -369,6 +371,23 @@ export default function CalendarScreen(): React.JSX.Element {
 
   const activeFilterCount = countActiveCareFilters(filters);
   const isFilterActive = activeFilterCount > 0;
+  // The funnel badge also counts a non-default grouping: the button only
+  // changes colour while the sheet is open, so the badge is the one place a
+  // regrouped list can explain itself.
+  const headerFilterBadgeCount = activeFilterCount + (groupBy !== DEFAULT_GROUP_BY ? 1 : 0);
+
+  const openSearch = useCallback(() => setSearchActive(true), []);
+  const closeSearch = useCallback(() => {
+    setSearchActive(false);
+    setSearchQuery((current) => (current.trim() ? current : ''));
+  }, []);
+  const clearSearchQuery = useCallback(() => setSearchQuery(''), []);
+  const handleSearchChange = useCallback(
+    (text: string) => setSearchQuery(sanitizeAlphaNumericSpaces(text)),
+    []
+  );
+  const toggleGroupMenu = useCallback(() => setShowGroupMenu((open) => !open), []);
+  const groupMenuA11yState = useMemo(() => ({ expanded: showGroupMenu }), [showGroupMenu]);
 
   const clearFilters = useCallback(() => {
     setSelectedTaskIds(new Set());
@@ -1930,13 +1949,6 @@ export default function CalendarScreen(): React.JSX.Element {
   const toggleHarvestRound = useCallback(() => toggleSection(HARVEST_ROUND_KEY), [toggleSection]);
   const toggleCatchUp = useCallback(() => toggleSection(OVERDUE_SECTION_KEY), [toggleSection]);
 
-  // "Select all N" under Catch up: every overdue task, folded ones included.
-  const selectAllOverdue = useCallback(() => {
-    tapFeedback();
-    const ids = catchUp.tasks.filter((task) => !isEarlyCompletionBlocked(task)).map((t) => t.id);
-    setSelectedTaskIds((prev) => new Set([...prev, ...ids]));
-  }, [catchUp.tasks]);
-
   // "+ Add" on a picked day creates the task on that day.
   const handleAddForPickedDay = useCallback(() => {
     setCreateTaskInitialDate(selectedDate ?? undefined);
@@ -2095,12 +2107,10 @@ export default function CalendarScreen(): React.JSX.Element {
         <CarePlanBandFooter
           tone={section.header.tone}
           footer={section.footer}
-          selectionMode={selectionMode}
           onToggle={toggleCatchUp}
-          onSelectAll={selectAllOverdue}
         />
       ) : null,
-    [selectionMode, toggleCatchUp, selectAllOverdue]
+    [toggleCatchUp]
   );
 
   const listKeyExtractor = useCallback((row: CalendarRow): string => row.key, []);
@@ -2151,35 +2161,15 @@ export default function CalendarScreen(): React.JSX.Element {
         <View style={styles.header}>
           <View style={[styles.headerTop, { paddingTop: insets.top + 12 }]}>
             {searchActive ? (
-              <View style={styles.searchExpandedRow}>
-                <TouchableOpacity
-                  style={styles.searchBackBtn}
-                  onPress={() => {
-                    setSearchActive(false);
-                    if (!searchQuery.trim()) setSearchQuery('');
-                  }}
-                >
-                  <Ionicons name="chevron-back" size={22} color={theme.textInverse} />
-                </TouchableOpacity>
-                <View style={styles.searchExpandedWrapper}>
-                  <Ionicons name="search" size={16} color={theme.textSecondary} />
-                  <TextInput
-                    ref={searchInputRef}
-                    style={styles.searchExpandedInput}
-                    placeholder="Search tasks..."
-                    value={searchQuery}
-                    onChangeText={(text) => setSearchQuery(sanitizeAlphaNumericSpaces(text))}
-                    placeholderTextColor={theme.inputPlaceholder}
-                    autoFocus
-                    returnKeyType="search"
-                  />
-                  {searchQuery.trim() !== '' && (
-                    <TouchableOpacity onPress={() => setSearchQuery('')}>
-                      <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
+              <HeaderSearchField
+                inputRef={searchInputRef}
+                value={searchQuery}
+                onChangeText={handleSearchChange}
+                onClear={clearSearchQuery}
+                onClose={closeSearch}
+                placeholder="Search tasks..."
+                accessibilityLabel="Search care-plan tasks"
+              />
             ) : (
               <>
                 <View style={bandStyles.headerTitleBlock}>
@@ -2205,33 +2195,20 @@ export default function CalendarScreen(): React.JSX.Element {
                       <Text style={bandStyles.todayPillText}>Today</Text>
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity
-                    style={styles.searchIconBtn}
-                    onPress={() => setSearchActive(true)}
-                    accessibilityRole="button"
+                  <HeaderIconButton
+                    icon="search"
+                    onPress={openSearch}
                     accessibilityLabel="Search care-plan tasks"
-                  >
-                    <Ionicons name="search" size={20} color={theme.primary} />
-                    {searchQuery.trim() !== '' && <View style={styles.searchActiveDot} />}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.groupMenuButton,
-                      (showGroupMenu || isFilterActive || groupBy !== DEFAULT_GROUP_BY) &&
-                        styles.groupMenuButtonActive,
-                    ]}
-                    onPress={() => setShowGroupMenu(!showGroupMenu)}
-                    accessibilityRole="button"
+                    showDot={searchQuery.trim() !== ''}
+                  />
+                  <HeaderIconButton
+                    icon="funnel"
+                    onPress={toggleGroupMenu}
                     accessibilityLabel="Care-plan filters"
-                    accessibilityState={{ expanded: showGroupMenu }}
-                  >
-                    <Ionicons name="funnel" size={20} color={theme.textInverse} />
-                    {activeFilterCount > 0 && !showGroupMenu && (
-                      <View style={styles.filterBadge}>
-                        <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
+                    accessibilityState={groupMenuA11yState}
+                    active={showGroupMenu}
+                    badgeCount={headerFilterBadgeCount}
+                  />
                 </View>
               </>
             )}

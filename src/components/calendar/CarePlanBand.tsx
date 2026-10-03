@@ -185,25 +185,25 @@ export function CarePlanBandHeader({
   );
 }
 
+/** The more row is 32px tall; the slop brings it up to a 44px target. */
+const MORE_ROW_HIT_SLOP = { top: 6, bottom: 6 };
+
 interface FooterProps {
   tone: CarePlanBandTone;
-  footer: CarePlanOverdueFooter | undefined;
-  /** Hide Show all / Select all while a selection is running. */
-  selectionMode: boolean;
-  onToggle: () => void;
-  onSelectAll: () => void;
+  /** Catch up's "+N more / Show less" row; absent when nothing folds. */
+  footer?: CarePlanOverdueFooter;
+  onToggle?: () => void;
 }
 
 /**
- * Closes a band. Catch up carries "Show all N / Show less" and "Select all N";
- * other panels just round off; plain bands need nothing below their cards.
+ * Closes a band: a tinted panel (Catch up, a picked day) rounds off under its
+ * last card; plain bands need nothing below their cards. A folded Catch up says
+ * how many cards it holds back, and opens or folds from that line or its header.
  */
 export function CarePlanBandFooter({
   tone,
   footer,
-  selectionMode,
   onToggle,
-  onSelectAll,
 }: FooterProps): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -211,29 +211,23 @@ export function CarePlanBandFooter({
 
   return (
     <CarePlanBandFrame tone={tone} part="footer">
-      {footer && !selectionMode && (
-        <View style={styles.footerActions}>
-          <TouchableOpacity
-            style={styles.footerButton}
-            onPress={onToggle}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: footer.expanded }}
-          >
-            <Text style={styles.footerButtonText}>
-              {footer.expanded ? 'Show less' : `Show all ${footer.total}`}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.footerButton, styles.footerButtonStrong]}
-            onPress={onSelectAll}
-            accessibilityRole="button"
-            accessibilityLabel={`Select all ${footer.total} overdue tasks`}
-          >
-            <Text style={[styles.footerButtonText, styles.footerButtonStrongText]}>
-              {`Select all ${footer.total}`}
-            </Text>
-          </TouchableOpacity>
-        </View>
+      {footer && (
+        <TouchableOpacity
+          style={styles.moreRow}
+          onPress={onToggle}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: footer.expanded }}
+          hitSlop={MORE_ROW_HIT_SLOP}
+        >
+          <Text style={styles.moreRowText}>
+            {footer.expanded ? 'Show less' : `+${footer.hiddenCount} more overdue`}
+          </Text>
+          <Ionicons
+            name={footer.expanded ? 'chevron-up' : 'chevron-down'}
+            size={15}
+            color={theme.error}
+          />
+        </TouchableOpacity>
       )}
     </CarePlanBandFrame>
   );
