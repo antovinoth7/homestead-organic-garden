@@ -207,13 +207,16 @@ export function summarizeToday(
   dueNow: readonly TaskTemplate[],
   overdueCount: number,
   plotCount: number,
-  doneCount: number
+  doneCount: number,
+  /** Crops in the harvest round — their tasks are counted there, not in `dueNow`. */
+  harvestCount = 0
 ): TodaySummary {
   const n = dueNow.length;
   const title = n > 0 ? `${n} task${n === 1 ? '' : 's'} today` : 'All done for today';
   const subtitle = [
     overdueCount > 0 ? `${overdueCount} overdue` : '',
     plotCount > 0 ? `${plotCount} plot${plotCount === 1 ? '' : 's'}` : '',
+    harvestCount > 0 ? `${harvestCount} to harvest` : '',
     doneCount > 0 ? `${doneCount} done` : '',
   ]
     .filter(Boolean)

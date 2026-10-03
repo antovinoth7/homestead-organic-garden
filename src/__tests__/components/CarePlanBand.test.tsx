@@ -284,7 +284,9 @@ describe('HarvestRoundRow', () => {
     const tree = render(<HarvestRoundRow {...rowProps} row={row} onLogHarvest={onLogHarvest} />);
     expect(text(tree)).toBe('Black Pepper 02Overdue by 6 days · Scheduled+ Log');
     byLabel(tree, 'Log harvest for Black Pepper 02')?.props.onPress?.();
-    expect(onLogHarvest).toHaveBeenCalledWith('p1');
+    expect(onLogHarvest).toHaveBeenCalledWith(
+      expect.objectContaining({ plant: expect.objectContaining({ id: 'p1' }) })
+    );
   });
 
   it('spans the look-ahead harvests in days', () => {

@@ -51,7 +51,7 @@
     - `CarePlanBandFrame`, the timeline gutter (dot and line) plus the band body, with a tinted panel for Catch up and a picked day.
     - `CarePlanBandHeader`: the select-all box, title, "NOW · h:mm" chip, "+ Add", count and chevron, then the subtitle and rain banners.
     - `CarePlanBandFooter`: "Show all N" and "Select all N" under Catch up.
-  - `HarvestRoundRow`: one row of the multi-row harvest-round card. It is the head, a crop with "+ Log", or the "Harvest soon" toggle.
+  - `HarvestRoundRow`: one row of the multi-row harvest-round card. It is the head, a crop with "+ Log", or the "Harvest soon" toggle. "+ Log" completes the harvest task behind the check (`HarvestReadyItem.taskId`) and opens the journal harvest form; that task is not also listed as a card.
   - `CarePlanTaskCard`: the plant or bed is the title, with the job and `amount` on the second line. It carries the best-time chip from `utils/taskTimeWindow`, hidden inside a time band through `showBestTime={false}`. A 5 px type bar turns red with "3d late" when the task is overdue, and the tick is 44 px.
   - `TaskDetailSheet`: subject, editable Amount, Best time with its reason, Done / Skip-Reschedule, and "Done with notes…", which opens `TaskCompletionModal`.
   - Interaction:

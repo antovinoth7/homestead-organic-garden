@@ -106,6 +106,8 @@ export interface HarvestReadyItem {
   daysUntil: number;
   isReady: boolean;
   source: 'farmer_date' | 'scheduled_task';
+  /** The harvest task this check stands for, when it comes from one. */
+  taskId?: string;
 }
 
 /**
@@ -203,7 +205,7 @@ export function computeHarvestsReady(
         ? journalKey > stampedKey
           ? journalKey
           : stampedKey
-        : journalKey ?? stampedKey;
+        : (journalKey ?? stampedKey);
 
     // Applies to a scheduled task too, not just a farmer's date. A task that
     // did advance has a later `nextKey` and stays visible on its own; this is
@@ -225,7 +227,14 @@ export function computeHarvestsReady(
     // the plant record, not here.
     if (daysUntil > HARVEST_HORIZON_DAYS) continue;
 
-    items.push({ plant, nextDate, daysUntil, isReady: daysUntil <= READY_WITHIN_DAYS, source });
+    items.push({
+      plant,
+      nextDate,
+      daysUntil,
+      isReady: daysUntil <= READY_WITHIN_DAYS,
+      source,
+      ...(scheduled ? { taskId: scheduled.id } : {}),
+    });
   }
   // Ordered here rather than at each call site: the list came back in `plants`
   // order, so a crop 28 days out could print above one overdue by 3. Name
@@ -284,7 +293,7 @@ export function getHarvestBasis(entries: JournalEntry[]): HarvestBasis {
 /** An entry's contribution to a total on `basis`, or null if it is off-basis. */
 function contribution(entry: JournalEntry, basis: HarvestBasis): number | null {
   if (basis === 'kg') return harvestWeightKg(entry.harvest_quantity, entry.harvest_unit);
-  return isWeightUnit(entry.harvest_unit) ? null : entry.harvest_quantity ?? null;
+  return isWeightUnit(entry.harvest_unit) ? null : (entry.harvest_quantity ?? null);
 }
 
 export interface HarvestSummary {

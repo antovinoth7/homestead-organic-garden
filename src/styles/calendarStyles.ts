@@ -19,14 +19,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'space-between',
       alignItems: 'center',
     },
-    headerTitle: {
-      flex: 1,
-      flexShrink: 1,
-      marginRight: 8,
-      fontSize: 22,
-      fontWeight: '700',
-      color: theme.text,
-    },
     // Search and the month calendar are quiet outline buttons; only the filter
     // stays solid, so the one control that changes the list stands out.
     searchIconBtn: {

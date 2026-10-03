@@ -231,6 +231,13 @@ out in three bands. Each task goes into the band of its window
   row.
 - **Card chips.** Cards in a time band drop their best-time chip, because the
   band already says when.
+- **Harvest appears once.** A `harvest` / `harvest_leaves` task that the round
+  shows (`HarvestReadyItem.taskId`) is left out of Catch up, the time bands,
+  later days and a picked day; search still finds it. Its **+ Log** completes
+  the task, as ticking its card used to, and opens the journal harvest form for
+  the yield. A crop with only a farmer-set date has no task, so **+ Log** just
+  opens the form. The progress card counts these crops as "N to harvest", not
+  as tasks.
 
 The bands sit in this order:
 

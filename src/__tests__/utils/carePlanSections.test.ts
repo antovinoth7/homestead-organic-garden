@@ -79,6 +79,12 @@ describe('summarizeToday', () => {
     });
   });
 
+  it('names the crops waiting in the harvest round', () => {
+    expect(summarizeToday([t('a')], 1, 2, 3, 17).subtitle).toBe(
+      '1 overdue · 2 plots · 17 to harvest · 3 done'
+    );
+  });
+
   it('uses the singular and drops empty parts', () => {
     expect(summarizeToday([t('a')], 0, 1, 0)).toMatchObject({
       title: '1 task today',

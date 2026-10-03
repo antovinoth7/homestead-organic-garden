@@ -65,6 +65,7 @@ import {
   type CarePlanCardDoneState,
 } from '@/components/calendar/CarePlanTaskCard';
 import { TaskDetailSheet } from '@/components/calendar/TaskDetailSheet';
+import type { HarvestReadyItem } from '@/utils/harvestStats';
 import { UndoToast } from '@/components/UndoToast';
 import { usePendingCompletions, type CompletionSaveResult } from '@/hooks/usePendingCompletions';
 import { getErrorMessage } from '../utils/errorLogging';
@@ -334,8 +335,8 @@ export default function CalendarScreen(): React.JSX.Element {
     handleRefresh,
     plantMap,
     filteredTasks,
-    harvestsReadyNow,
-    harvestsSoon,
+    harvestsReadyNow: allHarvestsReadyNow,
+    harvestsSoon: allHarvestsSoon,
     todayTasks,
     tasksForDisplay,
     facetCounts,
@@ -1312,13 +1313,39 @@ export default function CalendarScreen(): React.JSX.Element {
     [plotResolution]
   );
 
+  // A harvest task the harvest round already shows lives only there: listing
+  // it as a card too put the same crop on screen twice. Search still finds it.
+  const roundTaskIds = useMemo(
+    () =>
+      new Set(
+        [...allHarvestsReadyNow, ...allHarvestsSoon]
+          .map((item) => item.taskId)
+          .filter((id): id is string => id !== undefined)
+      ),
+    [allHarvestsReadyNow, allHarvestsSoon]
+  );
+  // A check whose task was just logged leaves the round at once, as a ticked
+  // card leaves its band — it waits in Done today, not in the round.
+  const harvestsReadyNow = useMemo(
+    () => allHarvestsReadyNow.filter((item) => !item.taskId || !completedIds.has(item.taskId)),
+    [allHarvestsReadyNow, completedIds]
+  );
+  const harvestsSoon = useMemo(
+    () => allHarvestsSoon.filter((item) => !item.taskId || !completedIds.has(item.taskId)),
+    [allHarvestsSoon, completedIds]
+  );
+  const isListed = useCallback(
+    (task: TaskTemplate) => isOpen(task) && !roundTaskIds.has(task.id),
+    [isOpen, roundTaskIds]
+  );
+
   const openOverdue = useMemo(
-    () => sortTasks(overdueTasks.filter(isOpen)),
-    [overdueTasks, isOpen, sortTasks]
+    () => sortTasks(overdueTasks.filter(isListed)),
+    [overdueTasks, isListed, sortTasks]
   );
   const openToday = useMemo(
-    () => sortTasks(todayTasks.filter(isOpen)),
-    [todayTasks, isOpen, sortTasks]
+    () => sortTasks(todayTasks.filter(isListed)),
+    [todayTasks, isListed, sortTasks]
   );
 
   const doneItems = useMemo((): CarePlanDoneItem[] => {
@@ -1353,8 +1380,14 @@ export default function CalendarScreen(): React.JSX.Element {
   const todaySummary = useMemo(() => {
     const dueNow = [...openOverdue, ...openToday];
     const plots = new Set(dueNow.map((task) => taskPlotName(task) ?? ''));
-    return summarizeToday(dueNow, openOverdue.length, plots.size, doneItems.length);
-  }, [openOverdue, openToday, taskPlotName, doneItems.length]);
+    return summarizeToday(
+      dueNow,
+      openOverdue.length,
+      plots.size,
+      doneItems.length,
+      harvestsReadyNow.length
+    );
+  }, [openOverdue, openToday, taskPlotName, doneItems.length, harvestsReadyNow.length]);
 
   // Catch up leads with what matters most: priority first, then the oldest.
   // Stable, so equal tasks keep the farmer's chosen sort.
@@ -1452,7 +1485,7 @@ export default function CalendarScreen(): React.JSX.Element {
     const overdueIds = new Set(overdueTasks.map((task) => task.id));
     const rest = sortTasks(
       tasksForDisplay.filter((task) => {
-        if (!isOpen(task) || overdueIds.has(task.id)) return false;
+        if (!isListed(task) || overdueIds.has(task.id)) return false;
         const dueKey = farmDateKey(task.next_due_at);
         return dueKey !== todayKey && dueKey !== selectedKey;
       })
@@ -1510,7 +1543,7 @@ export default function CalendarScreen(): React.JSX.Element {
                 month: 'short',
                 day: 'numeric',
               }),
-              tasks: sortTasks(getTasksForDate(selectedDate).filter(isOpen)),
+              tasks: sortTasks(getTasksForDate(selectedDate).filter(isListed)),
               rawCount: getRawTasksForDate(selectedDate).length,
             }
           : null,
@@ -1539,6 +1572,7 @@ export default function CalendarScreen(): React.JSX.Element {
     sortTasks,
     tasksForDisplay,
     isOpen,
+    isListed,
     taskSubjectLabel,
     loadError,
     tasks.length,
@@ -1871,17 +1905,26 @@ export default function CalendarScreen(): React.JSX.Element {
     setHarvestSoonExpanded((prev) => !prev);
   }, []);
 
+  // "+ Log" in the harvest round. A check that stands for a harvest task
+  // completes it, exactly as ticking its card did — saved, then on to the
+  // journal harvest form for the yield. A farmer's own date has no task, so it
+  // goes straight to the form.
   const handleLogHarvest = useCallback(
-    (plantId: string) => {
+    (item: HarvestReadyItem) => {
+      const task = item.taskId ? templatesById.get(item.taskId) : undefined;
+      if (task && isOpen(task)) {
+        handleTaskComplete(task);
+        return;
+      }
       navigation.navigate('Journal', {
         screen: 'JournalForm',
         params: {
           initialEntryType: JournalEntryType.Harvest,
-          initialPlantId: plantId,
+          initialPlantId: item.plant.id,
         },
       });
     },
-    [navigation]
+    [templatesById, isOpen, handleTaskComplete, navigation]
   );
 
   const toggleHarvestRound = useCallback(() => toggleSection(HARVEST_ROUND_KEY), [toggleSection]);
@@ -2140,13 +2183,7 @@ export default function CalendarScreen(): React.JSX.Element {
             ) : (
               <>
                 <View style={bandStyles.headerTitleBlock}>
-                  <Text
-                    style={styles.headerTitle}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.82}
-                  >
+                  <Text style={bandStyles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
                     Care Plan
                   </Text>
                   <CarePlanDateNav

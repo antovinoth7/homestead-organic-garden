@@ -212,6 +212,7 @@ describe('harvestStats', () => {
       expect(items[0]?.isReady).toBe(true);
       expect(items[0]?.daysUntil).toBe(3);
       expect(items[0]?.source).toBe('farmer_date');
+      expect(items[0]?.taskId).toBeUndefined();
     });
 
     it('uses an enabled harvest task ahead of the plant estimate', () => {
@@ -229,6 +230,8 @@ describe('harvestStats', () => {
       const items = computeHarvestsReady([plant], [], NOW, [task]);
       expect(items[0]?.daysUntil).toBe(2);
       expect(items[0]?.source).toBe('scheduled_task');
+      // The Care Plan's harvest round completes this task from its + Log.
+      expect(items[0]?.taskId).toBe('harvest-task');
     });
 
     it('keeps a supported harvest date that is approaching but not yet ready', () => {
@@ -255,8 +258,16 @@ describe('harvestStats', () => {
       const items = computeHarvestsReady(
         [
           makePlant({ id: 'far', name: 'Far', expected_harvest_date: '2026-09-19T12:30:00.000Z' }),
-          makePlant({ id: 'late', name: 'Late', expected_harvest_date: '2026-08-19T12:30:00.000Z' }),
-          makePlant({ id: 'soon', name: 'Soon', expected_harvest_date: '2026-08-27T12:30:00.000Z' }),
+          makePlant({
+            id: 'late',
+            name: 'Late',
+            expected_harvest_date: '2026-08-19T12:30:00.000Z',
+          }),
+          makePlant({
+            id: 'soon',
+            name: 'Soon',
+            expected_harvest_date: '2026-08-27T12:30:00.000Z',
+          }),
         ],
         [],
         NOW

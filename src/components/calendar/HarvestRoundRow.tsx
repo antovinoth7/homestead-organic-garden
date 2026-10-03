@@ -5,6 +5,7 @@ import { ReferenceThumb } from '@/components/ReferenceThumb';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/carePlanBandStyles';
 import type { CarePlanRow } from '@/utils/carePlanSections';
+import type { HarvestReadyItem } from '@/utils/harvestStats';
 import { getPlantImage } from '@/config/referenceAssets';
 import { TASK_BEST_TIME } from '@/utils/taskTimeWindow';
 
@@ -14,7 +15,8 @@ interface Props {
   row: RoundRow;
   onToggleRound: () => void;
   onToggleSoon: () => void;
-  onLogHarvest: (plantId: string) => void;
+  /** Completes the harvest task behind the check, or opens the journal form. */
+  onLogHarvest: (item: HarvestReadyItem) => void;
 }
 
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -130,7 +132,7 @@ export function HarvestRoundRow({
       </View>
       <TouchableOpacity
         style={styles.roundLog}
-        onPress={() => onLogHarvest(harvest.plant.id)}
+        onPress={() => onLogHarvest(harvest)}
         accessibilityRole="button"
         accessibilityLabel={`Log harvest for ${harvest.plant.name}`}
       >

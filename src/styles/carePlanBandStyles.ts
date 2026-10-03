@@ -27,6 +27,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     headerTitleBlock: {
       flex: 1,
       minWidth: 0,
+      marginRight: 8,
+    },
+    // No flex and no auto-fit: in this column a flexed, auto-fitting title
+    // shrinks to its squeezed height, and Android ignores `minimumFontScale`.
+    headerTitle: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: theme.text,
     },
     dateLine: {
       flexDirection: 'row',

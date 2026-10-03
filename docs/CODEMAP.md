@@ -1,13 +1,13 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-10-02 — src/: 782 files, 143,915 lines.
+> Snapshot: 2026-10-03 — src/: 782 files, 143,985 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
 ## Large files (search, don't read whole)
 
-- src/screens/CalendarScreen.tsx (2511)
+- src/screens/CalendarScreen.tsx (2548)
 - src/styles/bedCreationWizardStyles.ts (1906)
 - src/utils/plantHelpers.ts (1872)
 - src/styles/plantFormStyles.ts (1719)
@@ -26,12 +26,12 @@
 
 ## src/
 
-### src/__tests__/components/ — 25 files, 4,889 lines
+### src/__tests__/components/ — 25 files, 4,891 lines
 
 - SeasonBlock.test.tsx (516)
 - PlotCard.test.tsx (351)
 - VoiceDictation.test.tsx (337)
-- CarePlanBand.test.tsx (305)
+- CarePlanBand.test.tsx (307)
 - CareTaskFilterSheet.test.tsx (289)
 - CatalogFilterSheet.test.tsx (275)
 - OptionPickerSheet.test.tsx (231)
@@ -154,13 +154,13 @@
 
 - catalogMetrics.test.ts (67)
 
-### src/__tests__/utils/ — 93 files, 14,436 lines
+### src/__tests__/utils/ — 93 files, 14,453 lines
 
 - journalEntryOptions.test.ts (727)
 - careTaskFilters.test.ts (568)
 - rowLayoutEngine.test.ts (523)
-- harvestStats.test.ts (493)
-- carePlanSections.test.ts (407)
+- harvestStats.test.ts (504)
+- carePlanSections.test.ts (413)
 - growthStage.test.ts (369)
 - catalogListItems.test.ts (361)
 - rowLayoutEngine.bedTypes.test.ts (343)
@@ -325,13 +325,13 @@
 - PlantNotesSection.tsx (33)
 - FieldErrorText.tsx (29)
 
-### src/components/calendar/ — 8 files, 1,272 lines
+### src/components/calendar/ — 8 files, 1,274 lines
 
 - TaskDetailSheet.tsx (306)
 - CarePlanBand.tsx (241)
 - CarePlanTaskCard.tsx (225)
 - MonthCalendarView.tsx (153)
-- HarvestRoundRow.tsx (142)
+- HarvestRoundRow.tsx (144)
 - MonthCalendarSheet.tsx (82)
 - CarePlanDateNav.tsx (80)
 - CarePlanProgressCard.tsx (43)
@@ -640,9 +640,9 @@
 
 - AppNavigator.tsx (197)
 
-### src/screens/ — 28 files, 11,963 lines
+### src/screens/ — 28 files, 12,000 lines
 
-- CalendarScreen.tsx (2511) ⚠️ large — Grep/search inside, do not read whole
+- CalendarScreen.tsx (2548) ⚠️ large — Grep/search inside, do not read whole
 - JournalFormScreen.tsx (1092) ⚠️ large — Grep/search inside, do not read whole
 - CatalogPlantDetailScreen.tsx (1064) ⚠️ large — Grep/search inside, do not read whole
 - PlantsScreen.tsx (825) ⚠️ large — Grep/search inside, do not read whole
@@ -705,7 +705,7 @@
 
 - bedCreationWizardStyles.ts (1906) ⚠️ large — Grep/search inside, do not read whole
 - plantFormStyles.ts (1719) ⚠️ large — Grep/search inside, do not read whole
-- calendarStyles.ts (783)
+- calendarStyles.ts (775)
 - plantDetailStyles.ts (691)
 - journalFormStyles.ts (688)
 - bedRowLayoutStyles.ts (633)
@@ -716,7 +716,7 @@
 - enrichedSectionStyles.ts (393)
 - plotCardStyles.ts (393)
 - journalStyles.ts (383)
-- carePlanBandStyles.ts (363)
+- carePlanBandStyles.ts (371)
 - plantCardStyles.ts (340)
 - bedListStyles.ts (338)
 - forecastOverlayStyles.ts (338)
@@ -822,16 +822,16 @@
 - visual.types.ts (90)
 - offline.types.ts (49)
 
-### src/utils/ — 97 files, 15,383 lines
+### src/utils/ — 97 files, 15,395 lines
 
 - plantHelpers.ts (1872) ⚠️ large — Grep/search inside, do not read whole
 - journalEntryOptions.ts (757)
 - rowLayoutEngine.ts (660)
-- carePlanSections.ts (513)
+- carePlanSections.ts (516)
 - plantAliases.ts (449)
 - plantLabels.ts (429)
 - zipHelper.ts (398)
-- harvestStats.ts (387)
+- harvestStats.ts (396)
 - catalogDraft.ts (342)
 - careTaskFilters.ts (341)
 - referenceFilters.ts (292)
@@ -955,10 +955,10 @@
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
 - BEST_PRACTICES.md (68)
-- CODEMAP.md (966)
+- CODEMAP.md (971)
 - COMPONENTS.md (88)
 - CONVENTIONS.md (275)
-- DOMAIN_LOGIC.md (276)
+- DOMAIN_LOGIC.md (283)
 - ENTERPRISE_AUDIT.md (444)
 - IMAGE_STORAGE.md (55)
 - IMPLEMENTATION_ROADMAP.md (685)
