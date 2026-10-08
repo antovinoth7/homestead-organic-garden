@@ -16,7 +16,6 @@ module.exports = defineConfig([
       'dist/**',
       'build/**',
       'coverage/**',
-      'UI/**',
       'eslint.config.cjs',
       'app.config.js',
       'metro.config.js',
@@ -77,12 +76,12 @@ module.exports = defineConfig([
       'react-hooks/purity': 'error',
 
       // Still a warning. The 11 genuine findings (cascading renders from state
-      // written back by an effect) are fixed; the 54 that remain are benign --
+      // written back by an effect) are fixed; the 51 that remain are benign --
       // prop-to-state sync on a sheet opening, and async loaders whose only
       // synchronous write is a setLoading(true) the hook already initialises to
       // true. Clearing them means restructuring those sheets around a `key`
       // reset, which is its own piece of work.
-      // Baseline: 0 errors, 54 warnings. A new warning is a regression.
+      // Baseline: 0 errors, 51 warnings. A new warning is a regression.
       // See docs/IMPLEMENTATION_ROADMAP.md section 9, Post-Upgrade Backlog.
       'react-hooks/set-state-in-effect': 'warn',
     },
