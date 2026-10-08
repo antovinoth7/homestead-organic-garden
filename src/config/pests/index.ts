@@ -27,10 +27,6 @@ export function getPestByName(name: string): PestEntry | undefined {
   return ALL_PESTS.find((p) => p.name.toLowerCase() === normalised);
 }
 
-export function getPestsByCategory(category: PestCategory): PestEntry[] {
-  return ALL_PESTS.filter((p) => p.category === category);
-}
-
 export interface PestCategoryGroup {
   category: PestCategory;
   label: string;
@@ -43,19 +39,6 @@ const CATEGORY_LABELS: Record<PestCategory, string> = {
   borers_larvae: 'Borers & Larvae',
   beetles_weevils: 'Beetles & Weevils',
   other: 'Other Pests',
-};
-
-export const CATEGORY_DESCRIPTIONS: Record<PestCategory, string> = {
-  sap_sucking:
-    'Insects that pierce plant tissue and suck out sap, weakening plants, causing leaf curl, and spreading viruses.',
-  mites:
-    'Tiny arachnids (not insects) that feed on plant cells, causing stippling, discoloration, and fine webbing.',
-  borers_larvae:
-    'Insect larvae that tunnel into stems, roots, or fruit, causing wilting, dieback, and structural damage.',
-  beetles_weevils:
-    'Hard-bodied beetles or weevils that chew leaves, bore into seeds, or damage storage organs.',
-  other:
-    "Pests that don't fit the main categories — includes soil pests, thrips, and region-specific threats.",
 };
 
 const CATEGORY_ORDER: PestCategory[] = [

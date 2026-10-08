@@ -112,7 +112,6 @@ export const lightTheme = {
 
   // Picker colors
   pickerBackground: '#ffffff',
-  pickerText: '#1a110a',
   pickerBorder: '#dccfc0',
 
   // Tab bar
@@ -225,7 +224,6 @@ export const darkTheme = {
 
   // Picker colors
   pickerBackground: '#2a2a2a',
-  pickerText: '#e0e0e0',
   pickerBorder: '#404040',
 
   // Tab bar

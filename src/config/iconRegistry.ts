@@ -163,13 +163,6 @@ export const TREATMENT_ICON_KEYS = {
   cultural: 'treatment.cultural',
 } as const satisfies Record<TreatmentMethod, VisualIconKey>;
 
-export const QUALITY_ICON_KEYS = {
-  excellent: 'quality.excellent',
-  good: 'quality.good',
-  fair: 'quality.fair',
-  poor: 'quality.poor',
-} as const satisfies Record<'excellent' | 'good' | 'fair' | 'poor', VisualIconKey>;
-
 export const ICON_REGISTRY: Record<VisualIconKey, IconDefinition> = {
   'task.water': { kind: 'ionicon', name: 'water' },
   'task.fertilise': { kind: 'ionicon', name: 'nutrition' },
@@ -237,10 +230,6 @@ export const ICON_REGISTRY: Record<VisualIconKey, IconDefinition> = {
   'treatment.soil': { kind: 'ionicon', name: 'layers-outline' },
   'treatment.manual': { kind: 'ionicon', name: 'hand-left-outline' },
   'treatment.cultural': { kind: 'ionicon', name: 'sync-outline' },
-  'quality.excellent': { kind: 'ionicon', name: 'star' },
-  'quality.good': { kind: 'ionicon', name: 'thumbs-up' },
-  'quality.fair': { kind: 'ionicon', name: 'remove-circle-outline' },
-  'quality.poor': { kind: 'ionicon', name: 'thumbs-down' },
   'general.plant': { kind: 'ionicon', name: 'leaf-outline' },
   'general.pest': { kind: 'ionicon', name: 'bug-outline' },
   'general.disease': { kind: 'ionicon', name: 'medical-outline' },

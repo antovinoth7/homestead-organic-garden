@@ -27,10 +27,6 @@ export function getDiseaseByName(name: string): DiseaseEntry | undefined {
   return ALL_DISEASES.find((d) => d.name.toLowerCase() === normalised);
 }
 
-export function getDiseasesByCategory(category: DiseaseCategory): DiseaseEntry[] {
-  return ALL_DISEASES.filter((d) => d.category === category);
-}
-
 export interface DiseaseCategoryGroup {
   category: DiseaseCategory;
   label: string;
@@ -43,19 +39,6 @@ const CATEGORY_LABELS: Record<DiseaseCategory, string> = {
   viral: 'Viral Diseases',
   phytoplasma: 'Phytoplasma Diseases',
   physiological: 'Physiological Disorders',
-};
-
-export const CATEGORY_DESCRIPTIONS: Record<DiseaseCategory, string> = {
-  fungal:
-    'Caused by fungal spores spread by moisture and wind; shows as spots, blight, mildew, or rot.',
-  bacterial:
-    'Caused by bacteria entering through wounds or stomata; leads to wilting, cankers, or oozing lesions.',
-  viral:
-    'Caused by plant viruses spread by insect vectors; symptoms include mosaic patterns, stunting, and deformity.',
-  phytoplasma:
-    'Caused by phloem-limited bacteria spread mainly by sap-feeding insects; common signs include little leaves, yellowing, and witches\u2019-broom growth.',
-  physiological:
-    'Non-infectious disorders caused by nutrient deficiency, watering extremes, or environmental stress.',
 };
 
 const CATEGORY_ORDER: DiseaseCategory[] = [

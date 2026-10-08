@@ -5,8 +5,7 @@
 
 import { WeatherForecast, LocationProfile } from '@/types/database.types';
 import { getDistrictCoordinates, DEFAULT_COORDINATES } from '@/config/zones/districtCoordinates';
-import { forecastDateKey, selectForecastDays, SHOWERS_MM } from '@/utils/weatherWords';
-import type { VisualIconKey } from '@/types/visual.types';
+import { forecastDateKey, SHOWERS_MM } from '@/utils/weatherWords';
 
 export interface WeatherCoords {
   lat: number;
@@ -48,40 +47,6 @@ export function resolveWeatherCoords(
     return { lat: districtCoords.lat, lng: districtCoords.lng, source: 'district' };
   }
   return { lat: DEFAULT_COORDINATES.lat, lng: DEFAULT_COORDINATES.lng, source: 'default' };
-}
-
-/**
- * True when any of the next `days` days has meaningful rain (≥ `SHOWERS_MM`).
- *
- * Counts forward from today, not from `daily[0]`: a cached forecast served
- * offline keeps the days it has already passed, so slicing the raw array let
- * yesterday's rain tell the grower not to water today.
- */
-export function hasRainSoon(
-  forecast: WeatherForecast | null,
-  days = 2,
-  now: Date = new Date()
-): boolean {
-  if (!forecast) return false;
-  return selectForecastDays(forecast, now)
-    .available.slice(0, days)
-    .some((d) => d.precipitationMm >= SHOWERS_MM);
-}
-
-export interface WateringAdvice {
-  iconKey: VisualIconKey;
-  text: string;
-}
-
-/**
- * Watering guidance for the forecast card's status line. Both branches are one
- * short line so the card keeps the same height whether rain is coming or not —
- * the deck stacks cards for several plots and they must all measure the same.
- */
-export function wateringAdvice(rainSoon: boolean): WateringAdvice {
-  return rainSoon
-    ? { iconKey: 'weather.rain', text: 'Rain expected soon — check soil before watering' }
-    : { iconKey: 'weather.clear', text: 'No rain expected soon — keep watering' };
 }
 
 /**

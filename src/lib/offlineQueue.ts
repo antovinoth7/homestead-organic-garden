@@ -151,9 +151,6 @@ export const enqueueMutations = (inputs: OfflineMutationInput[]): Promise<void> 
     notifyListeners(queue.length);
   });
 
-export const enqueueMutation = (input: OfflineMutationInput): Promise<void> =>
-  enqueueMutations([input]);
-
 /**
  * Remove a replayed entry, but only if it still holds the revision that was
  * executed. A mutation enqueued while the entry was in flight coalesces into it

@@ -1,12 +1,5 @@
 /// <reference types="jest" />
-import {
-  getCurrentRisk,
-  getPeakRisk,
-  getRiskColor,
-  getSeasonLabelById,
-  getSeasonNameById,
-  getSeasonRiskBars,
-} from '../../utils/riskHelpers';
+import { getCurrentRisk, getRiskColor, getSeasonRiskBars } from '../../utils/riskHelpers';
 import { lightTheme } from '../../theme/colors';
 import { HIGH_RAINFALL_ZONE } from '../../config/zones/highRainfall';
 import type { AgroClimaticZone } from '../../config/zones/types';
@@ -112,30 +105,5 @@ describe('getSeasonRiskBars', () => {
     const bars = getSeasonRiskBars(undefined, APRIL);
     expect(bars).toHaveLength(4);
     expect(bars.every((b) => b.level === undefined)).toBe(true);
-  });
-});
-
-describe('getPeakRisk', () => {
-  it('returns the highest level present', () => {
-    expect(getPeakRisk(SAMPLE)).toBe('high');
-    expect(getPeakRisk({ sw_monsoon: 'low', cool_dry: 'moderate' })).toBe('moderate');
-    expect(getPeakRisk({ cool_dry: 'low' })).toBe('low');
-  });
-
-  it('returns undefined with no data', () => {
-    expect(getPeakRisk(undefined)).toBeUndefined();
-    expect(getPeakRisk({})).toBeUndefined();
-  });
-});
-
-describe('season id lookups', () => {
-  it('resolves labels and names from the zone definition', () => {
-    expect(getSeasonLabelById('summer')).toBe('Pre-monsoon (Mar–May)');
-    expect(getSeasonNameById('sw_monsoon')).toBe('SW Monsoon');
-  });
-
-  it('falls back to the raw id when unknown', () => {
-    expect(getSeasonLabelById('not_a_season')).toBe('not_a_season');
-    expect(getSeasonNameById('not_a_season')).toBe('not_a_season');
   });
 });

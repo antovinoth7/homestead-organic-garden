@@ -5,7 +5,6 @@ import { getQueue } from '@/lib/offlineQueue';
 import { hasPendingWriteFor } from '@/utils/offlineQueueLogic';
 import {
   applyProfileDeletion,
-  applyProfileDismissal,
   applyProfileRename,
   applyProfileRestore,
 } from '@/utils/plantProfileMutations';
@@ -699,15 +698,4 @@ export async function restorePlantProfile(type: PlantType, name: string): Promis
   const current = await getPlantProfiles();
   if (!current[type]?.[name]?.isDeleted) return current;
   return savePlantProfiles(applyProfileRestore(current, DEFAULT_PLANT_PROFILES, type, name));
-}
-
-/**
- * Drops a hidden entry from the restore list for good. The bundled record
- * itself ships with the app and cannot be erased — what this makes permanent
- * is the hiding.
- */
-export async function dismissPlantProfile(type: PlantType, name: string): Promise<PlantProfiles> {
-  const current = await getPlantProfiles();
-  if (!current[type]?.[name]?.isDeleted) return current;
-  return savePlantProfiles(applyProfileDismissal(current, type, name));
 }

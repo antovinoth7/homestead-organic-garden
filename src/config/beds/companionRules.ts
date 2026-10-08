@@ -48,7 +48,3 @@ export function validateCompanionPair(plantA: string, plantB: string): Companion
 
   return { valid: true };
 }
-
-export function getAntagonistPairs(): { a: string; b: string; reason: string }[] {
-  return ANTAGONIST_PAIRS;
-}

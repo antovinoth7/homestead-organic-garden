@@ -3,7 +3,6 @@ import {
   getAllPests,
   getPestById,
   getPestByName,
-  getPestsByCategory,
   getGroupedPestEntries,
   getCategoryLabel,
 } from '../../config/pests';
@@ -59,16 +58,6 @@ describe('pest registry', () => {
 
     it('returns undefined for unknown name', () => {
       expect(getPestByName('Invisible Bug')).toBeUndefined();
-    });
-  });
-
-  describe('getPestsByCategory', () => {
-    it('returns only pests matching the category', () => {
-      const mites = getPestsByCategory('mites');
-      expect(mites.length).toBeGreaterThan(0);
-      for (const pest of mites) {
-        expect(pest.category).toBe('mites');
-      }
     });
   });
 

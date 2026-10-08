@@ -3,8 +3,8 @@
  *
  * Harvest data is captured as `JournalEntryType.Harvest` journal entries
  * (`harvest_quantity` / `harvest_unit` / `created_at`), not a dedicated
- * collection. These helpers summarize and bucket those entries for the
- * `HarvestHistorySection` stats + `HarvestYieldChart`.
+ * collection. `summarizeHarvests` totals those entries for the Journal's harvest
+ * stat (see `journalStats.ts`).
  *
  * This module is also the single home for "has this harvest already happened?"
  * (`isHarvestSatisfied`), shared with `alertsLogic.ts` so the Care Plan and the
@@ -29,7 +29,6 @@ import {
   TaskTemplate,
   TaskType,
 } from '@/types/database.types';
-import { getCurrentSeason } from '@/utils/seasonHelpers';
 import { calendarDaysBetweenKeys, farmDateKey } from '@/utils/farmDate';
 
 /**
@@ -325,71 +324,4 @@ export function summarizeHarvests(entries: JournalEntry[]): HarvestSummary {
     unit: basis,
     excludedCount: entries.length - counted,
   };
-}
-
-const SEASON_ORDER = ['summer', 'sw_monsoon', 'ne_monsoon', 'cool_dry'] as const;
-const SEASON_LABELS: Record<string, string> = {
-  summer: 'Summer',
-  sw_monsoon: 'SW Mon',
-  ne_monsoon: 'NE Mon',
-  cool_dry: 'Cool Dry',
-};
-
-export interface YieldBucket {
-  key: string;
-  label: string;
-  total: number;
-}
-
-/**
- * Sum harvest quantity per agro-climatic season (only seasons with harvests),
- * in calendar order, for the yield chart. Totals are on the set's `basis`, so
- * the chart and the summary stat above it always express the same scale.
- */
-export function groupHarvestsBySeason(
-  entries: JournalEntry[],
-  basis: HarvestBasis = getHarvestBasis(entries)
-): YieldBucket[] {
-  const totals = new Map<string, number>();
-  for (const e of entries) {
-    const value = contribution(e, basis);
-    if (value === null) continue;
-    const season = getCurrentSeason(new Date(e.created_at));
-    totals.set(season, (totals.get(season) ?? 0) + value);
-  }
-  return SEASON_ORDER.filter((s) => (totals.get(s) ?? 0) > 0).map((s) => ({
-    key: s,
-    label: SEASON_LABELS[s] ?? s,
-    total: totals.get(s) ?? 0,
-  }));
-}
-
-export interface TreeYield {
-  treeNumber: number;
-  total: number;
-  count: number;
-}
-
-/**
- * Per-tree harvest totals for coconut groves, ordered by tree number. Entries
- * without a `harvest_tree_number`, or recorded off the set's `basis`, are
- * ignored — a grove logged in nuts must not have kilograms added to it.
- */
-export function groupHarvestsByTree(
-  entries: JournalEntry[],
-  basis: HarvestBasis = getHarvestBasis(entries)
-): TreeYield[] {
-  const map = new Map<number, { total: number; count: number }>();
-  for (const e of entries) {
-    if (e.harvest_tree_number == null) continue;
-    const value = contribution(e, basis);
-    if (value === null) continue;
-    const cur = map.get(e.harvest_tree_number) ?? { total: 0, count: 0 };
-    cur.total += value;
-    cur.count += 1;
-    map.set(e.harvest_tree_number, cur);
-  }
-  return [...map.entries()]
-    .map(([treeNumber, v]) => ({ treeNumber, total: v.total, count: v.count }))
-    .sort((a, b) => a.treeNumber - b.treeNumber);
 }

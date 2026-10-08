@@ -1,10 +1,9 @@
 /**
- * Compact growing-spec formatters for crop rows and tiles.
+ * Compact growing-spec helpers for crop rows and tiles: whether a harvest range
+ * states a real wait, that wait in years, and the spacing figure.
  *
- * Missing data yields nothing rather than a placeholder — '' from the harvest
- * formatter, null from the spacing one — so callers skip the line entirely: a
- * crop whose care profile carries no harvest range renders its name alone
- * rather than a stub.
+ * Missing data yields nothing rather than a placeholder — null from the spacing
+ * formatter — so callers skip the line entirely rather than render a stub.
  */
 
 import type { NumericRange } from '@/types/database.types';
@@ -34,20 +33,6 @@ export function harvestRangeInYears(range: NumericRange): NumericRange | null {
     min: Math.round(range.min / DAYS_PER_YEAR),
     max: Math.round(range.max / DAYS_PER_YEAR),
   };
-}
-
-/**
- * Harvest duration, e.g. "35 d" for an exact figure or "100–140 d" for a
- * range, or "12–15 yr" once the wait runs past a year. The range is shown
- * whole: collapsing it to one number would imply a precision the care
- * profiles do not carry.
- */
-export function formatDaysToHarvest(range?: NumericRange): string {
-  if (!isStatedHarvestRange(range)) return '';
-  const years = harvestRangeInYears(range);
-  const { min, max } = years ?? range;
-  const unit = years ? 'yr' : 'd';
-  return min === max ? `${min} ${unit}` : `${min}–${max} ${unit}`;
 }
 
 /**

@@ -211,22 +211,6 @@ function applyZoneConditions(
   };
 }
 
-export function getTodayCropEvidence(
-  plantType: PlantType,
-  plantName: string
-): AgronomyEvidence[] {
-  const evidenceIds = [
-    ...new Set(
-      TAMIL_NADU_PLANTING_RULES.filter(
-        (rule) => rule.plantType === plantType && rule.plantName === plantName
-      ).flatMap((rule) => rule.evidenceIds)
-    ),
-  ];
-  return evidenceIds
-    .map((id) => TODAY_AGRONOMY_EVIDENCE[id])
-    .filter((entry): entry is AgronomyEvidence => entry !== undefined);
-}
-
 export function getTamilNaduPlantingWindows(
   zoneId: AgroClimaticZoneId,
   date: Date = new Date()

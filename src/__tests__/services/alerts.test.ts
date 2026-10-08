@@ -2,8 +2,6 @@ import {
   getFarmAlerts,
   sortAlerts,
   isActionable,
-  getTopAlert,
-  ALERT_COMPLETE_FIELD,
   ATTENTION_MIN_DAYS_OVERDUE,
 } from '@/services/alerts';
 import type { FarmAlert } from '@/types/database.types';
@@ -498,35 +496,5 @@ describe('isActionable', () => {
     expect(
       isActionable({ ...base, type: 'harvest_due', severity: 'warning', templateId: 't1' })
     ).toBe(false);
-  });
-});
-
-describe('ALERT_COMPLETE_FIELD', () => {
-  it('covers only the card kind that has no task to complete', () => {
-    expect(ALERT_COMPLETE_FIELD).toEqual({ harvest_due: 'last_harvest_date' });
-  });
-
-  it('covers only actionable alert types', () => {
-    const base = {
-      id: 'x',
-      iconKey: 'general.warning' as const,
-      title: '',
-      message: '',
-      created_at: '',
-      daysOverdue: 0,
-    };
-    for (const type of Object.keys(ALERT_COMPLETE_FIELD) as FarmAlert['type'][]) {
-      expect(isActionable({ ...base, type, severity: 'warning' })).toBe(true);
-    }
-  });
-});
-
-describe('getTopAlert', () => {
-  it('returns null for no alerts and the most urgent otherwise', () => {
-    expect(getTopAlert([])).toBeNull();
-    const top = getTopAlert(
-      getFarmAlerts({ plants: [makePlant({ health_status: 'sick' })], now: NOW })
-    );
-    expect(top?.severity).toBe('critical');
   });
 });

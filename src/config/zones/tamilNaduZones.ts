@@ -41,7 +41,6 @@ export const TAMIL_NADU_METEOROLOGICAL_ZONE: AgroClimaticZone = {
   soilTypes: [],
   seasons: IMD_SEASONS,
   wateringMultipliers: neutralWatering(),
-  seasonalPestAlerts: {},
   irrigationDominant: 'not_applicable',
 };
 
@@ -60,7 +59,6 @@ function createZone(seed: ZoneSeed): AgroClimaticZone {
     // Today guidance has its own reviewed advisories. Neutral values prevent
     // an unreviewed zone from silently changing recurring care elsewhere.
     wateringMultipliers: neutralWatering(),
-    seasonalPestAlerts: {},
     irrigationDominant: 'varies_by_plot',
   };
 }

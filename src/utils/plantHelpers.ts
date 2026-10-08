@@ -653,16 +653,6 @@ export function getDefaultGroupedDiseases(): PestDiseaseGroup[] {
   return groupByCategory(DEFAULT_COMMON_DISEASES, DISEASE_CATEGORY_MAP, 'Other', '💊');
 }
 
-/**
- * Get the emoji for a specific pest or disease name.
- */
-export function getPestDiseaseEmoji(name: string, type: 'pest' | 'disease'): string {
-  if (type === 'pest') {
-    return PEST_CATEGORY_MAP[name]?.emoji ?? '🐛';
-  }
-  return DISEASE_CATEGORY_MAP[name]?.emoji ?? '💊';
-}
-
 // ---------------------------------------------------------------------------
 // Organic Treatment Suggestions (South Tamil Nadu / Kanyakumari)
 // ---------------------------------------------------------------------------
@@ -890,15 +880,6 @@ export function getGroupedTreatments(issueName: string): TreatmentGroup[] {
     'cultural',
   ];
   return methodOrder.filter((m) => groups[m]).map((m) => groups[m]!);
-}
-
-/**
- * Get the effort emoji indicator for a treatment effort level.
- */
-export function getTreatmentEffortDot(effort: 'easy' | 'moderate' | 'advanced'): string {
-  if (effort === 'easy') return '🟢';
-  if (effort === 'moderate') return '🟡';
-  return '🔴';
 }
 
 const ORGANIC_TREATMENTS: Record<string, string[]> = {

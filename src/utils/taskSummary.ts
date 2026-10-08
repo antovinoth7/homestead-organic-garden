@@ -3,7 +3,8 @@
  *
  * Turns raw today task templates + today's completion logs into the per-type
  * counts the dashboard needs. Extracted from the inline memos in `TodayScreen`
- * so `DashboardHero` can share it and it can be unit-tested.
+ * so the Today brief and the plot cards (`useTodayBrief`, `todayBrief`,
+ * `plotBriefLine`) share it and it can be unit-tested.
  */
 
 import { TaskTemplate, TaskLog, TaskType } from '@/types/database.types';

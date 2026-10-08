@@ -1,10 +1,8 @@
 /// <reference types="jest" />
 import {
   getCurrentSeason,
-  isMonsoonSeason,
   getSeasonLabel,
   getWateringFrequencyMultiplier,
-  getSeasonalPestAlerts,
 } from '../../utils/seasonHelpers';
 import { HIGH_RAINFALL_ZONE } from '../../config/zones/highRainfall';
 import { resolveActiveZone, setActiveZone } from '../../config/zones';
@@ -53,24 +51,6 @@ describe('seasonHelpers', () => {
       const withZone = getCurrentSeason(new Date(2026, 6, 1), HIGH_RAINFALL_ZONE);
       const withoutZone = getCurrentSeason(new Date(2026, 6, 1));
       expect(withZone).toBe(withoutZone);
-    });
-  });
-
-  describe('isMonsoonSeason', () => {
-    it('returns true during SW monsoon', () => {
-      expect(isMonsoonSeason(new Date(2026, 6, 15))).toBe(true);
-    });
-
-    it('returns true during NE monsoon', () => {
-      expect(isMonsoonSeason(new Date(2026, 10, 15))).toBe(true);
-    });
-
-    it('returns false during summer', () => {
-      expect(isMonsoonSeason(new Date(2026, 3, 15))).toBe(false);
-    });
-
-    it('returns false during cool dry', () => {
-      expect(isMonsoonSeason(new Date(2026, 0, 15))).toBe(false);
     });
   });
 
@@ -141,31 +121,6 @@ describe('seasonHelpers', () => {
     });
   });
 
-  describe('getSeasonalPestAlerts', () => {
-    it('returns general alerts for null plant type', () => {
-      jest.useFakeTimers({ now: new Date(2026, 3, 15) });
-      const alerts = getSeasonalPestAlerts(null);
-      expect(alerts.length).toBeGreaterThan(0);
-      expect(alerts.some((a) => a.issue === 'Mites')).toBe(true);
-      jest.useRealTimers();
-    });
-
-    it('returns coconut-specific alerts for coconut_tree', () => {
-      jest.useFakeTimers({ now: new Date(2026, 3, 15) });
-      const alerts = getSeasonalPestAlerts('coconut_tree');
-      expect(alerts.some((a) => a.issue === 'Eriophyid Mite')).toBe(true);
-      expect(alerts.some((a) => a.issue === 'Mites')).toBe(true);
-      jest.useRealTimers();
-    });
-
-    it('accepts a zone parameter', () => {
-      jest.useFakeTimers({ now: new Date(2026, 3, 15) });
-      const alerts = getSeasonalPestAlerts('vegetable', HIGH_RAINFALL_ZONE);
-      expect(alerts.some((a) => a.issue === 'Whiteflies')).toBe(true);
-      jest.useRealTimers();
-    });
-  });
-
   describe('custom zone support', () => {
     const twoSeasonZone: AgroClimaticZone = {
       id: 'test_zone',
@@ -182,7 +137,6 @@ describe('seasonHelpers', () => {
         wet: { pot: 1.5, bed: 3.0, ground: 3.0 },
         dry: { pot: 0.5, bed: 0.7, ground: 0.7 },
       },
-      seasonalPestAlerts: {},
     };
 
     it('resolves season for a zone with wrap-around months', () => {
@@ -194,13 +148,6 @@ describe('seasonHelpers', () => {
       jest.useFakeTimers({ now: new Date(2026, 7, 15) });
       const multiplier = getWateringFrequencyMultiplier('pot', twoSeasonZone);
       expect(multiplier).toBe(1.5);
-      jest.useRealTimers();
-    });
-
-    it('returns empty alerts for zone with no pest data', () => {
-      jest.useFakeTimers({ now: new Date(2026, 7, 15) });
-      const alerts = getSeasonalPestAlerts('vegetable', twoSeasonZone);
-      expect(alerts).toEqual([]);
       jest.useRealTimers();
     });
   });

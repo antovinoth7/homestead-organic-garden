@@ -534,8 +534,6 @@ export default function CalendarScreen(): React.JSX.Element {
         setFilters(emptyCareTaskFilters());
         setGroupBy(DEFAULT_GROUP_BY);
         setSortBy('due');
-      } else if (route.params?.filterOverdue) {
-        setFilters({ ...emptyCareTaskFilters(), dueStatuses: new Set(['overdue']) });
       }
       // Armed here, fired by the scroll effect once the section is in the model.
       // Consumed like the other one-shots so returning to the tab later — from

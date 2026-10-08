@@ -1,65 +1,9 @@
 /**
- * Seasonal adaptation rules for Kanyakumari / Tamil Nadu organic farming.
- * Shows how task frequencies change across the 4 seasons.
+ * Pre-monsoon batch tasks for Kanyakumari / Tamil Nadu organic farming — the
+ * preparation list `getPreMonsoonTasks` (`utils/preMonsoonTasks.ts`) returns in
+ * the three weeks before SW Monsoon onset. Built and tested but not yet shown
+ * on any screen; see docs/IMPLEMENTATION_ROADMAP.md §9.
  */
-
-import { getCurrentSeason } from '@/utils/seasonHelpers';
-
-export interface SeasonalFrequency {
-  seasonId: string;
-  seasonLabel: string;
-  waterInterval: string;
-  waterDays: number;
-  mulchCheck: string;
-  mulchDays: number;
-  jeevamruthaInterval: string;
-  jeevamruthaDays: number;
-}
-
-export const SEASONAL_FREQUENCIES: SeasonalFrequency[] = [
-  {
-    seasonId: 'summer',
-    seasonLabel: 'Summer (Mar–May)',
-    waterInterval: 'Every 2 days',
-    waterDays: 2,
-    mulchCheck: 'Check weekly',
-    mulchDays: 7,
-    jeevamruthaInterval: 'Every 10 days',
-    jeevamruthaDays: 10,
-  },
-  {
-    seasonId: 'sw_monsoon',
-    seasonLabel: 'SW Monsoon (Jun–Sep)',
-    waterInterval: 'Rain-fed',
-    waterDays: 0,
-    mulchCheck: 'Check fortnightly',
-    mulchDays: 14,
-    jeevamruthaInterval: 'Every 15 days',
-    jeevamruthaDays: 15,
-  },
-  {
-    seasonId: 'ne_monsoon',
-    seasonLabel: 'NE Monsoon (Oct–Dec)',
-    waterInterval: 'Every 3 days',
-    waterDays: 3,
-    mulchCheck: 'Check weekly',
-    mulchDays: 7,
-    jeevamruthaInterval: 'Every 12 days',
-    jeevamruthaDays: 12,
-  },
-  {
-    seasonId: 'cool_dry',
-    seasonLabel: 'Cool Dry (Jan–Feb)',
-    waterInterval: 'Every 3 days',
-    waterDays: 3,
-    mulchCheck: 'Check monthly',
-    mulchDays: 30,
-    jeevamruthaInterval: 'Every 14 days',
-    jeevamruthaDays: 14,
-  },
-];
-
-// ─── Pre-Monsoon Batch Tasks ─────────────────────────────────────────────────
 
 export interface PreMonsoonTask {
   id: string;
@@ -68,11 +12,6 @@ export interface PreMonsoonTask {
   icon: string;
   category: 'bed_prep' | 'input' | 'infrastructure' | 'planting';
 }
-
-/** SW Monsoon starts June 1 in Kanyakumari zone */
-export const SW_MONSOON_START_DAY = 152; // June 1 (day-of-year in non-leap year)
-
-export const PRE_MONSOON_WINDOW_DAYS = 21;
 
 export const PRE_MONSOON_TASKS: PreMonsoonTask[] = [
   {
@@ -116,18 +55,3 @@ export const PRE_MONSOON_TASKS: PreMonsoonTask[] = [
     category: 'planting',
   },
 ];
-
-/**
- * Get the current season's frequency row.
- */
-export function getFrequencyForSeason(seasonId: string): SeasonalFrequency | undefined {
-  return SEASONAL_FREQUENCIES.find((f) => f.seasonId === seasonId);
-}
-
-/**
- * Resolve the care-rhythm row for the current (or given) date's season.
- * Returns `null` when the season has no mapped frequency row.
- */
-export function getSeasonalCareRhythm(date?: Date): SeasonalFrequency | null {
-  return getFrequencyForSeason(getCurrentSeason(date)) ?? null;
-}

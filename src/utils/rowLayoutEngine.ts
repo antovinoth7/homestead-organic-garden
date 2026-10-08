@@ -189,46 +189,6 @@ export function getRecommendedFirstAdd(
 }
 
 /**
- * Returns { plantsPerRow, rowCount, total } for a species in a given bed.
- * Used by Step 4 to show "N rows × M = total" in the capacity display.
- */
-export function computePlantMatrix(
-  candidate: RowPlantInput,
-  currentPlants: RowPlantInput[],
-  widthM: number,
-  lengthM: number,
-  bedType: BedType = 'leafy',
-  constructionType?: 'raised' | 'in_ground'
-): { plantsPerRow: number; rowCount: number; total: number } {
-  const bedWidthCm = Math.round(widthM * 100);
-  const bedLengthCm = Math.round(lengthM * 100);
-  const category: BedCategory = constructionType ?? 'raised';
-  const rowMultiplier = ROW_MULTIPLIER_BY_CATEGORY[category];
-  const minRowGap = MIN_ROW_GAP_BY_CATEGORY[category];
-
-  const plantsPerRow = computePlantsPerRow(bedWidthCm, candidate.spacingCm);
-  const gapCm = candidate.rowGapCm ?? candidate.spacingCm * rowMultiplier;
-  const effectiveGap = Math.max(gapCm, minRowGap);
-  const edgeBuf = computeEdgeBuffer(effectiveGap);
-
-  // Rows available for this species only (ignores other species already in bed for display)
-  const rowCount = Math.max(1, Math.floor((bedLengthCm - 2 * edgeBuf) / effectiveGap) + 1);
-
-  // Cap by actual remaining capacity
-  const maxFit = maxFitForSpecies(
-    candidate,
-    currentPlants,
-    widthM,
-    lengthM,
-    bedType,
-    constructionType
-  );
-  const total = Math.min(plantsPerRow * rowCount, maxFit);
-
-  return { plantsPerRow, rowCount: Math.ceil(total / plantsPerRow), total };
-}
-
-/**
  * Reorders a row's plants so companions sit BETWEEN mains in the display sequence.
  * The engine's row.plants is `[...mains, ...companions]`; this helper produces
  * `[Main, Companion, Main, Companion, Main, ...]` for spatial rendering.

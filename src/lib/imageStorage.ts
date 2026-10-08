@@ -34,9 +34,6 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { logger } from '../utils/logger';
 
-type AssetWithFileSize = MediaLibrary.Asset & { fileSize?: number };
-type AssetInfoWithFileSize = MediaLibrary.AssetInfo & { fileSize?: number; localUri?: string };
-
 /**
  * Check if running in Expo Go (which has limited MediaLibrary permissions)
  * In Expo Go, we fall back to documentDirectory storage
@@ -62,122 +59,6 @@ let mediaLookupPromise: Promise<Map<string, string>> | null = null;
 const clearMediaLookupCache = (): void => {
   mediaLookupCache = null;
   mediaLookupPromise = null;
-};
-
-const getFileSize = async (uri: string | null): Promise<number> => {
-  if (!uri) return 0;
-  try {
-    const fileInfo = await FileSystem.getInfoAsync(uri);
-    if (fileInfo.exists && typeof fileInfo.size === 'number') {
-      return fileInfo.size;
-    }
-  } catch {
-    // Ignore unsupported URI schemes or inaccessible paths.
-  }
-  return 0;
-};
-
-const getDirectorySize = async (directoryUri: string | null): Promise<number> => {
-  if (!directoryUri) return 0;
-
-  const dirInfo = await FileSystem.getInfoAsync(directoryUri);
-  if (!dirInfo.exists) return 0;
-
-  const files = await FileSystem.readDirectoryAsync(directoryUri);
-  let totalSize = 0;
-
-  for (const file of files) {
-    totalSize += await getFileSize(`${directoryUri}${file}`);
-  }
-
-  return totalSize;
-};
-
-const hasAndroidMediaLibraryAccess = async (): Promise<boolean> => {
-  if (Platform.OS !== 'android' || isExpoGo) {
-    return false;
-  }
-
-  try {
-    const { status } = await MediaLibrary.getPermissionsAsync(false, ['photo']);
-    return status === 'granted';
-  } catch {
-    return false;
-  }
-};
-
-const getAndroidMediaLibrarySize = async (): Promise<number> => {
-  if (Platform.OS !== 'android' || isExpoGo) {
-    return 0;
-  }
-
-  const hasPermission = await hasAndroidMediaLibraryAccess();
-  if (!hasPermission) {
-    return 0;
-  }
-
-  let totalSize = 0;
-  let after: string | undefined;
-  let pageCount = 0;
-  const seenAssetIds = new Set<string>();
-  const album = await MediaLibrary.getAlbumAsync(ALBUM_NAME);
-  if (!album) {
-    return 0;
-  }
-
-  while (pageCount < MEDIA_LOOKUP_MAX_PAGES) {
-    const page = await MediaLibrary.getAssetsAsync({
-      album,
-      first: MEDIA_LOOKUP_PAGE_SIZE,
-      mediaType: ['photo'],
-      ...(after ? { after } : {}),
-    });
-
-    for (const asset of page.assets) {
-      const assetKey = String(asset.id);
-      if (seenAssetIds.has(assetKey)) {
-        continue;
-      }
-
-      seenAssetIds.add(assetKey);
-
-      const assetInlineSize = (asset as AssetWithFileSize).fileSize;
-      if (typeof assetInlineSize === 'number' && assetInlineSize > 0) {
-        totalSize += assetInlineSize;
-        continue;
-      }
-
-      const directUriSize = await getFileSize(asset.uri);
-      if (directUriSize > 0) {
-        totalSize += directUriSize;
-        continue;
-      }
-
-      try {
-        const info = await MediaLibrary.getAssetInfoAsync(asset.id);
-        const infoWithExtra = info as AssetInfoWithFileSize;
-        const infoInlineSize = infoWithExtra.fileSize;
-        if (typeof infoInlineSize === 'number' && infoInlineSize > 0) {
-          totalSize += infoInlineSize;
-          continue;
-        }
-
-        const fallbackUri = infoWithExtra.localUri ?? info.uri ?? null;
-        totalSize += await getFileSize(fallbackUri);
-      } catch {
-        // Ignore malformed or stale assets and continue.
-      }
-    }
-
-    if (!page.hasNextPage || !page.endCursor) {
-      break;
-    }
-
-    after = page.endCursor;
-    pageCount += 1;
-  }
-
-  return totalSize;
 };
 
 /**
@@ -532,26 +413,6 @@ export const imageExists = async (imageUri: string | null): Promise<boolean> => 
       logger.warn('imageExists error', error as Error);
     }
     return false;
-  }
-};
-
-/**
- * Get the total size of all stored images
- * @returns Size in bytes
- */
-export const getImageStorageSize = async (): Promise<number> => {
-  // On web, we can't calculate storage size
-  if (Platform.OS === 'web') return 0;
-
-  try {
-    const [directorySize, mediaLibrarySize] = await Promise.all([
-      getDirectorySize(IMAGES_DIR),
-      getAndroidMediaLibrarySize(),
-    ]);
-    return directorySize + mediaLibrarySize;
-  } catch (error) {
-    logger.error('Error calculating storage size', error as Error);
-    return 0;
   }
 };
 

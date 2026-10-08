@@ -192,7 +192,8 @@ export function BedLayoutStep({
     [rowLayout.rows]
   );
 
-  // Layers to show in BedLayerStack — filtered to bed type + planted layers.
+  // The bed type's layers plus any already planted — the ghost rows below draw
+  // whichever of these are still empty.
   const visibleLayers = useMemo(() => {
     if (!bedType) return undefined;
     const plantedLayers = new Set(step4.plant_entries.map((e) => e.layer as BedLayer));

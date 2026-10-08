@@ -57,18 +57,6 @@ export function getCurrentRisk(
   return seasonalRisk[getCurrentSeason(date, zone)];
 }
 
-/** Full season label ("Summer (Mar–May)") for a season id. */
-export function getSeasonLabelById(seasonId: string, zone?: AgroClimaticZone): string {
-  const z = zone ?? DEFAULT_ZONE;
-  return z.seasons.find((s) => s.id === seasonId)?.label ?? seasonId;
-}
-
-/** Short season name ("Summer") for a season id. */
-export function getSeasonNameById(seasonId: string, zone?: AgroClimaticZone): string {
-  const z = zone ?? DEFAULT_ZONE;
-  return z.seasons.find((s) => s.id === seasonId)?.name ?? seasonId;
-}
-
 export interface SeasonRiskBar {
   seasonId: string;
   /** Month-range abbreviation used as the bar's axis label (MAR–MAY, JUN–SEP, …). */
@@ -118,14 +106,4 @@ export function getSeasonRiskBars(
     level: seasonalRisk?.[season.id],
     isCurrent: season.id === current,
   }));
-}
-
-/** Highest risk the entry reaches in any season — used to sort the list. */
-export function getPeakRisk(seasonalRisk?: SeasonalRisk): RiskLevel | undefined {
-  if (!seasonalRisk) return undefined;
-  const levels = Object.values(seasonalRisk);
-  if (levels.includes('high')) return 'high';
-  if (levels.includes('moderate')) return 'moderate';
-  if (levels.includes('low')) return 'low';
-  return undefined;
 }

@@ -82,10 +82,6 @@ export const BED_PLANT_CATALOG: Record<BedType, string[]> = {
   ],
 };
 
-export function getRecommendedPlantsForBed(type: BedType): string[] {
-  return BED_PLANT_CATALOG[type] ?? [];
-}
-
 /**
  * Rotation/companion-aware "next crop" suggestions for a bed. Starts from the bed-type catalog
  * and removes crops that are already planted, repeat last season's family (`prev_crop_family`),

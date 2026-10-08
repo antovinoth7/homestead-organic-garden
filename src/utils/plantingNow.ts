@@ -1,10 +1,9 @@
 /**
- * "What to Plant Now" derivation — pure logic (Phase C, C.1).
+ * Season-text parsing — pure logic (Phase C, C.1).
  *
- * Maps a plant's free-text `growingSeason` (and optional `seasonSuitability`
- * list) onto Kanyakumari season ids, then filters to varieties sowable in the
- * current season. Heuristic string matching keeps it resilient to the mixed
- * season vocabularies used across `plantCareDefaults` and the catalog.
+ * Maps a plant's free-text `growingSeason` onto Kanyakumari season ids.
+ * Heuristic string matching keeps it resilient to the mixed season
+ * vocabularies used across `plantCareDefaults` and the catalog.
  */
 
 import { NumericRange, PlantType } from '@/types/database.types';
@@ -20,12 +19,6 @@ export interface PlantingCandidate {
   /** Optional structured season suitability strings. */
   seasonSuitability?: string[];
   /** Harvest window from the care profile, e.g. `{ min: 100, max: 140 }`. */
-  daysToHarvest?: NumericRange;
-}
-
-export interface PlantingSuggestion {
-  plantType: PlantType;
-  variety: string;
   daysToHarvest?: NumericRange;
 }
 
@@ -122,54 +115,4 @@ export function mapSeasonTextToIds(text: string): Set<KKSeasonId> {
   }
 
   return ids;
-}
-
-/** All season ids a candidate can be sown in, merging growingSeason + suitability. */
-export function candidateSeasonIds(candidate: PlantingCandidate): Set<KKSeasonId> {
-  const ids = new Set<KKSeasonId>();
-  const phrases = [candidate.growingSeason ?? '', ...(candidate.seasonSuitability ?? [])];
-  for (const phrase of phrases) {
-    for (const id of mapSeasonTextToIds(phrase)) ids.add(id);
-  }
-  return ids;
-}
-
-/**
- * Filter candidates to those sowable in the current season. Candidates with no
- * recognizable season are excluded (we only suggest when we're confident).
- */
-export function getWhatToPlantNow(
-  candidates: PlantingCandidate[],
-  currentSeason: KKSeasonId
-): PlantingSuggestion[] {
-  const suggestions: PlantingSuggestion[] = [];
-  const seen = new Set<string>();
-  for (const c of candidates) {
-    const ids = candidateSeasonIds(c);
-    if (!ids.has(currentSeason)) continue;
-    const key = `${c.plantType}:${c.variety}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    suggestions.push({
-      plantType: c.plantType,
-      variety: c.variety,
-      daysToHarvest: c.daysToHarvest,
-    });
-  }
-  return suggestions.sort((a, b) => a.variety.localeCompare(b.variety));
-}
-
-/**
- * Collapsed-card summary line, e.g. "Agathi, Aloe Vera, Amaranthus + 5 more".
- * Names the first `previewCount` varieties and counts the rest.
- */
-export function formatSuggestionSummary(
-  suggestions: PlantingSuggestion[],
-  previewCount = 3
-): string {
-  if (suggestions.length === 0) return '';
-  const names = suggestions.slice(0, previewCount).map((s) => s.variety);
-  const remaining = suggestions.length - names.length;
-  const list = names.join(', ');
-  return remaining > 0 ? `${list} + ${remaining} more` : list;
 }

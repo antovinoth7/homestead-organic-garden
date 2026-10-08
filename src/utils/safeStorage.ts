@@ -34,10 +34,6 @@ class StorageQueue {
     });
   }
 
-  getQueueSize(): number {
-    return this.queue.length;
-  }
-
   private async process(): Promise<void> {
     if (this.isProcessing || this.queue.length === 0) return;
 
@@ -60,11 +56,6 @@ class StorageQueue {
 }
 
 const storageQueue = new StorageQueue();
-
-/**
- * Get current storage queue size for monitoring
- */
-const _getStorageQueueSize = (): number => storageQueue.getQueueSize();
 
 /**
  * Outcome of a strict read. `ok: false` distinguishes "the read failed" from

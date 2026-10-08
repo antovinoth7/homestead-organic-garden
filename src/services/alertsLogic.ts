@@ -28,7 +28,6 @@ import type { VisualIconKey } from '@/types/visual.types';
 // anywhere. Its dependencies below all honour that: `harvestStats` and the
 // `farmDate`/`taskConstants` it reaches are RN-free, and the icon-bearing
 // module in that neighbourhood (`journalEntryOptions.ts`) is never on this path.
-import type { PlantLastCareField } from '@/services/taskSchedulingLogic';
 import { isPlantArchived } from '@/utils/plantHelpers';
 import { HARVEST_TASK_TYPES, isHarvestSatisfied } from '@/utils/harvestStats';
 import { getGreenManureForMonth } from '@/config/beds';
@@ -42,7 +41,7 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
  *
  * Care alerts no longer reach the Today queue (`isActionable` drops anything
  * with a `templateId`), but they remain part of this service's output for
- * `getTopAlert` and for callers that want the schedule expressed as alerts.
+ * callers that want the schedule expressed as alerts.
  */
 export const ATTENTION_MIN_DAYS_OVERDUE = 1;
 
@@ -98,20 +97,6 @@ const EXCEPTION_TYPES = new Set<FarmAlert['type']>([
   // these, so without them they are computed and shown nowhere.
   'rotation_due',
 ]);
-
-/**
- * Alert types resolvable by stamping a plant date field, for the one card kind
- * that has no task behind it to complete: harvest readiness on crops that get
- * no harvest template. Everything else carries a `templateId` and completes
- * through `markTaskDone`, which writes a real `TaskLog`.
- *
- * Typed as `PlantLastCareField` so this cannot drift from
- * `TASK_TYPE_TO_PLANT_LAST_CARE_FIELD`, which the task layer writes on
- * completion — Home and Care Plan must agree on what "harvested" means.
- */
-export const ALERT_COMPLETE_FIELD: Partial<Record<FarmAlert['type'], PlantLastCareField>> = {
-  harvest_due: 'last_harvest_date',
-};
 
 export interface FarmAlertInputs {
   plants: Plant[];
@@ -355,10 +340,4 @@ export function sortAlerts(alerts: FarmAlert[]): FarmAlert[] {
  */
 export function isActionable(alert: FarmAlert): boolean {
   return alert.templateId === undefined && EXCEPTION_TYPES.has(alert.type);
-}
-
-/** Highest-priority alert overall, or null when there are none. Drives TipStrip (C.14). */
-export function getTopAlert(alerts: FarmAlert[]): FarmAlert | null {
-  const sorted = sortAlerts(alerts);
-  return sorted[0] ?? null;
 }

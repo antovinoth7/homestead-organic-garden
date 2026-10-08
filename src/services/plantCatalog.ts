@@ -1,5 +1,4 @@
 import { PlantCatalog, PlantCatalogCategory, PlantType } from '../types/database.types';
-import { getData, KEYS } from '../lib/storage';
 import { getCanonicalPlantKey, PLANT_NAME_ALIASES, toLookupKey } from '../utils/plantAliases';
 import { PLANT_CATEGORIES } from '../utils/plantCategories';
 import { buildPlantCatalog, PLANT_CATALOG_ENTRIES } from '../config/plantCatalog';
@@ -176,26 +175,4 @@ export const normalizeCatalog = (catalog?: PlantCatalog | null): PlantCatalog =>
   });
 
   return { categories };
-};
-
-const _getCachedCatalog = async (): Promise<PlantCatalog> => {
-  const stored = await getData<PlantCatalog>(KEYS.PLANT_CATALOG);
-  if (stored.length > 0 && stored[0]) {
-    return normalizeCatalog(stored[0]);
-  }
-
-  return DEFAULT_PLANT_CATALOG;
-};
-
-/** @deprecated Use getPlantProfiles from @/services/plantProfiles */
-export const getPlantCatalog = async (): Promise<PlantCatalog> => {
-  const { getPlantProfiles, toPlantCatalogShape } = await import('@/services/plantProfiles');
-  return toPlantCatalogShape(await getPlantProfiles());
-};
-
-/** @deprecated Mutations go through savePlantProfile in @/services/plantProfiles */
-export const savePlantCatalog = async (_catalog: PlantCatalog): Promise<PlantCatalog> => {
-  const { logger } = await import('@/utils/logger');
-  logger.warn('savePlantCatalog is deprecated — use savePlantProfile instead');
-  return _catalog;
 };

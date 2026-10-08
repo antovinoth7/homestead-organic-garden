@@ -5,7 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { BottomSheetModal } from '../BottomSheetModal';
 import ThemedDropdown from '../ThemedDropdown';
 import FloatingLabelInput from '../FloatingLabelInput';
-import type { DropdownItem } from '../ThemedDropdown';
+import type { PickerOption } from '@/components/OptionPickerSheet';
 import { createTaskTemplate } from '../../services/tasks';
 import { Plant, TaskType, Bed, TaskTemplate } from '../../types/database.types';
 import { findDuplicateTemplate } from '@/services/taskSchedulingLogic';
@@ -22,7 +22,7 @@ import {
   formatFarmDate,
 } from '@/utils/farmDate';
 
-const TASK_TYPE_ITEMS: DropdownItem[] = [
+const TASK_TYPE_ITEMS: PickerOption[] = [
   { label: 'Water', value: 'water' },
   { label: 'Fertilize', value: 'fertilise' },
   { label: 'Prune', value: 'prune' },
@@ -69,7 +69,7 @@ export default function CreateTaskModal({
   // covers the whole bed, which is not always what one plant needs. Show the
   // bed in the label so the two dropdowns can't be confused for each other.
   const bedNamesById = useMemo(() => new Map(beds.map((bed) => [bed.id, bed.name])), [beds]);
-  const plantItems = useMemo<DropdownItem[]>(
+  const plantItems = useMemo<PickerOption[]>(
     () => [
       { label: 'No Plant', value: '' },
       ...plants.map((plant) => {

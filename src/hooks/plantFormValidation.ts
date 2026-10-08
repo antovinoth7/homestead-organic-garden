@@ -37,25 +37,3 @@ export function careScheduleErrors(input: CareScheduleInput): string[] {
     errors.push('Please enter a valid pruning frequency (number of days)');
   return errors;
 }
-
-export interface PlantFormGateInput {
-  plantVariety: string;
-  parentLocation: string;
-  childLocation: string;
-  careProfilesLoaded: boolean;
-  care: CareScheduleInput;
-}
-
-/**
- * Reason the add-plant form's Save is blocked, or null when clear. Evaluated
- * in visual order: plant → location → care plan readiness/validity.
- */
-export function plantFormBlockReason(input: PlantFormGateInput): string | null {
-  if (!input.plantVariety.trim()) return 'Please select a plant';
-  if (!input.parentLocation.trim()) return 'Please select a main location';
-  if (!input.childLocation.trim()) return 'Please select a direction or section';
-  if (!input.careProfilesLoaded) return 'Loading care plan…';
-  const careErrors = careScheduleErrors(input.care);
-  if (careErrors.length > 0) return careErrors[0] ?? null;
-  return null;
-}

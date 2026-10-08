@@ -71,26 +71,6 @@ export const TASK_COLORS: Record<TaskType, string> = {
 };
 
 /**
- * Lightened variants of TASK_COLORS for use on the dark-green dashboard hero.
- * The base palette is tuned for white cards — `mulch` (#795548) and
- * `cultivating` (#8D6E63) in particular disappear against deep green — so the
- * hero uses these instead. Hues are kept, only lightness is raised.
- */
-export const TASK_COLORS_ON_DARK: Record<TaskType, string> = {
-  water: '#90CAF9',
-  fertilise: '#FFCC80',
-  prune: '#CE93D8',
-  repot: '#81C784',
-  spray: '#80DEEA',
-  mulch: '#BCAAA4',
-  harvest: '#DCE775',
-  harvest_leaves: '#A5D6A7',
-  weeding: '#C5E1A5',
-  transplanting: '#80CBC4',
-  cultivating: '#D7CCC8',
-};
-
-/**
  * The same work named as an activity rather than a command. `TASK_LABELS` is
  * imperative ("Water", "Spray"), which reads wrong as the subject of a sentence
  * — "Water on Bed 3 is 5 days late" states the wrong thing. Used by the Today

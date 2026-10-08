@@ -5,9 +5,8 @@ import { writeOrQueue } from '@/lib/offlineWrite';
 import { logError } from '@/utils/errorLogging';
 import { getData, setData, KEYS } from '@/lib/storage';
 import { getCached, setCached, invalidate } from '@/lib/dataCache';
-import { sumLandCents } from '@/utils/landCents';
 import { resolveActiveZone, setActiveZone } from '@/config/zones';
-import type { FarmConfig, Bed, BedType, LocationProfile } from '@/types/database.types';
+import type { FarmConfig, Bed, BedType } from '@/types/database.types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -62,14 +61,6 @@ export function calcMaxBeds(usableSqm: number): number {
  */
 export function calcWeeklyVegNeed(familiesCount: number): number {
   return Math.round(familiesCount * MEMBERS_PER_FAMILY * WEEKLY_VEG_PER_PERSON_KG * 10) / 10;
-}
-
-/**
- * Sum land_cents across all per-plot LocationProfiles.
- * Replaces the single user-level land_cents in FarmConfig.
- */
-export function calcCapacityFromProfiles(profiles: Record<string, LocationProfile>): number {
-  return sumLandCents(profiles);
 }
 
 /**

@@ -68,10 +68,6 @@ export function describeDay(day: DailyWeather | null | undefined): DayDescriptio
   return { id: 'clear', label: 'Clear', iconKey: 'weather.clear' };
 }
 
-export function weatherIconKey(day: DailyWeather): VisualIconKey {
-  return describeDay(day).iconKey;
-}
-
 function dateAtNoonUtc(isoDate: string): Date {
   return new Date(`${isoDate}T12:00:00.000Z`);
 }

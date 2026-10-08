@@ -2,8 +2,8 @@
  * Plant health aggregation for the Home dashboard (Phase C).
  *
  * Pure, dependency-free summary of plant health states. Extracted from the
- * inline `stats` memo that used to live in `TodayScreen` so it can be reused
- * by `DashboardHero` and unit-tested.
+ * inline `stats` memo that used to live in `TodayScreen` so the Today brief
+ * (`useTodayBrief`) can reuse it and it can be unit-tested.
  */
 
 import { Plant } from '@/types/database.types';

@@ -7,14 +7,8 @@ import FieldHelp from './FieldHelp';
 import { OptionPickerSheet } from './OptionPickerSheet';
 import type { PickerOption } from './OptionPickerSheet';
 
-/**
- * @deprecated Prefer importing `PickerOption` from `OptionPickerSheet`. Kept as
- * an alias so existing dropdown call sites keep compiling unchanged.
- */
-export type DropdownItem = PickerOption;
-
 interface ThemedDropdownProps {
-  items: DropdownItem[];
+  items: PickerOption[];
   selectedValue: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- callers pass setters for various string union types
   onValueChange: (value: any) => void;

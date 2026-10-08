@@ -104,9 +104,6 @@ class ErrorTracker {
    */
   async trackWarning(message: string, context?: Record<string, unknown>): Promise<void> {
     logger.warn(message, undefined, { metadata: context });
-
-    // In production, you might want to track warnings too
-    // await this.trackError(`[WARNING] ${message}`, undefined, context);
   }
 
   /**

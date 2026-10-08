@@ -1,9 +1,4 @@
-import {
-  Bed,
-  CropFamily,
-  PestHistoryItem,
-  GreenManureRecommendation,
-} from '@/types/database.types';
+import { Bed, CropFamily, PestHistoryItem } from '@/types/database.types';
 import { db, auth, refreshAuthToken } from '@/lib/firebase';
 import {
   collection,
@@ -22,13 +17,11 @@ import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
 import { getCached, invalidate, dedup, CACHE_KEYS } from '@/lib/dataCache';
 import {
-  getBedSizeRecommendation,
-  getGreenManureForMonth,
   getTransitionInputs as getTransitionInputsConfig,
   validateCompanionPair as validateCompanionPairConfig,
 } from '@/config/beds';
 import { getPlantsByBed, deletePlantsForBed } from '@/services/plants';
-import type { BedSizeConditions, BedSizeResult, CompanionValidation } from '@/config/beds';
+import type { CompanionValidation } from '@/config/beds';
 import { normalizeBed, getHarvestGapWarnings, getCrossBedStatus } from '@/services/bedLogic';
 
 // Pure domain logic lives in `bedLogic.ts` (no Firestore/RN imports, unit-tested).
@@ -204,14 +197,6 @@ export async function endBedRest(id: string): Promise<void> {
 // (see markTaskDone in services/tasks.ts) — the single completion surface.
 
 // ─── Domain helpers ───────────────────────────────────────────────────────────
-
-export function getBedSizeRecommendationForBed(conditions: BedSizeConditions): BedSizeResult {
-  return getBedSizeRecommendation(conditions);
-}
-
-export function getGreenManureForSeason(month: number): GreenManureRecommendation {
-  return getGreenManureForMonth(month);
-}
 
 export function getTransitionInputs(
   from: CropFamily,

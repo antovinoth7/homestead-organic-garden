@@ -9,14 +9,7 @@ import { logger } from '@/utils/logger';
 import { FARM_TIMEZONE } from '@/utils/weatherWords';
 import { isValidWeatherCoordinates } from './weatherLogic';
 
-export {
-  hasRainSoon,
-  isRainPredictedOnDate,
-  isValidWeatherCoordinates,
-  resolveWeatherCoords,
-  wateringAdvice,
-} from './weatherLogic';
-export type { WeatherCoords, WateringAdvice } from './weatherLogic';
+export { resolveWeatherCoords } from './weatherLogic';
 
 export const KANYAKUMARI_LAT = 8.0883;
 export const KANYAKUMARI_LNG = 77.5385;
@@ -317,6 +310,10 @@ let primaryCoords: { lat: number; lng: number } | null = null;
  * Plan already makes for its rain markers, and rain is a district-scale signal.
  * Null is a normal answer: offline, or before anything has fetched. Callers must
  * carry on without it rather than treat it as "no rain".
+ *
+ * Not called yet: it is the forecast source for the forecast-damped watering in
+ * `utils/wateringForecast.ts`, which is built but not wired — see
+ * docs/IMPLEMENTATION_ROADMAP.md §9 → Built, not wired.
  */
 export function getPrimaryForecast(): WeatherForecast | null {
   if (!primaryCoords) return null;

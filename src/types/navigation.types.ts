@@ -57,7 +57,6 @@ export type RootTabParamList = {
   'Care Plan':
     | {
         resetFilters?: boolean;
-        filterOverdue?: boolean;
         /**
          * One-shot: reveal a section of the plan rather than opening at the top.
          * Set by the Today plot card's overdue count, which names a section the

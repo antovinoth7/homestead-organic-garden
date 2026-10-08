@@ -1,14 +1,11 @@
 import {
   getAllOrganicInputs,
   getOrganicInputById,
-  getOrganicInputByName,
-  getOrganicInputsByCategory,
   getGroupedOrganicInputs,
   getCategoryLabel,
   formatIdealFor,
   getRecipeById,
   ORGANIC_RECIPES,
-  CATEGORY_DESCRIPTIONS,
 } from '@/config/organicInputs';
 import type { OrganicInputCategory } from '@/types/database.types';
 
@@ -31,10 +28,9 @@ describe('Organic Input Registry', () => {
     });
   });
 
-  it('every category in use has a label and a help description', () => {
+  it('every category in use has a label', () => {
     inputs.forEach((input) => {
       expect(getCategoryLabel(input.category)).toBeTruthy();
-      expect(CATEGORY_DESCRIPTIONS[input.category]).toBeTruthy();
     });
   });
 
@@ -64,17 +60,6 @@ describe('Organic Input Registry', () => {
     it('getOrganicInputById finds a known entry and misses cleanly', () => {
       expect(getOrganicInputById('compost_basic')?.name).toBe('Compost');
       expect(getOrganicInputById('not_a_real_input')).toBeUndefined();
-    });
-
-    it('getOrganicInputByName is case-insensitive', () => {
-      expect(getOrganicInputByName('  nEEm ExTrAcT ')?.id).toBe('neem');
-      expect(getOrganicInputByName('nothing')).toBeUndefined();
-    });
-
-    it('getOrganicInputsByCategory returns only that category', () => {
-      const promoters = getOrganicInputsByCategory('growth_promoters');
-      expect(promoters.length).toBeGreaterThan(0);
-      promoters.forEach((i) => expect(i.category).toBe('growth_promoters'));
     });
   });
 

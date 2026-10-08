@@ -18,8 +18,6 @@ const DEFAULT_TIMEOUT = 15000; // 15 seconds
 
 export const FIRESTORE_WRITE_TIMEOUT_MS = 15000;
 export const FIRESTORE_READ_TIMEOUT_MS = 10000;
-export const FIRESTORE_MAX_RETRIES = 2;
-export const FIRESTORE_BASE_DELAY_MS = 1000;
 
 /**
  * Wraps a Firestore operation with timeout and network check

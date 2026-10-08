@@ -35,7 +35,6 @@ import {
   CACHE_KEYS,
 } from '../lib/dataCache';
 import { TASK_LABELS, EARLY_COMPLETION_BLOCK_REASON } from '../utils/taskConstants';
-import { getCurrentSeason } from '../utils/seasonHelpers';
 import { getCoconutAgeInfo, getEffectiveGrowthStage, isPlantArchived } from '../utils/plantHelpers';
 import { getEffectiveWateringIntervalDays } from '../utils/plantWatering';
 import { getPlantCareProfile } from '../utils/plantCareDefaults';
@@ -1493,39 +1492,6 @@ export const calculateTaskPriority = (
 };
 
 /**
- * Get seasonal care reminder for plant
- * (Simplified version - seasonal care profiles removed)
- */
-export const getSeasonalCareReminder = (
-  plant: Plant,
-  zone?: import('@/config/zones').AgroClimaticZone
-): string | null => {
-  if (!zone) return null;
-  const season = getCurrentSeason(undefined, zone);
-
-  // Provide season-specific advice for Kanyakumari conditions
-  if ((season === 'sw_monsoon' || season === 'ne_monsoon') && plant.space_type === 'pot') {
-    return season === 'ne_monsoon'
-      ? 'NE Monsoon: heaviest rains — check drainage daily, move pots under cover if needed'
-      : 'SW Monsoon: ensure proper drainage to prevent waterlogging';
-  }
-
-  if (season === 'ne_monsoon' && (plant.space_type === 'bed' || plant.space_type === 'ground')) {
-    return 'NE Monsoon season — reduce watering; natural rainfall is usually sufficient';
-  }
-
-  if (season === 'summer') {
-    return 'Peak summer heat — water early morning or after sunset to reduce evaporation';
-  }
-
-  if (season === 'cool_dry') {
-    return 'Cool dry period — good time to apply organic mulch and prepare beds for the next season';
-  }
-
-  return null;
-};
-
-/**
  * Disable (but do not delete) every task template for the given plants.
  *
  * The reversible counterpart to `deleteTasksForPlantIds`: used when a plant is
@@ -1588,12 +1554,3 @@ export const disableTasksForPlantIds = async (plantIds: string[]): Promise<void>
 export const disableTasksForPlant = async (plantId: string): Promise<void> => {
   await disableTasksForPlantIds([plantId]);
 };
-
-// ─── Pre-Monsoon Batch Tasks ─────────────────────────────────────────────────
-
-// Re-export pure pre-monsoon functions from utility (avoids Firebase dep in tests)
-export { getDaysToSWMonsoon, getPreMonsoonTasks } from '@/utils/preMonsoonTasks';
-export type { PreMonsoonTaskItem } from '@/utils/preMonsoonTasks';
-
-// Re-export bed task sync for consumers that import from tasks.ts
-export { syncBedTasksFromPlants } from './BedTaskResolver';

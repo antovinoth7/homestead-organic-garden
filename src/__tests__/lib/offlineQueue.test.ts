@@ -5,7 +5,6 @@
  */
 
 import {
-  enqueueMutation,
   enqueueMutations,
   getQueue,
   getQueueLength,
@@ -55,7 +54,7 @@ beforeEach(() => {
 
 describe('offlineQueue store', () => {
   it('enqueues mutations with generated ids and zero retries', async () => {
-    await enqueueMutation(input());
+    await enqueueMutations([input()]);
     const queue = await getQueue();
     expect(queue).toHaveLength(1);
     expect(queue[0]!.id).toBeTruthy();
@@ -64,8 +63,8 @@ describe('offlineQueue store', () => {
   });
 
   it('coalesces an update into a pending create for the same doc', async () => {
-    await enqueueMutation(input());
-    await enqueueMutation(input({ op: 'update', payload: { name: 'Roma Tomato' } }));
+    await enqueueMutations([input()]);
+    await enqueueMutations([input({ op: 'update', payload: { name: 'Roma Tomato' } })]);
     const queue = await getQueue();
     expect(queue).toHaveLength(1);
     expect(queue[0]!.op).toBe('create');
@@ -92,7 +91,7 @@ describe('offlineQueue store', () => {
   });
 
   it('increments retry counts and persists them', async () => {
-    await enqueueMutation(input());
+    await enqueueMutations([input()]);
     const [entry] = await getQueue();
     expect((await incrementRetry(entry!.id)).retryCount).toBe(1);
     expect((await incrementRetry(entry!.id)).retryCount).toBe(2);
@@ -100,26 +99,26 @@ describe('offlineQueue store', () => {
   });
 
   it('notifies subscribers with the current and updated counts', async () => {
-    await enqueueMutation(input({ docId: 'a' }));
+    await enqueueMutations([input({ docId: 'a' })]);
     const counts: number[] = [];
     const unsubscribe = subscribeQueueCount((count) => counts.push(count));
     await Promise.resolve(); // initial push
-    await enqueueMutation(input({ docId: 'b' }));
+    await enqueueMutations([input({ docId: 'b' })]);
     unsubscribe();
-    await enqueueMutation(input({ docId: 'c' }));
+    await enqueueMutations([input({ docId: 'c' })]);
     expect(counts).toEqual([1, 2]);
   });
 
   it('serializes concurrent enqueues without losing entries', async () => {
     await Promise.all(
-      Array.from({ length: 10 }, (_, i) => enqueueMutation(input({ docId: `doc-${i}` })))
+      Array.from({ length: 10 }, (_, i) => enqueueMutations([input({ docId: `doc-${i}` })]))
     );
     expect(await getQueueLength()).toBe(10);
   });
 
   it('stamps the current owner uid onto queued mutations', async () => {
     setQueueOwner('user-2');
-    await enqueueMutation(input());
+    await enqueueMutations([input()]);
     expect((await getQueue())[0]!.ownerUid).toBe('user-2');
   });
 
@@ -133,11 +132,11 @@ describe('offlineQueue store', () => {
 describe('durability', () => {
   it('throws instead of reporting success when the queue cannot be persisted', async () => {
     mockSetDataFails = true;
-    await expect(enqueueMutation(input())).rejects.toThrow(/could not be persisted/);
+    await expect(enqueueMutations([input()])).rejects.toThrow(/could not be persisted/);
   });
 
   it('throws when a removal cannot be persisted, so the entry is replayed again', async () => {
-    await enqueueMutation(input());
+    await enqueueMutations([input()]);
     const [entry] = await getQueue();
     mockSetDataFails = true;
     await expect(removeMutation(entry!.id, entry!.revision)).rejects.toThrow(
@@ -148,18 +147,18 @@ describe('durability', () => {
 
 describe('revision compare-and-swap', () => {
   it('bumps the revision when a mutation coalesces into a pending entry', async () => {
-    await enqueueMutation(input());
+    await enqueueMutations([input()]);
     expect((await getQueue())[0]!.revision).toBe(0);
-    await enqueueMutation(input({ op: 'update', payload: { name: 'Roma' } }));
+    await enqueueMutations([input({ op: 'update', payload: { name: 'Roma' } })]);
     expect((await getQueue())[0]!.revision).toBe(1);
   });
 
   it('keeps an entry whose revision changed while it was in flight', async () => {
-    await enqueueMutation(input());
+    await enqueueMutations([input()]);
     const [inFlight] = await getQueue();
 
     // Simulates a user edit landing while the entry is being replayed.
-    await enqueueMutation(input({ op: 'update', payload: { name: 'Roma' } }));
+    await enqueueMutations([input({ op: 'update', payload: { name: 'Roma' } })]);
 
     const removed = await removeMutation(inFlight!.id, inFlight!.revision);
     expect(removed).toBe(false);
@@ -170,7 +169,7 @@ describe('revision compare-and-swap', () => {
   });
 
   it('removes the entry when the revision still matches', async () => {
-    await enqueueMutation(input());
+    await enqueueMutations([input()]);
     const [entry] = await getQueue();
     expect(await removeMutation(entry!.id, entry!.revision)).toBe(true);
     expect(await getQueueLength()).toBe(0);
@@ -195,7 +194,7 @@ describe('unreadable queue is never mistaken for an empty one', () => {
     'enqueueMutations throws on a %s read failure and leaves the queue untouched',
     async (reason) => {
       const before = await seedThenBreakReads(reason);
-      await expect(enqueueMutation(input({ docId: 'c' }))).rejects.toThrow(
+      await expect(enqueueMutations([input({ docId: 'c' })])).rejects.toThrow(
         /device storage is unavailable/
       );
       expect(mockMemoryStore.get(KEY)).toBe(before);
@@ -232,7 +231,7 @@ describe('unreadable queue is never mistaken for an empty one', () => {
   it('recovers once reads succeed again', async () => {
     await seedThenBreakReads();
     mockReadDataFails = null;
-    await enqueueMutation(input({ docId: 'c' }));
+    await enqueueMutations([input({ docId: 'c' })]);
     expect(mockMemoryStore.get(KEY)).toHaveLength(3);
   });
 });

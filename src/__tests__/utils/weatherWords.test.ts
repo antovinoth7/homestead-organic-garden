@@ -10,7 +10,6 @@ import {
   formatRainChance,
   formatTempRange,
   selectForecastDays,
-  weatherIconKey,
   weekdayLabel,
 } from '../../utils/weatherWords';
 import { makeDailyWeather, makeWeatherForecast } from '../fixtures/today.fixtures';
@@ -152,7 +151,7 @@ describe('weather formatting', () => {
   });
 
   it('uses the semantic icon mapping for weather conditions', () => {
-    expect(weatherIconKey(makeDailyWeather({ weatherCode: 95 }))).toBe('weather.thunderstorm');
+    expect(describeDay(makeDailyWeather({ weatherCode: 95 })).iconKey).toBe('weather.thunderstorm');
   });
 });
 

@@ -6,10 +6,8 @@
  * call site continues to work without changes.
  */
 
-import { PlantType, SpaceType } from '@/types/database.types';
-import { AgroClimaticZone, DEFAULT_ZONE, SeasonalPestAlert, getActiveZone } from '@/config/zones';
-
-export type KKSeason = string;
+import { SpaceType } from '@/types/database.types';
+import { AgroClimaticZone, DEFAULT_ZONE, getActiveZone } from '@/config/zones';
 
 export function getCurrentSeason(date?: Date, zone?: AgroClimaticZone): string {
   const z = zone ?? DEFAULT_ZONE;
@@ -28,11 +26,6 @@ export function getCurrentSeason(date?: Date, zone?: AgroClimaticZone): string {
   }
 
   return z.seasons[0]?.id ?? 'unknown';
-}
-
-export function isMonsoonSeason(date?: Date, zone?: AgroClimaticZone): boolean {
-  const s = getCurrentSeason(date, zone);
-  return s === 'sw_monsoon' || s === 'ne_monsoon';
 }
 
 export function getSeasonLabel(date?: Date, zone?: AgroClimaticZone): string {
@@ -75,18 +68,4 @@ export function getWateringFrequencyMultiplier(
   const multipliers = z.wateringMultipliers[seasonId];
   if (!multipliers) return 1.0;
   return multipliers[spaceType] ?? 1.0;
-}
-
-export function getSeasonalPestAlerts(
-  plantType: PlantType | null | undefined,
-  zone?: AgroClimaticZone
-): SeasonalPestAlert[] {
-  const z = zone ?? DEFAULT_ZONE;
-  const seasonId = getCurrentSeason(undefined, z);
-  const seasonAlerts = z.seasonalPestAlerts[seasonId];
-  if (!seasonAlerts) return [];
-
-  const general = seasonAlerts['_general'] ?? [];
-  const specific = plantType ? seasonAlerts[plantType] ?? [] : [];
-  return [...specific, ...general];
 }

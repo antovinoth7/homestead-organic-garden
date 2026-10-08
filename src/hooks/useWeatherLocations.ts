@@ -1,6 +1,6 @@
 /**
- * useWeatherLocations — resolves the set of plots the WeatherCard should show a
- * forecast for. Each plot gets coordinates via `resolveWeatherCoords` (plot GPS
+ * useWeatherLocations — resolves the set of plots the Today screen and the Care
+ * Plan show a forecast for. Each plot gets coordinates via `resolveWeatherCoords` (plot GPS
  * → farm district → Kanyakumari default). With no plots configured it emits a
  * single fallback plot named after the district. Both reads are cached, so this
  * is cheap on the dashboard.

@@ -226,15 +226,6 @@ export function getOrganicInputById(id: string): OrganicInputEntry | undefined {
   return INPUT_BY_ID.get(id);
 }
 
-export function getOrganicInputByName(name: string): OrganicInputEntry | undefined {
-  const normalised = name.trim().toLowerCase();
-  return ALL_ORGANIC_INPUTS.find((i) => i.name.toLowerCase() === normalised);
-}
-
-export function getOrganicInputsByCategory(category: OrganicInputCategory): OrganicInputEntry[] {
-  return ALL_ORGANIC_INPUTS.filter((i) => i.category === category);
-}
-
 export interface OrganicInputCategoryGroup {
   category: OrganicInputCategory;
   label: string;
@@ -247,18 +238,6 @@ const CATEGORY_LABELS: Record<OrganicInputCategory, string> = {
   soil_amendments: 'Soil Amendments',
   biopesticides: 'Biopesticides',
   other: 'Other Inputs',
-};
-
-export const CATEGORY_DESCRIPTIONS: Record<OrganicInputCategory, string> = {
-  fertilizers:
-    'Nutrient sources including compost, manures, and plant-based amendments that improve soil fertility and plant nutrition.',
-  growth_promoters:
-    'Bioactive extracts and microbial preparations that stimulate plant growth, hormone production, and stress tolerance.',
-  soil_amendments:
-    'Materials that modify soil structure, pH, or water retention to create optimal growing conditions.',
-  biopesticides:
-    'Natural pest and disease control agents derived from plants, minerals, or microorganisms — safe for organic farming.',
-  other: "Specialized inputs that support organic agriculture but don't fit primary categories.",
 };
 
 const CATEGORY_ORDER: OrganicInputCategory[] = [

@@ -5,7 +5,6 @@ import {
   GROWTH_STAGE_ICON_KEYS,
   ICON_REGISTRY,
   PLANT_TYPE_ICON_KEYS,
-  QUALITY_ICON_KEYS,
   SEASON_ICON_KEYS,
   TASK_ICON_KEYS,
   TREATMENT_ICON_KEYS,
@@ -24,7 +23,6 @@ describe('semantic icon registry', () => {
     ['bed types', BED_TYPE_ICON_KEYS],
     ['bed layers', BED_LAYER_ICON_KEYS],
     ['treatment methods', TREATMENT_ICON_KEYS],
-    ['quality states', QUALITY_ICON_KEYS],
   ])('resolves every %s mapping', (_label, mapping) => {
     for (const iconKey of Object.values(mapping)) {
       expect(ICON_REGISTRY[iconKey]).toBeDefined();

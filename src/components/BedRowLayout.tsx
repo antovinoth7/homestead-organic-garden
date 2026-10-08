@@ -812,54 +812,6 @@ function BedInsightsAccordion({
   );
 }
 
-// ─── GhostRowCard (kept for backward compat with BedDetail screens) ───────────
-
-export function GhostRowCard({
-  ghost,
-  onAddToRow,
-}: {
-  ghost: GhostRow;
-  onAddToRow: (layer: BedLayer) => void;
-}): React.JSX.Element {
-  const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
-  const borderColor = theme.layerColors[ghost.layer].color;
-  const bgColor = theme.layerColors[ghost.layer].bg;
-  const displayName = getRowDisplayName(ghost.layer, false);
-
-  return (
-    <View style={[styles.rowCard, { borderColor, backgroundColor: bgColor }]}>
-      <View style={[styles.rowAccentStripe, { backgroundColor: borderColor }]} />
-      <View style={[styles.rowHeader, { borderBottomColor: borderColor }]}>
-        <View style={styles.rowHeaderTop}>
-          <GardenIcon name={BED_LAYER_ICON_KEYS[ghost.layer]} size={20} color={borderColor} />
-          <Text style={styles.rowNameText} numberOfLines={1}>
-            {displayName}
-          </Text>
-        </View>
-        <View style={styles.badgeRow}>
-          <View style={styles.mainCropBadge}>
-            <Text style={styles.mainCropBadgeText}>EMPTY</Text>
-          </View>
-          <Text style={styles.plantCountText}>0 / {ghost.plantsPerRow} plants</Text>
-        </View>
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.plantTilesContainer}>
-          {Array.from({ length: ghost.plantsPerRow }, (_, i) => (
-            <EmptySlot
-              key={i}
-              spacingCm={ghost.spacingCm}
-              borderColor={borderColor}
-              onPress={() => onAddToRow(ghost.layer)}
-            />
-          ))}
-        </View>
-      </ScrollView>
-    </View>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function BedRowLayout({

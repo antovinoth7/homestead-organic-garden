@@ -2,14 +2,8 @@ import { AgroClimaticZone } from './types';
 import { HIGH_RAINFALL_ZONE } from './highRainfall';
 import { TAMIL_NADU_ZONES } from './tamilNaduZones';
 
-export { HIGH_RAINFALL_ZONE } from './highRainfall';
 export { TAMIL_NADU_METEOROLOGICAL_ZONE } from './tamilNaduZones';
-export type {
-  AgroClimaticZone,
-  AgroClimaticZoneId,
-  SeasonDefinition,
-  SeasonalPestAlert,
-} from './types';
+export type { AgroClimaticZone, AgroClimaticZoneId } from './types';
 
 export const DEFAULT_ZONE: AgroClimaticZone = HIGH_RAINFALL_ZONE;
 

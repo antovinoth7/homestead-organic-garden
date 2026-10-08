@@ -1,7 +1,5 @@
 import {
   summarizeHarvests,
-  groupHarvestsBySeason,
-  groupHarvestsByTree,
   computeHarvestsReady,
   isHarvestJournalEntry,
   isHarvestSatisfied,
@@ -136,60 +134,6 @@ describe('harvestStats', () => {
     it('does not re-arm any other mode', () => {
       expect(isHarvestSatisfied('one_shot', 0, 90)).toBe(true);
       expect(isHarvestSatisfied(null, 0, 90)).toBe(true);
-    });
-  });
-
-  describe('groupHarvestsBySeason', () => {
-    it('buckets quantity by season in calendar order, omitting empty seasons', () => {
-      const entries = [
-        makeJournalEntry({ id: '1', harvest_quantity: 2, created_at: '2026-04-15T12:00:00.000Z' }), // summer
-        makeJournalEntry({ id: '2', harvest_quantity: 3, created_at: '2026-07-15T12:00:00.000Z' }), // sw_monsoon
-        makeJournalEntry({ id: '3', harvest_quantity: 1, created_at: '2026-07-20T12:00:00.000Z' }), // sw_monsoon
-      ];
-      const buckets = groupHarvestsBySeason(entries);
-      expect(buckets.map((b) => b.key)).toEqual(['summer', 'sw_monsoon']);
-      expect(buckets.find((b) => b.key === 'sw_monsoon')?.total).toBe(4);
-    });
-
-    it('returns no buckets for no entries', () => {
-      expect(groupHarvestsBySeason([])).toEqual([]);
-    });
-  });
-
-  describe('groupHarvestsByTree', () => {
-    it('groups by tree number, ignores entries without one, sorts ascending', () => {
-      const entries = [
-        makeJournalEntry({ id: '1', harvest_quantity: 5, harvest_tree_number: 2 }),
-        makeJournalEntry({ id: '2', harvest_quantity: 3, harvest_tree_number: 1 }),
-        makeJournalEntry({ id: '3', harvest_quantity: 4, harvest_tree_number: 1 }),
-        makeJournalEntry({ id: '4', harvest_quantity: 9 }), // no tree number → ignored
-      ];
-      const trees = groupHarvestsByTree(entries);
-      expect(trees.map((t) => t.treeNumber)).toEqual([1, 2]);
-      expect(trees[0]).toEqual({ treeNumber: 1, total: 7, count: 2 });
-      expect(trees[1]).toEqual({ treeNumber: 2, total: 5, count: 1 });
-    });
-
-    it('returns empty when no entries carry a tree number', () => {
-      expect(groupHarvestsByTree([makeJournalEntry({ harvest_quantity: 1 })])).toEqual([]);
-    });
-
-    it('ignores entries off the chosen basis so nuts and kilograms never mix', () => {
-      const trees = groupHarvestsByTree([
-        makeJournalEntry({
-          id: '1',
-          harvest_quantity: 2,
-          harvest_unit: 'kg',
-          harvest_tree_number: 1,
-        }),
-        makeJournalEntry({
-          id: '2',
-          harvest_quantity: 9,
-          harvest_unit: 'pcs',
-          harvest_tree_number: 1,
-        }),
-      ]);
-      expect(trees).toEqual([{ treeNumber: 1, total: 2, count: 1 }]);
     });
   });
 

@@ -14,7 +14,6 @@ function restSeasonsFor(family: CropFamily): number | undefined {
   return REST_BY_PREV_CROP[family]?.restSeasons;
 }
 const MIN_LEGUME_COVERAGE_PCT = LOW_LEGUME_THRESHOLD;
-const _MAX_SAME_FAMILY_CONSECUTIVE = 3;
 
 // Canonical accumulator names — single-sourced from the dynamic-accumulator config.
 const ACCUMULATOR_NAMES = DYNAMIC_ACCUMULATORS.map((a) => a.name);

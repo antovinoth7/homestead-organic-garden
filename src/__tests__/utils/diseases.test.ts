@@ -3,7 +3,6 @@ import {
   getAllDiseases,
   getDiseaseById,
   getDiseaseByName,
-  getDiseasesByCategory,
   getGroupedDiseaseEntries,
   getCategoryLabel,
 } from '../../config/diseases';
@@ -59,24 +58,6 @@ describe('disease registry', () => {
 
     it('returns undefined for unknown name', () => {
       expect(getDiseaseByName('Imaginary Disease')).toBeUndefined();
-    });
-  });
-
-  describe('getDiseasesByCategory', () => {
-    it('returns only diseases matching the category', () => {
-      const fungal = getDiseasesByCategory('fungal');
-      expect(fungal.length).toBeGreaterThan(0);
-      for (const disease of fungal) {
-        expect(disease.category).toBe('fungal');
-      }
-    });
-
-    it('returns viral diseases', () => {
-      const viral = getDiseasesByCategory('viral');
-      expect(viral.length).toBeGreaterThan(0);
-      for (const disease of viral) {
-        expect(disease.category).toBe('viral');
-      }
     });
   });
 

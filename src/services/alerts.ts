@@ -11,8 +11,5 @@ export {
   getFarmAlerts,
   sortAlerts,
   isActionable,
-  getTopAlert,
-  ALERT_COMPLETE_FIELD,
   ATTENTION_MIN_DAYS_OVERDUE,
 } from '@/services/alertsLogic';
-export type { FarmAlertInputs } from '@/services/alertsLogic';

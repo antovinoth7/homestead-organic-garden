@@ -1,27 +1,33 @@
-import { formatDaysToHarvest, formatSpacingFigure } from '@/utils/growSpecFormat';
+import {
+  formatSpacingFigure,
+  harvestRangeInYears,
+  isStatedHarvestRange,
+} from '@/utils/growSpecFormat';
 
-describe('formatDaysToHarvest', () => {
-  it('returns an empty string when the profile has no range', () => {
-    expect(formatDaysToHarvest(undefined)).toBe('');
+describe('isStatedHarvestRange', () => {
+  it('rejects a missing range', () => {
+    expect(isStatedHarvestRange(undefined)).toBe(false);
+    expect(isStatedHarvestRange(null)).toBe(false);
   });
 
-  it('treats a 0–0 range as no figure, not "0 d"', () => {
-    expect(formatDaysToHarvest({ min: 0, max: 0 })).toBe('');
+  it('treats a 0–0 range as no figure, not "0 days"', () => {
+    expect(isStatedHarvestRange({ min: 0, max: 0 })).toBe(false);
   });
 
-  it('shows a single figure when the bounds are equal', () => {
-    expect(formatDaysToHarvest({ min: 35, max: 35 })).toBe('35 d');
+  it('accepts a real wait', () => {
+    expect(isStatedHarvestRange({ min: 35, max: 35 })).toBe(true);
+    expect(isStatedHarvestRange({ min: 100, max: 140 })).toBe(true);
+  });
+});
+
+describe('harvestRangeInYears', () => {
+  it('restates a wait of a year or more in whole years', () => {
+    expect(harvestRangeInYears({ min: 4380, max: 5475 })).toEqual({ min: 12, max: 15 });
+    expect(harvestRangeInYears({ min: 730, max: 730 })).toEqual({ min: 2, max: 2 });
   });
 
-  it('shows both bounds when they differ', () => {
-    expect(formatDaysToHarvest({ min: 100, max: 140 })).toBe('100–140 d');
-    expect(formatDaysToHarvest({ min: 25, max: 40 })).toBe('25–40 d');
-  });
-
-  it('switches to years once the shorter bound reaches a year', () => {
-    expect(formatDaysToHarvest({ min: 4380, max: 5475 })).toBe('12–15 yr');
-    expect(formatDaysToHarvest({ min: 730, max: 730 })).toBe('2 yr');
-    expect(formatDaysToHarvest({ min: 300, max: 400 })).toBe('300–400 d');
+  it('leaves a wait under a year in days', () => {
+    expect(harvestRangeInYears({ min: 300, max: 400 })).toBeNull();
   });
 });
 
