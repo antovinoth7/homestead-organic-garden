@@ -1,11 +1,10 @@
 import { useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Bed, GrowthStage, Plant } from '@/types/database.types';
+import { Bed, Plant } from '@/types/database.types';
 import { getBeds } from '@/services/beds';
 import { getAllPlants, getStoredPlants } from '@/services/plants';
 import { isPlantArchived } from '@/utils/plantHelpers';
 import { isPlantWaterOverdue } from '@/utils/plantWatering';
-import { buildBedPreview } from '@/utils/bedPreview';
 import { logError } from '@/utils/errorLogging';
 
 export interface BedWithCoverage extends Bed {
@@ -14,10 +13,6 @@ export interface BedWithCoverage extends Bed {
   active_plant_count: number;
   /** True when at least one active plant in the bed is due/overdue for watering. */
   water_overdue: boolean;
-  /** Plant names for the bed card's mini thumbnails — at most MAX_PREVIEW_PINS. */
-  preview_plant_names: string[];
-  /** Stage most of the bed's plants are in; null when none has one recorded. */
-  dominant_stage: GrowthStage | null;
 }
 
 interface UseBedDataResult {
@@ -62,17 +57,12 @@ export function useBedData(): UseBedDataResult {
       const enriched = rawBeds.map((bed) => {
         const bedPlants = plantsByBed.get(bed.id) ?? [];
         const activePlants = bedPlants.filter((p) => !isPlantArchived(p));
-        // The plants are already in hand, so the card's grid pins and stage
-        // badge cost nothing beyond this pass.
-        const preview = buildBedPreview(activePlants);
         return {
           ...bed,
           legume_coverage_pct: computeLegumePct(bedPlants),
           plant_count: bedPlants.length,
           active_plant_count: activePlants.length,
           water_overdue: activePlants.some((p) => isPlantWaterOverdue(p, now)),
-          preview_plant_names: preview.plantNames,
-          dominant_stage: preview.dominantStage,
         };
       });
       // Newest beds first.

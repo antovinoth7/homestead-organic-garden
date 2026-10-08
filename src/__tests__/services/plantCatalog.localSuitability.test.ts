@@ -1,5 +1,5 @@
 import { DEFAULT_PLANT_CATALOG } from '@/services/plantCatalog';
-import { KANYAKUMARI_PLANTING_CALENDAR } from '@/config/kanyakumariPlantingCalendar';
+import { TAMIL_NADU_PLANTING_RULES } from '@/config/tamilNaduPlantingCalendar';
 import { DEFAULT_PLANT_PROFILES, toPlantCatalogShape } from '@/services/plantProfiles';
 import { sortPlantNames } from '@/utils/plantSort';
 import { PLANT_CARE_OVERRIDES } from '@/utils/plantCareDefaults/overrides';
@@ -51,9 +51,12 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
 
   it('points cool-season spinach prompts to the selectable Palak crop', () => {
     for (const month of [9, 10]) {
-      expect(KANYAKUMARI_PLANTING_CALENDAR[month]).toContainEqual({
+      const kanyakumariRules = TAMIL_NADU_PLANTING_RULES.filter(
+        (rule) => rule.zones.includes('high_rainfall') && rule.months.includes(month)
+      ).map(({ plantType, plantName, action }) => ({ plantType, plantName, action }));
+      expect(kanyakumariRules).toContainEqual({
         plantType: 'spinach',
-        variety: 'Palak',
+        plantName: 'Palak',
         action: 'sow',
       });
     }

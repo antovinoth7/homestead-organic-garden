@@ -1,5 +1,5 @@
 /// <reference types="jest" />
-import { computeTargetIndex } from '../../utils/dragRowMath';
+import { computeTargetIndex } from '@/utils/dragRowMath';
 
 const STEP = 118;
 

@@ -135,3 +135,70 @@ describe('Tamil Nadu Today planting rules', () => {
     }
   });
 });
+
+// Kanyakumari is the high-rainfall zone, so these pin the windows the Today
+// season block shows there month by month.
+describe('High-rainfall (Kanyakumari) planting windows', () => {
+  const highRainfall = TAMIL_NADU_PLANTING_RULES.filter((rule) =>
+    rule.zones.includes('high_rainfall')
+  );
+  const names = (rules: readonly { plantName: string }[]): string[] =>
+    rules.map((rule) => rule.plantName);
+
+  it('has a reviewed set for all twelve months', () => {
+    for (let month = 1; month <= 12; month += 1) {
+      expect(highRainfall.some((rule) => rule.months.includes(month))).toBe(true);
+    }
+  });
+
+  it('contains food crops only', () => {
+    for (const rule of highRainfall) {
+      expect(['vegetable', 'spinach']).toContain(rule.plantType);
+    }
+  });
+
+  it('closes the crops August has that September does not', () => {
+    const { closing } = getTamilNaduPlantingWindows('high_rainfall', at(2026, 8));
+    expect(names(closing)).toEqual(['Amaranthus', 'Brinjal', 'Chilli', 'Cluster Beans']);
+  });
+
+  it('opens the crops September has that August does not', () => {
+    const { openingNext } = getTamilNaduPlantingWindows('high_rainfall', at(2026, 8));
+    expect(names(openingNext)).toEqual(['Fenugreek', 'Palak']);
+  });
+
+  it('keeps a crop out of both lists when its window spans the boundary', () => {
+    // Fenugreek runs September through December, so October closes nothing of it.
+    const { current, closing, openingNext } = getTamilNaduPlantingWindows(
+      'high_rainfall',
+      at(2026, 10)
+    );
+    expect(names(current)).toContain('Fenugreek');
+    expect(names(closing)).not.toContain('Fenugreek');
+    expect(names(openingNext)).not.toContain('Fenugreek');
+  });
+
+  it('distinguishes sow from transplant for the same crop', () => {
+    // Tomato transplants in December and January; the sow/transplant pair must
+    // not collapse into one key and mask a genuinely closing window.
+    const { current } = getTamilNaduPlantingWindows('high_rainfall', at(2026, 12));
+    const tomato = current.filter((rule) => rule.plantName === 'Tomato');
+    expect(tomato).toHaveLength(1);
+    expect(tomato[0]?.action).toBe('transplant');
+  });
+
+  it('wraps December to January rather than closing every winter crop', () => {
+    const december = getTamilNaduPlantingWindows('high_rainfall', at(2026, 12));
+    // Both months carry Radish, so it is not closing.
+    expect(names(december.current)).toContain('Radish');
+    expect(names(december.closing)).not.toContain('Radish');
+    // January's cowpea is genuinely new.
+    expect(names(december.openingNext)).toContain('Cowpea');
+  });
+
+  it('closes December crops that January drops', () => {
+    const { closing } = getTamilNaduPlantingWindows('high_rainfall', at(2026, 12));
+    expect(names(closing)).toContain('Beetroot');
+    expect(names(closing)).toContain('Fenugreek');
+  });
+});
