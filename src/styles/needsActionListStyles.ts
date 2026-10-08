@@ -39,9 +39,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     iconInfo: {
       backgroundColor: theme.infoLight,
     },
-    iconGlyph: {
-      fontSize: 17,
-    },
     body: {
       flex: 1,
       minWidth: 0,
@@ -64,9 +61,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12.5,
       color: theme.textTertiary,
       marginTop: 2,
-    },
-    chevron: {
-      fontSize: 18,
-      color: theme.textTertiary,
     },
   });

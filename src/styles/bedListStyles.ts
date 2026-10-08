@@ -15,7 +15,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
-    bedCount: { fontSize: 13, color: theme.textSecondary },
     errorText: { color: theme.error, marginBottom: 12, textAlign: 'center' },
     retryButton: {
       paddingHorizontal: 20,

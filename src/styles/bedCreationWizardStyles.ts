@@ -101,16 +101,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.error,
     },
     blockedBannerText: { flex: 1, fontSize: 12, color: theme.error, lineHeight: 17 },
-    stepCounterRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      gap: 6,
-      paddingHorizontal: 16,
-      paddingTop: 4,
-    },
-    stepCounterText: { fontSize: 11, fontWeight: '600' as const, color: theme.textSecondary },
-    stepSubtitleText: { fontSize: 11, color: theme.textTertiary, flexShrink: 1 },
     // ── Discard-changes modal ─────────────────────────────────────────────────
     discardOverlay: {
       flex: 1,
@@ -191,14 +181,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600' as const,
       color: theme.textInverse,
     },
-    blockedText: {
-      flex: 1,
-      fontSize: 12,
-      color: theme.error,
-      backgroundColor: theme.errorLight,
-      padding: 8,
-      borderRadius: 6,
-    },
     // Step 1 — type grid
     typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     typeCard: {
@@ -250,46 +232,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.info,
     },
     btSeasonBannerText: { fontSize: 12, color: theme.infoDark, fontWeight: '500' as const },
-    // Step 1 — Quick-start goal chips
-    btGoalLabel: {
-      fontSize: 10,
-      fontWeight: '700' as const,
-      letterSpacing: 1.2,
-      color: theme.textTertiary,
-      marginBottom: 10,
-    },
-    btGoalRow: {
-      flexDirection: 'row' as const,
-      flexWrap: 'wrap' as const,
-      gap: 8,
-      marginBottom: 16,
-    },
-    btGoalChip: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 20,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1.5,
-      borderColor: theme.border,
-    },
-    btGoalChipSelected: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    btGoalIcon: { fontSize: 16 },
-    btGoalText: { fontSize: 13, fontWeight: '600' as const, color: theme.textSecondary },
-    btGoalTextSelected: { color: theme.primary },
-    // Step 1 — All types divider
-    btAllTypesLabel: {
-      fontSize: 10,
-      fontWeight: '700' as const,
-      letterSpacing: 1.2,
-      color: theme.textTertiary,
-      marginBottom: 10,
-    },
     // Field groups
     fieldGroup: { marginBottom: 12 },
     // Step 2 — collapsible "More soil details" toggle
@@ -387,26 +329,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sunlightWarningText: { color: theme.warning, fontSize: 12, flex: 1 },
     inlineLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-    // Step 3 — size
-    recommendationCard: {
-      backgroundColor: theme.primaryLight,
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: theme.primary,
-    },
-    recommendationTitle: { fontSize: 12, color: theme.primary, fontWeight: '600', marginBottom: 4 },
-    recommendationValue: { fontSize: 18, fontWeight: '700', color: theme.primary },
-    recommendationRationale: { fontSize: 12, color: theme.primary, marginTop: 4 },
-    areaBadge: {
-      backgroundColor: theme.backgroundTertiary,
-      borderRadius: 6,
-      padding: 10,
-      marginVertical: 8,
-      alignItems: 'center',
-    },
-    areaText: { fontSize: 16, fontWeight: '700', color: theme.text },
     // Step 4 — guild
     infoBadge: {
       backgroundColor: theme.infoLight,
@@ -510,34 +432,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sequenceWeek: { fontSize: 12, color: theme.primary, fontWeight: '600', width: 48 },
     sequenceAction: { flex: 1, fontSize: 12, color: theme.textSecondary },
     sequenceNote: { fontSize: 12, color: theme.textSecondary, lineHeight: 16 },
-    sectionLabel: { fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 8 },
-    plantRowCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 12,
-      marginBottom: 8,
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    plantRowCardSelected: { borderColor: theme.primary, backgroundColor: theme.primaryLight },
-    plantRowCardBlocked: { borderColor: theme.border, opacity: 0.6 },
-    plantRowInfo: { flex: 1 },
-    plantRowName: { fontSize: 14, fontWeight: '600', color: theme.text },
-    plantRowNameBlocked: { color: theme.textSecondary },
-    plantRowMeta: { fontSize: 11, color: theme.textSecondary, marginTop: 2 },
-    antagonistWarning: { fontSize: 11, color: theme.error, marginTop: 3 },
-    selectedCheck: { fontSize: 18, color: theme.primary },
-    accumulatorCard: {
-      backgroundColor: theme.backgroundTertiary,
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 8,
-    },
-    accumulatorName: { fontSize: 14, fontWeight: '600', color: theme.text },
-    accumulatorDesc: { fontSize: 12, color: theme.textSecondary, marginTop: 2 },
-    accumulatorMeta: { fontSize: 11, color: theme.primary, marginTop: 4 },
     // Step 6 — confirm
     textInput: {
       borderWidth: 1,
@@ -547,28 +441,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       backgroundColor: theme.backgroundSecondary,
     },
-    textArea: { minHeight: 80, textAlignVertical: 'top' },
-    summaryCard: {
-      backgroundColor: theme.backgroundTertiary,
-      borderRadius: 8,
-      padding: 12,
-      marginTop: 16,
-    },
-    summaryTitle: { fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 8 },
-    summaryRow: { fontSize: 13, color: theme.textSecondary, marginBottom: 4 },
-    summaryItemRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-    summaryItemIcon: { width: 18, textAlign: 'center' },
-    summaryItemValue: { flex: 1, fontSize: 13, color: theme.text },
-    autoTasksCard: {
-      backgroundColor: theme.primaryLight,
-      borderRadius: 8,
-      padding: 12,
-      marginTop: 12,
-      borderWidth: 1,
-      borderColor: theme.primary,
-    },
-    autoTasksTitle: { fontSize: 13, fontWeight: '600', color: theme.primary, marginBottom: 6 },
-    autoTaskRow: { fontSize: 12, color: theme.primary, marginBottom: 3 },
     // Step 6 — modern Review redesign (cf*)
     cfOverviewCard: {
       backgroundColor: theme.backgroundSecondary,
@@ -608,13 +480,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textTransform: 'uppercase' as const,
       marginBottom: 8,
     },
-    cfCard: {
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      padding: 12,
-    },
     cfAutoCard: {
       backgroundColor: theme.primaryLight,
       borderRadius: 12,
@@ -639,26 +504,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     cfAutoText: { flex: 1, fontSize: 12.5, color: theme.primary },
     cfNotesArea: { minHeight: 64, textAlignVertical: 'top' as const },
-    // Stepper (legacy — kept for other steps)
-    stepperRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 6 },
-    stepperLabel: { flex: 1, color: theme.text },
-    stepperButton: {
-      padding: 8,
-      backgroundColor: theme.backgroundTertiary,
-      borderRadius: 4,
-      marginHorizontal: 4,
-    },
-    stepperBtnText: { color: theme.text, fontWeight: 'bold' },
-    stepperValue: { color: theme.text, minWidth: 40, textAlign: 'center' },
-    sectionLabelMt: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: theme.text,
-      marginBottom: 8,
-      marginTop: 16,
-    },
-    loadingSpinner: { marginTop: 32 },
-    diagramSectionLabel: { marginTop: 16, marginBottom: 8 },
     // Step 3 — redesigned size controls
     szRecCard: {
       backgroundColor: theme.primaryLight,
@@ -728,14 +573,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       letterSpacing: 1.2,
       color: theme.textTertiary,
       marginBottom: 12,
-    },
-    szSectionLabelSpaced: {
-      fontSize: 10,
-      fontWeight: '700' as const,
-      letterSpacing: 1.2,
-      color: theme.textTertiary,
-      marginBottom: 12,
-      marginTop: 20,
     },
     // Step 3 — unit toggle + arm's reach hint
     szCustomHeader: {
@@ -836,7 +673,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginRight: 12,
     },
     gtEmojiCircleSelected: { backgroundColor: theme.primary },
-    gtEmoji: { fontSize: 22 },
     gtPlantMeta: { flex: 1 },
     gtPlantNameRow: {
       flexDirection: 'row' as const,
@@ -846,20 +682,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     gtPlantName: { fontSize: 14, fontWeight: '700' as const, color: theme.text, flexShrink: 1 as const },
     gtPlantNameBlocked: { color: theme.textTertiary },
-    gtTamilName: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      fontStyle: 'italic' as const,
-      marginBottom: 3,
-      marginTop: 1,
-    },
-    gtMarketBadge: {
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 6,
-      backgroundColor: theme.accent,
-    },
-    gtMarketBadgeText: { fontSize: 9, fontWeight: '700' as const, color: theme.textInverse },
     gtHarvestBadge: {
       paddingHorizontal: 7,
       paddingVertical: 2,
@@ -899,32 +721,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     gtNFixerBadgeText: { fontSize: 10, fontWeight: '600' as const, color: theme.success },
     gtAntagonistText: { fontSize: 11, color: theme.error, marginTop: 5 },
     gtPlantRight: { alignItems: 'flex-end' as const, gap: 6, marginLeft: 10, flexShrink: 0 as const },
-    gtSpacingBlock: { alignItems: 'flex-end' as const },
-    gtSpacingLabel: {
-      fontSize: 8,
-      fontWeight: '700' as const,
-      letterSpacing: 0.8,
-      color: theme.textTertiary,
-      textAlign: 'right' as const,
-    },
-    gtSpacingTag: { fontSize: 11, fontWeight: '600' as const, color: theme.textSecondary },
     gtSpacingCompact: {
       fontSize: 11,
       color: theme.accent,
       fontWeight: '500' as const,
       letterSpacing: 0.1,
     },
-    gtSelectCircle: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      borderWidth: 2,
-      borderColor: theme.border,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-    },
-    gtSelectCircleActive: { borderColor: theme.primary, backgroundColor: theme.primary },
-    gtCountText: { fontSize: 11, fontWeight: '700' as const, color: theme.textInverse },
     // ── Quantity stepper (Guild step) ─────────────────────────────────────────
     gtQtyStepper: {
       flexDirection: 'row' as const,
@@ -955,25 +757,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textAlign: 'center' as const,
     },
     gtQtyValueZero: { color: theme.textTertiary, fontWeight: '500' as const },
-    // Placeholder/template banner on Guild step
-    gtTemplateBanner: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: 8,
-      backgroundColor: theme.infoLight,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      marginBottom: 14,
-      borderWidth: 1,
-      borderColor: theme.info,
-    },
-    gtTemplateBannerText: {
-      flex: 1,
-      fontSize: 12,
-      color: theme.infoDark,
-      lineHeight: 17,
-    },
     // Companion section
     gtCompanionRow: {
       flexDirection: 'row' as const,
@@ -983,7 +766,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomWidth: 1,
       borderBottomColor: theme.borderLight,
     },
-    gtCompanionEmoji: { fontSize: 18, width: 24, textAlign: 'center' as const },
     gtCompanionName: { fontSize: 13, fontWeight: '500' as const, color: theme.text },
     gtCompanionNameBlock: { flex: 1 },
     gtCompanionFitText: {
@@ -996,17 +778,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       marginTop: 4,
     },
-    // Add / Added pill button (shared by companions + accumulators)
-    gtAddBtn: {
-      paddingHorizontal: 14,
-      paddingVertical: 6,
-      borderRadius: 16,
-      borderWidth: 1.5,
-      borderColor: theme.primary,
-    },
-    gtAddedBtn: { backgroundColor: theme.primary },
-    gtAddBtnText: { fontSize: 12, fontWeight: '700' as const, color: theme.primary },
-    gtAddedBtnText: { color: theme.textInverse },
     // Accumulator card
     gtAccSubtitle: { fontSize: 13, color: theme.textSecondary, marginBottom: 12, marginTop: -4 },
     gtAccCard: {
@@ -1027,7 +798,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     gtAccNameBlock: { flex: 1, marginRight: 10 },
     gtAccName: { fontSize: 14, fontWeight: '700' as const, color: theme.text },
     gtAccNameSelected: { color: theme.primary },
-    gtAccTamil: { fontSize: 12, color: theme.textSecondary, marginTop: 2 },
     gtIntervalText: { fontSize: 12, color: theme.textSecondary, marginBottom: 8 },
     gtIntervalTextSelected: { color: theme.primary },
     gtNutrientRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 5 },
@@ -1065,45 +835,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.borderLight,
     },
     gtRotationHintText: { fontSize: 12, color: theme.textSecondary },
-    // ── Size presets row ─────────────────────────────────────────────────────
-    szPresetRow: {
-      flexDirection: 'row' as const,
-      gap: 8,
-      marginBottom: 20,
-    },
-    szPresetChip: {
-      flex: 1,
-      padding: 10,
-      borderRadius: 10,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1.5,
-      borderColor: theme.border,
-      alignItems: 'center' as const,
-    },
-    szPresetChipSelected: {
-      borderColor: theme.primary,
-      backgroundColor: theme.primaryLight,
-    },
-    szPresetChipSize: {
-      fontSize: 13,
-      fontWeight: '700' as const,
-      color: theme.textSecondary,
-      marginBottom: 2,
-    },
-    szPresetChipSizeSelected: { color: theme.primary },
-    szPresetChipName: {
-      fontSize: 11,
-      fontWeight: '600' as const,
-      color: theme.textTertiary,
-    },
-    szPresetChipNameSelected: { color: theme.primary },
-    szPresetChipHint: {
-      fontSize: 10,
-      color: theme.textTertiary,
-      marginTop: 2,
-    },
-    szPresetChipHintSelected: { color: theme.primary },
-    szPresetCheck: { fontSize: 10, color: theme.primary, marginTop: 2 },
     // ── Prep card ────────────────────────────────────────────────────────────
     szPrepCard: {
       borderWidth: 1.5,
@@ -1144,11 +875,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'space-between' as const,
     },
     szPrepFirstStep: { marginTop: 12 },
-    szPrepChevron: {
-      fontSize: 11,
-      fontWeight: '700' as const,
-      color: theme.warning,
-    },
     szPrepStepContent: { flex: 1 },
     szPrepStepText: {
       fontSize: 13,
@@ -1203,9 +929,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 12,
       paddingVertical: 6,
     },
-    gtQuickStartPillApplied: {
-      backgroundColor: theme.success,
-    },
     gtQuickStartPillText: {
       fontSize: 12,
       fontWeight: '700' as const,
@@ -1226,13 +949,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 12,
       marginTop: -4,
     },
-    // Guild step — benefit explanation line
-    gtBenefitLine: {
-      fontSize: 11,
-      color: theme.primary,
-      marginTop: 3,
-      lineHeight: 15,
-    },
     // Guild step — benefit tag badge (non-legume)
     gtBenefitTagBadge: {
       paddingHorizontal: 8,
@@ -1246,42 +962,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 10,
       fontWeight: '600' as const,
       color: theme.infoDark,
-    },
-    gtBedTypeChip: {
-      alignSelf: 'flex-start' as const,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 12,
-      backgroundColor: theme.primaryLight,
-      borderWidth: 1,
-      borderColor: theme.primary,
-      marginBottom: 12,
-    },
-    gtBedTypeChipText: {
-      fontSize: 12,
-      fontWeight: '600' as const,
-      color: theme.primary,
-    },
-    gtBedBanner: {
-      paddingVertical: 10,
-      paddingHorizontal: 14,
-      backgroundColor: theme.primaryLight,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.successBorder,
-      marginBottom: 10,
-    },
-    gtBedBannerLabel: {
-      fontSize: 15,
-      fontWeight: '700' as const,
-      color: theme.primary,
-      lineHeight: 20,
-    },
-    gtBedBannerDims: {
-      fontSize: 11,
-      color: theme.textTertiary,
-      marginTop: 2,
-      letterSpacing: 0.2,
     },
     // Layout step — top-down bed map (Step 5 hero)
     tdmCard: {
@@ -1418,11 +1098,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700' as const,
       letterSpacing: 0.2,
     },
-    tdmRowTagWarn: {
-      fontSize: 11,
-      color: theme.warning,
-      fontWeight: '700' as const,
-    },
     tdmPathStrip: {
       position: 'absolute' as const,
       left: 0,
@@ -1519,19 +1194,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 10,
       color: theme.textSecondary,
       fontWeight: '500' as const,
-    },
-    tdmZoomReset: {
-      position: 'absolute' as const,
-      top: 6,
-      left: 6,
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
     },
     tdmZoomControls: {
       position: 'absolute' as const,
@@ -1656,10 +1318,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.textTertiary,
       opacity: 0.6,
     },
-    tdmPinEmoji: {
-      fontSize: 11,
-      lineHeight: 13,
-    },
     tdmPinLabel: {
       fontSize: 6,
       color: theme.textSecondary,
@@ -1774,58 +1432,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 2,
       marginBottom: 6,
     },
-    // Layout step — planting schedule
-    blScheduleCard: {
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      padding: 14,
-      marginTop: 12,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
-    blScheduleTitle: {
-      fontSize: 10,
-      fontWeight: '700' as const,
-      letterSpacing: 1.2,
-      color: theme.textTertiary,
-      marginBottom: 10,
-    },
-    blScheduleWeekRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'flex-start' as const,
-      marginBottom: 8,
-      gap: 10,
-    },
-    blScheduleWeekLabel: {
-      fontSize: 12,
-      fontWeight: '700' as const,
-      color: theme.primary,
-      width: 56,
-    },
-    blSchedulePlantNames: {
-      flex: 1,
-      fontSize: 12,
-      color: theme.text,
-      lineHeight: 18,
-    },
 
-    // ── BedLayoutStep interactive grid ────────────────────────────────────────
-    blRemoveBtn: {
-      position: 'absolute' as const,
-      top: 4,
-      right: 4,
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      backgroundColor: theme.error,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-    },
-    blRemoveBtnText: {
-      fontSize: 10,
-      fontWeight: '800' as const,
-      color: theme.textInverse,
-    },
     // Guild step — auto-companion notification banner
     gtAutoAddedBanner: {
       flexDirection: 'row' as const,

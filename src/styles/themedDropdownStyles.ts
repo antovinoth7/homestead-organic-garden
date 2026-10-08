@@ -61,16 +61,4 @@ export const createStyles = (
       textAlign: 'left' as const,
       maxWidth: '100%' as const,
     },
-    // Kept for backward compat — no longer used visually
-    triggerWithLabel: {},
-    floatingLabel: {
-      position: 'absolute' as const,
-      top: -9,
-      left: 12,
-      paddingHorizontal: 4,
-      fontSize: 12,
-      fontWeight: '500',
-      color: theme.textSecondary,
-      backgroundColor: theme.backgroundSecondary,
-    },
   });

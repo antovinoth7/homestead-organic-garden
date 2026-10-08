@@ -81,9 +81,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 999,
       borderWidth: StyleSheet.hairlineWidth,
     },
-    weatherPillEmoji: {
-      fontSize: 12.5,
-    },
     weatherPillText: {
       fontSize: 11.5,
       fontWeight: '500',

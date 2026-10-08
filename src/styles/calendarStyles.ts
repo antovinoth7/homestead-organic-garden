@@ -277,16 +277,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 8,
     },
 
-    input: {
-      backgroundColor: theme.inputBackground,
-      padding: 16,
-      borderRadius: 12,
-      fontSize: 16,
-      color: theme.inputText,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      marginBottom: 12,
-    },
     dateButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -512,9 +502,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     farmDetailsField: {
       flex: 1,
     },
-    notesInput: {
-      minHeight: 80,
-    },
     // Skip Modal (Calendar)
     skipModalSubtext: {
       fontSize: 14,
@@ -670,11 +657,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     flexOne: {
       flex: 1,
-    },
-    rowCenterGap8: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
     },
     // Clips the collapsible header as it slides up out of view. The list fills
     // this area and is padded down by the header's measured height.

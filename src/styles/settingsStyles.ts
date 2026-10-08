@@ -115,13 +115,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textInverse,
       marginLeft: 8,
     },
-    backupNote: {
-      fontSize: 13,
-      color: theme.textSecondary,
-      marginTop: 12,
-      fontStyle: 'italic',
-      lineHeight: 18,
-    },
     backupNoteRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',

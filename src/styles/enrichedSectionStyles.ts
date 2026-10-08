@@ -40,27 +40,10 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
     },
 
     // ─── Chip Sections (shared by Relationships, Nutrition, CareGuidance) ──────
-    chipSection: {
-      marginBottom: 12,
-    },
-    chipSectionHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginBottom: 8,
-    },
-    chipSectionLabel: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      fontWeight: '600',
-    },
     chipRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
-    },
-    chipEmoji: {
-      fontSize: 14,
     },
 
     // ─── Companion / Incompatible Chips ────────────────────────────────────────
@@ -131,51 +114,6 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
       fontWeight: '500',
     },
 
-    // ─── Nutrition Chips ───────────────────────────────────────────────────────
-    vitaminChip: {
-      backgroundColor: theme.infoLight,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: theme.infoBorder,
-    },
-    vitaminChipText: {
-      fontSize: 13,
-      color: theme.infoDark,
-      fontWeight: '500',
-    },
-    mineralChip: {
-      backgroundColor: theme.purpleLight,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: theme.purpleBorder,
-    },
-    mineralChipText: {
-      fontSize: 13,
-      color: theme.purpleDark,
-      fontWeight: '500',
-    },
-
-    // ─── Feeding Badge ─────────────────────────────────────────────────────────
-    feedingBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      alignSelf: 'flex-start',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      borderWidth: 1.5,
-      marginBottom: 12,
-    },
-    feedingBadgeText: {
-      fontSize: 14,
-      fontWeight: '600',
-    },
-
     // ─── Safety Banner ─────────────────────────────────────────────────────────
     safetyBanner: {
       flexDirection: 'row',
@@ -220,17 +158,6 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
       borderWidth: 1,
       borderColor: theme.borderLight,
     },
-    narrativeHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginBottom: 8,
-    },
-    narrativeTitle: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: theme.text,
-    },
     narrativeText: {
       fontSize: 14,
       color: theme.textSecondary,
@@ -262,10 +189,6 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
       borderTopWidth: 1,
       borderTopColor: theme.borderLight,
     },
-    techniqueIcon: {
-      fontSize: 16,
-      marginTop: 2,
-    },
     techniqueTitle: {
       fontSize: 14,
       fontWeight: '600',
@@ -279,25 +202,6 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
     },
     flexOne: {
       flex: 1,
-    },
-
-    // ─── Empty State (Beneficials) ─────────────────────────────────────────────
-    emptyState: {
-      alignItems: 'center',
-      paddingVertical: 20,
-      gap: 6,
-    },
-    emptyStateText: {
-      fontSize: 15,
-      color: theme.textSecondary,
-      fontWeight: '600',
-    },
-    emptyStateSubtext: {
-      fontSize: 13,
-      color: theme.textTertiary,
-      textAlign: 'center',
-      paddingHorizontal: 16,
-      lineHeight: 18,
     },
 
     // ─── Care Toggle (B.9) ────────────────────────────────────────────────────
@@ -323,23 +227,6 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
     },
 
     // ─── Bed Context Section (B2) ─────────────────────────────────────────────
-    bedSection: {
-      marginTop: 4,
-      marginBottom: 8,
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
-    bedSectionTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      marginBottom: 8,
-    },
     bedLink: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -370,23 +257,5 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
       fontSize: 12,
       color: theme.text,
       fontWeight: '600',
-    },
-    bedMatesRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginTop: 6,
-    },
-    bedMateChip: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      backgroundColor: theme.backgroundTertiary,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    bedMateChipText: {
-      fontSize: 12,
-      color: theme.text,
     },
   });

@@ -93,12 +93,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     infoSection: {
       marginBottom: 24,
     },
-    careSection: {
-      marginBottom: 24,
-      backgroundColor: theme.card,
-      padding: 16,
-      borderRadius: 12,
-    },
     infoRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -109,132 +103,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginLeft: 12,
     },
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme.text,
-      marginBottom: 12,
-    },
-    sectionTitleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 7,
-    },
     notesText: {
       fontSize: 16,
       color: theme.textSecondary,
       lineHeight: 24,
     },
     // Phase 1 & 2 styles
-    seasonBox: {
-      backgroundColor: theme.backgroundSecondary,
-      padding: 12,
-      borderRadius: 8,
-      marginBottom: 12,
-    },
-    seasonTitle: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.text,
-      marginBottom: 8,
-    },
-    seasonText: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      marginBottom: 4,
-    },
-    seasonNotes: {
-      fontSize: 13,
-      color: theme.textTertiary,
-      fontStyle: 'italic',
-      marginTop: 4,
-    },
-    pestCard: {
-      backgroundColor: theme.backgroundSecondary,
-      padding: 12,
-      borderRadius: 8,
-      marginBottom: 8,
-      borderLeftWidth: 3,
-    },
-    pestCardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginBottom: 4,
-    },
-    pestCardName: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.text,
-      flex: 1,
-    },
-    severityBadge: {
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    severityText: {
-      fontSize: 10,
-      fontWeight: '700',
-    },
-    resolvedBadgeDetail: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 2,
-    },
-    resolvedTextDetail: {
-      fontSize: 11,
-      color: theme.success,
-      fontWeight: '600',
-    },
-    pestCardDate: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      marginBottom: 4,
-    },
-    pestCardMeta: {
-      fontSize: 13,
-      color: theme.textSecondary,
-      marginBottom: 2,
-    },
-    pestCardNotes: {
-      fontSize: 13,
-      color: theme.textTertiary,
-      fontStyle: 'italic',
-      marginTop: 4,
-    },
-    seasonAlertCard: {
-      backgroundColor: theme.warningLight,
-      padding: 10,
-      borderRadius: 8,
-      marginBottom: 6,
-      borderLeftWidth: 3,
-      borderLeftColor: theme.warning,
-    },
-    seasonAlertName: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.warning,
-      flex: 1,
-    },
-    seasonAlertTypeBadge: {
-      backgroundColor: theme.warningLight,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    seasonAlertTypeText: {
-      fontSize: 10,
-      fontWeight: '600',
-      color: theme.warning,
-    },
-    seasonAlertTip: {
-      fontSize: 13,
-      color: theme.text,
-      marginTop: 4,
-      lineHeight: 18,
-    },
     taskItem: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -283,102 +157,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 16,
       fontWeight: '600',
       marginTop: 16,
-    },
-    harvestSection: {
-      backgroundColor: theme.card,
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 16,
-    },
-    harvestStats: {
-      flexDirection: 'row',
-      gap: 12,
-      marginBottom: 16,
-    },
-    statCard: {
-      flex: 1,
-      backgroundColor: theme.background,
-      padding: 12,
-      borderRadius: 8,
-      alignItems: 'center',
-    },
-    statValue: {
-      fontSize: 24,
-      fontWeight: '700',
-      color: theme.primary,
-    },
-    statLabel: {
-      fontSize: 11,
-      color: theme.textSecondary,
-      marginTop: 4,
-      textAlign: 'center',
-    },
-    recentTitle: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.textSecondary,
-      marginBottom: 8,
-    },
-    harvestItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    harvestLeft: {
-      flex: 1,
-    },
-    harvestDate: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      marginBottom: 4,
-    },
-    harvestQuantity: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.text,
-    },
-    harvestRight: {
-      alignItems: 'flex-end',
-    },
-    qualityBadge: {
-      fontSize: 24,
-    },
-    viewAllButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 12,
-      marginTop: 8,
-    },
-    viewAllText: {
-      fontSize: 14,
-      color: theme.primary,
-      fontWeight: '600',
-      marginRight: 4,
-    },
-    emptyHarvest: {
-      alignItems: 'center',
-      paddingVertical: 32,
-    },
-    emptyHarvestText: {
-      fontSize: 16,
-      color: theme.textTertiary,
-      marginTop: 12,
-      marginBottom: 16,
-    },
-    addHarvestButton: {
-      backgroundColor: theme.primary,
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      borderRadius: 8,
-    },
-    addHarvestButtonText: {
-      color: theme.buttonText,
-      fontSize: 14,
-      fontWeight: '600',
     },
     // Last Care Summary
     lastCareGrid: {
@@ -487,19 +265,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 20,
     },
     // Nutrient deficiency
-    nutrientCard: {
-      backgroundColor: theme.backgroundSecondary,
-      padding: 12,
-      borderRadius: 8,
-      marginBottom: 8,
-      borderLeftWidth: 3,
-    },
-    nutrientName: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.text,
-      marginBottom: 4,
-    },
     nutrientSymptom: {
       fontSize: 13,
       color: theme.textSecondary,
@@ -518,25 +283,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       marginTop: 6,
       marginBottom: 4,
-    },
-    // Common pest/disease awareness
-    awarenessChip: {
-      backgroundColor: theme.warningLight,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 16,
-    },
-    awarenessChipText: {
-      fontSize: 12,
-      color: theme.warning,
-      fontWeight: '500',
-    },
-    awarenessRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginTop: 4,
-      marginBottom: 8,
     },
     subsectionTitle: {
       fontSize: 14,
@@ -559,15 +305,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     infoRowMarginTop: {
       marginTop: 12,
-    },
-    nutrientCardHigh: {
-      borderLeftColor: theme.error,
-    },
-    nutrientCardMedium: {
-      borderLeftColor: theme.warning,
-    },
-    nutrientCardLow: {
-      borderLeftColor: theme.success,
     },
     growthStageBadge: {
       backgroundColor: theme.primaryLight,

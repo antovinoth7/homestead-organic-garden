@@ -118,7 +118,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomColor: theme.borderLight,
       gap: 10,
     },
-    guildEmoji: { fontSize: 22, width: 30, textAlign: 'center' as const },
     guildMeta: { flex: 1 },
     guildName: { fontSize: 14, fontWeight: '600' as const, color: theme.text },
     guildBadgeRow: {
@@ -134,7 +133,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.backgroundTertiary,
     },
     guildLayerBadgeText: { fontSize: 10, color: theme.textSecondary, fontWeight: '600' as const },
-    guildSpacingTag: { fontSize: 11, color: theme.textTertiary },
     guildAddBtn: {
       paddingHorizontal: 14,
       paddingVertical: 6,
@@ -203,7 +201,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textAlign: 'center' as const,
     },
     myPlantsListContent: { padding: 12, paddingBottom: 4 },
-    removeXText: { fontSize: 10, fontWeight: '800' as const, color: theme.textInverse },
 
     // ── Search bar ────────────────────────────────────────────────────────────
     searchBarContainer: {

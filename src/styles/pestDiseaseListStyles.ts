@@ -43,9 +43,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       overflow: 'hidden',
     },
-    cardTileEmoji: {
-      fontSize: 21,
-    },
     cardTileImage: {
       width: 44,
       height: 44,

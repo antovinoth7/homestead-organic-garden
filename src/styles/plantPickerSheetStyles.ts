@@ -63,17 +63,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     rowSelected: {
       backgroundColor: theme.primaryLight,
     },
-    emojiCircle: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: theme.backgroundTertiary,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-    },
-    emoji: {
-      fontSize: 20,
-    },
     rowMeta: { flex: 1 },
     rowName: {
       fontSize: 15,
@@ -107,16 +96,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 10,
       color: theme.primary,
       fontWeight: '600' as const,
-    },
-    pinnedLabel: {
-      fontSize: 10,
-      fontWeight: '700' as const,
-      color: theme.textTertiary,
-      letterSpacing: 0.8,
-      paddingHorizontal: 14,
-      paddingTop: 12,
-      paddingBottom: 4,
-      textTransform: 'uppercase' as const,
     },
     emptyState: {
       alignItems: 'center' as const,

@@ -79,9 +79,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       backgroundColor: theme.backgroundTertiary,
     },
-    cardTileEmoji: {
-      fontSize: 21,
-    },
     cardTileImage: {
       width: 44,
       height: 44,

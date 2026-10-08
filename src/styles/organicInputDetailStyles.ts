@@ -29,9 +29,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingBottom: 10,
       gap: 8,
     },
-    stickyHeaderEmoji: {
-      fontSize: 22,
-    },
     stickyHeaderTitle: {
       fontSize: 17,
       fontWeight: '700',

@@ -51,17 +51,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
     },
-    emojiCircle: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
-      backgroundColor: theme.backgroundTertiary,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-    },
-    emoji: {
-      fontSize: 18,
-    },
     rowMeta: { flex: 1 },
     rowNameLine: {
       flexDirection: 'row' as const,

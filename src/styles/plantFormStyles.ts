@@ -62,15 +62,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     saveTextDisabled: {
       color: theme.textTertiary,
     },
-    cancelButton: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-    },
-    cancelButtonText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: theme.textSecondary,
-    },
     content: {
       flex: 1,
       paddingHorizontal: 16,
@@ -79,116 +70,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     scrollContent: {
       paddingBottom: 100,
     },
-    photoButton: {
-      alignSelf: 'center',
-      marginTop: 8,
-      marginBottom: 20,
-    },
-    photo: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      borderWidth: 3,
-      borderColor: theme.primaryLight,
-    },
-    photoPlaceholder: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: theme.primaryLight,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: theme.border,
-      borderStyle: 'dashed',
-    },
-    photoText: {
-      marginTop: 4,
-      fontSize: 11,
-      color: theme.textTertiary,
-      fontWeight: '600',
-    },
-    input: {
-      backgroundColor: theme.inputBackground,
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 12,
-      fontSize: 16,
-      color: theme.inputText,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-    },
-    dateButton: {
-      backgroundColor: theme.inputBackground,
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    dateButtonText: {
-      fontSize: 16,
-      color: theme.text,
-      fontWeight: '500',
-    },
-    datePlaceholder: {
-      fontSize: 16,
-      color: theme.inputPlaceholder,
-    },
-    textArea: {
-      height: 100,
-      textAlignVertical: 'top',
-    },
     noteCounter: {
       fontSize: 12,
       color: theme.textTertiary,
       textAlign: 'right',
       marginTop: 6,
-    },
-    spaceTypeContainer: {
-      flexDirection: 'row',
-      marginBottom: 12,
-      gap: 12,
-    },
-    spaceTypeContainerCompact: {
-      gap: 8,
-    },
-    spaceTypeButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 16,
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      minWidth: 0,
-    },
-    spaceTypeButtonCompact: {
-      paddingVertical: 12,
-      paddingHorizontal: 8,
-    },
-    spaceTypeActive: {
-      borderColor: theme.primary,
-      backgroundColor: theme.primaryLight,
-    },
-    spaceTypeText: {
-      fontSize: 16,
-      color: theme.textTertiary,
-      marginLeft: 8,
-      flexShrink: 1,
-    },
-    spaceTypeTextCompact: {
-      fontSize: 14,
-      marginLeft: 6,
-    },
-    spaceTypeTextActive: {
-      color: theme.primary,
-      fontWeight: '600',
     },
     label: {
       fontSize: 14,
@@ -197,38 +83,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 8,
       marginTop: 4,
     },
-    nicknameInputWrapper: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.inputBackground,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-    },
-    nicknameInput: {
-      flex: 1,
-      padding: 16,
-      fontSize: 16,
-      color: theme.inputText,
-    },
-    nicknameClearButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 16,
-    },
-    locationPreview: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      backgroundColor: theme.primaryLight,
-      padding: 12,
-      borderRadius: 8,
-      marginBottom: 12,
-    },
-    locationPreviewText: {
-      fontSize: 14,
-      color: theme.primary,
-      fontWeight: '600',
-    },
     locationDefaultsHint: {
       fontSize: 12,
       color: theme.primary,
@@ -236,28 +90,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 4,
       marginHorizontal: 2,
       fontStyle: 'italic',
-    },
-    sectionHeader: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: theme.primary,
-      marginTop: 16,
-      marginBottom: 12,
-    },
-    checkboxContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.backgroundSecondary,
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    checkboxLabel: {
-      fontSize: 16,
-      color: theme.text,
-      marginLeft: 12,
     },
     settingToggle: {
       flexDirection: 'row',
@@ -326,112 +158,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     settingSwitchThumbActive: {
       alignSelf: 'flex-end',
     },
-    smartDefaultsCard: {
-      backgroundColor: theme.backgroundSecondary,
-      padding: 14,
-      borderRadius: 14,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    smartDefaultsCardActive: {
-      borderColor: theme.primary,
-      backgroundColor: theme.primaryLight,
-    },
-    smartDefaultsToggleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    smartDefaultsLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
-      minWidth: 0,
-    },
-    smartDefaultsIconWrap: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-      marginRight: 10,
-    },
-    smartDefaultsIconWrapActive: {
-      borderColor: theme.primary,
-      backgroundColor: theme.backgroundSecondary,
-    },
-    smartDefaultsLabel: {
-      fontSize: 16,
-      color: theme.text,
-      fontWeight: '600',
-      flexShrink: 1,
-    },
-    smartDefaultsLabelCompact: {
-      fontSize: 15,
-    },
-    smartDefaultsLabelActive: {
-      color: theme.primary,
-    },
-    smartDefaultsSwitchTrack: {
-      width: 44,
-      height: 26,
-      borderRadius: 13,
-      backgroundColor: theme.border,
-      justifyContent: 'center',
-      paddingHorizontal: 3,
-      marginLeft: 12,
-    },
-    smartDefaultsSwitchTrackActive: {
-      backgroundColor: theme.primary,
-    },
-    smartDefaultsSwitchThumb: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      backgroundColor: theme.backgroundSecondary,
-      alignSelf: 'flex-start',
-    },
-    smartDefaultsSwitchThumbActive: {
-      alignSelf: 'flex-end',
-    },
     helperText: {
       fontSize: 12,
       color: theme.textTertiary,
       marginTop: -2,
       marginBottom: 12,
       marginLeft: 4,
-    },
-    // --- Plant Category chip selector ---
-    categoryChipsScroll: {
-      marginBottom: 12,
-    },
-    categoryChipsContent: {
-      paddingRight: 8,
-      gap: 8,
-    },
-    categoryChip: {
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 20,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1.5,
-      borderColor: theme.border,
-    },
-    categoryChipActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    categoryChipText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: theme.textTertiary,
-    },
-    categoryChipTextActive: {
-      color: theme.primary,
     },
     // --- Wizard step section cards (icon-headed groups, DetailCard language) ---
     sectionCard: {
@@ -486,103 +218,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       letterSpacing: 0.8,
       marginBottom: 10,
       marginTop: 2,
-    },
-    // --- Direction/Section chips ---
-    directionChipsWrapper: {
-      borderWidth: 1,
-      borderColor: theme.inputBorder,
-      borderRadius: 12,
-      backgroundColor: theme.inputBackground,
-      paddingHorizontal: 12,
-      paddingTop: 16,
-      paddingBottom: 12,
-      marginBottom: 12,
-    },
-    directionChipsFloatingLabel: {
-      position: 'absolute' as const,
-      top: -9,
-      left: 12,
-      paddingHorizontal: 4,
-      fontSize: 12,
-      fontWeight: '500' as const,
-      color: theme.textSecondary,
-      backgroundColor: theme.backgroundSecondary,
-    },
-    directionChipsContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    directionChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 18,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1.5,
-      borderColor: theme.border,
-      gap: 5,
-    },
-    directionChipActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    directionChipText: {
-      fontSize: 13,
-      fontWeight: '500',
-      color: theme.textTertiary,
-    },
-    directionChipTextActive: {
-      color: theme.primary,
-      fontWeight: '700',
-    },
-    // --- Display Name Card ---
-    displayNameCard: {
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 14,
-      padding: 14,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
-    displayNameHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 8,
-    },
-    displayNameLabelRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    displayNameLabel: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    autoGenBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: theme.primaryLight,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-    },
-    autoGenBadgeText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: theme.primary,
-    },
-    displayNameHelper: {
-      fontSize: 12,
-      color: theme.textTertiary,
-      marginTop: 4,
-      marginLeft: 2,
     },
     // --- Date Card ---
     dateCard: {
@@ -786,81 +421,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginBottom: 8,
     },
-    chipContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      marginTop: 8,
-    },
     varietySuggestions: {
       marginBottom: 12,
-    },
-    suggestionLabel: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      marginBottom: 6,
-      fontWeight: '600',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    varietySuggestionChips: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    varietySuggestionChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      backgroundColor: theme.primaryLight,
-      borderWidth: 1,
-      borderColor: theme.primary,
-    },
-    varietySuggestionText: {
-      fontSize: 12,
-      color: theme.primary,
-      fontWeight: '600',
-    },
-    companionChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      backgroundColor: theme.background,
-      borderWidth: 1,
-      borderColor: theme.border,
-      gap: 4,
-    },
-    companionChipSelected: {
-      backgroundColor: theme.accentLight,
-      borderColor: theme.accent,
-    },
-    companionChipText: {
-      fontSize: 13,
-      color: theme.textSecondary,
-    },
-    companionChipTextSelected: {
-      color: theme.accent,
-      fontWeight: '600',
-    },
-    incompatibleChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      backgroundColor: theme.warningLight,
-      borderWidth: 1,
-      borderColor: theme.warning,
-    },
-    incompatibleChipText: {
-      fontSize: 13,
-      color: theme.warning,
-      fontWeight: '600',
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'flex-end',
     },
     discardOverlay: {
       flex: 1,
@@ -941,205 +503,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600',
       color: theme.textInverse,
     },
-    modalContent: {
-      backgroundColor: theme.backgroundSecondary,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      paddingTop: 20,
-      paddingHorizontal: 20,
-      maxHeight: '85%',
-    },
-    modalScrollView: {
-      flexGrow: 0,
-      marginBottom: 20,
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 20,
-    },
-    // Opt-in rule under a modal header. The negative margin cancels
-    // modalContent's horizontal padding so the rule spans the whole sheet.
-    modalHeaderDivided: {
-      marginHorizontal: -20,
-      paddingHorizontal: 20,
-      paddingBottom: 16,
-      marginBottom: 16,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: theme.borderLight,
-    },
-    modalCloseButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: theme.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    modalTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.text,
-    },
-    suggestionsScroll: {
-      marginBottom: 12,
-    },
-    suggestionGroupContainer: {
-      marginBottom: 12,
-    },
-    suggestionGroup: {
-      marginBottom: 8,
-    },
-    suggestionGroupLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.textSecondary,
-      marginBottom: 6,
-      letterSpacing: 0.3,
-    },
-    suggestionGroupChips: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    suggestionChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 16,
-      backgroundColor: theme.accentLight,
-      marginRight: 8,
-    },
-    suggestionChipText: {
-      fontSize: 13,
-      color: theme.accent,
-    },
-    suggestionChipActive: {
-      backgroundColor: theme.primaryLight,
-    },
-    suggestionChipTextActive: {
-      color: theme.primary,
-      fontWeight: '600',
-    },
-    treatmentGroupContainer: {
-      marginBottom: 8,
-    },
-    treatmentGroup: {
-      marginBottom: 8,
-    },
-    treatmentGroupLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.textSecondary,
-      marginBottom: 6,
-      letterSpacing: 0.3,
-    },
-    treatmentGroupChips: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    treatmentChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 16,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-      marginBottom: 4,
-    },
-    treatmentChipActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    treatmentChipText: {
-      fontSize: 13,
-      color: theme.textSecondary,
-    },
-    treatmentChipTextActive: {
-      color: theme.primary,
-      fontWeight: '600',
-    },
-    affectedPartChips: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      marginBottom: 12,
-    },
-    affectedPartChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 16,
-      backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    affectedPartChipActive: {
-      backgroundColor: theme.primaryLight,
-      borderColor: theme.primary,
-    },
-    affectedPartChipText: {
-      fontSize: 13,
-      color: theme.textSecondary,
-    },
-    affectedPartChipTextActive: {
-      color: theme.primary,
-      fontWeight: '600',
-    },
-    pestPhotoButton: {
-      marginBottom: 12,
-      alignSelf: 'flex-start',
-    },
-    pestPhotoPreviewWrap: {
-      position: 'relative',
-    },
-    pestPhotoPreview: {
-      width: 100,
-      height: 100,
-      borderRadius: 8,
-    },
-    pestPhotoRemoveBtn: {
-      position: 'absolute',
-      top: -6,
-      right: -6,
-    },
-    pestPhotoPlaceholder: {
-      width: 100,
-      height: 100,
-      borderRadius: 8,
-      borderWidth: 1.5,
-      borderColor: theme.border,
-      borderStyle: 'dashed',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.backgroundSecondary,
-    },
-    pestPhotoPlaceholderText: {
-      fontSize: 11,
-      color: theme.textTertiary,
-      marginTop: 4,
-    },
-    modalSaveButton: {
-      backgroundColor: theme.primary,
-      padding: 16,
-      borderRadius: 12,
-      alignItems: 'center',
-      marginTop: 16,
-    },
-    modalSaveButtonText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.textInverse,
-    },
-    charCounter: {
-      fontSize: 12,
-      color: theme.textTertiary,
-      textAlign: 'right' as const,
-      marginTop: -6,
-    },
 
     // --- #2 Photo Hero ---
     photoHeroContainer: {
@@ -1185,34 +548,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textInverse,
     },
 
-    // --- #3 Frequency Presets ---
-    frequencyPresetsRow: {
-      flexDirection: 'row' as const,
-      flexWrap: 'wrap' as const,
-      gap: 6,
-      marginBottom: 8,
-    },
-    frequencyPresetChip: {
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.backgroundSecondary,
-    },
-    frequencyPresetChipActive: {
-      borderColor: theme.primary,
-      backgroundColor: theme.primaryLight,
-    },
-    frequencyPresetChipText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.textTertiary,
-    },
-    frequencyPresetChipTextActive: {
-      color: theme.primary,
-    },
-
     // --- #9 Auto-Name Preview Inline ---
     namePreviewRow: {
       flexDirection: 'row' as const,
@@ -1235,11 +570,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '500' as const,
       color: theme.textSecondary,
       backgroundColor: theme.backgroundSecondary,
-    },
-    namePreviewLabel: {
-      fontSize: 12,
-      color: theme.textTertiary,
-      fontWeight: '600' as const,
     },
     namePreviewValue: {
       fontSize: 14,
@@ -1307,80 +637,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
     },
 
-    // --- #4 Care Profile Card ---
-    careProfileCard: {
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      padding: 14,
-      marginBottom: 12,
-      borderLeftWidth: 4,
-      borderLeftColor: theme.success,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
-    careProfileCardHeader: {
-      flexDirection: 'row' as const,
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 8,
-    },
-    careProfileCardTitleRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'center',
-      gap: 6,
-    },
-    careProfileCardTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.success,
-    },
-    careProfileCardRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'center',
-      gap: 6,
-      marginBottom: 3,
-    },
-    careProfileCardText: {
-      fontSize: 13,
-      color: theme.textSecondary,
-    },
-    careProfileCardDismiss: {
-      padding: 4,
-    },
-
-    // --- #8 Space Type Visual Cards ---
-    spaceTypeCardsRow: {
-      flexDirection: 'row' as const,
-      gap: 10,
-      marginBottom: 12,
-    },
-    spaceTypeCard: {
-      flex: 1,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      paddingVertical: 16,
-      paddingHorizontal: 6,
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 14,
-      borderWidth: 2,
-      borderColor: theme.border,
-    },
-    spaceTypeCardActive: {
-      borderColor: theme.primary,
-      backgroundColor: theme.primaryLight,
-    },
-    spaceTypeCardIcon: {
-      marginBottom: 6,
-    },
-    spaceTypeCardLabel: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.textTertiary,
-      textAlign: 'center' as const,
-    },
-    spaceTypeCardLabelActive: {
-      color: theme.primary,
-    },
     // Compact single-row segmented control for the growing-space picker.
     spaceSegmentRow: {
       flexDirection: 'row' as const,
@@ -1416,70 +672,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textInverse,
     },
 
-    // --- #1 Phase Gates ---
-    phaseLockedBanner: {
-      flexDirection: 'row' as const,
-      alignItems: 'center',
-      gap: 10,
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      padding: 14,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-      opacity: 0.75,
-    },
-    phaseLockedText: {
-      fontSize: 14,
-      color: theme.textTertiary,
-      fontStyle: 'italic',
-      flex: 1,
-    },
-    moreDetailsTouchable: {
-      flexDirection: 'row' as const,
-      alignItems: 'center',
-      justifyContent: 'center' as const,
-      gap: 8,
-      padding: 14,
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-    },
-    moreDetailsText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: theme.primary,
-    },
-
-    // --- #10 Quick Add Fast Path ---
-    quickSaveWithDefaultsButton: {
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 14,
-      paddingVertical: 14,
-      paddingHorizontal: 18,
-      alignItems: 'center' as const,
-      flexDirection: 'row' as const,
-      justifyContent: 'center' as const,
-      gap: 8,
-      marginBottom: 12,
-      borderWidth: 1.5,
-      borderColor: theme.primary,
-      borderStyle: 'dashed' as const,
-    },
-    quickSaveWithDefaultsText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: theme.primary,
-    },
-
     // --- D: Chip Grid (replaces horizontal ScrollView) ---
     // Read-only plant identity under the hero photo, echoing the detail hero
     // (PlantKeyInfoSection) scaled for this form's shorter 180px photo.
-    heroCaption: {
-      marginBottom: 12,
-    },
     heroCaptionName: {
       fontSize: 24,
       fontWeight: '700' as const,
@@ -1589,12 +784,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.borderLight,
     },
-    stepperHeader: {
-      flexDirection: 'row' as const,
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 12,
-    },
     stepperIconWrap: {
       width: 32,
       height: 32,
@@ -1648,71 +837,5 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '700' as const,
       textAlign: 'center' as const,
       marginTop: 8,
-    },
-
-    // --- B: Grouped Field Card ---
-    groupedFieldCard: {
-      flexDirection: 'row' as const,
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 14,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: theme.borderLight,
-      overflow: 'hidden' as const,
-    },
-    groupedFieldCardAccent: {
-      width: 4,
-      backgroundColor: theme.primary,
-    },
-    groupedFieldCardContent: {
-      flex: 1,
-      padding: 14,
-    },
-    groupedFieldCardTitle: {
-      fontSize: 13,
-      fontWeight: '700' as const,
-      color: theme.primary,
-      textTransform: 'uppercase' as const,
-      letterSpacing: 0.8,
-      marginBottom: 12,
-    },
-    waterDropsRow: {
-      flexDirection: 'row' as const,
-      gap: 1,
-    },
-
-    // --- H: Smart Defaults Summary (nested inside smartDefaultsCard) ---
-    smartDefaultsDivider: {
-      height: 1,
-      backgroundColor: theme.border,
-      marginVertical: 10,
-    },
-    smartDefaultsSummaryRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'center',
-      gap: 8,
-    },
-    smartDefaultsBannerLeft: {
-      flexDirection: 'row' as const,
-      alignItems: 'center',
-      flex: 1,
-      gap: 8,
-    },
-    smartDefaultsBannerTextWrap: {
-      flex: 1,
-    },
-    smartDefaultsBannerTitle: {
-      fontSize: 13,
-      fontWeight: '700' as const,
-      color: theme.primary,
-      marginBottom: 2,
-    },
-    smartDefaultsBannerSummary: {
-      fontSize: 12,
-      fontWeight: '600' as const,
-      color: theme.textSecondary,
-    },
-    smartDefaultsBannerDismiss: {
-      padding: 4,
     },
   });

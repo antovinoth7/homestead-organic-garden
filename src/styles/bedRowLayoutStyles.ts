@@ -142,9 +142,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '800',
       color: theme.textInverse,
     },
-    rowIcon: {
-      fontSize: 16,
-    },
     rowNameText: {
       flex: 1,
       fontSize: 13,
@@ -252,9 +249,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       gap: 2,
       opacity: 0.3,
-    },
-    plantTileEmoji: {
-      fontSize: 22,
     },
     plantTileName: {
       fontSize: 12,
@@ -452,15 +446,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     plantTileEmptyTappable: {
       opacity: 1,
     },
-    ghostRowsLabel: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: theme.textTertiary,
-      letterSpacing: 0.8,
-      paddingHorizontal: 4,
-      paddingTop: 10,
-      paddingBottom: 4,
-    },
 
     // ── AvailableLayersSection ─────────────────────────────────────────────────
     availableLayersCard: {
@@ -507,9 +492,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 11,
       borderBottomWidth: 1,
       borderBottomColor: theme.borderLight,
-    },
-    availableLayerItemIcon: {
-      fontSize: 18,
     },
     availableLayerItemName: {
       fontSize: 13,
@@ -563,7 +545,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontWeight: '600' as const,
     },
 
-    // ── Tile remove button (matches BedLayerStack tileRemove) ────────────────
+    // ── Tile remove button ───────────────────────────────────────────────────
     tileRemove: {
       position: 'absolute' as const,
       top: -6,

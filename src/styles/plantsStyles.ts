@@ -29,41 +29,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 8,
     },
 
-    sortMenu: {
-      backgroundColor: theme.backgroundSecondary,
-      marginHorizontal: 16,
-      marginTop: 4,
-      marginBottom: 8,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    sortOption: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-      gap: 12,
-    },
-    sortOptionActive: {
-      backgroundColor: theme.background,
-    },
-    sortText: {
-      flex: 1,
-      fontSize: 15,
-      color: theme.text,
-    },
-    sortTextActive: {
-      fontWeight: '600',
-      color: theme.primary,
-    },
     sheetOverlay: {
       flex: 1,
       backgroundColor: theme.overlay,
@@ -265,10 +230,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     segmentBadgeTextActive: {
       color: theme.textInverse,
     },
-    resultsShowing: {
-      fontSize: 12,
-      color: theme.textTertiary,
-    },
     listContent: {
       paddingHorizontal: 16,
       paddingTop: 8,
@@ -298,22 +259,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     loadMoreText: {
       fontSize: 14,
       color: theme.primary,
-      fontWeight: '600',
-    },
-    healthAlertBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.warningLight,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      gap: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    healthAlertText: {
-      flex: 1,
-      fontSize: 13,
-      color: theme.warning,
       fontWeight: '600',
     },
     emptyState: {

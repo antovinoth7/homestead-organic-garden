@@ -238,30 +238,4 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 14,
       paddingVertical: 14,
     },
-
-    // ---- Care status strip ------------------------------------------------
-    statusStrip: {
-      marginHorizontal: 14,
-      marginTop: 12,
-      marginBottom: 4,
-      padding: 11,
-      borderRadius: 10,
-      backgroundColor: theme.background,
-    },
-    statusStripRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 7,
-    },
-    statusStripTitle: {
-      fontSize: 12.5,
-      fontWeight: '600',
-      color: theme.text,
-    },
-    statusStripNote: {
-      fontSize: 11.5,
-      lineHeight: 17,
-      color: theme.textSecondary,
-      marginTop: 3,
-    },
   });
