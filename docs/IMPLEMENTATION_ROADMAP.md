@@ -4,6 +4,7 @@
 > Last updated: July 5, 2026 — **Post-ship reconciliation (dev→main release delta; no new scope, no schema changes).** All work extends shipped phases. **Phase C extension**: the single `WeatherCard` grew into a location-aware, swipeable multi-plot deck (`WeatherDeck`/`WeatherPlotCard`, `useWeatherLocations`, `config/zones/districtCoordinates.ts` — first concrete step parameterizing the hardcoded-district risk); Today dashboard compacted (active-first progress chips, Garden Health reordering, task list folded into the progress donut). **Phase E extensions**: journal list overhaul (`JournalEntryCard` extraction, swipe edit/delete, grid view dropped); voice dictation extended to all notes/analysis fields via reusable `VoiceDictation` (G10 follow-through); pest/disease history photos with capture-time device-local compression (`expo-image-manipulator` → `utils/imageCompression.ts`) + shared pinch-zoom viewer (`ImageZoomModal`/`usePinchZoom`). Shared `ConfirmDeleteModal` replaced `BedDeleteModal` and the catalog/farm delete flows. **B2 maintenance**: bed wizard/map fixes; first care tasks now scheduled from the planting date with auto-selected care-plan segment (`services/taskSchedulingLogic.ts`). Nav restructure introduced `AuthedStackParamList` (fixes the duplicate nested screen-name warning). Note: four cache-first-paint perf commits were tried and reverted — that approach remains an open want.
 > **2026-07-05 (later same day) — Offline write queue + performance pass.** Closed the Critical "No Offline Mutation Queue" risk: `writeOrQueue()` (`lib/offlineWrite.ts`) + AsyncStorage queue (`lib/offlineQueue.ts`, coalescing in `utils/offlineQueueLogic.ts`) + FIFO replay-on-reconnect (`services/offlineSync.ts`) + `OfflineBanner`/`useOfflineStatus`; creates moved to client-generated doc ids across plants/tasks/journal/beds/locations/farmCapacity. Performance: CalendarScreen task area virtualized (ScrollView `.map()` → `SectionList`), `PlantCard` memoized, catalog picker filter allocation fixed, migration runner now skips its per-launch Firestore read via a local schema-version cache.
 > **2026-09-21 — Expo SDK 54 → 57 upgrade (platform only; no product scope, no schema changes).** React Native 0.81 → 0.86, React 19.1 → 19.2, TypeScript 5.9 → 6.0, all `expo-*` renumbered to `~57.x`. Two app APIs broke and were fixed (`NavigationBar.setStyle`, `expo-media-library/legacy`); `StyleSheet.absoluteFillObject` was removed in RN 0.85 and rewritten at 11 sites across 9 style files. Deferred follow-ups are tracked in **§9 Post-Upgrade Backlog** below; the lint triage recorded there has since been completed, taking the baseline to 0 errors / 54 warnings.
+> **2026-10-09 — Stale-code pass (no product scope, no schema changes).** Removed code nothing ran: 38 never-imported source files (the July dashboard — `DashboardHero`, `NeedsAttentionScroll`, `WeatherDeck`/`WeatherPlotCard`/`WeatherCard`, `TipStrip`, `BedsQuickScroll`, `PrepCard`; old bed and plant-detail pieces; `StatStrip`; the Kanyakumari planting-calendar adapter), ~400 unused style keys, dead exports together with the tests that only exercised them, the zone-level `seasonalPestAlerts` (superseded by `todaySeasonalAdvisories`), and the two unused `@testing-library` packages. Several July 5 items above are therefore gone; in particular, capture-time photo compression has been unwired since 2026-07-17. Complete-but-unwired features were kept and are listed in §9 → Built, not wired.
 > Older "Previous:" reconciliation notes: `docs/archive/ROADMAP_ARCHIVE.md`.
 > Status: Phase 0 / A / A2 / B / B2 / B3 / B4 / C / D / E / F shipped (Phase B with deliberate deferrals); Phase G–H planned
 > Scope: Solo developer, iterative build, Firebase free-tier
@@ -69,7 +70,7 @@
 
 | Feature               | Existing Foundation                                                                                                                 | Gap                                                                                                      |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Harvest Tracking      | `JournalEntry` has `harvest_quantity`, `harvest_unit`, `harvest_quality`, `harvest_notes`; `HarvestHistorySection` component exists; readiness shares one rule across Care Plan + Today, and logging a harvest closes its due task | No yield analysis, no income tracking; **harvest dates are zone-blind** — the source-reviewed `maturityDays` in `tamilNaduPlantingCalendar.ts` is not consulted by any harvest estimate (see docs/DOMAIN_LOGIC.md → Harvest Readiness) |
+| Harvest Tracking      | `JournalEntry` has `harvest_quantity`, `harvest_unit`, `harvest_quality`, `harvest_notes`; harvests show on the Journal's harvest stat and each plant's History tab (`PlantHistorySection`); readiness shares one rule across Care Plan + Today, and logging a harvest closes its due task | No yield analysis, no income tracking; **harvest dates are zone-blind** — the source-reviewed `maturityDays` in `tamilNaduPlantingCalendar.ts` is not consulted by any harvest estimate (see docs/DOMAIN_LOGIC.md → Harvest Readiness) |
 | Companion Planting UI | Functions in `plantHelpers.ts`, surfaces on `PlantDetailScreen`                                                                     | No zone-aware warnings, no intercropping planner                                                         |
 | Soil Profiles         | `LocationProfile` has pH/NPK/drainage/soil_type fields                                                                              | Data stored but no recommendation engine, no amendment suggestions                                       |
 | Growth Stages         | Static `growth_stage` field on `Plant`, 6 stages defined; `getCoconutAgeInfo()` computes coconut age stages from planting date      | No auto-progression, no stage history, no per-variety stage durations, no annual cycling for fruit trees |
@@ -503,7 +504,7 @@ these block anything; they are recorded so they are not rediscovered as surprise
   baseline without the dirty check recomputing and leave the discard prompt
   reading a stale value. It is state now.
 
-- **Remaining: 53 `react-hooks/set-state-in-effect` warnings** (54 until the Care Plan v7 redesign removed the segment auto-select effect), still demoted on
+- **Remaining: 51 `react-hooks/set-state-in-effect` warnings** (54 until the Care Plan v7 redesign removed the segment auto-select effect; 53 until the 2026-10-09 stale-code pass deleted the never-rendered `useWeather` and `DraggablePlantRow`), still demoted on
   purpose. The 11 genuine findings are fixed — state that was a pure function of
   other state, written back by an effect, costing a second render per change
   (`usePlantFormState`'s `location` and `coconutAgeInfo`, `PlantCard`'s
@@ -511,7 +512,7 @@ these block anything; they are recorded so they are not rediscovered as surprise
   mount reset, and five effects that allocated a fresh empty collection instead
   of bailing).
 
-  The 53 that remain are benign and fall into two shapes:
+  The 51 that remain are benign and fall into two shapes:
   - **Prop-to-state sync on open** (~14) — `useEffect(() => { if (visible) setX(prop) }, [visible, prop])`
     in sheets and modals. Clearing these means restructuring each sheet around a
     `key`-prop remount, which is its own piece of work and carries real UI risk.
@@ -524,7 +525,7 @@ these block anything; they are recorded so they are not rediscovered as surprise
 
 - `docs/ENTERPRISE_AUDIT.md` recommends running lint with `--max-warnings=0`.
   Now partly satisfied — the five promoted rules already fail the build. A
-  blanket `--max-warnings=0` still waits on the 53 above.
+  blanket `--max-warnings=0` still waits on the 51 above.
 
 - **Untested paths touched by this triage.** `usePlantFormState`, `PlantCard`,
   `CalendarScreen`, `usePlantPhotos`, `useCrossBedStatus`, `useWeatherByPlot` and
@@ -621,10 +622,10 @@ these block anything; they are recorded so they are not rediscovered as surprise
   contradictory and only the unused-dependency half is settled. Note **`expo-font` is not removable** despite also having no direct
   imports: it is a peer dependency of `@expo/vector-icons` and a dependency of
   `expo` itself.
-- **`@testing-library/react-native` + `@testing-library/jest-native` are unused.**
-  Either adopt them (migrating the 15 `react-test-renderer` tests, which would let
-  them load real React Native and become a genuine compatibility signal) or remove
-  both. See `docs/TESTING.md`.
+- ✅ **Done — `@testing-library/react-native` + `@testing-library/jest-native`
+  removed** (2026-10-09). Neither was imported by any test. Adopting React Native
+  Testing Library later (migrating the `react-test-renderer` tests so they load
+  real React Native) means adding it back deliberately. See `docs/TESTING.md`.
 - Remove `babel-plugin-module-resolver` in favour of the native tsconfig `paths`
   support Expo has had since SDK 50. Low reward, touches module resolution for all
   715 source files — do it in isolation.
@@ -641,6 +642,35 @@ these block anything; they are recorded so they are not rediscovered as surprise
   (`src/lib/imageStorage.ts`). Deprecated but still present in `expo-constants` 57.
 - 15 sites pass `pointerEvents` as a prop rather than via `style`. Deprecated,
   still functional.
+
+### Built, not wired
+
+Found by the 2026-10-09 stale-code pass. Each piece is complete — and tested,
+unless noted — but nothing in the app calls it. They were kept on purpose:
+wiring one in is a product decision, not a cleanup.
+
+- **Photo compression** — `utils/imageCompression.ts` (`compressImage`). Its only
+  caller was `PestDiseaseModal`, deleted 2026-07-17; plant and journal photos are
+  saved at the image picker's `quality: 0.8` without it. It is the only user of the
+  native `expo-image-manipulator` dependency, so either wire it into the photo flows
+  or remove both together (a native dependency change needs a new dev build).
+- **Forecast-damped watering** — `utils/wateringForecast.ts`
+  (`dampWateringMultiplier`) blends the zone's season watering multiplier with the
+  cached forecast, read through `getPrimaryForecast` (`services/weather.ts`). Both
+  arrived in `30380d0` (2026-08-25) and neither has a caller; task completion
+  records `last_watering_adjustment: null`.
+- **Pre-monsoon batch tasks** — `getPreMonsoonTasks` (`utils/preMonsoonTasks.ts`)
+  over `PRE_MONSOON_TASKS` (`config/organicInputs/seasonalAdaptations.ts`). The
+  June 1 onset is Kanyakumari's.
+- **Row-level rotation check** — `validateRowRotation`
+  (`config/beds/rotationRules.ts`). The bed-level `checkRotationRules` is what ships.
+- **Bed-level task generation** — `syncBedTasks` / `syncBedTasksFromPlants`
+  (`services/BedTaskResolver.ts`, untested). Its only caller was the bed-tab
+  `BedTasksScreen`, removed 2026-06-20 (B2.13); `BED_MANAGEMENT_TAMIL_NADU_AUDIT.md`
+  records the missing wizard call.
+- **Offline-queue dead letters** — `getDeadLetters` / `clearDeadLetters`
+  (`lib/offlineQueue.ts`). Failed writes are parked, but no screen shows or clears
+  them.
 
 ### Documentation debt (pre-existing)
 

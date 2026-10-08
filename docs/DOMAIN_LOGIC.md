@@ -4,7 +4,7 @@ The Today seasonal experience supports all 38 Tamil Nadu districts. Other older 
 
 ## Agro-Climatic Zone System
 
-Season logic, watering multipliers, and pest alerts are parameterized by zone config rather than hardcoded.
+Season logic and watering multipliers are parameterized by zone config rather than hardcoded. Zones no longer carry seasonal pest tips: Today's seasonal guidance comes from the reviewed `config/todaySeasonalAdvisories.ts`, and the unreviewed per-zone `seasonalPestAlerts` (read only by the retired `getSeasonalPestAlerts`) were removed.
 
 - **Zone definitions**: `src/config/zones/` — each zone exports an `AgroClimaticZone` object.
 - **Legacy default zone**: `HIGH_RAINFALL_ZONE` (Kanyakumari) remains for backward compatibility outside Today.
@@ -112,7 +112,7 @@ task, so the distinction is not cosmetic: a banana stand and a mango tree are bo
 
 `src/utils/seasonHelpers.ts` functions accept an optional `zone?: AgroClimaticZone` param. They default to `DEFAULT_ZONE` for backward compatibility.
 
-Watering frequencies, seasonal pest alerts, and reminders are all zone-aware.
+Season resolution, season labels and watering frequencies are all zone-aware.
 
 ---
 
