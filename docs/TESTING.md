@@ -49,17 +49,17 @@ exactly** (currently 19.2.3). It was previously resolved transitively via
 `jest-expo`; bump it in lockstep whenever React moves, or `npm ci` will fail on
 the peer range.
 
-`@testing-library/react-native` and `@testing-library/jest-native` are declared
-but **currently unused by any test**. Adopting them (which would let these tests
-load real React Native and become a genuine compatibility signal) or removing
-them is tracked in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
+`@testing-library/react-native` and `@testing-library/jest-native` were declared
+but never used by any test, so both were removed. Adopting React Native Testing
+Library later (which would let these tests load real React Native and become a
+genuine compatibility signal) means adding it back deliberately.
 
 The hand-rolled `Probe` helpers in `src/__tests__/hooks/` capture the hook's
 return value in a `useEffect`, not by assigning during render — reassigning an
 outer binding mid-render is a side effect and `react-hooks/globals` reports it
 as an error. Effects flush inside `act`, so the captured value is still current
 by the time assertions run. `renderHook` from `@testing-library/react-native`
-would replace the pattern outright if that migration happens.
+would replace the pattern outright if that migration ever happens.
 
 ---
 
