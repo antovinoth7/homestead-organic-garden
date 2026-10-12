@@ -24,7 +24,6 @@ updates:
       testing:
         patterns:
           - "jest*"
-          - "@testing-library/*"
           - "ts-jest"
       linting:
         patterns:
