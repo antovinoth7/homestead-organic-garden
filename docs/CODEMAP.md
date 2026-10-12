@@ -1,7 +1,7 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-10-08 — src/: 741 files, 135,569 lines.
+> Snapshot: 2026-10-12 — src/: 741 files, 135,494 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
@@ -53,16 +53,16 @@
 - GardenIcon.test.tsx (91)
 - bedSuccessionTimeline.harvest.test.ts (60)
 
-### src/__tests__/config/ — 12 files, 1,144 lines
+### src/__tests__/config/ — 12 files, 1,136 lines
 
 - tamilNaduPlantingCalendar.test.ts (205)
 - referenceAssets.test.ts (165)
 - catalogTaxonomy.test.ts (164)
 - organicInputs.entries.test.ts (111)
 - zones.test.ts (82)
-- iconRegistry.test.ts (72)
 - plantCatalogEntries.test.ts (71)
 - todaySeasonalAdvisories.test.ts (71)
+- iconRegistry.test.ts (64)
 - organicInputs.test.ts (63)
 - satelliteNameCoverage.test.ts (58)
 - districtCoordinates.test.ts (45)
@@ -128,9 +128,9 @@
 - noFunctionalEmoji.test.ts (54)
 - agronomyEvidenceDocs.test.ts (44)
 
-### src/__tests__/services/ — 15 files, 2,611 lines
+### src/__tests__/services/ — 15 files, 2,607 lines
 
-- alerts.test.ts (501)
+- alerts.test.ts (497)
 - manualTaskScheduling.test.ts (317)
 - offlineSync.test.ts (264)
 - weatherResponse.test.ts (206)
@@ -150,9 +150,9 @@
 
 - catalogMetrics.test.ts (67)
 
-### src/__tests__/utils/ — 91 files, 13,858 lines
+### src/__tests__/utils/ — 91 files, 13,857 lines
 
-- journalEntryOptions.test.ts (727)
+- journalEntryOptions.test.ts (726)
 - careTaskFilters.test.ts (568)
 - rowLayoutEngine.test.ts (523)
 - harvestStats.test.ts (448)
@@ -434,13 +434,13 @@
 - TodayHeader.tsx (82)
 - NeedsActionRow.tsx (73)
 
-### src/config/ — 7 files, 1,061 lines
+### src/config/ — 7 files, 1,016 lines
 
 - tamilNaduPlantingCalendar.ts (253)
 - referenceImages.gen.ts (249)
-- iconRegistry.ts (246)
+- iconRegistry.ts (203)
 - almanac.ts (108)
-- referenceAssets.ts (78)
+- referenceAssets.ts (76)
 - todaySeasonalAdvisories.ts (64)
 - referenceKeys.ts (63)
 
@@ -656,7 +656,7 @@
 - BedConfirmStep.tsx (226)
 - BedTypeStep.tsx (154)
 
-### src/services/ — 18 files, 7,129 lines
+### src/services/ — 18 files, 7,124 lines
 
 - tasks.ts (1557) ⚠️ large — Grep/search inside, do not read whole
 - plants.ts (1140) ⚠️ large — Grep/search inside, do not read whole
@@ -675,7 +675,7 @@
 - todayBrief.ts (135)
 - bedLogic.ts (116)
 - weatherLogic.ts (65)
-- alerts.ts (16)
+- alerts.ts (11)
 
 ### src/styles/ — 94 files, 17,260 lines
 
@@ -774,9 +774,9 @@
 - bottomSheetModalStyles.ts (17)
 - fieldLabelWithHelpStyles.ts (17)
 
-### src/theme/ — 2 files, 344 lines
+### src/theme/ — 2 files, 340 lines
 
-- colors.ts (255)
+- colors.ts (251)
 - index.tsx (89)
 
 ### src/types/ — 4 files, 1,570 lines
@@ -786,10 +786,10 @@
 - visual.types.ts (86)
 - offline.types.ts (49)
 
-### src/utils/ — 94 files, 14,798 lines
+### src/utils/ — 94 files, 14,790 lines
 
 - plantHelpers.ts (1853) ⚠️ large — Grep/search inside, do not read whole
-- journalEntryOptions.ts (757)
+- journalEntryOptions.ts (749)
 - rowLayoutEngine.ts (620)
 - carePlanSections.ts (519)
 - plantAliases.ts (449)
@@ -922,7 +922,7 @@
 - DOMAIN_LOGIC.md (283)
 - ENTERPRISE_AUDIT.md (444)
 - IMAGE_STORAGE.md (55)
-- IMPLEMENTATION_ROADMAP.md (715)
+- IMPLEMENTATION_ROADMAP.md (716)
 - REFERENCE_IMAGES.md (81)
 - SCHEMA_MIGRATIONS.md (63)
 - SERVICES.md (215)

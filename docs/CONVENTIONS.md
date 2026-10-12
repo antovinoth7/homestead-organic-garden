@@ -180,7 +180,7 @@ removed from the codebase — do not add them back. Pad for system bars with
 - No `console.log` in committed code. Use `src/utils/logger.ts` or remove.
 - No commented-out code blocks. Delete dead code; git history preserves it.
 - No TODO comments without an associated issue number.
-- ESLint must pass with zero errors (`npm run lint`). **54 warnings are the accepted baseline**, all `react-hooks/set-state-in-effect` and demoted in `eslint.config.cjs`. The other five `eslint-plugin-react-hooks` v7 rules (`refs`, `preserve-manual-memoization`, `globals`, `immutability`, `purity`) were triaged to zero and are back at `error`, so they now fail the build. A *new* warning is a regression; the remaining ones are tracked in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
+- ESLint must pass with zero errors (`npm run lint`). **51 warnings are the accepted baseline**, all `react-hooks/set-state-in-effect` and demoted in `eslint.config.cjs`. The other five `eslint-plugin-react-hooks` v7 rules (`refs`, `preserve-manual-memoization`, `globals`, `immutability`, `purity`) were triaged to zero and are back at `error`, so they now fail the build. A *new* warning is a regression; the remaining ones are tracked in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog.
 - Keep functions ≤ 50 lines; extract helpers when exceeded.
 - Magic numbers must be named constants.
 - No docstrings, comments, or type annotations added to code that was not changed.
