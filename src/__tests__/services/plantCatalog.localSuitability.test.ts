@@ -164,8 +164,8 @@ describe('Tamil Nadu and Kanyakumari default plant catalog', () => {
 
   // An override whose (type, name) is not a catalog row still lands in
   // `PLANT_CARE_PROFILES` via Object.assign, and `getPlantingCandidates()`
-  // enumerates every key — so a leftover key has the dashboard suggesting you
-  // plant something the catalog no longer offers.
+  // enumerates every key — so a leftover key is dead data for a plant the
+  // catalog no longer offers.
   it('has no care-override key without a matching catalog plant', () => {
     const known = new Set<string>();
     for (const [type, category] of Object.entries(DEFAULT_PLANT_CATALOG.categories)) {

@@ -124,7 +124,6 @@ export const lightTheme = {
   // green ground and the ring fill shift.
   heroGradientStart: '#1a4a2e',
   heroGradientEnd: '#0f2d1a',
-  heroGlow: '#c8842a',
   heroText: '#ffffff',
   heroTextMuted: 'rgba(255,255,255,0.74)',
   heroTextFaint: 'rgba(255,255,255,0.55)',
@@ -136,7 +135,6 @@ export const lightTheme = {
   // either green without carrying a colour of its own.
   heroSurface: 'rgba(255,255,255,0.10)',
   heroDivider: 'rgba(255,255,255,0.16)',
-  heroRingTrack: 'rgba(255,255,255,0.16)',
   heroRingFill: '#a5d6a7',
   heroBarTrack: 'rgba(255,255,255,0.16)',
 
@@ -235,7 +233,6 @@ export const darkTheme = {
   // the near-black background rather than glowing off it.
   heroGradientStart: '#173a1d',
   heroGradientEnd: '#0d2011',
-  heroGlow: '#e08b4f',
   heroText: '#ffffff',
   heroTextMuted: 'rgba(255,255,255,0.74)',
   heroTextFaint: 'rgba(255,255,255,0.55)',
@@ -243,7 +240,6 @@ export const darkTheme = {
   heroTextAlert: '#ff8a80',
   heroSurface: 'rgba(255,255,255,0.10)',
   heroDivider: 'rgba(255,255,255,0.16)',
-  heroRingTrack: 'rgba(255,255,255,0.16)',
   heroRingFill: '#81c784',
   heroBarTrack: 'rgba(255,255,255,0.16)',
 

@@ -81,8 +81,9 @@ export function getPlantCareProfile(
 }
 
 /**
- * Enumerate every known variety with its growing season, for the dashboard
- * "What to Plant Now" section (Phase C, C.1). Structurally a `PlantingCandidate`.
+ * Enumerate every known variety with its growing season. Structurally a
+ * `PlantingCandidate`. No screen reads it: it is the only way to list the
+ * module-private `PLANT_CARE_PROFILES`, which the registry snapshot test walks.
  */
 export function getPlantingCandidates(): PlantingCandidate[] {
   return Object.entries(PLANT_CARE_PROFILES).map(([key, profile]) => {
@@ -141,4 +142,3 @@ export function hasPlantCareProfile(
 }
 
 export { getPruningTechniques, getStaticPruningDefaults } from './pruning';
-export type { PruningInfo } from './pruning';

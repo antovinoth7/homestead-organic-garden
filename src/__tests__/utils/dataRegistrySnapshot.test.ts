@@ -5,8 +5,8 @@ import {
   getPlantCareProfile,
   getPlantingCandidates,
   getStaticPruningDefaults,
-  PruningInfo,
 } from '@/utils/plantCareDefaults';
+import type { PruningInfo } from '@/utils/plantCareDefaults/pruning';
 
 // Guards the data-module split refactor: the assembled registries must stay
 // byte-identical no matter how the underlying data files are sharded.

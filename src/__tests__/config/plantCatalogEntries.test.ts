@@ -58,8 +58,8 @@ describe('PLANT_CATALOG_ENTRIES', () => {
 
   // An override whose (type, name) is not a row still lands in
   // `PLANT_CARE_PROFILES` via Object.assign, and `getPlantingCandidates()`
-  // enumerates every key — so a leftover has the dashboard suggesting a crop
-  // the catalog no longer offers.
+  // enumerates every key — so a leftover is dead data for a crop the catalog
+  // no longer offers.
   it('has a row behind every care-override key', () => {
     const rowKeys = new Set(
       PLANT_CATALOG_ENTRIES.map((e) => buildProfileKey(e.plantType, e.name))

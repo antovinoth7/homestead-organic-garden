@@ -60,14 +60,6 @@ export function normalizeHarvestUnit(unit: string | null | undefined): string {
   return unit;
 }
 
-/**
- * Unit conversion lives in `harvestStats.ts`, which is contractually free of
- * React-Native imports so `alertsLogic.ts` can share its harvest rules. This
- * module imports `@expo/vector-icons`, so the dependency can only run one way —
- * re-exported here for the call sites that already reach for it.
- */
-export { isWeightUnit, harvestWeightKg } from './harvestStats';
-
 // ─── Pest / disease ──────────────────────────────────────────────────────────
 export const AFFECTED_PARTS: readonly string[] = [
   'Leaf',

@@ -7,9 +7,4 @@
  * `beds.ts` ↔ `bedLogic.ts` split.
  */
 
-export {
-  getFarmAlerts,
-  sortAlerts,
-  isActionable,
-  ATTENTION_MIN_DAYS_OVERDUE,
-} from '@/services/alertsLogic';
+export { getFarmAlerts, isActionable } from '@/services/alertsLogic';

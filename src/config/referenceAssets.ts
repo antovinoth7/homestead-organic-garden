@@ -26,8 +26,6 @@ import {
 } from './referenceImages.gen';
 import { resolvePlantImageKey } from './referenceKeys';
 
-export { PLANT_IMAGE_ALIASES, slugifyReferenceKey } from './referenceKeys';
-
 /**
  * The `cachePolicy` every bundled reference image must render with.
  *

@@ -29,13 +29,12 @@ import {
   formatJournalTimestamp,
   getMilestoneMeta,
   journalPickablePlants,
-  harvestWeightKg,
   isActiveProblem,
-  isWeightUnit,
   journalEntryTimestamp,
   normalizeHarvestUnit,
   tagsForEntry,
 } from '../../utils/journalEntryOptions';
+import { harvestWeightKg, isWeightUnit } from '@/utils/harvestStats';
 import { JournalEntry, JournalEntryType } from '../../types/database.types';
 import { makeJournalEntry } from '../fixtures/journal.fixtures';
 import { makePlant } from '../fixtures/plant.fixtures';

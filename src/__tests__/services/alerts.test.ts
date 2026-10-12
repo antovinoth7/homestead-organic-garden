@@ -1,9 +1,5 @@
-import {
-  getFarmAlerts,
-  sortAlerts,
-  isActionable,
-  ATTENTION_MIN_DAYS_OVERDUE,
-} from '@/services/alerts';
+import { getFarmAlerts, isActionable } from '@/services/alerts';
+import { sortAlerts, ATTENTION_MIN_DAYS_OVERDUE } from '@/services/alertsLogic';
 import type { FarmAlert } from '@/types/database.types';
 import { summarizeTodayTasks } from '@/utils/taskSummary';
 import { makePlant } from '../fixtures/plant.fixtures';

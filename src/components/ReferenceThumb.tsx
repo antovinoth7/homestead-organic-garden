@@ -24,8 +24,8 @@ interface Props {
 }
 
 /**
- * Small reference-image thumbnail with a semantic icon fallback, shared by the pest and
- * disease lists, the plant catalog, and the PestDiseaseModal suggestion chips.
+ * Small reference-image thumbnail with a semantic icon fallback, used wherever a plant,
+ * pest, disease or input appears in a list, picker or card.
  */
 export function ReferenceThumb({
   source,

@@ -3,11 +3,8 @@ import type {
   BedLayer,
   BedType,
   CatalogGroup,
-  FarmAlertType,
   GrowthStage,
-  PlantType,
   TaskType,
-  WeatherConditionId,
 } from '@/types/database.types';
 import type { VisualIconKey } from '@/types/visual.types';
 import type { TreatmentMethod } from '@/utils/plantHelpers';
@@ -40,19 +37,6 @@ export const TASK_ICON_KEYS: Record<TaskType, VisualIconKey> = {
   cultivating: 'task.cultivating',
 };
 
-export const ALERT_ICON_KEYS: Record<FarmAlertType, VisualIconKey> = {
-  harvest_due: 'alert.harvest_due',
-  water_needed: 'alert.water_needed',
-  fertilise_due: 'alert.fertilise_due',
-  trellis_repair: 'alert.trellis_repair',
-  prune_due: 'alert.prune_due',
-  pest_spotted: 'alert.pest_spotted',
-  rotation_due: 'alert.rotation_due',
-  bed_resting_end: 'alert.bed_resting_end',
-  health_sick: 'alert.health_sick',
-  health_stressed: 'alert.health_stressed',
-};
-
 /**
  * What each agro-climatic season looks like, for the Today season header's badge.
  *
@@ -83,22 +67,6 @@ export function getSeasonIconKey(seasonId: string): VisualIconKey {
   return SEASON_ICON_KEYS[seasonId] ?? 'weather.clear';
 }
 
-export const WEATHER_ICON_KEYS: Record<WeatherConditionId, VisualIconKey> = {
-  clear: 'weather.clear',
-  partly_cloudy: 'weather.partly_cloudy',
-  cloudy: 'weather.cloudy',
-  fog: 'weather.fog',
-  drizzle: 'weather.drizzle',
-  rain: 'weather.rain',
-  heavy_rain: 'weather.heavy_rain',
-  showers: 'weather.showers',
-  heavy_showers: 'weather.heavy_showers',
-  snow: 'weather.snow',
-  thunderstorm: 'weather.thunderstorm',
-  hot: 'weather.hot',
-  unknown: 'weather.unknown',
-};
-
 export const GROWTH_STAGE_ICON_KEYS: Record<GrowthStage, VisualIconKey> = {
   seedling: 'growth.seedling',
   vegetative: 'growth.vegetative',
@@ -106,17 +74,6 @@ export const GROWTH_STAGE_ICON_KEYS: Record<GrowthStage, VisualIconKey> = {
   fruiting: 'growth.fruiting',
   dormant: 'growth.dormant',
   mature: 'growth.mature',
-};
-
-export const PLANT_TYPE_ICON_KEYS: Record<PlantType, VisualIconKey> = {
-  vegetable: 'plant.vegetable',
-  spinach: 'plant.spinach',
-  fruit_tree: 'plant.fruit_tree',
-  coconut_tree: 'plant.coconut_tree',
-  herb: 'plant.herb',
-  timber_tree: 'plant.timber_tree',
-  flower: 'plant.flower',
-  shrub: 'plant.shrub',
 };
 
 /**

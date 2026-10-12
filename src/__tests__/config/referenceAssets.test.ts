@@ -3,13 +3,13 @@ import {
   getOrganicInputImage,
   getPestImage,
   getPlantImage,
-  PLANT_IMAGE_ALIASES,
-  slugifyReferenceKey,
 } from '@/config/referenceAssets';
 import {
   EXTRA_REFERENCE_PLANT_NAMES,
   getKnownReferencePlantNames,
+  PLANT_IMAGE_ALIASES,
   resolvePlantImageKey,
+  slugifyReferenceKey,
 } from '@/config/referenceKeys';
 import {
   DISEASE_IMAGES,
