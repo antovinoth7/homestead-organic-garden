@@ -34,7 +34,7 @@ export function CatalogRangeEditSheet({
   decimal = false,
   onCommit,
   helpText,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), [theme]);

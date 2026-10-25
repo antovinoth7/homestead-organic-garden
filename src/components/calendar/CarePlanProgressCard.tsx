@@ -15,7 +15,7 @@ const MIN_FILL_PERCENT = 2;
  * The card heading the Care Plan: "12 tasks today", "3 of 15 done", a bar,
  * and the shape of the day (overdue · plots · done).
  */
-export function CarePlanProgressCard({ summary }: Props): React.JSX.Element {
+export function CarePlanProgressCard({ summary }: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const percent = Math.max(MIN_FILL_PERCENT, Math.round(summary.progress * 100));

@@ -70,7 +70,7 @@ export function CatalogDetailRow({
   badgeIcon,
   disabled = false,
   isLast = false,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const badgeColors = useBadgeColors(badgeTone);
@@ -80,7 +80,10 @@ export function CatalogDetailRow({
   // On an interactive row the target's label already speaks the label and
   // value, so the text under it is hidden from the reader.
   const spoken = interactive
-    ? { accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' as const }
+    ? {
+        accessibilityElementsHidden: true,
+        importantForAccessibility: 'no-hide-descendants' as const,
+      }
     : {};
 
   const body = (

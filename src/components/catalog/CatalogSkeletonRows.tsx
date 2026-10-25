@@ -19,7 +19,7 @@ interface Props {
  * Plain `Animated` rather than a shimmer sweep: the app has no reanimated, and
  * a pulsing opacity reads as loading without a gradient to maintain.
  */
-function CatalogSkeletonRowsComponent({ count = 8 }: Props): React.JSX.Element {
+function CatalogSkeletonRowsComponent({ count = 8 }: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const { fontScale } = useWindowDimensions();
   const styles = useMemo(() => createStyles(theme, fontScale), [theme, fontScale]);

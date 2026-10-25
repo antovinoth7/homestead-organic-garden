@@ -49,7 +49,7 @@ function CatalogBrowseRowComponent({
   isLast,
   fontScale = 1,
   onPress,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   // The row's height is a contract with getItemLayout, so it has to be built at
   // the same scale the list measured with.

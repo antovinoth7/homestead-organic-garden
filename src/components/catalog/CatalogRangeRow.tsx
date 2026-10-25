@@ -32,7 +32,7 @@ export function CatalogRangeRow({
   onPress,
   errorText,
   isLast = false,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 

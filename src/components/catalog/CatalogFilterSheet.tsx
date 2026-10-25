@@ -38,10 +38,10 @@ interface Props {
 function ChipCount({
   count,
   styles,
-}: {
+}: Readonly<{
   count: number;
   styles: ReturnType<typeof createStyles>;
-}): React.JSX.Element {
+}>): React.JSX.Element {
   return <Text style={count === 0 ? styles.sheetChipCountZero : undefined}> ({count})</Text>;
 }
 
@@ -66,7 +66,7 @@ function SheetChip<T extends string>({
   count,
   onPick,
   styles,
-}: SheetChipProps<T>): React.JSX.Element {
+}: Readonly<SheetChipProps<T>>): React.JSX.Element {
   const handlePress = useCallback(() => onPick(value), [onPick, value]);
   return (
     <TouchableOpacity
@@ -116,7 +116,7 @@ function CatalogFilterSheetComponent({
   onClose,
   hiddenPlants = [],
   onRestore,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();

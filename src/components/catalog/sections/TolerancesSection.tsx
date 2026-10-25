@@ -13,7 +13,7 @@ interface Props {
   petToxicity?: boolean;
 }
 
-export function TolerancesSection({ editor, petToxicity }: Props): React.JSX.Element {
+export function TolerancesSection({ editor, petToxicity }: Readonly<Props>): React.JSX.Element {
   const { careForm, setForm, openPicker } = editor;
 
   const toleranceOptions = useMemo(() => optionsFromLabels(TOLERANCE_LABELS), []);

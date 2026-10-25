@@ -18,7 +18,12 @@ interface SeasonPillProps {
   onToggle: (value: string) => void;
 }
 
-function SeasonPill({ label, value, active, onToggle }: SeasonPillProps): React.JSX.Element {
+function SeasonPill({
+  label,
+  value,
+  active,
+  onToggle,
+}: Readonly<SeasonPillProps>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const handlePress = useCallback(() => onToggle(value), [onToggle, value]);
@@ -60,7 +65,7 @@ export function VarietyDetailModal({
   draft,
   onDraftChange,
   onSave,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
@@ -73,7 +78,7 @@ export function VarietyDetailModal({
 
   const onDaysChange = useCallback(
     (raw: string) => {
-      const parsed = parseInt(sanitizeNum(raw), 10);
+      const parsed = Number.parseInt(sanitizeNum(raw), 10);
       onDraftChange((prev) => ({
         ...prev,
         daysToMaturity: Number.isNaN(parsed) ? undefined : parsed,

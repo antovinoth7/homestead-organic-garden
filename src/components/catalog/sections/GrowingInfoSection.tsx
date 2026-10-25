@@ -15,7 +15,7 @@ interface Props {
   editor: CatalogEditor;
 }
 
-export function GrowingInfoSection({ editor }: Props): React.JSX.Element {
+export function GrowingInfoSection({ editor }: Readonly<Props>): React.JSX.Element {
   const { careForm, setForm, errors, showErrors, openText, openPicker, openRange } = editor;
 
   // {label, value, description}: the description is the season's pattam,

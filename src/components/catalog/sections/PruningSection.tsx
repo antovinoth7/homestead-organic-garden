@@ -10,7 +10,7 @@ interface Props {
   editor: CatalogEditor;
 }
 
-export function PruningSection({ editor }: Props): React.JSX.Element {
+export function PruningSection({ editor }: Readonly<Props>): React.JSX.Element {
   const { careForm, setForm, openText } = editor;
 
   const onFrequency = useCallback(

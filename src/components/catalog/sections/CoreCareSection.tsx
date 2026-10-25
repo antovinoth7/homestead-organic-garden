@@ -29,7 +29,7 @@ interface Props {
   editor: CatalogEditor;
 }
 
-export function CoreCareSection({ editor }: Props): React.JSX.Element {
+export function CoreCareSection({ editor }: Readonly<Props>): React.JSX.Element {
   const { careForm, setForm, errors, showErrors, openText, openPicker } = editor;
 
   const waterOptions = useMemo(() => optionsFromLabels(WATER_REQUIREMENT_LABELS), []);
@@ -182,18 +182,14 @@ export function CoreCareSection({ editor }: Props): React.JSX.Element {
       <CatalogDetailRow
         kind="picker"
         label="Feeding intensity"
-        value={
-          careForm.feedingIntensity ? FEEDING_INTENSITY_LABELS[careForm.feedingIntensity] : ''
-        }
+        value={careForm.feedingIntensity ? FEEDING_INTENSITY_LABELS[careForm.feedingIntensity] : ''}
         helpText={CATALOG_FIELD_HELP.feedingIntensity}
         onPress={onFeedingIntensity}
       />
       <CatalogDetailRow
         kind="text"
         label="Fertilising frequency"
-        value={
-          careForm.fertilisingFrequencyDays ? `${careForm.fertilisingFrequencyDays} days` : ''
-        }
+        value={careForm.fertilisingFrequencyDays ? `${careForm.fertilisingFrequencyDays} days` : ''}
         helpText={CATALOG_FIELD_HELP.fertilisingFrequencyDays}
         onPress={onFertilisingFrequency}
         errorText={showErrors ? errors.fertilisingFrequencyDays : undefined}

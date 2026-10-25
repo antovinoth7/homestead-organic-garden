@@ -61,7 +61,7 @@ function CarePlanTaskCardComponent({
   onPress,
   onLongPress,
   onTick,
-}: CarePlanTaskCardProps): React.JSX.Element {
+}: Readonly<CarePlanTaskCardProps>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 

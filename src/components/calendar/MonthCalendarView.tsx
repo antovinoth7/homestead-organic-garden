@@ -35,7 +35,7 @@ export default function MonthCalendarView({
   todayHasOverdue,
   onSelectDate,
   onNavigateMonth,
-}: MonthCalendarViewProps): React.JSX.Element {
+}: Readonly<MonthCalendarViewProps>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 

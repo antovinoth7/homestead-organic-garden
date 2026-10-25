@@ -57,7 +57,7 @@ export function CarePlanBandFrame({
   part,
   isNow = false,
   children,
-}: FrameProps): React.JSX.Element {
+}: Readonly<FrameProps>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const panel = isPanel(tone);
@@ -112,7 +112,7 @@ export function CarePlanBandHeader({
   onToggle,
   onAdd,
   banners,
-}: HeaderProps): React.JSX.Element {
+}: Readonly<HeaderProps>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const collapsible = header.collapsible === true;
@@ -204,7 +204,7 @@ export function CarePlanBandFooter({
   tone,
   footer,
   onToggle,
-}: FooterProps): React.JSX.Element | null {
+}: Readonly<FooterProps>): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   if (!isPanel(tone)) return null;

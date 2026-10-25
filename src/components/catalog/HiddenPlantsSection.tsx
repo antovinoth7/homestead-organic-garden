@@ -15,7 +15,7 @@ interface RowProps extends HiddenPlant {
   onRestore: (name: string, plantType: PlantType) => void;
 }
 
-function HiddenPlantRow({ name, plantType, onRestore }: RowProps): React.JSX.Element {
+function HiddenPlantRow({ name, plantType, onRestore }: Readonly<RowProps>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const handleRestore = useCallback(() => onRestore(name, plantType), [onRestore, name, plantType]);
@@ -59,7 +59,10 @@ interface Props {
  * Restore is the only action. A "remove permanently" that only took an
  * already-hidden plant off this list read as a second, scarier delete.
  */
-export function HiddenPlantsSection({ plants, onRestore }: Props): React.JSX.Element | null {
+export function HiddenPlantsSection({
+  plants,
+  onRestore,
+}: Readonly<Props>): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [expanded, setExpanded] = useState(false);

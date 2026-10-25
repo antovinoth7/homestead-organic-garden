@@ -24,7 +24,7 @@ interface ChipProps {
   onRemove?: (key: string) => void;
 }
 
-function Chip({ chip, onPress, onRemove }: ChipProps): React.JSX.Element {
+function Chip({ chip, onPress, onRemove }: Readonly<ChipProps>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -91,7 +91,7 @@ export function CatalogChipList({
   emptyText,
   onChipPress,
   onRemove,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 

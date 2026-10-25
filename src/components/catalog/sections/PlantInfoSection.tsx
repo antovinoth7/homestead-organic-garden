@@ -73,7 +73,7 @@ export function PlantInfoSection({
   onPlantTypeChange,
   group,
   onGroupChange,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   const { careForm, setForm, errors, showErrors, openText, openPicker } = editor;
 
   const lifecycleOptions = useMemo(

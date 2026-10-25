@@ -26,7 +26,7 @@ function CatalogSectionHeaderComponent({
   title,
   count,
   fontScale = 1,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme, fontScale), [theme, fontScale]);
 

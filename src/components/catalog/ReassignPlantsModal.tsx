@@ -10,7 +10,7 @@ interface OptionProps {
   onSelect: (option: string) => void;
 }
 
-function ReassignOption({ option, active, onSelect }: OptionProps): React.JSX.Element {
+function ReassignOption({ option, active, onSelect }: Readonly<OptionProps>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const handlePress = useCallback(() => onSelect(option), [onSelect, option]);
@@ -57,7 +57,7 @@ export function ReassignPlantsModal({
   deleteKind,
   onSelect,
   onConfirm,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const verb = deleteKind === 'hide' ? 'Hide' : 'Delete';
@@ -82,8 +82,8 @@ export function ReassignPlantsModal({
             </TouchableOpacity>
           </View>
           <Text style={styles.modalHint}>
-            {usageCount} garden plant{usageCount === 1 ? '' : 's'} use &quot;{plantName}&quot;.
-            Pick the plant to move {usageCount === 1 ? 'it' : 'them'} to.
+            {usageCount} garden plant{usageCount === 1 ? '' : 's'} use &quot;{plantName}&quot;. Pick
+            the plant to move {usageCount === 1 ? 'it' : 'them'} to.
           </Text>
           <ScrollView style={styles.reassignScroll} contentContainerStyle={styles.reassignList}>
             {options.map((option) => (

@@ -55,7 +55,7 @@ export function PestDiseasePickerModal({
   groups,
   takenNames,
   onSelect,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -155,7 +155,12 @@ interface RowProps {
   onSelect: (name: string) => void;
 }
 
-function PickerRow({ entry, categoryLabel, kind, onSelect }: RowProps): React.JSX.Element {
+function PickerRow({
+  entry,
+  categoryLabel,
+  kind,
+  onSelect,
+}: Readonly<RowProps>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const handlePress = useCallback(() => onSelect(entry.name), [onSelect, entry.name]);
