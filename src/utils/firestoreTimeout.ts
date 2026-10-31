@@ -20,6 +20,56 @@ export const FIRESTORE_WRITE_TIMEOUT_MS = 15000;
 export const FIRESTORE_READ_TIMEOUT_MS = 10000;
 
 /**
+ * Raised when an operation outlives its timeout. Carries Firestore's own
+ * `deadline-exceeded` code so callers classify it with `getErrorCode` instead
+ * of matching message text — `writeOrQueue` queues on it, because a Firestore
+ * write never rejects when the link is dead, it just stays pending.
+ */
+export class FirestoreTimeoutError extends Error {
+  readonly code = 'deadline-exceeded';
+  constructor(timeoutMs: number) {
+    super(`Operation timed out after ${timeoutMs}ms`);
+    this.name = 'FirestoreTimeoutError';
+  }
+}
+
+/**
+ * Errors a retry cannot fix. `failed-precondition` is a missing index or a
+ * bad query; `resource-exhausted` is the free-tier quota — retrying either only
+ * burns time (and, for quota, more of it).
+ */
+const NON_RETRYABLE_CODES = new Set([
+  'permission-denied',
+  'unauthenticated',
+  'invalid-argument',
+  'failed-precondition',
+  'resource-exhausted',
+]);
+
+type RetryOptions = TimeoutOptions & {
+  maxRetries?: number;
+  baseDelayMs?: number;
+  /**
+   * Re-run the operation after it times out (default true). A timed-out
+   * Firestore call is not cancelled — it is still pending inside the SDK — so a
+   * retry re-sends the same request on a link that just proved it is stalled.
+   */
+  retryOnTimeout?: boolean;
+};
+
+/**
+ * For reads that fall back to the AsyncStorage copy on failure. The local copy
+ * is a better retry than the network: one retry for a transient error, none
+ * after a timeout, so a stalled link reaches the fallback in one read timeout
+ * (10s) instead of three plus backoff (up to 48s with the write timeout).
+ */
+export const CACHED_READ_OPTIONS: RetryOptions = {
+  timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
+  maxRetries: 1,
+  retryOnTimeout: false,
+};
+
+/**
  * Wraps a Firestore operation with timeout and network check
  */
 async function withTimeout<T>(
@@ -43,7 +93,7 @@ async function withTimeout<T>(
     const timeoutId = setTimeout(() => {
       if (!isResolved) {
         isResolved = true;
-        const error = new Error(`Operation timed out after ${timeoutMs}ms`);
+        const error = new FirestoreTimeoutError(timeoutMs);
 
         if (throwOnTimeout) {
           reject(error);
@@ -80,7 +130,8 @@ async function withTimeout<T>(
 async function withRetry<T>(
   operation: () => Promise<T>,
   maxRetries: number = 3,
-  baseDelayMs: number = 1000
+  baseDelayMs: number = 1000,
+  retryOnTimeout: boolean = true
 ): Promise<T> {
   let lastError: unknown;
 
@@ -92,15 +143,12 @@ async function withRetry<T>(
       const code = getErrorCode(error);
       const message = getErrorMessage(error);
 
-      // Don't retry on auth errors
-      if (code === 'permission-denied' || code === 'unauthenticated') {
-        logger.error('Authentication error, not retrying: ' + code);
+      if (!retryOnTimeout && error instanceof FirestoreTimeoutError) {
         throw error;
       }
 
-      // Don't retry on invalid argument errors
-      if (code === 'invalid-argument') {
-        logger.error('Invalid argument error, not retrying: ' + message);
+      if (code !== undefined && NON_RETRYABLE_CODES.has(code)) {
+        logger.error(`Non-retryable Firestore error (${code}), not retrying: ${message}`);
         throw error;
       }
 
@@ -138,7 +186,7 @@ async function withRetry<T>(
  */
 export async function withTimeoutAndRetry<T>(
   operation: () => Promise<T>,
-  options: TimeoutOptions & { maxRetries?: number; baseDelayMs?: number } = {}
+  options: RetryOptions = {}
 ): Promise<T> {
   const {
     timeoutMs = DEFAULT_TIMEOUT,
@@ -146,11 +194,13 @@ export async function withTimeoutAndRetry<T>(
     fallbackValue = null,
     maxRetries = 2,
     baseDelayMs = 1000,
+    retryOnTimeout = true,
   } = options;
 
   return withRetry(
     () => withTimeout(operation, { timeoutMs, throwOnTimeout, fallbackValue }),
     maxRetries,
-    baseDelayMs
+    baseDelayMs,
+    retryOnTimeout
   );
 }

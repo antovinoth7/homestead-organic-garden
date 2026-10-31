@@ -918,7 +918,7 @@ export function usePlantFormState(): PlantFormStateReturn {
       let resolvedPhotoFilename = photoFilename;
       const combinedLocation = `${parentLocation.trim()} - ${childLocation.trim()}`;
       // When auto-generating a name, always number against a fresh plant list
-      // (cache-backed, 30s TTL, invalidated after each create) so back-to-back
+      // (cache-backed, invalidated after each create) so back-to-back
       // creates don't collide on a stale in-memory list and produce duplicate #N.
       const plantsForNaming = nickname ? existingPlants : await getAllPlants();
       const finalPlantName =

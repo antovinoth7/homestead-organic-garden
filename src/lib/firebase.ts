@@ -18,6 +18,7 @@ import * as FirebaseAuth from '@firebase/auth';
 import { initializeFirestore, memoryLocalCache } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../utils/logger';
+import { isNetworkAvailable } from '@/utils/networkState';
 
 const apiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY;
 const authDomain = process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN;
@@ -95,25 +96,40 @@ const db = initializeFirestore(app, {
 // Track last token refresh to avoid excessive refreshes
 let lastTokenRefresh = 0;
 const TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000; // 50 minutes (tokens expire in 60min)
+// After a failed refresh, skip further attempts for a while. Without this every
+// service call in a weak-signal session re-attempts the round trip and stalls on
+// Firebase Auth's own HTTP timeout before its Firestore read can even start.
+let lastRefreshFailure = 0;
+const TOKEN_REFRESH_FAILURE_BACKOFF_MS = 60 * 1000;
 let pendingRefresh: Promise<boolean> | null = null;
 
 /**
- * Refresh auth token to prevent expiration issues
- * Firebase tokens expire after 1 hour - refresh proactively but cached.
- * Concurrent calls share the same in-flight promise to avoid duplicate
- * network round-trips (e.g. when TodayScreen fires 3 service calls in parallel).
- * @param forceRefresh - Force refresh even if recently refreshed
- * @returns true if token was refreshed successfully
+ * Make sure the auth token is usable before a Firestore call.
+ *
+ * Not forced by default: `getIdToken()` returns the cached token and only goes
+ * to the network when it is within 5 minutes of expiry, which is all the
+ * Firestore SDK needs (it refreshes tokens itself as well). A forced refresh
+ * cost a network round trip ahead of the first read of every session.
+ *
+ * Offline it returns immediately — the read it guards will fall back to
+ * AsyncStorage, and waiting on a token request first only delays that.
+ * Concurrent calls share the same in-flight promise.
+ * @param forceRefresh - Force a network refresh even if recently refreshed
+ * @returns true if the token is fresh or was refreshed successfully
  */
 export const refreshAuthToken = async (forceRefresh = false): Promise<boolean> => {
   try {
     const user = auth.currentUser;
     if (!user) return false;
+    if (!isNetworkAvailable()) return false;
 
     const now = Date.now();
     // Only refresh if token is close to expiring (or force refresh)
     if (!forceRefresh && now - lastTokenRefresh < TOKEN_REFRESH_INTERVAL) {
       return true; // Token is still fresh
+    }
+    if (!forceRefresh && now - lastRefreshFailure < TOKEN_REFRESH_FAILURE_BACKOFF_MS) {
+      return false; // Failed recently — let the caller proceed to its own fallback
     }
 
     // Deduplicate concurrent refresh calls
@@ -121,10 +137,12 @@ export const refreshAuthToken = async (forceRefresh = false): Promise<boolean> =
 
     pendingRefresh = (async () => {
       try {
-        await user.getIdToken(/* forceRefresh */ true);
+        await user.getIdToken(forceRefresh);
         lastTokenRefresh = Date.now();
+        lastRefreshFailure = 0;
         return true;
       } catch (error: unknown) {
+        lastRefreshFailure = Date.now();
         logger.error(
           'Token refresh failed',
           error instanceof Error ? error : new Error(String(error))

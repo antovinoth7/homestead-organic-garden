@@ -19,8 +19,8 @@ import { writeOrQueue, isOfflineWriteError } from '../lib/offlineWrite';
 import type { OfflineMutationInput } from '../types/offline.types';
 import {
   withTimeoutAndRetry,
-  FIRESTORE_WRITE_TIMEOUT_MS,
   FIRESTORE_READ_TIMEOUT_MS,
+  CACHED_READ_OPTIONS,
 } from '../utils/firestoreTimeout';
 import { logError } from '../utils/errorLogging';
 import { logger } from '../utils/logger';
@@ -104,9 +104,7 @@ export const getTaskTemplates = async (): Promise<TaskTemplate[]> => {
     );
 
     const tasks = await dedup(CACHE_KEYS.TASK_TEMPLATES, async () => {
-      const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-        timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-      });
+      const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
 
       return snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -127,65 +125,39 @@ export const getTaskTemplates = async (): Promise<TaskTemplate[]> => {
   }
 };
 
-export const getTodayTasks = async (): Promise<TaskTemplate[]> => {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
+/**
+ * Warm read of every template for an instant first paint: the in-memory list
+ * (fresh or not), otherwise the AsyncStorage copy. Never touches the network.
+ */
+export const getStoredTaskTemplates = async (): Promise<TaskTemplate[]> => {
+  const warm = peekCached<TaskTemplate[]>(CACHE_KEYS.TASK_TEMPLATES);
+  if (warm) return warm;
+  return getData<TaskTemplate>(KEYS.TASKS);
+};
 
-  // Return fresh in-memory data if available
-  const cached = getCached<TaskTemplate[]>(CACHE_KEYS.TODAY_TASKS);
-  if (cached) return cached;
-
-  // Refresh token to prevent expiration issues
-  await refreshAuthToken();
-
-  // Get today's date range (start and end of day)
-  const now = new Date();
-  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-
-  try {
-    // Simplified query without orderBy to avoid composite index requirement
-    const q = query(
-      collection(db, TASKS_COLLECTION),
-      where('user_id', '==', user.uid),
-      where('enabled', '==', true)
-    );
-
-    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-    });
-
-    let tasks = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      created_at: convertTimestamp(doc.data().created_at),
-      next_due_at: convertTimestamp(doc.data().next_due_at),
-    })) as TaskTemplate[];
-
-    // Filter tasks: include overdue tasks and tasks due today
-    tasks = tasks.filter((task) => {
-      if (!task.next_due_at) return false;
-      const dueDate = new Date(task.next_due_at);
-      // Show tasks that are overdue or due today
-      return dueDate <= todayEnd;
-    });
-
-    tasks.sort((a, b) => a.next_due_at.localeCompare(b.next_due_at));
-
-    setCached(CACHE_KEYS.TODAY_TASKS, tasks);
-    return tasks;
-  } catch (error) {
-    logger.warn('Failed to fetch today tasks, using cached data', error as Error);
-    logError('network', 'Failed to fetch today tasks', error as Error);
-    const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-    const filtered = cachedTasks.filter((task) => {
+/** Enabled templates due today or overdue on the farm calendar, soonest first. */
+const selectTodayTasks = (templates: TaskTemplate[]): TaskTemplate[] => {
+  const todayKey = farmDateKey(new Date());
+  if (!todayKey) return [];
+  return templates
+    .filter((task) => {
       if (!task.enabled || !task.next_due_at) return false;
-      const dueDate = new Date(task.next_due_at);
-      return dueDate <= todayEnd;
-    });
-    filtered.sort((a, b) => a.next_due_at.localeCompare(b.next_due_at));
-    return filtered;
-  }
+      const dueKey = farmDateKey(task.next_due_at);
+      return dueKey !== null && dueKey <= todayKey;
+    })
+    .sort((a, b) => a.next_due_at.localeCompare(b.next_due_at));
+};
+
+/**
+ * Today's due and overdue templates, derived from `getTaskTemplates()`. The
+ * Today brief reads both, and a separate `enabled == true` query over the same
+ * collection paid a second document read for every enabled template. Filtering
+ * on the farm-calendar day — the rule `getStoredTodayTasks` uses — also keeps
+ * the cached paint and the revalidate from disagreeing about what "today" is.
+ */
+export const getTodayTasks = async (): Promise<TaskTemplate[]> => {
+  if (!auth.currentUser) throw new Error('Not authenticated');
+  return selectTodayTasks(await getTaskTemplates());
 };
 
 export const createTaskTemplate = async (
@@ -218,7 +190,7 @@ export const createTaskTemplate = async (
       : template.next_due_at,
   } as TaskTemplate;
 
-  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+  invalidate(CACHE_KEYS.TASK_TEMPLATES);
 
   // Keep the AsyncStorage copy in sync so the task is visible offline
   const cachedTasks = await getData<TaskTemplate>(KEYS.TASKS);
@@ -300,7 +272,7 @@ export const updateTaskTemplate = async (
     }
   }
 
-  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+  invalidate(CACHE_KEYS.TASK_TEMPLATES);
 
   return result;
 };
@@ -342,6 +314,48 @@ export const skipTaskTemplate = async (
   });
 };
 
+/** Firestore's cap on the number of values in an `in` filter. */
+const IN_QUERY_LIMIT = 30;
+
+/**
+ * The user's task logs whose `field` is one of `values` — all the delete
+ * cascades need, where they used to read `getTaskLogs()`'s entire history (one
+ * document read per log the farmer ever recorded) and filter it client-side.
+ * Equality-only filters (`user_id ==` + `field in`), so no composite index.
+ * On a read failure it filters the AsyncStorage copy, the same fallback
+ * `getTaskLogs` gives.
+ */
+const getTaskLogsWhereIn = async (
+  userUid: string,
+  field: 'plant_id' | 'template_id',
+  values: string[]
+): Promise<TaskLog[]> => {
+  if (values.length === 0) return [];
+  try {
+    const logs: TaskLog[] = [];
+    for (let i = 0; i < values.length; i += IN_QUERY_LIMIT) {
+      const q = query(
+        collection(db, TASK_LOGS_COLLECTION),
+        where('user_id', '==', userUid),
+        where(field, 'in', values.slice(i, i + IN_QUERY_LIMIT))
+      );
+      const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
+      for (const d of snapshot.docs) {
+        logs.push({ id: d.id, ...d.data() } as TaskLog);
+      }
+    }
+    return logs;
+  } catch (error) {
+    logger.warn(`Failed to fetch task logs by ${field}, using cached data`, error as Error);
+    const wanted = new Set(values);
+    const cachedLogs = await getData<TaskLog>(KEYS.TASK_LOGS);
+    return cachedLogs.filter((log) => {
+      const value = log[field];
+      return value != null && wanted.has(value);
+    });
+  }
+};
+
 export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> => {
   const uniquePlantIds = Array.from(
     new Set(plantIds.filter((plantId) => plantId && plantId.trim() !== ''))
@@ -353,10 +367,9 @@ export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> 
 
   const plantIdSet = new Set(uniquePlantIds);
   const tasks = await getTaskTemplates();
-  const logs = await getTaskLogs();
+  const logsToDelete = await getTaskLogsWhereIn(user.uid, 'plant_id', uniquePlantIds);
 
   const tasksToDelete = tasks.filter((task) => task.plant_id && plantIdSet.has(task.plant_id));
-  const logsToDelete = logs.filter((log) => log.plant_id && plantIdSet.has(log.plant_id));
 
   // Batch delete all related templates and logs atomically
   // Firestore batches support up to 500 operations
@@ -397,12 +410,7 @@ export const deleteTasksForPlantIds = async (plantIds: string[]): Promise<void> 
     await setData(KEYS.TASK_LOGS, filteredLogs);
   }
 
-  invalidate(
-    CACHE_KEYS.TASK_TEMPLATES,
-    CACHE_KEYS.TODAY_TASKS,
-    CACHE_KEYS.TODAY_TASK_LOGS,
-    CACHE_KEYS.TASK_LOGS
-  );
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASK_LOGS, CACHE_KEYS.TASK_LOGS);
   invalidatePrefix(PLANT_TASK_LOGS_CACHE_PREFIX);
 };
 
@@ -422,7 +430,6 @@ export const deleteTasksForBedIds = async (bedIds: string[]): Promise<void> => {
 
   const bedIdSet = new Set(uniqueBedIds);
   const tasks = await getTaskTemplates();
-  const logs = await getTaskLogs();
 
   // Bed-level only (`plant_id == null`), matching `isBedLevelOrphanTask`. Without
   // that clause this deleted every task carrying the bed_id, so one stale
@@ -434,7 +441,7 @@ export const deleteTasksForBedIds = async (bedIds: string[]): Promise<void> => {
   if (tasksToDelete.length === 0) return;
 
   const deletedTaskIds = new Set(tasksToDelete.map((task) => task.id));
-  const logsToDelete = logs.filter((log) => deletedTaskIds.has(log.template_id));
+  const logsToDelete = await getTaskLogsWhereIn(user.uid, 'template_id', [...deletedTaskIds]);
 
   // Batch delete templates + logs atomically (Firestore caps batches at 500 ops)
   const BATCH_LIMIT = 500;
@@ -474,12 +481,7 @@ export const deleteTasksForBedIds = async (bedIds: string[]): Promise<void> => {
     await setData(KEYS.TASK_LOGS, filteredLogs);
   }
 
-  invalidate(
-    CACHE_KEYS.TASK_TEMPLATES,
-    CACHE_KEYS.TODAY_TASKS,
-    CACHE_KEYS.TODAY_TASK_LOGS,
-    CACHE_KEYS.TASK_LOGS
-  );
+  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASK_LOGS, CACHE_KEYS.TASK_LOGS);
   invalidatePrefix(PLANT_TASK_LOGS_CACHE_PREFIX);
 };
 
@@ -783,10 +785,6 @@ const applyTaskDoneCacheDeltas = async (opsList: TaskDoneOps[]): Promise<void> =
   // would mean re-deriving which plant every new log belongs to, and the next
   // History open refetches a single plant's logs cheaply.
   invalidatePrefix(PLANT_TASK_LOGS_CACHE_PREFIX);
-
-  // TODAY_TASKS is a differently-filtered list used by other screens; leave it
-  // to a plain invalidate rather than reconstructing the filter here.
-  invalidate(CACHE_KEYS.TODAY_TASKS);
 };
 
 /**
@@ -878,8 +876,13 @@ export const markTaskDone = async (
     const startOfDay = todayKey ? farmDateTimeFromKey(todayKey, 0) : null;
     const endOfDay = tomorrowKey ? farmDateTimeFromKey(tomorrowKey, 0) : null;
 
-    const existingLogs = await getTaskLogs(template.id);
-    const alreadyDoneToday = existingLogs.some((log) => {
+    // Today's logs answer "done today?": a cached, date-bounded read that each
+    // completion patches in place. This used to fetch the template's entire
+    // history from Firestore on every tap — one more document per day for a
+    // daily task — and wait on the network before the completion could save.
+    const todayLogs = await getTodayTaskLogs();
+    const alreadyDoneToday = todayLogs.some((log) => {
+      if (log.template_id !== template.id) return false;
       const logDate = new Date(log.done_at);
       return (
         startOfDay !== null && endOfDay !== null && logDate >= startOfDay && logDate < endOfDay
@@ -1038,9 +1041,7 @@ export const getTaskLogs = async (templateId?: string): Promise<TaskLog[]> => {
       q = query(collection(db, TASK_LOGS_COLLECTION), where('user_id', '==', user.uid));
     }
 
-    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-    });
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
     const logs = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
@@ -1101,9 +1102,7 @@ export const getPlantTaskLogs = async (plantId: string): Promise<TaskLog[]> => {
       where('plant_id', '==', plantId)
     );
 
-    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-    });
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
     const logs = snapshot.docs.map((d) => ({
       id: d.id,
       ...d.data(),
@@ -1151,9 +1150,7 @@ export const getTodayTaskLogs = async (): Promise<TaskLog[]> => {
       where('done_at', '<', Timestamp.fromDate(todayEnd))
     );
 
-    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-    });
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
 
     const logs = snapshot.docs.map((d) => ({
       id: d.id,
@@ -1177,24 +1174,12 @@ export const getTodayTaskLogs = async (): Promise<TaskLog[]> => {
 };
 
 /**
- * Warm read of today's tasks for an instant first paint: the fresh in-memory
- * cache if present, otherwise the AsyncStorage copy filtered to today's window.
- * Mirrors the offline fallback in `getTodayTasks` but never touches the network.
+ * Warm read of today's tasks for an instant first paint: the same filter as
+ * `getTodayTasks`, over the in-memory templates if present, otherwise the
+ * AsyncStorage copy. Never touches the network.
  */
-export const getStoredTodayTasks = async (): Promise<TaskTemplate[]> => {
-  const cached = getCached<TaskTemplate[]>(CACHE_KEYS.TODAY_TASKS);
-  if (cached) return cached;
-
-  const todayKey = farmDateKey(new Date());
-  const stored = await getData<TaskTemplate>(KEYS.TASKS);
-  const filtered = stored.filter((task) => {
-    if (!task.enabled || !task.next_due_at) return false;
-    const dueKey = farmDateKey(task.next_due_at);
-    return dueKey !== null && todayKey !== null && dueKey <= todayKey;
-  });
-  filtered.sort((a, b) => a.next_due_at.localeCompare(b.next_due_at));
-  return filtered;
-};
+export const getStoredTodayTasks = async (): Promise<TaskTemplate[]> =>
+  selectTodayTasks(await getStoredTaskTemplates());
 
 /**
  * Warm read of today's task logs for an instant first paint: the fresh
@@ -1440,7 +1425,7 @@ export const rebuildCareTasksForAllPlants = async (
     onProgress?.(result.plantsProcessed, plants.length);
   }
 
-  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+  invalidate(CACHE_KEYS.TASK_TEMPLATES);
   logger.info(
     `Care task rebuild: ${result.created} created, ${result.updated} updated, ${result.failed} failed across ${result.plantsProcessed} plants`
   );
@@ -1543,7 +1528,7 @@ export const disableTasksForPlantIds = async (plantIds: string[]): Promise<void>
     );
   }
 
-  invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+  invalidate(CACHE_KEYS.TASK_TEMPLATES);
 };
 
 /**

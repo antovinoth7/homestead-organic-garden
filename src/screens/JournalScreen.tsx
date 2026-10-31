@@ -10,8 +10,13 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
-import { getJournalEntries, deleteJournalEntry, updateJournalEntry } from '../services/journal';
-import { getAllPlants } from '../services/plants';
+import {
+  getJournalEntries,
+  deleteJournalEntry,
+  invalidateJournalCache,
+  updateJournalEntry,
+} from '../services/journal';
+import { getAllPlants, invalidatePlantsCache } from '../services/plants';
 import {
   JournalEntry,
   JournalEntryType,
@@ -131,6 +136,14 @@ export default function JournalScreen(): React.JSX.Element {
         setLoading(false);
       }
     }
+  };
+
+  // Pull-to-refresh asks the server: without dropping the in-memory copies, a
+  // read within the cache window returns what was fetched moments ago.
+  const handleRefresh = (): void => {
+    invalidateJournalCache();
+    invalidatePlantsCache();
+    void loadData();
   };
 
   useEffect(() => {
@@ -590,7 +603,7 @@ export default function JournalScreen(): React.JSX.Element {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh} />}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={listEmpty}
       />

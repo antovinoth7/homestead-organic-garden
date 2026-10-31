@@ -13,6 +13,7 @@ import {
   subscribeQueueCount,
   setQueueOwner,
   clearQueue,
+  hasPendingMutationFor,
 } from '@/lib/offlineQueue';
 import type { OfflineMutationInput } from '@/types/offline.types';
 
@@ -233,5 +234,60 @@ describe('unreadable queue is never mistaken for an empty one', () => {
     mockReadDataFails = null;
     await enqueueMutations([input({ docId: 'c' })]);
     expect(mockMemoryStore.get(KEY)).toHaveLength(3);
+  });
+});
+
+describe('hasPendingMutationFor', () => {
+  const plant1 = { collection: 'plants', docId: 'doc-1' };
+
+  it('reports a doc while it has a queued mutation, and not once it is removed', async () => {
+    await clearQueue();
+    expect(await hasPendingMutationFor([plant1])).toBe(false);
+
+    await enqueueMutations([input()]);
+    expect(await hasPendingMutationFor([plant1])).toBe(true);
+    expect(await hasPendingMutationFor([{ collection: 'plants', docId: 'doc-2' }])).toBe(false);
+    expect(await hasPendingMutationFor([{ collection: 'beds', docId: 'doc-1' }])).toBe(false);
+
+    const [entry] = await getQueue();
+    await removeMutation(entry!.id);
+    expect(await hasPendingMutationFor([plant1])).toBe(false);
+  });
+
+  it('matches when any one of several targets is pending', async () => {
+    await clearQueue();
+    await enqueueMutations([input({ docId: 'doc-3' })]);
+    expect(
+      await hasPendingMutationFor([
+        { collection: 'plants', docId: 'other' },
+        { ...plant1, docId: 'doc-3' },
+      ])
+    ).toBe(true);
+  });
+
+  it('is false for no targets', async () => {
+    expect(await hasPendingMutationFor([])).toBe(false);
+  });
+
+  it('reads the stored queue on first use in a session', async () => {
+    mockMemoryStore.set('@garden_offline_queue', [
+      { ...input(), id: 'om1', createdAt: 1, retryCount: 0, revision: 0, ownerUid: 'user-1' },
+    ]);
+    let fresh: typeof hasPendingMutationFor = async () => false;
+    jest.isolateModules(() => {
+      ({ hasPendingMutationFor: fresh } =
+        jest.requireActual<typeof import('@/lib/offlineQueue')>('@/lib/offlineQueue'));
+    });
+    expect(await fresh([plant1])).toBe(true);
+  });
+
+  it('falls back to a direct write (false) when the queue cannot be read', async () => {
+    let fresh: typeof hasPendingMutationFor = async () => true;
+    jest.isolateModules(() => {
+      ({ hasPendingMutationFor: fresh } =
+        jest.requireActual<typeof import('@/lib/offlineQueue')>('@/lib/offlineQueue'));
+    });
+    mockReadDataFails = 'io';
+    expect(await fresh([plant1])).toBe(false);
   });
 });

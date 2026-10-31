@@ -12,10 +12,14 @@ import {
 } from 'firebase/firestore';
 import { getData, setData, KEYS } from '@/lib/storage';
 import { writeOrQueue } from '@/lib/offlineWrite';
-import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '@/utils/firestoreTimeout';
+import {
+  withTimeoutAndRetry,
+  FIRESTORE_READ_TIMEOUT_MS,
+  CACHED_READ_OPTIONS,
+} from '@/utils/firestoreTimeout';
 import { logError } from '@/utils/errorLogging';
 import { logger } from '@/utils/logger';
-import { getCached, invalidate, dedup, CACHE_KEYS } from '@/lib/dataCache';
+import { getCached, peekCached, invalidate, dedup, CACHE_KEYS } from '@/lib/dataCache';
 import {
   getTransitionInputs as getTransitionInputsConfig,
   validateCompanionPair as validateCompanionPairConfig,
@@ -48,9 +52,7 @@ export async function getBeds(): Promise<Bed[]> {
       // while being perfectly alive — and callers treat "missing from this list"
       // as "deleted". `normalizeBed` already defaults the flag on read.
       const q = query(collection(db, BEDS_COLLECTION), where('user_id', '==', user.uid));
-      const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-        timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-      });
+      const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
 
       const beds = snapshot.docs
         .map((d) => normalizeBed(d.id, d.data() as Record<string, unknown>))
@@ -63,6 +65,17 @@ export async function getBeds(): Promise<Bed[]> {
       return getData<Bed>(KEYS.BEDS);
     }
   });
+}
+
+/**
+ * Warm read for an instant first paint: the in-memory list (fresh or not),
+ * otherwise the AsyncStorage copy. Never touches the network — unlike
+ * `getBeds`, which on a cold start waits on Firestore before falling back.
+ */
+export async function getStoredBeds(): Promise<Bed[]> {
+  const warm = peekCached<Bed[]>(CACHE_KEYS.BEDS);
+  if (warm) return warm;
+  return getData<Bed>(KEYS.BEDS);
 }
 
 export async function getBed(id: string): Promise<Bed | null> {
@@ -171,9 +184,7 @@ export async function getDeletedBeds(): Promise<Bed[]> {
       where('user_id', '==', user.uid),
       where('is_deleted', '==', true)
     );
-    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-    });
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
     return snapshot.docs.map((d) => normalizeBed(d.id, d.data() as Record<string, unknown>));
   } catch (error) {
     logger.warn('getDeletedBeds: Firestore failed, using cache', error as Error);

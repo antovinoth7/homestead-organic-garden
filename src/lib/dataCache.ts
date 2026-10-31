@@ -12,7 +12,14 @@
  * on every focus" bottleneck.
  */
 
-const STALE_MS = 30_000; // 30 seconds
+/**
+ * Five minutes. One farmer's data changes only through this app's own services,
+ * and every mutation invalidates the keys it touches, so a short window bought
+ * little freshness: it re-queried every plant, template and bed (and re-resolved
+ * every photo) on each tab switch. Pull-to-refresh invalidates explicitly for
+ * changes made on another device.
+ */
+const STALE_MS = 5 * 60_000;
 
 interface CacheEntry<T> {
   data: T;
@@ -35,7 +42,7 @@ export function getCached<T>(key: string): T | null {
 }
 
 /**
- * Return cached data regardless of the 30s staleness window (still `null`
+ * Return cached data regardless of the `STALE_MS` window (still `null`
  * after `invalidate`). For callers that manage their own freshness policy
  * (e.g. the weather service's 3h window) or want stale-while-revalidate UI.
  */
@@ -152,7 +159,6 @@ export function dedup<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
 
 export const CACHE_KEYS = {
   ALL_PLANTS: 'allPlants',
-  TODAY_TASKS: 'todayTasks',
   TASK_TEMPLATES: 'taskTemplates',
   TASK_LOGS: 'taskLogs',
   TODAY_TASK_LOGS: 'todayTaskLogs',

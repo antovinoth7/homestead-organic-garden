@@ -1,8 +1,15 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { calculateTaskPriority, getTaskTemplates, getTodayTaskLogs } from '../services/tasks';
-import { getAllPlants } from '../services/plants';
-import { getBeds } from '../services/beds';
-import { getHarvestJournalMetadata } from '../services/journal';
+import {
+  calculateTaskPriority,
+  getStoredTaskTemplates,
+  getStoredTodayTaskLogs,
+  getTaskTemplates,
+  getTodayTaskLogs,
+} from '../services/tasks';
+import { getAllPlants, getStoredPlants } from '../services/plants';
+import { getBeds, getStoredBeds } from '../services/beds';
+import { getHarvestJournalMetadata, getStoredHarvestJournalMetadata } from '../services/journal';
+import { CACHE_KEYS, invalidate } from '@/lib/dataCache';
 import { Bed, TaskTemplate, Plant, JournalEntry, TaskLog } from '../types/database.types';
 import { computeHarvestsReady, type HarvestReadyItem } from '../utils/harvestStats';
 import { calendarDaysOverdue } from '../services/taskSchedulingLogic';
@@ -121,47 +128,25 @@ export function useCalendarData({
     };
   }, []);
 
-  const loadData = React.useCallback(async (options?: { force?: boolean }) => {
-    // Debounce: skip if loaded recently (within 2s) unless forced
-    const now = Date.now();
-    if (!options?.force && now - lastLoadTimeRef.current < 2000) return;
-    lastLoadTimeRef.current = now;
-
-    try {
-      // Beds ride along in the same round trip rather than waiting for the other
-      // four: nothing here depends on them, only the orphan filter below does.
-      // The catch keeps a bed failure from rejecting the whole load and blanking
-      // the task list — it degrades to "no orphan hiding", as it did when this
-      // was a separate try/catch.
-      const [tasksData, plantsData, harvestEntriesData, todayLogsData, bedsData] =
-        await Promise.all([
-          getTaskTemplates(),
-          getAllPlants(),
-          getHarvestJournalMetadata(),
-          getTodayTaskLogs(),
-          getBeds().catch((error) => {
-            logger.warn('Failed to load beds for orphan filtering', error as Error);
-            return null;
-          }),
-        ]);
-
-      if (!isMountedRef.current) return;
-
-      const plantIds = new Set(plantsData.map((plant) => plant.id));
-      const filteredTasks = tasksData.filter(
+  /** Push one consistent snapshot of the sources into state. */
+  const applySources = React.useCallback(
+    (sources: {
+      templates: TaskTemplate[];
+      plants: Plant[];
+      harvests: JournalEntry[];
+      todayLogs: TaskLog[];
+      beds: Bed[] | null;
+    }) => {
+      const plantIds = new Set(sources.plants.map((plant) => plant.id));
+      const filteredTasks = sources.templates.filter(
         (task) => task.enabled && (!task.plant_id || plantIds.has(task.plant_id))
       );
 
       setTasks(filteredTasks);
-      setAllTemplates(tasksData);
-      setPlants(plantsData);
-      setTodayLogs(todayLogsData);
-      setHarvestEntries(harvestEntriesData);
-      hasLoadedDataRef.current = true;
-      setError(null);
-      const loadedOffline = !isNetworkAvailable();
-      setIsStale(loadedOffline);
-      if (!loadedOffline) setLastUpdatedAt(new Date().toISOString());
+      setAllTemplates(sources.templates);
+      setPlants(sources.plants);
+      setTodayLogs(sources.todayLogs);
+      setHarvestEntries(sources.harvests);
 
       // Bed-level tasks whose bed is missing from `getBeds()` are hidden, never
       // deleted. Absence from a read is not evidence the bed was deleted: a
@@ -169,27 +154,121 @@ export function useCalendarData({
       // this hook previously hard-deleted those tasks (and their logs) from
       // Firestore on nothing more than that. Real deletion belongs to the bed
       // cascade in `beds.ts`, which knows a bed was actually removed.
-      if (bedsData) {
-        const liveBedIds = new Set(bedsData.map((bed) => bed.id));
+      if (sources.beds) {
+        const liveBedIds = new Set(sources.beds.map((bed) => bed.id));
         const orphanBedTasks = filteredTasks.filter((task) =>
           isBedLevelOrphanTask(task, liveBedIds)
         );
         setOrphanBedTaskIds(new Set(orphanBedTasks.map((task) => task.id)));
       }
+    },
+    []
+  );
+
+  /**
+   * Cold-start paint from the local copies, so the Care Plan isn't a skeleton
+   * for as long as Firestore takes to answer (on a weak link, a full read
+   * timeout). Network-free readers only; `loadData` revalidates right after.
+   */
+  const hydrateFromCache = React.useCallback(async (): Promise<void> => {
+    try {
+      const [templates, storedPlants, harvests, storedTodayLogs, storedBeds] = await Promise.all([
+        getStoredTaskTemplates(),
+        getStoredPlants(),
+        getStoredHarvestJournalMetadata(),
+        getStoredTodayTaskLogs(),
+        getStoredBeds(),
+      ]);
+      if (!isMountedRef.current || hasLoadedDataRef.current) return;
+      if (templates.length === 0 && storedPlants.length === 0) return;
+
+      applySources({
+        templates,
+        plants: storedPlants,
+        harvests,
+        todayLogs: storedTodayLogs,
+        // An empty stored list is "never cached", not "no beds" — orphan
+        // hiding against it would hide every bed-level task until the network
+        // answered.
+        beds: storedBeds.length > 0 ? storedBeds : null,
+      });
+      setInitialLoading(false);
     } catch (error) {
-      if (!isMountedRef.current) return;
-      logger.error('Failed to load calendar data', error as Error);
-      setError(getErrorMessage(error));
-      setIsStale(hasLoadedDataRef.current);
-    } finally {
-      if (isMountedRef.current) {
-        setInitialLoading(false);
-      }
+      logger.warn('Care Plan cache paint failed', error as Error);
     }
-  }, []);
+  }, [applySources]);
+
+  const hasHydratedRef = useRef(false);
+
+  const loadData = React.useCallback(
+    async (options?: { force?: boolean }) => {
+      // Debounce: skip if loaded recently (within 2s) unless forced
+      const now = Date.now();
+      if (!options?.force && now - lastLoadTimeRef.current < 2000) return;
+      lastLoadTimeRef.current = now;
+
+      if (!hasHydratedRef.current && !hasLoadedDataRef.current) {
+        hasHydratedRef.current = true;
+        await hydrateFromCache();
+      }
+
+      try {
+        // Beds ride along in the same round trip rather than waiting for the other
+        // four: nothing here depends on them, only the orphan filter below does.
+        // The catch keeps a bed failure from rejecting the whole load and blanking
+        // the task list — it degrades to "no orphan hiding", as it did when this
+        // was a separate try/catch.
+        const [tasksData, plantsData, harvestEntriesData, todayLogsData, bedsData] =
+          await Promise.all([
+            getTaskTemplates(),
+            getAllPlants(),
+            getHarvestJournalMetadata(),
+            getTodayTaskLogs(),
+            getBeds().catch((error) => {
+              logger.warn('Failed to load beds for orphan filtering', error as Error);
+              return null;
+            }),
+          ]);
+
+        if (!isMountedRef.current) return;
+
+        applySources({
+          templates: tasksData,
+          plants: plantsData,
+          harvests: harvestEntriesData,
+          todayLogs: todayLogsData,
+          beds: bedsData,
+        });
+        hasLoadedDataRef.current = true;
+        setError(null);
+        const loadedOffline = !isNetworkAvailable();
+        setIsStale(loadedOffline);
+        if (!loadedOffline) setLastUpdatedAt(new Date().toISOString());
+      } catch (error) {
+        if (!isMountedRef.current) return;
+        logger.error('Failed to load calendar data', error as Error);
+        setError(getErrorMessage(error));
+        setIsStale(hasLoadedDataRef.current);
+      } finally {
+        if (isMountedRef.current) {
+          setInitialLoading(false);
+        }
+      }
+    },
+    [applySources, hydrateFromCache]
+  );
 
   const handleRefresh = React.useCallback(async () => {
     setRefreshing(true);
+    // Pull-to-refresh means "ask the server": without this, anything read in
+    // the cache window came straight back from the in-memory cache.
+    invalidate(
+      CACHE_KEYS.TASK_TEMPLATES,
+      CACHE_KEYS.TODAY_TASK_LOGS,
+      CACHE_KEYS.ALL_PLANTS,
+      CACHE_KEYS.BEDS,
+      CACHE_KEYS.JOURNAL_HARVESTS
+    );
     try {
       await loadData({ force: true });
     } finally {

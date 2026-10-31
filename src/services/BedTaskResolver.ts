@@ -160,7 +160,7 @@ export async function syncBedTasks(bed: Bed, plants: Plant[]): Promise<void> {
       }
     }
 
-    invalidate(CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.TODAY_TASKS);
+    invalidate(CACHE_KEYS.TASK_TEMPLATES);
     logger.info(`syncBedTasks: synced ${specs.length} tasks for bed ${bed.id}`);
   } catch (error) {
     logger.warn('syncBedTasks failed', error as Error);

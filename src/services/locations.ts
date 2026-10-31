@@ -2,10 +2,14 @@ import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firest
 import { auth, db, refreshAuthToken } from '../lib/firebase';
 import { getData, setData, getLocationStorageKey } from '../lib/storage';
 import { writeOrQueue } from '../lib/offlineWrite';
-import { getCached, setCached, dedup, CACHE_KEYS } from '../lib/dataCache';
+import { getCached, peekCached, setCached, dedup, CACHE_KEYS } from '../lib/dataCache';
 import { LocationConfig } from '../types/database.types';
 import { logError } from '../utils/errorLogging';
-import { withTimeoutAndRetry, FIRESTORE_READ_TIMEOUT_MS } from '../utils/firestoreTimeout';
+import {
+  withTimeoutAndRetry,
+  FIRESTORE_READ_TIMEOUT_MS,
+  CACHED_READ_OPTIONS,
+} from '../utils/firestoreTimeout';
 
 /**
  * Auto-generate a short name from a location name.
@@ -114,9 +118,7 @@ export const getLocationConfig = async (): Promise<LocationConfig> => {
   return dedup(cacheKey, async () => {
     try {
       const docRef = doc(db, SETTINGS_COLLECTION, user.uid);
-      const snapshot = await withTimeoutAndRetry(() => getDoc(docRef), {
-        timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-      });
+      const snapshot = await withTimeoutAndRetry(() => getDoc(docRef), CACHED_READ_OPTIONS);
 
       if (!snapshot.exists()) {
         // New user: persist the empty config to their document
@@ -154,6 +156,19 @@ export const getLocationConfig = async (): Promise<LocationConfig> => {
       return asyncCached;
     }
   });
+};
+
+/**
+ * Warm read for an instant first paint: the in-memory copy (fresh or not),
+ * otherwise the AsyncStorage copy. Never touches the network — callers that
+ * need the server's version follow up with `getLocationConfig`.
+ */
+export const getStoredLocationConfig = async (): Promise<LocationConfig> => {
+  const uid = auth.currentUser?.uid ?? null;
+  const cacheKey = uid ? `${CACHE_KEYS.LOCATIONS}:${uid}` : CACHE_KEYS.LOCATIONS;
+  const memCached = peekCached<LocationConfig>(cacheKey);
+  if (memCached) return memCached;
+  return getCachedConfig(uid);
 };
 
 export const saveLocationConfig = async (config: LocationConfig): Promise<LocationConfig> => {

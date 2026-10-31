@@ -55,13 +55,10 @@ import { CarePlanDateNav } from '@/components/calendar/CarePlanDateNav';
 import { HeaderIconButton } from '@/components/header/HeaderIconButton';
 import { HeaderSearchField } from '@/components/header/HeaderSearchField';
 import { CarePlanProgressCard } from '@/components/calendar/CarePlanProgressCard';
-import {
-  CarePlanBandFooter,
-  CarePlanBandFrame,
-  CarePlanBandHeader,
-} from '@/components/calendar/CarePlanBand';
+import { CarePlanBandFooter, CarePlanBandFrame } from '@/components/calendar/CarePlanBand';
+import { LiveCarePlanBandHeader } from '@/components/calendar/LiveCarePlanBandHeader';
 import { HarvestRoundRow } from '@/components/calendar/HarvestRoundRow';
-import { useMinuteClock } from '@/hooks/useMinuteClock';
+import { useMinuteValue } from '@/hooks/useMinuteClock';
 import {
   CarePlanTaskCard,
   type CarePlanCardDoneState,
@@ -114,7 +111,6 @@ import {
   TIME_BANDS,
   TIME_BAND_ORDER,
   currentTimeBand,
-  farmClockLabel,
   taskTimeBand,
   type TimeBand,
 } from '@/utils/taskTimeWindow';
@@ -233,7 +229,10 @@ export default function CalendarScreen(): React.JSX.Element {
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
   // Drives the NOW marker on today's time band; idle while another tab is up.
   const isFocused = useIsFocused();
-  const now = useMinuteClock(isFocused);
+  // The time band shapes the Today model, so the screen tracks it — but only the
+  // band: this re-renders when the band changes, not every minute. The NOW
+  // chip's minute label lives in `LiveCarePlanBandHeader`.
+  const nowBand = useMinuteValue(isFocused, currentTimeBand);
   const scrollViewRef = useRef<SectionList<CalendarRow, CalendarListSection>>(null);
   // A section the plan was asked to open at, held until that section exists.
   // The request lives in a ref because callbacks read it (`scrollToTop` parks
@@ -1444,9 +1443,6 @@ export default function CalendarScreen(): React.JSX.Element {
     [weatherByPlotName, rainBannerByPlot]
   );
 
-  // Only the band changes the model; the minute ticks just redraw the NOW chip.
-  const nowBand = currentTimeBand(now);
-  const nowLabel = farmClockLabel(now);
   const timeLayout = !isSearching && effectiveGroupBy === 'time';
 
   const listSections = useMemo((): CalendarListSection[] => {
@@ -2075,14 +2071,14 @@ export default function CalendarScreen(): React.JSX.Element {
       const header = section.header;
       if (!header) return null;
       return (
-        <CarePlanBandHeader
+        <LiveCarePlanBandHeader
           header={header}
           selectBox={
             selectionMode && header.selectableTasks
               ? renderSectionCheckbox(header.selectableTasks)
               : null
           }
-          nowLabel={nowLabel}
+          clockActive={isFocused}
           onToggle={() => toggleSection(section.key)}
           onAdd={handleAddForPickedDay}
           banners={header.rainPlots?.map((plot) => renderPlotBanner(plot, header.plot !== plot))}
@@ -2092,7 +2088,7 @@ export default function CalendarScreen(): React.JSX.Element {
     [
       selectionMode,
       renderSectionCheckbox,
-      nowLabel,
+      isFocused,
       toggleSection,
       handleAddForPickedDay,
       renderPlotBanner,

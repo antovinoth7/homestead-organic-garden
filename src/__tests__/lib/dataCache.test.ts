@@ -14,13 +14,21 @@ describe('dataCache peekCached', () => {
     invalidate('k');
   });
 
-  it('returns entries that getCached considers stale (30s window)', () => {
+  it('returns entries that getCached considers stale (5 min window)', () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-06-20T00:00:00.000Z'));
     setCached('k', { v: 1 });
 
-    jest.setSystemTime(new Date('2026-06-20T00:01:00.000Z')); // 60s later
+    jest.setSystemTime(new Date('2026-06-20T00:06:00.000Z')); // 6 min later
     expect(getCached('k')).toBeNull();
     expect(peekCached('k')).toEqual({ v: 1 });
+  });
+
+  it('keeps entries fresh within the 5 min window', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-06-20T00:00:00.000Z'));
+    setCached('k', { v: 1 });
+
+    jest.setSystemTime(new Date('2026-06-20T00:04:00.000Z')); // 4 min later
+    expect(getCached('k')).toEqual({ v: 1 });
   });
 
   it('returns null for absent and invalidated keys', () => {

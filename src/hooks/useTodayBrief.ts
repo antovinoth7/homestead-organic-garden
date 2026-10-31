@@ -27,6 +27,7 @@ import {
   resolveActiveZone,
   TAMIL_NADU_METEOROLOGICAL_ZONE,
 } from '@/config/zones';
+import { CACHE_KEYS, invalidate, invalidatePrefix } from '@/lib/dataCache';
 import { getFarmAlerts, isActionable } from '@/services/alerts';
 import { getCrossBedStatus, getHarvestGapWarnings } from '@/services/beds';
 import { createEmptyProfiles, getProfileEntry } from '@/services/plantProfiles';
@@ -61,7 +62,16 @@ export interface UseTodayBriefResult {
   /** True only on a cold start with nothing cached to paint. */
   loading: boolean;
   error: string | null;
-  reload: (options?: { silent?: boolean; forceWeather?: boolean }) => Promise<void>;
+  /**
+   * Re-read the sources. `fresh` (pull-to-refresh) drops the in-memory copies
+   * first so the reads go to Firestore instead of returning what was fetched
+   * moments ago.
+   */
+  reload: (options?: {
+    silent?: boolean;
+    forceWeather?: boolean;
+    fresh?: boolean;
+  }) => Promise<void>;
   /** Force-refresh one plot from the forecast overlay. */
   refreshWeatherFor: (plotId: string) => Promise<void>;
   /**
@@ -493,7 +503,11 @@ export function useTodayBrief(): UseTodayBriefResult {
   );
 
   const reload = useCallback(
-    async (options?: { silent?: boolean; forceWeather?: boolean }) => {
+    async (options?: { silent?: boolean; forceWeather?: boolean; fresh?: boolean }) => {
+      if (options?.fresh) {
+        invalidate(CACHE_KEYS.TODAY_TASK_LOGS, CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.BEDS);
+        invalidatePrefix(CACHE_KEYS.LOCATIONS);
+      }
       await Promise.all([load(options), refreshWeather({ force: options?.forceWeather })]);
     },
     [load, refreshWeather]

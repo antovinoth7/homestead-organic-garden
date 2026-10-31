@@ -1,26 +1,26 @@
 # Codemap
 
 > **Generated file — do not edit.** Regenerate with `npm run codemap`.
-> Snapshot: 2026-10-12 — src/: 741 files, 135,494 lines.
+> Snapshot: 2026-10-31 — src/: 747 files, 136,346 lines.
 >
 > Files marked ⚠️ exceed 800 lines: search inside them (Grep) instead of reading them whole.
 
 ## Large files (search, don't read whole)
 
-- src/screens/CalendarScreen.tsx (2523)
+- src/screens/CalendarScreen.tsx (2519)
 - src/utils/plantHelpers.ts (1853)
-- src/services/tasks.ts (1557)
+- src/services/tasks.ts (1542)
 - src/styles/bedCreationWizardStyles.ts (1513)
 - src/hooks/usePlantFormState.ts (1200)
 - src/types/database.types.ts (1161)
-- src/services/plants.ts (1140)
+- src/services/plants.ts (1142)
 - src/screens/JournalFormScreen.tsx (1092)
 - src/screens/CatalogPlantDetailScreen.tsx (1064)
 - src/hooks/useBedCreationWizard.ts (937)
 - src/components/BedRowLayout.tsx (932)
 - src/styles/plantFormStyles.ts (842)
 - src/screens/BedWizardSteps/GuildTemplateStep.tsx (839)
-- src/screens/PlantsScreen.tsx (813)
+- src/screens/PlantsScreen.tsx (826)
 - src/utils/plantCareDefaults/overrides/fruitTrees.ts (812)
 
 ## src/
@@ -95,11 +95,13 @@
 - blockReasonForStep.test.ts (77)
 - plantFormValidation.test.ts (43)
 
-### src/__tests__/lib/ — 3 files, 491 lines
+### src/__tests__/lib/ — 5 files, 757 lines
 
-- offlineQueue.test.ts (238)
-- dataCache.test.ts (153)
+- offlineQueue.test.ts (294)
+- dataCache.test.ts (161)
+- refreshAuthToken.test.ts (111)
 - storage.test.ts (100)
+- offlineWrite.test.ts (91)
 
 ### src/__tests__/migrations/ — 14 files, 1,820 lines
 
@@ -128,7 +130,7 @@
 - noFunctionalEmoji.test.ts (54)
 - agronomyEvidenceDocs.test.ts (44)
 
-### src/__tests__/services/ — 15 files, 2,607 lines
+### src/__tests__/services/ — 16 files, 2,680 lines
 
 - alerts.test.ts (497)
 - manualTaskScheduling.test.ts (317)
@@ -144,13 +146,14 @@
 - harvestTaskSelection.test.ts (86)
 - plantProfilesGroup.test.ts (85)
 - preMonsoonTasks.test.ts (83)
+- todayTasks.test.ts (73)
 - plantCatalogShape.test.ts (30)
 
 ### src/__tests__/styles/ — 1 files, 67 lines
 
 - catalogMetrics.test.ts (67)
 
-### src/__tests__/utils/ — 91 files, 13,857 lines
+### src/__tests__/utils/ — 93 files, 14,014 lines
 
 - journalEntryOptions.test.ts (726)
 - careTaskFilters.test.ts (568)
@@ -206,6 +209,7 @@
 - catalogCounts.test.ts (109)
 - scrollSpy.test.ts (109)
 - bedEditReconcile.test.ts (104)
+- firestoreTimeout.test.ts (98)
 - plantClassification.test.ts (98)
 - taskWeatherAdvisory.test.ts (91)
 - carePlanDisplay.test.ts (90)
@@ -225,6 +229,7 @@
 - pestDiseasePickerRows.test.ts (65)
 - progressiveList.test.ts (64)
 - perennialCare.test.ts (62)
+- networkState.test.ts (59)
 - textSanitizer.test.ts (58)
 - growingSeasons.test.ts (57)
 - journalSections.test.ts (56)
@@ -302,7 +307,7 @@
 - PlantNotesSection.tsx (33)
 - FieldErrorText.tsx (29)
 
-### src/components/calendar/ — 8 files, 1,271 lines
+### src/components/calendar/ — 9 files, 1,298 lines
 
 - TaskDetailSheet.tsx (306)
 - CarePlanBand.tsx (235)
@@ -312,18 +317,19 @@
 - CarePlanDateNav.tsx (83)
 - MonthCalendarSheet.tsx (82)
 - CarePlanProgressCard.tsx (43)
+- LiveCarePlanBandHeader.tsx (27)
 
-### src/components/catalog/ — 19 files, 2,158 lines
+### src/components/catalog/ — 19 files, 2,175 lines
 
 - CatalogFilterSheet.tsx (253)
-- VarietyDetailModal.tsx (201)
-- PestDiseasePickerModal.tsx (193)
-- CatalogDetailRow.tsx (157)
+- VarietyDetailModal.tsx (206)
+- PestDiseasePickerModal.tsx (198)
+- CatalogDetailRow.tsx (160)
 - CatalogBrowseRow.tsx (138)
-- CatalogSearchResultRow.tsx (133)
+- CatalogSearchResultRow.tsx (134)
 - ReassignPlantsModal.tsx (123)
+- HiddenPlantsSection.tsx (112)
 - CatalogChipList.tsx (110)
-- HiddenPlantsSection.tsx (109)
 - CatalogRangeRow.tsx (107)
 - CatalogTextEditSheet.tsx (104)
 - CatalogRangeEditSheet.tsx (99)
@@ -335,11 +341,11 @@
 - CatalogSectionHeader.tsx (48)
 - catalogGroupModes.ts (31)
 
-### src/components/catalog/sections/ — 5 files, 941 lines
+### src/components/catalog/sections/ — 5 files, 937 lines
 
 - PlantInfoSection.tsx (258)
 - GrowingInfoSection.tsx (242)
-- CoreCareSection.tsx (235)
+- CoreCareSection.tsx (231)
 - PruningSection.tsx (129)
 - TolerancesSection.tsx (77)
 
@@ -525,14 +531,14 @@
 - types.ts (33)
 - activeZone.ts (26)
 
-### src/hooks/ — 38 files, 7,645 lines
+### src/hooks/ — 38 files, 7,755 lines
 
 - usePlantFormState.ts (1200) ⚠️ large — Grep/search inside, do not read whole
 - useBedCreationWizard.ts (937) ⚠️ large — Grep/search inside, do not read whole
 - useCatalogEntryForm.ts (736)
+- useCalendarData.ts (605)
 - useLocationManager.ts (567)
-- useCalendarData.ts (526)
-- useTodayBrief.ts (518)
+- useTodayBrief.ts (532)
 - usePlantCatalogManager.ts (356)
 - useVoiceInput.ts (221)
 - usePinchZoom.ts (192)
@@ -557,23 +563,23 @@
 - useBedDetail.ts (53)
 - useUserCareProfiles.ts (53)
 - useBedOptions.ts (50)
+- useMinuteClock.ts (48)
 - useLandCents.ts (47)
 - useOwnerName.ts (44)
 - plantFormValidation.ts (40)
 - useAnimatedValue.ts (33)
 - useKeyboardHeight.ts (31)
-- useMinuteClock.ts (31)
 - useOfflineStatus.ts (31)
 - useKeyboardVisible.ts (25)
 
-### src/lib/ — 6 files, 1,491 lines
+### src/lib/ — 6 files, 1,583 lines
 
 - imageStorage.ts (739)
-- offlineQueue.ts (256)
-- dataCache.ts (166)
-- firebase.ts (146)
+- offlineQueue.ts (299)
+- dataCache.ts (172)
+- firebase.ts (164)
 - storage.ts (132)
-- offlineWrite.ts (52)
+- offlineWrite.ts (77)
 
 ### src/migrations/ — 34 files, 3,058 lines
 
@@ -616,13 +622,13 @@
 
 - AppNavigator.tsx (197)
 
-### src/screens/ — 28 files, 11,886 lines
+### src/screens/ — 28 files, 11,908 lines
 
-- CalendarScreen.tsx (2523) ⚠️ large — Grep/search inside, do not read whole
+- CalendarScreen.tsx (2519) ⚠️ large — Grep/search inside, do not read whole
 - JournalFormScreen.tsx (1092) ⚠️ large — Grep/search inside, do not read whole
 - CatalogPlantDetailScreen.tsx (1064) ⚠️ large — Grep/search inside, do not read whole
-- PlantsScreen.tsx (813) ⚠️ large — Grep/search inside, do not read whole
-- JournalScreen.tsx (672)
+- PlantsScreen.tsx (826) ⚠️ large — Grep/search inside, do not read whole
+- JournalScreen.tsx (685)
 - SettingsScreen.tsx (563)
 - MyFarmScreen.tsx (537)
 - BedListScreen.tsx (524)
@@ -656,23 +662,23 @@
 - BedConfirmStep.tsx (226)
 - BedTypeStep.tsx (154)
 
-### src/services/ — 18 files, 7,124 lines
+### src/services/ — 18 files, 7,154 lines
 
-- tasks.ts (1557) ⚠️ large — Grep/search inside, do not read whole
-- plants.ts (1140) ⚠️ large — Grep/search inside, do not read whole
+- tasks.ts (1542) ⚠️ large — Grep/search inside, do not read whole
+- plants.ts (1142) ⚠️ large — Grep/search inside, do not read whole
 - plantProfiles.ts (702)
 - backup.ts (617)
-- journal.ts (564)
+- journal.ts (577)
 - weather.ts (381)
 - alertsLogic.ts (344)
 - taskSchedulingLogic.ts (316)
 - farmCapacity.ts (239)
-- beds.ts (213)
-- locations.ts (197)
+- beds.ts (224)
+- locations.ts (212)
 - BedTaskResolver.ts (182)
 - plantCatalog.ts (179)
-- offlineSync.ts (166)
-- todayBrief.ts (135)
+- offlineSync.ts (168)
+- todayBrief.ts (137)
 - bedLogic.ts (116)
 - weatherLogic.ts (65)
 - alerts.ts (11)
@@ -786,7 +792,7 @@
 - visual.types.ts (86)
 - offline.types.ts (49)
 
-### src/utils/ — 94 files, 14,790 lines
+### src/utils/ — 94 files, 14,852 lines
 
 - plantHelpers.ts (1853) ⚠️ large — Grep/search inside, do not read whole
 - journalEntryOptions.ts (749)
@@ -807,6 +813,7 @@
 - plantFilters.ts (223)
 - weatherWords.ts (219)
 - organicInputFilters.ts (210)
+- firestoreTimeout.ts (207)
 - taskTimeWindow.ts (194)
 - catalogSummaries.ts (183)
 - quickStartPlanner.ts (180)
@@ -815,7 +822,6 @@
 - journalListHelpers.ts (161)
 - logger.ts (161)
 - plotRainMove.ts (160)
-- firestoreTimeout.ts (157)
 - taskSummary.ts (157)
 - bedStatus.ts (156)
 - catalogValidation.ts (150)
@@ -837,13 +843,13 @@
 - backupManifest.ts (103)
 - plantPhotos.ts (101)
 - plantHistory.ts (99)
+- networkState.ts (93)
 - seasonProgress.ts (90)
 - plantEntryMapper.ts (86)
 - dateHelpers.ts (83)
 - journalStats.ts (83)
 - catalogCounts.ts (81)
 - growSpecFormat.ts (81)
-- networkState.ts (81)
 - scrollSpy.ts (80)
 - needsActionItems.ts (79)
 - imageCompression.ts (76)
@@ -915,7 +921,7 @@
 - archive/ROADMAP_ARCHIVE.md (1861)
 - BED_MANAGEMENT_TAMIL_NADU_AUDIT.md (532)
 - BED_TAB_ROADMAP_ALIGNMENT.md (76)
-- BEST_PRACTICES.md (68)
+- BEST_PRACTICES.md (71)
 - CODEMAP.md (932)
 - COMPONENTS.md (100)
 - CONVENTIONS.md (275)
@@ -925,7 +931,7 @@
 - IMPLEMENTATION_ROADMAP.md (716)
 - REFERENCE_IMAGES.md (81)
 - SCHEMA_MIGRATIONS.md (63)
-- SERVICES.md (215)
+- SERVICES.md (234)
 - tamil-nadu-reference-audit.md (790)
 - TESTING.md (83)
 - TODAY_SCREEN_RECOMMENDATION.md (629)

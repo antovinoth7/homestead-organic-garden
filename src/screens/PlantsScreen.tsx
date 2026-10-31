@@ -17,7 +17,13 @@ import {
 } from 'react-native';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import { getAllPlants, deletePlant, archivePlant, getCachedPlants } from '../services/plants';
+import {
+  getAllPlants,
+  deletePlant,
+  archivePlant,
+  getCachedPlants,
+  invalidatePlantsCache,
+} from '../services/plants';
 import { getLocationConfig } from '../services/locations';
 import { Plant, HealthStatus } from '../types/database.types';
 import PlantCard from '../components/PlantCard';
@@ -187,7 +193,7 @@ export default function PlantsScreen(): React.JSX.Element {
 
   const openArchived = useCallback(() => navigation.navigate('ArchivedPlants'), [navigation]);
 
-  const loadPlants =useCallback(async (options?: { silent?: boolean }) => {
+  const loadPlants = useCallback(async (options?: { silent?: boolean }) => {
     if (!options?.silent) {
       setLoading(true);
     }
@@ -207,6 +213,13 @@ export default function PlantsScreen(): React.JSX.Element {
       }
     }
   }, []);
+
+  // Pull-to-refresh asks the server: without dropping the in-memory copy, a
+  // read within the cache window returns what was fetched moments ago.
+  const refreshPlants = useCallback(() => {
+    invalidatePlantsCache();
+    void loadPlants();
+  }, [loadPlants]);
 
   const loadLocations = useCallback(async () => {
     try {
@@ -741,7 +754,7 @@ export default function PlantsScreen(): React.JSX.Element {
         ]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadPlants} />}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refreshPlants} />}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
         ListEmptyComponent={
