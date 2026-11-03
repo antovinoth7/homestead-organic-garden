@@ -1,7 +1,7 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
 import { border, font, radius } from '@/theme/styleTokens';
-import { MONO_FONT } from '@/styles/typography';
+import { mono } from '@/styles/typography';
 
 /**
  * Dense "read-first" rows inside the catalog section cards: label on the left,
@@ -107,7 +107,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.background,
     },
     rangeChipText: {
-      fontFamily: MONO_FONT,
+      ...mono(theme),
       fontSize: 14,
       color: theme.text,
       textAlign: 'center',
@@ -216,7 +216,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       ...font(theme, 'body'),
     },
     chipSub: {
-      fontFamily: MONO_FONT,
+      ...mono(theme),
       fontSize: 11,
       color: theme.textTertiary,
     },

@@ -83,10 +83,8 @@ const createFloatingStyles = (theme: Theme): ReturnType<typeof StyleSheet.create
       alignItems: 'center',
       justifyContent: 'center',
     },
-    iconWrapActive: {
-      backgroundColor:
-        theme.style.tabBar.activeMark === 'pill' ? theme.primaryLight : 'transparent',
-    },
+    iconWrapActive:
+      theme.style.tabBar.activeMark === 'pill' ? { backgroundColor: theme.primaryLight } : {},
     label: {
       fontSize: 10.5,
       ...font(theme, 'bodyStrong', '600'),

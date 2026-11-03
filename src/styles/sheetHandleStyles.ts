@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { radius } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -10,11 +11,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       width: '100%' as const,
       paddingTop: 12,
     },
+    // A palette with its own sheet shape (Meadow) uses a slightly larger,
+    // stronger grab handle.
     handle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.border,
+      width: theme.style.radii.sheet ? 44 : 40,
+      height: theme.style.radii.sheet ? 5 : 4,
+      borderRadius: radius(theme, 'bar', 2),
+      backgroundColor: theme.style.radii.sheet ? theme.borderDark : theme.border,
       alignSelf: 'center' as const,
       marginBottom: 4,
     },

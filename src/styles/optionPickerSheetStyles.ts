@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
-import { eyebrow, font, radius, shadow } from '@/theme/styleTokens';
+import { eyebrow, font, labelCase, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * Styles for the shared option-picker bottom sheet. Extracted from
@@ -38,6 +38,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 16,
       paddingVertical: 8,
       ...font(theme, 'bodyStrong', '600'),
+      ...labelCase(theme),
     },
     sheetSubtitle: {
       fontSize: 13.5,

@@ -86,3 +86,18 @@ export const eyebrow = (
     ...font(theme, 'bodyStrong', fallback.fontWeight),
   };
 };
+
+/**
+ * Section / group labels that Garden sets in tracked uppercase. Meadow sets
+ * them in sentence case with no tracking; Garden keeps the factory's own
+ * casing. Spread it after the label's `textTransform` / `letterSpacing`.
+ * Not for badges or micro labels, which stay uppercase in every palette.
+ */
+export const labelCase = (theme: Theme): TextStyle =>
+  theme.style.type.eyebrowUppercase ? {} : { textTransform: 'none', letterSpacing: 0 };
+
+/**
+ * True when the palette draws screen headers (Today, More) as a gradient hero
+ * with a texture, rather than Garden's flat green / plain header.
+ */
+export const hasHeroTexture = (theme: Theme): boolean => theme.style.hero.texture !== 'none';

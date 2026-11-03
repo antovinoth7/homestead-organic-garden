@@ -24,7 +24,7 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
-import { MONO_META } from './typography';
+import { monoMeta } from '@/styles/typography';
 import { CARD_GUTTER } from './todayScreenStyles';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
@@ -292,10 +292,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
     },
     tileTotal: {
-      ...MONO_META,
+      ...monoMeta(theme, '500'),
       fontSize: 22,
       lineHeight: 24,
-      fontWeight: '500',
       color: theme.text,
     },
     // Both totals are captions over the rows that divide them up — the rows are

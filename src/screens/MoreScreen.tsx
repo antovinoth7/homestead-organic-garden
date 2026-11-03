@@ -11,11 +11,14 @@ import { createStyles } from '../styles/moreStyles';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
 import { getErrorMessage } from '../utils/errorLogging';
 import { useOwnerName } from '@/hooks/useOwnerName';
+import { HeroBackdrop } from '@/components/HeroBackdrop';
+import { hasHeroTexture } from '@/theme/styleTokens';
 
 export default function MoreScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const onHero = hasHeroTexture(theme);
   const insets = useSafeAreaInsets();
   const { ownerName } = useOwnerName();
 
@@ -42,10 +45,11 @@ export default function MoreScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <HeroBackdrop />
         <View style={styles.accountHeader}>
           <TouchableOpacity style={styles.avatarWrap} onPress={goToProfile} activeOpacity={0.85}>
             <View style={styles.avatarCircle}>
-              <Ionicons name="person" size={38} color={theme.primary} />
+              <Ionicons name="person" size={38} color={onHero ? theme.heroText : theme.primary} />
             </View>
             <View style={styles.avatarBadge}>
               <Ionicons name="pencil" size={11} color={theme.primary} />

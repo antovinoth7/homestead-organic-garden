@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
-import { font, radius, shadow } from '@/theme/styleTokens';
+import { font, radius, shadow, typeSize } from '@/theme/styleTokens';
 
 /**
  * Centred dialog card. Deliberately shares the geometry of
@@ -19,7 +19,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     card: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: radius(theme, 'card', 20),
+      borderRadius: radius(theme, 'dialog', 20),
       padding: 28,
       alignItems: 'center' as const,
       width: '100%',
@@ -29,7 +29,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       shadowOpacity: 0.15,
       shadowRadius: 24,
       elevation: 8,
-      ...shadow(theme, 'card'),
+      ...shadow(theme, 'dialog'),
     },
     iconWrap: {
       width: 64,
@@ -40,7 +40,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 16,
     },
     title: {
-      fontSize: 19,
+      fontSize: typeSize(theme, 'dialogTitle', 19),
       color: theme.text,
       textAlign: 'center' as const,
       marginBottom: 8,
@@ -73,7 +73,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center' as const,
       gap: 8,
       paddingVertical: 14,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'button', 14),
     },
     actionGhost: {
       backgroundColor: theme.background,

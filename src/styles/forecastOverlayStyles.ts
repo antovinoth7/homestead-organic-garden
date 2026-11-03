@@ -18,8 +18,8 @@
 
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
-import { eyebrow, font, radius, shadow } from '@/theme/styleTokens';
-import { MONO_META } from './typography';
+import { eyebrow, font, labelCase, radius, shadow } from '@/theme/styleTokens';
+import { monoMeta } from '@/styles/typography';
 import { CARD_GUTTER } from './todayScreenStyles';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
@@ -104,18 +104,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 10,
     },
     todayEyebrow: {
-      ...MONO_META,
+      ...monoMeta(theme, '600'),
       flex: 1,
       fontSize: 10.5,
-      fontWeight: '600',
       letterSpacing: 1.2,
       textTransform: 'uppercase',
       color: theme.heroTextMuted,
+      ...labelCase(theme),
     },
     todayCondition: {
-      ...MONO_META,
+      ...monoMeta(theme, '600'),
       fontSize: 10.5,
-      fontWeight: '600',
       letterSpacing: 1.2,
       textTransform: 'uppercase',
       color: theme.heroTextMuted,
@@ -128,10 +127,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 16,
     },
     todayTemp: {
-      ...MONO_META,
+      ...monoMeta(theme, '700'),
       fontSize: 34,
       lineHeight: 40,
-      fontWeight: '700',
       color: theme.heroText,
     },
 
@@ -155,10 +153,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginVertical: 2,
     },
     todayStatValue: {
-      ...MONO_META,
+      ...monoMeta(theme, '700'),
       fontSize: 20,
       lineHeight: 24,
-      fontWeight: '700',
       color: theme.heroText,
     },
     todayStatLabel: {
@@ -235,9 +232,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       ...font(theme, 'bodyStrong', '600'),
     },
     dayTemp: {
-      ...MONO_META,
+      ...monoMeta(theme, '600'),
       fontSize: 13.5,
-      fontWeight: '600',
       color: theme.text,
     },
     // The overnight low is the quieter half of the pair, so it is nested in the
@@ -258,11 +254,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       ...font(theme, 'bodyStrong', '600'),
     },
     dayRain: {
-      ...MONO_META,
+      ...monoMeta(theme, '500'),
       flexShrink: 1,
       textAlign: 'right',
       fontSize: 11.5,
-      fontWeight: '500',
       color: theme.textTertiary,
     },
     daySpacer: {
@@ -319,9 +314,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingTop: 16,
     },
     footerText: {
-      ...MONO_META,
+      ...monoMeta(theme, '500'),
       fontSize: 10,
-      fontWeight: '500',
       lineHeight: 17,
       color: theme.textTertiary,
       textTransform: 'uppercase',

@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
-import { border, font, radius, shadow } from '@/theme/styleTokens';
+import { border, font, labelCase, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * The variety editor wears the same chrome as the other catalog edit sheets
@@ -40,6 +40,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 16,
       paddingVertical: 8,
       ...font(theme, 'bodyStrong', '600'),
+      ...labelCase(theme),
     },
     // Shrinks (rather than pushing Done off) when the sheet is clamped to
     // maxHeight or the keyboard reduces the available space.

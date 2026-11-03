@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
-import { border, font, radius, shadow } from '@/theme/styleTokens';
+import { border, font, labelCase, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -50,6 +50,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textTransform: 'uppercase',
       letterSpacing: 1,
       ...font(theme, 'title', '600'),
+      ...labelCase(theme),
     },
     sectionDescription: {
       fontSize: 14,

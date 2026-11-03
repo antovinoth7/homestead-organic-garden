@@ -1,7 +1,7 @@
 import { Dimensions, StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
 import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
-import { MONO_FONT } from '@/styles/typography';
+import { mono } from '@/styles/typography';
 import {
   catalogRowHeight,
   catalogSectionHeaderHeight,
@@ -232,7 +232,7 @@ export const createStyles = (theme: Theme, fontScale = 1): ReturnType<typeof Sty
       ...font(theme, 'bodyBold', '700'),
     },
     catalogSectionCount: {
-      fontFamily: MONO_FONT,
+      ...mono(theme),
       fontSize: 11,
       color: theme.textTertiary,
     },
@@ -319,7 +319,7 @@ export const createStyles = (theme: Theme, fontScale = 1): ReturnType<typeof Sty
       ...eyebrow(theme, { fontSize: 12, letterSpacing: 0.6, fontWeight: '700' }),
     },
     sectionLabelCount: {
-      fontFamily: MONO_FONT,
+      ...mono(theme),
       fontSize: 12,
       color: theme.textTertiary,
     },

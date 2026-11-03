@@ -1,7 +1,7 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
 import { font } from '@/theme/styleTokens';
-import { MONO_META } from '@/styles/typography';
+import { monoMeta } from '@/styles/typography';
 
 /**
  * Journal summary tiles — three separate cards, number over label. The numbers
@@ -47,16 +47,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       minWidth: 0,
     },
     value: {
-      ...MONO_META,
+      ...monoMeta(theme, '700'),
       flexShrink: 1,
       fontSize: 26,
       lineHeight: 30,
-      fontWeight: '700',
     },
     unit: {
-      ...MONO_META,
+      ...monoMeta(theme, '700'),
       fontSize: 13,
-      fontWeight: '700',
     },
     toneNeutral: { color: theme.text },
     toneHarvest: { color: theme.warningDark },

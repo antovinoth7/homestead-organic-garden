@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
-import { font, radius, shadow } from '@/theme/styleTokens';
+import { font, labelCase, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -30,6 +30,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 16,
       paddingVertical: 8,
       ...font(theme, 'bodyStrong', '600'),
+      ...labelCase(theme),
     },
     helpText: {
       fontSize: 12.5,

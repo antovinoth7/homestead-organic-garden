@@ -1,21 +1,36 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
-import { border, font, radius, shadow } from '@/theme/styleTokens';
+import { border, font, hasHeroTexture, radius, shadow } from '@/theme/styleTokens';
 
-export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
-  StyleSheet.create({
+/**
+ * The account header is a plain bar in Garden and a gradient hero in Meadow
+ * (`HeroBackdrop` draws the ground). `onHero` swaps the header's own colours.
+ */
+export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> => {
+  const onHero = hasHeroTexture(theme);
+  return StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.background,
     },
-    header: {
-      paddingHorizontal: 20,
-      paddingBottom: 20,
-      paddingTop: 12,
-      backgroundColor: theme.tabBarBackground,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
+    header: onHero
+      ? {
+          paddingHorizontal: 20,
+          paddingBottom: 28,
+          paddingTop: 12,
+          backgroundColor: theme.heroGradientStart,
+          borderBottomLeftRadius: radius(theme, 'hero', 0),
+          borderBottomRightRadius: radius(theme, 'hero', 0),
+          overflow: 'hidden',
+        }
+      : {
+          paddingHorizontal: 20,
+          paddingBottom: 20,
+          paddingTop: 12,
+          backgroundColor: theme.tabBarBackground,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.border,
+        },
     accountHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -29,7 +44,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       width: 72,
       height: 72,
       borderRadius: 36,
-      backgroundColor: theme.backgroundTertiary,
+      backgroundColor: onHero ? theme.heroSurface : theme.backgroundTertiary,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -51,16 +66,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'flex-start',
       justifyContent: 'center',
     },
-    accountName: {
-      fontSize: 17,
-      color: theme.text,
-      textTransform: 'uppercase',
-      letterSpacing: 0.3,
-      ...font(theme, 'bodyBold', '800'),
-    },
+    accountName: onHero
+      ? { fontSize: 24, color: theme.heroText, ...font(theme, 'display', '500') }
+      : {
+          fontSize: 17,
+          color: theme.text,
+          textTransform: 'uppercase',
+          letterSpacing: 0.3,
+          ...font(theme, 'bodyBold', '800'),
+        },
     accountEmail: {
       fontSize: 13,
-      color: theme.textSecondary,
+      color: onHero ? theme.heroTextMuted : theme.textSecondary,
       marginTop: 2,
       ...font(theme, 'bodyMedium', '500'),
     },
@@ -112,3 +129,4 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       ...font(theme, 'bodyStrong', '600'),
     },
   });
+};

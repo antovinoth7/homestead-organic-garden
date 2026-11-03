@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
 import { font, radius, shadow } from '@/theme/styleTokens';
-import { MONO_FONT } from '@/styles/typography';
+import { mono } from '@/styles/typography';
 
 /** The timeline gutter beside every band: its dot sits level with the title. */
 export const BAND_GUTTER_WIDTH = 18;
@@ -99,9 +99,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       ...font(theme, 'title', '700'),
     },
     progressDoneOf: {
-      fontFamily: MONO_FONT,
+      ...mono(theme, '600'),
       fontSize: 11,
-      fontWeight: '600',
       color: theme.heroTextMuted,
     },
     progressTrack: {
@@ -231,9 +230,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       ...font(theme, 'bodyBold', '700'),
     },
     count: {
-      fontFamily: MONO_FONT,
+      ...mono(theme, '700'),
       fontSize: 12,
-      fontWeight: '700',
       color: theme.textSecondary,
     },
     subtitle: {

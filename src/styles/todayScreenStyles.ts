@@ -10,7 +10,7 @@
 
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
-import { eyebrow, font } from '@/theme/styleTokens';
+import { eyebrow, font, radius } from '@/theme/styleTokens';
 
 /** Gutter shared by the plot cards and the season block. */
 export const CARD_GUTTER = 16;
@@ -38,6 +38,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 20,
       paddingBottom: 26,
       backgroundColor: theme.heroGradientStart,
+      borderBottomLeftRadius: radius(theme, 'hero', 0),
+      borderBottomRightRadius: radius(theme, 'hero', 0),
+      overflow: 'hidden',
     },
     heroDate: {
       fontSize: 16,
