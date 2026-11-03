@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
-import { font, radius, shadow } from '@/theme/styleTokens';
+import { font, radius, shadow, typeSize } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -25,7 +25,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     title: {
       flex: 1,
-      fontSize: 20,
+      fontSize: typeSize(theme, 'compactTitle', 20),
       color: theme.text,
       ...font(theme, 'title', '700'),
     },

@@ -1,6 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
 import type { Theme } from '../theme/colors';
-import { border, eyebrow, font, radius } from '@/theme/styleTokens';
+import { border, eyebrow, font, radius, typeSize } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -20,7 +20,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomColor: theme.border,
     },
     headerTitle: {
-      fontSize: 22,
+      fontSize: typeSize(theme, 'title', 22),
       color: theme.text,
       ...font(theme, 'title', '700'),
     },

@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
-import { font, radius, shadow } from '@/theme/styleTokens';
+import { font, radius, shadow, typeSize } from '@/theme/styleTokens';
 
 const cardShadow = (theme: Theme): object =>
   Platform.select({
@@ -33,7 +33,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomColor: theme.border,
     },
     headerTitle: {
-      fontSize: 22,
+      fontSize: typeSize(theme, 'title', 22),
       color: theme.text,
       ...font(theme, 'title', '700'),
     },

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
-import { font, radius, shadow } from '@/theme/styleTokens';
+import { font, radius, shadow, typeSize } from '@/theme/styleTokens';
 import { mono } from '@/styles/typography';
 
 /** The timeline gutter beside every band: its dot sits level with the title. */
@@ -33,7 +33,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // No flex and no auto-fit: in this column a flexed, auto-fitting title
     // shrinks to its squeezed height, and Android ignores `minimumFontScale`.
     headerTitle: {
-      fontSize: 22,
+      fontSize: typeSize(theme, 'title', 22),
       color: theme.text,
       ...font(theme, 'title', '700'),
     },
