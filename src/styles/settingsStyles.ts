@@ -151,6 +151,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     backupProgressTextSuccess: {
       color: theme.primary,
     },
+    paletteList: {
+      gap: 12,
+      marginBottom: 12,
+    },
     themeLabel: {
       fontSize: 16,
       fontWeight: '600',

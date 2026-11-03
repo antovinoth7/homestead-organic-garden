@@ -11,7 +11,9 @@ import {
 import { rebuildCareTasksForAllPlants } from '@/services/tasks';
 import { getAllPlants } from '@/services/plants';
 import type { BackupProgress } from '@/utils/zipHelper';
-import { useTheme, useThemeMode } from '@/theme';
+import { usePalette, useTheme, useThemeMode } from '@/theme';
+import { PALETTE_ORDER } from '@/theme/themes';
+import { ThemePaletteCard } from '@/components/settings/ThemePaletteCard';
 import {
   useFocusEffect,
   useNavigation,
@@ -65,7 +67,8 @@ const formatProgress = (progress: BackupProgress): string => {
 export default function SettingsScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
-  const { mode, setMode } = useThemeMode();
+  const { mode, setMode, resolvedMode } = useThemeMode();
+  const { palette, setPalette } = usePalette();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -347,10 +350,24 @@ export default function SettingsScreen(): React.JSX.Element {
       >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Appearance</Text>
-          <Text style={styles.sectionDescription}>Choose how the app looks on this device.</Text>
+          <Text style={styles.sectionDescription}>
+            Pick a look for the whole app. It applies at once and is kept on this device.
+          </Text>
+
+          <View style={styles.paletteList} accessibilityRole="radiogroup">
+            {PALETTE_ORDER.map((option) => (
+              <ThemePaletteCard
+                key={option}
+                palette={option}
+                mode={resolvedMode}
+                selected={palette === option}
+                onSelect={setPalette}
+              />
+            ))}
+          </View>
 
           <View style={styles.card}>
-            <Text style={styles.themeLabel}>Theme</Text>
+            <Text style={styles.themeLabel}>Mode</Text>
             <View style={styles.themePills} accessibilityRole="radiogroup">
               {THEME_OPTIONS.map((option) => {
                 const isActive = mode === option.mode;
@@ -362,7 +379,7 @@ export default function SettingsScreen(): React.JSX.Element {
                     activeOpacity={0.7}
                     accessibilityRole="radio"
                     accessibilityState={{ selected: isActive }}
-                    accessibilityLabel={`${option.label} theme`}
+                    accessibilityLabel={`${option.label} mode`}
                     accessibilityHint={option.subtitle}
                   >
                     <Ionicons
