@@ -82,7 +82,7 @@ export function AddPlantBasicsSection({ formState }: Props): React.JSX.Element {
               cachePolicy="memory-disk"
             />
             <View style={formStyles.photoHeroEditBadge}>
-              <Ionicons name="camera" size={14} color="#fff" />
+              <Ionicons name="camera" size={14} color={theme.heroText} />
               <Text style={formStyles.photoHeroEditBadgeText}>Change Photo</Text>
             </View>
           </>

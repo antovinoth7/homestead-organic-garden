@@ -312,7 +312,7 @@ export function AnimatedFAB({ onPress, iconName = 'add' }: AnimatedFABProps): Re
       ]}
     >
       <TouchableOpacity onPress={onPress} style={fabStyles.fabTouchable} activeOpacity={0.7}>
-        <Ionicons name={iconName} size={28} color="#fff" />
+        <Ionicons name={iconName} size={28} color={theme.textInverse} />
       </TouchableOpacity>
     </Animated.View>
   );

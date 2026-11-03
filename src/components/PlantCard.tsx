@@ -112,7 +112,7 @@ function PlantCard({
           accessibilityLabel="Edit plant"
           accessibilityRole="button"
         >
-          <Ionicons name="create-outline" size={20} color="#fff" />
+          <Ionicons name="create-outline" size={20} color={theme.textInverse} />
           <Text style={styles.swipeActionText}>Edit</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -124,12 +124,12 @@ function PlantCard({
           accessibilityLabel="Delete plant"
           accessibilityRole="button"
         >
-          <Ionicons name="trash-outline" size={20} color="#fff" />
+          <Ionicons name="trash-outline" size={20} color={theme.textInverse} />
           <Text style={styles.swipeActionText}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
-    [styles, onEdit, onDelete, plant.id]
+    [styles, theme.textInverse, onEdit, onDelete, plant.id]
   );
 
   // Watering status shares the single source of truth used by the Today screen

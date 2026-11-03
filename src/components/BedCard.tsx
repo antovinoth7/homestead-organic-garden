@@ -92,7 +92,7 @@ export const BedCard = React.memo(function BedCard({
           accessibilityLabel="Edit bed"
           accessibilityRole="button"
         >
-          <Ionicons name="create-outline" size={20} color="#fff" />
+          <Ionicons name="create-outline" size={20} color={theme.textInverse} />
           <Text style={styles.swipeActionText}>Edit</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -101,12 +101,12 @@ export const BedCard = React.memo(function BedCard({
           accessibilityLabel="Delete bed"
           accessibilityRole="button"
         >
-          <Ionicons name="trash-outline" size={20} color="#fff" />
+          <Ionicons name="trash-outline" size={20} color={theme.textInverse} />
           <Text style={styles.swipeActionText}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
-    [styles, handleEdit, handleDelete]
+    [styles, theme.textInverse, handleEdit, handleDelete]
   );
 
   const renderLeftActions = useCallback(
@@ -118,12 +118,12 @@ export const BedCard = React.memo(function BedCard({
           accessibilityLabel="View crop rotation"
           accessibilityRole="button"
         >
-          <Ionicons name="sync-outline" size={20} color="#fff" />
+          <Ionicons name="sync-outline" size={20} color={theme.textInverse} />
           <Text style={styles.swipeActionText}>Rotation</Text>
         </TouchableOpacity>
       </View>
     ),
-    [styles, handleRotation]
+    [styles, theme.textInverse, handleRotation]
   );
 
   return (

@@ -56,19 +56,11 @@ export const TASK_TYPE_ORDER: readonly TaskType[] = [
   'cultivating',
 ];
 
-export const TASK_COLORS: Record<TaskType, string> = {
-  water: '#2196F3',
-  fertilise: '#FF9800',
-  prune: '#9C27B0',
-  repot: '#4CAF50',
-  spray: '#00BCD4',
-  mulch: '#795548',
-  harvest: '#8BC34A',
-  harvest_leaves: '#66BB6A',
-  weeding: '#7CB342',
-  transplanting: '#26A69A',
-  cultivating: '#8D6E63',
-};
+/**
+ * One colour per task type, tuned to the active palette (Care Plan task bars,
+ * task detail). Garden keeps the original fixed map; see `Theme.taskColors`.
+ */
+export const taskColor = (theme: Theme, type: TaskType): string => theme.taskColors[type];
 
 /**
  * The same work named as an activity rather than a command. `TASK_LABELS` is

@@ -13,9 +13,9 @@ import type { TaskPriority } from '@/utils/careTaskFilters';
 import { formatFarmDate } from '@/utils/farmDate';
 import {
   EARLY_COMPLETION_BLOCK_REASON,
-  TASK_COLORS,
   TASK_LABELS,
   TASK_PRIORITY_LABELS,
+  taskColor,
   taskPriorityColor,
 } from '@/utils/taskConstants';
 import { preferredTimeLabel, taskBestTime } from '@/utils/taskTimeWindow';
@@ -83,7 +83,7 @@ export function TaskDetailSheet({
   }, [task.id, task.amount]);
 
   const label = TASK_LABELS[task.task_type];
-  const color = TASK_COLORS[task.task_type];
+  const color = taskColor(theme, task.task_type);
   const bestTime = taskBestTime(task);
   const timeLabel = preferredTimeLabel(task.preferred_time);
   const amount = task.amount?.trim() ?? '';

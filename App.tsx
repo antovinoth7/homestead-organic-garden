@@ -28,6 +28,13 @@ import {
 } from 'react-native-safe-area-context';
 import { useOfflineStatus } from './src/hooks/useOfflineStatus';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useFonts } from 'expo-font';
+import { Outfit_500Medium } from '@expo-google-fonts/outfit/500Medium';
+import { Outfit_600SemiBold } from '@expo-google-fonts/outfit/600SemiBold';
+import { Figtree_400Regular } from '@expo-google-fonts/figtree/400Regular';
+import { Figtree_500Medium } from '@expo-google-fonts/figtree/500Medium';
+import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
+import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 
 // Screens & Navigation
 import AuthScreen from './src/screens/AuthScreen';
@@ -195,6 +202,17 @@ const AppRoot = (): React.JSX.Element | null => {
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
   const { resolvedMode } = useThemeMode();
+  // Meadow's faces. A load error falls back to the system face rather than
+  // holding the splash forever.
+  const [fontsLoaded, fontError] = useFonts({
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
+  });
+  const fontsReady = fontsLoaded || fontError !== null;
   const insets = useSafeAreaInsets();
   const { isOnline, pendingCount } = useOfflineStatus();
 
@@ -224,23 +242,13 @@ const AppRoot = (): React.JSX.Element | null => {
       border: theme.border,
       notification: theme.primary,
     },
+    // A palette with its own faces (Meadow) names one family per weight, so
+    // the weight resets to normal; Garden keeps the system face.
     fonts: {
-      regular: {
-        fontFamily: 'System',
-        fontWeight: '400' as const,
-      },
-      medium: {
-        fontFamily: 'System',
-        fontWeight: '500' as const,
-      },
-      bold: {
-        fontFamily: 'System',
-        fontWeight: '700' as const,
-      },
-      heavy: {
-        fontFamily: 'System',
-        fontWeight: '900' as const,
-      },
+      regular: navFont(theme.style.fonts.body, '400'),
+      medium: navFont(theme.style.fonts.bodyMedium, '500'),
+      bold: navFont(theme.style.fonts.bodyBold, '700'),
+      heavy: navFont(theme.style.fonts.bodyBold, '900'),
     },
   };
 
@@ -461,7 +469,7 @@ const AppRoot = (): React.JSX.Element | null => {
     };
   }, [user]);
 
-  if (loading) return null; // Show splash screen
+  if (loading || !fontsReady) return null; // Show splash screen
 
   return (
     <>
@@ -495,6 +503,16 @@ function App(): React.JSX.Element {
     </GestureHandlerRootView>
   );
 }
+
+type NavFontWeight = '400' | '500' | '700' | '900' | 'normal';
+
+const navFont = (
+  family: string | undefined,
+  weight: NavFontWeight
+): { fontFamily: string; fontWeight: NavFontWeight } =>
+  family
+    ? { fontFamily: family, fontWeight: 'normal' }
+    : { fontFamily: 'System', fontWeight: weight };
 
 const rootStyles = StyleSheet.create({
   flex: { flex: 1 },

@@ -6,7 +6,7 @@ import type { TaskTemplate } from '@/types/database.types';
 import type { VisualIconKey } from '@/types/visual.types';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/carePlanTaskCardStyles';
-import { TASK_COLORS, TASK_LABELS } from '@/utils/taskConstants';
+import { TASK_LABELS, taskColor } from '@/utils/taskConstants';
 import type { TaskPriority } from '@/utils/careTaskFilters';
 import { preferredTimeLabel, showPreferredTimeInMeta, taskBestTime } from '@/utils/taskTimeWindow';
 
@@ -70,7 +70,7 @@ function CarePlanTaskCardComponent({
   const amount = task.amount?.trim() ?? '';
   const bestTime = isDone || !showBestTime ? null : taskBestTime(task);
   const timeLabel = showPreferredTimeInMeta(task) ? preferredTimeLabel(task.preferred_time) : null;
-  const barColor = overdue && !isDone ? theme.error : TASK_COLORS[task.task_type];
+  const barColor = overdue && !isDone ? theme.error : taskColor(theme, task.task_type);
   const showBadge = !isDone && (priority === 'critical' || priority === 'high');
 
   const handlePress = useCallback(() => onPress(task), [onPress, task]);

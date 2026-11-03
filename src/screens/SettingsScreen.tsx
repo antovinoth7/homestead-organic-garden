@@ -405,7 +405,7 @@ export default function SettingsScreen(): React.JSX.Element {
               </View>
             ) : (
               <>
-                <Ionicons name="archive-outline" size={20} color="#fff" />
+                <Ionicons name="archive-outline" size={20} color={theme.textInverse} />
                 <Text style={styles.backupButtonText}>Export All Data + Photos (ZIP)</Text>
               </>
             )}
@@ -465,7 +465,7 @@ export default function SettingsScreen(): React.JSX.Element {
               </View>
             ) : (
               <>
-                <Ionicons name="images-outline" size={20} color="#fff" />
+                <Ionicons name="images-outline" size={20} color={theme.textInverse} />
                 <Text style={styles.backupButtonText}>Export Images Only (ZIP)</Text>
               </>
             )}
