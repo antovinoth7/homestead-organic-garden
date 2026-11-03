@@ -713,3 +713,28 @@ wiring one in is a product decision, not a cleanup.
 - **Option A**: New `harvest_logs` collection — clean separation, purpose-built fields (sale_price, buyer_market, destination)
 - **Option B**: Extend existing `task_logs` with harvest fields — less migration, reuses existing service
 - **Recommendation**: Option A. Harvests have fundamentally different data needs (quantity, market, income) that don't fit the task completion model.
+
+## 10. Meadow Theme — Follow-ups
+
+Meadow (2026-11-03) shipped as the default palette, with Garden selectable in
+Settings → Appearance. Every `createStyles(theme)` factory reads radii, borders,
+shadows and faces through `@/theme/styleTokens`, so all screens pick up Meadow's
+colours, shapes and Outfit / Figtree faces. Hand-tuned so far: floating pill tab
+bar, hero headers (Today, More), dialogs, sheet handle, root-screen titles,
+readout numbers, sentence-case section labels and the Appearance picker.
+
+Still to do against the design handoff (`design_handoff_meadow_theme`):
+
+- **Screens the handoff has not drawn yet**: PlantFormScreen (edit),
+  ArchivedPlantsScreen, ManagePlantCatalogScreen, CatalogPlantDetailScreen,
+  OrganicInputList/Detail, InputRecipes, Onboarding, Auth. They have the token
+  pass only; review them against the card / sheet / dialog recipes.
+- **Filter chip "on" state**: the recipe is a solid `primary` fill with
+  `textInverse`; the sheets keep the tinted `primaryLight` state because each
+  sheet colours its chip icons with `theme.primary` in the component.
+- **Photo "soft wash"**: `theme.photoWash` and `shadows.photo` exist but no
+  image applies the bottom fade yet.
+- **Title tracking**: Outfit titles at -0.015em are not applied.
+- **Pill segments / track control and the 46×28 switch** from the recipes.
+- **Clear-bed and already-scheduled alerts** are still system `Alert`s; the
+  handoff suggests the Meadow dialog.

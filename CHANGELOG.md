@@ -15,6 +15,15 @@ version heading with the release date.
 
 ### Added
 
+- **Meadow theme (new default) and a palette picker** — sage and leaf greens
+  with a sky accent, Outfit titles and Figtree body text, round soft-lit
+  cards, a floating pill tab bar and gradient hero headers, in light and dark.
+  Settings → Appearance now offers Meadow or Garden (the original look) above
+  the Light / Dark / Auto control; the choice applies at once and is kept on
+  the device (`@garden_theme_palette`). Style factories read shape, type and
+  shadow values through `src/theme/styleTokens.ts`, so Garden renders exactly
+  as before. Task colours now come from the palette (`taskColor(theme, type)`).
+
 - **Offline write queue with auto-sync** — creating, updating, and deleting
   data now works offline. Failed-due-to-offline writes are saved to an
   AsyncStorage mutation queue (`src/lib/offlineQueue.ts`, `writeOrQueue()` in

@@ -98,8 +98,8 @@ export function MyComponent({ value, onPress }: Props) {
 - Use React Native `StyleSheet` exclusively. No inline style objects in JSX.
 - Every component has a colocated `*Styles.ts` file that exports `createStyles(theme: Theme)`.
 - Spacing values: multiples of 4 or 8 (`4, 8, 12, 16, 20, 24`).
-- Border radius: `8` for cards/inputs, `12` for modals/large surfaces, `999` for pills/badges.
-- Typography: define font sizes from the theme (`theme.typography` or explicit values: `12, 14, 16, 18, 20, 24`).
+- Border radius, border widths, shadows and type faces go through the palette tokens in `@/theme/styleTokens` (`radius`, `border`, `shadow`, `font`, `typeSize`, `eyebrow`, `labelCase`), with the Garden value as the fallback — see `docs/COMPONENTS.md` → Palettes.
+- Typography: explicit font sizes (`12, 14, 16, 18, 20, 24`); faces via `font(theme, role, fallbackWeight)`, never a bare `fontFamily` string.
 - Never use platform-specific style hacks unless required; prefer cross-platform abstractions.
 
 ### Absolute fill — `absoluteFill` yes, `absoluteFillObject` never

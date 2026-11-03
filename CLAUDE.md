@@ -45,6 +45,7 @@ These are enforced by the platform, not by lint. Reintroducing any of them compi
 - **Service pattern**: cache check → `refreshAuthToken()` → `withTimeoutAndRetry()` (reads) / `writeOrQueue()` (writes) → update cache → AsyncStorage fallback.
 - **Offline writes**: user-data mutations go through `writeOrQueue()` (`src/lib/offlineWrite.ts`); creates use client-generated doc ids (`doc(collection(...))` + `setDoc`, never `addDoc`); queued mutations replay via `src/services/offlineSync.ts`.
 - **Cache**: `src/lib/dataCache.ts` (30s TTL). `invalidate()`/`invalidateAll()` after mutations.
+- **Palettes**: `theme = themes[palette][mode]` — Meadow (default) and Garden (original). Shape / type / shadow values in style factories go through `@/theme/styleTokens` helpers with the Garden literal as fallback; text on `primary`/`error`/`info`/`accent` uses `textInverse`, never white. See `docs/COMPONENTS.md` → Palettes.
 - **Tamil language strategy**: English ↔ Tamil toggle in Settings (Phase G) governs *interface* language only. No language mixing in UI copy — a label is English or Tamil, never half of each. A `tamilName` may be shown *alongside* its English name as a secondary identifier (see `ReferenceListCard`, `CatalogBrowseRow`); it must never replace the English name before the Phase G toggle ships.
 
 ## Directory Structure
@@ -91,7 +92,7 @@ npm test           # Jest
 - Files over 800 lines (flagged ⚠️ in the codemap, e.g. `src/utils/plantHelpers.ts`, `src/screens/CatalogPlantDetailScreen.tsx`, `src/styles/plantFormStyles.ts`) — Grep/search inside them; do not read them whole.
 - Scoped checks: `npm run lint:file -- <path>` lints one file; `npm test -- <path-or-pattern>` runs one test file. Prefer these while iterating; run full `npm run lint` + `npm test` before finishing.
 - **Lint baseline: 0 errors, 51 warnings.** The `eslint-plugin-react-hooks` v7 rules that arrived with `eslint-config-expo` 57 were triaged after the upgrade. `refs` (142), `preserve-manual-memoization` (8), `globals` (3), `immutability` (3), `purity` (2) and the lone `exhaustive-deps` warning are all at zero and those five rules are back at **`error`** in `eslint.config.cjs` — reintroducing one fails the build. The remaining 51 are `set-state-in-effect`, still demoted on purpose: they are prop-to-state sync on sheet open and async loaders whose only synchronous write is a no-op `setLoading(true)`. **That is the expected state — do not "fix" these as a side task.** Remaining triage is in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog. Only a *new* warning or any error is a regression.
-- Test baseline: 177 suites / 2271 tests / 5 snapshots passing.
+- Test baseline: 179 suites / 2293 tests / 5 snapshots passing.
 
 ## New Feature Order
 

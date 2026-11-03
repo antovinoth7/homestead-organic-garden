@@ -77,7 +77,19 @@ When adding complex data logic to a screen, extract it into a custom hook in `sr
 ## UI Conventions
 
 - Use `useTheme()` for colors and shared tokens.
-- Use `useThemeMode()` for theme mode changes. The only place the user picks a mode is the **Appearance** section at the top of `SettingsScreen` (More → Settings) — a Light / Dark / Auto segmented pill row. Do not add theme controls to other screens.
+- Use `useThemeMode()` for theme mode changes and `usePalette()` for the palette. The only place the user picks either is the **Appearance** section at the top of `SettingsScreen` (More → Settings) — palette cards (`components/settings/ThemePaletteCard`) above a Light / Dark / Auto pill row. Do not add theme controls to other screens.
+
+### Palettes (Meadow, Garden)
+
+- `theme = themes[palette][mode]` (`src/theme/themes.ts`). **Meadow** is the default; **Garden** is the original look (`lightTheme` / `darkTheme` in `colors.ts`). Persisted under `@garden_theme_palette`.
+- Every palette has the full `Theme` shape: the colour tokens plus `rule`, `taskColors`, `photoWash`, `heroGlow`, `heroSky`, `style` (shape / type / tab bar / hero tokens, `src/theme/themeStyle.ts`) and `shadows` (CSS `boxShadow` strings).
+- Read shape, type and shadow tokens in style factories through `src/theme/styleTokens.ts`, passing the value the factory used before as the fallback: `radius(theme, 'card', 12)`, `border(theme, 'card', 1)`, `shadow(theme, 'card')`, `typeSize(theme, 'title', 22)`, `font(theme, 'bodyStrong', '600')`, `eyebrow(...)`, `labelCase(theme)`. Garden sets no tokens, so it renders exactly as before; Meadow overrides them.
+- `font()` sets a per-weight family (Outfit / Figtree, loaded in `App.tsx`) and resets `fontWeight` to normal — spread it **after** any `fontWeight`, and do not add `fontWeight` back on a style that spreads it.
+- Numbers shown as readings use `mono(theme, weight)` / `monoMeta(theme, weight)` from `styles/typography.ts`, not `MONO_FONT` / `MONO_META` directly.
+- Task colours: `taskColor(theme, type)` (`utils/taskConstants.ts`) — there is no fixed map.
+- Text or icons on `primary`, `error`, `info` or `accent` use `theme.textInverse` (dark ink in Meadow dark), never a literal white. On photo overlays and hero grounds use `heroText`.
+- Hero headers: put `<HeroBackdrop />` first inside a hero with `overflow: 'hidden'`; it draws the gradient + soft circles for a palette with a hero texture and nothing for Garden. `hasHeroTexture(theme)` switches a header's own colours (see `moreStyles`).
+- `FloatingTabBar` draws an inset pill bar when `theme.style.tabBar.floating` (Meadow) and the docked bar otherwise.
 - Prefer existing themed styles over new hardcoded colors.
 - Most screens use safe area insets and refresh on focus; preserve those patterns.
 - Main tabs: `Home`, `Plants`, `Care Plan`, `Journal`, `More`.
