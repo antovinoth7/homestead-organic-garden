@@ -258,6 +258,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.backgroundSecondary,
       borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'chip'),
     },
     sheetChipActive: { backgroundColor: theme.primaryLight, borderColor: theme.primary },
     sheetChipText: {

@@ -1,6 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
 import type { Theme } from '../theme/colors';
-import { border, eyebrow, font, radius, typeSize } from '@/theme/styleTokens';
+import { border, eyebrow, font, radius, shadow, typeSize } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -100,6 +100,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.backgroundSecondary,
       borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'chip'),
     },
     sheetChipActive: {
       backgroundColor: theme.primaryLight,
