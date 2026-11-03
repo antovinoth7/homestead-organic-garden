@@ -1,15 +1,17 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: {
       backgroundColor: theme.card,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       marginBottom: 16,
       overflow: 'hidden',
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     header: {
       flexDirection: 'row',
@@ -59,15 +61,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     headerTitle: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.text,
       flexShrink: 1,
+      ...font(theme, 'title', '600'),
     },
     headerSummary: {
       fontSize: 12,
       lineHeight: 18,
       color: theme.textSecondary,
       marginTop: 4,
+      ...font(theme, 'body'),
     },
     headerRight: {
       flexDirection: 'row',
@@ -82,7 +85,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     chevronButton: {
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'iconButton', 16),
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -96,13 +99,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.success + '20',
       paddingHorizontal: 8,
       paddingVertical: 2,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
       marginLeft: 8,
     },
     autoFilledText: {
       fontSize: 11,
       color: theme.success,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     errorDot: {
       width: 8,
@@ -119,7 +122,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     statusCompleteBadge: {
       width: 22,
       height: 22,
-      borderRadius: 11,
+      borderRadius: radius(theme, 'chip', 11),
       backgroundColor: theme.success,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
@@ -144,20 +147,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     statusRequiredText: {
       fontSize: 11,
       color: theme.error,
-      fontWeight: '700' as const,
+      ...font(theme, 'bodyBold', '700'),
     },
     statusOptionalBadge: {
       marginLeft: 8,
       backgroundColor: theme.background,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 10,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'chip', 10),
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.borderLight,
     },
     statusOptionalText: {
       fontSize: 11,
       color: theme.textTertiary,
-      fontWeight: '600' as const,
+      ...font(theme, 'bodyStrong', '600'),
     },
   });

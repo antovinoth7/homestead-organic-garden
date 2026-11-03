@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * Shared styles for the journal's own bottom sheets — entry actions, resolve
@@ -10,8 +11,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
   StyleSheet.create({
     sheet: {
       backgroundColor: theme.background,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
+      borderTopLeftRadius: radius(theme, 'sheet', 24),
+      borderTopRightRadius: radius(theme, 'sheet', 24),
       paddingHorizontal: 20,
       ...Platform.select({
         ios: {
@@ -29,20 +30,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     title: {
       fontSize: 21,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     subtitle: {
       fontSize: 15,
-      fontWeight: '500',
       color: theme.textSecondary,
       marginTop: -4,
+      ...font(theme, 'bodyMedium', '500'),
     },
     message: {
       fontSize: 15.5,
       lineHeight: 22,
       color: theme.textSecondary,
       paddingBottom: 4,
+      ...font(theme, 'body'),
     },
 
     // ── Full-width action rows ──
@@ -69,8 +71,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     actionText: {
       flex: 1,
       fontSize: 16,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     actionTextOnPrimary: {
       color: theme.textInverse,
@@ -89,8 +91,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     ghostButtonText: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // ── Resolve prompt ──
@@ -105,8 +107,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     questionText: {
       fontSize: 15,
       lineHeight: 21,
-      fontWeight: '500',
       color: theme.text,
+      ...font(theme, 'bodyMedium', '500'),
     },
     answerDot: {
       width: 12,
@@ -125,12 +127,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     quickPick: {
       flex: 1,
       minHeight: 48,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.card,
       borderWidth: 1.5,
       borderColor: theme.borderDark,
+      ...shadow(theme, 'card'),
     },
     quickPickActive: {
       backgroundColor: theme.primaryLight,
@@ -138,15 +141,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     quickPickText: {
       fontSize: 14.5,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     quickPickTextActive: {
       color: theme.primary,
     },
     pickRow: {
       minHeight: 56,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'card', 14),
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
@@ -154,23 +157,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.card,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.borderDark,
+      ...shadow(theme, 'card'),
     },
     pickRowLabel: {
       flex: 1,
       fontSize: 16,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     pickRowValue: {
       fontSize: 16,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     footnote: {
       fontSize: 13,
-      fontWeight: '500',
       color: theme.textTertiary,
       textAlign: 'center',
+      ...font(theme, 'bodyMedium', '500'),
     },
 
     // ── Filter sheet ──
@@ -184,14 +188,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     clearAllButton: {
       minHeight: 36,
       paddingHorizontal: 14,
-      borderRadius: 18,
+      borderRadius: radius(theme, 'button', 18),
       justifyContent: 'center',
       backgroundColor: theme.errorLight,
     },
     clearAllText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.errorDark,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Shrinks inside the sheet's maxHeight so the Show button stays on screen.
     filterScroll: {
@@ -206,11 +210,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 8,
     },
     sectionTitle: {
-      fontSize: 12.5,
-      fontWeight: '700',
-      letterSpacing: 0.9,
       textTransform: 'uppercase',
       color: theme.textTertiary,
+      ...eyebrow(theme, { fontSize: 12.5, letterSpacing: 0.9, fontWeight: '700' }),
     },
     chipWrap: {
       flexDirection: 'row',
@@ -220,7 +222,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     chip: {
       minHeight: 44,
       paddingHorizontal: 14,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'chip', 22),
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
@@ -234,30 +236,31 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     chipText: {
       fontSize: 14.5,
-      fontWeight: '600',
       color: theme.text,
       textTransform: 'capitalize',
+      ...font(theme, 'bodyStrong', '600'),
     },
     chipTextActive: {
       color: theme.primary,
     },
     chipCount: {
       fontSize: 12.5,
-      fontWeight: '500',
       color: theme.textTertiary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     placeRow: {
       minHeight: 56,
       paddingVertical: 8,
       paddingLeft: 16,
       paddingRight: 12,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'card', 14),
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
       backgroundColor: theme.card,
       borderWidth: 1.5,
       borderColor: theme.borderDark,
+      ...shadow(theme, 'card'),
     },
     placeRowActive: {
       backgroundColor: theme.primaryLight,
@@ -269,28 +272,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     placeRowLabel: {
       fontSize: 16,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     placeRowLabelActive: {
       color: theme.primary,
     },
     placeRowHint: {
       fontSize: 13,
-      fontWeight: '500',
       color: theme.textTertiary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     showButton: {
       minHeight: 56,
       marginTop: 6,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'button', 16),
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.primary,
+      ...shadow(theme, 'button'),
     },
     showButtonText: {
       fontSize: 17,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

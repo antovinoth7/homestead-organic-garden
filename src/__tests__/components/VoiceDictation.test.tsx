@@ -27,6 +27,8 @@ jest.mock('@expo/vector-icons/Ionicons', () => {
 
 jest.mock('@/theme', () => ({
   useTheme: () => ({
+    // The full Garden theme carries the shape/type tokens the style factory reads.
+    ...jest.requireActual<typeof import('@/theme/colors')>('@/theme/colors').lightTheme,
     backgroundSecondary: '#fff',
     backgroundTertiary: '#f4eee6',
     border: '#dccfc0',

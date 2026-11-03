@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -16,16 +17,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     backButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'iconButton', 20),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     title: {
       flex: 1,
       fontSize: 20,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     right: {
       flexDirection: 'row',

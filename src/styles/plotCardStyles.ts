@@ -23,6 +23,7 @@
 
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 import { MONO_META } from './typography';
 import { CARD_GUTTER } from './todayScreenStyles';
 
@@ -32,19 +33,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginHorizontal: CARD_GUTTER,
       marginTop: 12,
       backgroundColor: theme.card,
-      borderRadius: 20,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: radius(theme, 'card', 20),
+      borderWidth: border(theme, 'card', StyleSheet.hairlineWidth),
       borderColor: theme.borderLight,
       padding: 15,
+      ...shadow(theme, 'card'),
     },
 
     // ─── Header ──────────────────────────────────────────────────────────────
     eyebrow: {
-      fontSize: 10.5,
-      fontWeight: '600',
-      letterSpacing: 1.1,
       color: theme.textTertiary,
       textTransform: 'uppercase',
+      ...eyebrow(theme, { fontSize: 10.5, letterSpacing: 1.1, fontWeight: '600' }),
     },
     titleRow: {
       flexDirection: 'row',
@@ -60,9 +60,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     name: {
       fontSize: 17,
-      fontWeight: '700',
       letterSpacing: -0.2,
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ─── Forecast pill ───────────────────────────────────────────────────────
@@ -78,12 +78,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 5,
       height: 26,
       paddingHorizontal: 9,
-      borderRadius: 999,
+      borderRadius: radius(theme, 'chip', 999),
       borderWidth: StyleSheet.hairlineWidth,
     },
     weatherPillText: {
       fontSize: 11.5,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
 
     // One pair per `WeatherTone`. Cloud, fog and a missing forecast take
@@ -173,11 +173,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     pill: {
       overflow: 'hidden',
-      borderRadius: 999,
+      borderRadius: radius(theme, 'chip', 999),
       paddingHorizontal: 10,
       paddingVertical: 5,
       fontSize: 11.5,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     pillDue: {
       backgroundColor: theme.successLight,
@@ -198,8 +198,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // chevron on the card, so it means exactly one thing.
     chevron: {
       fontSize: 16,
-      fontWeight: '500',
       color: theme.textTertiary,
+      ...font(theme, 'bodyMedium', '500'),
     },
 
     // ─── Context lines ───────────────────────────────────────────────────────
@@ -223,6 +223,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 13.5,
       lineHeight: 20,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     lineHeadline: {
       flex: 1,
@@ -232,7 +233,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // background, so it drops to the tertiary ramp.
     lineStrong: {
       color: theme.text,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     lineMuted: {
       color: theme.textTertiary,
@@ -246,13 +247,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // work mix have nothing in common but this row.
     rungTag: {
       overflow: 'hidden',
-      borderRadius: 6,
+      borderRadius: radius(theme, 'chip', 6),
       paddingHorizontal: 7,
       paddingVertical: 3,
       fontSize: 9.5,
-      fontWeight: '700',
       letterSpacing: 0.9,
       textTransform: 'uppercase',
+      ...font(theme, 'bodyBold', '700'),
     },
     rungTagOverdue: {
       backgroundColor: theme.errorLight,
@@ -301,8 +302,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // the tap targets, so neither unit takes a link colour.
     tileUnit: {
       fontSize: 12,
-      fontWeight: '500',
       color: theme.textTertiary,
+      ...font(theme, 'bodyMedium', '500'),
     },
 
     // ─── Status rows ─────────────────────────────────────────────────────────
@@ -355,17 +356,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     statusValue: {
       fontSize: 12.5,
-      fontWeight: '500',
       color: theme.textSecondary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     statusLabel: {
       fontSize: 12.5,
-      fontWeight: '500',
       color: theme.textSecondary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     statusMuted: {
-      fontWeight: '400',
       color: theme.textTertiary,
+      ...font(theme, 'body', '400'),
     },
 
     // ─── Empty beds ──────────────────────────────────────────────────────────
@@ -377,13 +378,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     emptyBedsLine: {
       fontSize: 12.5,
       lineHeight: 18,
-      fontWeight: '500',
       color: theme.textTertiary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     emptyBedsLink: {
       fontSize: 12.5,
-      fontWeight: '600',
       color: theme.primary,
       marginTop: 9,
+      ...font(theme, 'bodyStrong', '600'),
     },
   });

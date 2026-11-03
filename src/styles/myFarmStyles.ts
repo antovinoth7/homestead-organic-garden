@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const createStyles = (theme: Theme) =>
@@ -23,15 +24,16 @@ export const createStyles = (theme: Theme) =>
     backButton: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: radius(theme, 'iconButton', 18),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
-    title: { fontSize: 22, fontWeight: '700', color: theme.text, letterSpacing: -0.2 },
+    title: { fontSize: 22, color: theme.text, letterSpacing: -0.2, ...font(theme, 'title', '700') },
     content: { flex: 1 },
     loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-    loadingText: { fontSize: 14, color: theme.textSecondary },
+    loadingText: { fontSize: 14, color: theme.textSecondary, ...font(theme, 'body') },
 
     // ── Section headers ──────────────────────────────────────────────────────
     sectionHeader: {
@@ -45,17 +47,20 @@ export const createStyles = (theme: Theme) =>
     sectionHeaderText: { flex: 1 },
     sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     sectionTitle: {
-      fontSize: 11,
-      fontWeight: '700',
       color: theme.textTertiary,
       textTransform: 'uppercase',
-      letterSpacing: 1,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 1, fontWeight: '700' }),
     },
-    sectionSubtitle: { fontSize: 11.5, color: theme.textTertiary, marginTop: 2 },
+    sectionSubtitle: {
+      fontSize: 11.5,
+      color: theme.textTertiary,
+      marginTop: 2,
+      ...font(theme, 'body'),
+    },
     sectionAddButton: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: radius(theme, 'iconButton', 18),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -64,6 +69,7 @@ export const createStyles = (theme: Theme) =>
       shadowOpacity: 0.18,
       shadowRadius: 4,
       elevation: 3,
+      ...shadow(theme, 'iconButton'),
     },
 
     // ── Plot cards ───────────────────────────────────────────────────────────
@@ -73,15 +79,16 @@ export const createStyles = (theme: Theme) =>
       alignItems: 'flex-start',
       gap: 12,
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'card', 16),
       padding: 13,
       shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
       shadowRadius: 2,
       elevation: 1,
+      ...shadow(theme, 'card'),
     },
     plotAvatar: {
       width: 46,
@@ -93,9 +100,9 @@ export const createStyles = (theme: Theme) =>
     },
     plotAvatarText: {
       fontSize: 14,
-      fontWeight: '700',
       color: theme.primary,
       letterSpacing: 0.5,
+      ...font(theme, 'bodyBold', '700'),
     },
     plotBody: { flex: 1, minWidth: 0 },
     plotTitleRow: {
@@ -104,13 +111,13 @@ export const createStyles = (theme: Theme) =>
       justifyContent: 'space-between',
       gap: 8,
     },
-    plotName: { flex: 1, fontSize: 15.5, fontWeight: '700', color: theme.text },
+    plotName: { flex: 1, fontSize: 15.5, color: theme.text, ...font(theme, 'bodyBold', '700') },
     plotCents: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
-    plotMeta: { fontSize: 12, color: theme.textSecondary, marginTop: 2 },
+    plotMeta: { fontSize: 12, color: theme.textSecondary, marginTop: 2, ...font(theme, 'body') },
     chipStrip: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -123,13 +130,13 @@ export const createStyles = (theme: Theme) =>
       alignItems: 'center',
       gap: 4,
       backgroundColor: theme.background,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.borderLight,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
     },
-    chipText: { fontSize: 11, fontWeight: '600', color: theme.textTertiary },
+    chipText: { fontSize: 11, color: theme.textTertiary, ...font(theme, 'bodyStrong', '600') },
     // Drainage only. Not folded into `chipText`: the pH chip shares that key and
     // 'capitalize' would render "pH 5.0" as "PH 5.0".
     chipTextCapitalized: { textTransform: 'capitalize' },
@@ -140,12 +147,12 @@ export const createStyles = (theme: Theme) =>
       backgroundColor: theme.primaryLight,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
     },
     coordChipText: {
       fontSize: 11,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     npkDotRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
     npkDot: { width: 7, height: 7, borderRadius: 4 },
@@ -153,7 +160,7 @@ export const createStyles = (theme: Theme) =>
     editButton: {
       width: 32,
       height: 32,
-      borderRadius: 11,
+      borderRadius: radius(theme, 'iconButton', 11),
       backgroundColor: theme.backgroundTertiary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -161,7 +168,7 @@ export const createStyles = (theme: Theme) =>
     deleteButton: {
       width: 32,
       height: 32,
-      borderRadius: 11,
+      borderRadius: radius(theme, 'iconButton', 11),
       backgroundColor: theme.errorLight,
       alignItems: 'center',
       justifyContent: 'center',
@@ -199,9 +206,9 @@ export const createStyles = (theme: Theme) =>
     sectionTileName: {
       flex: 1,
       fontSize: 14.5,
-      fontWeight: '700',
       color: theme.text,
       lineHeight: 17,
+      ...font(theme, 'bodyBold', '700'),
     },
     sectionTileActions: { flexDirection: 'row', gap: 7 },
     // Matches `plotMeta` — both render the same "N plants" line.
@@ -209,6 +216,7 @@ export const createStyles = (theme: Theme) =>
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 8,
+      ...font(theme, 'body'),
     },
 
     // ── Empty states ─────────────────────────────────────────────────────────
@@ -219,24 +227,26 @@ export const createStyles = (theme: Theme) =>
       paddingVertical: 24,
       paddingHorizontal: 16,
       backgroundColor: theme.card,
-      borderRadius: 14,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'card', 14),
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
       borderStyle: 'dashed',
+      ...shadow(theme, 'card'),
     },
     emptyStateIcon: { marginBottom: 10 },
     emptyStateTitle: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.text,
       marginBottom: 4,
       textAlign: 'center',
+      ...font(theme, 'title', '700'),
     },
     emptyStateSubtitle: {
       fontSize: 13,
       color: theme.textSecondary,
       textAlign: 'center',
       lineHeight: 18,
+      ...font(theme, 'body'),
     },
 
     // ── Saving overlay ───────────────────────────────────────────────────────
@@ -247,5 +257,5 @@ export const createStyles = (theme: Theme) =>
       justifyContent: 'center',
       gap: 12,
     },
-    savingText: { fontSize: 14, color: theme.textInverse, fontWeight: '600' },
+    savingText: { fontSize: 14, color: theme.textInverse, ...font(theme, 'bodyStrong', '600') },
   });

@@ -8,6 +8,7 @@
 
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { font } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -45,21 +46,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     title: {
       fontSize: 14.5,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Where the item is. Sits directly under the name and is weighted above the
     // reason line: on a multi-plot farm this is what decides whether the grower
     // acts on it during this walk or the next one.
     where: {
       fontSize: 12.5,
-      fontWeight: '500',
       color: theme.textSecondary,
       marginTop: 2,
+      ...font(theme, 'bodyMedium', '500'),
     },
     meta: {
       fontSize: 12.5,
       color: theme.textTertiary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
   });

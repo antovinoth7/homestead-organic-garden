@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { font } from '@/theme/styleTokens';
 import { MONO_META } from '@/styles/typography';
 
 /**
@@ -64,7 +65,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     label: {
       fontSize: 13,
       lineHeight: 16,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
   });

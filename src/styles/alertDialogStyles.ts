@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * Centred dialog card. Deliberately shares the geometry of
@@ -18,7 +19,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     card: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'card', 20),
       padding: 28,
       alignItems: 'center' as const,
       width: '100%',
@@ -28,6 +29,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       shadowOpacity: 0.15,
       shadowRadius: 24,
       elevation: 8,
+      ...shadow(theme, 'card'),
     },
     iconWrap: {
       width: 64,
@@ -39,19 +41,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     title: {
       fontSize: 19,
-      fontWeight: '700' as const,
       color: theme.text,
       textAlign: 'center' as const,
       marginBottom: 8,
+      ...font(theme, 'title', '700'),
     },
     // What the dialog is about (e.g. "Water · Black Pepper 02 · due Mon, Jul 27").
     // Carried on its own line so the message below stays a single plain sentence.
     detail: {
       fontSize: 14,
-      fontWeight: '600' as const,
       color: theme.text,
       textAlign: 'center' as const,
       marginBottom: 6,
+      ...font(theme, 'bodyStrong', '600'),
     },
     message: {
       fontSize: 14,
@@ -59,6 +61,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textAlign: 'center' as const,
       lineHeight: 21,
       marginBottom: 24,
+      ...font(theme, 'body'),
     },
     actions: {
       width: '100%',
@@ -79,7 +82,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     actionText: {
       fontSize: 15,
-      fontWeight: '700' as const,
       flexShrink: 1,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

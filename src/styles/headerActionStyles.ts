@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { font, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * The search / filter controls every browse header shares — `HeaderIconButton`
@@ -17,10 +18,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     iconBtn: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'iconButton', 22),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     /** The control's own panel is open. Applied filters are the badge's job. */
     iconBtnActive: {
@@ -37,7 +39,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       right: -3,
       minWidth: 18,
       height: 18,
-      borderRadius: 9,
+      borderRadius: radius(theme, 'chip', 9),
       borderWidth: 2,
       borderColor: theme.tabBarBackground,
       backgroundColor: theme.accent,
@@ -48,8 +50,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     badgeText: {
       fontSize: 10,
       color: theme.textInverse,
-      fontWeight: '700',
       lineHeight: 13,
+      ...font(theme, 'bodyBold', '700'),
     },
     /**
      * Dot saying the magnifier hides a query that is still in force — the bar
@@ -80,10 +82,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     searchBackBtn: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'iconButton', 22),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     /**
      * The flex is what makes the pill fill the row beside the chevron; without
@@ -108,5 +111,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 16,
       color: theme.inputText,
       padding: 0,
+      ...font(theme, 'body'),
     },
   });

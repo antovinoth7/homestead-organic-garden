@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -20,17 +21,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     headerIconButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'iconButton', 20),
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       backgroundColor: theme.primary,
+      ...shadow(theme, 'iconButton'),
     },
     title: {
       fontSize: 17,
-      fontWeight: '700' as const,
       color: theme.text,
       // Ellipsize a long plant name instead of shoving the unsaved dot off-screen.
       flexShrink: 1,
+      ...font(theme, 'title', '700'),
     },
     headerCenter: {
       flex: 1,
@@ -47,14 +49,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     saveText: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.buttonText,
+      ...font(theme, 'bodyBold', '700'),
     },
     saveButton: {
       backgroundColor: theme.primary,
       paddingHorizontal: 18,
       paddingVertical: 8,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'button', 20),
+      ...shadow(theme, 'button'),
     },
     saveButtonDisabled: {
       backgroundColor: theme.borderDark,
@@ -75,13 +78,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       textAlign: 'right',
       marginTop: 6,
+      ...font(theme, 'body'),
     },
     label: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textSecondary,
       marginBottom: 8,
       marginTop: 4,
+      ...font(theme, 'bodyStrong', '600'),
     },
     locationDefaultsHint: {
       fontSize: 12,
@@ -130,8 +134,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     settingToggleLabel: {
       fontSize: 16,
       color: theme.text,
-      fontWeight: '600',
       flexShrink: 1,
+      ...font(theme, 'bodyStrong', '600'),
     },
     settingToggleLabelActive: {
       color: theme.primary,
@@ -164,15 +168,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: -2,
       marginBottom: 12,
       marginLeft: 4,
+      ...font(theme, 'body'),
     },
     // --- Wizard step section cards (icon-headed groups, DetailCard language) ---
     sectionCard: {
       backgroundColor: theme.card,
-      borderRadius: 12,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'card', 12),
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
       padding: 14,
       marginBottom: 14,
+      ...shadow(theme, 'card'),
     },
     sectionCardTitleRow: {
       flexDirection: 'row',
@@ -190,8 +196,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sectionCardTitle: {
       fontSize: 14,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     sectionCardIconWrapError: {
       backgroundColor: theme.errorLight,
@@ -211,22 +217,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginHorizontal: 4,
     },
     fieldGroupLabel: {
-      fontSize: 13,
-      fontWeight: '700',
       color: theme.textTertiary,
       textTransform: 'uppercase',
-      letterSpacing: 0.8,
       marginBottom: 10,
       marginTop: 2,
+      ...eyebrow(theme, { fontSize: 13, letterSpacing: 0.8, fontWeight: '700' }),
     },
     // --- Date Card ---
     dateCard: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'card', 14),
       marginBottom: 12,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
       overflow: 'hidden',
+      ...shadow(theme, 'card'),
     },
     dateCardTouchable: {
       flexDirection: 'row',
@@ -247,33 +252,34 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     dateCardLabel: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.textTertiary,
       letterSpacing: 0.5,
       marginBottom: 2,
+      ...font(theme, 'bodyStrong', '600'),
     },
     dateCardValue: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     dateCardPlaceholder: {
       fontSize: 15,
       color: theme.inputPlaceholder,
+      ...font(theme, 'body'),
     },
     optionalBadge: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 6,
+      borderRadius: radius(theme, 'chip', 6),
       paddingHorizontal: 6,
       paddingVertical: 1,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.borderLight,
     },
     optionalBadgeText: {
       fontSize: 10,
-      fontWeight: '600' as const,
       color: theme.textTertiary,
       letterSpacing: 0.3,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // --- Frequency Row (Water/Feed/Prune inline cards) ---
     frequencyRow: {
@@ -284,11 +290,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     frequencyCard: {
       flex: 1,
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'card', 14),
       padding: 12,
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
+      ...shadow(theme, 'card'),
     },
     frequencyIconWrap: {
       width: 32,
@@ -300,17 +307,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 6,
     },
     frequencyCardLabel: {
-      fontSize: 11,
-      fontWeight: '700',
       color: theme.textTertiary,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
       marginBottom: 4,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 0.5, fontWeight: '700' }),
     },
     frequencyInputWrap: {
       backgroundColor: theme.inputBackground,
-      borderRadius: 8,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'input', 8),
+      borderWidth: border(theme, 'input', 1),
       borderColor: theme.inputBorder,
       width: '100%',
       alignItems: 'center',
@@ -318,17 +323,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     frequencyInput: {
       fontSize: 22,
-      fontWeight: '700',
       color: theme.text,
       textAlign: 'center',
       paddingVertical: 6,
       paddingHorizontal: 8,
       minWidth: 50,
+      ...font(theme, 'bodyBold', '700'),
     },
     frequencyUnit: {
       fontSize: 11,
       color: theme.textTertiary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     // --- Stat Cards (Coconut metrics) ---
     statCardsRow: {
@@ -339,11 +344,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     statCard: {
       flex: 1,
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'card', 14),
       padding: 10,
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
+      ...shadow(theme, 'card'),
     },
     statCardIconWrap: {
       width: 28,
@@ -354,49 +360,49 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 4,
     },
     statCardLabel: {
-      fontSize: 10,
-      fontWeight: '700',
       color: theme.textTertiary,
       textTransform: 'uppercase',
-      letterSpacing: 0.4,
       marginBottom: 4,
+      ...eyebrow(theme, { fontSize: 10, letterSpacing: 0.4, fontWeight: '700' }),
     },
     statCardInputWrap: {
       backgroundColor: theme.inputBackground,
-      borderRadius: 8,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'input', 8),
+      borderWidth: border(theme, 'input', 1),
       borderColor: theme.inputBorder,
       width: '100%',
       alignItems: 'center',
     },
     statCardInput: {
       fontSize: 20,
-      fontWeight: '700',
       color: theme.text,
       textAlign: 'center',
       paddingVertical: 4,
       paddingHorizontal: 4,
       minWidth: 40,
+      ...font(theme, 'bodyBold', '700'),
     },
     // --- Notes Card ---
     notesCardInput: {
       backgroundColor: theme.inputBackground,
-      borderRadius: 10,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'input', 10),
+      borderWidth: border(theme, 'input', 1),
       borderColor: theme.inputBorder,
       padding: 12,
       fontSize: 15,
       color: theme.inputText,
       minHeight: 80,
       textAlignVertical: 'top',
+      ...font(theme, 'body'),
     },
     infoCard: {
       backgroundColor: theme.backgroundSecondary,
       padding: 16,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       marginBottom: 12,
       borderWidth: 1,
       borderColor: theme.borderDark,
+      ...shadow(theme, 'card'),
     },
     infoCardHeader: {
       flexDirection: 'row',
@@ -406,20 +412,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     infoCardTitle: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.text,
       flex: 1,
+      ...font(theme, 'title', '600'),
     },
     infoCardText: {
       fontSize: 16,
       color: theme.primary,
-      fontWeight: '600',
       marginBottom: 4,
+      ...font(theme, 'bodyStrong', '600'),
     },
     infoCardSubtext: {
       fontSize: 13,
       color: theme.textSecondary,
       marginBottom: 8,
+      ...font(theme, 'body'),
     },
     varietySuggestions: {
       marginBottom: 12,
@@ -433,7 +440,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     discardCard: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'card', 20),
       padding: 28,
       alignItems: 'center',
       width: '100%',
@@ -443,6 +450,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       shadowOpacity: 0.15,
       shadowRadius: 24,
       elevation: 12,
+      ...shadow(theme, 'card'),
     },
     discardIconWrap: {
       width: 64,
@@ -455,9 +463,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     discardTitle: {
       fontSize: 19,
-      fontWeight: '700',
       color: theme.text,
       marginBottom: 8,
+      ...font(theme, 'title', '700'),
     },
     discardMessage: {
       fontSize: 14,
@@ -465,6 +473,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textAlign: 'center',
       lineHeight: 20,
       marginBottom: 24,
+      ...font(theme, 'body'),
     },
     discardActions: {
       flexDirection: 'row',
@@ -478,15 +487,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       gap: 6,
       paddingVertical: 13,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       borderWidth: 1.5,
       borderColor: theme.primary,
       backgroundColor: theme.primaryLight,
     },
     discardKeepText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     discardButton: {
       flex: 1,
@@ -495,13 +504,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       gap: 6,
       paddingVertical: 13,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       backgroundColor: theme.error,
+      ...shadow(theme, 'button'),
     },
     discardButtonText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textInverse,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // --- #2 Photo Hero ---
@@ -527,15 +537,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     photoHeroPlaceholderText: {
       fontSize: 15,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     photoHeroEditBadge: {
       position: 'absolute' as const,
       bottom: 10,
       right: 10,
       backgroundColor: theme.overlay,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       paddingHorizontal: 12,
       paddingVertical: 5,
       flexDirection: 'row' as const,
@@ -544,8 +554,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     photoHeroEditBadgeText: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // --- #9 Auto-Name Preview Inline ---
@@ -553,11 +563,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row' as const,
       alignItems: 'center',
       backgroundColor: theme.inputBackground,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'input', 12),
       paddingHorizontal: 16,
       minHeight: 52,
       marginBottom: 12,
-      borderWidth: 1,
+      borderWidth: border(theme, 'input', 1),
       borderColor: theme.inputBorder,
       gap: 8,
     },
@@ -567,15 +577,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       left: 12,
       paddingHorizontal: 4,
       fontSize: 12,
-      fontWeight: '500' as const,
       color: theme.textSecondary,
       backgroundColor: theme.backgroundSecondary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     namePreviewValue: {
       fontSize: 14,
       color: theme.text,
-      fontWeight: '600' as const,
       flex: 1,
+      ...font(theme, 'bodyStrong', '600'),
     },
     namePreviewValuePending: {
       fontSize: 13,
@@ -587,21 +597,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row' as const,
       alignItems: 'center',
       backgroundColor: theme.inputBackground,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'input', 12),
       paddingLeft: 16,
       paddingRight: 10,
       minHeight: 52,
       marginBottom: 12,
-      borderWidth: 1,
+      borderWidth: border(theme, 'input', 1),
       borderColor: theme.inputBorder,
     },
     nameCustomInput: {
       flex: 1,
       fontSize: 14,
-      fontWeight: '600' as const,
       color: theme.inputText,
       paddingVertical: 14,
       paddingRight: 8,
+      ...font(theme, 'bodyStrong', '600'),
     },
     nameCustomActions: {
       flexDirection: 'row' as const,
@@ -628,13 +638,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     namePreviewActionText: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     namePreviewActionTextMuted: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.textTertiary,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // Compact single-row segmented control for the growing-space picker.
@@ -665,8 +675,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     spaceSegmentLabel: {
       fontSize: 13,
-      fontWeight: '600' as const,
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     spaceSegmentLabelActive: {
       color: theme.textInverse,
@@ -677,9 +687,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // (PlantKeyInfoSection) scaled for this form's shorter 180px photo.
     heroCaptionName: {
       fontSize: 24,
-      fontWeight: '700' as const,
       color: theme.text,
       marginBottom: 2,
+      ...font(theme, 'bodyBold', '700'),
     },
     heroCaptionCategory: {
       fontSize: 14,
@@ -702,15 +712,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center' as const,
       gap: 6,
       paddingVertical: 10,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1.5,
+      borderWidth: border(theme, 'card', 1.5),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     healthGridItemText: {
       fontSize: 13,
-      fontWeight: '600' as const,
       color: theme.textTertiary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Tone variants so a selected health chip reads at a glance without parsing
     // the label. Keyed off HEALTH_STATUS_TONE in utils/plantLabels.
@@ -732,19 +743,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     healthGridItemTextSuccess: {
       color: theme.successDark,
-      fontWeight: '700' as const,
+      ...font(theme, 'bodyBold', '700'),
     },
     healthGridItemTextWarning: {
       color: theme.warningDark,
-      fontWeight: '700' as const,
+      ...font(theme, 'bodyBold', '700'),
     },
     healthGridItemTextInfo: {
       color: theme.infoDark,
-      fontWeight: '700' as const,
+      ...font(theme, 'bodyBold', '700'),
     },
     healthGridItemTextError: {
       color: theme.errorDark,
-      fontWeight: '700' as const,
+      ...font(theme, 'bodyBold', '700'),
     },
     statusDot: {
       width: 8,
@@ -794,8 +805,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     stepperLabel: {
       fontSize: 14,
-      fontWeight: '700' as const,
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     stepperRow: {
       flexDirection: 'row' as const,
@@ -806,7 +817,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     stepperButton: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'iconButton', 22),
       backgroundColor: theme.background,
       borderWidth: 2,
       borderColor: theme.primary,
@@ -819,23 +830,23 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     stepperValueInput: {
       fontSize: 28,
-      fontWeight: '800' as const,
       color: theme.text,
       textAlign: 'center' as const,
       paddingVertical: 2,
       paddingHorizontal: 8,
       minWidth: 60,
+      ...font(theme, 'bodyBold', '800'),
     },
     stepperUnit: {
       fontSize: 12,
-      fontWeight: '600' as const,
       color: theme.textTertiary,
       marginTop: 2,
+      ...font(theme, 'bodyStrong', '600'),
     },
     stepperHint: {
       fontSize: 12,
-      fontWeight: '700' as const,
       textAlign: 'center' as const,
       marginTop: 8,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

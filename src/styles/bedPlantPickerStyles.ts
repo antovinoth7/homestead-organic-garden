@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -15,64 +16,72 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
-    title: { fontSize: 18, fontWeight: '700', color: theme.text },
+    title: { fontSize: 18, color: theme.text, ...font(theme, 'title', '700') },
     list: { padding: 12, paddingBottom: 100 },
     plantRow: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'card', 10),
       padding: 12,
       marginBottom: 8,
-      borderWidth: 1.5,
+      borderWidth: border(theme, 'card', 1.5),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     plantRowSelected: { borderColor: theme.primary, backgroundColor: theme.primaryLight },
     plantRowInfo: {},
-    plantName: { fontSize: 15, fontWeight: '600', color: theme.text },
-    plantVariety: { fontSize: 12, color: theme.textSecondary, marginTop: 1 },
+    plantName: { fontSize: 15, color: theme.text, ...font(theme, 'bodyStrong', '600') },
+    plantVariety: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 1,
+      ...font(theme, 'body'),
+    },
     assignedBadge: {
       fontSize: 11,
       color: theme.warning,
       marginTop: 3,
+      ...font(theme, 'body'),
     },
     layerPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
     layerChip: {
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'chip', 14),
       backgroundColor: theme.border,
     },
     layerChipActive: { backgroundColor: theme.primaryLight },
-    layerChipText: { fontSize: 11, color: theme.text },
-    layerChipTextActive: { color: theme.primary, fontWeight: '600' },
+    layerChipText: { fontSize: 11, color: theme.text, ...font(theme, 'body') },
+    layerChipTextActive: { color: theme.primary, ...font(theme, 'bodyStrong', '600') },
     confirmButton: {
       position: 'absolute',
       bottom: 24,
       left: 16,
       right: 16,
       backgroundColor: theme.primary,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       padding: 16,
       alignItems: 'center',
+      ...shadow(theme, 'button'),
     },
     confirmButtonDisabled: { backgroundColor: theme.textTertiary },
-    confirmText: { color: theme.textInverse, fontWeight: '700', fontSize: 16 },
+    confirmText: { color: theme.textInverse, fontSize: 16, ...font(theme, 'bodyBold', '700') },
     loader: { flex: 1 },
 
     // ── Bottom sheet ─────────────────────────────────────────────────────────
     sheet: {
       backgroundColor: theme.background,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
       // maxHeight and paddingBottom are computed at runtime from the safe-area insets.
     },
     sheetTitle: {
       fontSize: 16,
-      fontWeight: '700' as const,
       color: theme.text,
       textAlign: 'center' as const,
       paddingVertical: 10,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
+      ...font(theme, 'title', '700'),
     },
 
     // ── Tab bar ──────────────────────────────────────────────────────────────
@@ -92,8 +101,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tabText: {
       fontSize: 13,
-      fontWeight: '600' as const,
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     tabTextActive: {
       color: theme.primary,
@@ -102,12 +111,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // ── Guild tab rows ────────────────────────────────────────────────────────
     sectionLabel: {
       fontSize: 10,
-      fontWeight: '700' as const,
       color: theme.textTertiary,
       letterSpacing: 0.8,
       paddingHorizontal: 14,
       paddingTop: 12,
       paddingBottom: 4,
+      ...font(theme, 'bodyBold', '700'),
     },
     guildPlantRow: {
       flexDirection: 'row' as const,
@@ -119,7 +128,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 10,
     },
     guildMeta: { flex: 1 },
-    guildName: { fontSize: 14, fontWeight: '600' as const, color: theme.text },
+    guildName: { fontSize: 14, color: theme.text, ...font(theme, 'bodyStrong', '600') },
     guildBadgeRow: {
       flexDirection: 'row' as const,
       gap: 6,
@@ -129,46 +138,58 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     guildLayerBadge: {
       paddingHorizontal: 7,
       paddingVertical: 2,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       backgroundColor: theme.backgroundTertiary,
     },
-    guildLayerBadgeText: { fontSize: 10, color: theme.textSecondary, fontWeight: '600' as const },
+    guildLayerBadgeText: {
+      fontSize: 10,
+      color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
+    },
     guildAddBtn: {
       paddingHorizontal: 14,
       paddingVertical: 6,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'button', 14),
       backgroundColor: theme.primary,
+      ...shadow(theme, 'button'),
     },
     guildAddBtnText: {
       fontSize: 12,
-      fontWeight: '700' as const,
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ── My Plants tab ─────────────────────────────────────────────────────────
     myPlantRow: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'card', 10),
       padding: 12,
       marginHorizontal: 12,
       marginBottom: 8,
-      borderWidth: 1.5,
+      borderWidth: border(theme, 'card', 1.5),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     myPlantRowSelected: { borderColor: theme.primary, backgroundColor: theme.primaryLight },
-    myPlantName: { fontSize: 15, fontWeight: '600' as const, color: theme.text },
-    myPlantVariety: { fontSize: 12, color: theme.textSecondary, marginTop: 1 },
+    myPlantName: { fontSize: 15, color: theme.text, ...font(theme, 'bodyStrong', '600') },
+    myPlantVariety: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 1,
+      ...font(theme, 'body'),
+    },
     addSelectedBtn: {
       marginHorizontal: 14,
       marginTop: 10,
       marginBottom: 4,
       backgroundColor: theme.primary,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       padding: 14,
       alignItems: 'center' as const,
+      ...shadow(theme, 'button'),
     },
     addSelectedBtnDisabled: { backgroundColor: theme.textTertiary },
-    addSelectedText: { color: theme.textInverse, fontWeight: '700' as const, fontSize: 15 },
+    addSelectedText: { color: theme.textInverse, fontSize: 15, ...font(theme, 'bodyBold', '700') },
 
     // ── Info note ─────────────────────────────────────────────────────────────
     infoNote: {
@@ -187,6 +208,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       color: theme.textSecondary,
       lineHeight: 17,
+      ...font(theme, 'body'),
     },
 
     // ── Empty state ───────────────────────────────────────────────────────────
@@ -199,6 +221,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       marginTop: 8,
       textAlign: 'center' as const,
+      ...font(theme, 'body'),
     },
     myPlantsListContent: { padding: 12, paddingBottom: 4 },
 
@@ -221,17 +244,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.text,
       paddingVertical: 9,
+      ...font(theme, 'body'),
     },
 
     // ── Spacing info tags ─────────────────────────────────────────────────────
     spacingTag: {
       fontSize: 10,
-      fontWeight: '600' as const,
       color: theme.textTertiary,
       backgroundColor: theme.backgroundTertiary,
-      borderRadius: 4,
+      borderRadius: radius(theme, 'chip', 4),
       paddingHorizontal: 5,
       paddingVertical: 2,
+      ...font(theme, 'bodyStrong', '600'),
     },
     spacingTagRow: {
       flexDirection: 'row' as const,

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { radius, shadow } from '@/theme/styleTokens';
 
 /**
  * Cached per theme: ReferenceThumb renders inside list rows, so without this every
@@ -28,13 +29,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     chipImage: {
       width: 20,
       height: 20,
-      borderRadius: 4,
+      borderRadius: radius(theme, 'chip', 4),
       backgroundColor: theme.backgroundSecondary,
     },
     chipFallback: {
       width: 20,
       height: 20,
-      borderRadius: 4,
+      borderRadius: radius(theme, 'chip', 4),
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -47,10 +48,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     heroFallback: {
       width: 44,
       height: 44,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.backgroundSecondary,
+      ...shadow(theme, 'card'),
     },
     // Top corners only: the photo sits flush against the top edge of its tile
     // card, which owns the bottom two. Sized by ratio rather than a fixed
@@ -64,15 +66,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tileImage: {
       width: '100%',
       aspectRatio: 1,
-      borderTopLeftRadius: 14,
-      borderTopRightRadius: 14,
+      borderTopLeftRadius: radius(theme, 'sheet', 14),
+      borderTopRightRadius: radius(theme, 'sheet', 14),
       backgroundColor: theme.backgroundTertiary,
     },
     tileFallback: {
       width: '100%',
       aspectRatio: 1,
-      borderTopLeftRadius: 14,
-      borderTopRightRadius: 14,
+      borderTopLeftRadius: radius(theme, 'sheet', 14),
+      borderTopRightRadius: radius(theme, 'sheet', 14),
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.backgroundTertiary,

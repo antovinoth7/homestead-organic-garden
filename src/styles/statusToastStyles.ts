@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { font } from '@/theme/styleTokens';
 
 /**
  * The toast sits on the hero green — dark in both themes — so its text and
@@ -33,8 +34,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     text: {
       flex: 1,
       fontSize: 15,
-      fontWeight: '600',
       lineHeight: 20,
       color: theme.heroText,
+      ...font(theme, 'bodyStrong', '600'),
     },
   });

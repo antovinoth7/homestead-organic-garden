@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -38,9 +39,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       bottom: -2,
       width: 24,
       height: 24,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'chip', 12),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
       alignItems: 'center',
       justifyContent: 'center',
@@ -52,16 +53,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     accountName: {
       fontSize: 17,
-      fontWeight: '800',
       color: theme.text,
       textTransform: 'uppercase',
       letterSpacing: 0.3,
+      ...font(theme, 'bodyBold', '800'),
     },
     accountEmail: {
       fontSize: 13,
-      fontWeight: '500',
       color: theme.textSecondary,
       marginTop: 2,
+      ...font(theme, 'bodyMedium', '500'),
     },
     signOutPill: {
       flexDirection: 'row',
@@ -71,15 +72,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.error,
       paddingVertical: 8,
       paddingHorizontal: 16,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'chip', 22),
     },
     signOutPillText: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.textInverse,
       marginLeft: 6,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
+      ...font(theme, 'bodyBold', '700'),
     },
     content: {
       padding: 16,
@@ -89,10 +90,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       padding: 16,
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'card', 12),
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       marginBottom: 12,
+      ...shadow(theme, 'card'),
     },
     menuIcon: {
       width: 32,
@@ -106,7 +108,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     menuText: {
       flex: 1,
       fontSize: 16,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
   });

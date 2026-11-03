@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * The variety editor wears the same chrome as the other catalog edit sheets
@@ -12,8 +13,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
   StyleSheet.create({
     sheet: {
       backgroundColor: theme.card,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
       paddingHorizontal: 16,
       // Keeps the handle and Done in frame however far the keyboard padding
       // pushes the sheet up; the fields between them scroll.
@@ -32,13 +33,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetTitle: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textTertiary,
       textAlign: 'center',
       textTransform: 'uppercase',
       letterSpacing: 0.8,
       paddingHorizontal: 16,
       paddingVertical: 8,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Shrinks (rather than pushing Done off) when the sheet is clamped to
     // maxHeight or the keyboard reduces the available space.
@@ -53,6 +54,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12.5,
       color: theme.textSecondary,
       marginBottom: 8,
+      ...font(theme, 'body'),
     },
     seasonChipRow: {
       flexDirection: 'row',
@@ -63,9 +65,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     seasonChip: {
       paddingHorizontal: 11,
       paddingVertical: 6,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       backgroundColor: theme.background,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     seasonChipActive: {
@@ -75,10 +77,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     seasonChipText: {
       fontSize: 13,
       color: theme.text,
+      ...font(theme, 'body'),
     },
     seasonChipTextActive: {
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Notes: label left, the compact mic | language pill right — the same row
     // the catalog's Description and pruning-tip blocks use.
@@ -93,6 +96,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12.5,
       color: theme.textSecondary,
       flexShrink: 1,
+      ...font(theme, 'body'),
     },
     notesInput: {
       backgroundColor: theme.background,
@@ -109,15 +113,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     doneButton: {
       backgroundColor: theme.primary,
-      borderRadius: 24,
+      borderRadius: radius(theme, 'button', 24),
       paddingVertical: 13,
       alignItems: 'center',
       marginTop: 4,
       marginBottom: 8,
+      ...shadow(theme, 'button'),
     },
     doneButtonText: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

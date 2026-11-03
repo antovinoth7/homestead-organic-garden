@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -34,8 +35,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     label: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.text,
       textAlign: 'center',
+      ...font(theme, 'bodyStrong', '600'),
     },
   });

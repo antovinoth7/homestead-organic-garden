@@ -1,23 +1,24 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { eyebrow, font, radius } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     sheet: {
       backgroundColor: theme.background,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
       // height is computed at runtime (85% of the window, capped below the top inset).
       paddingBottom: 24,
     },
     sheetTitle: {
       fontSize: 16,
-      fontWeight: '700' as const,
       color: theme.text,
       textAlign: 'center' as const,
       paddingVertical: 10,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
+      ...font(theme, 'title', '700'),
     },
     searchBarContainer: {
       flexDirection: 'row' as const,
@@ -37,19 +38,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.text,
       paddingVertical: 9,
+      ...font(theme, 'body'),
     },
     listContent: {
       paddingBottom: 16,
     },
     categoryHeader: {
-      fontSize: 10,
-      fontWeight: '700' as const,
       color: theme.textTertiary,
-      letterSpacing: 0.8,
       paddingHorizontal: 14,
       paddingTop: 14,
       paddingBottom: 4,
       textTransform: 'uppercase' as const,
+      ...eyebrow(theme, { fontSize: 10, letterSpacing: 0.8, fontWeight: '700' }),
     },
     row: {
       flexDirection: 'row' as const,
@@ -66,8 +66,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     rowMeta: { flex: 1 },
     rowName: {
       fontSize: 15,
-      fontWeight: '600' as const,
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     badgeRow: {
       flexDirection: 'row' as const,
@@ -78,24 +78,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     categoryBadge: {
       paddingHorizontal: 7,
       paddingVertical: 2,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       backgroundColor: theme.backgroundTertiary,
     },
     categoryBadgeText: {
       fontSize: 10,
       color: theme.textSecondary,
-      fontWeight: '600' as const,
+      ...font(theme, 'bodyStrong', '600'),
     },
     seasonBadge: {
       paddingHorizontal: 7,
       paddingVertical: 2,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       backgroundColor: theme.primaryLight,
     },
     seasonBadgeText: {
       fontSize: 10,
       color: theme.primary,
-      fontWeight: '600' as const,
+      ...font(theme, 'bodyStrong', '600'),
     },
     emptyState: {
       alignItems: 'center' as const,
@@ -107,5 +107,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 8,
       textAlign: 'center' as const,
       paddingHorizontal: 24,
+      ...font(theme, 'body'),
     },
   });

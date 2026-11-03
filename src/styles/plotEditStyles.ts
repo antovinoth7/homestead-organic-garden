@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * Styles for the full-page plot editor (`PlotEditModal`) and the soil chip
@@ -28,10 +29,11 @@ export const createStyles = (theme: Theme) =>
     closeButton: {
       width: 34,
       height: 34,
-      borderRadius: 17,
+      borderRadius: radius(theme, 'iconButton', 17),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     headerTitleWrap: {
       flex: 1,
@@ -39,20 +41,21 @@ export const createStyles = (theme: Theme) =>
     },
     headerTitle: {
       fontSize: 17,
-      fontWeight: '700',
       color: theme.text,
       textAlign: 'center',
+      ...font(theme, 'title', '700'),
     },
     saveButton: {
       backgroundColor: theme.primary,
       paddingHorizontal: 18,
       paddingVertical: 9,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'button', 20),
       shadowColor: theme.primary,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.28,
       shadowRadius: 10,
       elevation: 3,
+      ...shadow(theme, 'button'),
     },
     saveButtonDisabled: {
       backgroundColor: theme.borderDark,
@@ -61,8 +64,8 @@ export const createStyles = (theme: Theme) =>
     },
     saveButtonText: {
       fontSize: 14,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
     saveButtonTextDisabled: {
       color: theme.textTertiary,
@@ -76,9 +79,9 @@ export const createStyles = (theme: Theme) =>
     // ── Card shell ───────────────────────────────────────────────────────────
     card: {
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'card', 16),
       paddingHorizontal: 14,
       paddingVertical: 13,
       shadowColor: theme.shadow,
@@ -86,6 +89,7 @@ export const createStyles = (theme: Theme) =>
       shadowOpacity: 0.05,
       shadowRadius: 2,
       elevation: 1,
+      ...shadow(theme, 'card'),
     },
     cardDivider: {
       height: 1,
@@ -105,21 +109,21 @@ export const createStyles = (theme: Theme) =>
     fieldLabel: {
       width: 96,
       fontSize: 13,
-      fontWeight: '600',
       color: theme.textTertiary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     fieldInput: {
       flex: 1,
       textAlign: 'right',
       fontSize: 15.5,
-      fontWeight: '600',
       color: theme.text,
       padding: 0,
+      ...font(theme, 'bodyStrong', '600'),
     },
     /** Short name — a 5-char uppercase code, spaced out to read as one. */
     fieldInputCode: {
-      fontWeight: '700',
       letterSpacing: 1,
+      ...font(theme, 'bodyBold', '700'),
     },
     shortNameHint: {
       fontSize: 12,
@@ -127,6 +131,7 @@ export const createStyles = (theme: Theme) =>
       textAlign: 'right',
       paddingBottom: 11,
       marginTop: -4,
+      ...font(theme, 'body'),
     },
 
     // ── Size stepper ─────────────────────────────────────────────────────────
@@ -138,6 +143,7 @@ export const createStyles = (theme: Theme) =>
       fontSize: 11.5,
       color: theme.textTertiary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     stepperControls: {
       flexDirection: 'row',
@@ -147,16 +153,16 @@ export const createStyles = (theme: Theme) =>
     stepperButton: {
       width: 38,
       height: 38,
-      borderRadius: 19,
+      borderRadius: radius(theme, 'iconButton', 19),
       backgroundColor: theme.primaryLight,
       alignItems: 'center',
       justifyContent: 'center',
     },
     stepperButtonText: {
       fontSize: 20,
-      fontWeight: '600',
       color: theme.primary,
       lineHeight: 24,
+      ...font(theme, 'bodyStrong', '600'),
     },
     stepperValueWrap: {
       minWidth: 60,
@@ -166,12 +172,13 @@ export const createStyles = (theme: Theme) =>
     },
     stepperValue: {
       fontSize: 19,
-      fontWeight: '700',
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     stepperUnit: {
       fontSize: 12,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
 
     // ── Coordinates ──────────────────────────────────────────────────────────
@@ -193,14 +200,15 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
       minWidth: 0,
       backgroundColor: theme.background,
-      borderWidth: 1,
+      borderWidth: border(theme, 'input', 1),
       borderColor: theme.inputBorder,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'input', 10),
       paddingHorizontal: 11,
       paddingVertical: 10,
       fontSize: 14,
       color: theme.inputText,
       textAlign: 'center',
+      ...font(theme, 'body'),
     },
     coordInputError: {
       borderColor: theme.error,
@@ -210,16 +218,15 @@ export const createStyles = (theme: Theme) =>
       color: theme.textTertiary,
       lineHeight: 17,
       marginTop: 9,
+      ...font(theme, 'body'),
     },
 
     // ── Soil chip groups ─────────────────────────────────────────────────────
     groupLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.9,
       textTransform: 'uppercase',
       color: theme.textTertiary,
       marginBottom: 9,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 0.9, fontWeight: '700' }),
     },
     groupLabelSpaced: {
       marginTop: 15,
@@ -232,8 +239,8 @@ export const createStyles = (theme: Theme) =>
     chip: {
       paddingHorizontal: 13,
       paddingVertical: 9,
-      borderRadius: 19,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'chip', 19),
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.borderLight,
       backgroundColor: theme.background,
     },
@@ -243,8 +250,8 @@ export const createStyles = (theme: Theme) =>
     },
     chipText: {
       fontSize: 13.5,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     chipTextSelected: {
       color: theme.primary,
@@ -270,8 +277,8 @@ export const createStyles = (theme: Theme) =>
     },
     segmentText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     segmentTextSelected: {
       color: theme.primary,
@@ -288,8 +295,8 @@ export const createStyles = (theme: Theme) =>
     npkLetter: {
       width: 12,
       fontSize: 14,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     npkSegments: {
       flex: 1,
@@ -315,22 +322,21 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
     },
     dateLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.55,
       textTransform: 'uppercase',
       color: theme.textTertiary,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 0.55, fontWeight: '700' }),
     },
     dateValue: {
       fontSize: 14.5,
-      fontWeight: '600',
       color: theme.text,
       marginTop: 2,
+      ...font(theme, 'bodyStrong', '600'),
     },
     datePlaceholder: {
       fontSize: 14,
       color: theme.inputPlaceholder,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     staleBanner: {
       flexDirection: 'row',
@@ -349,6 +355,7 @@ export const createStyles = (theme: Theme) =>
       fontSize: 12.5,
       lineHeight: 18,
       color: theme.warningDark,
+      ...font(theme, 'body'),
     },
 
     // ── Notes ────────────────────────────────────────────────────────────────
@@ -364,17 +371,15 @@ export const createStyles = (theme: Theme) =>
     },
     notesLabel: {
       flex: 1,
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.9,
       textTransform: 'uppercase',
       color: theme.textTertiary,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 0.9, fontWeight: '700' }),
     },
     notesInput: {
       backgroundColor: theme.background,
-      borderWidth: 1,
+      borderWidth: border(theme, 'input', 1),
       borderColor: theme.inputBorder,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'input', 12),
       padding: 12,
       marginTop: 9,
       fontSize: 14,
@@ -382,12 +387,14 @@ export const createStyles = (theme: Theme) =>
       color: theme.inputText,
       minHeight: 76,
       textAlignVertical: 'top',
+      ...font(theme, 'body'),
     },
     notesCounter: {
       fontSize: 11.5,
       color: theme.textTertiary,
       textAlign: 'right',
       marginTop: 6,
+      ...font(theme, 'body'),
     },
 
     // ── Delete ───────────────────────────────────────────────────────────────
@@ -398,8 +405,9 @@ export const createStyles = (theme: Theme) =>
       backgroundColor: theme.card,
       borderWidth: 1,
       borderColor: theme.errorBorder,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'card', 16),
       padding: 14,
+      ...shadow(theme, 'card'),
     },
     deleteIconTile: {
       width: 36,
@@ -414,17 +422,19 @@ export const createStyles = (theme: Theme) =>
     },
     deleteTitle: {
       fontSize: 14.5,
-      fontWeight: '700',
       color: theme.error,
+      ...font(theme, 'bodyBold', '700'),
     },
     deleteSubtitle: {
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     usageLine: {
       fontSize: 12.5,
       color: theme.textTertiary,
       textAlign: 'center',
+      ...font(theme, 'body'),
     },
   });

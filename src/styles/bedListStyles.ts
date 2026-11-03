@@ -1,5 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -20,25 +21,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 20,
       paddingVertical: 10,
       backgroundColor: theme.primary,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'button', 8),
+      ...shadow(theme, 'button'),
     },
-    retryText: { color: theme.textInverse, fontWeight: '600' },
+    retryText: { color: theme.textInverse, ...font(theme, 'bodyStrong', '600') },
     list: { padding: 12, gap: 12 },
     emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-    emptyTitle: { fontSize: 18, fontWeight: '600', color: theme.text, marginTop: 16 },
+    emptyTitle: { fontSize: 18, color: theme.text, marginTop: 16, ...font(theme, 'title', '600') },
     emptySubtitle: { color: theme.textSecondary, marginTop: 8, textAlign: 'center' },
     // BedCard — richer single-column card
     card: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       paddingVertical: 12,
       paddingRight: 12,
       paddingLeft: 14,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       overflow: 'hidden',
+      ...shadow(theme, 'card'),
     },
     cardStripe: {
       position: 'absolute',
@@ -63,7 +66,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'space-between',
       gap: 8,
     },
-    cardName: { flexShrink: 1, fontSize: 16, fontWeight: '700', color: theme.text },
+    cardName: { flexShrink: 1, fontSize: 16, color: theme.text, ...font(theme, 'bodyBold', '700') },
     cardSubtitleRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -74,15 +77,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       color: theme.textSecondary,
       textTransform: 'capitalize',
+      ...font(theme, 'body'),
     },
     raisedTag: {
       fontSize: 10,
       color: theme.primary,
       borderWidth: 1,
       borderColor: theme.primary,
-      borderRadius: 4,
+      borderRadius: radius(theme, 'chip', 4),
       paddingHorizontal: 4,
       paddingVertical: 1,
+      ...font(theme, 'body'),
     },
     statusPill: {
       flexDirection: 'row',
@@ -91,9 +96,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexShrink: 0,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
     },
-    statusPillText: { fontSize: 11, fontWeight: '700' },
+    statusPillText: { fontSize: 11, ...font(theme, 'bodyBold', '700') },
     occupancyRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -112,7 +117,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 3,
       backgroundColor: theme.primary,
     },
-    occupancyText: { fontSize: 12, color: theme.textSecondary, fontWeight: '500' },
+    occupancyText: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      ...font(theme, 'bodyMedium', '500'),
+    },
     cardBottomRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -131,9 +140,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       flexShrink: 1,
     },
-    attentionTagText: { fontSize: 12, fontWeight: '700' },
+    attentionTagText: { fontSize: 12, ...font(theme, 'bodyBold', '700') },
     metaChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    metaChipText: { fontSize: 11, color: theme.textSecondary, fontWeight: '500' },
+    metaChipText: { fontSize: 11, color: theme.textSecondary, ...font(theme, 'bodyMedium', '500') },
     // Swipe actions
     swipeActions: { flexDirection: 'row' },
     swipeLeftActions: { flexDirection: 'row' },
@@ -161,9 +170,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     swipeActionText: {
       fontSize: 10,
-      fontWeight: '700',
       color: theme.textInverse,
       marginTop: 2,
+      ...font(theme, 'bodyBold', '700'),
     },
     // Results toolbar
     resultsHeader: {
@@ -175,8 +184,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.background,
     },
     resultsLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    resultsCount: { fontSize: 16, fontWeight: '700', color: theme.text },
-    resultsLabel: { fontSize: 14, color: theme.textSecondary, fontWeight: '500' },
+    resultsCount: { fontSize: 16, color: theme.text, ...font(theme, 'bodyBold', '700') },
+    resultsLabel: { fontSize: 14, color: theme.textSecondary, ...font(theme, 'bodyMedium', '500') },
     // Empty-state clear button
     clearFiltersEmptyButton: {
       flexDirection: 'row',
@@ -185,10 +194,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 20,
       paddingHorizontal: 20,
       paddingVertical: 10,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'button', 20),
       backgroundColor: theme.primaryLight,
     },
-    clearFiltersEmptyText: { fontSize: 14, fontWeight: '600', color: theme.primary },
+    clearFiltersEmptyText: {
+      fontSize: 14,
+      color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
+    },
     // Filter sheet
     sheetOverlay: {
       flex: 1,
@@ -199,8 +212,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetContainer: {
       backgroundColor: theme.background,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
     },
     sheetHeader: {
       flexDirection: 'row',
@@ -211,30 +224,28 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
-    sheetTitle: { fontSize: 18, fontWeight: '700', color: theme.text },
+    sheetTitle: { fontSize: 18, color: theme.text, ...font(theme, 'title', '700') },
     sheetClearBtn: {
       paddingHorizontal: 12,
       paddingVertical: 4,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'button', 14),
       backgroundColor: theme.errorLight,
     },
-    sheetClearText: { fontSize: 13, fontWeight: '600', color: theme.error },
+    sheetClearText: { fontSize: 13, color: theme.error, ...font(theme, 'bodyStrong', '600') },
     sheetScroll: { paddingHorizontal: 20, maxHeight: Dimensions.get('window').height * 0.55 },
     sheetSectionTitle: {
-      fontSize: 13,
-      fontWeight: '700',
       color: theme.textSecondary,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
       marginTop: 16,
       marginBottom: 8,
+      ...eyebrow(theme, { fontSize: 13, letterSpacing: 0.5, fontWeight: '700' }),
     },
     sheetSubSectionTitle: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.textSecondary,
       marginTop: 8,
       marginBottom: 6,
+      ...font(theme, 'bodyStrong', '600'),
     },
     sheetChipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     sheetChip: {
@@ -243,13 +254,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 5,
       paddingHorizontal: 14,
       paddingVertical: 8,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     sheetChipActive: { backgroundColor: theme.primaryLight, borderColor: theme.primary },
-    sheetChipText: { fontSize: 14, color: theme.textSecondary, fontWeight: '500' },
-    sheetChipTextActive: { color: theme.primary, fontWeight: '600' },
+    sheetChipText: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      ...font(theme, 'bodyMedium', '500'),
+    },
+    sheetChipTextActive: { color: theme.primary, ...font(theme, 'bodyStrong', '600') },
     filterBottomSpacer: { height: 12 },
   });

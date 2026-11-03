@@ -1,5 +1,6 @@
 import { Dimensions, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -34,8 +35,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetContainer: {
       backgroundColor: theme.background,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
     },
     sheetHeader: {
       flexDirection: 'row',
@@ -48,19 +49,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetTitle: {
       fontSize: 18,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     sheetClearBtn: {
       paddingHorizontal: 12,
       paddingVertical: 4,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'button', 14),
       backgroundColor: theme.errorLight,
     },
     sheetClearText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.error,
+      ...font(theme, 'bodyStrong', '600'),
     },
     sheetScroll: {
       paddingHorizontal: 20,
@@ -73,13 +74,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingBottom: 20,
     },
     sheetSectionTitle: {
-      fontSize: 13,
-      fontWeight: '700',
       color: theme.textSecondary,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
       marginTop: 16,
       marginBottom: 8,
+      ...eyebrow(theme, { fontSize: 13, letterSpacing: 0.5, fontWeight: '700' }),
     },
     sheetChipWrap: {
       flexDirection: 'row',
@@ -93,9 +92,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 14,
       paddingVertical: 8,
       minHeight: 44,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     sheetChipActive: {
@@ -105,11 +104,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sheetChipText: {
       fontSize: 14,
       color: theme.textSecondary,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     sheetChipTextActive: {
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     /** A facet count of zero — still shown, but visibly inert. */
     sheetChipCountZero: {
@@ -131,10 +130,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     emptyStateText: {
       fontSize: 18,
-      fontWeight: '600',
       color: theme.text,
       marginTop: 16,
       textAlign: 'center',
+      ...font(theme, 'bodyStrong', '600'),
     },
     emptyStateSubtext: {
       fontSize: 14,
@@ -142,6 +141,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 8,
       marginBottom: 16,
       textAlign: 'center',
+      ...font(theme, 'body'),
     },
     // Compact variant for a single empty *day* inside an otherwise populated
     // list — the full-size emptyState above is for whole-screen empties only.
@@ -162,13 +162,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     emptyStateCompactText: {
       fontSize: 15,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     emptyStateCompactSubtext: {
       fontSize: 13,
       color: theme.textSecondary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     emptyStateCompactAction: {
       flexDirection: 'row',
@@ -182,19 +183,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     emptyStateCompactActionText: {
       fontSize: 13,
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     clearSearchButton: {
       marginTop: 8,
       paddingVertical: 10,
       paddingHorizontal: 20,
       backgroundColor: theme.primary,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'button', 8),
+      ...shadow(theme, 'button'),
     },
     clearSearchText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textInverse,
+      ...font(theme, 'bodyStrong', '600'),
     },
     addTaskButton: {
       flexDirection: 'row',
@@ -203,17 +205,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 8,
       paddingHorizontal: 16,
       backgroundColor: theme.primaryLight,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'button', 20),
     },
     addTaskButtonText: {
       fontSize: 14,
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     modalContent: {
       backgroundColor: theme.backgroundSecondary,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
+      borderTopLeftRadius: radius(theme, 'sheet', 24),
+      borderTopRightRadius: radius(theme, 'sheet', 24),
       maxHeight: '85%',
     },
     modalHeader: {
@@ -227,15 +229,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     modalCloseButton: {
       width: 44,
       height: 44,
-      borderRadius: 18,
+      borderRadius: radius(theme, 'iconButton', 18),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     modalTitle: {
       fontSize: 20,
-      fontWeight: 'bold',
       color: theme.text,
+      ...font(theme, 'title', 'bold'),
     },
     modalTitleWrap: {
       flex: 1,
@@ -248,15 +251,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primary,
       paddingHorizontal: 16,
       paddingVertical: 8,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'button', 20),
+      ...shadow(theme, 'button'),
     },
     modalSaveButtonDisabled: {
       backgroundColor: theme.borderDark,
     },
     modalSaveText: {
       fontSize: 14,
-      fontWeight: '700',
       color: theme.buttonText,
+      ...font(theme, 'bodyBold', '700'),
     },
     modalSaveTextDisabled: {
       color: theme.textTertiary,
@@ -272,9 +276,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     label: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textSecondary,
       marginBottom: 8,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     dateButton: {
@@ -283,15 +287,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 12,
       backgroundColor: theme.inputBackground,
       padding: 16,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'input', 12),
       marginBottom: 16,
-      borderWidth: 1,
+      borderWidth: border(theme, 'input', 1),
       borderColor: theme.inputBorder,
     },
     dateButtonText: {
       fontSize: 16,
       color: theme.text,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     timeButtons: {
       flexDirection: 'row',
@@ -305,7 +309,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 5,
       paddingVertical: 12,
       paddingHorizontal: 8,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       borderWidth: 2,
       borderColor: theme.border,
       backgroundColor: theme.backgroundSecondary,
@@ -318,11 +322,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     timeButtonText: {
       fontSize: 12,
       color: theme.textSecondary,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     timeButtonTextActive: {
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     taskTypeToggle: {
       flexDirection: 'row',
@@ -336,7 +340,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingVertical: 14,
       paddingHorizontal: 12,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       borderWidth: 2,
       borderColor: theme.border,
       backgroundColor: theme.backgroundSecondary,
@@ -349,11 +353,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     toggleButtonText: {
       fontSize: 14,
       color: theme.textSecondary,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     toggleButtonTextActive: {
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     presets: {
       flexDirection: 'row',
@@ -364,7 +368,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     presetButton: {
       paddingVertical: 8,
       paddingHorizontal: 16,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'button', 20),
       backgroundColor: theme.background,
       borderWidth: 1,
       borderColor: theme.border,
@@ -376,7 +380,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     presetText: {
       fontSize: 12,
       color: theme.textSecondary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     presetTextActive: {
       color: theme.primary,
@@ -392,20 +396,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     previewTitle: {
       fontSize: 14,
-      fontWeight: 'bold',
       color: theme.text,
       marginBottom: 8,
+      ...font(theme, 'bodyBold', 'bold'),
     },
     previewText: {
       fontSize: 13,
       color: theme.textSecondary,
       marginBottom: 4,
       lineHeight: 20,
+      ...font(theme, 'body'),
     },
     helperText: {
       fontSize: 12,
       color: theme.textTertiary,
       marginBottom: 24,
+      ...font(theme, 'body'),
     },
     selectedTaskInfo: {
       backgroundColor: theme.background,
@@ -415,13 +421,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     selectedTaskTitle: {
       fontSize: 18,
-      fontWeight: 'bold',
       color: theme.text,
       marginBottom: 4,
+      ...font(theme, 'title', 'bold'),
     },
     selectedTaskPlant: {
       fontSize: 14,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     staleBanner: {
       flexDirection: 'row',
@@ -441,12 +448,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     staleBannerTitle: {
       color: theme.text,
       fontSize: 13,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     staleBannerText: {
       color: theme.textSecondary,
       fontSize: 11,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     staleBannerRetry: {
       minWidth: 44,
@@ -457,7 +465,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     staleBannerRetryText: {
       color: theme.warning,
       fontSize: 12,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     earlyCompletionNotice: {
       minHeight: 48,
@@ -474,6 +482,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 13,
       lineHeight: 18,
       color: theme.text,
+      ...font(theme, 'body'),
     },
     farmDetailsToggle: {
       minHeight: 48,
@@ -488,8 +497,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     farmDetailsToggleText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     farmDetailsFields: {
       marginTop: 12,
@@ -507,26 +516,28 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.textSecondary,
       marginBottom: 16,
+      ...font(theme, 'body'),
     },
     // Shows the exact date a skip will land on, so the 6 PM convention and the
     // "never earlier than the current due date" clamp are both visible up front.
     skipPreviewText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.warning,
       marginBottom: 16,
+      ...font(theme, 'bodyStrong', '600'),
     },
     skipModalInput: {
       backgroundColor: theme.inputBackground,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'input', 12),
       padding: 12,
       fontSize: 15,
       color: theme.inputText,
       minHeight: 80,
       textAlignVertical: 'top',
       marginBottom: 12,
-      borderWidth: 1,
+      borderWidth: border(theme, 'input', 1),
       borderColor: theme.inputBorder,
+      ...font(theme, 'body'),
     },
     skipReasonChips: {
       flexDirection: 'row',
@@ -540,8 +551,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 12,
       paddingVertical: 6,
       backgroundColor: theme.background,
-      borderRadius: 16,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'chip', 16),
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     skipReasonChipActive: {
@@ -551,7 +562,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     skipReasonChipText: {
       fontSize: 13,
       color: theme.textSecondary,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     skipReasonChipTextActive: {
       color: theme.primary,
@@ -599,12 +610,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 10,
       minHeight: 44,
       paddingHorizontal: 18,
-      borderRadius: 999,
+      borderRadius: radius(theme, 'button', 999),
+      ...shadow(theme, 'button'),
     },
     selectionBarBtnText: {
       color: theme.textInverse,
       fontSize: 13,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     previewTitleRow: {
       flexDirection: 'row',
@@ -620,13 +632,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 8,
       minHeight: 44,
       paddingHorizontal: 14,
-      borderRadius: 999,
+      borderRadius: radius(theme, 'button', 999),
       backgroundColor: theme.backgroundSecondary,
     },
     selectionBarSecondaryBtnText: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     skipDaysRow: {
       flexDirection: 'row',
@@ -637,10 +649,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       minHeight: 44,
       paddingVertical: 10,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
       alignItems: 'center',
       backgroundColor: theme.background,
-      borderWidth: 1.5,
+      borderWidth: border(theme, 'chip', 1.5),
       borderColor: theme.border,
     },
     skipDayChipActive: {
@@ -649,8 +661,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     skipDayChipText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     skipDayChipTextActive: {
       color: theme.warning,

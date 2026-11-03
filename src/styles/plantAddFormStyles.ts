@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 /** Styles for the single-screen add-plant form (successor to the step wizard). */
 export const createAddFormStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
@@ -36,11 +37,12 @@ export const createAddFormStyles = (theme: Theme): ReturnType<typeof StyleSheet.
     // Collapsible "Your care plan" section (successor to the review step).
     careSectionCard: {
       backgroundColor: theme.card,
-      borderRadius: 12,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'card', 12),
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
       padding: 14,
       marginBottom: 14,
+      ...shadow(theme, 'card'),
     },
     careSectionHeader: {
       flexDirection: 'row' as const,
@@ -60,13 +62,14 @@ export const createAddFormStyles = (theme: Theme): ReturnType<typeof StyleSheet.
     },
     careSectionTitle: {
       fontSize: 14,
-      fontWeight: '700' as const,
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     careSectionSummary: {
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 1,
+      ...font(theme, 'body'),
     },
     careSectionBody: {
       marginTop: 12,
@@ -86,6 +89,7 @@ export const createAddFormStyles = (theme: Theme): ReturnType<typeof StyleSheet.
       fontSize: 12,
       color: theme.textSecondary,
       lineHeight: 17,
+      ...font(theme, 'body'),
     },
     reviewFooterHint: {
       flexDirection: 'row' as const,
@@ -99,5 +103,6 @@ export const createAddFormStyles = (theme: Theme): ReturnType<typeof StyleSheet.
       color: theme.textTertiary,
       textAlign: 'center' as const,
       lineHeight: 17,
+      ...font(theme, 'body'),
     },
   });

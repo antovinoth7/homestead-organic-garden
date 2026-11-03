@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * Pest & disease browse list — cards, count line and empty state.
@@ -26,14 +27,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // Row card
     card: {
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'card', 14),
       paddingVertical: 12,
       paddingHorizontal: 13,
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: 12,
+      ...shadow(theme, 'card'),
     },
     cardTile: {
       width: 44,
@@ -58,20 +60,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     cardName: {
       fontSize: 14.5,
-      fontWeight: '700',
       color: theme.text,
       flexShrink: 1,
+      ...font(theme, 'bodyBold', '700'),
     },
     cardTamil: {
       fontSize: 11,
       color: theme.inputPlaceholder,
       flexShrink: 1,
+      ...font(theme, 'body'),
     },
     cardSymptom: {
       fontSize: 12.5,
       lineHeight: 17,
       color: theme.textSecondary,
       marginTop: 3,
+      ...font(theme, 'body'),
     },
     cardMetaRow: {
       flexDirection: 'row',
@@ -83,16 +87,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     riskBadge: {
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 7,
+      borderRadius: radius(theme, 'chip', 7),
     },
     riskBadgeText: {
       fontSize: 10.5,
-      fontWeight: '700',
       letterSpacing: 0.5,
+      ...font(theme, 'bodyBold', '700'),
     },
     cardPlantsLabel: {
       fontSize: 10.5,
       color: theme.inputPlaceholder,
+      ...font(theme, 'body'),
     },
     cardChevron: {
       paddingTop: 12,
@@ -109,6 +114,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginTop: 12,
       textAlign: 'center',
+      ...font(theme, 'body'),
     },
     emptyAction: {
       marginTop: 14,
@@ -119,7 +125,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     emptyActionText: {
       fontSize: 13,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

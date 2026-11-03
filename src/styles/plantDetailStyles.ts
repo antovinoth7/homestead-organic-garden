@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -33,17 +34,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     floatingCircleButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'iconButton', 20),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     stuckHeaderTitle: {
       flex: 1,
       fontSize: 16,
-      fontWeight: '700',
       color: theme.text,
       textAlign: 'center',
+      ...font(theme, 'title', '700'),
     },
     photo: {
       width: '100%',
@@ -65,9 +67,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     name: {
       fontSize: 32,
-      fontWeight: 'bold',
       color: theme.text,
       marginBottom: 4,
+      ...font(theme, 'bodyBold', 'bold'),
     },
     variety: {
       fontSize: 18,
@@ -88,7 +90,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     rowRecordBadgeText: {
       fontSize: 13,
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     infoSection: {
       marginBottom: 24,
@@ -102,11 +104,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 16,
       color: theme.textSecondary,
       marginLeft: 12,
+      ...font(theme, 'body'),
     },
     notesText: {
       fontSize: 16,
       color: theme.textSecondary,
       lineHeight: 24,
+      ...font(theme, 'body'),
     },
     // Phase 1 & 2 styles
     taskItem: {
@@ -115,37 +119,37 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       backgroundColor: theme.card,
       padding: 16,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       marginBottom: 8,
+      ...shadow(theme, 'card'),
     },
     taskLeft: {
       flex: 1,
     },
     taskType: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     taskFrequency: {
       fontSize: 14,
       color: theme.textSecondary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     taskStatus: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     taskDisabled: {
       color: theme.textTertiary,
     },
     careTasksLabel: {
-      fontSize: 12,
-      fontWeight: '700',
       color: theme.textSecondary,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
       marginBottom: 10,
+      ...eyebrow(theme, { fontSize: 12, letterSpacing: 0.5, fontWeight: '700' }),
     },
     centered: {
       flex: 1,
@@ -155,8 +159,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     link: {
       color: theme.primary,
       fontSize: 16,
-      fontWeight: '600',
       marginTop: 16,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Last Care Summary
     lastCareGrid: {
@@ -177,12 +181,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 6,
+      ...font(theme, 'body'),
     },
     lastCareDate: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.text,
       marginTop: 2,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Coconut metrics
     metricsGrid: {
@@ -201,21 +206,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     metricValue: {
       fontSize: 22,
-      fontWeight: '700',
       color: theme.primary,
       marginTop: 4,
+      ...font(theme, 'bodyBold', '700'),
     },
     metricLabel: {
       fontSize: 11,
       color: theme.textSecondary,
       marginTop: 4,
       textAlign: 'center',
+      ...font(theme, 'body'),
     },
     metricWarning: {
       fontSize: 11,
       color: theme.error,
-      fontWeight: '600',
       marginTop: 2,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Companion planting
     companionRow: {
@@ -228,23 +234,23 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primaryLight,
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
     },
     companionChipText: {
       fontSize: 13,
       color: theme.primary,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     incompatibleChip: {
       backgroundColor: theme.errorLight,
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
     },
     incompatibleChipText: {
       fontSize: 13,
       color: theme.error,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     // Coconut age care tips
     careTipItem: {
@@ -257,12 +263,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.primary,
       marginRight: 8,
       marginTop: 1,
+      ...font(theme, 'body'),
     },
     careTipText: {
       fontSize: 14,
       color: theme.textSecondary,
       flex: 1,
       lineHeight: 20,
+      ...font(theme, 'body'),
     },
     // Nutrient deficiency
     nutrientSymptom: {
@@ -270,38 +278,40 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginLeft: 8,
       marginBottom: 2,
+      ...font(theme, 'body'),
     },
     nutrientCorrection: {
       fontSize: 13,
       color: theme.primary,
       marginLeft: 8,
       marginBottom: 2,
+      ...font(theme, 'body'),
     },
     nutrientSubTitle: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.text,
       marginTop: 6,
       marginBottom: 4,
+      ...font(theme, 'bodyStrong', '600'),
     },
     subsectionTitle: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textSecondary,
       marginBottom: 6,
       marginTop: 8,
+      ...font(theme, 'bodyStrong', '600'),
     },
     healthStatusHealthy: {
       color: theme.success,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     healthStatusSick: {
       color: theme.error,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     healthStatusWarning: {
       color: theme.warning,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     infoRowMarginTop: {
       marginTop: 12,
@@ -315,8 +325,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     growthStageBadgeText: {
       fontSize: 11,
-      fontWeight: '600' as const,
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     growthStageAction: {
       flexDirection: 'row' as const,
@@ -335,7 +345,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     growthStageActionText: {
       fontSize: 13,
       color: theme.primary,
-      fontWeight: '500' as const,
+      ...font(theme, 'bodyMedium', '500'),
     },
     sectionDivider: {
       height: 1,
@@ -356,9 +366,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     pinModalSheet: {
       marginHorizontal: 24,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'card', 20),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       shadowColor: theme.shadow,
       shadowOpacity: 0.2,
@@ -366,6 +376,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       shadowOffset: { width: 0, height: 6 },
       elevation: 10,
       overflow: 'hidden',
+      ...shadow(theme, 'card'),
     },
     pinModalHeader: {
       flexDirection: 'row',
@@ -378,13 +389,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     pinModalTitle: {
       fontSize: 17,
-      fontWeight: '700' as const,
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     pinModalCloseButton: {
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'iconButton', 16),
       backgroundColor: theme.background,
       borderWidth: 1,
       borderColor: theme.border,
@@ -405,21 +416,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     pinModalItemText: {
       fontSize: 15,
-      fontWeight: '500' as const,
       color: theme.text,
+      ...font(theme, 'bodyMedium', '500'),
     },
     clearBedHint: {
       fontSize: 13,
       color: theme.textSecondary,
       marginBottom: 12,
       lineHeight: 18,
+      ...font(theme, 'body'),
     },
     clearBedButton: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       gap: 6,
       borderWidth: 1,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'button', 8),
       padding: 12,
       borderColor: theme.warning,
       backgroundColor: theme.warning + '20',

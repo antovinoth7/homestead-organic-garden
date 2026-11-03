@@ -1,11 +1,12 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: {
-      borderWidth: 1,
-      borderRadius: 12,
+      borderWidth: border(theme, 'input', 1),
+      borderRadius: radius(theme, 'input', 12),
       borderColor: theme.inputBorder,
       backgroundColor: theme.inputBackground,
       marginBottom: 12,
@@ -35,7 +36,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       position: 'absolute',
       left: 12,
       paddingHorizontal: 4,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     labelWithHelp: {
       maxWidth: '82%',

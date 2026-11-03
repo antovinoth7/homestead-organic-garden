@@ -197,18 +197,15 @@ export function FloatingTabBar({
     return null;
   }
 
-  const bottomPadding = Math.max(insets.bottom, 8);
+  const { floating, inset } = theme.style.tabBar;
+  // Docked: the bar runs to the screen edge and pads itself over the inset.
+  // Floating: the bar keeps its own padding and sits `inset` above the edge.
+  const placement = floating
+    ? { bottom: Math.max(insets.bottom, inset), transform: [{ translateY }] }
+    : { paddingBottom: Math.max(insets.bottom, 8), transform: [{ translateY }] };
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          paddingBottom: bottomPadding,
-          transform: [{ translateY }],
-        },
-      ]}
-    >
+    <Animated.View style={[styles.container, placement]}>
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key]!;
         const isFocused = state.index === index;
@@ -236,7 +233,7 @@ export function FloatingTabBar({
         const icon = options.tabBarIcon?.({
           focused: isFocused,
           color: isFocused ? theme.tabBarActive : theme.tabBarInactive,
-          size: 24,
+          size: floating ? 22 : 24,
         });
 
         const label =
@@ -256,7 +253,7 @@ export function FloatingTabBar({
             onLongPress={onLongPress}
             style={styles.tab}
           >
-            {icon}
+            <View style={[styles.iconWrap, isFocused && styles.iconWrapActive]}>{icon}</View>
             <View style={styles.iconLabelSpacer} />
             <Animated.Text
               style={[

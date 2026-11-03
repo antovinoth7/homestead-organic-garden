@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -14,8 +15,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     title: {
       fontSize: 18,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     titleError: {
       color: theme.error,
@@ -29,7 +30,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     statusCompleteBadge: {
       width: 22,
       height: 22,
-      borderRadius: 11,
+      borderRadius: radius(theme, 'chip', 11),
       backgroundColor: theme.success,
       alignItems: 'center',
       justifyContent: 'center',
@@ -38,14 +39,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.background,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 10,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'chip', 10),
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.borderLight,
     },
     statusOptionalText: {
       fontSize: 11,
       color: theme.textTertiary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     statusRequired: {
       flexDirection: 'row',
@@ -65,7 +66,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     statusRequiredText: {
       fontSize: 11,
       color: theme.error,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     /** Pushes the action slot to the trailing edge. */
     action: {

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { font } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -55,8 +56,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     stageLabel: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     stageLabelRow: {
       flexDirection: 'row',
@@ -65,7 +66,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     stageLabelCurrent: {
       color: theme.primary,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     stageLabelFuture: {
       color: theme.textTertiary,
@@ -74,6 +75,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     progressBar: {
       height: 4,
@@ -96,11 +98,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 11,
       color: theme.accent,
       marginLeft: 4,
+      ...font(theme, 'body'),
     },
     sourceTag: {
       fontSize: 11,
       color: theme.textTertiary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     checkIcon: {
       position: 'absolute',

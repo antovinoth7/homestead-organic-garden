@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -34,7 +35,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 2,
       borderColor: theme.primary,
     },
-    stepCircleText: { fontSize: 12, fontWeight: '700' as const, color: theme.textTertiary },
+    stepCircleText: { fontSize: 12, color: theme.textTertiary, ...font(theme, 'bodyBold', '700') },
     stepCircleTextActive: { color: theme.textInverse },
     stepConnector: {
       flex: 1,
@@ -44,14 +45,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignSelf: 'flex-start' as const,
     },
     stepConnectorFilled: { backgroundColor: theme.primary },
-    progressLabel: { fontSize: 9, color: theme.textTertiary, textAlign: 'center' as const },
-    progressLabelActive: { color: theme.primary, fontWeight: '600' as const },
+    progressLabel: {
+      fontSize: 9,
+      color: theme.textTertiary,
+      textAlign: 'center' as const,
+      ...font(theme, 'body'),
+    },
+    progressLabelActive: { color: theme.primary, ...font(theme, 'bodyStrong', '600') },
     progressLabelComplete: { color: theme.textSecondary },
     keyboardAvoiding: { flex: 1 },
     stepContent: { flex: 1 },
     stepContainer: { padding: 16, paddingBottom: 40 },
-    stepTitle: { fontSize: 20, fontWeight: '700', color: theme.text, marginBottom: 6 },
-    stepSubtitle: { fontSize: 14, color: theme.textSecondary, marginBottom: 16 },
+    stepTitle: { fontSize: 20, color: theme.text, marginBottom: 6, ...font(theme, 'title', '700') },
+    stepSubtitle: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginBottom: 16,
+      ...font(theme, 'body'),
+    },
     footer: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -69,12 +80,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 16,
       height: 44,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'button', 22),
       borderWidth: 1.5,
       borderColor: theme.border,
       backgroundColor: theme.primary,
+      ...shadow(theme, 'button'),
     },
-    backText: { color: theme.textInverse, fontSize: 14, fontWeight: '600' as const },
+    backText: { color: theme.textInverse, fontSize: 14, ...font(theme, 'bodyStrong', '600') },
     nextButton: {
       flexDirection: 'row' as const,
       alignItems: 'center',
@@ -82,11 +94,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 16,
       height: 44,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'button', 22),
       backgroundColor: theme.primary,
+      ...shadow(theme, 'button'),
     },
     nextButtonDisabled: { backgroundColor: theme.textTertiary },
-    nextText: { color: theme.textInverse, fontWeight: '700', fontSize: 14 },
+    nextText: { color: theme.textInverse, fontSize: 14, ...font(theme, 'bodyBold', '700') },
     blockedBanner: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
@@ -100,7 +113,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.error,
     },
-    blockedBannerText: { flex: 1, fontSize: 12, color: theme.error, lineHeight: 17 },
+    blockedBannerText: {
+      flex: 1,
+      fontSize: 12,
+      color: theme.error,
+      lineHeight: 17,
+      ...font(theme, 'body'),
+    },
     // ── Discard-changes modal ─────────────────────────────────────────────────
     discardOverlay: {
       flex: 1,
@@ -111,7 +130,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     discardCard: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'card', 20),
       padding: 28,
       alignItems: 'center' as const,
       width: '100%',
@@ -121,6 +140,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       shadowOpacity: 0.15,
       shadowRadius: 24,
       elevation: 8,
+      ...shadow(theme, 'card'),
     },
     discardIconWrap: {
       width: 64,
@@ -133,9 +153,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     discardTitle: {
       fontSize: 19,
-      fontWeight: '700' as const,
       color: theme.text,
       marginBottom: 8,
+      ...font(theme, 'title', '700'),
     },
     discardMessage: {
       fontSize: 14,
@@ -143,6 +163,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textAlign: 'center' as const,
       lineHeight: 20,
       marginBottom: 24,
+      ...font(theme, 'body'),
     },
     discardActions: {
       flexDirection: 'row' as const,
@@ -156,15 +177,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center' as const,
       gap: 6,
       paddingVertical: 13,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       borderWidth: 1.5,
       borderColor: theme.primary,
       backgroundColor: theme.primaryLight,
     },
     discardKeepText: {
       fontSize: 14,
-      fontWeight: '600' as const,
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     discardButton: {
       flex: 1,
@@ -173,51 +194,64 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center' as const,
       gap: 6,
       paddingVertical: 13,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       backgroundColor: theme.error,
+      ...shadow(theme, 'button'),
     },
     discardButtonText: {
       fontSize: 14,
-      fontWeight: '600' as const,
       color: theme.textInverse,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Step 1 — type grid
     typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     typeCard: {
       width: '47%',
       padding: 10,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'card', 10),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1.5,
+      borderWidth: border(theme, 'card', 1.5),
       borderColor: theme.border,
       alignItems: 'center',
+      ...shadow(theme, 'card'),
     },
     typeCardSelected: { borderColor: theme.primary, backgroundColor: theme.primaryLight },
     typeCardDimmed: { opacity: 0.5 },
     typeIcon: { marginBottom: 4 },
-    typeLabel: { fontSize: 13, fontWeight: '600', color: theme.text, textAlign: 'center' },
+    typeLabel: {
+      fontSize: 13,
+      color: theme.text,
+      textAlign: 'center',
+      ...font(theme, 'bodyStrong', '600'),
+    },
     typeLabelSelected: { color: theme.primary },
-    typeDesc: { fontSize: 11, color: theme.textSecondary, textAlign: 'center', marginTop: 2 },
+    typeDesc: {
+      fontSize: 11,
+      color: theme.textSecondary,
+      textAlign: 'center',
+      marginTop: 2,
+      ...font(theme, 'body'),
+    },
     typeInfoTag: {
       marginTop: 4,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
       backgroundColor: theme.primaryLight,
       alignSelf: 'center' as const,
     },
-    typeInfoTagText: { fontSize: 10, fontWeight: '600' as const, color: theme.primary },
+    typeInfoTagText: { fontSize: 10, color: theme.primary, ...font(theme, 'bodyStrong', '600') },
     // Step 1 — Ideal season badge overlaid on card
     btIdealBadge: {
       position: 'absolute' as const,
       top: 6,
       right: 6,
       backgroundColor: theme.success,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       paddingHorizontal: 6,
       paddingVertical: 2,
     },
-    btIdealBadgeText: { fontSize: 9, fontWeight: '700' as const, color: theme.textInverse },
+    btIdealBadgeText: { fontSize: 9, color: theme.textInverse, ...font(theme, 'bodyBold', '700') },
     // Step 1 — Season context banner
     btSeasonBanner: {
       flexDirection: 'row',
@@ -231,7 +265,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.info,
     },
-    btSeasonBannerText: { fontSize: 12, color: theme.infoDark, fontWeight: '500' as const },
+    btSeasonBannerText: {
+      fontSize: 12,
+      color: theme.infoDark,
+      ...font(theme, 'bodyMedium', '500'),
+    },
     // Field groups
     fieldGroup: { marginBottom: 12 },
     // Step 2 — collapsible "More soil details" toggle
@@ -248,22 +286,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 12,
     },
     lcMoreToggleLabelBlock: { flex: 1, paddingRight: 8 },
-    lcMoreToggleText: { fontSize: 14, fontWeight: '600' as const, color: theme.text },
-    lcMoreToggleHint: { fontSize: 11, color: theme.textSecondary, marginTop: 2 },
+    lcMoreToggleText: { fontSize: 14, color: theme.text, ...font(theme, 'bodyStrong', '600') },
+    lcMoreToggleHint: {
+      fontSize: 11,
+      color: theme.textSecondary,
+      marginTop: 2,
+      ...font(theme, 'body'),
+    },
     fieldLabelRow: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       gap: 6,
       marginBottom: 8,
     },
-    fieldLabel: { fontSize: 13, fontWeight: '600', color: theme.text },
+    fieldLabel: { fontSize: 13, color: theme.text, ...font(theme, 'bodyStrong', '600') },
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     chip: {
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 18,
+      borderRadius: radius(theme, 'chip', 18),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1.5,
+      borderWidth: border(theme, 'chip', 1.5),
       borderColor: theme.border,
       alignItems: 'center',
     },
@@ -271,9 +314,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primaryLight,
       borderColor: theme.primary,
     },
-    chipLabel: { fontSize: 12, fontWeight: '500' as const, color: theme.textTertiary },
-    chipLabelSelected: { color: theme.primary, fontWeight: '700' as const },
-    chipHint: { fontSize: 10, color: theme.textTertiary, marginTop: 1 },
+    chipLabel: { fontSize: 12, color: theme.textTertiary, ...font(theme, 'bodyMedium', '500') },
+    chipLabelSelected: { color: theme.primary, ...font(theme, 'bodyBold', '700') },
+    chipHint: { fontSize: 10, color: theme.textTertiary, marginTop: 1, ...font(theme, 'body') },
     chipHintSelected: { color: theme.primary },
     switchRow: {
       flexDirection: 'row',
@@ -285,7 +328,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 4,
     },
     switchLabelBlock: { flex: 1, marginRight: 12 },
-    switchHint: { fontSize: 11, color: theme.textSecondary, marginTop: 2 },
+    switchHint: { fontSize: 11, color: theme.textSecondary, marginTop: 2, ...font(theme, 'body') },
     switchTrack: {
       width: 44,
       height: 26,
@@ -315,7 +358,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.error,
     },
-    blockAlertText: { color: theme.error, fontSize: 13, flex: 1 },
+    blockAlertText: { color: theme.error, fontSize: 13, flex: 1, ...font(theme, 'body') },
     sunlightWarning: {
       flexDirection: 'row',
       alignItems: 'flex-start',
@@ -327,27 +370,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.warning,
     },
-    sunlightWarningText: { color: theme.warning, fontSize: 12, flex: 1 },
+    sunlightWarningText: { color: theme.warning, fontSize: 12, flex: 1, ...font(theme, 'body') },
     inlineLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
     // Step 4 — guild
     infoBadge: {
       backgroundColor: theme.infoLight,
-      borderRadius: 6,
+      borderRadius: radius(theme, 'chip', 6),
       padding: 10,
       marginBottom: 12,
     },
-    infoBadgeText: { color: theme.infoDark, fontSize: 12 },
+    infoBadgeText: { color: theme.infoDark, fontSize: 12, ...font(theme, 'body') },
     // Bed name field — mirrors the plant form's Name field (field-look row +
     // floating label notched into the border). See src/styles/plantFormStyles.ts.
     namePreviewRow: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       backgroundColor: theme.inputBackground,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'input', 12),
       paddingHorizontal: 16,
       minHeight: 52,
       marginBottom: 12,
-      borderWidth: 1,
+      borderWidth: border(theme, 'input', 1),
       borderColor: theme.inputBorder,
       gap: 8,
     },
@@ -357,35 +400,35 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       left: 12,
       paddingHorizontal: 4,
       fontSize: 12,
-      fontWeight: '500' as const,
       color: theme.textSecondary,
       backgroundColor: theme.backgroundSecondary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     namePreviewValue: {
       fontSize: 14,
       color: theme.text,
-      fontWeight: '600' as const,
       flex: 1,
+      ...font(theme, 'bodyStrong', '600'),
     },
     nameCustomRow: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       backgroundColor: theme.inputBackground,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'input', 12),
       paddingLeft: 16,
       paddingRight: 10,
       minHeight: 52,
       marginBottom: 12,
-      borderWidth: 1,
+      borderWidth: border(theme, 'input', 1),
       borderColor: theme.inputBorder,
     },
     nameCustomInput: {
       flex: 1,
       fontSize: 14,
-      fontWeight: '600' as const,
       color: theme.inputText,
       paddingVertical: 14,
       paddingRight: 8,
+      ...font(theme, 'bodyStrong', '600'),
     },
     nameCustomActions: {
       flexDirection: 'row' as const,
@@ -412,26 +455,47 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     namePreviewActionText: {
       fontSize: 12,
-      fontWeight: '700' as const,
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     namePreviewActionTextMuted: {
       fontSize: 12,
-      fontWeight: '600' as const,
       color: theme.textTertiary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     sequenceCard: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'card', 8),
       padding: 12,
       marginBottom: 12,
+      ...shadow(theme, 'card'),
     },
-    sequenceTitle: { fontSize: 13, fontWeight: '600', color: theme.text, marginBottom: 2 },
-    sequenceSubtitle: { fontSize: 11, color: theme.textTertiary, marginBottom: 8 },
+    sequenceTitle: {
+      fontSize: 13,
+      color: theme.text,
+      marginBottom: 2,
+      ...font(theme, 'bodyStrong', '600'),
+    },
+    sequenceSubtitle: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      marginBottom: 8,
+      ...font(theme, 'body'),
+    },
     sequenceRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
-    sequenceWeek: { fontSize: 12, color: theme.primary, fontWeight: '600', width: 48 },
-    sequenceAction: { flex: 1, fontSize: 12, color: theme.textSecondary },
-    sequenceNote: { fontSize: 12, color: theme.textSecondary, lineHeight: 16 },
+    sequenceWeek: {
+      fontSize: 12,
+      color: theme.primary,
+      width: 48,
+      ...font(theme, 'bodyStrong', '600'),
+    },
+    sequenceAction: { flex: 1, fontSize: 12, color: theme.textSecondary, ...font(theme, 'body') },
+    sequenceNote: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      lineHeight: 16,
+      ...font(theme, 'body'),
+    },
     // Step 6 — confirm
     textInput: {
       borderWidth: 1,
@@ -444,11 +508,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // Step 6 — modern Review redesign (cf*)
     cfOverviewCard: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'card', 12),
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       padding: 14,
       marginBottom: 16,
+      ...shadow(theme, 'card'),
     },
     cfOverviewHead: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 },
     cfOverviewIcon: {
@@ -460,8 +525,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center' as const,
     },
     cfOverviewTextCol: { flex: 1 },
-    cfOverviewName: { fontSize: 17, fontWeight: '800' as const, color: theme.text },
-    cfOverviewType: { fontSize: 12, color: theme.textSecondary, marginTop: 2 },
+    cfOverviewName: { fontSize: 17, color: theme.text, ...font(theme, 'bodyBold', '800') },
+    cfOverviewType: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 2,
+      ...font(theme, 'body'),
+    },
     cfDivider: { height: 1, backgroundColor: theme.border, marginVertical: 12 },
     cfSummaryRow: {
       flexDirection: 'row' as const,
@@ -470,15 +540,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 7,
     },
     cfSummaryIcon: { width: 18, textAlign: 'center' as const },
-    cfSummaryValue: { flex: 1, fontSize: 13, color: theme.text, lineHeight: 18 },
+    cfSummaryValue: {
+      flex: 1,
+      fontSize: 13,
+      color: theme.text,
+      lineHeight: 18,
+      ...font(theme, 'body'),
+    },
     cfSection: { marginBottom: 16 },
     cfEyebrow: {
-      fontSize: 10,
-      fontWeight: '700' as const,
-      letterSpacing: 0.9,
       color: theme.textTertiary,
       textTransform: 'uppercase' as const,
       marginBottom: 8,
+      ...eyebrow(theme, { fontSize: 10, letterSpacing: 0.9, fontWeight: '700' }),
     },
     cfAutoCard: {
       backgroundColor: theme.primaryLight,
@@ -489,12 +563,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 16,
     },
     cfAutoTitle: {
-      fontSize: 12,
-      fontWeight: '700' as const,
       color: theme.primary,
-      letterSpacing: 0.5,
       textTransform: 'uppercase' as const,
       marginBottom: 8,
+      ...eyebrow(theme, { fontSize: 12, letterSpacing: 0.5, fontWeight: '700' }),
     },
     cfAutoRow: {
       flexDirection: 'row' as const,
@@ -502,7 +574,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 8,
       marginBottom: 6,
     },
-    cfAutoText: { flex: 1, fontSize: 12.5, color: theme.primary },
+    cfAutoText: { flex: 1, fontSize: 12.5, color: theme.primary, ...font(theme, 'body') },
     cfNotesArea: { minHeight: 64, textAlignVertical: 'top' as const },
     // Step 3 — redesigned size controls
     szRecCard: {
@@ -521,37 +593,44 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     szRecTitle: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.primary,
       flex: 1,
       marginRight: 8,
+      ...font(theme, 'title', '700'),
     },
     szRecTags: {
       fontSize: 11,
       color: theme.textSecondary,
       textAlign: 'right',
       flexShrink: 1,
+      ...font(theme, 'body'),
     },
     szOptimalLabel: {
       fontSize: 10,
-      fontWeight: '700',
       letterSpacing: 1.2,
       color: theme.textTertiary,
       marginBottom: 4,
+      ...font(theme, 'bodyBold', '700'),
     },
     szSizeRow: {
       flexDirection: 'row',
       alignItems: 'baseline',
       marginBottom: 8,
     },
-    szSizeValue: { fontSize: 40, fontWeight: '800', color: theme.primary },
-    szSizeSep: { fontSize: 28, fontWeight: '400', color: theme.primary },
-    szSizeUnit: { fontSize: 16, fontWeight: '400', color: theme.primary, marginLeft: 2 },
+    szSizeValue: { fontSize: 40, color: theme.primary, ...font(theme, 'bodyBold', '800') },
+    szSizeSep: { fontSize: 28, color: theme.primary, ...font(theme, 'body', '400') },
+    szSizeUnit: {
+      fontSize: 16,
+      color: theme.primary,
+      marginLeft: 2,
+      ...font(theme, 'body', '400'),
+    },
     szRationale: {
       fontSize: 12,
       color: theme.textSecondary,
       lineHeight: 17,
       marginBottom: 14,
+      ...font(theme, 'body'),
     },
     szMetricsRow: {
       flexDirection: 'row',
@@ -565,14 +644,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 10,
     },
     szMetricDivider: { width: 1, backgroundColor: theme.primaryDark },
-    szMetricValue: { fontSize: 14, fontWeight: '700', color: theme.textInverse },
-    szMetricLabel: { fontSize: 10, color: theme.textInverse, marginTop: 2 },
+    szMetricValue: { fontSize: 14, color: theme.textInverse, ...font(theme, 'bodyBold', '700') },
+    szMetricLabel: { fontSize: 10, color: theme.textInverse, marginTop: 2, ...font(theme, 'body') },
     szSectionLabel: {
       fontSize: 10,
-      fontWeight: '700',
       letterSpacing: 1.2,
       color: theme.textTertiary,
       marginBottom: 12,
+      ...font(theme, 'bodyBold', '700'),
     },
     // Step 3 — unit toggle + arm's reach hint
     szCustomHeader: {
@@ -594,7 +673,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.backgroundSecondary,
     },
     szUnitBtnActive: { backgroundColor: theme.primary },
-    szUnitBtnText: { fontSize: 13, fontWeight: '600' as const, color: theme.textSecondary },
+    szUnitBtnText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
+    },
     szUnitBtnTextActive: { color: theme.textInverse },
     szArmReachHint: {
       flexDirection: 'row',
@@ -608,7 +691,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.warning,
     },
-    szArmReachText: { fontSize: 11, color: theme.warning, fontWeight: '500' as const },
+    szArmReachText: { fontSize: 11, color: theme.warning, ...font(theme, 'bodyMedium', '500') },
     szStepperRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -617,37 +700,42 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomWidth: 1,
       borderBottomColor: theme.borderLight,
     },
-    szStepperLabel: { fontSize: 15, color: theme.text, fontWeight: '500' },
+    szStepperLabel: { fontSize: 15, color: theme.text, ...font(theme, 'bodyMedium', '500') },
     szStepperControls: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     szCircleBtn: {
       width: 34,
       height: 34,
-      borderRadius: 17,
+      borderRadius: radius(theme, 'iconButton', 17),
       alignItems: 'center',
       justifyContent: 'center',
     },
     szCircleBtnMinus: { backgroundColor: theme.backgroundTertiary },
     szCircleBtnPlus: { backgroundColor: theme.primary },
     szCircleBtnDisabled: { opacity: 0.3 },
-    szCircleBtnText: { fontSize: 20, fontWeight: '400', color: theme.text, lineHeight: 24 },
+    szCircleBtnText: {
+      fontSize: 20,
+      color: theme.text,
+      lineHeight: 24,
+      ...font(theme, 'body', '400'),
+    },
     szCircleBtnTextPlus: { color: theme.textInverse },
     szCircleBtnTextDisabled: {},
     szStepperValue: {
       fontSize: 18,
-      fontWeight: '700',
       color: theme.text,
       minWidth: 52,
       textAlign: 'center',
+      ...font(theme, 'bodyBold', '700'),
     },
-    szStepperUnit: { fontSize: 13, fontWeight: '400', color: theme.textSecondary },
+    szStepperUnit: { fontSize: 13, color: theme.textSecondary, ...font(theme, 'body', '400') },
     // ── Guild Template Step (gt*) ─────────────────────────────────────────────
     gtSectionHeader: {
       fontSize: 10,
-      fontWeight: '700' as const,
       letterSpacing: 1.2,
       color: theme.textTertiary,
       marginBottom: 10,
       marginTop: 4,
+      ...font(theme, 'bodyBold', '700'),
     },
     gtSectionHeaderMt: { marginTop: 24 },
     // Plant row card
@@ -657,9 +745,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       padding: 12,
       marginBottom: 8,
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 10,
-      borderWidth: 1.5,
+      borderRadius: radius(theme, 'card', 10),
+      borderWidth: border(theme, 'card', 1.5),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     gtPlantCardSelected: { borderColor: theme.primary, backgroundColor: theme.primaryLight },
     gtPlantCardBlocked: { opacity: 0.5 },
@@ -680,17 +769,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       flexWrap: 'wrap' as const,
     },
-    gtPlantName: { fontSize: 14, fontWeight: '700' as const, color: theme.text, flexShrink: 1 as const },
+    gtPlantName: {
+      fontSize: 14,
+      color: theme.text,
+      flexShrink: 1 as const,
+      ...font(theme, 'bodyBold', '700'),
+    },
     gtPlantNameBlocked: { color: theme.textTertiary },
     gtHarvestBadge: {
       paddingHorizontal: 7,
       paddingVertical: 2,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       backgroundColor: theme.successLight,
       borderWidth: 1,
       borderColor: theme.success,
     },
-    gtHarvestBadgeText: { fontSize: 9, fontWeight: '600' as const, color: theme.success },
+    gtHarvestBadgeText: { fontSize: 9, color: theme.success, ...font(theme, 'bodyStrong', '600') },
     gtBadgeRow: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
@@ -702,30 +796,39 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     gtLayerBadge: {
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
       backgroundColor: theme.backgroundTertiary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     gtLayerBadgeSelected: { backgroundColor: theme.primary, borderColor: theme.primary },
-    gtLayerBadgeText: { fontSize: 10, fontWeight: '600' as const, color: theme.textSecondary },
+    gtLayerBadgeText: {
+      fontSize: 10,
+      color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
+    },
     gtLayerBadgeTextSelected: { color: theme.textInverse },
     gtNFixerBadge: {
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
       backgroundColor: theme.successLight,
       borderWidth: 1,
       borderColor: theme.success,
     },
-    gtNFixerBadgeText: { fontSize: 10, fontWeight: '600' as const, color: theme.success },
-    gtAntagonistText: { fontSize: 11, color: theme.error, marginTop: 5 },
-    gtPlantRight: { alignItems: 'flex-end' as const, gap: 6, marginLeft: 10, flexShrink: 0 as const },
+    gtNFixerBadgeText: { fontSize: 10, color: theme.success, ...font(theme, 'bodyStrong', '600') },
+    gtAntagonistText: { fontSize: 11, color: theme.error, marginTop: 5, ...font(theme, 'body') },
+    gtPlantRight: {
+      alignItems: 'flex-end' as const,
+      gap: 6,
+      marginLeft: 10,
+      flexShrink: 0 as const,
+    },
     gtSpacingCompact: {
       fontSize: 11,
       color: theme.accent,
-      fontWeight: '500' as const,
       letterSpacing: 0.1,
+      ...font(theme, 'bodyMedium', '500'),
     },
     // ── Quantity stepper (Guild step) ─────────────────────────────────────────
     gtQtyStepper: {
@@ -736,7 +839,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     gtQtyBtn: {
       width: 28,
       height: 28,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'iconButton', 14),
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
     },
@@ -747,16 +850,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     gtQtyBtnPlus: { backgroundColor: theme.primary },
     gtQtyBtnDisabled: { opacity: 0.3 },
-    gtQtyBtnText: { fontSize: 16, fontWeight: '600' as const, color: theme.text, lineHeight: 18 },
+    gtQtyBtnText: {
+      fontSize: 16,
+      color: theme.text,
+      lineHeight: 18,
+      ...font(theme, 'bodyStrong', '600'),
+    },
     gtQtyBtnTextPlus: { color: theme.textInverse },
     gtQtyValue: {
       fontSize: 13,
-      fontWeight: '700' as const,
       color: theme.text,
       minWidth: 18,
       textAlign: 'center' as const,
+      ...font(theme, 'bodyBold', '700'),
     },
-    gtQtyValueZero: { color: theme.textTertiary, fontWeight: '500' as const },
+    gtQtyValueZero: { color: theme.textTertiary, ...font(theme, 'bodyMedium', '500') },
     // Companion section
     gtCompanionRow: {
       flexDirection: 'row' as const,
@@ -766,27 +874,36 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomWidth: 1,
       borderBottomColor: theme.borderLight,
     },
-    gtCompanionName: { fontSize: 13, fontWeight: '500' as const, color: theme.text },
+    gtCompanionName: { fontSize: 13, color: theme.text, ...font(theme, 'bodyMedium', '500') },
     gtCompanionNameBlock: { flex: 1 },
     gtCompanionFitText: {
       fontSize: 10,
       color: theme.textTertiary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     gtAccFitText: {
       fontSize: 10,
       color: theme.textTertiary,
       marginTop: 4,
+      ...font(theme, 'body'),
     },
     // Accumulator card
-    gtAccSubtitle: { fontSize: 13, color: theme.textSecondary, marginBottom: 12, marginTop: -4 },
+    gtAccSubtitle: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      marginBottom: 12,
+      marginTop: -4,
+      ...font(theme, 'body'),
+    },
     gtAccCard: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'card', 10),
       padding: 12,
       marginBottom: 10,
-      borderWidth: 1.5,
+      borderWidth: border(theme, 'card', 1.5),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     gtAccCardSelected: { borderColor: theme.primary, backgroundColor: theme.primaryLight },
     gtAccHeader: {
@@ -796,34 +913,48 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 8,
     },
     gtAccNameBlock: { flex: 1, marginRight: 10 },
-    gtAccName: { fontSize: 14, fontWeight: '700' as const, color: theme.text },
+    gtAccName: { fontSize: 14, color: theme.text, ...font(theme, 'bodyBold', '700') },
     gtAccNameSelected: { color: theme.primary },
-    gtIntervalText: { fontSize: 12, color: theme.textSecondary, marginBottom: 8 },
+    gtIntervalText: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginBottom: 8,
+      ...font(theme, 'body'),
+    },
     gtIntervalTextSelected: { color: theme.primary },
     gtNutrientRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 5 },
     gtNutrientChip: {
       paddingHorizontal: 9,
       paddingVertical: 3,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
       backgroundColor: theme.primaryLight,
     },
     gtNutrientChipSelected: { backgroundColor: theme.borderLight },
-    gtNutrientText: { fontSize: 10, fontWeight: '700' as const, color: theme.primary },
+    gtNutrientText: { fontSize: 10, color: theme.primary, ...font(theme, 'bodyBold', '700') },
     gtNutrientTextSelected: { color: theme.primary },
     // Plant count chip (beside spacing tag)
-    gtPlantCountTag: { fontSize: 10, color: theme.textTertiary, textAlign: 'right' as const },
+    gtPlantCountTag: {
+      fontSize: 10,
+      color: theme.textTertiary,
+      textAlign: 'right' as const,
+      ...font(theme, 'body'),
+    },
     // Drainage warning badge
     gtDrainageBadge: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 4,
+      borderRadius: radius(theme, 'chip', 4),
       backgroundColor: theme.warning,
       marginTop: 4,
       alignSelf: 'flex-start' as const,
     },
-    gtDrainageBadgeText: { fontSize: 9, fontWeight: '700' as const, color: theme.textInverse },
+    gtDrainageBadgeText: {
+      fontSize: 9,
+      color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
+    },
     // Rotation hint banner
     gtRotationHint: {
       backgroundColor: theme.backgroundTertiary,
@@ -834,7 +965,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.borderLight,
     },
-    gtRotationHintText: { fontSize: 12, color: theme.textSecondary },
+    gtRotationHintText: { fontSize: 12, color: theme.textSecondary, ...font(theme, 'body') },
     // ── Prep card ────────────────────────────────────────────────────────────
     szPrepCard: {
       borderWidth: 1.5,
@@ -846,9 +977,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     szPrepCardTitle: {
       fontSize: 13,
-      fontWeight: '700' as const,
       color: theme.warning,
       flex: 1,
+      ...font(theme, 'bodyBold', '700'),
     },
     szPrepStepRow: {
       flexDirection: 'row' as const,
@@ -866,8 +997,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     szPrepStepNumberText: {
       fontSize: 10,
-      fontWeight: '800' as const,
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '800'),
     },
     szPrepToggleRow: {
       flexDirection: 'row' as const,
@@ -878,14 +1009,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     szPrepStepContent: { flex: 1 },
     szPrepStepText: {
       fontSize: 13,
-      fontWeight: '600' as const,
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     szPrepStepDetail: {
       fontSize: 11,
       color: theme.textSecondary,
       marginTop: 2,
       lineHeight: 16,
+      ...font(theme, 'body'),
     },
 
     // Guild step — use full crop plan button
@@ -894,7 +1026,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center' as const,
       justifyContent: 'space-between' as const,
       backgroundColor: theme.primaryLight,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'button', 10),
       paddingHorizontal: 12,
       paddingVertical: 8,
       marginBottom: 12,
@@ -912,8 +1044,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     gtQuickStartTitle: {
       fontSize: 13,
-      fontWeight: '700' as const,
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     gtQuickStartTitleApplied: {
       color: theme.success,
@@ -922,22 +1054,23 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 11,
       color: theme.textSecondary,
       marginTop: 1,
+      ...font(theme, 'body'),
     },
     gtQuickStartPill: {
       backgroundColor: theme.primary,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       paddingHorizontal: 12,
       paddingVertical: 6,
     },
     gtQuickStartPillText: {
       fontSize: 12,
-      fontWeight: '700' as const,
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
     gtQuickStartIconBtn: {
       width: 34,
       height: 34,
-      borderRadius: 17,
+      borderRadius: radius(theme, 'iconButton', 17),
       borderWidth: 1.5,
       borderColor: theme.error,
       alignItems: 'center' as const,
@@ -948,29 +1081,31 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginBottom: 12,
       marginTop: -4,
+      ...font(theme, 'body'),
     },
     // Guild step — benefit tag badge (non-legume)
     gtBenefitTagBadge: {
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
       backgroundColor: theme.infoLight,
       borderWidth: 1,
       borderColor: theme.info,
     },
     gtBenefitTagBadgeText: {
       fontSize: 10,
-      fontWeight: '600' as const,
       color: theme.infoDark,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Layout step — top-down bed map (Step 5 hero)
     tdmCard: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       padding: 10,
       marginBottom: 12,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     tdmHeader: {
       flexDirection: 'row' as const,
@@ -980,14 +1115,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tdmEyebrow: {
       fontSize: 10,
-      fontWeight: '700' as const,
       letterSpacing: 0.9,
       color: theme.textTertiary,
+      ...font(theme, 'bodyBold', '700'),
     },
     tdmMeta: {
       fontSize: 10,
       color: theme.textTertiary,
       letterSpacing: 0.2,
+      ...font(theme, 'body'),
     },
     tdmMapWrap: {
       flexDirection: 'column' as const,
@@ -1016,19 +1152,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmCompassN: {
       fontSize: 10,
       color: theme.primary,
-      fontWeight: '600' as const,
       letterSpacing: 0.3,
+      ...font(theme, 'bodyStrong', '600'),
     },
     tdmCompassS: {
       fontSize: 10,
       color: theme.accent,
-      fontWeight: '500' as const,
       letterSpacing: 0.3,
+      ...font(theme, 'bodyMedium', '500'),
     },
     tdmCompassDim: {
       fontSize: 10,
       color: theme.textTertiary,
       letterSpacing: 0.2,
+      ...font(theme, 'body'),
     },
     tdmCanvasFrame: {
       position: 'relative' as const,
@@ -1095,8 +1232,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmRowTagText: {
       fontSize: 11,
       color: theme.primary,
-      fontWeight: '700' as const,
       letterSpacing: 0.2,
+      ...font(theme, 'bodyBold', '700'),
     },
     tdmPathStrip: {
       position: 'absolute' as const,
@@ -1124,8 +1261,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       position: 'absolute' as const,
       fontSize: 9,
       color: theme.textTertiary,
-      fontWeight: '600' as const,
       letterSpacing: 0.2,
+      ...font(theme, 'bodyStrong', '600'),
     },
     tdmStripLabelN: {
       top: 1,
@@ -1151,12 +1288,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tdmGapCaretText: {
       color: theme.accent,
-      fontWeight: '600' as const,
       letterSpacing: 0.1,
       paddingHorizontal: 2,
       borderRadius: 3,
       overflow: 'hidden' as const,
       backgroundColor: theme.backgroundSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Chip on the midline between two adjacent rows showing their exact N-S gap.
     tdmRowGapChip: {
@@ -1169,12 +1306,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tdmRowGapChipText: {
       color: theme.accent,
-      fontWeight: '600' as const,
       letterSpacing: 0.1,
       paddingHorizontal: 3,
       borderRadius: 3,
       overflow: 'hidden' as const,
       backgroundColor: theme.backgroundSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     tdmZoomHint: {
       position: 'absolute' as const,
@@ -1193,7 +1330,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmZoomHintText: {
       fontSize: 10,
       color: theme.textSecondary,
-      fontWeight: '500' as const,
+      ...font(theme, 'bodyMedium', '500'),
     },
     tdmZoomControls: {
       position: 'absolute' as const,
@@ -1212,7 +1349,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmZoomBtn: {
       width: 28,
       height: 28,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'iconButton', 14),
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
     },
@@ -1224,7 +1361,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       top: 6,
       right: 6,
       height: 28,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'button', 14),
       backgroundColor: theme.backgroundSecondary,
       borderWidth: 1,
       borderColor: theme.border,
@@ -1237,7 +1374,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmExpandButtonText: {
       fontSize: 10,
       color: theme.textSecondary,
-      fontWeight: '500' as const,
+      ...font(theme, 'bodyMedium', '500'),
     },
     tdmModalGestureRoot: {
       flex: 1,
@@ -1258,13 +1395,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tdmModalTitle: {
       fontSize: 16,
-      fontWeight: '700' as const,
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     tdmModalSubtitle: {
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     tdmModalClose: {
       width: 32,
@@ -1290,12 +1428,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmPin: {
       width: 22,
       height: 22,
-      borderRadius: 11,
+      borderRadius: radius(theme, 'card', 11),
       backgroundColor: theme.backgroundSecondary,
       borderWidth: 1.5,
       borderColor: theme.primary,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
+      ...shadow(theme, 'card'),
     },
     tdmPinCompanion: {
       borderStyle: 'dashed' as const,
@@ -1327,6 +1466,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       // Allow short names to center under the pin without being clipped to the
       // narrow pin-wrap width.
       maxWidth: 56,
+      ...font(theme, 'body'),
     },
     tdmOverflowBadge: {
       flexDirection: 'row',
@@ -1340,12 +1480,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderColor: theme.warning,
       paddingHorizontal: 5,
       paddingVertical: 1,
-      borderRadius: 4,
+      borderRadius: radius(theme, 'chip', 4),
     },
     tdmOverflowText: {
       fontSize: 8,
       color: theme.warning,
-      fontWeight: '700' as const,
+      ...font(theme, 'bodyBold', '700'),
     },
     tdmLegend: {
       flexDirection: 'row' as const,
@@ -1383,6 +1523,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tdmLegendText: {
       fontSize: 10,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     tdmLegendHint: {
       fontSize: 9,
@@ -1403,6 +1544,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 10,
       color: theme.textTertiary,
       letterSpacing: 0.2,
+      ...font(theme, 'body'),
     },
     blTrellisCard: {
       flexDirection: 'row',
@@ -1419,6 +1561,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 13,
       color: theme.text,
       lineHeight: 19,
+      ...font(theme, 'body'),
     },
     // Step 4 — collapsible section headers
     gtCollapsibleHeader: {
@@ -1431,6 +1574,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       marginTop: 2,
       marginBottom: 6,
+      ...font(theme, 'body'),
     },
 
     // Guild step — auto-companion notification banner
@@ -1451,14 +1595,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       fontSize: 12,
       color: theme.success,
-      fontWeight: '500' as const,
       lineHeight: 17,
+      ...font(theme, 'bodyMedium', '500'),
     },
     gtAutoAddedBannerDismiss: {
       fontSize: 18,
       color: theme.success,
-      fontWeight: '700' as const,
       marginLeft: 8,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // Step 5 — Name / Plot tabs at the top of the layout designer
@@ -1485,12 +1629,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     blLayoutTabText: {
       fontSize: 14,
-      fontWeight: '600' as const,
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     blLayoutTabTextActive: {
       color: theme.textInverse,
-      fontWeight: '700' as const,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ── Crops tab — companion antagonist warning banner ───────────────────────
@@ -1508,5 +1652,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       color: theme.warningDark,
       lineHeight: 17,
+      ...font(theme, 'body'),
     },
   });

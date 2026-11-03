@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -28,18 +29,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     rowTitle: {
       fontSize: 15,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'title', '600'),
     },
     rowDetail: {
       fontSize: 13,
       color: theme.textSecondary,
       lineHeight: 18,
+      ...font(theme, 'body'),
     },
     rowDate: {
       fontSize: 12,
       color: theme.textTertiary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     centered: {
       alignItems: 'center',
@@ -53,5 +56,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       textAlign: 'center',
       lineHeight: 20,
+      ...font(theme, 'body'),
     },
   });

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -18,14 +19,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     title: {
       fontSize: 32,
-      fontWeight: 'bold',
       color: theme.text,
       marginTop: 16,
+      ...font(theme, 'title', 'bold'),
     },
     subtitle: {
       fontSize: 16,
       color: theme.textSecondary,
       marginTop: 8,
+      ...font(theme, 'body'),
     },
     form: {
       width: '100%',
@@ -33,9 +35,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     button: {
       backgroundColor: theme.primary,
       padding: 16,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       alignItems: 'center',
       marginTop: 8,
+      ...shadow(theme, 'button'),
     },
     buttonDisabled: {
       backgroundColor: theme.textTertiary,
@@ -43,7 +46,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     buttonText: {
       color: theme.textInverse,
       fontSize: 18,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     switchButton: {
       marginTop: 24,
@@ -52,6 +55,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     switchText: {
       color: theme.primary,
       fontSize: 16,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
   });

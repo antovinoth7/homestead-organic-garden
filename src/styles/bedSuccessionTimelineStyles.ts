@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 const LEFT_COL_W = 96;
 const ROW_HEIGHT = 22;
@@ -9,15 +10,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     container: {
       marginTop: 4,
       backgroundColor: theme.card,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       padding: 12,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.06,
       shadowRadius: 4,
       elevation: 1,
+      ...shadow(theme, 'card'),
     },
     timelineRow: {
       flexDirection: 'row' as const,
@@ -34,13 +36,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     leftLabelText: {
       fontSize: 10,
-      fontWeight: '600' as const,
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     leftLabelGm: {
       fontSize: 10,
-      fontWeight: '700' as const,
       color: theme.accent,
+      ...font(theme, 'bodyBold', '700'),
     },
     leftLabelGmSub: {
       fontSize: 8,
@@ -73,7 +75,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     bandLabel: {
       fontSize: 9,
-      fontWeight: '700' as const,
+      ...font(theme, 'bodyBold', '700'),
     },
     bandLabelCoolDry: {
       color: theme.textSecondary,
@@ -92,7 +94,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       position: 'absolute' as const,
       fontSize: 8,
       color: theme.textSecondary,
-      fontWeight: '600' as const,
+      ...font(theme, 'bodyStrong', '600'),
     },
     // Harvest bars
     harvestBar: {
@@ -134,7 +136,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       position: 'absolute' as const,
       fontSize: 8,
       color: theme.primary,
-      fontWeight: '700' as const,
+      ...font(theme, 'bodyBold', '700'),
     },
     // Legend row below the canvas
     legendRow: {
@@ -170,6 +172,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     legendText: {
       fontSize: 10,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     // Green manure rationale text
     gmRationale: {
@@ -189,6 +192,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 11,
       color: theme.textSecondary,
       lineHeight: 16,
+      ...font(theme, 'body'),
     },
     // Next crop rotation card
     nextCropCard: {
@@ -202,15 +206,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     nextCropLabel: {
       fontSize: 9,
-      fontWeight: '700' as const,
       color: theme.primary,
       letterSpacing: 1,
       marginBottom: 3,
+      ...font(theme, 'bodyBold', '700'),
     },
     nextCropText: {
       fontSize: 12,
       color: theme.primary,
-      fontWeight: '500' as const,
       lineHeight: 17,
+      ...font(theme, 'bodyMedium', '500'),
     },
   });

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -7,11 +8,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // form screens share one card language.
     card: {
       backgroundColor: theme.card,
-      borderRadius: 12,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'card', 12),
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
       padding: 14,
       marginBottom: 14,
+      ...shadow(theme, 'card'),
     },
     header: {
       flexDirection: 'row',
@@ -30,7 +32,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     title: {
       flex: 1,
       fontSize: 14,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

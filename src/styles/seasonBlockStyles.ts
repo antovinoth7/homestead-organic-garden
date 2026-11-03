@@ -22,6 +22,7 @@
 
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 import { CARD_GUTTER } from './todayScreenStyles';
 
 /**
@@ -38,11 +39,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 18,
       marginBottom: 22,
       backgroundColor: theme.card,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderWidth: border(theme, 'card', StyleSheet.hairlineWidth),
       borderColor: theme.border,
-      borderRadius: 18,
+      borderRadius: radius(theme, 'card', 18),
       paddingHorizontal: 15,
       paddingVertical: 14,
+      ...shadow(theme, 'card'),
     },
 
     // ─── Header band ─────────────────────────────────────────────────────────
@@ -59,7 +61,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     iconBadge: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: radius(theme, 'chip', 18),
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.primaryLight,
@@ -71,27 +73,28 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     title: {
       fontSize: 17,
       lineHeight: 22,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     subtitle: {
       fontSize: 12.5,
       lineHeight: 17,
       color: theme.textTertiary,
+      ...font(theme, 'body'),
     },
     // `primaryDark` rather than `primary` for the text: it is the token that
     // stays legible on `primaryLight` in both palettes, which invert it.
     daysLeftPill: {
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 999,
+      borderRadius: radius(theme, 'chip', 999),
       backgroundColor: theme.primaryLight,
     },
     daysLeftText: {
       fontSize: 12,
-      fontWeight: '700',
       letterSpacing: 0.2,
       color: theme.primaryDark,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ─── Progress bar ────────────────────────────────────────────────────────
@@ -118,9 +121,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     barLabel: {
       fontSize: 11.5,
-      fontWeight: '600',
       letterSpacing: 0.3,
       color: theme.textTertiary,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     note: {
@@ -128,6 +131,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 21,
       color: theme.textSecondary,
       marginTop: 10,
+      ...font(theme, 'body'),
     },
 
     // Splits the card into bands so the suggestions do not run on from the note.
@@ -139,12 +143,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     // ─── Plant now ───────────────────────────────────────────────────────────
     sowTitle: {
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 1.1,
       textTransform: 'uppercase',
       color: theme.textTertiary,
       marginTop: 13,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 1.1, fontWeight: '600' }),
     },
 
     plantGroup: {
@@ -152,8 +154,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     plantAction: {
       fontSize: 13,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     // What the action actually asks of the grower. "Transplant" without this
     // silently assumes a nursery sown weeks ago.
@@ -162,6 +164,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 17,
       color: theme.textTertiary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     // Bleeds past the card's 15pt padding; the content padding puts the first
     // tile back in line with the text above it.
@@ -240,17 +243,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderTopColor: theme.borderLight,
     },
     openingNextTitle: {
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 1.1,
       textTransform: 'uppercase',
       color: theme.textTertiary,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 1.1, fontWeight: '600' }),
     },
     openingNextCrops: {
       fontSize: 13.5,
       lineHeight: 20,
       color: theme.textSecondary,
       marginTop: 5,
+      ...font(theme, 'body'),
     },
 
     // ─── Empty state ─────────────────────────────────────────────────────────
@@ -259,12 +261,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 20,
       color: theme.textSecondary,
       marginTop: 10,
+      ...font(theme, 'body'),
     },
     emptyLink: {
       fontSize: 13.5,
-      fontWeight: '600',
       color: theme.primary,
       marginTop: 6,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // ─── Seasonal risk ───────────────────────────────────────────────────────
@@ -287,16 +290,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 3,
     },
     riskTitle: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.9,
       textTransform: 'uppercase',
       color: theme.warningDark,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 0.9, fontWeight: '700' }),
     },
     riskText: {
       fontSize: 13.5,
       lineHeight: 20,
       color: theme.text,
+      ...font(theme, 'body'),
     },
 
     // ─── Perennial care ──────────────────────────────────────────────────────
@@ -307,16 +309,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderTopColor: theme.successBorder,
     },
     perennialTitle: {
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 1.1,
       textTransform: 'uppercase',
       color: theme.textTertiary,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 1.1, fontWeight: '600' }),
     },
     perennialText: {
       fontSize: 13.5,
       lineHeight: 20,
       color: theme.textSecondary,
       marginTop: 5,
+      ...font(theme, 'body'),
     },
   });

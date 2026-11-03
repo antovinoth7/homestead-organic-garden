@@ -18,6 +18,7 @@
 
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 import { MONO_META } from './typography';
 import { CARD_GUTTER } from './todayScreenStyles';
 
@@ -41,15 +42,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primaryLight,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.successBorder,
-      borderRadius: 999,
+      borderRadius: radius(theme, 'chip', 999),
       paddingHorizontal: 11,
       paddingVertical: 5,
       maxWidth: 140,
     },
     pillText: {
       fontSize: 11.5,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // ─── Notice cards ────────────────────────────────────────────────────────
@@ -77,12 +78,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 11.5,
       lineHeight: 17,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     retryLink: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.primary,
       paddingVertical: 4,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ─── Today card ──────────────────────────────────────────────────────────
@@ -160,21 +162,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.heroText,
     },
     todayStatLabel: {
-      fontSize: 9.5,
-      fontWeight: '600',
-      letterSpacing: 0.9,
       textTransform: 'uppercase',
       color: theme.heroTextFaint,
       marginTop: 4,
+      ...eyebrow(theme, { fontSize: 9.5, letterSpacing: 0.9, fontWeight: '600' }),
     },
     // Sits under the jobs figure. Overdue work is the one thing on this card
     // that is not weather, so it gets the one alert colour the hero ramp has.
     todayStatNote: {
       fontSize: 10.5,
-      fontWeight: '700',
       color: theme.heroTextMuted,
       marginTop: 3,
       textAlign: 'center',
+      ...font(theme, 'bodyBold', '700'),
     },
     todayStatNoteAlert: {
       color: theme.heroTextAlert,
@@ -182,14 +182,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     // ─── Six days ────────────────────────────────────────────────────────────
     sectionLabel: {
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 1.2,
       textTransform: 'uppercase',
       color: theme.textTertiary,
       paddingHorizontal: CARD_GUTTER,
       paddingTop: 22,
       paddingBottom: 10,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 1.2, fontWeight: '600' }),
     },
     days: {
       paddingHorizontal: CARD_GUTTER,
@@ -232,9 +230,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     dayName: {
       flex: 1,
       fontSize: 13.5,
-      fontWeight: '600',
       color: theme.text,
       letterSpacing: -0.2,
+      ...font(theme, 'bodyStrong', '600'),
     },
     dayTemp: {
       ...MONO_META,
@@ -245,8 +243,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // The overnight low is the quieter half of the pair, so it is nested in the
     // same line rather than given a column of its own.
     dayTempMin: {
-      fontWeight: '500',
       color: theme.textTertiary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     dayMetaRow: {
       flexDirection: 'row',
@@ -256,8 +254,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     dayConditionLabel: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     dayRain: {
       ...MONO_META,
@@ -274,8 +272,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     dayJob: {
       marginTop: 8,
       fontSize: 11.5,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     dayJobOverdue: {
       color: theme.errorDark,
@@ -286,6 +284,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 13,
       textAlign: 'center',
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     noDataBlock: {
       alignItems: 'center',
@@ -304,13 +303,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 18,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'button', 22),
       backgroundColor: theme.primary,
+      ...shadow(theme, 'button'),
     },
     retryButtonText: {
       fontSize: 13,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ─── Source footer ───────────────────────────────────────────────────────
@@ -330,8 +330,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 6,
       paddingVertical: 10,
       fontSize: 11,
-      fontWeight: '700',
       color: theme.primary,
       textDecorationLine: 'underline',
+      ...font(theme, 'bodyBold', '700'),
     },
   });

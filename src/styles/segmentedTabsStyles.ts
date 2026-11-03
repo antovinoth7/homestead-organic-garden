@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -21,9 +22,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 14,
       paddingVertical: 8,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     pillActive: {
@@ -32,11 +33,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     pillText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     pillTextActive: {
       color: theme.primary,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
   });

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -7,11 +8,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 12,
     },
     optionGroup: {
-      borderRadius: 14,
+      borderRadius: radius(theme, 'card', 14),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       overflow: 'hidden',
+      ...shadow(theme, 'card'),
     },
     optionRow: {
       flexDirection: 'row',
@@ -26,13 +28,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     optionText: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     cancelButton: {
       marginTop: 10,
       paddingVertical: 16,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'button', 14),
       backgroundColor: theme.backgroundSecondary,
       borderWidth: 1,
       borderColor: theme.border,
@@ -41,7 +43,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     cancelText: {
       fontSize: 16,
-      fontWeight: '700',
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

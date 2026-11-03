@@ -1,5 +1,6 @@
 import { Dimensions, StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 import { MONO_FONT } from '@/styles/typography';
 import {
   catalogRowHeight,
@@ -24,10 +25,7 @@ export { catalogRowTotalHeight } from '@/styles/catalogMetrics';
  */
 const styleCache = new WeakMap<Theme, Map<number, ReturnType<typeof StyleSheet.create>>>();
 
-export const createStyles = (
-  theme: Theme,
-  fontScale = 1
-): ReturnType<typeof StyleSheet.create> => {
+export const createStyles = (theme: Theme, fontScale = 1): ReturnType<typeof StyleSheet.create> => {
   const scale = clampFontScale(fontScale);
 
   let byScale = styleCache.get(theme);
@@ -58,10 +56,11 @@ export const createStyles = (
     backButton: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'iconButton', 22),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     headerActions: {
       flexDirection: 'row',
@@ -79,26 +78,28 @@ export const createStyles = (
       paddingHorizontal: 14,
       paddingVertical: 10,
       marginBottom: 12,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     errorBannerText: {
       flex: 1,
       fontSize: 13,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     errorBannerAction: {
-      fontWeight: '700',
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     /** The chevron that collapses search, mirroring `plantsStyles`. */
     /** Expanded search row — takes the place of the title in the header bar. */
     title: {
       fontSize: 20,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
 
     // ---- Search bar -------------------------------------------------------
@@ -152,17 +153,18 @@ export const createStyles = (
     plantName: {
       fontSize: 16,
       lineHeight: 20,
-      fontWeight: '600',
       color: theme.text,
       // The English name takes the ellipsis; the Tamil name is often the one a
       // grower here recognises, so it keeps its width.
       flexShrink: 1,
+      ...font(theme, 'bodyStrong', '600'),
     },
     plantTamil: {
       fontSize: 13.5,
       color: theme.textSecondary,
       flexShrink: 0,
       maxWidth: '50%',
+      ...font(theme, 'body'),
     },
     plantSubtitle: {
       fontSize: 12.5,
@@ -171,6 +173,7 @@ export const createStyles = (
       lineHeight: 16,
       color: theme.textSecondary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     /** Pressed feedback — TouchableOpacity's fade alone reads as nothing. */
     plantRowPressed: {
@@ -220,13 +223,13 @@ export const createStyles = (
     },
     catalogSectionLetter: {
       fontSize: 13,
-      fontWeight: '700',
       // Tight enough that "Pulses, Oilseeds & Cereals" fits at 400px; shrinks
       // rather than pushing the count off the row.
       letterSpacing: 0.3,
       color: theme.primary,
       flexShrink: 1,
       paddingRight: 8,
+      ...font(theme, 'bodyBold', '700'),
     },
     catalogSectionCount: {
       fontFamily: MONO_FONT,
@@ -239,20 +242,20 @@ export const createStyles = (
      * must not add height.
      */
     plantHabit: {
-      fontWeight: '700',
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     plantCountChip: {
       paddingHorizontal: 8,
       paddingVertical: 2,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
       backgroundColor: theme.primaryLight,
       marginRight: 4,
     },
     plantCountChipText: {
       fontSize: 11,
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     rowDivider: {
       // Absolute so the hairline paints on the card's bottom edge without adding
@@ -277,16 +280,17 @@ export const createStyles = (
     },
     emptyTitle: {
       fontSize: 15,
-      fontWeight: '600',
       color: theme.text,
       marginTop: 12,
       textAlign: 'center',
+      ...font(theme, 'title', '600'),
     },
     emptyText: {
       fontSize: 13,
       color: theme.textTertiary,
       marginTop: 6,
       textAlign: 'center',
+      ...font(theme, 'body'),
     },
     emptyAction: {
       marginTop: 14,
@@ -297,8 +301,8 @@ export const createStyles = (
     },
     emptyActionText: {
       fontSize: 13,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ---- Search results ---------------------------------------------------
@@ -310,11 +314,9 @@ export const createStyles = (
       marginBottom: 8,
     },
     sectionLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      letterSpacing: 0.6,
       textTransform: 'uppercase',
       color: theme.textSecondary,
+      ...eyebrow(theme, { fontSize: 12, letterSpacing: 0.6, fontWeight: '700' }),
     },
     sectionLabelCount: {
       fontFamily: MONO_FONT,
@@ -325,11 +327,12 @@ export const createStyles = (
       fontSize: 11.5,
       color: theme.textTertiary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     resultHighlight: {
       backgroundColor: theme.accentLight,
       color: theme.warningDark,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ---- Recent searches --------------------------------------------------
@@ -342,8 +345,8 @@ export const createStyles = (
     },
     recentClearText: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     recentChipRow: {
       flexDirection: 'row',
@@ -356,14 +359,15 @@ export const createStyles = (
       gap: 6,
       paddingHorizontal: 12,
       minHeight: 44,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'chip', 22),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     recentChipText: {
       fontSize: 13,
       color: theme.text,
+      ...font(theme, 'body'),
     },
 
     // ---- "Add as new plant" call to action --------------------------------
@@ -383,10 +387,11 @@ export const createStyles = (
       fontSize: 13,
       lineHeight: 18,
       color: theme.primary,
+      ...font(theme, 'body'),
     },
     createCtaStrong: {
-      fontWeight: '700',
       textDecorationLine: 'underline',
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ---- Filter sheet (category + grouping) -------------------------------
@@ -397,8 +402,8 @@ export const createStyles = (
     },
     sheetContainer: {
       backgroundColor: theme.background,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
       paddingHorizontal: 16,
     },
     sheetHeader: {
@@ -411,30 +416,28 @@ export const createStyles = (
     },
     sheetTitle: {
       fontSize: 18,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     sheetSectionTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      letterSpacing: 0.5,
       textTransform: 'uppercase',
       color: theme.textSecondary,
       marginTop: 16,
       marginBottom: 8,
+      ...eyebrow(theme, { fontSize: 13, letterSpacing: 0.5, fontWeight: '700' }),
     },
     /** "Reset" pill — shown only while a facet is off its default. */
     sheetClearBtn: {
       paddingHorizontal: 14,
       minHeight: 44,
       justifyContent: 'center',
-      borderRadius: 22,
+      borderRadius: radius(theme, 'button', 22),
       backgroundColor: theme.errorLight,
     },
     sheetClearText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.error,
+      ...font(theme, 'bodyStrong', '600'),
     },
     /**
      * The sheet holds two facets now — nine category chips and three grouping
@@ -455,9 +458,9 @@ export const createStyles = (
       gap: 6,
       paddingHorizontal: 14,
       minHeight: 44,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'chip', 22),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     sheetChipActive: {
@@ -467,11 +470,11 @@ export const createStyles = (
     sheetChipText: {
       fontSize: 14,
       color: theme.textSecondary,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     sheetChipTextActive: {
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     /**
      * The " (n)" on a category chip. A zero is information — "this category is

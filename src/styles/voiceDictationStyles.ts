@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius } from '@/theme/styleTokens';
 
 /**
  * Styles for the reusable VoiceDictation control. Carried over from the
@@ -50,11 +51,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     voiceLocaleText: {
       fontSize: 12,
       color: theme.textSecondary,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     voiceLocaleTextActive: {
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     voicePreview: {
       fontSize: 14,
@@ -71,8 +72,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row',
       alignItems: 'center',
       height: 28,
-      borderRadius: 14,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'chip', 14),
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
       backgroundColor: theme.background,
       overflow: 'hidden',
@@ -110,8 +111,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 11.5,
       lineHeight: 18,
       letterSpacing: 0.3,
-      fontWeight: '700',
       color: theme.textSecondary,
+      ...font(theme, 'bodyBold', '700'),
     },
     // Tamil needs more optical size than Latin to stay legible at this scale.
     // The line box stays 18 so swapping scripts never resizes the pill.
@@ -119,7 +120,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       lineHeight: 18,
       letterSpacing: 0,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     compactLocaleTextMuted: {
       color: theme.textTertiary,

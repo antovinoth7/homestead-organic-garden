@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -15,6 +16,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       fontSize: 12,
       color: theme.textTertiary,
+      ...font(theme, 'body'),
     },
     actions: {
       flexDirection: 'row',
@@ -29,8 +31,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     buttonText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     buttonTextSecondary: {
       color: theme.textSecondary,

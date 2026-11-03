@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * Organic-input detail — emoji-watermark hero, a rate/when/ideal-for stat
@@ -31,17 +32,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     stickyHeaderTitle: {
       fontSize: 17,
-      fontWeight: '700',
       color: theme.text,
       flex: 1,
+      ...font(theme, 'title', '700'),
     },
     stickyBackButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'iconButton', 20),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
 
     // Hero — oversized emoji watermark behind the name, scrim, title overlay
@@ -84,11 +86,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       left: 16,
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'iconButton', 20),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 5,
+      ...shadow(theme, 'iconButton'),
     },
     heroCaption: {
       position: 'absolute',
@@ -98,28 +101,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     heroCategoryPill: {
       alignSelf: 'flex-start',
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       paddingHorizontal: 9,
       paddingVertical: 4,
       backgroundColor: theme.primaryLight,
     },
     heroCategoryPillText: {
       fontSize: 10.5,
-      fontWeight: '700',
       letterSpacing: 0.5,
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     heroTitle: {
       fontSize: 32,
       lineHeight: 36,
-      fontWeight: '700',
       color: theme.text,
       marginTop: 8,
+      ...font(theme, 'title', '700'),
     },
     heroSubtitle: {
       fontSize: 13.5,
       color: theme.textSecondary,
       marginTop: 3,
+      ...font(theme, 'body'),
     },
 
     // Rate / when / ideal-for stat strip
@@ -127,12 +131,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginHorizontal: 18,
       marginTop: 16,
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'card', 16),
       padding: 14,
       flexDirection: 'row',
       gap: 10,
+      ...shadow(theme, 'card'),
     },
     statCell: {
       flex: 1,
@@ -140,16 +145,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     statLabel: {
       fontSize: 9.5,
-      fontWeight: '700',
       letterSpacing: 0.8,
       color: theme.inputPlaceholder,
+      ...font(theme, 'bodyBold', '700'),
     },
     statValue: {
       fontSize: 13,
       lineHeight: 17,
-      fontWeight: '600',
       color: theme.primary,
       marginTop: 3,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // Lower panel
@@ -166,6 +171,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14.5,
       lineHeight: 22,
       color: theme.text,
+      ...font(theme, 'body'),
     },
 
     // Made from / storage pair
@@ -177,41 +183,44 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     pairCard: {
       flex: 1,
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'card', 14),
       paddingVertical: 12,
       paddingHorizontal: 13,
+      ...shadow(theme, 'card'),
     },
     microLabel: {
       fontSize: 10,
-      fontWeight: '700',
       letterSpacing: 0.8,
       color: theme.textTertiary,
+      ...font(theme, 'bodyBold', '700'),
     },
     pairText: {
       fontSize: 12.5,
       lineHeight: 19,
       color: theme.text,
       marginTop: 6,
+      ...font(theme, 'body'),
     },
 
     // Section headings
     sectionTitle: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.text,
       marginTop: 20,
       marginBottom: 10,
+      ...font(theme, 'title', '700'),
     },
 
     // Benefit list ("What it does")
     listCard: {
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'card', 16),
       paddingHorizontal: 14,
+      ...shadow(theme, 'card'),
     },
     listRow: {
       flexDirection: 'row',
@@ -230,6 +239,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 13.5,
       lineHeight: 20,
       color: theme.text,
+      ...font(theme, 'body'),
     },
 
     // Precaution list ("Watch out for")
@@ -257,15 +267,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     idealChip: {
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.borderLight,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       paddingVertical: 7,
       paddingHorizontal: 13,
     },
     idealChipText: {
       fontSize: 13,
       color: theme.text,
+      ...font(theme, 'body'),
     },
 
     // "Make your own" recipe CTA
@@ -292,14 +303,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     recipeCtaTitle: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'title', '700'),
     },
     recipeCtaSubtitle: {
       fontSize: 12,
       lineHeight: 17,
       color: theme.heroTextMuted,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
 
     // "Not found" fallback header
@@ -317,14 +329,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     fallbackBackButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'iconButton', 20),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     fallbackTitle: {
       fontSize: 22,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
   });

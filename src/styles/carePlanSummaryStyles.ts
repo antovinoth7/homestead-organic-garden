@@ -1,15 +1,17 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createCarePlanSummaryStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     card: {
       backgroundColor: theme.card,
-      borderRadius: 12,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: radius(theme, 'card', 12),
+      borderWidth: border(theme, 'card', StyleSheet.hairlineWidth),
       borderColor: theme.border,
       padding: 16,
       marginBottom: 16,
+      ...shadow(theme, 'card'),
     },
     cardCompact: {
       padding: 12,
@@ -32,14 +34,15 @@ export const createCarePlanSummaryStyles = (theme: Theme): ReturnType<typeof Sty
     title: {
       flex: 1,
       fontSize: 15,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     subtitle: {
       fontSize: 13,
       color: theme.textSecondary,
       marginBottom: 4,
       lineHeight: 18,
+      ...font(theme, 'body'),
     },
     row: {
       flexDirection: 'row',
@@ -65,6 +68,7 @@ export const createCarePlanSummaryStyles = (theme: Theme): ReturnType<typeof Sty
       flex: 1,
       fontSize: 14,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     rowValueWrap: {
       alignItems: 'flex-end',
@@ -72,14 +76,15 @@ export const createCarePlanSummaryStyles = (theme: Theme): ReturnType<typeof Sty
     },
     rowValue: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.text,
       textAlign: 'right',
+      ...font(theme, 'bodyStrong', '600'),
     },
     rowDetail: {
       fontSize: 12,
       color: theme.textTertiary,
       marginTop: 1,
       textAlign: 'right',
+      ...font(theme, 'body'),
     },
   });

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -21,18 +22,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     backButton: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: radius(theme, 'iconButton', 18),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     headerSpacer: {
       width: 36,
     },
     title: {
       fontSize: 20,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     content: {
       flex: 1,
@@ -43,27 +45,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sectionTitle: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.textSecondary,
       marginBottom: 12,
       textTransform: 'uppercase',
       letterSpacing: 1,
+      ...font(theme, 'title', '600'),
     },
     sectionDescription: {
       fontSize: 14,
       color: theme.textSecondary,
       marginBottom: 12,
       lineHeight: 20,
+      ...font(theme, 'body'),
     },
     card: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       padding: 16,
       shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 4,
       elevation: 3,
+      ...shadow(theme, 'card'),
     },
     row: {
       flexDirection: 'row',
@@ -74,13 +78,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     rowTitle: {
       fontSize: 18,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'title', '600'),
     },
     rowSubtitle: {
       fontSize: 14,
       color: theme.textSecondary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     infoItem: {
       flexDirection: 'row',
@@ -92,13 +97,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.text,
       marginLeft: 12,
       flex: 1,
+      ...font(theme, 'body'),
     },
     backupButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       padding: 14,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'button', 10),
       marginTop: 12,
     },
     exportButton: {
@@ -111,9 +117,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     backupButtonText: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.textInverse,
       marginLeft: 8,
+      ...font(theme, 'bodyStrong', '600'),
     },
     backupNoteRow: {
       flexDirection: 'row',
@@ -134,6 +140,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 8,
       marginLeft: 32,
       lineHeight: 18,
+      ...font(theme, 'body'),
     },
     backupButtonTextSuccess: {
       color: theme.primary,
@@ -145,8 +152,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     backupProgressText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textInverse,
+      ...font(theme, 'bodyStrong', '600'),
     },
     backupProgressTextSuccess: {
       color: theme.primary,
@@ -157,9 +164,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     themeLabel: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.text,
       marginBottom: 12,
+      ...font(theme, 'bodyStrong', '600'),
     },
     themePills: {
       flexDirection: 'row',
@@ -173,9 +180,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 10,
       paddingVertical: 10,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       backgroundColor: theme.background,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     themePillActive: {
@@ -184,17 +191,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     themePillText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     themePillTextActive: {
       color: theme.primary,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     themeHint: {
       fontSize: 13,
       color: theme.textSecondary,
       marginTop: 10,
       lineHeight: 18,
+      ...font(theme, 'body'),
     },
   });
