@@ -37,8 +37,9 @@ const isPlainObject = (value: object): boolean => {
  * Anything else (class instances, Maps, references) is equal only to itself.
  *
  * Deliberately conservative: a false "different" only costs a re-render, while a
- * false "equal" would show stale data. A key holding `undefined` therefore
- * differs from a missing key.
+ * false "equal" would show stale data. One JSON rule is followed on purpose: an
+ * object key holding `undefined` counts as absent, since every AsyncStorage
+ * round-trip drops such keys and the two read the same.
  */
 export function isJsonEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
@@ -69,14 +70,18 @@ export function isJsonEqual(a: unknown, b: unknown): boolean {
 
   const aRecord = a as Record<string, unknown>;
   const bRecord = b as Record<string, unknown>;
-  const aKeys = Object.keys(aRecord);
-  if (aKeys.length !== Object.keys(bRecord).length) return false;
+  const aKeys = definedKeys(aRecord);
+  if (aKeys.length !== definedKeys(bRecord).length) return false;
+  // Same count of defined keys, and each of a's matches a defined value in b
+  // (a missing or undefined one never equals a defined value) ⇒ same key set.
   for (const key of aKeys) {
-    if (!Object.prototype.hasOwnProperty.call(bRecord, key)) return false;
     if (!isJsonEqual(aRecord[key], bRecord[key])) return false;
   }
   return true;
 }
+
+const definedKeys = (record: Record<string, unknown>): string[] =>
+  Object.keys(record).filter((key) => record[key] !== undefined);
 
 /**
  * `next`, but with each entry swapped for its `prev` counterpart (matched by

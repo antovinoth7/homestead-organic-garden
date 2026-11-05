@@ -32,8 +32,16 @@ describe('isJsonEqual', () => {
   it('ignores key order but not missing keys', () => {
     expect(isJsonEqual({ a: 1, b: 2 }, { b: 2, a: 1 })).toBe(true);
     expect(isJsonEqual({ a: 1 }, { a: 1, b: 2 })).toBe(false);
-    // Conservative: an explicit undefined is not the same as no key.
-    expect(isJsonEqual({ a: undefined }, {})).toBe(false);
+    expect(isJsonEqual({ a: 1, b: 2 }, { a: 1, c: 2 })).toBe(false);
+  });
+
+  it('reads a key holding undefined as absent, as a JSON round-trip does', () => {
+    expect(isJsonEqual({ a: undefined }, {})).toBe(true);
+    expect(isJsonEqual({ a: 1, b: undefined }, { a: 1 })).toBe(true);
+    expect(isJsonEqual({ a: undefined }, { a: null })).toBe(false);
+    expect(isJsonEqual({ a: undefined }, { b: 1 })).toBe(false);
+    // Arrays keep their slots: JSON turns an undefined element into null.
+    expect(isJsonEqual([undefined], [])).toBe(false);
   });
 
   it('compares Dates by time, never as empty objects', () => {
