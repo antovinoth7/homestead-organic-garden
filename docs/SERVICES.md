@@ -86,6 +86,7 @@ Rules for new write functions:
 - Uses paginated reads.
 - Soft-deletes plants with `is_deleted` and `deleted_at`.
 - Resolves image filenames to local URIs before returning plants.
+- `getAllPlants()` shares structure. Across refetches it returns the previous object for every plant whose content is unchanged, and the previous array when nothing changed (`reuseUnchanged`, `src/utils/structuralShare.ts`). It reuses the warm cache, or the last result, which survives `invalidate()`. Without this, every stale refetch re-rendered every memoized `PlantCard`. It also persists the assembled list to AsyncStorage once; the single-page write in `getPlants` is skipped for it.
 - Deletion cascades into tasks along two different paths, and the difference matters:
   - **Soft delete** (`deletePlant`, `deletePlantsForBed`) calls `disableTasksForPlantIds()`. Templates
     and their logs are kept, just disabled, because the plant is restorable. `restorePlant` /
@@ -110,6 +111,8 @@ Rules for new write functions:
 - The full `TaskType` union is `water | fertilise | prune | repot | spray | mulch | harvest | harvest_leaves | weeding | transplanting | cultivating`. Sync auto-generates only water, fertilise, prune, coconut `harvest`, and perennial `harvest_leaves`; the rest are user-created.
 
 ### `src/services/journal.ts`
+
+- `getJournalEntries()` wraps its network read in `dedup`, so concurrent callers share one read: the list's focus refresh and its `refresh` param used to read the collection twice. It reuses unchanged entries the same way `getAllPlants` does. The offline fallback is not cached, so the next call retries the network.
 
 - Supports multiple images through `photo_filenames` and `photo_urls`.
 - Still carries the legacy single `photo_url` field for backward compatibility.

@@ -25,7 +25,7 @@
 - `FloatingTabBar` (includes `AnimatedFAB` and `FloatingTabBarProvider`) — tab bar with scroll-hide
 - `SegmentedTabs` — generic horizontally-scrollable pill tab bar; use for overflowing tab sets. For a small fixed set inside a card (e.g. the Appearance picker in `SettingsScreen`), match the pill visuals with local styles instead — the component's scroller and bottom hairline are meant for full-width tab bars.
 - `FieldHelp` / `FieldLabelWithHelp` — inline help affordances
-- `UndoToast` — post-action undo snackbar (bed delete, Care Plan ticks)
+- `UndoToast` — post-action undo snackbar (plant delete and saved, bed delete, Care Plan ticks). The bar drains by `scaleX`, so drive `progress` with `useNativeDriver: true`.
 - `OfflineBanner` (+ `useOfflineStatus`) — connectivity strip above the navigator; shows offline state and pending-sync count from the offline write queue
 - `ErrorBoundary` — class component error boundary
 - `VoiceDictation` / `VoiceInputButton` (+ `useVoiceInput`, `useVoiceLocale`) — speech-to-text for existing notes/analysis fields. Default layout is a Tamil/English segmented control with an adjacent mic on its own row above the input; `compact` renders a 28px split `mic | language` pill that sits at the trailing end of a field’s existing label row, costing no extra height (used by `CatalogTextBlock`). Both keep 44px touch targets — compact via outer-side `hitSlop`. The dictation language is app-wide and persisted (`useVoiceLocale`), so every mounted control agrees and the choice survives a restart
@@ -66,6 +66,7 @@
 
 ## Custom Hooks (`src/hooks/`)
 
+- Plants list: `usePlantList`. It owns the list's plants and filter locations, revalidates silently on focus and keeps unchanged data. Pull-to-refresh goes past the 30 s cache.
 - Plant form: `usePlantFormState` (large — 120+ returned properties), `usePlantFormData`, `usePlantDetail`, `usePlantCatalogManager`
 - Beds: `useBedCreationWizard` (+ `bedWizardValidation` helpers), `useBedData`, `useBedDetail`, `useBedOptions`, `useCrossBedStatus`
 - Dashboard/calendar: `useTodayBrief` (everything the Today screen shows), `useCalendarData`, `usePendingCompletions` (Care Plan one-tap completion with a delayed save), `useWeatherLocations` + `useWeatherByPlot` (per-plot forecasts), `useFarmCapacity` (the Profile screen's farm-capacity figures)
