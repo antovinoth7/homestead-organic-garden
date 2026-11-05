@@ -70,10 +70,7 @@ describe('reuseUnchanged', () => {
 
   it('returns the previous array when a refetch found the same data', () => {
     const prev = [tomato, okra];
-    const refetched = [
-      { ...tomato, pest_disease_history: [] },
-      { ...okra },
-    ];
+    const refetched = [{ ...tomato, pest_disease_history: [] }, { ...okra }];
     expect(reuseUnchanged(prev, refetched)).toBe(prev);
   });
 

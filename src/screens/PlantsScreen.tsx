@@ -6,51 +6,103 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  ActivityIndicator,
   TextInput,
   LayoutAnimation,
   Platform,
   UIManager,
   Animated,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
 } from 'react-native';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import { getAllPlants, deletePlant, archivePlant, getCachedPlants } from '../services/plants';
-import { getLocationConfig } from '../services/locations';
-import { Plant, HealthStatus } from '../types/database.types';
-import PlantCard from '../components/PlantCard';
+import { deletePlant, archivePlant } from '@/services/plants';
+import { Plant, HealthStatus } from '@/types/database.types';
+import PlantCard from '@/components/PlantCard';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { PlantsScreenNavigationProp, PlantsScreenRouteProp } from '../types/navigation.types';
-import { useTheme } from '../theme';
-import type { Theme } from '../theme/colors';
-import { createStyles } from '../styles/plantsStyles';
-import { logger } from '../utils/logger';
-import { getErrorMessage } from '../utils/errorLogging';
-import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '../components/FloatingTabBar';
-import { PlantFilterSheet } from '../components/PlantFilterSheet';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { PlantsScreenNavigationProp, PlantsScreenRouteProp } from '@/types/navigation.types';
+import { useTheme } from '@/theme';
+import type { Theme } from '@/theme/colors';
+import { createStyles } from '@/styles/plantsStyles';
+import { getErrorMessage } from '@/utils/errorLogging';
+import { useTabBarScroll, TAB_BAR_HEIGHT, AnimatedFAB } from '@/components/FloatingTabBar';
+import { PlantFilterSheet } from '@/components/PlantFilterSheet';
 import { HeaderIconButton } from '@/components/header/HeaderIconButton';
 import { HeaderSearchField } from '@/components/header/HeaderSearchField';
-import { UndoToast } from '../components/UndoToast';
-import { ConfirmDeleteModal } from '../components/modals/ConfirmDeleteModal';
+import { UndoToast } from '@/components/UndoToast';
+import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
 import { useBedOptions } from '@/hooks/useBedOptions';
-import { isPlantArchived } from '../utils/plantHelpers';
+import { usePlantList } from '@/hooks/usePlantList';
+import { isPlantArchived } from '@/utils/plantHelpers';
+import { PlantSortOption, sortPlantsBy } from '@/utils/plantSort';
 import {
   ActiveFilters,
   BedSegment,
   countActiveFilters,
   countFacets,
+  countSegments,
   EMPTY_FILTERS,
   filterPlants,
 } from '@/utils/plantFilters';
 
-type ListItem = { kind: 'plant'; data: Plant } | { kind: 'header'; title: string };
-type SortOption = 'name' | 'newest' | 'oldest' | 'health' | 'age';
+type ListItem = { kind: 'plant'; data: Plant } | { kind: 'header'; key: string; title: string };
 
-const ITEMS_PER_PAGE = 20;
+/** How long a swipe-delete stays undoable, and how long "Plant saved" shows. */
+const UNDO_WINDOW_MS = 4000;
+const SAVED_TOAST_MS = 2500;
+
+const NO_HIDDEN_IDS: ReadonlySet<string> = new Set();
+const NO_ITEMS: ListItem[] = [];
+
+/**
+ * One list item per Plant object. `getAllPlants` reuses unchanged plants, so a
+ * rebuilt list hands FlatList the same items and its cells skip re-rendering.
+ */
+const plantItems = new WeakMap<Plant, ListItem>();
+function plantListItem(plant: Plant): ListItem {
+  let item = plantItems.get(plant);
+  if (!item) {
+    item = { kind: 'plant', data: plant };
+    plantItems.set(plant, item);
+  }
+  return item;
+}
+
+/** The Bed segment's rows: a header per bed (by name), unassigned plants last. */
+function groupByBed(plants: readonly Plant[], bedNames: ReadonlyMap<string, string>): ListItem[] {
+  const buckets = new Map<string, Plant[]>();
+  for (const plant of plants) {
+    const key = plant.bed_id ?? '';
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(plant);
+    else buckets.set(key, [plant]);
+  }
+  const sortedEntries = [...buckets.entries()].sort(([a], [b]) => {
+    if (!a) return 1;
+    if (!b) return -1;
+    return (bedNames.get(a) ?? '').localeCompare(bedNames.get(b) ?? '');
+  });
+  const items: ListItem[] = [];
+  for (const [bedId, bedPlants] of sortedEntries) {
+    // Keyed by bed id: two beds can share a name.
+    items.push({
+      kind: 'header',
+      key: `header-${bedId || 'unassigned'}`,
+      title: bedId ? (bedNames.get(bedId) ?? 'Unknown Bed') : 'Unassigned',
+    });
+    for (const plant of bedPlants) items.push(plantListItem(plant));
+  }
+  return items;
+}
+
+const withoutId = (ids: ReadonlySet<string>, id: string): ReadonlySet<string> => {
+  if (!ids.has(id)) return ids;
+  const next = new Set(ids);
+  next.delete(id);
+  return next;
+};
+
+const listItemKey = (item: ListItem): string => (item.kind === 'plant' ? item.data.id : item.key);
 
 /**
  * What an empty list says when it was opened from a Today plot card's health
@@ -104,22 +156,27 @@ export default function PlantsScreen(): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const flatListRef = useRef<FlatList>(null);
-  const loadMoreTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flatListRef = useRef<FlatList<ListItem>>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
-  const [plants, setPlants] = useState<Plant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  const { plants, parentLocations, childLocations, loading, refreshing, refresh, reload } =
+    usePlantList();
   const [bedSegment, setBedSegment] = useState<BedSegment>('other');
   const { beds } = useBedOptions();
   const bedNameMap = useMemo(() => new Map(beds.map((b) => [b.id, b.name])), [beds]);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<{
-    id: string;
-    plant: Plant;
-    index: number;
-  } | null>(null);
+
+  // Deleting hides the plant by id rather than editing a local copy of the list:
+  // Undo just un-hides it (it returns to its sorted slot), and nothing below has
+  // to depend on the whole list. Mirrors BedListScreen.
+  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<string>>(NO_HIDDEN_IDS);
+  const [pendingDelete, setPendingDelete] = useState<Plant | null>(null);
+  // Mirror of pendingDelete read inside callbacks, so the delete handlers keep a
+  // stable identity and the cards don't re-render while a delete is in flight.
+  const pendingDeleteRef = useRef<Plant | null>(null);
+  const setPending = useCallback((plant: Plant | null) => {
+    pendingDeleteRef.current = plant;
+    setPendingDelete(plant);
+  }, []);
   // Active plant awaiting the themed delete-confirmation modal.
   const [confirmDelete, setConfirmDelete] = useState<Plant | null>(null);
   const undoProgress = useAnimatedValue(1);
@@ -136,19 +193,10 @@ export default function PlantsScreen(): React.JSX.Element {
   const [searchActive, setSearchActive] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
 
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [sortBy, setSortBy] = useState<PlantSortOption>('newest');
   const [filters, setFilters] = useState<ActiveFilters>(EMPTY_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
   const [homeHealthFilter, setHomeHealthFilter] = useState<HealthStatus | null>(null);
-  const [parentLocations, setParentLocations] = useState<string[]>([]);
-  const [childLocations, setChildLocations] = useState<string[]>([]);
-
-  const handleScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      onTabBarScroll(e);
-    },
-    [onTabBarScroll]
-  );
 
   const handleSearchChange = useCallback((text: string) => {
     setSearchInput(text);
@@ -186,73 +234,36 @@ export default function PlantsScreen(): React.JSX.Element {
   }, [searchInput]);
 
   const openArchived = useCallback(() => navigation.navigate('ArchivedPlants'), [navigation]);
+  const openPlantForm = useCallback(() => navigation.navigate('PlantForm'), [navigation]);
 
-  const loadPlants =useCallback(async (options?: { silent?: boolean }) => {
-    if (!options?.silent) {
-      setLoading(true);
-    }
-    try {
-      const data = await getAllPlants();
-      setPlants(data);
-      if (!options?.silent) {
-        setDisplayCount(ITEMS_PER_PAGE);
-      }
-    } catch (error: unknown) {
-      if (!options?.silent) {
-        Alert.alert('Error', getErrorMessage(error));
-      }
-    } finally {
-      if (!options?.silent) {
-        setLoading(false);
-      }
-    }
-  }, []);
+  // Data refreshes on focus inside usePlantList; the screen only resets the bar.
+  useFocusEffect(
+    useCallback(() => {
+      resetTabBar();
+    }, [resetTabBar])
+  );
 
-  const loadLocations = useCallback(async () => {
-    try {
-      const config = await getLocationConfig();
-      setParentLocations(config.parentLocations);
-      setChildLocations(config.childLocations);
-    } catch (error) {
-      logger.error('Error loading locations', error as Error);
-    }
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-    loadLocations();
-    loadPlants();
-
-    const unsubscribe = navigation.addListener('focus', () => {
-      if (isMounted) {
-        resetTabBar();
-        // Immediately apply any surgical cache update (e.g. bed deletion) so
-        // deleted plants don't linger during the async refresh.
-        const instant = getCachedPlants();
-        if (instant !== null) setPlants(instant);
-        void loadPlants({ silent: true });
-        void loadLocations();
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      unsubscribe();
-      if (loadMoreTimeoutRef.current) clearTimeout(loadMoreTimeoutRef.current);
+  useEffect(
+    () => () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
       if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
-    };
-  }, [navigation, loadPlants, loadLocations, resetTabBar]);
+    },
+    []
+  );
 
+  // After a save the form pops back with `refresh`. The save already
+  // invalidated the cache and the focus revalidate picks it up; this only puts
+  // the list back at the top (and revalidates once more in case the list was
+  // already focused, which is a cache hit otherwise).
   useEffect(() => {
     if (route.params?.refresh) {
       flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
       resetTabBar();
-      loadPlants();
+      void reload();
       navigation.setParams({ refresh: undefined });
     }
-  }, [route.params, navigation, loadPlants, resetTabBar]);
+  }, [route.params, navigation, reload, resetTabBar]);
 
   // Show a brief "saved" confirmation when the plant form returns a savedPlantId.
   useEffect(() => {
@@ -262,11 +273,11 @@ export default function PlantsScreen(): React.JSX.Element {
     savedToastProgress.setValue(1);
     Animated.timing(savedToastProgress, {
       toValue: 0,
-      duration: 2500,
-      useNativeDriver: false,
+      duration: SAVED_TOAST_MS,
+      useNativeDriver: true,
     }).start();
     if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
-    savedToastTimerRef.current = setTimeout(() => setSavedToast(null), 2500);
+    savedToastTimerRef.current = setTimeout(() => setSavedToast(null), SAVED_TOAST_MS);
     navigation.setParams({ savedPlantId: undefined, savedPlantName: undefined });
   }, [route.params, navigation, savedToastProgress]);
 
@@ -294,7 +305,6 @@ export default function PlantsScreen(): React.JSX.Element {
     if (health !== null) setHomeHealthFilter(health);
     if (plotFilter) setBedSegment('other');
     setShowFilters(false);
-    setDisplayCount(ITEMS_PER_PAGE);
     navigation.setParams({ healthFilter: undefined, plotFilter: undefined });
   }, [route.params, navigation]);
 
@@ -309,135 +319,107 @@ export default function PlantsScreen(): React.JSX.Element {
         await deletePlant(plant.id);
       } catch (error: unknown) {
         Alert.alert('Error', getErrorMessage(error));
-        void loadPlants();
       }
+      // Either way the reloaded list now says what happened — the plant is gone,
+      // or (on failure) back — so it no longer needs hiding. Un-hiding matters:
+      // a deleted plant can be restored from Archived and must show again.
+      await reload();
+      setHiddenIds((prev) => withoutId(prev, plant.id));
     },
-    [loadPlants]
+    [reload]
   );
 
   const startPendingDelete = useCallback(
-    (plant: Plant, index: number) => {
-      // Cancel any in-flight undo for the previous pending delete
+    (plant: Plant) => {
+      // A new delete closes the previous Undo window: commit that one now.
       if (undoTimerRef.current) {
         clearTimeout(undoTimerRef.current);
-        if (pendingDelete) {
-          void commitDelete(pendingDelete.plant);
-        }
+        undoTimerRef.current = null;
+        const previous = pendingDeleteRef.current;
+        if (previous) void commitDelete(previous);
       }
 
-      // Optimistic remove
-      setPlants((prev) => prev.filter((p) => p.id !== plant.id));
-      setPendingDelete({ id: plant.id, plant, index });
+      setHiddenIds((prev) => new Set(prev).add(plant.id));
+      setPending(plant);
 
-      // Animate progress bar from full → empty over 4 seconds
+      // Drain the Undo bar from full to empty across the window.
       undoProgress.setValue(1);
       Animated.timing(undoProgress, {
         toValue: 0,
-        duration: 4000,
-        useNativeDriver: false,
+        duration: UNDO_WINDOW_MS,
+        useNativeDriver: true,
       }).start();
 
       undoTimerRef.current = setTimeout(() => {
-        setPendingDelete(null);
         undoTimerRef.current = null;
+        setPending(null);
         void commitDelete(plant);
-      }, 4000);
+      }, UNDO_WINDOW_MS);
     },
-    [pendingDelete, commitDelete, undoProgress]
+    [commitDelete, setPending, undoProgress]
   );
 
   const handleDelete = useCallback(
-    (id: string) => {
-      const index = plants.findIndex((p) => p.id === id);
-      if (index === -1) return;
-      const plant = plants[index]!;
-
+    (plant: Plant) => {
       // Active plants are still deletable, but confirm first since deleting one
       // also archives it (ends its place in the bed's rotation).
       if (!isPlantArchived(plant)) {
         setConfirmDelete(plant);
         return;
       }
-
-      startPendingDelete(plant, index);
+      startPendingDelete(plant);
     },
-    [plants, startPendingDelete]
+    [startPendingDelete]
   );
 
   const handleConfirmDelete = useCallback(() => {
     if (!confirmDelete) return;
     const plant = confirmDelete;
     setConfirmDelete(null);
-    const index = plants.findIndex((p) => p.id === plant.id);
-    if (index === -1) return;
-    startPendingDelete(plant, index);
-  }, [confirmDelete, plants, startPendingDelete]);
+    startPendingDelete(plant);
+  }, [confirmDelete, startPendingDelete]);
+
+  const handleCancelDelete = useCallback(() => setConfirmDelete(null), []);
 
   const handleUndo = useCallback(() => {
-    if (!pendingDelete) return;
+    const pending = pendingDeleteRef.current;
+    if (!pending) return;
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     undoTimerRef.current = null;
     undoProgress.stopAnimation();
-    // Restore plant at original index
-    setPlants((prev) => {
-      const next = [...prev];
-      next.splice(pendingDelete.index, 0, pendingDelete.plant);
-      return next;
-    });
-    setPendingDelete(null);
-  }, [pendingDelete, undoProgress]);
+    setHiddenIds((prev) => withoutId(prev, pending.id));
+    setPending(null);
+  }, [setPending, undoProgress]);
+
+  const visiblePlants = useMemo(
+    () => (hiddenIds.size === 0 ? plants : plants.filter((p) => !hiddenIds.has(p.id))),
+    [plants, hiddenIds]
+  );
 
   const filterState = useMemo(
     () => ({ filters, searchQuery, bedSegment }),
     [filters, searchQuery, bedSegment]
   );
 
-  // Each chip's count is taken against every *other* active filter, so it reads
-  // as "how many would I get if I picked this" rather than a farm-wide total
-  // sitting above a filtered list.
-  const plantCounts = useMemo(() => countFacets(plants, filterState), [plants, filterState]);
-
-  const getSortedPlants = useCallback(
-    (plantsToSort: Plant[]) => {
-      const sorted = [...plantsToSort];
-      switch (sortBy) {
-        case 'name':
-          return sorted.sort((a, b) => a.name.localeCompare(b.name));
-        case 'newest':
-          return sorted.sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-        case 'oldest':
-          return sorted.sort(
-            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          );
-        case 'health': {
-          const healthOrder = { healthy: 0, recovering: 1, stressed: 2, sick: 3 };
-          return sorted.sort((a, b) => {
-            const aHealth = a.health_status || 'healthy';
-            const bHealth = b.health_status || 'healthy';
-            return healthOrder[aHealth] - healthOrder[bHealth];
-          });
-        }
-        case 'age':
-          return sorted.sort((a, b) => {
-            const aDate = a.planting_date ? new Date(a.planting_date).getTime() : 0;
-            const bDate = b.planting_date ? new Date(b.planting_date).getTime() : 0;
-            return aDate - bDate;
-          });
-        default:
-          return sorted;
-      }
-    },
-    [sortBy]
+  // The segment badges are always on screen; the other facets only matter while
+  // the filter sheet is open (it unmounts when closed), so only then are they
+  // counted. Each chip's count is taken against every *other* active filter, so
+  // it reads as "how many would I get if I picked this".
+  const segmentCounts = useMemo(
+    () => countSegments(visiblePlants, filterState),
+    [visiblePlants, filterState]
+  );
+  const facetCounts = useMemo(
+    () => (showFilters ? countFacets(visiblePlants, filterState) : null),
+    [showFilters, visiblePlants, filterState]
   );
 
-  const updateFilter = <K extends keyof ActiveFilters>(
-    category: K,
-    value: ActiveFilters[K]
-  ): void => {
-    setFilters((prev) => ({ ...prev, [category]: value }));
-  };
+  const updateFilter = useCallback(
+    <K extends keyof ActiveFilters>(category: K, value: ActiveFilters[K]): void => {
+      setFilters((prev) => ({ ...prev, [category]: value }));
+    },
+    []
+  );
 
   const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
 
@@ -446,18 +428,20 @@ export default function PlantsScreen(): React.JSX.Element {
     [activeFilterCount, searchQuery]
   );
 
-  const clearAllFilters = (): void => {
+  const clearAllFilters = useCallback((): void => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     setFilters(EMPTY_FILTERS);
     setSearchInput('');
     setSearchQuery('');
     setHomeHealthFilter(null);
-    setDisplayCount(ITEMS_PER_PAGE);
-  };
+  }, []);
+
+  const gardenIsEmpty = visiblePlants.length === 0;
 
   // An empty list means one of three things: no plants at all, a health count
   // from Today that turned out to be empty, or filters that match nothing.
   const emptyState = useMemo(() => {
-    if (plants.length === 0) {
+    if (gardenIsEmpty) {
       return {
         icon: 'leaf-outline' as const,
         color: theme.primary,
@@ -475,77 +459,46 @@ export default function PlantsScreen(): React.JSX.Element {
       title: 'No plants match',
       subtitle: 'Try adjusting your filters or search',
     };
-  }, [plants.length, homeHealthFilter, theme]);
+  }, [gardenIsEmpty, homeHealthFilter, theme]);
 
-  const toggleFilters = (): void => {
+  const toggleFilters = useCallback((): void => {
     if (!showFilters) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     }
     setShowFilters((prev) => !prev);
-  };
+  }, [showFilters]);
 
-  const segmentFiltered = useMemo(() => filterPlants(plants, filterState), [plants, filterState]);
+  const segmentFiltered = useMemo(
+    () => filterPlants(visiblePlants, filterState),
+    [visiblePlants, filterState]
+  );
 
   const filteredPlants = useMemo(
-    () => getSortedPlants(segmentFiltered),
-    [getSortedPlants, segmentFiltered]
+    () => sortPlantsBy(segmentFiltered, sortBy),
+    [segmentFiltered, sortBy]
   );
 
-  const displayedPlants = useMemo(() => {
-    return filteredPlants.slice(0, displayCount);
-  }, [filteredPlants, displayCount]);
-
-  const hasMore = displayCount < filteredPlants.length;
-
-  // Group under bed headers automatically when viewing the Bed segment.
+  // Group under bed headers automatically when viewing the Bed segment. The
+  // whole filtered list goes to FlatList, which windows it: there is no paging,
+  // so no stall and spinner every 20 plants.
   const autoGroup = bedSegment === 'bed';
 
-  const groupedListData = useMemo((): ListItem[] => {
-    if (!autoGroup) {
-      return displayedPlants.map((p): ListItem => ({ kind: 'plant', data: p }));
-    }
-    const buckets = new Map<string, Plant[]>();
-    // Bucket the paged slice (not the full filtered set) so the Bed segment
-    // respects Load More instead of rendering every bed plant at once.
-    for (const p of displayedPlants) {
-      const key = p.bed_id ?? '';
-      if (!buckets.has(key)) buckets.set(key, []);
-      buckets.get(key)!.push(p);
-    }
-    const items: ListItem[] = [];
-    // Beds first (sorted by name), unassigned last
-    const sortedEntries = [...buckets.entries()].sort(([a], [b]) => {
-      if (!a) return 1;
-      if (!b) return -1;
-      return (bedNameMap.get(a) ?? '').localeCompare(bedNameMap.get(b) ?? '');
-    });
-    for (const [bedId, bPlants] of sortedEntries) {
-      const title = bedId ? (bedNameMap.get(bedId) ?? 'Unknown Bed') : 'Unassigned';
-      items.push({ kind: 'header', title });
-      for (const p of bPlants) items.push({ kind: 'plant', data: p });
-    }
-    return items;
-  }, [autoGroup, displayedPlants, bedNameMap]);
-
-  const loadMore = (): void => {
-    if (loadingMore || !hasMore) return;
-    if (loadMoreTimeoutRef.current) clearTimeout(loadMoreTimeoutRef.current);
-    setLoadingMore(true);
-    loadMoreTimeoutRef.current = setTimeout(() => {
-      setDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, filteredPlants.length));
-      setLoadingMore(false);
-      loadMoreTimeoutRef.current = null;
-    }, 300);
-  };
-
-  useEffect(() => {
-    setDisplayCount(ITEMS_PER_PAGE);
-  }, [filters, searchQuery, sortBy, bedSegment]);
-
-  const listItemKeyExtractor = useCallback(
-    (item: ListItem) => (item.kind === 'plant' ? item.data.id : `header-${item.title}`),
-    []
+  const ungroupedItems = useMemo(
+    () => (autoGroup ? NO_ITEMS : filteredPlants.map(plantListItem)),
+    [autoGroup, filteredPlants]
   );
+  // Only the grouped list reads bed names, so a bed reload can't rebuild the
+  // ungrouped one.
+  const groupedItems = useMemo(
+    () => (autoGroup ? groupByBed(filteredPlants, bedNameMap) : NO_ITEMS),
+    [autoGroup, filteredPlants, bedNameMap]
+  );
+  const listData = autoGroup ? groupedItems : ungroupedItems;
+
+  // A new result set starts at the top.
+  useEffect(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [filters, searchQuery, sortBy, bedSegment]);
 
   const handleSwipeableOpen = useCallback((ref: Swipeable) => {
     if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
@@ -597,39 +550,54 @@ export default function PlantsScreen(): React.JSX.Element {
     [handleCardPress, handleCardEdit, handleDelete, searchQuery, handleSwipeableOpen, styles, theme]
   );
 
-  const renderUndoToast = (): React.JSX.Element | null => {
-    if (!pendingDelete) return null;
-    const progressWidth = undoProgress.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['0%', '100%'],
-    });
-    return (
-      <View
-        style={[
-          styles.undoToast,
-          {
-            bottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8,
-          },
-        ]}
-      >
-        <View style={styles.undoToastRow}>
-          <View style={styles.undoToastLeft}>
-            <Ionicons name="trash-outline" size={16} color={theme.textSecondary} />
-            <Text style={styles.undoToastText}>{pendingDelete.plant.name} deleted</Text>
-          </View>
-          <TouchableOpacity
-            onPress={handleUndo}
-            hitSlop={{ top: 8, bottom: 8, left: 12, right: 4 }}
-          >
-            <Text style={styles.undoToastAction}>Undo</Text>
-          </TouchableOpacity>
+  // Stable list props: an inline style, refresh control or empty state is a new
+  // object every render, which re-renders the FlatList and re-runs every cell.
+  const listContentStyle = useMemo(
+    () => [
+      styles.listContent,
+      { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 },
+    ],
+    [styles.listContent, insets.bottom]
+  );
+
+  const refreshControl = useMemo(
+    () => <RefreshControl refreshing={loading || refreshing} onRefresh={refresh} />,
+    [loading, refreshing, refresh]
+  );
+
+  const listEmpty = useMemo(
+    () =>
+      loading ? null : (
+        <View style={styles.emptyState}>
+          <Ionicons name={emptyState.icon} size={64} color={emptyState.color} />
+          <Text style={styles.emptyText}>{emptyState.title}</Text>
+          <Text style={styles.emptySubtext}>{emptyState.subtitle}</Text>
+          {gardenIsEmpty ? (
+            <TouchableOpacity style={styles.clearFiltersEmptyButton} onPress={openPlantForm}>
+              <Ionicons name="add" size={16} color={theme.primary} />
+              <Text style={styles.clearFiltersEmptyText}>Add First Plant</Text>
+            </TouchableOpacity>
+          ) : hasActiveFilters ? (
+            <TouchableOpacity style={styles.clearFiltersEmptyButton} onPress={clearAllFilters}>
+              <Ionicons name="close-circle-outline" size={16} color={theme.primary} />
+              <Text style={styles.clearFiltersEmptyText}>Clear Filters</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
-        <View style={styles.undoProgressTrack}>
-          <Animated.View style={[styles.undoProgressBar, { width: progressWidth }]} />
-        </View>
-      </View>
-    );
-  };
+      ),
+    [
+      loading,
+      styles,
+      emptyState,
+      gardenIsEmpty,
+      hasActiveFilters,
+      openPlantForm,
+      clearAllFilters,
+      theme.primary,
+    ]
+  );
+
+  const toastBottomOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8;
 
   return (
     <View style={styles.container}>
@@ -676,7 +644,7 @@ export default function PlantsScreen(): React.JSX.Element {
       </View>
 
       {/* ── Filter + Sort Bottom Sheet ── */}
-      {showFilters && (
+      {showFilters && facetCounts && (
         <PlantFilterSheet
           sortBy={sortBy}
           setSortBy={setSortBy}
@@ -684,7 +652,7 @@ export default function PlantsScreen(): React.JSX.Element {
           updateFilter={updateFilter}
           clearAllFilters={clearAllFilters}
           hasActiveFilters={hasActiveFilters}
-          plantCounts={plantCounts}
+          plantCounts={facetCounts}
           parentLocations={parentLocations}
           childLocations={childLocations}
           onClose={toggleFilters}
@@ -697,8 +665,8 @@ export default function PlantsScreen(): React.JSX.Element {
         <View style={styles.segmentRow}>
           {(
             [
-              ['other', 'Pots & Ground', 'cube-outline', plantCounts.segment.other],
-              ['bed', 'Beds', 'grid-outline', plantCounts.segment.bed],
+              ['other', 'Pots & Ground', 'cube-outline', segmentCounts.other],
+              ['bed', 'Beds', 'grid-outline', segmentCounts.bed],
             ] as const
           ).map(([value, label, icon, count]) => {
             const active = bedSegment === value;
@@ -732,78 +700,48 @@ export default function PlantsScreen(): React.JSX.Element {
 
       <FlatList
         ref={flatListRef}
-        data={groupedListData}
-        keyExtractor={listItemKeyExtractor}
+        data={listData}
+        keyExtractor={listItemKey}
         renderItem={renderListItem}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 },
-        ]}
-        onScroll={handleScroll}
+        contentContainerStyle={listContentStyle}
+        onScroll={onTabBarScroll}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadPlants} />}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        ListEmptyComponent={
-          !loading ? (
-            <View style={styles.emptyState}>
-              <Ionicons name={emptyState.icon} size={64} color={emptyState.color} />
-              <Text style={styles.emptyText}>{emptyState.title}</Text>
-              <Text style={styles.emptySubtext}>{emptyState.subtitle}</Text>
-              {plants.length === 0 ? (
-                <TouchableOpacity
-                  style={styles.clearFiltersEmptyButton}
-                  onPress={() => navigation.navigate('PlantForm')}
-                >
-                  <Ionicons name="add" size={16} color={theme.primary} />
-                  <Text style={styles.clearFiltersEmptyText}>Add First Plant</Text>
-                </TouchableOpacity>
-              ) : hasActiveFilters ? (
-                <TouchableOpacity style={styles.clearFiltersEmptyButton} onPress={clearAllFilters}>
-                  <Ionicons name="close-circle-outline" size={16} color={theme.primary} />
-                  <Text style={styles.clearFiltersEmptyText}>Clear Filters</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          ) : null
-        }
-        ListFooterComponent={
-          loadingMore ? (
-            <View style={styles.loadingMore}>
-              <ActivityIndicator size="small" color={theme.primary} />
-              <Text style={styles.loadingText}>Loading more plants...</Text>
-            </View>
-          ) : hasMore && displayedPlants.length > 0 ? (
-            <TouchableOpacity style={styles.loadMoreButton} onPress={loadMore}>
-              <Text style={styles.loadMoreText}>Load More</Text>
-              <Ionicons name="chevron-down" size={16} color={theme.primary} />
-            </TouchableOpacity>
-          ) : null
-        }
+        refreshControl={refreshControl}
+        ListEmptyComponent={listEmpty}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
-        // removeClippedSubviews is intentionally OFF: combined with a legacy
-        // gesture-handler Swipeable per row under the New Architecture it caused
-        // blank/stuck cells while scrolling. Pagination (20/page) bounds cost.
         updateCellsBatchingPeriod={50}
+        // Memoizes FlatList's per-cell renderer: without it every FlatList
+        // render hands each mounted cell a new renderItem and re-runs it.
+        strictMode
+        // Explicitly OFF — FlatList defaults it ON for Android. With a legacy
+        // gesture-handler Swipeable per row under the New Architecture it caused
+        // blank/stuck cells while scrolling. Windowing (windowSize) bounds cost.
+        removeClippedSubviews={false}
       />
 
-      <AnimatedFAB onPress={() => navigation.navigate('PlantForm')} />
+      <AnimatedFAB onPress={openPlantForm} />
       <ConfirmDeleteModal
         visible={confirmDelete !== null}
         title="Delete plant?"
         message={`This archives and deletes “${confirmDelete?.name ?? ''}”. You’ll have a few seconds to undo.`}
-        onCancel={() => setConfirmDelete(null)}
+        onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
       />
-      {renderUndoToast()}
+      <UndoToast
+        visible={pendingDelete !== null}
+        message={`${pendingDelete?.name ?? 'Plant'} deleted`}
+        onUndo={handleUndo}
+        progress={undoProgress}
+        bottomOffset={toastBottomOffset}
+      />
       <UndoToast
         visible={savedToast !== null}
         message={`${savedToast?.name ?? 'Plant'} saved`}
         onUndo={handleViewSaved}
         progress={savedToastProgress}
-        bottomOffset={TAB_BAR_HEIGHT + Math.max(insets.bottom, 16) + 8}
+        bottomOffset={toastBottomOffset}
         icon="checkmark-circle"
         actionLabel="View"
       />
