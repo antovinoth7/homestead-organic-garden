@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -47,8 +47,14 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
   const [pendingGroupDelete, setPendingGroupDelete] = useState<BedGroup | null>(null);
   const [deletingBedId, setDeletingBedId] = useState<string | null>(null);
 
+  // The list is replaced by a spinner only until the first load lands; a
+  // refocus or the reload after a restore/delete updates in place, so the
+  // scroll position survives.
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    const silent = hasLoadedRef.current;
+    if (!silent) setLoading(true);
     try {
       const [archivedPlants, activeBeds, deletedBeds] = await Promise.all([
         getArchivedPlants(),
@@ -60,10 +66,11 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
       setPlants(archivedPlants);
       setBedNames(names);
       setDeletedBedIds(new Set(deletedBeds.map((b) => b.id)));
+      hasLoadedRef.current = true;
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 

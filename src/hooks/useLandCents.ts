@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { getLocationConfig } from '@/services/locations';
 import { getFarmConfig } from '@/services/farmCapacity';
@@ -19,8 +19,13 @@ export function useLandCents(): UseLandCentsResult {
   const [landCents, setLandCents] = useState(DEFAULT_LAND_CENTS);
   const [loading, setLoading] = useState(true);
 
+  // Spinner on the first load only: both reads are cache-first, so a refocus
+  // is near-instant and should not flash the screen's loading state.
+  const hasLoadedRef = useRef(false);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    const silent = hasLoadedRef.current;
+    if (!silent) setLoading(true);
     try {
       // Both reads are cache-first, so the common case costs no Firestore reads.
       const [locationConfig, farmConfig] = await Promise.all([
@@ -32,7 +37,8 @@ export function useLandCents(): UseLandCentsResult {
       logger.warn('useLandCents: failed to resolve farm size', error as Error);
       setLandCents(DEFAULT_LAND_CENTS);
     } finally {
-      setLoading(false);
+      hasLoadedRef.current = true;
+      if (!silent) setLoading(false);
     }
   }, []);
 

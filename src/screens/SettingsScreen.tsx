@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -104,11 +104,9 @@ export default function SettingsScreen(): React.JSX.Element {
     }
   }, []);
 
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
-
-  // Reset scroll to top when screen comes into focus
+  // Reset scroll to top and refresh the stats when the screen comes into focus
+  // (that includes the first focus — a separate mount effect ran the storage
+  // scan a second time on every open).
   useFocusEffect(
     React.useCallback(() => {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
