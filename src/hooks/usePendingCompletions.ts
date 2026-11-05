@@ -107,7 +107,7 @@ export function usePendingCompletions({ onSaved, onError }: Options): UsePending
       toValue: 0,
       duration: UNDO_WINDOW_MS,
       easing: Easing.linear,
-      useNativeDriver: false,
+      useNativeDriver: true,
     });
     animation.start();
     return () => animation.stop();

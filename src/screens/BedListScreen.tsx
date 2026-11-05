@@ -290,7 +290,7 @@ export default function BedListScreen(): React.JSX.Element {
       Animated.timing(undoProgress, {
         toValue: 0,
         duration: 4000,
-        useNativeDriver: false,
+        useNativeDriver: true,
       }).start();
 
       undoTimerRef.current = setTimeout(() => {
@@ -363,6 +363,11 @@ export default function BedListScreen(): React.JSX.Element {
       />
     ),
     [navigateToBed, requestDelete, handleEdit, handleRotation, handleSwipeableOpen]
+  );
+
+  const openBedWizard = useCallback(
+    () => navigation.navigate('BedCreationWizard', undefined),
+    [navigation]
   );
 
   const renderUndoToast = (): React.JSX.Element => (
@@ -486,10 +491,7 @@ export default function BedListScreen(): React.JSX.Element {
 
       {renderUndoToast()}
 
-      <AnimatedFAB
-        onPress={() => navigation.navigate('BedCreationWizard', undefined)}
-        iconName="add"
-      />
+      <AnimatedFAB onPress={openBedWizard} iconName="add" />
 
       <ConfirmDeleteModal
         visible={deleteTarget !== null}

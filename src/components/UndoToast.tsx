@@ -8,7 +8,10 @@ interface Props {
   visible: boolean;
   message: string;
   onUndo: () => void;
-  /** 0→1 value driving the countdown bar; parent owns the timing animation. */
+  /**
+   * 0→1 value driving the countdown bar; parent owns the timing animation and
+   * should run it with `useNativeDriver: true`.
+   */
   progress: Animated.Value;
   /** Distance from the bottom of the screen, in px. */
   bottomOffset: number;
@@ -19,7 +22,13 @@ interface Props {
 /**
  * Floating "X done — Undo" toast with a draining progress bar. Presentational:
  * the parent owns the `progress` Animated.Value, the auto-dismiss timer, and the
- * `onUndo` handler. Shared by the bed list (delete) and bed detail (soil log).
+ * `onUndo` handler. Shared by the plant list (delete, saved), the bed list
+ * (delete) and the Care Plan (ticks).
+ *
+ * The bar drains by `scaleX` from its left edge rather than by `width`, so the
+ * parent can drive `progress` with `useNativeDriver: true`: a 4–5 s JS-driven
+ * width animation re-laid-out the bar every frame on the JS thread, exactly
+ * while the list underneath was refreshing.
  */
 export function UndoToast({
   visible,
@@ -32,13 +41,9 @@ export function UndoToast({
 }: Props): React.JSX.Element | null {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const barTransform = useMemo(() => ({ transform: [{ scaleX: progress }] }), [progress]);
 
   if (!visible) return null;
-
-  const progressWidth = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
 
   return (
     <View style={[styles.toast, { bottom: bottomOffset }]}>
@@ -57,7 +62,7 @@ export function UndoToast({
         </TouchableOpacity>
       </View>
       <View style={styles.progressTrack}>
-        <Animated.View style={[styles.progressBar, { width: progressWidth }]} />
+        <Animated.View style={[styles.progressBar, barTransform]} />
       </View>
     </View>
   );

@@ -231,26 +231,30 @@ const AppRoot = (): React.JSX.Element | null => {
     }
   }, [resolvedMode]);
 
-  // Configure navigation theme
-  const navigationTheme = {
-    dark: resolvedMode === 'dark',
-    colors: {
-      primary: theme.primary,
-      background: theme.background,
-      card: theme.backgroundSecondary,
-      text: theme.text,
-      border: theme.border,
-      notification: theme.primary,
-    },
-    // A palette with its own faces (Meadow) names one family per weight, so
-    // the weight resets to normal; Garden keeps the system face.
-    fonts: {
-      regular: navFont(theme.style.fonts.body, '400'),
-      medium: navFont(theme.style.fonts.bodyMedium, '500'),
-      bold: navFont(theme.style.fonts.bodyBold, '700'),
-      heavy: navFont(theme.style.fonts.bodyBold, '900'),
-    },
-  };
+  // Configure navigation theme. Memoized: AppRoot re-renders on every offline
+  // queue change, and a fresh theme object re-rendered the navigators each time.
+  const navigationTheme = useMemo(
+    () => ({
+      dark: resolvedMode === 'dark',
+      colors: {
+        primary: theme.primary,
+        background: theme.background,
+        card: theme.backgroundSecondary,
+        text: theme.text,
+        border: theme.border,
+        notification: theme.primary,
+      },
+      // A palette with its own faces (Meadow) names one family per weight, so
+      // the weight resets to normal; Garden keeps the system face.
+      fonts: {
+        regular: navFont(theme.style.fonts.body, '400'),
+        medium: navFont(theme.style.fonts.bodyMedium, '500'),
+        bold: navFont(theme.style.fonts.bodyBold, '700'),
+        heavy: navFont(theme.style.fonts.bodyBold, '900'),
+      },
+    }),
+    [resolvedMode, theme]
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -477,7 +481,7 @@ const AppRoot = (): React.JSX.Element | null => {
       {user && <OfflineBanner />}
       <SafeAreaInsetsContext.Provider value={contentInsets}>
         <NavigationContainer theme={navigationTheme}>
-          <RootStack.Navigator screenOptions={{ headerShown: false }}>
+          <RootStack.Navigator screenOptions={ROOT_SCREEN_OPTIONS}>
             {user ? (
               <RootStack.Screen name="Main" component={AuthedNavigator} />
             ) : (
@@ -513,6 +517,8 @@ const navFont = (
   family
     ? { fontFamily: family, fontWeight: 'normal' }
     : { fontFamily: 'System', fontWeight: weight };
+
+const ROOT_SCREEN_OPTIONS = { headerShown: false } as const;
 
 const rootStyles = StyleSheet.create({
   flex: { flex: 1 },

@@ -36,5 +36,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       overflow: 'hidden',
       marginBottom: 8,
     },
-    progressBar: { height: 3, backgroundColor: theme.primary, borderRadius: 2 },
+    // Full width, drained by a native-driven scaleX from the left edge.
+    progressBar: {
+      height: 3,
+      width: '100%',
+      backgroundColor: theme.primary,
+      borderRadius: 2,
+      transformOrigin: 'left',
+    },
   });

@@ -2153,6 +2153,11 @@ export default function CalendarScreen(): React.JSX.Element {
     [handleSelectDate]
   );
 
+  const openCreateTaskFromFab = useCallback(() => {
+    setCreateTaskInitialDate(undefined);
+    setShowModal(true);
+  }, []);
+
   return (
     <GestureHandlerRootView style={styles.flexOne}>
       <View style={styles.container}>
@@ -2356,12 +2361,7 @@ export default function CalendarScreen(): React.JSX.Element {
         />
 
         {/* Floating Action Button */}
-        <AnimatedFAB
-          onPress={() => {
-            setCreateTaskInitialDate(undefined);
-            setShowModal(true);
-          }}
-        />
+        <AnimatedFAB onPress={openCreateTaskFromFab} />
 
         <MonthCalendarSheet
           visible={showMonthSheet}

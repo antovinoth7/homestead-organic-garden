@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
   TouchableOpacity,
@@ -281,7 +281,12 @@ interface AnimatedFABProps {
   iconName?: keyof typeof import('@expo/vector-icons').Ionicons.glyphMap;
 }
 
-export function AnimatedFAB({ onPress, iconName = 'add' }: AnimatedFABProps): React.JSX.Element {
+// Memoized, with a memoized interpolation: rebuilt on every render it detached
+// and re-attached the native animated graph each time its screen re-rendered.
+export const AnimatedFAB = React.memo(function AnimatedFAB({
+  onPress,
+  iconName = 'add',
+}: AnimatedFABProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const translateY = useTabBarTranslateY();
@@ -291,26 +296,33 @@ export function AnimatedFAB({ onPress, iconName = 'add' }: AnimatedFABProps): Re
   const fabBottom = Math.max(insets.bottom, 8) + TAB_BAR_HEIGHT + 16;
 
   // FAB slides down by the same amount the tab bar does, but caps so it stays above safe area
-  const fabTranslateY = translateY.interpolate({
-    inputRange: [0, TAB_BAR_HEIGHT + 40],
-    outputRange: [0, TAB_BAR_HEIGHT + 8],
-    extrapolate: 'clamp',
-  });
+  const fabTranslateY = useMemo(
+    () =>
+      translateY.interpolate({
+        inputRange: [0, TAB_BAR_HEIGHT + 40],
+        outputRange: [0, TAB_BAR_HEIGHT + 8],
+        extrapolate: 'clamp',
+      }),
+    [translateY]
+  );
+
+  const fabStyle = useMemo(
+    () => [
+      fabStyles.fab,
+      {
+        bottom: fabBottom,
+        backgroundColor: theme.primary,
+        transform: [{ translateY: fabTranslateY }],
+      },
+    ],
+    [fabBottom, theme.primary, fabTranslateY]
+  );
 
   return (
-    <Animated.View
-      style={[
-        fabStyles.fab,
-        {
-          bottom: fabBottom,
-          backgroundColor: theme.primary,
-          transform: [{ translateY: fabTranslateY }],
-        },
-      ]}
-    >
+    <Animated.View style={fabStyle}>
       <TouchableOpacity onPress={onPress} style={fabStyles.fabTouchable} activeOpacity={0.7}>
         <Ionicons name={iconName} size={28} color={theme.textInverse} />
       </TouchableOpacity>
     </Animated.View>
   );
-}
+});
