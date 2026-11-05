@@ -49,6 +49,7 @@ import { getPerennialCareBrief } from '@/utils/perennialCare';
 import { countBedLifecycles } from '@/utils/plotBedCounts';
 import { buildPlotBriefLine } from '@/utils/plotBriefLine';
 import { groupByPlot } from '@/utils/plotGrouping';
+import { isJsonEqual, reuseUnchanged } from '@/utils/structuralShare';
 import { getSeasonProgress } from '@/utils/seasonProgress';
 import { toPlantNowChips } from '@/utils/sowNowChips';
 import { countRemaining, summarizeTasksByPlot, summarizeTodayTasks } from '@/utils/taskSummary';
@@ -94,6 +95,33 @@ const EMPTY_SOURCES: TodayBriefSources = {
   profiles: createEmptyProfiles(),
 };
 
+/** `next` when it differs from `prev` by content, else `prev`. */
+const sameOr = <T>(prev: T, next: T): T => (isJsonEqual(prev, next) ? prev : next);
+
+/**
+ * `next`, keeping `prev`'s value for every field whose content did not change —
+ * and `prev` itself when none did, so the `setSources` bails out. Every reload
+ * re-filters tasks, logs and templates into new arrays (`scopeToKnownPlants`),
+ * and the derived alerts, plot groups and cards below key off those fields:
+ * without this, switching to Today re-derived all of it for identical data.
+ */
+function shareSources(prev: TodayBriefSources, next: TodayBriefSources): TodayBriefSources {
+  const shared: TodayBriefSources = {
+    tasks: reuseUnchanged(prev.tasks, next.tasks),
+    logs: reuseUnchanged(prev.logs, next.logs),
+    allTemplates: reuseUnchanged(prev.allTemplates, next.allTemplates),
+    plants: reuseUnchanged(prev.plants, next.plants),
+    beds: reuseUnchanged(prev.beds, next.beds),
+    locationConfig: sameOr(prev.locationConfig, next.locationConfig),
+    farmConfig: sameOr(prev.farmConfig, next.farmConfig),
+    profiles: sameOr(prev.profiles, next.profiles),
+  };
+  const unchanged = (Object.keys(shared) as (keyof TodayBriefSources)[]).every(
+    (key) => shared[key] === prev[key]
+  );
+  return unchanged ? prev : shared;
+}
+
 /**
  * "Friday, 31 July" — en-GB puts the day before the month, as the design does.
  * The weekday is formatted separately because `toLocaleDateString` runs the
@@ -118,7 +146,7 @@ export function useTodayBrief(): UseTodayBriefResult {
     try {
       const next = await getTodayBriefSources();
       if (!isMountedRef.current) return;
-      setSources(next);
+      setSources((prev) => shareSources(prev, next));
       setError(null);
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
@@ -134,7 +162,7 @@ export function useTodayBrief(): UseTodayBriefResult {
     try {
       const stored = await getStoredTodayBriefSources();
       if (!isMountedRef.current || !stored) return false;
-      setSources(stored);
+      setSources((prev) => shareSources(prev, stored));
       setLoading(false);
       return true;
     } catch {

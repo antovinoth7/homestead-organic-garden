@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { font, radius, shadow, typeSize } from '@/theme/styleTokens';
 
 const cardShadow = (theme: Theme): object =>
   Platform.select({
@@ -32,9 +33,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomColor: theme.border,
     },
     headerTitle: {
-      fontSize: 22,
-      fontWeight: '700',
+      fontSize: typeSize(theme, 'title', 22),
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     headerActions: {
       flexDirection: 'row',
@@ -59,10 +60,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     dayHeader: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.text,
       paddingTop: 10,
       paddingHorizontal: 2,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ── Entry card, with its type icon on a timeline rail to the left ──
@@ -103,11 +104,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       height: 28,
       justifyContent: 'center',
       paddingHorizontal: 10,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'chip', 14),
     },
     typeChipText: {
       fontSize: 13,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     // Per-type tint for the type chip, keyed `typeChip_<JournalEntryType>`.
     typeChip_observation: { backgroundColor: theme.primaryLight },
@@ -127,29 +128,30 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       minWidth: 0,
       textAlign: 'right',
       fontSize: 13,
-      fontWeight: '500',
       color: theme.textTertiary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     moreButton: {
       width: 36,
       height: 36,
       marginVertical: -4,
       marginRight: -8,
-      borderRadius: 18,
+      borderRadius: radius(theme, 'iconButton', 18),
       alignItems: 'center',
       justifyContent: 'center',
     },
     // Built from structured fields ("Harvested 12 pcs", "Aphids on leaf").
     headlineText: {
       fontSize: 17,
-      fontWeight: '700',
       lineHeight: 21,
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     contentText: {
       fontSize: 15,
       lineHeight: 22,
       color: theme.text,
+      ...font(theme, 'body'),
     },
     // Harvest storage notes stand in when the entry has no notes of its own.
     contentTextMuted: {
@@ -167,12 +169,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 5,
       paddingHorizontal: 10,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'chip', 14),
     },
     chipText: {
       flexShrink: 1,
       fontSize: 13,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     chipPlant: {
       backgroundColor: theme.primaryLight,
@@ -257,8 +259,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     thumbMoreText: {
       fontSize: 18,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
     resolveButton: {
       alignSelf: 'flex-start',
@@ -267,14 +269,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 14,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       borderWidth: 1,
       borderColor: theme.primary,
     },
     resolveButtonText: {
       fontSize: 14.5,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // ── Empty state ──
@@ -287,26 +289,28 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     emptyText: {
       fontSize: 17,
-      fontWeight: '700',
       color: theme.text,
       marginTop: 8,
+      ...font(theme, 'bodyBold', '700'),
     },
     emptySubtext: {
       fontSize: 15,
       color: theme.textSecondary,
       textAlign: 'center',
+      ...font(theme, 'body'),
     },
     clearFiltersButton: {
       marginTop: 6,
       minHeight: 48,
       justifyContent: 'center',
       paddingHorizontal: 20,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       backgroundColor: theme.primary,
+      ...shadow(theme, 'button'),
     },
     clearFiltersText: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.textInverse,
+      ...font(theme, 'bodyStrong', '600'),
     },
   });

@@ -1,6 +1,7 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
-import { MONO_FONT } from '@/styles/typography';
+import { border, font, radius } from '@/theme/styleTokens';
+import { mono } from '@/styles/typography';
 
 /**
  * Dense "read-first" rows inside the catalog section cards: label on the left,
@@ -61,6 +62,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 13,
       color: theme.textSecondary,
       flexShrink: 1,
+      ...font(theme, 'body'),
     },
     valueWrap: {
       flex: 1,
@@ -69,13 +71,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     value: {
       fontSize: 14.5,
-      fontWeight: '600',
       color: theme.text,
       textAlign: 'right',
+      ...font(theme, 'bodyStrong', '600'),
     },
     valuePlaceholder: {
       color: theme.textTertiary,
-      fontWeight: '400',
+      ...font(theme, 'body', '400'),
     },
     hint: {
       fontSize: 11.5,
@@ -101,11 +103,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       minWidth: 52,
       paddingHorizontal: 8,
       paddingVertical: 5,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       backgroundColor: theme.background,
     },
     rangeChipText: {
-      fontFamily: MONO_FONT,
+      ...mono(theme),
       fontSize: 14,
       color: theme.text,
       textAlign: 'center',
@@ -116,11 +118,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     rangeDash: {
       fontSize: 12,
       color: theme.textTertiary,
+      ...font(theme, 'body'),
     },
     rangeUnit: {
       fontSize: 12,
       color: theme.textTertiary,
       marginLeft: 2,
+      ...font(theme, 'body'),
     },
 
     // ---- Badge value (read-only, e.g. pet toxicity) ------------------------
@@ -130,12 +134,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 10,
       paddingVertical: 4,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       borderWidth: 1,
     },
     badgeText: {
       fontSize: 12.5,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ---- Free-text block (description, pruning tips) ----------------------
@@ -172,6 +176,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12.5,
       color: theme.textSecondary,
       flexShrink: 1,
+      ...font(theme, 'body'),
     },
     blockInput: {
       backgroundColor: theme.background,
@@ -200,17 +205,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 11,
       paddingVertical: 6,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       backgroundColor: theme.background,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     chipText: {
       fontSize: 13,
       color: theme.text,
+      ...font(theme, 'body'),
     },
     chipSub: {
-      fontFamily: MONO_FONT,
+      ...mono(theme),
       fontSize: 11,
       color: theme.textTertiary,
     },
@@ -228,7 +234,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     chipDot: {
       width: 6,
       height: 6,
-      borderRadius: 3,
+      borderRadius: radius(theme, 'chip', 3),
       backgroundColor: theme.primary,
     },
     chipEmpty: {

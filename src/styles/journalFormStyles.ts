@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 const softShadow = (theme: Theme): object =>
   Platform.select({
@@ -62,7 +63,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     backButton: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'iconButton', 22),
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.card,
@@ -72,8 +73,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     title: {
       flex: 1,
       fontSize: 20,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     content: {
       flex: 1,
@@ -110,8 +111,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     typeTileText: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.textSecondary,
+      ...font(theme, 'bodyBold', '700'),
     },
     typeTileTextActive: {
       color: theme.textInverse,
@@ -141,8 +142,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     linkRowLabel: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     linkRowValueWrap: {
       flex: 1,
@@ -151,16 +152,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     linkRowValue: {
       fontSize: 16,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     linkRowValueEmpty: {
       color: theme.textTertiary,
     },
     linkRowDetail: {
       fontSize: 12.5,
-      fontWeight: '500',
       color: theme.textTertiary,
+      ...font(theme, 'bodyMedium', '500'),
     },
 
     // ─── Section cards (harvest / pest-disease / milestone / after saving) ───
@@ -182,8 +183,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     label: {
       fontSize: 14,
-      fontWeight: '700',
       color: theme.textSecondary,
+      ...font(theme, 'bodyBold', '700'),
     },
     fieldLabelRow: {
       flexDirection: 'row',
@@ -217,8 +218,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     segmentActive: raised(theme),
     segmentText: {
       fontSize: 15,
-      fontWeight: '600',
       color: theme.textTertiary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     segmentTextActive: {
       color: theme.text,
@@ -247,12 +248,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     optionTileActive: raised(theme),
     optionTileText: {
       fontSize: 13.5,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     optionTileTextActive: {
       color: theme.primary,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ─── Harvest ─────────────────────────────────────────────────────────────
@@ -265,8 +266,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     lastHint: {
       flexShrink: 1,
       fontSize: 13,
-      fontWeight: '500',
       color: theme.textTertiary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     stepperRow: {
       flexDirection: 'row',
@@ -276,7 +277,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     stepButton: {
       width: 58,
       height: 58,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'iconButton', 14),
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.background,
@@ -297,9 +298,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.background,
       textAlign: 'center',
       fontSize: 30,
-      fontWeight: '600',
       color: theme.inputText,
       padding: 0,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // ─── Milestone ───────────────────────────────────────────────────────────
@@ -338,6 +339,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 23,
       color: theme.inputText,
       textAlignVertical: 'top',
+      ...font(theme, 'body'),
     },
     notesInputSmall: {
       minHeight: 76,
@@ -362,10 +364,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12.5,
       color: theme.textTertiary,
       textAlign: 'right',
+      ...font(theme, 'body'),
     },
     addPhotoButton: {
       height: 52,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'button', 14),
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
@@ -377,8 +380,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     addPhotoText: {
       fontSize: 15,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     photoGrid: {
       flexDirection: 'row',
@@ -401,7 +404,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       right: -6,
       width: 24,
       height: 24,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'iconButton', 12),
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.text,
@@ -416,16 +419,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     tagChip: {
       minHeight: 42,
       paddingHorizontal: 14,
-      borderRadius: 21,
+      borderRadius: radius(theme, 'chip', 21),
       justifyContent: 'center',
       ...pickable(theme),
     },
     tagChipActive: picked(theme),
     tagChipText: {
       fontSize: 14.5,
-      fontWeight: '600',
       color: theme.text,
       textTransform: 'capitalize',
+      ...font(theme, 'bodyStrong', '600'),
     },
     tagChipTextActive: {
       color: theme.primary,
@@ -441,26 +444,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     saveButton: {
       height: 58,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'button', 16),
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.primary,
+      ...shadow(theme, 'button'),
     },
     saveButtonDisabled: {
       opacity: 0.6,
     },
     saveText: {
       fontSize: 17,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ─── Pest / disease suggestions ──────────────────────────────────────────
     suggestionHeading: {
       fontSize: 13,
-      fontWeight: '500',
       color: theme.textTertiary,
       marginTop: -6,
+      ...font(theme, 'bodyMedium', '500'),
     },
     // Bleeds past the section card's 16pt padding so tiles scroll off the
     // card edge instead of being clipped inside it; the content padding puts
@@ -532,14 +536,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 5,
       paddingHorizontal: 13,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       ...pickable(theme),
     },
     affectedPartChipActive: picked(theme),
     affectedPartChipText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     affectedPartChipTextActive: {
       color: theme.primary,
@@ -579,9 +583,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     effortLegendText: {
       fontSize: 12,
-      fontWeight: '500',
       color: theme.textTertiary,
       marginRight: 4,
+      ...font(theme, 'bodyMedium', '500'),
     },
     effortDot: {
       width: 9,
@@ -599,11 +603,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
     },
     treatmentGroupLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      letterSpacing: 0.8,
       textTransform: 'uppercase',
       color: theme.textTertiary,
+      ...eyebrow(theme, { fontSize: 12, letterSpacing: 0.8, fontWeight: '700' }),
     },
     treatmentGroupChips: {
       flexDirection: 'row',
@@ -617,7 +619,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 8,
       paddingHorizontal: 13,
-      borderRadius: 21,
+      borderRadius: radius(theme, 'chip', 21),
       ...pickable(theme),
     },
     treatmentChipActive: picked(theme),
@@ -628,8 +630,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     treatmentChipText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     treatmentChipTextActive: {
       color: theme.primary,
@@ -645,8 +647,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     followUpText: {
       flex: 1,
       fontSize: 15,
-      fontWeight: '500',
       color: theme.text,
+      ...font(theme, 'bodyMedium', '500'),
     },
     followUpDetail: {
       marginLeft: 32,
@@ -655,6 +657,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     followUpHint: {
       fontSize: 12.5,
       color: theme.textTertiary,
+      ...font(theme, 'body'),
     },
 
     // ─── More details disclosure (optional harvest / pest fields) ───────────
@@ -671,15 +674,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     moreToggleText: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     moreSummary: {
       flex: 1,
       fontSize: 13,
-      fontWeight: '500',
       color: theme.textTertiary,
       marginLeft: 4,
+      ...font(theme, 'bodyMedium', '500'),
     },
     moreBody: {
       marginTop: 6,

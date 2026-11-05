@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
   TouchableOpacity,
@@ -197,18 +197,15 @@ export function FloatingTabBar({
     return null;
   }
 
-  const bottomPadding = Math.max(insets.bottom, 8);
+  const { floating, inset } = theme.style.tabBar;
+  // Docked: the bar runs to the screen edge and pads itself over the inset.
+  // Floating: the bar keeps its own padding and sits `inset` above the edge.
+  const placement = floating
+    ? { bottom: Math.max(insets.bottom, inset), transform: [{ translateY }] }
+    : { paddingBottom: Math.max(insets.bottom, 8), transform: [{ translateY }] };
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          paddingBottom: bottomPadding,
-          transform: [{ translateY }],
-        },
-      ]}
-    >
+    <Animated.View style={[styles.container, placement]}>
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key]!;
         const isFocused = state.index === index;
@@ -236,7 +233,7 @@ export function FloatingTabBar({
         const icon = options.tabBarIcon?.({
           focused: isFocused,
           color: isFocused ? theme.tabBarActive : theme.tabBarInactive,
-          size: 24,
+          size: floating ? 22 : 24,
         });
 
         const label =
@@ -256,7 +253,7 @@ export function FloatingTabBar({
             onLongPress={onLongPress}
             style={styles.tab}
           >
-            {icon}
+            <View style={[styles.iconWrap, isFocused && styles.iconWrapActive]}>{icon}</View>
             <View style={styles.iconLabelSpacer} />
             <Animated.Text
               style={[
@@ -284,7 +281,12 @@ interface AnimatedFABProps {
   iconName?: keyof typeof import('@expo/vector-icons').Ionicons.glyphMap;
 }
 
-export function AnimatedFAB({ onPress, iconName = 'add' }: AnimatedFABProps): React.JSX.Element {
+// Memoized, with a memoized interpolation: rebuilt on every render it detached
+// and re-attached the native animated graph each time its screen re-rendered.
+export const AnimatedFAB = React.memo(function AnimatedFAB({
+  onPress,
+  iconName = 'add',
+}: AnimatedFABProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const translateY = useTabBarTranslateY();
@@ -294,26 +296,33 @@ export function AnimatedFAB({ onPress, iconName = 'add' }: AnimatedFABProps): Re
   const fabBottom = Math.max(insets.bottom, 8) + TAB_BAR_HEIGHT + 16;
 
   // FAB slides down by the same amount the tab bar does, but caps so it stays above safe area
-  const fabTranslateY = translateY.interpolate({
-    inputRange: [0, TAB_BAR_HEIGHT + 40],
-    outputRange: [0, TAB_BAR_HEIGHT + 8],
-    extrapolate: 'clamp',
-  });
+  const fabTranslateY = useMemo(
+    () =>
+      translateY.interpolate({
+        inputRange: [0, TAB_BAR_HEIGHT + 40],
+        outputRange: [0, TAB_BAR_HEIGHT + 8],
+        extrapolate: 'clamp',
+      }),
+    [translateY]
+  );
+
+  const fabStyle = useMemo(
+    () => [
+      fabStyles.fab,
+      {
+        bottom: fabBottom,
+        backgroundColor: theme.primary,
+        transform: [{ translateY: fabTranslateY }],
+      },
+    ],
+    [fabBottom, theme.primary, fabTranslateY]
+  );
 
   return (
-    <Animated.View
-      style={[
-        fabStyles.fab,
-        {
-          bottom: fabBottom,
-          backgroundColor: theme.primary,
-          transform: [{ translateY: fabTranslateY }],
-        },
-      ]}
-    >
+    <Animated.View style={fabStyle}>
       <TouchableOpacity onPress={onPress} style={fabStyles.fabTouchable} activeOpacity={0.7}>
-        <Ionicons name={iconName} size={28} color="#fff" />
+        <Ionicons name={iconName} size={28} color={theme.textInverse} />
       </TouchableOpacity>
     </Animated.View>
   );
-}
+});

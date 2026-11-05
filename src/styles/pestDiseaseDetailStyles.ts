@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * Pest & disease detail — hero-behind-name layout with a seasonal risk card,
@@ -32,17 +33,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     stickyHeaderTitle: {
       fontSize: 17,
-      fontWeight: '700',
       color: theme.text,
       flex: 1,
+      ...font(theme, 'title', '700'),
     },
     stickyBackButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'iconButton', 20),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
 
     // Hero — image or oversized emoji watermark, scrim, title overlay
@@ -85,11 +87,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       left: 16,
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'iconButton', 20),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 5,
+      ...shadow(theme, 'iconButton'),
     },
     /**
      * Slot opposite the back button for a screen-specific action (the catalog
@@ -111,26 +114,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     heroRiskPill: {
       alignSelf: 'flex-start',
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       paddingHorizontal: 9,
       paddingVertical: 4,
     },
     heroRiskPillText: {
       fontSize: 10.5,
-      fontWeight: '700',
       letterSpacing: 0.5,
+      ...font(theme, 'bodyBold', '700'),
     },
     heroTitle: {
       fontSize: 32,
       lineHeight: 36,
-      fontWeight: '700',
       color: theme.text,
       marginTop: 8,
+      ...font(theme, 'title', '700'),
     },
     heroSubtitle: {
       fontSize: 13.5,
       color: theme.textSecondary,
       marginTop: 3,
+      ...font(theme, 'body'),
     },
 
     // "Risk in your garden" card
@@ -138,10 +142,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginHorizontal: 18,
       marginTop: 16,
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'card', 16),
       padding: 14,
+      ...shadow(theme, 'card'),
     },
     riskCardHeader: {
       flexDirection: 'row',
@@ -151,13 +156,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     riskCardTitle: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     riskCardReadout: {
       fontSize: 11,
-      fontWeight: '700',
       letterSpacing: 0.5,
+      ...font(theme, 'bodyBold', '700'),
     },
     riskBars: {
       flexDirection: 'row',
@@ -177,10 +182,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 9,
       color: theme.inputPlaceholder,
       marginTop: 5,
+      ...font(theme, 'body'),
     },
     riskBarLabelCurrent: {
       color: theme.text,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     riskAffectsRow: {
       flexDirection: 'row',
@@ -194,13 +200,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     riskAffectsLabel: {
       fontSize: 11.5,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     riskAffectsValue: {
       flex: 1,
       minWidth: 0,
       fontSize: 11.5,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // Lower panel (spot/damage + action plan + prevention)
@@ -223,44 +230,48 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     pairCard: {
       flex: 1,
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'card', 14),
       paddingVertical: 12,
       paddingHorizontal: 13,
+      ...shadow(theme, 'card'),
     },
     microLabel: {
       fontSize: 10,
-      fontWeight: '700',
       letterSpacing: 0.8,
       color: theme.textTertiary,
+      ...font(theme, 'bodyBold', '700'),
     },
     pairText: {
       fontSize: 12.5,
       lineHeight: 18,
       color: theme.text,
       marginTop: 6,
+      ...font(theme, 'body'),
     },
 
     // Action plan
     planTitle: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.text,
       marginBottom: 4,
+      ...font(theme, 'title', '700'),
     },
     planSubtitle: {
       fontSize: 12.5,
       color: theme.textSecondary,
       marginBottom: 14,
+      ...font(theme, 'body'),
     },
     planCard: {
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'card', 16),
       marginBottom: 11,
       overflow: 'hidden',
+      ...shadow(theme, 'card'),
     },
     planCardHeader: {
       flexDirection: 'row',
@@ -278,8 +289,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     planNumberText: {
       fontSize: 12.5,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
     planCardBody: {
       flex: 1,
@@ -287,9 +298,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     planName: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.text,
       lineHeight: 19,
+      ...font(theme, 'bodyBold', '700'),
     },
     planChipRow: {
       flexDirection: 'row',
@@ -300,7 +311,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     planChip: {
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 7,
+      borderRadius: radius(theme, 'chip', 7),
     },
     planChipMethod: {
       backgroundColor: theme.primaryLight,
@@ -313,9 +324,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     planChipText: {
       fontSize: 10.5,
-      fontWeight: '700',
       letterSpacing: 0.3,
       textTransform: 'capitalize',
+      ...font(theme, 'bodyBold', '700'),
     },
     planChipMethodText: {
       color: theme.primary,
@@ -325,8 +336,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     planChipDoseText: {
       color: theme.textTertiary,
-      fontWeight: '600',
       textTransform: 'none',
+      ...font(theme, 'bodyStrong', '600'),
     },
     planCardChevron: {
       paddingTop: 3,
@@ -348,6 +359,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       lineHeight: 20,
       color: theme.text,
       marginTop: 5,
+      ...font(theme, 'body'),
     },
     planDetailColumns: {
       flexDirection: 'row',
@@ -362,6 +374,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12.5,
       color: theme.text,
       marginTop: 3,
+      ...font(theme, 'body'),
     },
     planNote: {
       marginTop: 12,
@@ -374,6 +387,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12.5,
       lineHeight: 18,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     planAddButton: {
       marginTop: 12,
@@ -382,14 +396,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       gap: 7,
       backgroundColor: theme.primary,
-      borderRadius: 11,
+      borderRadius: radius(theme, 'button', 11),
       paddingVertical: 9,
       paddingHorizontal: 14,
+      ...shadow(theme, 'button'),
     },
     planAddButtonText: {
       fontSize: 13,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // Prevention card
@@ -401,14 +416,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     preventionTitle: {
       fontSize: 12.5,
-      fontWeight: '700',
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     preventionItem: {
       fontSize: 12.5,
       lineHeight: 19,
       color: theme.primary,
       marginTop: 6,
+      ...font(theme, 'body'),
     },
 
     // "Not found" fallback header
@@ -426,14 +442,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     fallbackBackButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'iconButton', 20),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     fallbackTitle: {
       fontSize: 22,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
   });

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font, radius } from '@/theme/styleTokens';
 
 /** A day cell's date disc — the grid's visual unit. */
 const DAY_DISC = 32;
@@ -12,8 +13,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
   StyleSheet.create({
     monthSheet: {
       backgroundColor: theme.card,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
       paddingHorizontal: 18,
     },
     monthHeader: {
@@ -31,8 +32,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     monthTitle: {
       flex: 1,
       fontSize: 18,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     monthWeekdays: {
       flexDirection: 'row',
@@ -42,8 +43,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       textAlign: 'center',
       fontSize: 11,
-      fontWeight: '600',
       color: theme.textTertiary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     monthGrid: {
       flexDirection: 'row',
@@ -72,11 +73,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     monthDiscSelected: { backgroundColor: theme.primary, borderColor: theme.primary },
     monthCellNumber: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     monthCellNumberPast: { color: theme.textTertiary, opacity: 0.6 },
-    monthCellNumberSelected: { color: theme.textInverse, fontWeight: '700' },
+    monthCellNumberSelected: { color: theme.textInverse, ...font(theme, 'bodyBold', '700') },
     // Overlaps the disc's lower edge so the dot reads as part of the date.
     monthDot: {
       width: 5,
@@ -108,7 +109,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     legendText: {
       fontSize: 12,
-      fontWeight: '500',
       color: theme.textSecondary,
+      ...font(theme, 'bodyMedium', '500'),
     },
   });

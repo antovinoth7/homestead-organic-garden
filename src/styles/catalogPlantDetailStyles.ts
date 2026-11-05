@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -17,6 +18,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     loadingText: {
       fontSize: 14,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     sectionNote: {
       fontSize: 12,
@@ -24,6 +26,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       paddingHorizontal: 14,
       paddingBottom: 12,
+      ...font(theme, 'body'),
     },
     loadErrorActions: {
       flexDirection: 'row',
@@ -33,7 +36,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     loadErrorButton: {
       minHeight: 44,
       paddingHorizontal: 20,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'button', 22),
       borderWidth: 1,
       borderColor: theme.border,
       alignItems: 'center',
@@ -45,13 +48,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     loadErrorButtonText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     loadErrorButtonTextPrimary: {
       fontSize: 14,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
     /**
      * Absolute bar that fades in as the hero scrolls away, mirroring the pest
@@ -75,16 +78,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       minWidth: 0,
       fontSize: 17,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     backButton: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: radius(theme, 'iconButton', 18),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     /**
      * Save lives in the header rather than a footer bar so it stays reachable
@@ -99,15 +103,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primary,
       paddingHorizontal: 16,
       paddingVertical: 9,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'button', 20),
+      ...shadow(theme, 'button'),
     },
     headerSaveButtonDisabled: {
       opacity: 0.6,
     },
     headerSaveText: {
       fontSize: 14,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
     /** Amber dot marking unsaved edits. */
     headerSaveDot: {
@@ -171,7 +176,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     savingText: {
       fontSize: 14,
       color: theme.textInverse,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     modalOverlay: {
       flex: 1,
@@ -184,10 +189,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       width: '100%',
       maxWidth: 420,
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'card', 16),
       padding: 20,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     modalHeader: {
       flexDirection: 'row',
@@ -197,13 +203,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     modalTitle: {
       fontSize: 18,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     modalHint: {
       fontSize: 13,
       color: theme.textSecondary,
       marginBottom: 12,
+      ...font(theme, 'body'),
     },
     modalActions: {
       flexDirection: 'row',
@@ -214,7 +221,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       alignItems: 'center',
       paddingVertical: 12,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'button', 10),
     },
     modalButtonSecondary: {
       backgroundColor: theme.background,
@@ -234,13 +241,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     modalButtonTextSecondary: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     modalButtonTextPrimary: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textInverse,
+      ...font(theme, 'bodyStrong', '600'),
     },
     reassignList: {
       flexDirection: 'row',
@@ -262,7 +269,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     reassignText: {
       fontSize: 13,
       color: theme.textSecondary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     reassignTextActive: {
       color: theme.primary,
@@ -270,9 +277,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     modalCloseButton: {
       width: 30,
       height: 30,
-      borderRadius: 15,
+      borderRadius: radius(theme, 'iconButton', 15),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
   });

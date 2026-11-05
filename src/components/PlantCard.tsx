@@ -12,16 +12,21 @@ import { getPlantWaterStatus, daysSinceLastWatered } from '../utils/plantWaterin
 import { CATALOG_GROUP_LABELS } from '@/utils/plantLabels';
 import { getTaxonomy } from '@/config/plants/catalogTaxonomy';
 import { createStyles } from '../styles/plantCardStyles';
+import { cacheStylesByTheme } from '@/theme/styleCache';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 interface PlantCardProps {
   plant: Plant;
   onPress: (plantId: string) => void;
   onEdit: (plantId: string) => void;
-  onDelete: (plantId: string) => void;
+  /** Gets the plant itself, so the list's handler needs no lookup (and no list dep). */
+  onDelete: (plant: Plant) => void;
   searchQuery?: string;
   onSwipeableOpen?: (ref: Swipeable) => void;
 }
+
+/** One sheet per theme shared by every card, instead of 32 styles per mounted card. */
+const getCardStyles = cacheStylesByTheme(createStyles);
 
 function PlantCard({
   plant,
@@ -32,7 +37,7 @@ function PlantCard({
   onSwipeableOpen,
 }: PlantCardProps): React.JSX.Element {
   const theme = useTheme();
-  const styles = React.useMemo(() => createStyles(theme), [theme]);
+  const styles = React.useMemo(() => getCardStyles(theme), [theme]);
   /**
    * Which photo failed, rather than a boolean reset by an effect: as a boolean
    * it needed an effect per card to clear on `photo_url` change, so every card
@@ -112,24 +117,24 @@ function PlantCard({
           accessibilityLabel="Edit plant"
           accessibilityRole="button"
         >
-          <Ionicons name="create-outline" size={20} color="#fff" />
+          <Ionicons name="create-outline" size={20} color={theme.textInverse} />
           <Text style={styles.swipeActionText}>Edit</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.swipeDeleteAction}
           onPress={() => {
             swipeableRef.current?.close();
-            setTimeout(() => onDelete(plant.id), 150);
+            setTimeout(() => onDelete(plant), 150);
           }}
           accessibilityLabel="Delete plant"
           accessibilityRole="button"
         >
-          <Ionicons name="trash-outline" size={20} color="#fff" />
+          <Ionicons name="trash-outline" size={20} color={theme.textInverse} />
           <Text style={styles.swipeActionText}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
-    [styles, onEdit, onDelete, plant.id]
+    [styles, theme.textInverse, onEdit, onDelete, plant]
   );
 
   // Watering status shares the single source of truth used by the Today screen

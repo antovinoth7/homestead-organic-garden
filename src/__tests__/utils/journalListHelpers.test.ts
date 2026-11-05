@@ -5,6 +5,7 @@ import {
   journalEntriesTileLabel,
   journalEmptySubtext,
   journalSaveMessage,
+  matchJournalEntries,
   type JournalFilters,
 } from '@/utils/journalListHelpers';
 import { JournalEntry, JournalEntryType } from '@/types/database.types';
@@ -104,6 +105,30 @@ describe('filterJournalEntries', () => {
       'plum-note',
       'bed-harvest',
       'old-aphids',
+    ]);
+  });
+
+  it('matches the same entries as the sorted list, in their given order', () => {
+    for (const scoped of [filters(), filters({ query: 'plum' }), filters({ period: 'month' })]) {
+      const matched = matchJournalEntries(entries, scoped, context, undefined, now);
+      const sorted = filterJournalEntries(entries, scoped, context, undefined, now);
+      expect(ids(matched).sort()).toEqual(ids(sorted).sort());
+      // Input order, not newest first: the counts never needed the sort.
+      expect(ids(matched)).toEqual(ids(entries).filter((id) => ids(sorted).includes(id)));
+    }
+  });
+
+  it('keeps the given order for entries with the same or an unreadable date', () => {
+    const at = new Date(2026, 8, 20).toISOString();
+    const twins = [
+      makeJournalEntry({ id: 'first', created_at: at }),
+      makeJournalEntry({ id: 'bad', created_at: 'not a date' }),
+      makeJournalEntry({ id: 'second', created_at: at }),
+    ];
+    expect(ids(filterJournalEntries(twins, filters(), context, undefined, now))).toEqual([
+      'first',
+      'second',
+      'bad',
     ]);
   });
 

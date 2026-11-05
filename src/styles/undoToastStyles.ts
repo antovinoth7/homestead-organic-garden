@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -26,8 +27,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 8,
     },
     left: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    text: { fontSize: 14, color: theme.text, fontWeight: '500' },
-    action: { fontSize: 14, fontWeight: '700', color: theme.primary },
+    text: { fontSize: 14, color: theme.text, ...font(theme, 'bodyMedium', '500') },
+    action: { fontSize: 14, color: theme.primary, ...font(theme, 'bodyBold', '700') },
     progressTrack: {
       height: 3,
       backgroundColor: theme.border,
@@ -35,5 +36,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       overflow: 'hidden',
       marginBottom: 8,
     },
-    progressBar: { height: 3, backgroundColor: theme.primary, borderRadius: 2 },
+    // Full width, drained by a native-driven scaleX from the left edge.
+    progressBar: {
+      height: 3,
+      width: '100%',
+      backgroundColor: theme.primary,
+      borderRadius: 2,
+      transformOrigin: 'left',
+    },
   });

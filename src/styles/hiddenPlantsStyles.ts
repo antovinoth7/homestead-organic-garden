@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -16,14 +17,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     toggleLabel: {
       flex: 1,
       fontSize: 13,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     hint: {
       fontSize: 11.5,
       lineHeight: 16,
       color: theme.textTertiary,
       marginBottom: 8,
+      ...font(theme, 'body'),
     },
     row: {
       flexDirection: 'row',
@@ -31,16 +33,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 10,
       paddingVertical: 10,
       paddingHorizontal: 12,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'card', 10),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       marginBottom: 8,
+      ...shadow(theme, 'card'),
     },
     rowName: {
       flex: 1,
       fontSize: 14,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     restoreButton: {
       flexDirection: 'row',
@@ -48,12 +52,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 5,
       paddingHorizontal: 14,
       minHeight: 44,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'button', 22),
       backgroundColor: theme.primaryLight,
     },
     restoreText: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

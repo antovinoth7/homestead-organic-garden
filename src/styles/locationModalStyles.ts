@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * Centered-dialog chrome for `LocationReassignModal`.
@@ -22,10 +23,11 @@ export const createStyles = (theme: Theme) =>
       width: '100%',
       maxWidth: 400,
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'card', 16),
       padding: 20,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     modalHeader: {
       flexDirection: 'row',
@@ -35,13 +37,13 @@ export const createStyles = (theme: Theme) =>
     },
     modalTitle: {
       fontSize: 18,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     closeButton: {
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'iconButton', 16),
       backgroundColor: theme.background,
       borderWidth: 1,
       borderColor: theme.border,
@@ -52,6 +54,7 @@ export const createStyles = (theme: Theme) =>
       fontSize: 13,
       color: theme.textSecondary,
       marginBottom: 12,
+      ...font(theme, 'body'),
     },
     modalActions: {
       flexDirection: 'row',
@@ -62,7 +65,7 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
       alignItems: 'center',
       paddingVertical: 12,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'button', 10),
     },
     modalButtonSecondary: {
       backgroundColor: theme.background,
@@ -74,12 +77,12 @@ export const createStyles = (theme: Theme) =>
     },
     modalButtonTextSecondary: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     modalButtonTextPrimary: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textInverse,
+      ...font(theme, 'bodyStrong', '600'),
     },
   });

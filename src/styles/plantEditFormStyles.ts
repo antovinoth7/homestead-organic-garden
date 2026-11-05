@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -42,14 +43,15 @@ export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.cre
     },
     editHeaderTitle: {
       fontSize: 18,
-      fontWeight: '700',
       color: theme.text,
       flexShrink: 1,
+      ...font(theme, 'title', '700'),
     },
     editHeaderSubtitle: {
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 1,
+      ...font(theme, 'body'),
     },
     dataLoadingOverlay: {
       position: 'absolute',
@@ -90,21 +92,23 @@ export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.cre
       gap: 8,
       paddingVertical: 12,
       paddingHorizontal: 12,
-      borderRadius: 10,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'card', 10),
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
       backgroundColor: theme.backgroundSecondary,
       marginBottom: 12,
+      ...shadow(theme, 'card'),
     },
     adjustScheduleHeaderText: {
       flex: 1,
       fontSize: 14,
-      fontWeight: '600' as const,
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     adjustScheduleHint: {
       fontSize: 11,
       color: theme.textTertiary,
       marginTop: 1,
+      ...font(theme, 'body'),
     },
   });

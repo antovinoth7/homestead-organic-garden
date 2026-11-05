@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { font } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -44,13 +45,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     popoverTitle: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.text,
       marginBottom: 4,
+      ...font(theme, 'bodyBold', '700'),
     },
     popoverText: {
       fontSize: 12,
       lineHeight: 18,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
   });

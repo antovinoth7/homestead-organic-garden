@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const ROW_TILE_WIDTH = 90;
 export const ROW_TILE_GAP = 8;
@@ -26,6 +27,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textTertiary,
       textAlign: 'center',
       marginTop: 10,
+      ...font(theme, 'body'),
     },
 
     // ── Compass bars ──────────────────────────────────────────────────────────
@@ -41,17 +43,17 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     compassHeaderLeft: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.textInverse,
       letterSpacing: 0.3,
       flexShrink: 1,
+      ...font(theme, 'bodyBold', '700'),
     },
     compassHeaderRight: {
       fontSize: 11,
       color: theme.textInverse,
-      fontWeight: '600',
       opacity: 0.85,
       marginLeft: 8,
+      ...font(theme, 'bodyStrong', '600'),
     },
     compassFooter: {
       backgroundColor: theme.backgroundSecondary,
@@ -68,14 +70,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     compassFooterLeft: {
       fontSize: 11,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     compassFooterRight: {
       fontSize: 10,
       color: theme.textTertiary,
-      fontWeight: '700',
       letterSpacing: 0.5,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ── Capacity strip ────────────────────────────────────────────────────────
@@ -98,7 +100,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     capacityStripText: {
       fontSize: 12,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     capacityStripTextOk: {
       color: theme.success,
@@ -139,14 +141,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     rowNumText: {
       fontSize: 11,
-      fontWeight: '800',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '800'),
     },
     rowNameText: {
       flex: 1,
       fontSize: 13,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     badgeRow: {
       flexDirection: 'row',
@@ -157,54 +159,54 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     nFixerBadge: {
       backgroundColor: theme.successLight,
-      borderRadius: 4,
+      borderRadius: radius(theme, 'chip', 4),
       paddingHorizontal: 5,
       paddingVertical: 2,
     },
     nFixerBadgeText: {
       fontSize: 9,
-      fontWeight: '700',
       color: theme.successDark,
+      ...font(theme, 'bodyBold', '700'),
     },
     fillsGapsBadge: {
       backgroundColor: theme.warningLight,
-      borderRadius: 4,
+      borderRadius: radius(theme, 'chip', 4),
       paddingHorizontal: 5,
       paddingVertical: 2,
     },
     fillsGapsBadgeText: {
       fontSize: 9,
-      fontWeight: '700',
       color: theme.warningDark,
+      ...font(theme, 'bodyBold', '700'),
     },
     staggeredBadge: {
       backgroundColor: theme.accentLight,
-      borderRadius: 4,
+      borderRadius: radius(theme, 'chip', 4),
       paddingHorizontal: 5,
       paddingVertical: 2,
     },
     staggeredBadgeText: {
       fontSize: 9,
       color: theme.accent,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     mainCropBadge: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 4,
+      borderRadius: radius(theme, 'chip', 4),
       paddingHorizontal: 5,
       paddingVertical: 2,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     mainCropBadgeText: {
       fontSize: 9,
       color: theme.textSecondary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     plantCountText: {
       fontSize: 11,
       color: theme.textSecondary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // ── Plant tiles ───────────────────────────────────────────────────────────
@@ -252,18 +254,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     plantTileName: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.text,
       textAlign: 'center',
       lineHeight: 15,
+      ...font(theme, 'bodyBold', '700'),
     },
     plantTileSpacing: {
       fontSize: 10,
       color: theme.textTertiary,
+      ...font(theme, 'body'),
     },
     plantTileEmptyIcon: {
       fontSize: 20,
       color: theme.textTertiary,
+      ...font(theme, 'body'),
     },
     tileGapDot: {
       width: 4,
@@ -277,7 +281,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     emptySlotSpacingText: {
       fontSize: 9,
       color: theme.textTertiary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // ── Care task chips ────────────────────────────────────────────────────────
@@ -291,43 +295,44 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     careTaskChip: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       paddingHorizontal: 10,
       paddingVertical: 4,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     careTaskChipText: {
       fontSize: 10,
       color: theme.textSecondary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // ── Planting schedule ─────────────────────────────────────────────────────
     scheduleSection: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'card', 10),
       padding: 14,
       marginTop: 8,
       marginBottom: 8,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     scheduleSectionTitle: {
       fontSize: 11,
-      fontWeight: '800',
       color: theme.textTertiary,
       letterSpacing: 1,
       marginBottom: 10,
+      ...font(theme, 'bodyBold', '800'),
     },
     scheduleWeekRow: {
       marginBottom: 10,
     },
     scheduleWeekLabel: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.text,
       marginBottom: 6,
+      ...font(theme, 'bodyBold', '700'),
     },
     scheduleTagsRow: {
       flexDirection: 'row',
@@ -335,7 +340,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
     },
     scheduleTag: {
-      borderRadius: 6,
+      borderRadius: radius(theme, 'chip', 6),
       paddingHorizontal: 10,
       paddingVertical: 4,
     },
@@ -351,7 +356,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     scheduleTagText: {
       fontSize: 11,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     scheduleTagTextNow: {
       color: theme.primary,
@@ -363,19 +368,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // ── Rules panel ────────────────────────────────────────────────────────────
     rulesPanel: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'card', 10),
       padding: 14,
       marginTop: 4,
       marginBottom: 8,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     rulesPanelTitle: {
       fontSize: 11,
-      fontWeight: '800',
       color: theme.textTertiary,
       letterSpacing: 1,
       marginBottom: 10,
+      ...font(theme, 'bodyBold', '800'),
     },
     ruleItem: {
       flexDirection: 'row',
@@ -393,7 +399,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     ruleTextWarn: {
       color: theme.error,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // ── Legend ─────────────────────────────────────────────────────────────────
@@ -439,7 +445,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     legendText: {
       fontSize: 10,
       color: theme.textSecondary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // ── Ghost rows (unoccupied layers) ─────────────────────────────────────────
@@ -449,12 +455,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     // ── AvailableLayersSection ─────────────────────────────────────────────────
     availableLayersCard: {
-      borderRadius: 10,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'card', 10),
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       backgroundColor: theme.backgroundSecondary,
       marginBottom: 6,
       overflow: 'hidden' as const,
+      ...shadow(theme, 'card'),
     },
     availableLayersHeader: {
       flexDirection: 'row' as const,
@@ -466,19 +473,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     availableLayersTitle: {
       flex: 1,
       fontSize: 13,
-      fontWeight: '700' as const,
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     availableLayersBadge: {
       backgroundColor: theme.primaryLight,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
       paddingHorizontal: 7,
       paddingVertical: 2,
     },
     availableLayersBadgeText: {
       fontSize: 11,
-      fontWeight: '700' as const,
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     availableLayersList: {
       borderTopWidth: 1,
@@ -495,8 +502,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     availableLayerItemName: {
       fontSize: 13,
-      fontWeight: '600' as const,
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     availableLayerItemTextBlock: {
       flex: 1,
@@ -505,6 +512,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 11,
       color: theme.textTertiary,
       marginTop: 1,
+      ...font(theme, 'body'),
     },
     availableLayerItemDot: {
       width: 8,
@@ -514,13 +522,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
 
     // ── BedInsightsAccordion ───────────────────────────────────────────────────
     insightsCard: {
-      borderRadius: 10,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'card', 10),
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       backgroundColor: theme.backgroundSecondary,
       marginTop: 8,
       marginBottom: 6,
       overflow: 'hidden' as const,
+      ...shadow(theme, 'card'),
     },
     insightsHeader: {
       flexDirection: 'row' as const,
@@ -532,17 +541,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     insightsTitle: {
       flex: 1,
       fontSize: 13,
-      fontWeight: '700' as const,
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     insightsSummary: {
       fontSize: 11,
       color: theme.textSecondary,
       marginRight: 4,
+      ...font(theme, 'body'),
     },
     insightsSummaryWarn: {
       color: theme.error,
-      fontWeight: '600' as const,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // ── Tile remove button ───────────────────────────────────────────────────
@@ -559,16 +569,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tileRemoveText: {
       fontSize: 11,
-      fontWeight: '800' as const,
       color: theme.textInverse,
       lineHeight: 13,
+      ...font(theme, 'bodyBold', '800'),
     },
 
     // ── Resolution chip ────────────────────────────────────────────────────────
     resolutionChip: {
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 6,
+      borderRadius: radius(theme, 'chip', 6),
       borderWidth: 1,
       borderStyle: 'dashed' as const,
       borderColor: theme.textTertiary,
@@ -577,8 +587,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     resolutionChipText: {
       fontSize: 9,
       color: theme.textSecondary,
-      fontWeight: '700' as const,
       letterSpacing: 0.3,
+      ...font(theme, 'bodyBold', '700'),
     },
     resolutionChipResolved: {
       borderStyle: 'solid' as const,
@@ -607,8 +617,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     rowCardAddBtnText: {
       fontSize: 12,
-      fontWeight: '700' as const,
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
   });
 };

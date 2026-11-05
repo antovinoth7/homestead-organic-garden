@@ -3,6 +3,7 @@ import {
   ActiveFilters,
   countActiveFilters,
   countFacets,
+  countSegments,
   EMPTY_FILTERS,
   filterPlants,
   healthBucketOf,
@@ -108,6 +109,38 @@ describe('filterPlants', () => {
     expect(filterPlants(PLANTS, state({ health: 'healthy' }, { searchQuery: 'ban' }))).toEqual([]);
   });
 
+  it('searches name, variety, cultivar, location and landmarks, ignoring case', () => {
+    const plant = makePlant({
+      id: 'x1',
+      name: 'Chilli',
+      plant_variety: 'Green Chilli',
+      variety: 'Jwala',
+      location: 'Terrace',
+      landmarks: 'Near the Tank',
+      space_type: 'pot',
+    });
+    for (const query of ['CHIL', 'green', 'jwala', 'terr', 'tank']) {
+      expect(filterPlants([plant], state({}, { searchQuery: ` ${query} ` }))).toEqual([plant]);
+    }
+    expect(filterPlants([plant], state({}, { searchQuery: 'tomato' }))).toEqual([]);
+  });
+
+  it('gives the same answer on repeat calls over the same objects', () => {
+    // Facts are cached per plant object; a second pass must not drift.
+    const scoped = state({ health: 'healthy' }, { searchQuery: 'to' });
+    const first = filterPlants(PLANTS, scoped).map((p) => p.id);
+    expect(filterPlants(PLANTS, scoped).map((p) => p.id)).toEqual(first);
+    expect(first).toEqual(['h1']);
+  });
+
+  it('reads an edited copy fresh rather than the original’s cached facts', () => {
+    const original = PLANTS[0]!;
+    expect(filterPlants([original], state({ health: 'healthy' }))).toEqual([original]);
+    const edited = { ...original, health_status: 'sick' as const };
+    expect(filterPlants([edited], state({ health: 'healthy' }))).toEqual([]);
+    expect(filterPlants([edited], state({ health: 'sick' }))).toEqual([edited]);
+  });
+
   it('holds back the category named in `except`', () => {
     const scoped = state({ health: 'sick', parentLocation: 'Home farm' });
     expect(filterPlants(PLANTS, scoped)).toEqual([]);
@@ -183,6 +216,15 @@ describe('countFacets', () => {
     expect(filterPlants(plants, state({ parentLocation: UNASSIGNED_PLOT_ID })).map((p) => p.id)).toEqual([
       'u1',
     ]);
+  });
+});
+
+describe('countSegments', () => {
+  it('matches the segment facet of countFacets', () => {
+    for (const scoped of [state(), state({ health: 'healthy' }), state({}, { searchQuery: 'o' })]) {
+      expect(countSegments(PLANTS, scoped)).toEqual(countFacets(PLANTS, scoped).segment);
+    }
+    expect(countSegments(PLANTS, state())).toEqual({ bed: 1, other: 5 });
   });
 });
 

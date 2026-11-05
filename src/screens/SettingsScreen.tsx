@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -11,7 +11,9 @@ import {
 import { rebuildCareTasksForAllPlants } from '@/services/tasks';
 import { getAllPlants } from '@/services/plants';
 import type { BackupProgress } from '@/utils/zipHelper';
-import { useTheme, useThemeMode } from '@/theme';
+import { usePalette, useTheme, useThemeMode } from '@/theme';
+import { PALETTE_ORDER } from '@/theme/themes';
+import { ThemePaletteCard } from '@/components/settings/ThemePaletteCard';
 import {
   useFocusEffect,
   useNavigation,
@@ -65,7 +67,8 @@ const formatProgress = (progress: BackupProgress): string => {
 export default function SettingsScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
-  const { mode, setMode } = useThemeMode();
+  const { mode, setMode, resolvedMode } = useThemeMode();
+  const { palette, setPalette } = usePalette();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -101,11 +104,9 @@ export default function SettingsScreen(): React.JSX.Element {
     }
   }, []);
 
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
-
-  // Reset scroll to top when screen comes into focus
+  // Reset scroll to top and refresh the stats when the screen comes into focus
+  // (that includes the first focus — a separate mount effect ran the storage
+  // scan a second time on every open).
   useFocusEffect(
     React.useCallback(() => {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
@@ -347,10 +348,24 @@ export default function SettingsScreen(): React.JSX.Element {
       >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Appearance</Text>
-          <Text style={styles.sectionDescription}>Choose how the app looks on this device.</Text>
+          <Text style={styles.sectionDescription}>
+            Pick a look for the whole app. It applies at once and is kept on this device.
+          </Text>
+
+          <View style={styles.paletteList} accessibilityRole="radiogroup">
+            {PALETTE_ORDER.map((option) => (
+              <ThemePaletteCard
+                key={option}
+                palette={option}
+                mode={resolvedMode}
+                selected={palette === option}
+                onSelect={setPalette}
+              />
+            ))}
+          </View>
 
           <View style={styles.card}>
-            <Text style={styles.themeLabel}>Theme</Text>
+            <Text style={styles.themeLabel}>Mode</Text>
             <View style={styles.themePills} accessibilityRole="radiogroup">
               {THEME_OPTIONS.map((option) => {
                 const isActive = mode === option.mode;
@@ -362,7 +377,7 @@ export default function SettingsScreen(): React.JSX.Element {
                     activeOpacity={0.7}
                     accessibilityRole="radio"
                     accessibilityState={{ selected: isActive }}
-                    accessibilityLabel={`${option.label} theme`}
+                    accessibilityLabel={`${option.label} mode`}
                     accessibilityHint={option.subtitle}
                   >
                     <Ionicons
@@ -405,7 +420,7 @@ export default function SettingsScreen(): React.JSX.Element {
               </View>
             ) : (
               <>
-                <Ionicons name="archive-outline" size={20} color="#fff" />
+                <Ionicons name="archive-outline" size={20} color={theme.textInverse} />
                 <Text style={styles.backupButtonText}>Export All Data + Photos (ZIP)</Text>
               </>
             )}
@@ -465,7 +480,7 @@ export default function SettingsScreen(): React.JSX.Element {
               </View>
             ) : (
               <>
-                <Ionicons name="images-outline" size={20} color="#fff" />
+                <Ionicons name="images-outline" size={20} color={theme.textInverse} />
                 <Text style={styles.backupButtonText}>Export Images Only (ZIP)</Text>
               </>
             )}

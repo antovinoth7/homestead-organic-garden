@@ -25,7 +25,7 @@
 - `FloatingTabBar` (includes `AnimatedFAB` and `FloatingTabBarProvider`) — tab bar with scroll-hide
 - `SegmentedTabs` — generic horizontally-scrollable pill tab bar; use for overflowing tab sets. For a small fixed set inside a card (e.g. the Appearance picker in `SettingsScreen`), match the pill visuals with local styles instead — the component's scroller and bottom hairline are meant for full-width tab bars.
 - `FieldHelp` / `FieldLabelWithHelp` — inline help affordances
-- `UndoToast` — post-action undo snackbar (bed delete, Care Plan ticks)
+- `UndoToast` — post-action undo snackbar (plant delete and saved, bed delete, Care Plan ticks). The bar drains by `scaleX`, so drive `progress` with `useNativeDriver: true`.
 - `OfflineBanner` (+ `useOfflineStatus`) — connectivity strip above the navigator; shows offline state and pending-sync count from the offline write queue
 - `ErrorBoundary` — class component error boundary
 - `VoiceDictation` / `VoiceInputButton` (+ `useVoiceInput`, `useVoiceLocale`) — speech-to-text for existing notes/analysis fields. Default layout is a Tamil/English segmented control with an adjacent mic on its own row above the input; `compact` renders a 28px split `mic | language` pill that sits at the trailing end of a field’s existing label row, costing no extra height (used by `CatalogTextBlock`). Both keep 44px touch targets — compact via outer-side `hitSlop`. The dictation language is app-wide and persisted (`useVoiceLocale`), so every mounted control agrees and the choice survives a restart
@@ -66,6 +66,7 @@
 
 ## Custom Hooks (`src/hooks/`)
 
+- Plants list: `usePlantList`. It owns the list's plants and filter locations, revalidates silently on focus and keeps unchanged data. Pull-to-refresh goes past the 30 s cache.
 - Plant form: `usePlantFormState` (large — 120+ returned properties), `usePlantFormData`, `usePlantDetail`, `usePlantCatalogManager`
 - Beds: `useBedCreationWizard` (+ `bedWizardValidation` helpers), `useBedData`, `useBedDetail`, `useBedOptions`, `useCrossBedStatus`
 - Dashboard/calendar: `useTodayBrief` (everything the Today screen shows), `useCalendarData`, `usePendingCompletions` (Care Plan one-tap completion with a delayed save), `useWeatherLocations` + `useWeatherByPlot` (per-plot forecasts), `useFarmCapacity` (the Profile screen's farm-capacity figures)
@@ -77,7 +78,19 @@ When adding complex data logic to a screen, extract it into a custom hook in `sr
 ## UI Conventions
 
 - Use `useTheme()` for colors and shared tokens.
-- Use `useThemeMode()` for theme mode changes. The only place the user picks a mode is the **Appearance** section at the top of `SettingsScreen` (More → Settings) — a Light / Dark / Auto segmented pill row. Do not add theme controls to other screens.
+- Use `useThemeMode()` for theme mode changes and `usePalette()` for the palette. The only place the user picks either is the **Appearance** section at the top of `SettingsScreen` (More → Settings) — palette cards (`components/settings/ThemePaletteCard`) above a Light / Dark / Auto pill row. Do not add theme controls to other screens.
+
+### Palettes (Meadow, Garden)
+
+- `theme = themes[palette][mode]` (`src/theme/themes.ts`). **Meadow** is the default; **Garden** is the original look (`lightTheme` / `darkTheme` in `colors.ts`). Persisted under `@garden_theme_palette`.
+- Every palette has the full `Theme` shape: the colour tokens plus `rule`, `taskColors`, `photoWash`, `heroGlow`, `heroSky`, `style` (shape / type / tab bar / hero tokens, `src/theme/themeStyle.ts`) and `shadows` (CSS `boxShadow` strings).
+- Read shape, type and shadow tokens in style factories through `src/theme/styleTokens.ts`, passing the value the factory used before as the fallback: `radius(theme, 'card', 12)`, `border(theme, 'card', 1)`, `shadow(theme, 'card')`, `typeSize(theme, 'title', 22)`, `font(theme, 'bodyStrong', '600')`, `eyebrow(...)`, `labelCase(theme)`. Garden sets no tokens, so it renders exactly as before; Meadow overrides them.
+- `font()` sets a per-weight family (Outfit / Figtree, loaded in `App.tsx`) and resets `fontWeight` to normal — spread it **after** any `fontWeight`, and do not add `fontWeight` back on a style that spreads it.
+- Numbers shown as readings use `mono(theme, weight)` / `monoMeta(theme, weight)` from `styles/typography.ts`, not `MONO_FONT` / `MONO_META` directly.
+- Task colours: `taskColor(theme, type)` (`utils/taskConstants.ts`) — there is no fixed map.
+- Text or icons on `primary`, `error`, `info` or `accent` use `theme.textInverse` (dark ink in Meadow dark), never a literal white. On photo overlays and hero grounds use `heroText`.
+- Hero headers: put `<HeroBackdrop />` first inside a hero with `overflow: 'hidden'`; it draws the gradient + soft circles for a palette with a hero texture and nothing for Garden. `hasHeroTexture(theme)` switches a header's own colours (see `moreStyles`).
+- `FloatingTabBar` draws an inset pill bar when `theme.style.tabBar.floating` (Meadow) and the docked bar otherwise.
 - Prefer existing themed styles over new hardcoded colors.
 - Most screens use safe area insets and refresh on focus; preserve those patterns.
 - Main tabs: `Home`, `Plants`, `Care Plan`, `Journal`, `More`.

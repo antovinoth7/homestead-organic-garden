@@ -2,9 +2,29 @@
  * Theme colors for dark and light mode
  */
 
-import type { BedLayer } from '@/types/database.types';
+import type { BedLayer, TaskType } from '@/types/database.types';
+import { gardenStyle } from './themeStyle';
+import type { ThemeShadows } from './themeStyle';
 
 type LayerColorMap = Record<BedLayer, { color: string; bg: string }>;
+
+// Garden task colours: the original fixed map, the same in both modes.
+const gardenTaskColors: Record<TaskType, string> = {
+  water: '#2196F3',
+  fertilise: '#FF9800',
+  prune: '#9C27B0',
+  repot: '#4CAF50',
+  spray: '#00BCD4',
+  mulch: '#795548',
+  harvest: '#8BC34A',
+  harvest_leaves: '#66BB6A',
+  weeding: '#7CB342',
+  transplanting: '#26A69A',
+  cultivating: '#8D6E63',
+};
+
+// Garden overrides no shadow: each factory keeps its own.
+const gardenShadows: ThemeShadows = {};
 
 // Per-layer accent (border) + tile background colors. Light values preserve the
 // original hand-picked hues; dark values use the same low-saturation tinting
@@ -140,9 +160,23 @@ export const lightTheme = {
 
   // Bed layer accent + tile background colors
   layerColors: lightLayerColors,
+
+  // Strong line colour (dividers, the frame on photos).
+  rule: '#d0c1b0',
+  // One colour per task type (Care Plan bars, task detail).
+  taskColors: gardenTaskColors,
+  // Bottom fade over photos ("soft wash"); transparent = no treatment.
+  photoWash: 'transparent',
+  // Soft circles drawn over the hero gradient; transparent = no texture.
+  heroGlow: 'transparent',
+  heroSky: 'transparent',
+
+  // Shape, type and shadow tokens — see `themeStyle.ts`.
+  style: gardenStyle,
+  shadows: gardenShadows,
 };
 
-export const darkTheme = {
+export const darkTheme: Theme = {
   // Background colors
   background: '#121212',
   backgroundSecondary: '#1a1a1a',
@@ -245,6 +279,15 @@ export const darkTheme = {
 
   // Bed layer accent + tile background colors
   layerColors: darkLayerColors,
+
+  rule: '#505050',
+  taskColors: gardenTaskColors,
+  photoWash: 'transparent',
+  heroGlow: 'transparent',
+  heroSky: 'transparent',
+
+  style: gardenStyle,
+  shadows: gardenShadows,
 };
 
 export type Theme = typeof lightTheme;

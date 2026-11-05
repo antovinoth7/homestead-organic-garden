@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (
   theme: Theme,
@@ -11,12 +12,13 @@ export const createStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.pickerBackground,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       borderWidth: 1,
       borderColor: theme.pickerBorder,
       paddingHorizontal: 16,
       minHeight: compact ? 40 : 44,
       marginBottom: compact ? 8 : 10,
+      ...shadow(theme, 'card'),
     },
     triggerDisabled: {
       opacity: 0.45,
@@ -32,9 +34,9 @@ export const createStyles = (
     // Left-side label (always visible)
     triggerLabel: {
       fontSize: 14,
-      fontWeight: '500',
       color: theme.textTertiary,
       flexShrink: 1,
+      ...font(theme, 'bodyMedium', '500'),
     },
     triggerLabelDisabled: {
       color: theme.textTertiary,
@@ -42,16 +44,16 @@ export const createStyles = (
     // Right-side selected value
     triggerText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.text,
       textAlign: 'right' as const,
       flexShrink: 1,
       maxWidth: '58%',
       marginRight: 6,
+      ...font(theme, 'bodyStrong', '600'),
     },
     triggerPlaceholder: {
       color: theme.inputPlaceholder,
-      fontWeight: '400',
+      ...font(theme, 'body', '400'),
     },
     triggerTextDisabled: {
       color: theme.textTertiary,

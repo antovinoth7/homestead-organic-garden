@@ -1,5 +1,6 @@
 import { Dimensions, StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font } from '@/theme/styleTokens';
 
 const SCREEN = Dimensions.get('window');
 
@@ -42,8 +43,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     counterText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textInverse,
+      ...font(theme, 'bodyStrong', '600'),
     },
     /** Sized to its content so the overlay keeps it vertically centred. */
     pager: {

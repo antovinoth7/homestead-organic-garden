@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -20,8 +21,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     text: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.warningDark,
+      ...font(theme, 'bodyStrong', '600'),
     },
     textSyncing: {
       color: theme.success,

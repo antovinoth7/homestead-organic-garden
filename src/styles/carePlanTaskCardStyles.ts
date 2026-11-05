@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 /** Tap target for the tick — field-friendly, wet or gloved hands. */
 export const TASK_TICK_TARGET = 44;
@@ -19,8 +20,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     card: {
       flexDirection: 'row',
       backgroundColor: theme.card,
-      borderRadius: 12,
-      borderWidth: 1,
+      borderRadius: radius(theme, 'card', 12),
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       overflow: 'hidden',
       shadowColor: theme.shadow,
@@ -28,6 +29,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       shadowOpacity: 0.05,
       shadowRadius: 4,
       elevation: 1,
+      ...shadow(theme, 'card'),
     },
     cardSelected: {
       backgroundColor: theme.primaryLight,
@@ -54,8 +56,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     title: {
       flexShrink: 1,
       fontSize: 15,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     titleDone: {
       color: theme.textTertiary,
@@ -65,11 +67,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexShrink: 0,
       paddingHorizontal: 5,
       paddingVertical: 1,
-      borderRadius: 5,
+      borderRadius: radius(theme, 'chip', 5),
       fontSize: 10,
-      fontWeight: '700',
       letterSpacing: 0.3,
       overflow: 'hidden',
+      ...font(theme, 'bodyBold', '700'),
     },
     badgeCritical: {
       backgroundColor: theme.errorLight,
@@ -87,15 +89,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 3,
       paddingHorizontal: 5,
       paddingVertical: 1,
-      borderRadius: 5,
+      borderRadius: radius(theme, 'chip', 5),
       backgroundColor: theme.infoLight,
     },
     rainChipText: {
       flexShrink: 1,
       fontSize: 10,
-      fontWeight: '700',
       letterSpacing: 0.3,
       color: theme.infoDark,
+      ...font(theme, 'bodyBold', '700'),
     },
     due: {
       flexShrink: 0,
@@ -103,14 +105,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingLeft: 6,
       fontSize: 13,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     dueOverdue: {
       color: theme.error,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     dueDone: {
       color: theme.success,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     metaRow: {
       flexDirection: 'row',
@@ -124,14 +127,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       minWidth: 0,
       fontSize: 13,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     metaLabel: {
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     metaAmount: {
-      fontWeight: '500',
       color: theme.text,
+      ...font(theme, 'bodyMedium', '500'),
     },
     timeChip: {
       flexShrink: 0,
@@ -141,7 +145,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 3,
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 6,
+      borderRadius: radius(theme, 'chip', 6),
     },
     timeChipWarm: {
       backgroundColor: theme.timeWarmBg,
@@ -151,7 +155,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     timeChipText: {
       fontSize: 11,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     timeChipTextWarm: {
       color: theme.timeWarmText,
@@ -169,7 +173,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexShrink: 1,
       fontSize: 12,
       color: theme.success,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     tick: {
       width: TASK_TICK_TARGET,

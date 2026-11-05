@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -12,10 +13,11 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
     statGridItem: {
       width: '48%' as unknown as number,
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       padding: 12,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
+      ...shadow(theme, 'card'),
     },
     statIconRow: {
       flexDirection: 'row',
@@ -31,12 +33,12 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
       fontSize: 12,
       lineHeight: 16,
       color: theme.textTertiary,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     statValue: {
       fontSize: 16,
       color: theme.text,
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ─── Chip Sections (shared by Relationships, Nutrition, CareGuidance) ──────
@@ -54,14 +56,14 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
       backgroundColor: theme.successLight,
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       borderWidth: 1,
       borderColor: theme.successBorder,
     },
     companionChipText: {
       fontSize: 13,
       color: theme.successDark,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     incompatibleChip: {
       flexDirection: 'row',
@@ -70,14 +72,14 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
       backgroundColor: theme.errorLight,
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       borderWidth: 1,
       borderColor: theme.errorBorder,
     },
     incompatibleChipText: {
       fontSize: 13,
       color: theme.errorDark,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
 
     // ─── Pest / Disease Chips (tappable) ───────────────────────────────────────
@@ -88,14 +90,14 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
       backgroundColor: theme.warningLight,
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       borderWidth: 1,
       borderColor: theme.warningBorder,
     },
     pestChipText: {
       fontSize: 13,
       color: theme.warningDark,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     diseaseChip: {
       flexDirection: 'row',
@@ -104,14 +106,14 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
       backgroundColor: theme.cautionLight,
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       borderWidth: 1,
       borderColor: theme.cautionBorder,
     },
     diseaseChipText: {
       fontSize: 13,
       color: theme.cautionDark,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
 
     // ─── Safety Banner ─────────────────────────────────────────────────────────
@@ -139,14 +141,15 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
     },
     safetyTitle: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.errorDark,
       marginBottom: 2,
+      ...font(theme, 'title', '700'),
     },
     safetyText: {
       fontSize: 13,
       color: theme.errorDarkest,
       lineHeight: 18,
+      ...font(theme, 'body'),
     },
 
     // ─── Narrative Blocks (Care Guidance) ──────────────────────────────────────
@@ -162,6 +165,7 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
       fontSize: 14,
       color: theme.textSecondary,
       lineHeight: 20,
+      ...font(theme, 'body'),
     },
     bulletRow: {
       flexDirection: 'row',
@@ -173,12 +177,14 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
       color: theme.textTertiary,
       marginRight: 8,
       lineHeight: 20,
+      ...font(theme, 'body'),
     },
     bulletText: {
       fontSize: 14,
       color: theme.textSecondary,
       flex: 1,
       lineHeight: 20,
+      ...font(theme, 'body'),
     },
     techniqueRow: {
       flexDirection: 'row',
@@ -191,14 +197,15 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
     },
     techniqueTitle: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.text,
       lineHeight: 20,
+      ...font(theme, 'bodyStrong', '600'),
     },
     techniqueTiming: {
       fontSize: 12,
       color: theme.textTertiary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     flexOne: {
       flex: 1,
@@ -235,13 +242,14 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
     },
     bedLinkText: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     bedDims: {
       fontSize: 12,
       color: theme.textTertiary,
       marginLeft: 2,
+      ...font(theme, 'body'),
     },
     bedInfoRow: {
       flexDirection: 'row',
@@ -252,10 +260,11 @@ export const createEnrichedSectionStyles = (theme: Theme): ReturnType<typeof Sty
     bedInfoLabel: {
       fontSize: 12,
       color: theme.textTertiary,
+      ...font(theme, 'body'),
     },
     bedInfoValue: {
       fontSize: 12,
       color: theme.text,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
   });

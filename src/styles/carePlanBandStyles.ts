@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
-import { MONO_FONT } from '@/styles/typography';
+import { font, radius, shadow, typeSize } from '@/theme/styleTokens';
+import { mono } from '@/styles/typography';
 
 /** The timeline gutter beside every band: its dot sits level with the title. */
 export const BAND_GUTTER_WIDTH = 18;
@@ -32,9 +33,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // No flex and no auto-fit: in this column a flexed, auto-fitting title
     // shrinks to its squeezed height, and Android ignores `minimumFontScale`.
     headerTitle: {
-      fontSize: 22,
-      fontWeight: '700',
+      fontSize: typeSize(theme, 'title', 22),
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     dateLine: {
       flexDirection: 'row',
@@ -57,22 +58,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     dateLabel: {
       fontSize: 14,
-      fontWeight: '700',
       color: theme.primary,
       flexShrink: 1,
+      ...font(theme, 'bodyBold', '700'),
     },
     dateLabelPicked: { color: theme.warningDark },
     todayPill: {
       height: 40,
       justifyContent: 'center',
       paddingHorizontal: 14,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       backgroundColor: theme.warningLight,
     },
     todayPillText: {
       fontSize: 13,
-      fontWeight: '700',
       color: theme.warningDark,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ── Progress card ──────────────────────────────────────────────────────
@@ -94,13 +95,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     progressTitle: {
       flexShrink: 1,
       fontSize: 18,
-      fontWeight: '700',
       color: theme.heroText,
+      ...font(theme, 'title', '700'),
     },
     progressDoneOf: {
-      fontFamily: MONO_FONT,
+      ...mono(theme, '600'),
       fontSize: 11,
-      fontWeight: '600',
       color: theme.heroTextMuted,
     },
     progressTrack: {
@@ -116,8 +116,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     progressSubtitle: {
       fontSize: 12,
-      fontWeight: '500',
       color: theme.heroTextMuted,
+      ...font(theme, 'bodyMedium', '500'),
     },
 
     // ── First-load skeleton ────────────────────────────────────────────────
@@ -199,40 +199,39 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     title: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     titleOverdue: { color: theme.error },
     titleDone: { color: theme.successDark },
     nowChip: {
       paddingHorizontal: 7,
       paddingVertical: 2,
-      borderRadius: 999,
+      borderRadius: radius(theme, 'chip', 999),
       backgroundColor: theme.primary,
     },
     nowChipText: {
       fontSize: 10,
-      fontWeight: '700',
       letterSpacing: 0.4,
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
     spacer: { flex: 1 },
     addPill: {
       minHeight: 32,
       justifyContent: 'center',
       paddingHorizontal: 10,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       backgroundColor: theme.card,
     },
     addPillText: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     count: {
-      fontFamily: MONO_FONT,
+      ...mono(theme, '700'),
       fontSize: 12,
-      fontWeight: '700',
       color: theme.textSecondary,
     },
     subtitle: {
@@ -240,6 +239,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       lineHeight: 17,
       color: theme.textTertiary,
+      ...font(theme, 'body'),
     },
 
     // ── Catch-up more row ──────────────────────────────────────────────────
@@ -253,8 +253,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     moreRowText: {
       fontSize: 13,
-      fontWeight: '700',
       color: theme.error,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ── Harvest round ──────────────────────────────────────────────────────
@@ -264,8 +264,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.successLight,
     },
     roundFirst: {
-      borderTopLeftRadius: 14,
-      borderTopRightRadius: 14,
+      borderTopLeftRadius: radius(theme, 'sheet', 14),
+      borderTopRightRadius: radius(theme, 'sheet', 14),
     },
     roundLast: {
       marginBottom: 8,
@@ -290,13 +290,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     roundTitle: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.successDark,
+      ...font(theme, 'title', '700'),
     },
     roundSubtitle: {
       fontSize: 12,
-      fontWeight: '500',
       color: theme.textSecondary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     roundItem: {
       flexDirection: 'row',
@@ -312,31 +312,32 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     roundItemName: {
       fontSize: 14,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
     roundItemStatus: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.successDark,
+      ...font(theme, 'bodyStrong', '600'),
     },
     roundItemStatusLate: { color: theme.warningDark },
     roundItemStatusSoon: { color: theme.textSecondary },
     roundItemSource: {
-      fontWeight: '400',
       color: theme.textTertiary,
+      ...font(theme, 'body', '400'),
     },
     roundLog: {
       minHeight: 40,
       justifyContent: 'center',
       paddingHorizontal: 14,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'card', 20),
       backgroundColor: theme.card,
+      ...shadow(theme, 'card'),
     },
     roundLogText: {
       fontSize: 13,
-      fontWeight: '700',
       color: theme.successDark,
+      ...font(theme, 'bodyBold', '700'),
     },
     soonToggle: {
       flexDirection: 'row',
@@ -348,11 +349,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     soonToggleText: {
       flex: 1,
       fontSize: 13,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     soonToggleMeta: {
       fontSize: 12,
       color: theme.textTertiary,
+      ...font(theme, 'body'),
     },
   });

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -10,12 +11,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       gap: 12,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       backgroundColor: theme.backgroundSecondary,
       paddingHorizontal: 12,
       paddingVertical: 10,
+      ...shadow(theme, 'card'),
     },
     fieldError: {
       borderColor: theme.error,
@@ -31,25 +33,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     meta: { flex: 1 },
     label: {
       fontSize: 11,
-      fontWeight: '600' as const,
       color: theme.textSecondary,
       letterSpacing: 0.3,
+      ...font(theme, 'bodyStrong', '600'),
     },
     value: {
       fontSize: 15,
-      fontWeight: '600' as const,
       color: theme.text,
       marginTop: 1,
+      ...font(theme, 'bodyStrong', '600'),
     },
     placeholder: {
       fontSize: 15,
       color: theme.inputPlaceholder,
       marginTop: 1,
+      ...font(theme, 'body'),
     },
     subtitle: {
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 1,
+      ...font(theme, 'body'),
     },
     valueRow: {
       flexDirection: 'row' as const,
@@ -58,13 +62,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     badge: {
       backgroundColor: theme.primaryLight,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       paddingHorizontal: 7,
       paddingVertical: 2,
     },
     badgeText: {
       fontSize: 10,
-      fontWeight: '700' as const,
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

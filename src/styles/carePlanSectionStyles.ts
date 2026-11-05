@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font, radius } from '@/theme/styleTokens';
 
 /**
  * Care Plan list chrome around the cards: the summary line, collapsible
@@ -27,23 +28,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 13,
       lineHeight: 18,
       color: theme.text,
+      ...font(theme, 'body'),
     },
     bannerHead: {
-      fontWeight: '700',
+      ...font(theme, 'bodyBold', '700'),
     },
     bannerButton: {
       minHeight: 44,
       justifyContent: 'center',
       paddingHorizontal: 14,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'button', 22),
       backgroundColor: theme.infoDark,
     },
     // The banner's own ground as the label colour: dark on the light blue
     // button in dark mode, white on the deep blue one in light mode.
     bannerButtonText: {
       fontSize: 13,
-      fontWeight: '700',
       color: theme.infoSurface,
+      ...font(theme, 'bodyBold', '700'),
     },
     bannerUndo: {
       minHeight: 44,
@@ -55,7 +57,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     bannerUndoText: {
       fontSize: 13,
-      fontWeight: '700',
       color: theme.infoDark,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

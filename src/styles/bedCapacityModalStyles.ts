@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -12,7 +13,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     card: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'dialog', 20),
       padding: 28,
       alignItems: 'center' as const,
       width: '100%',
@@ -22,6 +23,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       shadowOpacity: 0.15,
       shadowRadius: 24,
       elevation: 8,
+      ...shadow(theme, 'dialog'),
     },
     iconWrap: {
       width: 64,
@@ -34,10 +36,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     title: {
       fontSize: 19,
-      fontWeight: '700' as const,
       color: theme.text,
       textAlign: 'center' as const,
       marginBottom: 8,
+      ...font(theme, 'title', '700'),
     },
     message: {
       fontSize: 14,
@@ -45,6 +47,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textAlign: 'center' as const,
       lineHeight: 21,
       marginBottom: 24,
+      ...font(theme, 'body'),
     },
     overflowBadge: {
       flexDirection: 'row' as const,
@@ -53,19 +56,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.warningLight,
       borderWidth: 1,
       borderColor: theme.warningBorder,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
       paddingHorizontal: 14,
       paddingVertical: 8,
       marginBottom: 24,
     },
     overflowBadgeText: {
       fontSize: 13,
-      fontWeight: '700' as const,
       color: theme.warningDark,
+      ...font(theme, 'bodyBold', '700'),
     },
     overflowLabel: {
       fontSize: 12,
       color: theme.warningDark,
+      ...font(theme, 'body'),
     },
     button: {
       width: '100%',
@@ -74,12 +78,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center' as const,
       gap: 8,
       paddingVertical: 14,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'button', 14),
       backgroundColor: theme.warning,
     },
     buttonText: {
       fontSize: 15,
-      fontWeight: '700' as const,
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

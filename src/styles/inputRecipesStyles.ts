@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * "Make your own" recipe calculator.
@@ -32,10 +33,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     backButton: {
       width: 34,
       height: 34,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'iconButton', 12),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     headerTitleGroup: {
       flex: 1,
@@ -43,13 +45,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     headerTitle: {
       fontSize: 20,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     headerSubtitle: {
       fontSize: 12,
       color: theme.inputPlaceholder,
       marginTop: 1,
+      ...font(theme, 'body'),
     },
 
     // Recipe tabs — chip row on a light surface. These are navigation tabs, not
@@ -80,8 +83,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tabText: {
       fontSize: 12.5,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     tabTextActive: {
       color: theme.textInverse,
@@ -92,15 +95,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     recipeName: {
       fontSize: 24,
       lineHeight: 27,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'bodyBold', '700'),
     },
-    recipeTamilName: { fontSize: 13, color: theme.textSecondary, marginTop: 3 },
+    recipeTamilName: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      marginTop: 3,
+      ...font(theme, 'body'),
+    },
     recipeDescription: {
       fontSize: 13.5,
       lineHeight: 20,
       color: theme.textSecondary,
       marginTop: 9,
+      ...font(theme, 'body'),
     },
 
     // Land-size scaler
@@ -120,15 +129,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     scalerBody: { flex: 1, minWidth: 0 },
     scalerLabel: {
       fontSize: 10,
-      fontWeight: '700',
       letterSpacing: 0.8,
       color: theme.primary,
+      ...font(theme, 'bodyBold', '700'),
     },
     scalerValue: {
       fontSize: 13.5,
-      fontWeight: '600',
       color: theme.primary,
       marginTop: 3,
+      ...font(theme, 'bodyStrong', '600'),
     },
     scalerButtons: {
       flexDirection: 'row',
@@ -138,7 +147,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     scalerButton: {
       width: 32,
       height: 32,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'iconButton', 10),
       backgroundColor: theme.card,
       borderWidth: 1,
       borderColor: theme.borderLight,
@@ -154,21 +163,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 18,
       paddingTop: 22,
       paddingBottom: 6,
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.9,
       textTransform: 'uppercase',
       color: theme.textTertiary,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 0.9, fontWeight: '700' }),
     },
 
     // Ingredients
     ingredientCard: {
       marginHorizontal: 18,
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'card', 16),
       paddingHorizontal: 14,
+      ...shadow(theme, 'card'),
     },
     ingredientRow: {
       flexDirection: 'row',
@@ -182,17 +190,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderTopWidth: 0,
     },
     ingredientBody: { flex: 1, minWidth: 0 },
-    ingredientName: { fontSize: 14, fontWeight: '600', color: theme.text },
+    ingredientName: { fontSize: 14, color: theme.text, ...font(theme, 'bodyStrong', '600') },
     ingredientNote: {
       fontSize: 11.5,
       lineHeight: 16,
       color: theme.inputPlaceholder,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     ingredientQty: {
       fontSize: 15,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // Preparation steps
@@ -219,28 +228,31 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    stepNumberText: { fontSize: 11.5, fontWeight: '700', color: theme.textInverse },
+    stepNumberText: { fontSize: 11.5, color: theme.textInverse, ...font(theme, 'bodyBold', '700') },
     stepText: {
       flex: 1,
       minWidth: 0,
       fontSize: 13.5,
       lineHeight: 20,
       color: theme.text,
+      ...font(theme, 'body'),
     },
 
     // When to apply
     applyCard: {
       marginHorizontal: 18,
       backgroundColor: theme.card,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.borderLight,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'card', 16),
       padding: 14,
+      ...shadow(theme, 'card'),
     },
     applyText: {
       fontSize: 13.5,
       lineHeight: 20,
       color: theme.text,
+      ...font(theme, 'body'),
     },
     badgeRow: {
       flexDirection: 'row',
@@ -254,15 +266,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     frequencyBadge: {
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       backgroundColor: theme.primaryLight,
     },
-    frequencyBadgeText: { fontSize: 11.5, fontWeight: '700', color: theme.primary },
+    frequencyBadgeText: { fontSize: 11.5, color: theme.primary, ...font(theme, 'bodyBold', '700') },
     seasonBadge: {
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       backgroundColor: theme.backgroundTertiary,
     },
-    seasonBadgeText: { fontSize: 11.5, color: theme.textTertiary },
+    seasonBadgeText: { fontSize: 11.5, color: theme.textTertiary, ...font(theme, 'body') },
   });

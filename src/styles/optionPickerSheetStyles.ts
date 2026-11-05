@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { eyebrow, font, labelCase, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * Styles for the shared option-picker bottom sheet. Extracted from
@@ -11,8 +12,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // The dim backdrop and tap-outside-to-close live in BottomSheetModal.
     sheet: {
       backgroundColor: theme.card,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
       paddingHorizontal: 8,
       // maxHeight is computed at runtime (window height minus insets) and passed
       // in via the style array so the sheet never extends behind the nav bar.
@@ -30,13 +31,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetTitle: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.textTertiary,
       textAlign: 'center' as const,
       textTransform: 'uppercase',
       letterSpacing: 0.8,
       paddingHorizontal: 16,
       paddingVertical: 8,
+      ...font(theme, 'bodyStrong', '600'),
+      ...labelCase(theme),
     },
     sheetSubtitle: {
       fontSize: 13.5,
@@ -46,29 +48,29 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 20,
       marginTop: -4,
       marginBottom: 10,
+      ...font(theme, 'body'),
     },
     // Section header inside a grouped list ("Recently used", "In pots").
     groupHeader: {
-      fontSize: 12,
-      fontWeight: '700',
       color: theme.textTertiary,
       textTransform: 'uppercase',
-      letterSpacing: 0.9,
       paddingHorizontal: 20,
       paddingTop: 14,
       paddingBottom: 6,
+      ...eyebrow(theme, { fontSize: 12, letterSpacing: 0.9, fontWeight: '700' }),
     },
     searchContainer: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.pickerBackground,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'card', 10),
       borderWidth: 1,
       borderColor: theme.pickerBorder,
       marginHorizontal: 12,
       marginBottom: 8,
       paddingHorizontal: 12,
       minHeight: 42,
+      ...shadow(theme, 'card'),
     },
     searchIcon: {
       marginRight: 8,
@@ -78,6 +80,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 15,
       color: theme.text,
       paddingVertical: Platform.OS === 'ios' ? 10 : 8,
+      ...font(theme, 'body'),
     },
     // Searchable sheets have a fixed height; the list takes what the search leaves.
     list: {
@@ -93,6 +96,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 14,
       color: theme.textTertiary,
       textAlign: 'center',
+      ...font(theme, 'body'),
     },
     optionRow: {
       flexDirection: 'row',
@@ -110,19 +114,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     optionText: {
       flex: 1,
       fontSize: 16,
-      fontWeight: '400',
       color: theme.text,
       letterSpacing: 0.15,
       marginRight: 8,
+      ...font(theme, 'body', '400'),
     },
     optionTextSelected: {
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     optionDescription: {
       fontSize: 12.5,
       color: theme.textTertiary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     optionBody: {
       flex: 1,
@@ -141,5 +146,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     clearRowText: {
       fontSize: 16,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
   });

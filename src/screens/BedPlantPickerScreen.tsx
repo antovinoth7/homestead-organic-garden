@@ -144,7 +144,7 @@ export default function BedPlantPickerScreen(): React.JSX.Element {
         disabled={saving}
       >
         {saving ? (
-          <ActivityIndicator size="small" color="#fff" />
+          <ActivityIndicator size="small" color={theme.textInverse} />
         ) : (
           <Text style={styles.confirmText}>
             {selectedIds.size === 0

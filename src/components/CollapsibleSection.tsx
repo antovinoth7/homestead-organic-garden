@@ -100,7 +100,7 @@ export default function CollapsibleSection({
                 )}
                 {!hasError && sectionStatus === 'complete' && (
                   <View style={styles.statusCompleteBadge}>
-                    <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                    <Ionicons name="checkmark-circle" size={14} color={theme.textInverse} />
                   </View>
                 )}
                 {!hasError && sectionStatus === 'optional' && (

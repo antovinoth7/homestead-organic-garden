@@ -44,6 +44,8 @@ const bedDeleteMessage = (activePlantCount: number): string => {
   } too. This can't be undone after the toast disappears.`;
 };
 
+const bedKey = (bed: BedWithCoverage): string => bed.id;
+
 export default function BedListScreen(): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -290,7 +292,7 @@ export default function BedListScreen(): React.JSX.Element {
       Animated.timing(undoProgress, {
         toValue: 0,
         duration: 4000,
-        useNativeDriver: false,
+        useNativeDriver: true,
       }).start();
 
       undoTimerRef.current = setTimeout(() => {
@@ -363,6 +365,16 @@ export default function BedListScreen(): React.JSX.Element {
       />
     ),
     [navigateToBed, requestDelete, handleEdit, handleRotation, handleSwipeableOpen]
+  );
+
+  const openBedWizard = useCallback(
+    () => navigation.navigate('BedCreationWizard', undefined),
+    [navigation]
+  );
+
+  const listContentStyle = useMemo(
+    () => [styles.list, { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 }],
+    [styles.list, insets.bottom]
   );
 
   const renderUndoToast = (): React.JSX.Element => (
@@ -467,12 +479,9 @@ export default function BedListScreen(): React.JSX.Element {
       ) : (
         <FlatList
           data={visibleBeds}
-          keyExtractor={(item) => item.id}
+          keyExtractor={bedKey}
           renderItem={renderItem}
-          contentContainerStyle={[
-            styles.list,
-            { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 },
-          ]}
+          contentContainerStyle={listContentStyle}
           onScroll={handleScroll}
           scrollEventThrottle={16}
           onRefresh={refresh}
@@ -480,16 +489,19 @@ export default function BedListScreen(): React.JSX.Element {
           initialNumToRender={8}
           maxToRenderPerBatch={8}
           windowSize={7}
-          removeClippedSubviews
+          // Memoizes the cell renderer: a screen render (search typing, the undo
+          // toast) no longer re-runs every bed card.
+          strictMode
+          // OFF, as on Plants: removeClippedSubviews with a legacy gesture-handler
+          // Swipeable per row (BedCard) causes blank/stuck cells under the New
+          // Architecture. Windowing (windowSize) bounds the cost.
+          removeClippedSubviews={false}
         />
       )}
 
       {renderUndoToast()}
 
-      <AnimatedFAB
-        onPress={() => navigation.navigate('BedCreationWizard', undefined)}
-        iconName="add"
-      />
+      <AnimatedFAB onPress={openBedWizard} iconName="add" />
 
       <ConfirmDeleteModal
         visible={deleteTarget !== null}

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -37,13 +38,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     title: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     summary: {
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 1,
+      ...font(theme, 'body'),
     },
     content: {
       paddingHorizontal: 12,
@@ -54,9 +56,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // ExpandableText
     readMore: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.primary,
       marginTop: 4,
+      ...font(theme, 'bodyStrong', '600'),
     },
     measureHidden: {
       position: 'absolute',

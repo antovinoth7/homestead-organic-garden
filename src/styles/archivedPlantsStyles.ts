@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -21,18 +22,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     backButton: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: radius(theme, 'iconButton', 18),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     headerSpacer: {
       width: 24,
     },
     title: {
       fontSize: 20,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     listContent: {
       padding: 16,
@@ -40,15 +42,16 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     card: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       padding: 16,
       marginBottom: 12,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 12,
+      ...shadow(theme, 'card'),
     },
     cardContent: {
       flex: 1,
@@ -56,19 +59,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     name: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     meta: {
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 4,
       textTransform: 'uppercase',
+      ...font(theme, 'body'),
     },
     location: {
       fontSize: 13,
       color: theme.textSecondary,
       marginTop: 6,
+      ...font(theme, 'body'),
     },
     sectionHeader: {
       flexDirection: 'row',
@@ -85,13 +90,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sectionTitle: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     sectionCount: {
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     sectionHeaderActions: {
       alignItems: 'flex-end',
@@ -104,13 +110,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'button', 16),
       backgroundColor: theme.primary,
+      ...shadow(theme, 'button'),
     },
     sectionRestoreText: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
     sectionDeleteButton: {
       flexDirection: 'row',
@@ -119,20 +126,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'button', 16),
       backgroundColor: theme.errorLight,
       borderWidth: 1,
       borderColor: theme.error,
     },
     sectionDeleteText: {
       fontSize: 12,
-      fontWeight: '700',
       color: theme.error,
+      ...font(theme, 'bodyBold', '700'),
     },
     deletedAt: {
       fontSize: 12,
       color: theme.textTertiary,
       marginTop: 6,
+      ...font(theme, 'body'),
     },
     restoreButton: {
       flexDirection: 'row',
@@ -140,15 +148,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'button', 16),
       backgroundColor: theme.primaryLight,
       borderWidth: 1,
       borderColor: theme.primary,
     },
     restoreText: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     cardActions: {
       alignItems: 'flex-end',
@@ -160,15 +168,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'button', 16),
       backgroundColor: theme.errorLight,
       borderWidth: 1,
       borderColor: theme.error,
     },
     deleteText: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.error,
+      ...font(theme, 'bodyStrong', '600'),
     },
     loadingContainer: {
       flex: 1,
@@ -179,6 +187,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     loadingText: {
       fontSize: 14,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     emptyState: {
       flex: 1,
@@ -188,14 +197,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     emptyTitle: {
       fontSize: 18,
-      fontWeight: '600',
       color: theme.text,
       marginTop: 16,
+      ...font(theme, 'title', '600'),
     },
     emptyText: {
       fontSize: 14,
       color: theme.textSecondary,
       marginTop: 8,
       textAlign: 'center',
+      ...font(theme, 'body'),
     },
   });

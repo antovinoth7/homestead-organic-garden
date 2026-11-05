@@ -1,20 +1,21 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     sheet: {
       backgroundColor: theme.background,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
       // maxHeight is computed at runtime (window height minus the top inset).
     },
     title: {
       fontSize: 16,
-      fontWeight: '700' as const,
       color: theme.text,
       textAlign: 'center' as const,
       paddingVertical: 10,
+      ...font(theme, 'title', '700'),
     },
     subtitle: {
       fontSize: 12,
@@ -23,6 +24,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingBottom: 10,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
+      ...font(theme, 'body'),
     },
     tabBar: {
       flexDirection: 'row' as const,
@@ -40,8 +42,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     tabText: {
       fontSize: 13,
-      fontWeight: '600' as const,
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     tabTextActive: {
       color: theme.primary,
@@ -52,10 +54,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     scroll: { paddingVertical: 12, paddingHorizontal: 14 },
     sectionLabel: {
       fontSize: 10,
-      fontWeight: '700' as const,
       color: theme.textTertiary,
       letterSpacing: 0.8,
       marginBottom: 8,
+      ...font(theme, 'bodyBold', '700'),
     },
     varietyGrid: {
       flexDirection: 'row' as const,
@@ -65,9 +67,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     varietyChip: {
       paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1.5,
+      borderWidth: border(theme, 'chip', 1.5),
       borderColor: theme.border,
     },
     varietyChipActive: {
@@ -77,11 +79,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     varietyChipText: {
       fontSize: 13,
       color: theme.text,
-      fontWeight: '500' as const,
+      ...font(theme, 'bodyMedium', '500'),
     },
     varietyChipTextActive: {
       color: theme.primary,
-      fontWeight: '700' as const,
+      ...font(theme, 'bodyBold', '700'),
     },
     plantRow: {
       flexDirection: 'row' as const,
@@ -89,11 +91,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 12,
       paddingVertical: 12,
       marginBottom: 8,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'card', 10),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1.5,
+      borderWidth: border(theme, 'card', 1.5),
       borderColor: theme.border,
       gap: 10,
+      ...shadow(theme, 'card'),
     },
     plantRowSelected: {
       borderColor: theme.primary,
@@ -102,13 +105,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     plantInfo: { flex: 1 },
     plantName: {
       fontSize: 14,
-      fontWeight: '600' as const,
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     plantSub: {
       fontSize: 12,
       color: theme.textSecondary,
       marginTop: 2,
+      ...font(theme, 'body'),
     },
     emptyState: {
       alignItems: 'center' as const,
@@ -121,6 +125,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       textAlign: 'center' as const,
       paddingHorizontal: 20,
       lineHeight: 18,
+      ...font(theme, 'body'),
     },
     footer: {
       flexDirection: 'row' as const,
@@ -133,7 +138,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     secondaryBtn: {
       flex: 1,
       paddingVertical: 12,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'button', 10),
       borderWidth: 1.5,
       borderColor: theme.border,
       alignItems: 'center' as const,
@@ -141,23 +146,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     secondaryBtnText: {
       fontSize: 14,
-      fontWeight: '600' as const,
       color: theme.text,
+      ...font(theme, 'bodyStrong', '600'),
     },
     primaryBtn: {
       flex: 1,
       paddingVertical: 12,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'button', 10),
       alignItems: 'center' as const,
       backgroundColor: theme.primary,
+      ...shadow(theme, 'button'),
     },
     primaryBtnDisabled: {
       backgroundColor: theme.textTertiary,
     },
     primaryBtnText: {
       fontSize: 14,
-      fontWeight: '700' as const,
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
     revertBtn: {
       marginTop: 12,
@@ -170,6 +176,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     revertBtnText: {
       fontSize: 13,
       color: theme.warning,
-      fontWeight: '600' as const,
+      ...font(theme, 'bodyStrong', '600'),
     },
   });

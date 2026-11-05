@@ -14,6 +14,7 @@ import React, { useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/todayScreenStyles';
+import { HeroBackdrop } from '@/components/HeroBackdrop';
 
 interface Props {
   dateLabel: string;
@@ -41,6 +42,7 @@ export const TodayHeader = React.memo(function TodayHeader({
 
   return (
     <View style={[styles.hero, { paddingTop: topInset + 10 }]}>
+      <HeroBackdrop />
       <Text style={styles.heroDate}>{dateLabel}</Text>
 
       <View style={[styles.heroPanel, needActionCount === 0 && styles.heroPanelSolo]}>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -55,8 +55,12 @@ import { CarePlanDateNav } from '@/components/calendar/CarePlanDateNav';
 import { HeaderIconButton } from '@/components/header/HeaderIconButton';
 import { HeaderSearchField } from '@/components/header/HeaderSearchField';
 import { CarePlanProgressCard } from '@/components/calendar/CarePlanProgressCard';
-import { CarePlanBandFooter, CarePlanBandFrame } from '@/components/calendar/CarePlanBand';
-import { LiveCarePlanBandHeader } from '@/components/calendar/LiveCarePlanBandHeader';
+import {
+  CarePlanBandFooter,
+  CarePlanBandFrame,
+  CarePlanBandHeader,
+  CarePlanNowLabelContext,
+} from '@/components/calendar/CarePlanBand';
 import { HarvestRoundRow } from '@/components/calendar/HarvestRoundRow';
 import { useMinuteValue } from '@/hooks/useMinuteClock';
 import {
@@ -218,6 +222,24 @@ const optionalNumber = (value: string): number | undefined => {
   return value.trim() !== '' && Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 };
 
+/**
+ * Search text as the task filters compare it. Module-level so its identity is
+ * stable: as an inline function it was a new dependency of the search filter
+ * on every render, which re-ran the whole task pipeline and rebuilt every list
+ * section whenever any of this screen's state changed.
+ */
+const normalizeSearchText = (value: string): string =>
+  sanitizeAlphaNumericSpaces(value).trim().toLowerCase();
+
+/** Empties the selection, keeping the same Set when it is already empty. */
+const clearTaskIds = (ids: Set<string>): Set<string> => (ids.size === 0 ? ids : new Set());
+
+type RainMoves = Record<string, Record<string, string>>;
+
+/** Drops every rain move, keeping the same object when there are none. */
+const clearRainMoves = (moves: RainMoves): RainMoves =>
+  Object.keys(moves).length === 0 ? moves : {};
+
 export default function CalendarScreen(): React.JSX.Element {
   const route = useRoute<CalendarScreenRouteProp>();
   const navigation = useNavigation<CalendarScreenNavigationProp>();
@@ -306,7 +328,7 @@ export default function CalendarScreen(): React.JSX.Element {
   const [openSections, setOpenSections] = useState<ReadonlySet<string>>(() => new Set());
   // Per plot (by `locationKey`): the waterings moved past coming rain, with
   // their old due dates so Undo can put them back. Session-only — cleared on focus.
-  const [rainMoves, setRainMoves] = useState<Record<string, Record<string, string>>>({});
+  const [rainMoves, setRainMoves] = useState<RainMoves>({});
   const [rainMoveBusy, setRainMoveBusy] = useState<string | null>(null);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [detailTask, setDetailTask] = useState<TaskTemplate | null>(null);
@@ -319,9 +341,10 @@ export default function CalendarScreen(): React.JSX.Element {
   const [selectionBarMounted, setSelectionBarMounted] = useState(false);
   const selectionBarAnim = useAnimatedValue(0);
   const searchInputRef = React.useRef<TextInput>(null);
-  const normalizeSearchText = (value: string): string =>
-    sanitizeAlphaNumericSpaces(value).trim().toLowerCase();
-  const normalizedSearchQuery = normalizeSearchText(searchQuery);
+  // The field shows every keystroke at once; the task pipeline and the list
+  // follow at a deferred priority, so typing never waits on a re-filter.
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const normalizedSearchQuery = normalizeSearchText(deferredSearchQuery);
 
   const {
     tasks,
@@ -527,8 +550,11 @@ export default function CalendarScreen(): React.JSX.Element {
       resetTabBar();
       // Back to today with no day picked.
       setSelectedDate(null);
-      setRainMoves({});
-      setSelectedTaskIds(new Set());
+      // Guarded resets: an unconditional `{}` / `new Set()` is a new value every
+      // focus (and this effect re-runs after its own setParams), and the task
+      // ids feed every card's renderer — so each one re-rendered the whole list.
+      setRainMoves(clearRainMoves);
+      setSelectedTaskIds(clearTaskIds);
       if (route.params?.resetFilters) {
         setFilters(emptyCareTaskFilters());
         setGroupBy(DEFAULT_GROUP_BY);
@@ -570,7 +596,7 @@ export default function CalendarScreen(): React.JSX.Element {
         });
       }
       void loadData(); // debounced — skips if loaded recently
-      return () => setSelectedTaskIds(new Set());
+      return () => setSelectedTaskIds(clearTaskIds);
     }, [loadData, resetTabBar, route, navigation, scrollToTop])
   );
 
@@ -2078,21 +2104,13 @@ export default function CalendarScreen(): React.JSX.Element {
               ? renderSectionCheckbox(header.selectableTasks)
               : null
           }
-          clockActive={isFocused}
           onToggle={() => toggleSection(section.key)}
           onAdd={handleAddForPickedDay}
           banners={header.rainPlots?.map((plot) => renderPlotBanner(plot, header.plot !== plot))}
         />
       );
     },
-    [
-      selectionMode,
-      renderSectionCheckbox,
-      isFocused,
-      toggleSection,
-      handleAddForPickedDay,
-      renderPlotBanner,
-    ]
+    [selectionMode, renderSectionCheckbox, toggleSection, handleAddForPickedDay, renderPlotBanner]
   );
 
   const renderListSectionFooter = useCallback(
@@ -2147,6 +2165,81 @@ export default function CalendarScreen(): React.JSX.Element {
       handleSelectDate(date);
     },
     [handleSelectDate]
+  );
+
+  const openCreateTaskFromFab = useCallback(() => {
+    setCreateTaskInitialDate(undefined);
+    setShowModal(true);
+  }, []);
+
+  // Memoized (with the refresh control below): inline, each was a new element on
+  // every render, which re-rendered the SectionList and re-ran every task card.
+  const listHeader = useMemo(
+    () => (
+      <>
+        {(isStale || (loadError && tasks.length > 0)) && (
+          <View style={styles.staleBanner} accessibilityRole="alert">
+            <Ionicons name="cloud-offline-outline" size={18} color={theme.warning} />
+            <View style={styles.staleBannerBody}>
+              <Text style={styles.staleBannerTitle}>Showing saved care-plan data</Text>
+              <Text style={styles.staleBannerText}>
+                {lastUpdatedAt
+                  ? `Last updated ${formatFarmDate(new Date(lastUpdatedAt), {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}`
+                  : 'Live data is temporarily unavailable'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.staleBannerRetry}
+              onPress={handleRefresh}
+              accessibilityRole="button"
+              accessibilityLabel="Retry care plan refresh"
+            >
+              <Text style={styles.staleBannerRetryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {initialLoading && tasks.length === 0 && (
+          <View
+            style={bandStyles.skeleton}
+            accessibilityRole="progressbar"
+            accessibilityLabel="Loading the care plan"
+          >
+            <View style={[bandStyles.skeletonBlock, bandStyles.skeletonSummary]} />
+            <View style={[bandStyles.skeletonBlock, bandStyles.skeletonBand]} />
+            <View style={[bandStyles.skeletonBlock, bandStyles.skeletonCard]} />
+            <View
+              style={[bandStyles.skeletonBlock, bandStyles.skeletonCard, bandStyles.skeletonFaded]}
+            />
+          </View>
+        )}
+        {!isSearching && !initialLoading && !(loadError && tasks.length === 0) && (
+          <CarePlanProgressCard summary={todaySummary} />
+        )}
+      </>
+    ),
+    [
+      isStale,
+      loadError,
+      tasks.length,
+      styles,
+      theme.warning,
+      lastUpdatedAt,
+      handleRefresh,
+      initialLoading,
+      bandStyles,
+      isSearching,
+      todaySummary,
+    ]
+  );
+
+  const listRefreshControl = useMemo(
+    () => <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />,
+    [refreshing, handleRefresh]
   );
 
   return (
@@ -2212,81 +2305,33 @@ export default function CalendarScreen(): React.JSX.Element {
         {/* No week row: the date line in the header reaches any day, so the
             list starts right under it and keeps that height for task cards. */}
         <View style={styles.listArea}>
-          <SectionList
-            ref={scrollViewRef}
-            style={styles.content}
-            sections={listSections}
-            keyExtractor={listKeyExtractor}
-            renderItem={renderListItem}
-            renderSectionHeader={renderListSectionHeader}
-            renderSectionFooter={renderListSectionFooter}
-            stickySectionHeadersEnabled={false}
-            onScrollToIndexFailed={handleScrollToIndexFailed}
-            onLayout={handleListLayout}
-            contentContainerStyle={listContentStyle}
-            onScroll={onTabBarScroll}
-            scrollEventThrottle={16}
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-            initialNumToRender={12}
-            maxToRenderPerBatch={10}
-            windowSize={7}
-            removeClippedSubviews={true}
-            updateCellsBatchingPeriod={50}
-            ListHeaderComponent={
-              <>
-                {(isStale || (loadError && tasks.length > 0)) && (
-                  <View style={styles.staleBanner} accessibilityRole="alert">
-                    <Ionicons name="cloud-offline-outline" size={18} color={theme.warning} />
-                    <View style={styles.staleBannerBody}>
-                      <Text style={styles.staleBannerTitle}>Showing saved care-plan data</Text>
-                      <Text style={styles.staleBannerText}>
-                        {lastUpdatedAt
-                          ? `Last updated ${formatFarmDate(new Date(lastUpdatedAt), {
-                              day: 'numeric',
-                              month: 'short',
-                              hour: 'numeric',
-                              minute: '2-digit',
-                            })}`
-                          : 'Live data is temporarily unavailable'}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.staleBannerRetry}
-                      onPress={handleRefresh}
-                      accessibilityRole="button"
-                      accessibilityLabel="Retry care plan refresh"
-                    >
-                      <Text style={styles.staleBannerRetryText}>Retry</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-                {initialLoading && tasks.length === 0 && (
-                  <View
-                    style={bandStyles.skeleton}
-                    accessibilityRole="progressbar"
-                    accessibilityLabel="Loading the care plan"
-                  >
-                    <View style={[bandStyles.skeletonBlock, bandStyles.skeletonSummary]} />
-                    <View style={[bandStyles.skeletonBlock, bandStyles.skeletonBand]} />
-                    <View style={[bandStyles.skeletonBlock, bandStyles.skeletonCard]} />
-                    <View
-                      style={[
-                        bandStyles.skeletonBlock,
-                        bandStyles.skeletonCard,
-                        bandStyles.skeletonFaded,
-                      ]}
-                    />
-                  </View>
-                )}
-                {!isSearching && !initialLoading && !(loadError && tasks.length === 0) && (
-                  <CarePlanProgressCard summary={todaySummary} />
-                )}
-              </>
-            }
-          />
+          <CarePlanNowLabelContext.Provider value={nowLabel}>
+            <SectionList
+              ref={scrollViewRef}
+              style={styles.content}
+              sections={listSections}
+              keyExtractor={listKeyExtractor}
+              renderItem={renderListItem}
+              renderSectionHeader={renderListSectionHeader}
+              renderSectionFooter={renderListSectionFooter}
+              stickySectionHeadersEnabled={false}
+              onScrollToIndexFailed={handleScrollToIndexFailed}
+              onLayout={handleListLayout}
+              contentContainerStyle={listContentStyle}
+              onScroll={onTabBarScroll}
+              scrollEventThrottle={16}
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              refreshControl={listRefreshControl}
+              initialNumToRender={12}
+              maxToRenderPerBatch={10}
+              windowSize={7}
+              removeClippedSubviews={true}
+              updateCellsBatchingPeriod={50}
+              ListHeaderComponent={listHeader}
+            />
+          </CarePlanNowLabelContext.Provider>
         </View>
 
         {/* Floating selection pill — sits at the same height as the FAB */}
@@ -2352,12 +2397,7 @@ export default function CalendarScreen(): React.JSX.Element {
         />
 
         {/* Floating Action Button */}
-        <AnimatedFAB
-          onPress={() => {
-            setCreateTaskInitialDate(undefined);
-            setShowModal(true);
-          }}
-        />
+        <AnimatedFAB onPress={openCreateTaskFromFab} />
 
         <MonthCalendarSheet
           visible={showMonthSheet}

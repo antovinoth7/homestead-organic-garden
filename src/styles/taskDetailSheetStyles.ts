@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font, radius } from '@/theme/styleTokens';
 
 /** The Care Plan's task detail sheet — subject first, then the facts, then Done / Skip. */
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
@@ -13,8 +14,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheet: {
       backgroundColor: theme.backgroundSecondary,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
+      borderTopLeftRadius: radius(theme, 'sheet', 24),
+      borderTopRightRadius: radius(theme, 'sheet', 24),
       paddingTop: 12,
     },
     header: {
@@ -40,13 +41,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     title: {
       fontSize: 20,
-      fontWeight: '700',
       color: theme.text,
       marginBottom: 2,
+      ...font(theme, 'title', '700'),
     },
     subtitle: {
       fontSize: 14,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     body: {
       paddingHorizontal: 20,
@@ -64,8 +66,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     label: {
       flexShrink: 0,
       fontSize: 13,
-      fontWeight: '500',
       color: theme.textSecondary,
+      ...font(theme, 'bodyMedium', '500'),
     },
     // Value over its explanatory note, right-aligned against the label.
     valueBlock: {
@@ -76,9 +78,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     value: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.text,
       textAlign: 'right',
+      ...font(theme, 'bodyStrong', '600'),
     },
     valueOverdue: {
       color: theme.error,
@@ -100,9 +102,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     note: {
       flexShrink: 1,
       fontSize: 11,
-      fontWeight: '500',
       color: theme.textTertiary,
       textAlign: 'right',
+      ...font(theme, 'bodyMedium', '500'),
     },
     amountEditor: {
       flex: 1,
@@ -122,6 +124,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.inputBackground,
       fontSize: 14,
       color: theme.inputText,
+      ...font(theme, 'body'),
     },
     amountSave: {
       minHeight: 40,
@@ -132,8 +135,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     amountSaveText: {
       fontSize: 13,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
     actions: {
       flexDirection: 'row',
@@ -146,7 +149,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flex: 1,
       minHeight: 48,
       paddingVertical: 13,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'button', 12),
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
@@ -160,8 +163,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     actionText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.textInverse,
+      ...font(theme, 'bodyStrong', '600'),
     },
     notesLink: {
       alignSelf: 'center',
@@ -171,7 +174,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     notesLinkText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.primary,
+      ...font(theme, 'bodyStrong', '600'),
     },
   });

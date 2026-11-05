@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -12,7 +13,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     editButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'iconButton', 20),
       backgroundColor: theme.card,
       alignItems: 'center',
       justifyContent: 'center',
@@ -37,13 +38,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.primaryLight,
       borderWidth: 1,
       borderColor: theme.primary,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       paddingHorizontal: 8,
       paddingVertical: 3,
     },
-    typeChipText: { fontSize: 12, fontWeight: '600', color: theme.primary },
+    typeChipText: { fontSize: 12, color: theme.primary, ...font(theme, 'bodyStrong', '600') },
     metaDim: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    metaDimText: { fontSize: 13, color: theme.textSecondary },
+    metaDimText: { fontSize: 13, color: theme.textSecondary, ...font(theme, 'body') },
     restingBanner: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -54,17 +55,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 10,
       marginBottom: 12,
     },
-    restingText: { flex: 1, fontSize: 13, color: theme.warning ?? '#f59e0b', fontWeight: '600' },
-    endRestText: { fontSize: 12, color: theme.primary, fontWeight: '600' },
+    restingText: {
+      flex: 1,
+      fontSize: 13,
+      color: theme.warning ?? '#f59e0b',
+      ...font(theme, 'bodyStrong', '600'),
+    },
+    endRestText: { fontSize: 12, color: theme.primary, ...font(theme, 'bodyStrong', '600') },
     raisedBadge: {
       backgroundColor: theme.primaryLight,
-      borderRadius: 4,
+      borderRadius: radius(theme, 'chip', 4),
       paddingHorizontal: 6,
       paddingVertical: 2,
     },
-    raisedBadgeText: { fontSize: 11, color: theme.primary },
+    raisedBadgeText: { fontSize: 11, color: theme.primary, ...font(theme, 'body') },
     section: { marginTop: 20 },
-    sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginBottom: 10 },
+    sectionTitle: {
+      fontSize: 16,
+      color: theme.text,
+      marginBottom: 10,
+      ...font(theme, 'title', '700'),
+    },
     // Soil Input Log
     inputLogGrid: { flexDirection: 'row', gap: 8, marginBottom: 12 },
     inputLogItem: {
@@ -77,13 +88,34 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: 1,
       borderColor: theme.border,
     },
-    inputLogLabel: { fontSize: 11, color: theme.textSecondary, textAlign: 'center' },
-    inputLogValue: { fontSize: 12, fontWeight: '600', color: theme.text, textAlign: 'center' },
+    inputLogLabel: {
+      fontSize: 11,
+      color: theme.textSecondary,
+      textAlign: 'center',
+      ...font(theme, 'body'),
+    },
+    inputLogValue: {
+      fontSize: 12,
+      color: theme.text,
+      textAlign: 'center',
+      ...font(theme, 'bodyStrong', '600'),
+    },
     inputLogHint: { fontSize: 11, color: theme.textTertiary, fontStyle: 'italic' },
     // Transition inputs
     transitionRow: { flexDirection: 'row', gap: 6, marginBottom: 6, paddingRight: 12 },
-    transitionBullet: { color: theme.primary, fontSize: 14, lineHeight: 20 },
-    transitionText: { flex: 1, fontSize: 13, color: theme.text, lineHeight: 20 },
+    transitionBullet: {
+      color: theme.primary,
+      fontSize: 14,
+      lineHeight: 20,
+      ...font(theme, 'body'),
+    },
+    transitionText: {
+      flex: 1,
+      fontSize: 13,
+      color: theme.text,
+      lineHeight: 20,
+      ...font(theme, 'body'),
+    },
     // Actions
     actions: { flexDirection: 'row', gap: 12, marginTop: 16 },
     actionButton: {
@@ -93,20 +125,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       justifyContent: 'center',
       gap: 8,
       padding: 12,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'button', 8),
       borderWidth: 1,
       borderColor: theme.border,
       backgroundColor: theme.backgroundSecondary,
     },
     restButton: { borderColor: theme.warning ?? '#f59e0b' },
-    actionText: { color: theme.primary, fontWeight: '600', fontSize: 13 },
+    actionText: { color: theme.primary, fontSize: 13, ...font(theme, 'bodyStrong', '600') },
     // RotationStatusCard
     rotationCard: {
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'card', 10),
       padding: 14,
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'card'),
     },
     violationBanner: {
       flexDirection: 'row',
@@ -118,10 +151,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 8,
       marginBottom: 10,
     },
-    violationText: { color: theme.textInverse, fontSize: 13, flex: 1 },
+    violationText: { color: theme.textInverse, fontSize: 13, flex: 1, ...font(theme, 'body') },
     legumeRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-    legumeLabel: { color: theme.textSecondary, fontSize: 13 },
-    legumeValue: { fontSize: 13, fontWeight: '700' },
+    legumeLabel: { color: theme.textSecondary, fontSize: 13, ...font(theme, 'body') },
+    legumeValue: { fontSize: 13, ...font(theme, 'bodyBold', '700') },
     greenManureBanner: {
       flexDirection: 'row',
       gap: 8,
@@ -132,12 +165,22 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 8,
       marginBottom: 10,
     },
-    greenManureText: { color: theme.primary, fontSize: 12, flex: 1 },
-    checklistTitle: { fontSize: 13, fontWeight: '600', color: theme.text, marginBottom: 8 },
+    greenManureText: { color: theme.primary, fontSize: 12, flex: 1, ...font(theme, 'body') },
+    checklistTitle: {
+      fontSize: 13,
+      color: theme.text,
+      marginBottom: 8,
+      ...font(theme, 'bodyStrong', '600'),
+    },
     checklistRow: { flexDirection: 'row', gap: 10, marginBottom: 8, alignItems: 'flex-start' },
     checklistInfo: { flex: 1 },
-    checklistRule: { fontSize: 13, fontWeight: '600', color: theme.text },
-    checklistDesc: { fontSize: 11, color: theme.textSecondary, marginTop: 1 },
+    checklistRule: { fontSize: 13, color: theme.text, ...font(theme, 'bodyStrong', '600') },
+    checklistDesc: {
+      fontSize: 11,
+      color: theme.textSecondary,
+      marginTop: 1,
+      ...font(theme, 'body'),
+    },
     // Harvest gap alerts
     warningCard: {
       flexDirection: 'row',
@@ -149,16 +192,21 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 8,
       marginBottom: 8,
     },
-    warningText: { flex: 1, fontSize: 12, color: theme.warning ?? '#f59e0b' },
+    warningText: {
+      flex: 1,
+      fontSize: 12,
+      color: theme.warning ?? '#f59e0b',
+      ...font(theme, 'body'),
+    },
     // Next-crop chips
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     nextCropChip: {
       backgroundColor: theme.primaryLight,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       paddingHorizontal: 12,
       paddingVertical: 6,
     },
-    nextCropChipText: { fontSize: 12, color: theme.primary, fontWeight: '600' },
+    nextCropChipText: { fontSize: 12, color: theme.primary, ...font(theme, 'bodyStrong', '600') },
     // Progress bar
     progressBarContainer: {
       height: 6,
@@ -172,5 +220,10 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.success ?? '#22c55e',
       borderRadius: 3,
     },
-    progressLabel: { fontSize: 11, color: theme.textSecondary, marginBottom: 10 },
+    progressLabel: {
+      fontSize: 11,
+      color: theme.textSecondary,
+      marginBottom: 10,
+      ...font(theme, 'body'),
+    },
   });

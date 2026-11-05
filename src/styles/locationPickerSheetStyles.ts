@@ -1,36 +1,35 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     sheet: {
       backgroundColor: theme.background,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
       // maxHeight is computed at runtime (window height minus the top inset).
       paddingBottom: 24,
     },
     sheetTitle: {
       fontSize: 16,
-      fontWeight: '700' as const,
       color: theme.text,
       textAlign: 'center' as const,
       paddingVertical: 10,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
+      ...font(theme, 'title', '700'),
     },
     scrollContent: {
       paddingHorizontal: 14,
       paddingBottom: 16,
     },
     stageLabel: {
-      fontSize: 10,
-      fontWeight: '700' as const,
       color: theme.textTertiary,
-      letterSpacing: 0.8,
       paddingTop: 14,
       paddingBottom: 8,
       textTransform: 'uppercase' as const,
+      ...eyebrow(theme, { fontSize: 10, letterSpacing: 0.8, fontWeight: '700' }),
     },
     cardGrid: {
       flexDirection: 'row' as const,
@@ -41,12 +40,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       flexBasis: '47%' as const,
       flexGrow: 1,
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      borderWidth: 1.5,
+      borderRadius: radius(theme, 'card', 12),
+      borderWidth: border(theme, 'card', 1.5),
       borderColor: theme.border,
       padding: 12,
       alignItems: 'center' as const,
       gap: 6,
+      ...shadow(theme, 'card'),
     },
     locationCardSelected: {
       borderColor: theme.primary,
@@ -54,9 +54,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     locationCardName: {
       fontSize: 13,
-      fontWeight: '600' as const,
       color: theme.text,
       textAlign: 'center' as const,
+      ...font(theme, 'bodyStrong', '600'),
     },
     locationCardNameSelected: {
       color: theme.primary,
@@ -64,13 +64,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     shortNameBadge: {
       paddingHorizontal: 7,
       paddingVertical: 2,
-      borderRadius: 8,
+      borderRadius: radius(theme, 'chip', 8),
       backgroundColor: theme.backgroundTertiary,
     },
     shortNameBadgeText: {
       fontSize: 10,
       color: theme.textSecondary,
-      fontWeight: '600' as const,
+      ...font(theme, 'bodyStrong', '600'),
     },
     chipRow: {
       flexDirection: 'row' as const,
@@ -80,9 +80,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     chip: {
       paddingHorizontal: 14,
       paddingVertical: 8,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'chip', 16),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
     },
     chipSelected: {
@@ -92,10 +92,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     chipText: {
       fontSize: 13,
       color: theme.text,
+      ...font(theme, 'body'),
     },
     chipTextSelected: {
       color: theme.primary,
-      fontWeight: '600' as const,
+      ...font(theme, 'bodyStrong', '600'),
     },
     emptyState: {
       alignItems: 'center' as const,
@@ -107,5 +108,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 8,
       textAlign: 'center' as const,
       paddingHorizontal: 24,
+      ...font(theme, 'body'),
     },
   });

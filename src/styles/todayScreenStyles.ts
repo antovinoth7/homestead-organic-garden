@@ -10,6 +10,7 @@
 
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { eyebrow, font, radius } from '@/theme/styleTokens';
 
 /** Gutter shared by the plot cards and the season block. */
 export const CARD_GUTTER = 16;
@@ -37,12 +38,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingHorizontal: 20,
       paddingBottom: 26,
       backgroundColor: theme.heroGradientStart,
+      borderBottomLeftRadius: radius(theme, 'hero', 0),
+      borderBottomRightRadius: radius(theme, 'hero', 0),
+      overflow: 'hidden',
     },
     heroDate: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.heroText,
       letterSpacing: -0.2,
+      ...font(theme, 'bodyStrong', '600'),
     },
     heroPanel: {
       flexDirection: 'row',
@@ -74,20 +78,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     heroStatValue: {
       fontSize: 24,
-      fontWeight: '700',
       color: theme.heroText,
       lineHeight: 28,
+      ...font(theme, 'bodyBold', '700'),
     },
     heroStatValueAlert: {
       color: theme.heroTextAlert,
     },
     heroStatLabel: {
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 0.9,
       textTransform: 'uppercase',
       color: theme.heroTextFaint,
       marginTop: 4,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 0.9, fontWeight: '600' }),
     },
     heroStatLabelAlert: {
       color: theme.heroTextAlert,
@@ -118,15 +120,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sectionTitle: {
       flex: 1,
       fontSize: 15.5,
-      fontWeight: '700',
       color: theme.text,
       letterSpacing: -0.2,
+      ...font(theme, 'title', '700'),
     },
     sectionCount: {
       fontSize: 11.5,
-      fontWeight: '600',
       letterSpacing: 0.6,
       color: theme.errorDark,
+      ...font(theme, 'bodyStrong', '600'),
     },
 
     // Indented past the icon tile (36 + 20 padding + 12 gap) so the eye follows
@@ -149,11 +151,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     loadingText: {
       fontSize: 14,
       color: theme.textSecondary,
+      ...font(theme, 'body'),
     },
     errorText: {
       fontSize: 13,
       color: theme.errorDark,
       paddingHorizontal: 20,
       paddingTop: 12,
+      ...font(theme, 'body'),
     },
   });

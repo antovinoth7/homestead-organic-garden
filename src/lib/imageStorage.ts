@@ -396,8 +396,9 @@ export const imageExists = async (imageUri: string | null): Promise<boolean> => 
     })();
 
     // Race against timeout to prevent indefinite hangs
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<boolean>((resolve) => {
-      setTimeout(() => {
+      timer = setTimeout(() => {
         // Only log in development to reduce noise
         if (__DEV__) {
           logger.warn('imageExists timeout (file likely missing)');
@@ -406,7 +407,13 @@ export const imageExists = async (imageUri: string | null): Promise<boolean> => 
       }, timeoutMs);
     });
 
-    return await Promise.race([checkPromise, timeoutPromise]);
+    try {
+      return await Promise.race([checkPromise, timeoutPromise]);
+    } finally {
+      // The check usually wins; without this every call left a live 2 s timer
+      // behind (one per photo per refetch) that logged a false "timeout" in dev.
+      clearTimeout(timer);
+    }
   } catch (error) {
     // Only log errors in development
     if (__DEV__) {

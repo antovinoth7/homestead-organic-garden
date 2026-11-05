@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import {
   Pressable,
   Text,
@@ -17,6 +17,26 @@ import type {
 } from '@/utils/carePlanSections';
 
 type Styles = ReturnType<typeof createStyles>;
+
+/**
+ * The farm clock ("6:23") for the NOW chip, provided by the Care Plan around
+ * its list. Only the chip reads it, so the per-minute tick re-renders one chip
+ * — as a header prop it changed the section-header renderer every minute and
+ * re-ran every mounted task card.
+ */
+export const CarePlanNowLabelContext = createContext('');
+
+function NowChip({
+  label,
+  styles,
+}: Readonly<{ label: string | undefined; styles: Styles }>): React.JSX.Element {
+  const clock = useContext(CarePlanNowLabelContext);
+  return (
+    <View style={styles.nowChip}>
+      <Text style={styles.nowChipText}>{`NOW · ${label ?? clock}`}</Text>
+    </View>
+  );
+}
 
 /** Catch up and a picked day sit on a tinted panel; the other bands do not. */
 const isPanel = (tone: CarePlanBandTone): boolean => tone === 'overdue' || tone === 'picked';
@@ -92,8 +112,11 @@ export interface CarePlanBandHeaderProps {
   header: CarePlanSectionHeader;
   /** The select-all box while selecting, else null. */
   selectBox: React.ReactNode;
-  /** "6:23" — shown in the NOW chip when the band holds the current time. */
-  nowLabel: string;
+  /**
+   * "6:23" for the NOW chip when the band holds the current time. Optional:
+   * by default the chip reads `CarePlanNowLabelContext`.
+   */
+  nowLabel?: string;
   onToggle: () => void;
   onAdd: () => void;
   /** Rain banners for the band's plots, rendered by the screen. */
@@ -132,11 +155,7 @@ export function CarePlanBandHeader({
       >
         {header.title}
       </Text>
-      {header.isNow && (
-        <View style={styles.nowChip}>
-          <Text style={styles.nowChipText}>{`NOW · ${nowLabel}`}</Text>
-        </View>
-      )}
+      {header.isNow && <NowChip label={nowLabel} styles={styles} />}
       <View style={styles.spacer} />
       {header.addAction && (
         <TouchableOpacity

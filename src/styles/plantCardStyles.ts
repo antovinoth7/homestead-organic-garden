@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, font, radius, shadow } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -7,18 +8,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     card: {
       flexDirection: 'row',
       backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'card', 12),
       padding: 10,
       paddingLeft: 14,
       marginBottom: 8,
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: border(theme, 'card', 1),
       borderColor: theme.border,
       shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.08,
       shadowRadius: 3,
       elevation: 2,
+      ...shadow(theme, 'card'),
     },
     healthStripe: {
       position: 'absolute',
@@ -52,7 +54,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       right: 2,
       width: 20,
       height: 20,
-      borderRadius: 10,
+      borderRadius: radius(theme, 'chip', 10),
       backgroundColor: theme.textInverse + 'D9',
       alignItems: 'center',
       justifyContent: 'center',
@@ -70,9 +72,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     name: {
       fontSize: 16,
-      fontWeight: '600',
       color: theme.text,
       flex: 1,
+      ...font(theme, 'bodyStrong', '600'),
     },
     badge: {
       fontSize: 9,
@@ -80,11 +82,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       backgroundColor: theme.accentLight,
       paddingHorizontal: 7,
       paddingVertical: 2,
-      borderRadius: 8,
-      fontWeight: '700',
+      borderRadius: radius(theme, 'chip', 8),
       textTransform: 'uppercase',
       maxWidth: 110,
       overflow: 'hidden',
+      ...font(theme, 'bodyBold', '700'),
     },
     variety: {
       fontSize: 12,
@@ -107,16 +109,18 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       fontSize: 12,
       color: theme.textTertiary,
       flexShrink: 1,
+      ...font(theme, 'body'),
     },
     metaDot: {
       fontSize: 12,
       color: theme.border,
       marginHorizontal: 5,
+      ...font(theme, 'body'),
     },
     ageText: {
       fontSize: 12,
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     statusRow: {
       flexDirection: 'row',
@@ -130,7 +134,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 4,
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 6,
+      borderRadius: radius(theme, 'chip', 6),
       backgroundColor: theme.info + '20',
       borderWidth: 1,
       borderColor: theme.info + '40',
@@ -142,7 +146,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     statusChipText: {
       fontSize: 11,
       color: theme.info,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     statusChipTextOverdue: {
       color: theme.error,
@@ -158,8 +162,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     pestStatusChipText: {
       fontSize: 11,
-      fontWeight: '600',
       color: theme.error,
+      ...font(theme, 'bodyStrong', '600'),
     },
     bedChip: {
       flexDirection: 'row',
@@ -167,7 +171,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 3,
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 6,
+      borderRadius: radius(theme, 'chip', 6),
       backgroundColor: theme.primaryLight,
       borderWidth: 1,
       borderColor: theme.primary + '40',
@@ -175,12 +179,12 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     bedChipText: {
       fontSize: 11,
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     highlight: {
-      fontWeight: '700',
       color: theme.primary,
       backgroundColor: theme.primaryLight,
+      ...font(theme, 'bodyBold', '700'),
     },
     chevron: {
       marginLeft: 4,
@@ -212,7 +216,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     swipeActionText: {
       fontSize: 10,
-      fontWeight: '700',
       color: theme.textInverse,
+      ...font(theme, 'bodyBold', '700'),
     },
   });

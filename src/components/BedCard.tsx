@@ -21,6 +21,7 @@ import {
   type BedLifecycle,
 } from '@/utils/bedStatus';
 import { createStyles } from '@/styles/bedListStyles';
+import { cacheStylesByTheme } from '@/theme/styleCache';
 
 interface Props {
   bed: BedWithCoverage;
@@ -38,6 +39,9 @@ const LIFECYCLE_ICON: Record<BedLifecycle, keyof typeof Ionicons.glyphMap> = {
   permanent: 'pin',
 };
 
+/** One sheet per theme shared by every card, instead of one per mounted card. */
+const getRowStyles = cacheStylesByTheme(createStyles);
+
 export const BedCard = React.memo(function BedCard({
   bed,
   onPress,
@@ -47,7 +51,7 @@ export const BedCard = React.memo(function BedCard({
   onSwipeableOpen,
 }: Props): React.JSX.Element {
   const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = useMemo(() => getRowStyles(theme), [theme]);
   const swipeableRef = useRef<Swipeable>(null);
 
   const showLegume = bedExpectsLegumes(bed.type);
@@ -92,7 +96,7 @@ export const BedCard = React.memo(function BedCard({
           accessibilityLabel="Edit bed"
           accessibilityRole="button"
         >
-          <Ionicons name="create-outline" size={20} color="#fff" />
+          <Ionicons name="create-outline" size={20} color={theme.textInverse} />
           <Text style={styles.swipeActionText}>Edit</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -101,12 +105,12 @@ export const BedCard = React.memo(function BedCard({
           accessibilityLabel="Delete bed"
           accessibilityRole="button"
         >
-          <Ionicons name="trash-outline" size={20} color="#fff" />
+          <Ionicons name="trash-outline" size={20} color={theme.textInverse} />
           <Text style={styles.swipeActionText}>Delete</Text>
         </TouchableOpacity>
       </View>
     ),
-    [styles, handleEdit, handleDelete]
+    [styles, theme.textInverse, handleEdit, handleDelete]
   );
 
   const renderLeftActions = useCallback(
@@ -118,12 +122,12 @@ export const BedCard = React.memo(function BedCard({
           accessibilityLabel="View crop rotation"
           accessibilityRole="button"
         >
-          <Ionicons name="sync-outline" size={20} color="#fff" />
+          <Ionicons name="sync-outline" size={20} color={theme.textInverse} />
           <Text style={styles.swipeActionText}>Rotation</Text>
         </TouchableOpacity>
       </View>
     ),
-    [styles, handleRotation]
+    [styles, theme.textInverse, handleRotation]
   );
 
   return (

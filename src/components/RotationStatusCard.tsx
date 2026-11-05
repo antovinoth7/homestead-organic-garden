@@ -26,7 +26,7 @@ export function RotationStatusCard({
     <View style={styles.rotationCard}>
       {status.has_solanaceae_violation && (
         <View style={styles.violationBanner}>
-          <Ionicons name="warning" size={16} color="#fff" />
+          <Ionicons name="warning" size={16} color={theme.textInverse} />
           <Text style={styles.violationText}>
             Solanaceae planted in previous season — rest recommended
           </Text>

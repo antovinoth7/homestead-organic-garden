@@ -35,9 +35,52 @@ import { matchesPlotFilter } from '@/utils/plotGrouping';
  * would put Turmeric under "Herb" while its own card said "Spices".
  */
 export type FilterType = 'all' | CatalogGroup;
+
+/**
+ * What the filters read off a plant, worked out once per plant object.
+ *
+ * `countFacets` runs `filterPlants` about eight times per change, and each pass
+ * used to re-run `getTaxonomy`'s name normalisation and lower-case five search
+ * fields for every plant. Plants are never mutated in place — every update
+ * builds a new object, and `getAllPlants` reuses unchanged ones — so a cache
+ * keyed by object identity stays correct and survives a refresh.
+ */
+interface PlantFacts {
+  group: CatalogGroup;
+  health: HealthStatus;
+  activeIssue: boolean;
+  /** name, catalog variety, cultivar, location and landmarks, lower-cased. */
+  searchFields: readonly string[];
+}
+
+const factsByPlant = new WeakMap<Plant, PlantFacts>();
+
+function factsOf(plant: Plant): PlantFacts {
+  let facts = factsByPlant.get(plant);
+  if (!facts) {
+    const searchable = [
+      plant.name,
+      plant.plant_variety,
+      plant.variety,
+      plant.location,
+      plant.landmarks,
+    ];
+    facts = {
+      group: getTaxonomy(plant.plant_variety ?? plant.name, plant.plant_type).group,
+      health: healthBucketOf(plant),
+      activeIssue: (plant.pest_disease_history || []).some((record) => !record.resolved),
+      searchFields: searchable
+        .filter((value): value is string => typeof value === 'string' && value !== '')
+        .map((value) => value.toLowerCase()),
+    };
+    factsByPlant.set(plant, facts);
+  }
+  return facts;
+}
+
 /** A plant's browse group, resolved from its own name. */
 function groupOf(plant: Plant): CatalogGroup {
-  return getTaxonomy(plant.plant_variety ?? plant.name, plant.plant_type).group;
+  return factsOf(plant).group;
 }
 
 export type PestStatusFilter = 'all' | 'active_issues' | 'no_issues';
@@ -98,18 +141,12 @@ export function healthBucketOf(plant: Plant): HealthStatus {
 }
 
 function hasActiveIssue(plant: Plant): boolean {
-  return (plant.pest_disease_history || []).some((record) => !record.resolved);
+  return factsOf(plant).activeIssue;
 }
 
+/** `query` is already trimmed and lower-cased. */
 function matchesSearch(plant: Plant, query: string): boolean {
-  const q = query.toLowerCase();
-  return (
-    plant.name.toLowerCase().includes(q) ||
-    (plant.plant_variety?.toLowerCase().includes(q) ?? false) ||
-    (plant.variety?.toLowerCase().includes(q) ?? false) ||
-    (plant.location?.toLowerCase().includes(q) ?? false) ||
-    (plant.landmarks?.toLowerCase().includes(q) ?? false)
-  );
+  return factsOf(plant).searchFields.some((field) => field.includes(query));
 }
 
 /**
@@ -122,7 +159,7 @@ export function filterPlants(
   except?: FilterCategory
 ): Plant[] {
   const { filters, searchQuery, bedSegment } = state;
-  const query = searchQuery.trim();
+  const query = searchQuery.trim().toLowerCase();
 
   return plants.filter((plant) => {
     if (!plant?.name) return false;
@@ -130,7 +167,7 @@ export function filterPlants(
     if (except !== 'type' && filters.type !== 'all' && groupOf(plant) !== filters.type) {
       return false;
     }
-    if (except !== 'health' && filters.health !== 'all' && healthBucketOf(plant) !== filters.health) {
+    if (except !== 'health' && filters.health !== 'all' && factsOf(plant).health !== filters.health) {
       return false;
     }
     if (except !== 'space' && filters.space !== 'all' && plant.space_type !== filters.space) {
@@ -187,13 +224,30 @@ function tally<T extends string>(
  * How many plants each filter option would yield, given the others. Every
  * category is counted against the list narrowed by everything but itself.
  */
+/**
+ * Pots & Ground vs Beds badge counts, against every other filter. The segment
+ * control is always on screen, so this runs on every change — without the
+ * other six facet passes, which only the open filter sheet needs.
+ */
+export function countSegments(
+  plants: Plant[],
+  state: PlantFilterState
+): Record<BedSegment, number> {
+  let bed = 0;
+  let other = 0;
+  for (const plant of filterPlants(plants, state, 'segment')) {
+    if (plant.bed_id != null) bed++;
+    else other++;
+  }
+  return { bed, other };
+}
+
 export function countFacets(plants: Plant[], state: PlantFilterState): PlantFacetCounts {
   const byHealth = filterPlants(plants, state, 'health');
   const byPest = filterPlants(plants, state, 'pestStatus');
   const pestActive = byPest.filter(hasActiveIssue).length;
-  const bySegment = filterPlants(plants, state, 'segment');
 
-  const health = tally(byHealth, healthBucketOf);
+  const health = tally(byHealth, (plant) => factsOf(plant).health);
   return {
     type: tally(filterPlants(plants, state, 'type'), groupOf),
     health: {
@@ -207,10 +261,7 @@ export function countFacets(plants: Plant[], state: PlantFilterState): PlantFace
     water: tally(filterPlants(plants, state, 'water'), (p) => p.water_requirement),
     pestActive,
     pestNone: byPest.length - pestActive,
-    segment: {
-      bed: bySegment.filter((p) => p.bed_id != null).length,
-      other: bySegment.filter((p) => p.bed_id == null).length,
-    },
+    segment: countSegments(plants, state),
   };
 }
 

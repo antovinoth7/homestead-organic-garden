@@ -1,5 +1,6 @@
 import { Dimensions, StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 
 /**
  * Header bar, filter sheet and section divider shared by the pest, disease and
@@ -30,10 +31,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     backButton: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: radius(theme, 'iconButton', 22),
       backgroundColor: theme.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadow(theme, 'iconButton'),
     },
     /**
      * Title and subtitle share the middle of the bar. A zero min-width lets a
@@ -47,14 +49,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     title: {
       fontSize: 20,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     /** Zone line, e.g. "36 in the High Rainfall Zone". */
     subtitle: {
       fontSize: 12,
       color: theme.inputPlaceholder,
       marginTop: 1,
+      ...font(theme, 'body'),
     },
     headerActions: {
       flexDirection: 'row',
@@ -71,17 +74,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingBottom: 2,
     },
     sectionTitle: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.9,
       textTransform: 'uppercase',
       color: theme.textTertiary,
       flexShrink: 1,
+      ...eyebrow(theme, { fontSize: 11, letterSpacing: 0.9, fontWeight: '700' }),
     },
     sectionCount: {
       fontSize: 11,
-      fontWeight: '700',
       color: theme.inputPlaceholder,
+      ...font(theme, 'bodyBold', '700'),
     },
 
     // ---- Filter sheet -----------------------------------------------------
@@ -92,8 +93,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetContainer: {
       backgroundColor: theme.background,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
       paddingHorizontal: 16,
     },
     sheetHeader: {
@@ -106,29 +107,27 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetTitle: {
       fontSize: 18,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     sheetSectionTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      letterSpacing: 0.5,
       textTransform: 'uppercase',
       color: theme.textSecondary,
       marginTop: 16,
       marginBottom: 8,
+      ...eyebrow(theme, { fontSize: 13, letterSpacing: 0.5, fontWeight: '700' }),
     },
     /** Reset pill, shown only while a facet is off its default. */
     sheetClearBtn: {
       paddingHorizontal: 12,
       paddingVertical: 4,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'button', 14),
       backgroundColor: theme.errorLight,
     },
     sheetClearText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.error,
+      ...font(theme, 'bodyStrong', '600'),
     },
     /**
      * Four facets overflow a short screen, so the body scrolls. Capped rather
@@ -148,10 +147,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 14,
       paddingVertical: 8,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'chip'),
     },
     sheetChipActive: {
       backgroundColor: theme.primaryLight,
@@ -160,11 +160,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sheetChipText: {
       fontSize: 14,
       color: theme.textSecondary,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     sheetChipTextActive: {
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     /**
      * The count on a chip. A zero is information — nothing here under your

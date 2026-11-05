@@ -1,5 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { border, eyebrow, font, radius, shadow, typeSize } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -19,9 +20,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderBottomColor: theme.border,
     },
     headerTitle: {
-      fontSize: 22,
-      fontWeight: '700',
+      fontSize: typeSize(theme, 'title', 22),
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     headerActions: {
       flexDirection: 'row',
@@ -38,8 +39,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetContainer: {
       backgroundColor: theme.background,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: radius(theme, 'sheet', 20),
+      borderTopRightRadius: radius(theme, 'sheet', 20),
     },
     sheetHeader: {
       flexDirection: 'row',
@@ -52,39 +53,37 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetTitle: {
       fontSize: 18,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     sheetClearBtn: {
       paddingHorizontal: 12,
       paddingVertical: 4,
-      borderRadius: 14,
+      borderRadius: radius(theme, 'button', 14),
       backgroundColor: theme.errorLight,
     },
     sheetClearText: {
       fontSize: 13,
-      fontWeight: '600',
       color: theme.error,
+      ...font(theme, 'bodyStrong', '600'),
     },
     sheetScroll: {
       paddingHorizontal: 20,
       maxHeight: Dimensions.get('window').height * 0.55,
     },
     sheetSectionTitle: {
-      fontSize: 13,
-      fontWeight: '700',
       color: theme.textSecondary,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
       marginTop: 16,
       marginBottom: 8,
+      ...eyebrow(theme, { fontSize: 13, letterSpacing: 0.5, fontWeight: '700' }),
     },
     sheetSubSectionTitle: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.textSecondary,
       marginTop: 8,
       marginBottom: 6,
+      ...font(theme, 'bodyStrong', '600'),
     },
     sheetChipWrap: {
       flexDirection: 'row',
@@ -97,10 +96,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 6,
       paddingHorizontal: 14,
       paddingVertical: 8,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'chip', 20),
       backgroundColor: theme.backgroundSecondary,
-      borderWidth: 1,
+      borderWidth: border(theme, 'chip', 1),
       borderColor: theme.border,
+      ...shadow(theme, 'chip'),
     },
     sheetChipActive: {
       backgroundColor: theme.primaryLight,
@@ -115,11 +115,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     sheetChipText: {
       fontSize: 14,
       color: theme.textSecondary,
-      fontWeight: '500',
+      ...font(theme, 'bodyMedium', '500'),
     },
     sheetChipTextActive: {
       color: theme.primary,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     // A facet that would empty the list still shows its "(0)", muted.
     sheetChipCountZero: {
@@ -145,19 +145,19 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     sheetChipTextSuccess: {
       color: theme.successDark,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     sheetChipTextWarning: {
       color: theme.warningDark,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     sheetChipTextInfo: {
       color: theme.infoDark,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     sheetChipTextError: {
       color: theme.errorDark,
-      fontWeight: '600',
+      ...font(theme, 'bodyStrong', '600'),
     },
     statusDot: {
       width: 8,
@@ -197,15 +197,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 12,
+      borderRadius: radius(theme, 'chip', 12),
     },
     segmentChipActive: {
       backgroundColor: theme.primaryLight,
     },
     segmentChipText: {
       fontSize: 12,
-      fontWeight: '600',
       color: theme.textSecondary,
+      ...font(theme, 'bodyStrong', '600'),
     },
     segmentChipTextActive: {
       color: theme.primary,
@@ -213,7 +213,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     segmentBadge: {
       minWidth: 18,
       height: 18,
-      borderRadius: 9,
+      borderRadius: radius(theme, 'chip', 9),
       backgroundColor: theme.border,
       alignItems: 'center',
       justifyContent: 'center',
@@ -224,8 +224,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     segmentBadgeText: {
       fontSize: 10,
-      fontWeight: '700',
       color: theme.textTertiary,
+      ...font(theme, 'bodyBold', '700'),
     },
     segmentBadgeTextActive: {
       color: theme.textInverse,
@@ -235,32 +235,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingTop: 8,
       paddingBottom: 120,
     },
-    loadingMore: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 20,
-      gap: 8,
-    },
-    loadingText: {
-      fontSize: 14,
-      color: theme.textSecondary,
-    },
-    loadMoreButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 16,
-      marginVertical: 8,
-      backgroundColor: theme.primaryLight,
-      borderRadius: 12,
-      gap: 8,
-    },
-    loadMoreText: {
-      fontSize: 14,
-      color: theme.primary,
-      fontWeight: '600',
-    },
     emptyState: {
       alignItems: 'center',
       justifyContent: 'center',
@@ -269,14 +243,15 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     emptyText: {
       fontSize: 20,
-      fontWeight: '600',
       color: theme.text,
       marginTop: 16,
+      ...font(theme, 'bodyStrong', '600'),
     },
     emptySubtext: {
       fontSize: 14,
       color: theme.textSecondary,
       marginTop: 4,
+      ...font(theme, 'body'),
     },
     clearFiltersEmptyButton: {
       flexDirection: 'row',
@@ -285,62 +260,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 20,
       paddingHorizontal: 20,
       paddingVertical: 10,
-      borderRadius: 20,
+      borderRadius: radius(theme, 'button', 20),
       backgroundColor: theme.primaryLight,
     },
     clearFiltersEmptyText: {
       fontSize: 14,
-      fontWeight: '600',
       color: theme.primary,
-    },
-    undoToast: {
-      position: 'absolute',
-      left: 16,
-      right: 16,
-      backgroundColor: theme.backgroundSecondary,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 4,
-      elevation: 6,
-      shadowColor: theme.shadow,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.16,
-      shadowRadius: 8,
-      zIndex: 100,
-    },
-    undoToastRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 8,
-    },
-    undoToastLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    undoToastText: {
-      fontSize: 14,
-      color: theme.text,
-      fontWeight: '500',
-    },
-    undoToastAction: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: theme.primary,
-    },
-    undoProgressTrack: {
-      height: 3,
-      backgroundColor: theme.border,
-      borderRadius: 2,
-      overflow: 'hidden',
-      marginBottom: 8,
-    },
-    undoProgressBar: {
-      height: 3,
-      backgroundColor: theme.primary,
-      borderRadius: 2,
+      ...font(theme, 'bodyStrong', '600'),
     },
     filterBottomSpacer: {
       height: 12,
@@ -357,10 +283,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginBottom: 4,
     },
     groupHeaderText: {
-      fontSize: 13,
-      fontWeight: '700',
       color: theme.textSecondary,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      ...eyebrow(theme, { fontSize: 13, letterSpacing: 0.5, fontWeight: '700' }),
     },
   });

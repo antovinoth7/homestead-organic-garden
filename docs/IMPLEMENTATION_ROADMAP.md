@@ -6,6 +6,15 @@
 > **2026-09-21 — Expo SDK 54 → 57 upgrade (platform only; no product scope, no schema changes).** React Native 0.81 → 0.86, React 19.1 → 19.2, TypeScript 5.9 → 6.0, all `expo-*` renumbered to `~57.x`. Two app APIs broke and were fixed (`NavigationBar.setStyle`, `expo-media-library/legacy`); `StyleSheet.absoluteFillObject` was removed in RN 0.85 and rewritten at 11 sites across 9 style files. Deferred follow-ups are tracked in **§9 Post-Upgrade Backlog** below; the lint triage recorded there has since been completed, taking the baseline to 0 errors / 54 warnings.
 > **2026-10-09 — Stale-code pass (no product scope, no schema changes).** Removed code nothing ran: 38 never-imported source files (the July dashboard — `DashboardHero`, `NeedsAttentionScroll`, `WeatherDeck`/`WeatherPlotCard`/`WeatherCard`, `TipStrip`, `BedsQuickScroll`, `PrepCard`; old bed and plant-detail pieces; `StatStrip`; the Kanyakumari planting-calendar adapter), ~400 unused style keys, dead exports together with the tests that only exercised them, the zone-level `seasonalPestAlerts` (superseded by `todaySeasonalAdvisories`), and the two unused `@testing-library` packages. Several July 5 items above are therefore gone; in particular, capture-time photo compression has been unwired since 2026-07-17. Complete-but-unwired features were kept and are listed in §9 → Built, not wired.
 > **2026-10-13 — Stale-code follow-up.** An import-graph sweep found no more orphaned modules. Removed leftovers: the `heroGlow` / `heroRingTrack` theme tokens (only `DashboardHero` read them); the `ALERT_ICON_KEYS`, `WEATHER_ICON_KEYS` and `PLANT_TYPE_ICON_KEYS` maps, which no production code read (alerts and weather set their icon keys inline, and catalog groups replaced plant types); re-exports that only tests used; and three devDependencies that `eslint-config-expo` already supplies (`@typescript-eslint/parser`, `eslint-import-resolver-typescript`, `eslint-plugin-import`). Stale lint and test baselines in the contributor docs were corrected.
+> **2026-11-05 — Performance pass (no product scope, no schema changes).** The Plants tab lagged on return and stalled while scrolling. Causes and fixes:
+> - **Refetches**: a stale refetch rebuilt every Plant object and wrote the list to AsyncStorage twice; `getAllPlants` / `getJournalEntries` now reuse unchanged objects (`utils/structuralShare`).
+> - **Timers and paging**: `imageExists` leaked a 2 s timer per photo; the list paged with a fake 300 ms "Loading more"; it is now one continuous windowed list behind the new `usePlantList` hook.
+> - **Swipeable rows**: `removeClippedSubviews` was silently ON with Swipeable rows (FlatList's Android default); it is now explicitly off on Plants and Beds.
+> - **Navigation**: tab presses and Today's links pushed duplicate root screens under React Navigation 7; they now pass `pop: true`.
+> - **Re-render cascades**: Care Plan re-ran every task card on every render (an inline search normaliser), every minute (NOW clock) and every focus; Journal filtered and sorted four times per keystroke and double-loaded after a save.
+> - **Animations**: undo bars are native-driven.
+> - **Refocus**: the bed list, bed options, Today, bed detail, archived plants and input recipes refocus silently and keep unchanged data.
+> Lint baseline 51 → 47 (removed effects); tests 182 / 2329.
 > Older "Previous:" reconciliation notes: `docs/archive/ROADMAP_ARCHIVE.md`.
 > Status: Phase 0 / A / A2 / B / B2 / B3 / B4 / C / D / E / F shipped (Phase B with deliberate deferrals); Phase G–H planned
 > Scope: Solo developer, iterative build, Firebase free-tier
@@ -505,7 +514,7 @@ these block anything; they are recorded so they are not rediscovered as surprise
   baseline without the dirty check recomputing and leave the discard prompt
   reading a stale value. It is state now.
 
-- **Remaining: 51 `react-hooks/set-state-in-effect` warnings** (54 until the Care Plan v7 redesign removed the segment auto-select effect; 53 until the 2026-10-09 stale-code pass deleted the never-rendered `useWeather` and `DraggablePlantRow`), still demoted on
+- **Remaining: 47 `react-hooks/set-state-in-effect` warnings** (51 until the 2026-11-05 performance pass removed PlantsScreen's paging reset and mount/refresh loaders and Settings' duplicate mount load; 54 until the Care Plan v7 redesign removed the segment auto-select effect; 53 until the 2026-10-09 stale-code pass deleted the never-rendered `useWeather` and `DraggablePlantRow`), still demoted on
   purpose. The 11 genuine findings are fixed — state that was a pure function of
   other state, written back by an effect, costing a second render per change
   (`usePlantFormState`'s `location` and `coconutAgeInfo`, `PlantCard`'s
@@ -513,7 +522,7 @@ these block anything; they are recorded so they are not rediscovered as surprise
   mount reset, and five effects that allocated a fresh empty collection instead
   of bailing).
 
-  The 51 that remain are benign and fall into two shapes:
+  The 47 that remain are benign and fall into two shapes:
   - **Prop-to-state sync on open** (~14) — `useEffect(() => { if (visible) setX(prop) }, [visible, prop])`
     in sheets and modals. Clearing these means restructuring each sheet around a
     `key`-prop remount, which is its own piece of work and carries real UI risk.
@@ -526,7 +535,7 @@ these block anything; they are recorded so they are not rediscovered as surprise
 
 - `docs/ENTERPRISE_AUDIT.md` recommends running lint with `--max-warnings=0`.
   Now partly satisfied — the five promoted rules already fail the build. A
-  blanket `--max-warnings=0` still waits on the 51 above.
+  blanket `--max-warnings=0` still waits on the 47 above.
 
 - **Untested paths touched by this triage.** `usePlantFormState`, `PlantCard`,
   `CalendarScreen`, `usePlantPhotos`, `useCrossBedStatus`, `useWeatherByPlot` and
@@ -713,3 +722,28 @@ wiring one in is a product decision, not a cleanup.
 - **Option A**: New `harvest_logs` collection — clean separation, purpose-built fields (sale_price, buyer_market, destination)
 - **Option B**: Extend existing `task_logs` with harvest fields — less migration, reuses existing service
 - **Recommendation**: Option A. Harvests have fundamentally different data needs (quantity, market, income) that don't fit the task completion model.
+
+## 10. Meadow Theme — Follow-ups
+
+Meadow (2026-11-03) shipped as the default palette, with Garden selectable in
+Settings → Appearance. Every `createStyles(theme)` factory reads radii, borders,
+shadows and faces through `@/theme/styleTokens`, so all screens pick up Meadow's
+colours, shapes and Outfit / Figtree faces. Hand-tuned so far: floating pill tab
+bar, hero headers (Today, More), dialogs, sheet handle, root-screen titles,
+readout numbers, sentence-case section labels and the Appearance picker.
+
+Still to do against the design handoff (`design_handoff_meadow_theme`):
+
+- **Screens the handoff has not drawn yet**: PlantFormScreen (edit),
+  ArchivedPlantsScreen, ManagePlantCatalogScreen, CatalogPlantDetailScreen,
+  OrganicInputList/Detail, InputRecipes, Onboarding, Auth. They have the token
+  pass only; review them against the card / sheet / dialog recipes.
+- **Filter chip "on" state**: the recipe is a solid `primary` fill with
+  `textInverse`; the sheets keep the tinted `primaryLight` state because each
+  sheet colours its chip icons with `theme.primary` in the component.
+- **Photo "soft wash"**: `theme.photoWash` and `shadows.photo` exist but no
+  image applies the bottom fade yet.
+- **Title tracking**: Outfit titles at -0.015em are not applied.
+- **Pill segments / track control and the 46×28 switch** from the recipes.
+- **Clear-bed and already-scheduled alerts** are still system `Alert`s; the
+  handoff suggests the Meadow dialog.

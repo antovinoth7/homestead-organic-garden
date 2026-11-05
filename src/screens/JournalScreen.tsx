@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback, useDeferredValue } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,10 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
-import {
-  getJournalEntries,
-  deleteJournalEntry,
-  invalidateJournalCache,
-  updateJournalEntry,
-} from '../services/journal';
-import { getAllPlants, invalidatePlantsCache } from '../services/plants';
+import { getJournalEntries, deleteJournalEntry, updateJournalEntry } from '../services/journal';
+import { getAllPlants, getStoredPlants } from '../services/plants';
+import { CACHE_KEYS, invalidate } from '@/lib/dataCache';
+import { reuseUnchanged } from '@/utils/structuralShare';
 import {
   JournalEntry,
   JournalEntryType,
@@ -53,6 +50,7 @@ import {
   EMPTY_JOURNAL_FILTERS,
   countActiveJournalFilters,
   filterJournalEntries,
+  matchJournalEntries,
   journalEmptySubtext,
   journalEntriesTileLabel,
   type JournalFilterContext,
@@ -119,14 +117,22 @@ export default function JournalScreen(): React.JSX.Element {
     setFilters((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const loadData = async (options?: { silent?: boolean }): Promise<void> => {
+  const loadData = useCallback(async (options?: { silent?: boolean }): Promise<void> => {
     if (!options?.silent) {
       setLoading(true);
     }
     try {
-      const [entriesData, plantsData] = await Promise.all([getJournalEntries(), getAllPlants()]);
-      setEntries(entriesData);
-      setPlants(plantsData);
+      // Plants only label entries with their place, so the image-free stored
+      // read is enough (as on Beds and Today); getAllPlants, which pages
+      // Firestore and resolves every plant photo, runs only on a cold store.
+      const [entriesData, storedPlants] = await Promise.all([
+        getJournalEntries(),
+        getStoredPlants(),
+      ]);
+      const plantsData = storedPlants.length > 0 ? storedPlants : await getAllPlants();
+      // Same objects for unchanged data, so an unchanged reload renders nothing.
+      setEntries((prev) => reuseUnchanged(prev, entriesData));
+      setPlants((prev) => reuseUnchanged(prev, plantsData));
     } catch (error: unknown) {
       if (!options?.silent) {
         Alert.alert('Error', getErrorMessage(error));
@@ -136,7 +142,13 @@ export default function JournalScreen(): React.JSX.Element {
         setLoading(false);
       }
     }
-  };
+  }, []);
+
+  // A pull must reach past the 30 s cache, or it re-reads what is on screen.
+  const pullToRefresh = useCallback((): void => {
+    invalidate(CACHE_KEYS.JOURNAL_ENTRIES);
+    void loadData();
+  }, [loadData]);
 
   // Pull-to-refresh asks the server: without dropping the in-memory copies, a
   // read within the cache window returns what was fetched moments ago.
@@ -165,7 +177,7 @@ export default function JournalScreen(): React.JSX.Element {
       isMounted = false;
       unsubscribe();
     };
-  }, [navigation, resetTabBar]);
+  }, [navigation, resetTabBar, loadData]);
 
   // Listen for refresh param from child screens (after add/edit/delete)
   useEffect(() => {
@@ -173,7 +185,7 @@ export default function JournalScreen(): React.JSX.Element {
       loadData();
       navigation.setParams({ refresh: undefined });
     }
-  }, [route.params, navigation]);
+  }, [route.params, navigation, loadData]);
 
   useEffect(
     () => () => {
@@ -209,21 +221,26 @@ export default function JournalScreen(): React.JSX.Element {
     [plantById, bedById, getLocation]
   );
 
+  // The search field and chips update at once; everything computed from the
+  // filters follows at a deferred priority, so typing never waits on the list.
+  const listFilters = useDeferredValue(filters);
+
   // Summary tiles. Entries/harvests/weight follow the date filter; active
   // problems is a current-state count over all entries (see computeJournalStats).
   const stats = useMemo(
-    () => computeJournalStats(entries, getDateFilterStart(filters.period)),
-    [entries, filters.period]
+    () => computeJournalStats(entries, getDateFilterStart(listFilters.period)),
+    [entries, listFilters.period]
   );
 
   const filteredEntries = useMemo(
-    () => filterJournalEntries(entries, filters, filterContext),
-    [entries, filters, filterContext]
+    () => filterJournalEntries(entries, listFilters, filterContext),
+    [entries, listFilters, filterContext]
   );
 
   // ─── Filter sheet data — each chip counts what picking it would show ────
+  // Counts need only how many match, so these passes skip the sort.
   const typeCounts = useMemo<JournalFilterCount[]>(() => {
-    const base = filterJournalEntries(entries, filters, filterContext, 'type');
+    const base = matchJournalEntries(entries, listFilters, filterContext, 'type');
     return [
       { value: '', count: base.length },
       ...JOURNAL_TYPE_OPTIONS.map((option) => ({
@@ -231,21 +248,21 @@ export default function JournalScreen(): React.JSX.Element {
         count: base.filter((e) => e.entry_type === option.value).length,
       })),
     ];
-  }, [entries, filters, filterContext]);
+  }, [entries, listFilters, filterContext]);
   const plotCounts = useMemo<JournalFilterCount[]>(() => {
-    const base = filterJournalEntries(entries, filters, filterContext, 'plot');
+    const base = matchJournalEntries(entries, listFilters, filterContext, 'plot');
     return collectUsedPlots(entries, plantById, bedById).map((plot) => ({
       value: plot,
       count: base.filter((e) => entryMatchesPlot(e, plot, plantById, bedById)).length,
     }));
-  }, [entries, filters, filterContext, plantById, bedById]);
+  }, [entries, listFilters, filterContext, plantById, bedById]);
   const tagCounts = useMemo<JournalFilterCount[]>(() => {
-    const base = filterJournalEntries(entries, filters, filterContext, 'tag');
+    const base = matchJournalEntries(entries, listFilters, filterContext, 'tag');
     return collectUsedTags(entries).map((tag) => ({
       value: tag,
       count: base.filter((e) => (e.tags ?? []).includes(tag)).length,
     }));
-  }, [entries, filters, filterContext]);
+  }, [entries, listFilters, filterContext]);
 
   // Plants and beds that have entries, grouped by plot, for the place picker.
   const usedLocations = useMemo(
@@ -342,7 +359,7 @@ export default function JournalScreen(): React.JSX.Element {
         Alert.alert('Error', getErrorMessage(error));
       }
     },
-    []
+    [loadData]
   );
   // With a treatment on record, ask how well it worked before resolving — the
   // farmer's own evidence for next time. Without one there is nothing to rate.
@@ -389,7 +406,7 @@ export default function JournalScreen(): React.JSX.Element {
     } catch (error: unknown) {
       Alert.alert('Error', getErrorMessage(error));
     }
-  }, [actionTarget]);
+  }, [actionTarget, loadData]);
   const handleDeleteConfirmed = useCallback((): void => {
     void deleteFromActions();
   }, [deleteFromActions]);
@@ -537,6 +554,19 @@ export default function JournalScreen(): React.JSX.Element {
     </View>
   );
 
+  const listContentStyle = useMemo(
+    () => [
+      styles.listContent,
+      { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 },
+    ],
+    [styles.listContent, insets.bottom]
+  );
+
+  const refreshControl = useMemo(
+    () => <RefreshControl refreshing={loading} onRefresh={pullToRefresh} />,
+    [loading, pullToRefresh]
+  );
+
   const resolveName = resolvePrompt?.pest_name?.trim() || 'problem';
   const resolveOpenDays = resolvePrompt ? daysOpen(resolvePrompt) : null;
   const resolveSubtitle = resolvePrompt
@@ -595,17 +625,17 @@ export default function JournalScreen(): React.JSX.Element {
         keyExtractor={rowKey}
         renderItem={renderItem}
         style={styles.content}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: TAB_BAR_HEIGHT + Math.max(insets.bottom, 48) + 16 },
-        ]}
+        contentContainerStyle={listContentStyle}
         onScroll={onTabBarScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh} />}
+        refreshControl={refreshControl}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={listEmpty}
+        // Memoizes the cell renderer, so a screen render that changes nothing
+        // in the list (a keystroke, a toast) does not re-run every entry card.
+        strictMode
       />
 
       <AnimatedFAB onPress={openNewEntry} />

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '../theme/colors';
+import { radius } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -12,7 +13,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     buttonCircle: {
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: radius(theme, 'iconButton', 16),
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.primaryLight,

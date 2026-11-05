@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { Theme } from '@/theme/colors';
+import { font } from '@/theme/styleTokens';
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -30,13 +31,14 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     emptyTitle: {
       fontSize: 16,
-      fontWeight: '700',
       color: theme.text,
+      ...font(theme, 'title', '700'),
     },
     emptyText: {
       fontSize: 14,
       color: theme.textSecondary,
       textAlign: 'center',
       lineHeight: 20,
+      ...font(theme, 'body'),
     },
   });

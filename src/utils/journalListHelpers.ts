@@ -63,36 +63,63 @@ export function filterJournalEntries(
   skip?: JournalFilterSkip,
   now: Date = new Date()
 ): JournalEntry[] {
+  return sortNewestFirst(matchJournalEntries(entries, filters, context, skip, now));
+}
+
+/**
+ * `filterJournalEntries` without the sort, in the entries' own order. For the
+ * filter sheet's chip counts, which only need how many match — sorting each of
+ * those passes was most of the work on every keystroke.
+ */
+export function matchJournalEntries(
+  entries: readonly JournalEntry[],
+  filters: JournalFilters,
+  context: JournalFilterContext,
+  skip?: JournalFilterSkip,
+  now: Date = new Date()
+): JournalEntry[] {
   const query = filters.query.trim().toLowerCase();
   const start = getDateFilterStart(filters.period, now);
   const startMs = start ? start.getTime() : null;
+  return entries.filter((entry) => {
+    if (query) {
+      const haystack = [context.placeLabel(entry), entry.content, entry.pest_name];
+      if (!haystack.some((value) => value?.toLowerCase().includes(query))) return false;
+    }
+    if (skip !== 'type') {
+      if (filters.type && entry.entry_type !== filters.type) return false;
+      if (filters.openOnly && !isActiveProblem(entry)) return false;
+    }
+    if (
+      skip !== 'plot' &&
+      filters.plot &&
+      !entryMatchesPlot(entry, filters.plot, context.plantById, context.bedById)
+    ) {
+      return false;
+    }
+    if (filters.location && !entryMatchesLocation(entry, filters.location, context.plantById)) {
+      return false;
+    }
+    if (skip !== 'tag' && filters.tag && !(entry.tags ?? []).includes(filters.tag)) {
+      return false;
+    }
+    if (startMs !== null && new Date(entry.created_at).getTime() < startMs) return false;
+    return true;
+  });
+}
+
+/**
+ * Newest first. Each timestamp is parsed once rather than twice per comparison;
+ * ties (and unparseable dates, read as oldest) keep their given order.
+ */
+function sortNewestFirst(entries: JournalEntry[]): JournalEntry[] {
   return entries
-    .filter((entry) => {
-      if (query) {
-        const haystack = [context.placeLabel(entry), entry.content, entry.pest_name];
-        if (!haystack.some((value) => value?.toLowerCase().includes(query))) return false;
-      }
-      if (skip !== 'type') {
-        if (filters.type && entry.entry_type !== filters.type) return false;
-        if (filters.openOnly && !isActiveProblem(entry)) return false;
-      }
-      if (
-        skip !== 'plot' &&
-        filters.plot &&
-        !entryMatchesPlot(entry, filters.plot, context.plantById, context.bedById)
-      ) {
-        return false;
-      }
-      if (filters.location && !entryMatchesLocation(entry, filters.location, context.plantById)) {
-        return false;
-      }
-      if (skip !== 'tag' && filters.tag && !(entry.tags ?? []).includes(filters.tag)) {
-        return false;
-      }
-      if (startMs !== null && new Date(entry.created_at).getTime() < startMs) return false;
-      return true;
+    .map((entry, index) => {
+      const ms = Date.parse(entry.created_at);
+      return { entry, index, ms: Number.isNaN(ms) ? 0 : ms };
     })
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    .sort((a, b) => b.ms - a.ms || a.index - b.index)
+    .map(({ entry }) => entry);
 }
 
 /** Filters counted on the funnel badge. Search shows in the header, not the badge. */
