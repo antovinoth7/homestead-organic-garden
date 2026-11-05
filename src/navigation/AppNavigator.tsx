@@ -114,6 +114,9 @@ export const AppTabs = (): React.JSX.Element => {
       >
         {/* Route id stays `Home` (navigation types key off it); only the label reads "Today". */}
         <Tab.Screen name="Home" component={TodayScreen} options={{ tabBarLabel: 'Today' }} />
+        {/* Each stack tab returns to its list on press. `pop: true` matters: in
+            React Navigation 7 a plain navigate to a stacked-over root PUSHES a
+            second copy (fresh mount, full load) and keeps the old screens alive. */}
         <Tab.Screen
           name="Plants"
           component={PlantStack}
@@ -123,6 +126,7 @@ export const AppTabs = (): React.JSX.Element => {
               navigation.navigate('Plants', {
                 screen: 'PlantsList',
                 params: {},
+                pop: true,
               });
             },
           })}
@@ -136,6 +140,7 @@ export const AppTabs = (): React.JSX.Element => {
               navigation.navigate('Beds', {
                 screen: 'BedList',
                 params: {},
+                pop: true,
               });
             },
           })}
@@ -150,6 +155,7 @@ export const AppTabs = (): React.JSX.Element => {
               navigation.navigate('Journal', {
                 screen: 'JournalList',
                 params: {},
+                pop: true,
               });
             },
           })}
@@ -163,6 +169,7 @@ export const AppTabs = (): React.JSX.Element => {
               navigation.navigate('More', {
                 screen: 'MoreHome',
                 params: {},
+                pop: true,
               });
             },
           })}
