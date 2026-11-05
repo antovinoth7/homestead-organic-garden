@@ -41,7 +41,8 @@ import { logError } from '../utils/errorLogging';
 import { logger } from '../utils/logger';
 import { convertTimestamp } from '../utils/dateHelpers';
 import { resolvePhotoFilename } from '../utils/photoFilename';
-import { getCached, setCached, invalidate, dedup, CACHE_KEYS } from '../lib/dataCache';
+import { getCached, setCached, peekCached, invalidate, dedup, CACHE_KEYS } from '../lib/dataCache';
+import { reuseUnchanged } from '@/utils/structuralShare';
 import { writeOrQueue, isOfflineWriteError } from '../lib/offlineWrite';
 import { LAYER_ORDER as BED_LAYER_ORDER } from '../config/beds/layerMeta';
 
@@ -83,6 +84,12 @@ const verifyPlantOwnership = async (id: string, userUid: string, action: string)
   if (!owned) throw new Error(`Not authorized to ${action} this plant`);
 };
 
+interface PlantsPage {
+  plants: Plant[];
+  lastDoc?: QueryDocumentSnapshot;
+  fetchedCount?: number;
+}
+
 /**
  * Get all plants with offline-first approach and pagination support
  * @param pageSize - Number of plants to fetch per page (default: 50)
@@ -92,7 +99,19 @@ const verifyPlantOwnership = async (id: string, userUid: string, action: string)
 export const getPlants = async (
   pageSize: number = DEFAULT_PAGE_SIZE,
   lastDoc?: QueryDocumentSnapshot
-): Promise<{ plants: Plant[]; lastDoc?: QueryDocumentSnapshot; fetchedCount?: number }> => {
+): Promise<PlantsPage> => fetchPlantsPage(pageSize, lastDoc, true);
+
+/**
+ * One page of plants. `persistSinglePage` lets a caller that persists the
+ * assembled set itself (`getAllPlants`) skip the single-page write — otherwise
+ * a garden that fits in one page was `JSON.stringify`'d to AsyncStorage twice
+ * on every refetch.
+ */
+const fetchPlantsPage = async (
+  pageSize: number,
+  lastDoc: QueryDocumentSnapshot | undefined,
+  persistSinglePage: boolean
+): Promise<PlantsPage> => {
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
 
@@ -164,7 +183,7 @@ export const getPlants = async (
     // (first page, not full). A partial page must never overwrite the store —
     // the offline copy always mirrors the complete active-plant set, which
     // getAllPlants writes after assembling every page.
-    if (!lastDoc && snapshot.docs.length < pageSize) {
+    if (persistSinglePage && !lastDoc && snapshot.docs.length < pageSize) {
       await setData(KEYS.PLANTS, activePlants);
     }
 
@@ -221,6 +240,13 @@ export const getStoredPlants = async (): Promise<Plant[]> => {
   return getData<Plant>(KEYS.PLANTS);
 };
 
+/**
+ * The last list `getAllPlants` returned. Unlike the dataCache entry it survives
+ * `invalidate()`, so the refetch that follows a mutation can still reuse the
+ * objects that the mutation did not touch.
+ */
+let lastAllPlants: Plant[] | null = null;
+
 export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Promise<Plant[]> => {
   // Return fresh in-memory data if available (< 30s old)
   const cached = getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
@@ -234,7 +260,7 @@ export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Prom
 
     while (hasMore) {
       try {
-        const response = await getPlants(pageSize, lastDoc);
+        const response = await fetchPlantsPage(pageSize, lastDoc, false);
         allPlants.push(...(response.plants ?? []));
 
         // `fetchedCount` is undefined only when getPlants served its offline
@@ -266,14 +292,23 @@ export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Prom
     // stored copy, which can repeat plants from earlier pages.
     const uniquePlants = Array.from(new Map(allPlants.map((p) => [p.id, p])).values());
 
+    // Hand back the previous object for every plant that did not change (and
+    // the previous array when nothing did), so memoized rows and derived
+    // memos downstream skip work on a refetch that found the same data.
+    const shared = reuseUnchanged(
+      peekCached<Plant[]>(CACHE_KEYS.ALL_PLANTS) ?? lastAllPlants,
+      uniquePlants
+    );
+    lastAllPlants = shared;
+
     // Persist the fully-assembled set so offline cold-starts see every plant,
     // not just the newest page (pot/ground plants older than the first page
     // used to vanish from the offline copy).
     if (complete) {
-      await setData(KEYS.PLANTS, uniquePlants);
+      await setData(KEYS.PLANTS, shared);
     }
 
-    return uniquePlants;
+    return shared;
   });
 };
 
