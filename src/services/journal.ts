@@ -31,7 +31,8 @@ import {
 import { logError } from '../utils/errorLogging';
 import { logger } from '../utils/logger';
 import { convertTimestamp } from '../utils/dateHelpers';
-import { getCached, setCached, invalidate, CACHE_KEYS } from '../lib/dataCache';
+import { getCached, setCached, peekCached, invalidate, dedup, CACHE_KEYS } from '../lib/dataCache';
+import { reuseUnchanged } from '@/utils/structuralShare';
 import { writeOrQueue, isOfflineWriteError } from '../lib/offlineWrite';
 import { selectDueHarvestTasks } from './taskSchedulingLogic';
 const JOURNAL_COLLECTION = 'journal_entries';
@@ -94,100 +95,127 @@ export const getJournalEntries = async (): Promise<JournalEntry[]> => {
   const cached = getCached<JournalEntry[]>(CACHE_KEYS.JOURNAL_ENTRIES);
   if (cached) return cached;
 
-  // Refresh token to prevent expiration issues
-  await refreshAuthToken();
-
   try {
-    const q = query(
-      collection(db, JOURNAL_COLLECTION),
-      where('user_id', '==', user.uid),
-      orderBy('created_at', 'desc')
-    );
-
-    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-    });
-
-    const entries = (await Promise.all(
-      snapshot.docs.map(async (doc) => {
-        try {
-          const data = doc.data();
-          const legacyUrls = data.photo_urls || (data.photo_url ? [data.photo_url] : []);
-          const photoFilenames: string[] = Array.isArray(data.photo_filenames)
-            ? data.photo_filenames
-            : legacyUrls
-                .map((uri: string) => getFilenameFromUri(uri))
-                .filter((filename: string | null): filename is string => !!filename);
-          const resolvedPhotoUrls =
-            photoFilenames.length > 0
-              ? await resolveLocalImageUris(photoFilenames)
-              : await resolveLocalImageUris(legacyUrls);
-          const resolvedLegacy = data.photo_url ? await resolveLocalImageUri(data.photo_url) : null;
-
-          return {
-            id: doc.id,
-            ...data,
-            photo_filenames: photoFilenames,
-            photo_urls: resolvedPhotoUrls,
-            photo_url: resolvedLegacy,
-            created_at: convertTimestamp(data.created_at),
-          };
-        } catch (error) {
-          logger.warn(`Failed to resolve images for journal ${doc.id}`, error as Error);
-          const data = doc.data();
-          // Return entry without photos on error
-          return {
-            id: doc.id,
-            ...data,
-            photo_filenames: [],
-            photo_urls: [],
-            photo_url: null,
-            created_at: convertTimestamp(data.created_at),
-          };
-        }
-      })
-    )) as JournalEntry[];
-
-    // Cache locally
-    await setData(KEYS.JOURNAL, entries);
-    setCached(CACHE_KEYS.JOURNAL_ENTRIES, entries);
-
-    return entries;
+    // One network read at a time: returning from the entry form fires both the
+    // list's focus refresh and its `refresh` param, and each used to read the
+    // whole collection, resolve every photo and rewrite the stored journal.
+    // `dedup` caches only a successful read; the offline fallback below is
+    // never cached, so the next call retries the network as before.
+    return await dedup(CACHE_KEYS.JOURNAL_ENTRIES, () => fetchJournalEntries(user.uid));
   } catch (error) {
     logger.warn('Failed to fetch journal entries, using cached data', error as Error);
     logError('network', 'Failed to fetch journal entries', error as Error);
-    const cachedEntries = await getData<JournalEntry>(KEYS.JOURNAL);
-    const resolvedCached = await Promise.all(
-      cachedEntries.map(async (entry) => {
-        try {
-          const legacyUrls = entry.photo_urls || (entry.photo_url ? [entry.photo_url] : []);
-          const photoFilenames =
-            entry.photo_filenames && entry.photo_filenames.length > 0
-              ? entry.photo_filenames
-              : legacyUrls
-                  .map((uri: string) => getFilenameFromUri(uri))
-                  .filter((filename: string | null): filename is string => !!filename);
-          const resolvedPhotoUrls =
-            photoFilenames.length > 0
-              ? await resolveLocalImageUris(photoFilenames)
-              : await resolveLocalImageUris(legacyUrls);
-          return {
-            ...entry,
-            photo_filenames: photoFilenames,
-            photo_urls: resolvedPhotoUrls,
-          };
-        } catch (error) {
-          logger.warn(`Failed to resolve cached images for journal ${entry.id}`, error as Error);
-          return {
-            ...entry,
-            photo_filenames: [],
-            photo_urls: [],
-          };
-        }
-      })
-    );
-    return resolvedCached;
+    return readStoredJournalEntries();
   }
+};
+
+/**
+ * The last list `fetchJournalEntries` returned; survives `invalidate()` so the
+ * read after a mutation can still reuse the entries it did not touch.
+ */
+let lastJournalEntries: JournalEntry[] | null = null;
+
+const fetchJournalEntries = async (uid: string): Promise<JournalEntry[]> => {
+  // Refresh token to prevent expiration issues
+  await refreshAuthToken();
+
+  const q = query(
+    collection(db, JOURNAL_COLLECTION),
+    where('user_id', '==', uid),
+    orderBy('created_at', 'desc')
+  );
+
+  const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
+    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
+  });
+
+  const entries = (await Promise.all(
+    snapshot.docs.map(async (doc) => {
+      try {
+        const data = doc.data();
+        const legacyUrls = data.photo_urls || (data.photo_url ? [data.photo_url] : []);
+        const photoFilenames: string[] = Array.isArray(data.photo_filenames)
+          ? data.photo_filenames
+          : legacyUrls
+              .map((uri: string) => getFilenameFromUri(uri))
+              .filter((filename: string | null): filename is string => !!filename);
+        const resolvedPhotoUrls =
+          photoFilenames.length > 0
+            ? await resolveLocalImageUris(photoFilenames)
+            : await resolveLocalImageUris(legacyUrls);
+        const resolvedLegacy = data.photo_url ? await resolveLocalImageUri(data.photo_url) : null;
+
+        return {
+          id: doc.id,
+          ...data,
+          photo_filenames: photoFilenames,
+          photo_urls: resolvedPhotoUrls,
+          photo_url: resolvedLegacy,
+          created_at: convertTimestamp(data.created_at),
+        };
+      } catch (error) {
+        logger.warn(`Failed to resolve images for journal ${doc.id}`, error as Error);
+        const data = doc.data();
+        // Return entry without photos on error
+        return {
+          id: doc.id,
+          ...data,
+          photo_filenames: [],
+          photo_urls: [],
+          photo_url: null,
+          created_at: convertTimestamp(data.created_at),
+        };
+      }
+    })
+  )) as JournalEntry[];
+
+  // Keep the previous object for every unchanged entry (and the previous
+  // array when nothing changed), so memoized journal cards skip the refetch.
+  const shared = reuseUnchanged(
+    peekCached<JournalEntry[]>(CACHE_KEYS.JOURNAL_ENTRIES) ?? lastJournalEntries,
+    entries
+  );
+  lastJournalEntries = shared;
+
+  // Cache locally (the in-memory cache is set by `dedup`).
+  await setData(KEYS.JOURNAL, shared);
+
+  return shared;
+};
+
+/** Offline fallback: the stored journal with its photos re-resolved. */
+const readStoredJournalEntries = async (): Promise<JournalEntry[]> => {
+  const cachedEntries = await getData<JournalEntry>(KEYS.JOURNAL);
+  const resolvedCached = await Promise.all(
+    cachedEntries.map(async (entry) => {
+      try {
+        const legacyUrls = entry.photo_urls || (entry.photo_url ? [entry.photo_url] : []);
+        const photoFilenames =
+          entry.photo_filenames && entry.photo_filenames.length > 0
+            ? entry.photo_filenames
+            : legacyUrls
+                .map((uri: string) => getFilenameFromUri(uri))
+                .filter((filename: string | null): filename is string => !!filename);
+        const resolvedPhotoUrls =
+          photoFilenames.length > 0
+            ? await resolveLocalImageUris(photoFilenames)
+            : await resolveLocalImageUris(legacyUrls);
+        return {
+          ...entry,
+          photo_filenames: photoFilenames,
+          photo_urls: resolvedPhotoUrls,
+        };
+      } catch (error) {
+        logger.warn(`Failed to resolve cached images for journal ${entry.id}`, error as Error);
+        return {
+          ...entry,
+          photo_filenames: [],
+          photo_urls: [],
+        };
+      }
+    })
+  );
+  return resolvedCached;
 };
 
 export const createJournalEntry = async (
