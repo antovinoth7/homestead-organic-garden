@@ -121,7 +121,7 @@ export default function TodayScreen(): React.JSX.Element {
         navigation.navigate('Beds', { screen: 'BedDetail', params: { bedId: alert.bedId } });
       } else {
         // Farm-level alert — the bed list is where it can be acted on.
-        navigation.navigate('Beds', { screen: 'BedList' });
+        navigation.navigate('Beds', { screen: 'BedList', pop: true });
       }
     },
     [navigation]
@@ -149,7 +149,7 @@ export default function TodayScreen(): React.JSX.Element {
   // The no-beds tile's "Add a bed" link — the one place a card opens the Beds tab
   // without saying which beds it means.
   const goToBeds = useCallback(
-    () => navigation.navigate('Beds', { screen: 'BedList' }),
+    () => navigation.navigate('Beds', { screen: 'BedList', pop: true }),
     [navigation]
   );
 
@@ -178,9 +178,12 @@ export default function TodayScreen(): React.JSX.Element {
   // list opens on.
   const handlePressHealth = useCallback(
     (plotId: string, healthFilter: PlotHealthFilter) => {
+      // pop: back to the existing list rather than pushing a second one over
+      // whatever detail screen the Plants stack was left on.
       navigation.navigate('Plants', {
         screen: 'PlantsList',
         params: { healthFilter, plotFilter: plotId },
+        pop: true,
       });
     },
     [navigation]
@@ -203,6 +206,7 @@ export default function TodayScreen(): React.JSX.Element {
       navigation.navigate('Beds', {
         screen: 'BedList',
         params: { lifecycleFilter, ...(plotsAreConfigured && { plotFilter: plotId }) },
+        pop: true,
       });
     },
     [navigation, plotsAreConfigured]
