@@ -6,6 +6,7 @@ import { getAllPlants, getStoredPlants } from '@/services/plants';
 import { isPlantArchived } from '@/utils/plantHelpers';
 import { isPlantWaterOverdue } from '@/utils/plantWatering';
 import { logError } from '@/utils/errorLogging';
+import { reuseUnchanged } from '@/utils/structuralShare';
 
 export interface BedWithCoverage extends Bed {
   legume_coverage_pct: number;
@@ -67,7 +68,10 @@ export function useBedData(): UseBedDataResult {
       });
       // Newest beds first.
       enriched.sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''));
-      setBeds(enriched);
+      // Every bed is rebuilt above, so keep the previous object for each one
+      // whose content did not change: otherwise every memoized BedCard
+      // re-rendered on every focus of the Beds tab.
+      setBeds((prev) => reuseUnchanged(prev, enriched));
     } catch (err) {
       logError('network', 'useBedData: failed to load beds', err as Error);
       setError('Failed to load beds');
