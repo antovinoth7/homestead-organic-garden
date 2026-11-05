@@ -58,9 +58,8 @@ import { CarePlanProgressCard } from '@/components/calendar/CarePlanProgressCard
 import {
   CarePlanBandFooter,
   CarePlanBandFrame,
-  CarePlanBandHeader,
-  CarePlanNowLabelContext,
 } from '@/components/calendar/CarePlanBand';
+import { LiveCarePlanBandHeader } from '@/components/calendar/LiveCarePlanBandHeader';
 import { HarvestRoundRow } from '@/components/calendar/HarvestRoundRow';
 import { useMinuteValue } from '@/hooks/useMinuteClock';
 import {
@@ -2099,6 +2098,7 @@ export default function CalendarScreen(): React.JSX.Element {
       return (
         <LiveCarePlanBandHeader
           header={header}
+          clockActive={isFocused}
           selectBox={
             selectionMode && header.selectableTasks
               ? renderSectionCheckbox(header.selectableTasks)
@@ -2110,7 +2110,14 @@ export default function CalendarScreen(): React.JSX.Element {
         />
       );
     },
-    [selectionMode, renderSectionCheckbox, toggleSection, handleAddForPickedDay, renderPlotBanner]
+    [
+      isFocused,
+      selectionMode,
+      renderSectionCheckbox,
+      toggleSection,
+      handleAddForPickedDay,
+      renderPlotBanner,
+    ]
   );
 
   const renderListSectionFooter = useCallback(
@@ -2305,33 +2312,31 @@ export default function CalendarScreen(): React.JSX.Element {
         {/* No week row: the date line in the header reaches any day, so the
             list starts right under it and keeps that height for task cards. */}
         <View style={styles.listArea}>
-          <CarePlanNowLabelContext.Provider value={nowLabel}>
-            <SectionList
-              ref={scrollViewRef}
-              style={styles.content}
-              sections={listSections}
-              keyExtractor={listKeyExtractor}
-              renderItem={renderListItem}
-              renderSectionHeader={renderListSectionHeader}
-              renderSectionFooter={renderListSectionFooter}
-              stickySectionHeadersEnabled={false}
-              onScrollToIndexFailed={handleScrollToIndexFailed}
-              onLayout={handleListLayout}
-              contentContainerStyle={listContentStyle}
-              onScroll={onTabBarScroll}
-              scrollEventThrottle={16}
-              nestedScrollEnabled
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              refreshControl={listRefreshControl}
-              initialNumToRender={12}
-              maxToRenderPerBatch={10}
-              windowSize={7}
-              removeClippedSubviews={true}
-              updateCellsBatchingPeriod={50}
-              ListHeaderComponent={listHeader}
-            />
-          </CarePlanNowLabelContext.Provider>
+          <SectionList
+            ref={scrollViewRef}
+            style={styles.content}
+            sections={listSections}
+            keyExtractor={listKeyExtractor}
+            renderItem={renderListItem}
+            renderSectionHeader={renderListSectionHeader}
+            renderSectionFooter={renderListSectionFooter}
+            stickySectionHeadersEnabled={false}
+            onScrollToIndexFailed={handleScrollToIndexFailed}
+            onLayout={handleListLayout}
+            contentContainerStyle={listContentStyle}
+            onScroll={onTabBarScroll}
+            scrollEventThrottle={16}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            refreshControl={listRefreshControl}
+            initialNumToRender={12}
+            maxToRenderPerBatch={10}
+            windowSize={7}
+            removeClippedSubviews={true}
+            updateCellsBatchingPeriod={50}
+            ListHeaderComponent={listHeader}
+          />
         </View>
 
         {/* Floating selection pill — sits at the same height as the FAB */}

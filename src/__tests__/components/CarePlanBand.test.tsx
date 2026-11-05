@@ -38,11 +38,7 @@ jest.mock('@/styles/carePlanBandStyles', () => ({
 
 import React from 'react';
 import { CarePlanDateNav } from '@/components/calendar/CarePlanDateNav';
-import {
-  CarePlanBandFooter,
-  CarePlanBandHeader,
-  CarePlanNowLabelContext,
-} from '@/components/calendar/CarePlanBand';
+import { CarePlanBandFooter, CarePlanBandHeader } from '@/components/calendar/CarePlanBand';
 import { HarvestRoundRow } from '@/components/calendar/HarvestRoundRow';
 import type { CarePlanRow, CarePlanSectionHeader } from '@/utils/carePlanSections';
 import { makePlant } from '../fixtures/plant.fixtures';
@@ -160,16 +156,6 @@ describe('CarePlanBandHeader', () => {
   it('shows the title, NOW marker, count and why the band', () => {
     const tree = render(<CarePlanBandHeader {...headerProps} header={header({ isNow: true })} />);
     expect(text(tree)).toBe('Before 10 AMNOW · 6:233Water while it is cool.');
-  });
-
-  it('reads the NOW clock from the Care Plan context when no label is passed', () => {
-    const { nowLabel: _unused, ...withoutLabel } = headerProps;
-    const tree = render(
-      <CarePlanNowLabelContext.Provider value="7:05">
-        <CarePlanBandHeader {...withoutLabel} header={header({ isNow: true })} />
-      </CarePlanNowLabelContext.Provider>
-    );
-    expect(text(tree)).toBe('Before 10 AMNOW · 7:053Water while it is cool.');
   });
 
   it('hides a zero count and the NOW marker outside the current band', () => {

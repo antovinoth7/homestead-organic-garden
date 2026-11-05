@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   Pressable,
   Text,
@@ -18,22 +18,13 @@ import type {
 
 type Styles = ReturnType<typeof createStyles>;
 
-/**
- * The farm clock ("6:23") for the NOW chip, provided by the Care Plan around
- * its list. Only the chip reads it, so the per-minute tick re-renders one chip
- * — as a header prop it changed the section-header renderer every minute and
- * re-ran every mounted task card.
- */
-export const CarePlanNowLabelContext = createContext('');
-
 function NowChip({
   label,
   styles,
-}: Readonly<{ label: string | undefined; styles: Styles }>): React.JSX.Element {
-  const clock = useContext(CarePlanNowLabelContext);
+}: Readonly<{ label: string; styles: Styles }>): React.JSX.Element {
   return (
     <View style={styles.nowChip}>
-      <Text style={styles.nowChipText}>{`NOW · ${label ?? clock}`}</Text>
+      <Text style={styles.nowChipText}>{`NOW · ${label}`}</Text>
     </View>
   );
 }
@@ -112,10 +103,7 @@ export interface CarePlanBandHeaderProps {
   header: CarePlanSectionHeader;
   /** The select-all box while selecting, else null. */
   selectBox: React.ReactNode;
-  /**
-   * "6:23" for the NOW chip when the band holds the current time. Optional:
-   * by default the chip reads `CarePlanNowLabelContext`.
-   */
+  /** "6:23" for the NOW chip when the band holds the current time. */
   nowLabel?: string;
   onToggle: () => void;
   onAdd: () => void;
@@ -155,7 +143,7 @@ export function CarePlanBandHeader({
       >
         {header.title}
       </Text>
-      {header.isNow && <NowChip label={nowLabel} styles={styles} />}
+      {header.isNow && <NowChip label={nowLabel ?? ''} styles={styles} />}
       <View style={styles.spacer} />
       {header.addAction && (
         <TouchableOpacity

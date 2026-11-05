@@ -132,9 +132,7 @@ const fetchJournalEntries = async (uid: string): Promise<JournalEntry[]> => {
     orderBy('created_at', 'desc')
   );
 
-  const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-    timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-  });
+  const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
 
   const entries = (await Promise.all(
     snapshot.docs.map(async (doc) => {
