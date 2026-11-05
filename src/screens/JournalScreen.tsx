@@ -150,6 +150,14 @@ export default function JournalScreen(): React.JSX.Element {
     void loadData();
   }, [loadData]);
 
+  // Pull-to-refresh asks the server: without dropping the in-memory copies, a
+  // read within the cache window returns what was fetched moments ago.
+  const handleRefresh = (): void => {
+    invalidateJournalCache();
+    invalidatePlantsCache();
+    void loadData();
+  };
+
   useEffect(() => {
     let isMounted = true;
 

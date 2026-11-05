@@ -1,4 +1,5 @@
 import NetInfo from '@react-native-community/netinfo';
+import type { NetInfoState } from '@react-native-community/netinfo';
 import { logger } from './logger';
 
 /**
@@ -12,6 +13,17 @@ let unsubscribe: (() => void) | null = null;
 type NetworkChangeListener = (online: boolean) => void;
 
 const changeListeners = new Set<NetworkChangeListener>();
+
+/**
+ * Offline when there is no link, *or* when NetInfo has confirmed the link has
+ * no internet behind it (Wi-Fi without upstream, captive portal, exhausted data
+ * pack). Treating those as online made every read wait out its full timeout
+ * and retries before falling back to the local copy. `null` means "not checked
+ * yet" — stay optimistic so a fresh launch doesn't flash offline.
+ */
+export const isStateOnline = (
+  state: Pick<NetInfoState, 'isConnected' | 'isInternetReachable'>
+): boolean => state.isConnected !== false && state.isInternetReachable !== false;
 
 /**
  * Subscribe to online/offline transitions. The listener fires only when the
@@ -46,14 +58,14 @@ const initNetworkMonitoring = (): void => {
   // Initialize network state monitoring
   NetInfo.fetch().then((state) => {
     const wasOnline = isOnline;
-    isOnline = state.isConnected ?? true;
+    isOnline = isStateOnline(state);
     if (wasOnline !== isOnline) notifyChangeListeners(isOnline);
   });
 
   // Subscribe to network state changes
   unsubscribe = NetInfo.addEventListener((state) => {
     const wasOnline = isOnline;
-    isOnline = state.isConnected ?? true;
+    isOnline = isStateOnline(state);
 
     if (wasOnline !== isOnline) {
       logger.debug(`Network state changed: ${isOnline ? 'online' : 'offline'}`);

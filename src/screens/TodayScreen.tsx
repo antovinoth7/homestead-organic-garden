@@ -143,7 +143,7 @@ export default function TodayScreen(): React.JSX.Element {
     if (forecastPlotId) void refreshWeatherFor(forecastPlotId);
   }, [forecastPlotId, refreshWeatherFor]);
   const handleRefresh = useCallback(() => {
-    void reload({ forceWeather: true });
+    void reload({ forceWeather: true, fresh: true });
   }, [reload]);
 
   // The no-beds tile's "Add a bed" link — the one place a card opens the Beds tab

@@ -34,8 +34,8 @@ import {
 import { getData, setData, KEYS } from '../lib/storage';
 import {
   withTimeoutAndRetry,
-  FIRESTORE_WRITE_TIMEOUT_MS,
   FIRESTORE_READ_TIMEOUT_MS,
+  CACHED_READ_OPTIONS,
 } from '../utils/firestoreTimeout';
 import { logError } from '../utils/errorLogging';
 import { logger } from '../utils/logger';
@@ -138,9 +138,7 @@ const fetchPlantsPage = async (
     }
 
     // Wrap Firestore call with timeout
-    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-    });
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
 
     // Batch image resolution for better performance
     const plantsData = snapshot.docs.map((doc) => {
@@ -224,6 +222,12 @@ const fetchPlantsPage = async (
   }
 };
 
+/**
+ * Drop the in-memory plant list so the next `getAllPlants` asks Firestore —
+ * for pull-to-refresh, which otherwise returns what was read moments ago.
+ */
+export const invalidatePlantsCache = (): void => invalidate(CACHE_KEYS.ALL_PLANTS);
+
 /** Synchronous cache read — returns the warm plant list or null if stale/absent. */
 export const getCachedPlants = (): Plant[] | null => getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
 
@@ -248,7 +252,7 @@ export const getStoredPlants = async (): Promise<Plant[]> => {
 let lastAllPlants: Plant[] | null = null;
 
 export const getAllPlants = async (pageSize: number = FETCH_ALL_PAGE_SIZE): Promise<Plant[]> => {
-  // Return fresh in-memory data if available (< 30s old)
+  // Return fresh in-memory data if available (< STALE_MS old)
   const cached = getCached<Plant[]>(CACHE_KEYS.ALL_PLANTS);
   if (cached) return cached;
 
@@ -386,9 +390,7 @@ export const getArchivedPlants = async (): Promise<Plant[]> => {
       where('is_deleted', '==', true)
     );
 
-    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-    });
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
 
     const plants = snapshot.docs.map((doc) => {
       const data = doc.data();

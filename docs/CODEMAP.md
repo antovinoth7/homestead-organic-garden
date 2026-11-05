@@ -97,8 +97,9 @@
 
 ### src/__tests__/lib/ — 4 files, 555 lines
 
-- offlineQueue.test.ts (238)
-- dataCache.test.ts (153)
+- offlineQueue.test.ts (294)
+- dataCache.test.ts (161)
+- refreshAuthToken.test.ts (111)
 - storage.test.ts (100)
 - imageExists.test.ts (64)
 
@@ -129,7 +130,7 @@
 - noFunctionalEmoji.test.ts (54)
 - agronomyEvidenceDocs.test.ts (44)
 
-### src/__tests__/services/ — 15 files, 2,607 lines
+### src/__tests__/services/ — 16 files, 2,680 lines
 
 - alerts.test.ts (497)
 - manualTaskScheduling.test.ts (317)
@@ -145,6 +146,7 @@
 - harvestTaskSelection.test.ts (86)
 - plantProfilesGroup.test.ts (85)
 - preMonsoonTasks.test.ts (83)
+- todayTasks.test.ts (73)
 - plantCatalogShape.test.ts (30)
 
 ### src/__tests__/styles/ — 1 files, 67 lines
@@ -214,6 +216,7 @@
 - catalogCounts.test.ts (109)
 - scrollSpy.test.ts (109)
 - bedEditReconcile.test.ts (104)
+- firestoreTimeout.test.ts (98)
 - plantClassification.test.ts (98)
 - taskWeatherAdvisory.test.ts (91)
 - carePlanDisplay.test.ts (90)
@@ -232,6 +235,7 @@
 - pestDiseasePickerRows.test.ts (65)
 - progressiveList.test.ts (64)
 - perennialCare.test.ts (62)
+- networkState.test.ts (59)
 - textSanitizer.test.ts (58)
 - growingSeasons.test.ts (57)
 - journalSections.test.ts (56)
@@ -320,6 +324,7 @@
 - CarePlanDateNav.tsx (83)
 - MonthCalendarSheet.tsx (82)
 - CarePlanProgressCard.tsx (43)
+- LiveCarePlanBandHeader.tsx (27)
 
 ### src/components/catalog/ — 19 files, 2,175 lines
 
@@ -542,6 +547,7 @@
 - usePlantFormState.ts (1200) ⚠️ large — Grep/search inside, do not read whole
 - useBedCreationWizard.ts (937) ⚠️ large — Grep/search inside, do not read whole
 - useCatalogEntryForm.ts (736)
+- useCalendarData.ts (605)
 - useLocationManager.ts (567)
 - useTodayBrief.ts (546)
 - useCalendarData.ts (526)
@@ -575,7 +581,6 @@
 - plantFormValidation.ts (40)
 - useAnimatedValue.ts (33)
 - useKeyboardHeight.ts (31)
-- useMinuteClock.ts (31)
 - useOfflineStatus.ts (31)
 - useKeyboardVisible.ts (25)
 
@@ -586,7 +591,7 @@
 - dataCache.ts (166)
 - firebase.ts (146)
 - storage.ts (132)
-- offlineWrite.ts (52)
+- offlineWrite.ts (77)
 
 ### src/migrations/ — 34 files, 3,058 lines
 
@@ -680,12 +685,12 @@
 - alertsLogic.ts (344)
 - taskSchedulingLogic.ts (316)
 - farmCapacity.ts (239)
-- beds.ts (213)
-- locations.ts (197)
+- beds.ts (224)
+- locations.ts (212)
 - BedTaskResolver.ts (182)
 - plantCatalog.ts (179)
-- offlineSync.ts (166)
-- todayBrief.ts (135)
+- offlineSync.ts (168)
+- todayBrief.ts (137)
 - bedLogic.ts (116)
 - weatherLogic.ts (65)
 - alerts.ts (11)
@@ -827,6 +832,7 @@
 - plotGrouping.ts (228)
 - weatherWords.ts (219)
 - organicInputFilters.ts (210)
+- firestoreTimeout.ts (207)
 - taskTimeWindow.ts (194)
 - journalListHelpers.ts (188)
 - catalogSummaries.ts (183)
@@ -835,7 +841,6 @@
 - errorTracker.ts (165)
 - logger.ts (161)
 - plotRainMove.ts (160)
-- firestoreTimeout.ts (157)
 - taskSummary.ts (157)
 - bedStatus.ts (156)
 - catalogValidation.ts (150)
@@ -865,7 +870,6 @@
 - journalStats.ts (83)
 - catalogCounts.ts (81)
 - growSpecFormat.ts (81)
-- networkState.ts (81)
 - scrollSpy.ts (80)
 - needsActionItems.ts (79)
 - imageCompression.ts (76)

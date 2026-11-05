@@ -108,7 +108,7 @@ export function CarePlanBandFrame({
   );
 }
 
-interface HeaderProps {
+export interface CarePlanBandHeaderProps {
   header: CarePlanSectionHeader;
   /** The select-all box while selecting, else null. */
   selectBox: React.ReactNode;
@@ -135,7 +135,7 @@ export function CarePlanBandHeader({
   onToggle,
   onAdd,
   banners,
-}: Readonly<HeaderProps>): React.JSX.Element {
+}: Readonly<CarePlanBandHeaderProps>): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const collapsible = header.collapsible === true;

@@ -19,9 +19,9 @@ import {
   TaskLog,
   TaskTemplate,
 } from '@/types/database.types';
-import { getBeds } from '@/services/beds';
+import { getBeds, getStoredBeds } from '@/services/beds';
 import { getFarmConfig } from '@/services/farmCapacity';
-import { getLocationConfig } from '@/services/locations';
+import { getLocationConfig, getStoredLocationConfig } from '@/services/locations';
 import { getAllPlants, getStoredPlants } from '@/services/plants';
 import { getPlantProfiles } from '@/services/plantProfiles';
 import {
@@ -108,9 +108,11 @@ export async function getTodayBriefSources(): Promise<TodayBriefSources> {
 /**
  * Cold-start paint from the local caches. Returns `null` when there is nothing
  * worth painting, so the caller can show its skeleton instead of a screen of
- * zeroes. `getBeds`/`getLocationConfig`/`getFarmConfig` already fall back to
- * AsyncStorage themselves, so they are safe to call here. `getPlantProfiles` is
- * the same shape again — cache, then AsyncStorage, with the Firestore sync fired
+ * zeroes. Every reader here is network-free: beds and the location config use
+ * their `getStored…` variants because `getBeds`/`getLocationConfig` go to
+ * Firestore first on a cold start, which held this "instant" paint behind the
+ * network. `getFarmConfig` serves from AsyncStorage before Firestore, and
+ * `getPlantProfiles` is cache, then AsyncStorage, with its Firestore sync fired
  * in the background rather than awaited.
  */
 export async function getStoredTodayBriefSources(): Promise<TodayBriefSources | null> {
@@ -119,8 +121,8 @@ export async function getStoredTodayBriefSources(): Promise<TodayBriefSources | 
       getStoredTodayTasks(),
       getStoredTodayTaskLogs(),
       getStoredPlants(),
-      getBeds(),
-      getLocationConfig(),
+      getStoredBeds(),
+      getStoredLocationConfig(),
       getFarmConfig(),
       getPlantProfiles(),
     ]);

@@ -185,7 +185,7 @@ export function usePlantCatalogManager(): UsePlantCatalogManagerReturn {
   const refresh = useCallback(async (): Promise<void> => {
     setRefreshing(true);
     try {
-      // A pull must reach past the 30 s cache, or it re-reads what is on screen.
+      // A pull must reach past the in-memory cache, or it re-reads what is on screen.
       invalidate('plantProfiles');
       invalidate(CACHE_KEYS.ALL_PLANTS);
       await reload({ silent: true });

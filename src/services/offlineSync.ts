@@ -53,7 +53,9 @@ const defaultExecutor: MutationExecutor = async (mutation) => {
           return deleteDoc(ref);
       }
     },
-    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS }
+    // A timeout is treated as offline (the flush pauses and App retries later),
+    // so re-sending on the same stalled link would only hold the flush open.
+    { timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS, retryOnTimeout: false }
   );
 };
 

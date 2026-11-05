@@ -43,10 +43,25 @@ export class OfflineQueueUnavailableError extends Error {
   }
 }
 
+const docKey = (collection: string, docId: string): string => `${collection}/${docId}`;
+
+/**
+ * Documents with a queued mutation, mirrored from the last successful read or
+ * persist. This module is the only writer of KEYS.OFFLINE_QUEUE, so the mirror
+ * stays exact once populated; `null` means "not read yet this session".
+ */
+let pendingDocKeys: Set<string> | null = null;
+
+const mirrorQueue = (queue: OfflineMutation[]): void => {
+  pendingDocKeys = new Set(queue.map((m) => docKey(m.collection, m.docId)));
+};
+
 const readQueue = async (): Promise<OfflineMutation[]> => {
   const result = await readData<OfflineMutation>(KEYS.OFFLINE_QUEUE);
   if (!result.ok) throw new OfflineQueueUnavailableError(result.reason);
-  return result.data.map(normalizeEntry);
+  const queue = result.data.map(normalizeEntry);
+  mirrorQueue(queue);
+  return queue;
 };
 
 /** Persist the queue, throwing when the write did not actually land. */
@@ -55,6 +70,7 @@ const persistQueue = async (queue: OfflineMutation[]): Promise<void> => {
   if (!persisted) {
     throw new Error('Offline queue could not be persisted to storage');
   }
+  mirrorQueue(queue);
 };
 
 /**
@@ -114,6 +130,33 @@ export const subscribeQueueCount = (listener: QueueCountListener): (() => void) 
 };
 
 export const getQueue = (): Promise<OfflineMutation[]> => readQueue();
+
+/**
+ * Whether any of these documents already has a mutation waiting in the queue.
+ *
+ * `writeOrQueue` asks before writing directly: a newer edit that reached
+ * Firestore ahead of an older queued one would be overwritten when the queue
+ * replays, so while a doc has anything pending its later writes queue behind it
+ * (and coalesce) to keep per-document order. Served from the in-memory mirror;
+ * reads storage once per session. An unreadable queue reports false — the same
+ * direct write that happened before this check existed.
+ */
+export const hasPendingMutationFor = async (
+  targets: readonly { collection: string; docId: string }[]
+): Promise<boolean> => {
+  if (targets.length === 0) return false;
+  if (pendingDocKeys === null) {
+    try {
+      await withQueueLock(readQueue);
+    } catch (e) {
+      logger.warn('Offline queue unreadable, writing directly', e as Error);
+      return false;
+    }
+  }
+  const keys = pendingDocKeys;
+  if (keys === null || keys.size === 0) return false;
+  return targets.some((t) => keys.has(docKey(t.collection, t.docId)));
+};
 
 export const getQueueLength = async (): Promise<number> => {
   try {

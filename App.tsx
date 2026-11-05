@@ -15,11 +15,11 @@ import Constants from 'expo-constants';
 import * as Sentry from '@sentry/react-native';
 import { migrateImagesToMediaLibrary } from './src/lib/imageStorage';
 import { runPendingMigrations } from './src/migrations';
-import { subscribeToNetworkChanges } from './src/utils/networkState';
+import { isNetworkAvailable, subscribeToNetworkChanges } from './src/utils/networkState';
 import { flushOfflineQueue } from './src/services/offlineSync';
 import { getFarmConfig } from './src/services/farmCapacity';
 import { clearAllData } from './src/lib/storage';
-import { setQueueOwner } from './src/lib/offlineQueue';
+import { setQueueOwner, subscribeQueueCount } from './src/lib/offlineQueue';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   SafeAreaProvider,
@@ -53,6 +53,9 @@ const isDev = __DEV__;
 
 /** Last signed-in uid, used to detect an account switch on a shared device. */
 const LAST_UID_KEY = '@garden_last_uid';
+
+/** How often to retry replaying queued writes while some are pending and we look online. */
+const PENDING_FLUSH_RETRY_MS = 60_000;
 
 // Only log Sentry config in development
 if (isDev) {
@@ -439,36 +442,52 @@ const AppRoot = (): React.JSX.Element | null => {
     if (!user) return;
 
     let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    let pendingCount = 0;
+
+    const runFlush = (): void => {
+      flushOfflineQueue()
+        .then((result) => {
+          // A drop means a user's edit was given up on after repeated replay
+          // failures. It is parked in the dead-letter store, but it must not
+          // pass silently: logger is disabled outside development.
+          if (result.dropped > 0) {
+            logError(
+              'storage',
+              `Offline sync gave up on ${result.dropped} queued write(s); parked for recovery`,
+              undefined,
+              { dropped: result.dropped, remaining: result.remaining }
+            );
+          }
+        })
+        .catch((error) => {
+          logger.warn(
+            'Offline queue flush failed',
+            error instanceof Error ? error : new Error(String(error))
+          );
+        });
+    };
+
     const unsubscribeNetwork = subscribeToNetworkChanges((online) => {
       if (!online) return;
       // Short debounce so connectivity settles before replaying
       if (flushTimer) clearTimeout(flushTimer);
-      flushTimer = setTimeout(() => {
-        flushOfflineQueue()
-          .then((result) => {
-            // A drop means a user's edit was given up on after repeated replay
-            // failures. It is parked in the dead-letter store, but it must not
-            // pass silently: logger is disabled outside development.
-            if (result.dropped > 0) {
-              logError(
-                'storage',
-                `Offline sync gave up on ${result.dropped} queued write(s); parked for recovery`,
-                undefined,
-                { dropped: result.dropped, remaining: result.remaining }
-              );
-            }
-          })
-          .catch((error) => {
-            logger.warn(
-              'Offline queue flush failed',
-              error instanceof Error ? error : new Error(String(error))
-            );
-          });
-      }, 2000);
+      flushTimer = setTimeout(runFlush, 2000);
     });
+
+    // A write that timed out on a connected-but-stalled link is queued without
+    // any offline→online flip, so the listener above may never fire for it.
+    // Keep retrying while anything is pending; concurrent flushes share one run.
+    const unsubscribeQueue = subscribeQueueCount((count) => {
+      pendingCount = count;
+    });
+    const retryInterval = setInterval(() => {
+      if (pendingCount > 0 && isNetworkAvailable()) runFlush();
+    }, PENDING_FLUSH_RETRY_MS);
 
     return () => {
       if (flushTimer) clearTimeout(flushTimer);
+      clearInterval(retryInterval);
+      unsubscribeQueue();
       unsubscribeNetwork();
     };
   }, [user]);

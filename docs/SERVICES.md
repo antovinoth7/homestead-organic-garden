@@ -39,9 +39,13 @@ Keep Firestore and cache logic inside `src/services/*`. Typical service flow:
 
 Every public service function must:
 
-1. Check in-memory cache (return if fresh, <30s).
-2. Refresh auth token before Firestore calls.
-3. Apply 15s timeout + 2 retries for network requests.
+1. Check in-memory cache (return if fresh, <5 min).
+2. Refresh auth token before Firestore calls (`refreshAuthToken()` — a no-op offline, not forced,
+   and backed off for 60s after a failure, so it never stalls the read it guards).
+3. Wrap network requests in `withTimeoutAndRetry()`. Reads that fall back to AsyncStorage pass
+   `CACHED_READ_OPTIONS` (10s timeout, one retry for transient errors, none after a timeout) so a
+   stalled link reaches the local copy in one read timeout. `failed-precondition` and
+   `resource-exhausted` (quota) are never retried.
 4. Update AsyncStorage and in-memory cache on success.
 5. Fall back to AsyncStorage on network failure (reads) or queue the mutation (writes — see Offline Write Queue below).
 
@@ -72,7 +76,13 @@ Rules for new write functions:
   holds the signed-in user's data); don't let a pre-write `getDoc` kill the whole offline write.
 - **Batch commits** pass one mutation per document to `writeOrQueue` (replay doesn't need atomicity;
   last-write-wins is the accepted conflict policy).
-- Only offline/`unavailable` errors are queued; permission/validation errors still throw.
+- Offline errors are queued: `unavailable`, the no-network short-circuit, and `deadline-exceeded`
+  (our `FirestoreTimeoutError`). A Firestore write never rejects on a dead or stalled link — it stays
+  pending in the memory-only cache and would be lost if the app were killed — so a timeout is queued
+  after a single attempt rather than re-sent. Permission/validation errors still throw.
+- While a document has a queued mutation, later writes to it are queued behind it
+  (`hasPendingMutationFor`) instead of written directly, so a replay can never land an older edit
+  on top of a newer one.
 - Payloads containing `Timestamp` are serialized automatically; never put a `serverTimestamp()`
   sentinel in a queued payload — pass `Timestamp.now()` in the mutation and keep `serverTimestamp()`
   in the online `firestoreOp` closure (see `locations.ts` / `farmCapacity.ts`).
@@ -145,7 +155,12 @@ Notes:
 
 ## Caching Architecture
 
-- `src/lib/dataCache.ts` is an in-memory freshness cache (30-second TTL) between screens and service calls.
+- `src/lib/dataCache.ts` is an in-memory freshness cache (5-minute TTL) between screens and service calls.
+  Every mutation invalidates what it touches, so the window only matters for edits made on another
+  device — pull-to-refresh handlers invalidate their keys before reloading.
+  - Cold-start paints use the network-free `getStored…` readers (`getStoredPlants`,
+    `getStoredBeds`, `getStoredTaskTemplates`, `getStoredTodayTasks`, `getStoredTodayTaskLogs`,
+    `getStoredLocationConfig`, `getStoredHarvestJournalMetadata`): in-memory copy, else AsyncStorage.
   - Use `getCached()`/`setCached()` for short-lived reads.
   - Use `invalidate()`/`invalidateAll()` after mutations.
   - Does not replace AsyncStorage (offline fallback).
@@ -169,18 +184,22 @@ app implements its own durable offline writes:
 - **Pure logic** — coalescing and `Timestamp` encode/decode rules live Firestore-free in
   `src/utils/offlineQueueLogic.ts` so they're unit-testable.
 - **Entry point** — `writeOrQueue()` in `src/lib/offlineWrite.ts` (see Write path above): tries the
-  write, and enqueues only on offline/`unavailable` errors.
+  write, and enqueues on offline errors (including timeouts) or when the doc already has a queued
+  mutation.
 - **Replay** — `flushOfflineQueue()` in `src/services/offlineSync.ts` replays FIFO on reconnect:
   `not-found` updates/deletes are dropped; other failures pause the flush (preserving per-document
   ordering) and are retried on later flushes, dropped after 5 strikes. After a successful flush it
   calls `invalidateAll()` and stamps `KEYS.LAST_SYNC`. Concurrent calls share one flush.
 - **Trigger** — `App.tsx` subscribes via `subscribeToNetworkChanges()` (`src/utils/networkState.ts`)
-  and runs a debounced flush on offline→online transitions and once after sign-in.
+  and runs a debounced flush on offline→online transitions and once after sign-in. It also retries
+  every 60s while writes are pending and the device looks online — a write that timed out on a
+  connected-but-stalled link is queued without any connectivity flip. "Online" means a link *and*
+  internet that NetInfo has not ruled out (`isInternetReachable !== false`).
 - **Conflict policy** — last-write-wins. Reference data services (weather, plantCatalog,
   plantCareProfiles) and `backup.ts` / `BedTaskResolver.ts` stay online-only by design.
   `restorePlant()` is also online-only (archived plants aren't in the offline cache).
 - **Tests** — `src/__tests__/utils/offlineQueueLogic.test.ts`, `lib/offlineQueue.test.ts`,
-  `services/offlineSync.test.ts` (flush mechanics via an injected executor — the Firestore SDK is
+  `lib/offlineWrite.test.ts`, `utils/firestoreTimeout.test.ts`, `services/offlineSync.test.ts` (flush mechanics via an injected executor — the Firestore SDK is
   never mocked).
 
 ---

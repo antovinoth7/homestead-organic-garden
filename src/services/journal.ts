@@ -25,8 +25,8 @@ import {
 import { getData, setData, KEYS } from '../lib/storage';
 import {
   withTimeoutAndRetry,
-  FIRESTORE_WRITE_TIMEOUT_MS,
   FIRESTORE_READ_TIMEOUT_MS,
+  CACHED_READ_OPTIONS,
 } from '../utils/firestoreTimeout';
 import { logError } from '../utils/errorLogging';
 import { logger } from '../utils/logger';
@@ -83,6 +83,13 @@ const applyHarvestSideEffects = async (entry: JournalEntry): Promise<void> => {
     logger.warn('Failed to advance harvest task after harvest entry', error as Error);
   }
 };
+
+/**
+ * Drop the in-memory journal lists so the next read asks Firestore — for
+ * pull-to-refresh, which otherwise returns what was read moments ago.
+ */
+export const invalidateJournalCache = (): void =>
+  invalidate(CACHE_KEYS.JOURNAL_ENTRIES, CACHE_KEYS.JOURNAL_METADATA, CACHE_KEYS.JOURNAL_HARVESTS);
 
 /**
  * Get all journal entries with offline-first approach
@@ -496,9 +503,7 @@ export const getJournalMetadata = async (): Promise<JournalEntry[]> => {
       orderBy('created_at', 'desc')
     );
 
-    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-      timeoutMs: FIRESTORE_WRITE_TIMEOUT_MS,
-    });
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
 
     const entries = snapshot.docs.map((d) => {
       const data = d.data();
@@ -562,9 +567,7 @@ export const getHarvestJournalMetadata = async (): Promise<JournalEntry[]> => {
       where('entry_type', '==', JournalEntryType.Harvest)
     );
 
-    const snapshot = await withTimeoutAndRetry(() => getDocs(q), {
-      timeoutMs: FIRESTORE_READ_TIMEOUT_MS,
-    });
+    const snapshot = await withTimeoutAndRetry(() => getDocs(q), CACHED_READ_OPTIONS);
 
     const entries = snapshot.docs.map((d) => {
       const data = d.data();
@@ -588,4 +591,16 @@ export const getHarvestJournalMetadata = async (): Promise<JournalEntry[]> => {
     const cachedEntries = await getData<JournalEntry>(KEYS.JOURNAL);
     return cachedEntries.filter(isHarvestJournalEntry);
   }
+};
+
+/**
+ * Warm read of the harvest entries for an instant first paint: the in-memory
+ * list (fresh or not), otherwise the AsyncStorage journal copy filtered to
+ * harvests. Never touches the network.
+ */
+export const getStoredHarvestJournalMetadata = async (): Promise<JournalEntry[]> => {
+  const warm = peekCached<JournalEntry[]>(CACHE_KEYS.JOURNAL_HARVESTS);
+  if (warm) return warm;
+  const stored = await getData<JournalEntry>(KEYS.JOURNAL);
+  return stored.filter(isHarvestJournalEntry);
 };
