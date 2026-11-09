@@ -115,13 +115,11 @@ export const coalesceQueue = (
     );
   }
 
-  const op =
-    existing.op === 'create'
-      ? 'create'
-      : existing.op === 'set' || incoming.op === 'set'
-        ? 'set'
-        : 'update';
-  const payload = { ...(existing.payload ?? {}), ...(incoming.payload ?? {}) };
+  let op: 'create' | 'set' | 'update';
+  if (existing.op === 'create') op = 'create';
+  else if (existing.op === 'set' || incoming.op === 'set') op = 'set';
+  else op = 'update';
+  const payload = { ...existing.payload, ...incoming.payload };
 
   return queue.map((m, i) =>
     i === index ? { ...existing, op, payload, revision: (existing.revision ?? 0) + 1 } : m

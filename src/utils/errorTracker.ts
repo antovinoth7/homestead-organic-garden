@@ -28,6 +28,13 @@ export interface TrackErrorOptions {
   level?: TrackErrorLevel;
 }
 
+/** Sentry level implied by `context.type` when no explicit level is given. */
+const levelForType = (type: string): TrackErrorLevel => {
+  if (type === 'warning') return 'warning';
+  if (type === 'crash') return 'fatal';
+  return 'error';
+};
+
 class ErrorTracker {
   private errorLogs: ErrorLog[] = [];
   private initialized = false;
@@ -63,8 +70,7 @@ class ErrorTracker {
     const type = typeof normalizedContext.type === 'string' ? normalizedContext.type : 'error';
     // An explicit level wins — logError downgrades expected connectivity
     // failures (which already fell back to the local copy) to 'warning'.
-    const level: TrackErrorLevel =
-      options?.level ?? (type === 'warning' ? 'warning' : type === 'crash' ? 'fatal' : 'error');
+    const level: TrackErrorLevel = options?.level ?? levelForType(type);
 
     const errorLog: ErrorLog = {
       timestamp: new Date().toISOString(),
@@ -94,25 +100,31 @@ class ErrorTracker {
     logger.error(message, error, { metadata: context });
 
     // Send to Sentry (dev and production)
-    import('@sentry/react-native').then((Sentry) => {
-      const captureContext = {
-        level: level as 'warning' | 'error' | 'fatal' | 'info' | 'debug',
-        contexts: { custom: normalizedContext },
-        tags: { source: 'error_tracker', type },
-      };
+    import('@sentry/react-native')
+      .then((Sentry) => {
+        const captureContext = {
+          level: level as 'warning' | 'error' | 'fatal' | 'info' | 'debug',
+          contexts: { custom: normalizedContext },
+          tags: { source: 'error_tracker', type },
+        };
 
-      if (error) {
-        Sentry.captureException(error, captureContext);
-      } else {
-        Sentry.captureMessage(message, captureContext);
-      }
-    });
+        if (error) {
+          Sentry.captureException(error, captureContext);
+        } else {
+          Sentry.captureMessage(message, captureContext);
+        }
+      })
+      .catch((sentryError: unknown) => {
+        // Best-effort: the log is already persisted above. `logger` only writes
+        // to the console, so this cannot recurse into the tracker.
+        logger.warn('Sentry unavailable', sentryError instanceof Error ? sentryError : undefined);
+      });
   }
 
   /**
    * Track a non-fatal error (warning)
    */
-  async trackWarning(message: string, context?: Record<string, unknown>): Promise<void> {
+  trackWarning(message: string, context?: Record<string, unknown>): void {
     logger.warn(message, undefined, { metadata: context });
   }
 
@@ -157,7 +169,7 @@ class ErrorTracker {
     return {
       total: this.errorLogs.length,
       last24Hours: last24Hours.length,
-      mostRecent: this.errorLogs[this.errorLogs.length - 1],
+      mostRecent: this.errorLogs.at(-1),
     };
   }
 

@@ -26,11 +26,11 @@ import {
 } from '@/config/beds';
 import { getPlantsByBed, deletePlantsForBed } from '@/services/plants';
 import type { CompanionValidation } from '@/config/beds';
-import { normalizeBed, getHarvestGapWarnings, getCrossBedStatus } from '@/services/bedLogic';
+import { normalizeBed } from '@/services/bedLogic';
 
 // Pure domain logic lives in `bedLogic.ts` (no Firestore/RN imports, unit-tested).
 // Re-exported here so existing `@/services/beds` import sites keep working.
-export { normalizeBed, getHarvestGapWarnings, getCrossBedStatus };
+export { normalizeBed, getHarvestGapWarnings, getCrossBedStatus } from '@/services/bedLogic';
 
 const BEDS_COLLECTION = 'beds';
 

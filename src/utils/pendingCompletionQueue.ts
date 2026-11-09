@@ -29,7 +29,7 @@ export class PendingCompletionQueue<T extends { id: string }> {
   private batch: T[] = [];
   private inFlight: T[] = [];
   private timer: ReturnType<typeof setTimeout> | null = null;
-  private listeners = new Set<() => void>();
+  private readonly listeners = new Set<() => void>();
   private handlers: PendingCompletionHandlers<T> | null = null;
   private snapshot: PendingCompletionSnapshot<T> = { pending: [], saving: [] };
 

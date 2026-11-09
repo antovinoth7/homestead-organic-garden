@@ -309,7 +309,7 @@ export const skipTaskTemplate = async (
   return updateTaskTemplate(template.id, {
     next_due_at: computeSkipDate(template, days).toISOString(),
     last_skipped_at: new Date().toISOString(),
-    last_skip_reason: trimmedReason ? trimmedReason : null,
+    last_skip_reason: trimmedReason || null,
     skip_count: (template.skip_count ?? 0) + 1,
   });
 };
@@ -977,7 +977,7 @@ export const markTasksDone = async (
       if (ops.plantUpdate) {
         const key = ops.plantUpdate.ref.path;
         plantRefs.set(key, ops.plantUpdate.ref);
-        plantData.set(key, { ...(plantData.get(key) ?? {}), ...ops.plantUpdate.data });
+        plantData.set(key, { ...plantData.get(key), ...ops.plantUpdate.data });
       }
     }
     for (const [key, data] of plantData) {
@@ -1339,19 +1339,19 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
         updates.next_due_at = nextDueAt;
       }
       const existingDueDate = parseDateValue(existing.next_due_at);
-      if (!existingDueDate) {
-        updates.next_due_at = nextDueAt;
-      } else if (plantCreatedAt && existingDueDate < plantCreatedAt) {
-        updates.next_due_at = nextDueAt;
-      } else if (
-        TASK_TYPE_TO_PLANT_LAST_CARE_FIELD[taskType] !== undefined &&
-        !parseDateValue(getLastCareDate(plant, taskType)) &&
-        existingDueDate > new Date(nextDueAt)
-      ) {
+      if (
+        // No usable due date stored.
+        !existingDueDate ||
+        // Due date predates the plant itself.
+        (plantCreatedAt && existingDueDate < plantCreatedAt) ||
         // Older builds seeded the first due date from "now" instead of the
         // planting date; pull never-completed tasks back into agreement.
         // Only for task types with a plant last-care field — completions of
         // other types (harvest_leaves) are invisible on the plant doc.
+        (TASK_TYPE_TO_PLANT_LAST_CARE_FIELD[taskType] !== undefined &&
+          !parseDateValue(getLastCareDate(plant, taskType)) &&
+          existingDueDate > new Date(nextDueAt))
+      ) {
         updates.next_due_at = nextDueAt;
       }
       if (Object.keys(updates).length > 0) {

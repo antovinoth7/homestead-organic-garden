@@ -85,7 +85,8 @@ export function useBedData(): UseBedDataResult {
   const hasLoadedRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      load({ silent: hasLoadedRef.current });
+      // load() catches its own errors and surfaces them via `error` state.
+      void load({ silent: hasLoadedRef.current });
       hasLoadedRef.current = true;
     }, [load])
   );

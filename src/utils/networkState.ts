@@ -56,11 +56,16 @@ const initNetworkMonitoring = (): void => {
   if (unsubscribe) return; // Already initialized
 
   // Initialize network state monitoring
-  NetInfo.fetch().then((state) => {
-    const wasOnline = isOnline;
-    isOnline = isStateOnline(state);
-    if (wasOnline !== isOnline) notifyChangeListeners(isOnline);
-  });
+  NetInfo.fetch()
+    .then((state) => {
+      const wasOnline = isOnline;
+      isOnline = isStateOnline(state);
+      if (wasOnline !== isOnline) notifyChangeListeners(isOnline);
+    })
+    .catch((e: unknown) => {
+      // Keep the current assumption; the listener below still reports changes.
+      logger.warn('Initial network state fetch failed', e instanceof Error ? e : undefined);
+    });
 
   // Subscribe to network state changes
   unsubscribe = NetInfo.addEventListener((state) => {

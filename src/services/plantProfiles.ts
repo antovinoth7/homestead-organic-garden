@@ -285,9 +285,9 @@ type PlantCareProfileOverride = import('@/types/database.types').PlantCareProfil
 
 // ─── Normalization ────────────────────────────────────────────────────────────
 
-const WATER_REQS: WaterRequirement[] = ['low', 'medium', 'high'];
-const SUNLIGHT_LEVELS: SunlightLevel[] = ['full_sun', 'partial_sun', 'shade'];
-const SOIL_TYPES: SoilType[] = [
+const WATER_REQS = new Set<WaterRequirement>(['low', 'medium', 'high']);
+const SUNLIGHT_LEVELS = new Set<SunlightLevel>(['full_sun', 'partial_sun', 'shade']);
+const SOIL_TYPES = new Set<SoilType>([
   'garden_soil',
   'potting_mix',
   'coco_peat',
@@ -296,8 +296,8 @@ const SOIL_TYPES: SoilType[] = [
   'black_cotton',
   'alluvial',
   'custom',
-];
-const FERTILISERS: FertiliserType[] = [
+]);
+const FERTILISERS = new Set<FertiliserType>([
   'compost',
   'vermicompost',
   'cow_dung_slurry',
@@ -308,18 +308,18 @@ const FERTILISERS: FertiliserType[] = [
   'fish_emulsion',
   'seaweed',
   'other',
-];
-const GROWTH_STAGES: GrowthStage[] = [
+]);
+const GROWTH_STAGES = new Set<GrowthStage>([
   'seedling',
   'vegetative',
   'flowering',
   'fruiting',
   'dormant',
   'mature',
-];
-const TOLERANCE_LEVELS: ToleranceLevel[] = ['low', 'medium', 'high'];
-const FEEDING_INTENSITIES: FeedingIntensity[] = ['light', 'medium', 'heavy'];
-const LIFECYCLES: PlantLifecycle[] = ['annual', 'biennial', 'perennial', 'permanent'];
+]);
+const TOLERANCE_LEVELS = new Set<ToleranceLevel>(['low', 'medium', 'high']);
+const FEEDING_INTENSITIES = new Set<FeedingIntensity>(['light', 'medium', 'heavy']);
+const LIFECYCLES = new Set<PlantLifecycle>(['annual', 'biennial', 'perennial', 'permanent']);
 
 function normalizeStr(v: unknown): string | undefined {
   if (typeof v !== 'string') return undefined;
@@ -374,24 +374,24 @@ function normalizeEntry(raw: unknown): PlantProfile | null {
   }
   if (r.varietyDetails && typeof r.varietyDetails === 'object')
     entry.varietyDetails = r.varietyDetails as Record<string, VarietyDetail>;
-  if (WATER_REQS.includes(r.waterRequirement as WaterRequirement))
+  if (WATER_REQS.has(r.waterRequirement as WaterRequirement))
     entry.waterRequirement = r.waterRequirement as WaterRequirement;
-  if (SUNLIGHT_LEVELS.includes(r.sunlight as SunlightLevel))
+  if (SUNLIGHT_LEVELS.has(r.sunlight as SunlightLevel))
     entry.sunlight = r.sunlight as SunlightLevel;
-  if (SOIL_TYPES.includes(r.soilType as SoilType)) entry.soilType = r.soilType as SoilType;
-  if (FERTILISERS.includes(r.preferredFertiliser as FertiliserType))
+  if (SOIL_TYPES.has(r.soilType as SoilType)) entry.soilType = r.soilType as SoilType;
+  if (FERTILISERS.has(r.preferredFertiliser as FertiliserType))
     entry.preferredFertiliser = r.preferredFertiliser as FertiliserType;
-  if (GROWTH_STAGES.includes(r.initialGrowthStage as GrowthStage))
+  if (GROWTH_STAGES.has(r.initialGrowthStage as GrowthStage))
     entry.initialGrowthStage = r.initialGrowthStage as GrowthStage;
-  if (LIFECYCLES.includes(r.lifecycle as PlantLifecycle))
+  if (LIFECYCLES.has(r.lifecycle as PlantLifecycle))
     entry.lifecycle = r.lifecycle as PlantLifecycle;
-  if (TOLERANCE_LEVELS.includes(r.heatTolerance as ToleranceLevel))
+  if (TOLERANCE_LEVELS.has(r.heatTolerance as ToleranceLevel))
     entry.heatTolerance = r.heatTolerance as ToleranceLevel;
-  if (TOLERANCE_LEVELS.includes(r.droughtTolerance as ToleranceLevel))
+  if (TOLERANCE_LEVELS.has(r.droughtTolerance as ToleranceLevel))
     entry.droughtTolerance = r.droughtTolerance as ToleranceLevel;
-  if (TOLERANCE_LEVELS.includes(r.waterloggingTolerance as ToleranceLevel))
+  if (TOLERANCE_LEVELS.has(r.waterloggingTolerance as ToleranceLevel))
     entry.waterloggingTolerance = r.waterloggingTolerance as ToleranceLevel;
-  if (FEEDING_INTENSITIES.includes(r.feedingIntensity as FeedingIntensity))
+  if (FEEDING_INTENSITIES.has(r.feedingIntensity as FeedingIntensity))
     entry.feedingIntensity = r.feedingIntensity as FeedingIntensity;
   const wDays = normalizeNum(r.wateringFrequencyDays);
   if (wDays) entry.wateringFrequencyDays = wDays;

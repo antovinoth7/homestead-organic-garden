@@ -137,7 +137,8 @@ class Logger {
    */
   firebase(operation: string, collection: string, details?: string): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
-      console.log(`🔥 ${operation} ${collection}${details ? ` - ${details}` : ''}`);
+      const suffix = details ? ` - ${details}` : '';
+      console.log(`🔥 ${operation} ${collection}${suffix}`);
     }
   }
 
@@ -146,7 +147,8 @@ class Logger {
    */
   storage(operation: string, key: string, details?: string): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
-      console.log(`💾 ${operation} ${key}${details ? ` - ${details}` : ''}`);
+      const suffix = details ? ` - ${details}` : '';
+      console.log(`💾 ${operation} ${key}${suffix}`);
     }
   }
 }

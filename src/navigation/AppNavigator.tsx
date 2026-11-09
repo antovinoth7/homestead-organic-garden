@@ -97,9 +97,9 @@ export const AppTabs = (): React.JSX.Element => {
         tabBar={(props) => <FloatingTabBar {...props} />}
         screenOptions={({ route }) => ({
           tabBarIcon: ({ color, size }) => {
+            // 'home' is the default, which covers the Home (Today) tab.
             let iconName: keyof typeof Ionicons.glyphMap = 'home';
-            if (route.name === 'Home') iconName = 'home';
-            else if (route.name === 'Plants') iconName = 'leaf';
+            if (route.name === 'Plants') iconName = 'leaf';
             else if (route.name === 'Beds') iconName = 'grid';
             else if (route.name === 'Care Plan') iconName = 'calendar';
             else if (route.name === 'Journal') iconName = 'book';

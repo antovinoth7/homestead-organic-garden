@@ -12,7 +12,7 @@ import { logger } from './logger';
  * NOTE: Removed Firestore cache clearing - it was terminating the client and causing errors
  * Firebase SDK manages memory cache automatically
  */
-const handleAppStateChange = async (nextAppState: AppStateStatus): Promise<void> => {
+const handleAppStateChange = (nextAppState: AppStateStatus): void => {
   if (nextAppState === 'background') {
     logger.debug('App backgrounded');
     // Firestore cache is managed automatically by Firebase SDK
