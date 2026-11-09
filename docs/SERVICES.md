@@ -220,6 +220,7 @@ app implements its own durable offline writes:
 - Sentry is initialized in `App.tsx` when a DSN is configured.
 - Global error and unhandled promise rejection handlers are wired up in `App.tsx`.
 - Use `logError()`, `logAuthError()`, `logStorageError()`, and `setErrorLogUserId()` from `src/utils/errorLogging.ts`.
+- Every `logError` event carries its message as `contexts.custom.operation` in Sentry, so you can see which call failed. `logError('network', …)` with a connectivity failure (`isConnectivityError`: `deadline-exceeded` / `FirestoreTimeoutError`, `unavailable`, or the offline guard) is reported at **warning** level, because the service has already fallen back to the local copy. Every other failure stays at `error`.
 - `safeStorage` in `src/utils/safeStorage.ts` is the defensive wrapper for AsyncStorage access.
 - `src/utils/logger.ts` provides production-safe console logging.
 

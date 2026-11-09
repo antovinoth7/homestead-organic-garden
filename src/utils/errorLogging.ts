@@ -45,7 +45,13 @@ export const logError = (
 ): void => {
   const userId = currentUserId;
   const safeContext = sanitizeContext(context);
-  const enrichedContext = { ...safeContext, type, userId };
+  // `operation` carries the call-site message into Sentry's custom context —
+  // captureException otherwise sends only the bare error, so a timeout cannot
+  // say which read stalled. Context, not a tag: some messages hold user data.
+  const enrichedContext = { ...safeContext, type, userId, operation: message };
+  // Timeouts and offline errors on the network path are the expected weak-link
+  // fallback (the service already served the local copy) — report as warnings.
+  const level = type === 'network' && isConnectivityError(error) ? 'warning' : undefined;
   const errorLog: ErrorLog = {
     timestamp: new Date().toISOString(),
     type,
@@ -66,7 +72,9 @@ export const logError = (
 
   // Send to error tracker (can forward to Sentry)
   import('../utils/errorTracker').then(({ errorTracker }) => {
-    errorTracker.trackError(message, error instanceof Error ? error : undefined, enrichedContext);
+    errorTracker.trackError(message, error instanceof Error ? error : undefined, enrichedContext, {
+      level,
+    });
   });
 };
 
@@ -111,4 +119,20 @@ export function getErrorCode(error: unknown): string | undefined {
     return String((error as { code: unknown }).code);
   }
   return undefined;
+}
+
+const CONNECTIVITY_CODES = new Set(['deadline-exceeded', 'unavailable']);
+/** Thrown by `withTimeout` / `withRetry` in `firestoreTimeout.ts` when offline. */
+const NO_NETWORK_MESSAGE = 'No network connection available';
+
+/**
+ * True for failures caused by the link rather than the request: a timeout
+ * (`FirestoreTimeoutError` carries `deadline-exceeded`), Firestore
+ * `unavailable`, or the offline guard. Classified by code/message, not
+ * `instanceof FirestoreTimeoutError` — firestoreTimeout.ts imports this module.
+ */
+export function isConnectivityError(error: unknown): boolean {
+  const code = getErrorCode(error);
+  if (code !== undefined && CONNECTIVITY_CODES.has(code)) return true;
+  return error instanceof Error && error.message === NO_NETWORK_MESSAGE;
 }

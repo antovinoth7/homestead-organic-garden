@@ -21,6 +21,13 @@ export interface ErrorLog {
   appVersion?: string;
 }
 
+export type TrackErrorLevel = 'warning' | 'error' | 'fatal';
+
+export interface TrackErrorOptions {
+  /** Overrides the Sentry level otherwise derived from `context.type`. */
+  level?: TrackErrorLevel;
+}
+
 class ErrorTracker {
   private errorLogs: ErrorLog[] = [];
   private initialized = false;
@@ -49,12 +56,15 @@ class ErrorTracker {
   async trackError(
     message: string,
     error?: Error,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
+    options?: TrackErrorOptions
   ): Promise<void> {
     const normalizedContext = context || {};
     const type = typeof normalizedContext.type === 'string' ? normalizedContext.type : 'error';
-    const level: 'warning' | 'error' | 'fatal' =
-      type === 'warning' ? 'warning' : type === 'crash' ? 'fatal' : 'error';
+    // An explicit level wins — logError downgrades expected connectivity
+    // failures (which already fell back to the local copy) to 'warning'.
+    const level: TrackErrorLevel =
+      options?.level ?? (type === 'warning' ? 'warning' : type === 'crash' ? 'fatal' : 'error');
 
     const errorLog: ErrorLog = {
       timestamp: new Date().toISOString(),
