@@ -84,7 +84,7 @@ const schemaVersionCacheKey = (userId: string): string => `@garden_schema_versio
 async function getCachedSchemaVersion(userId: string): Promise<number | null> {
   const raw = await safeGetItem(schemaVersionCacheKey(userId));
   if (raw === null) return null;
-  const parsed = parseInt(raw, 10);
+  const parsed = Number.parseInt(raw, 10);
   return Number.isNaN(parsed) ? null : parsed;
 }
 

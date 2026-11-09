@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import * as NavigationBar from 'expo-navigation-bar';
+import { NavigationBar } from 'expo-navigation-bar';
 import { auth } from './src/lib/firebase';
 import { onAuthStateChanged, User } from '@firebase/auth';
 import { ThemeProvider, useTheme, useThemeMode } from './src/theme';
@@ -91,9 +91,13 @@ Sentry.init({
       delete event.request.headers['Cookie'];
     }
 
-    // Filter out sensitive user data
+    // Filter out sensitive user data: keep the first two characters and the
+    // domain. Same result as the former /(.{2}).*@/ replace, without its
+    // super-linear backtracking.
     if (event.user?.email) {
-      event.user.email = event.user.email.replace(/(.{2}).*@/, '$1***@');
+      const email = event.user.email;
+      const at = email.lastIndexOf('@');
+      if (at >= 2) event.user.email = `${email.slice(0, 2)}***${email.slice(at)}`;
     }
 
     // Add image-related context for debugging native crashes
@@ -355,7 +359,8 @@ const AppRoot = (): React.JSX.Element | null => {
         if (!isMounted) return;
 
         if (isDev) {
-          logger.debug(`Auth state changed: ${user ? `Logged in as ${user.uid}` : 'Logged out'}`);
+          const authState = user ? `Logged in as ${user.uid}` : 'Logged out';
+          logger.debug(`Auth state changed: ${authState}`);
         }
 
         // Update error logging context
@@ -387,7 +392,8 @@ const AppRoot = (): React.JSX.Element | null => {
                 error instanceof Error ? error : new Error(String(error))
               );
             });
-            runImageMigration();
+            // Catches and logs its own errors.
+            void runImageMigration();
             // Resolve the farm's agro-climatic zone up front: watering cadence
             // is computed synchronously deep in the scheduling helpers, and the
             // Care Plan can be the first screen opened, so waiting for Today to
