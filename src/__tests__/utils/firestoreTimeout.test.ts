@@ -78,6 +78,44 @@ describe('withTimeoutAndRetry', () => {
     expect(op).toHaveBeenCalledTimes(1);
   });
 
+  it('rethrows the original error object for a non-retryable code', async () => {
+    const error = firestoreError('permission-denied');
+    const op = jest.fn(() => Promise.reject(error));
+    await expect(withTimeoutAndRetry(op, { maxRetries: 2, baseDelayMs: 1 })).rejects.toBe(error);
+  });
+
+  it('rethrows the last error once every retry has failed', async () => {
+    const first = firestoreError('aborted');
+    const last = firestoreError('unavailable');
+    const op = jest
+      .fn<Promise<string>, []>()
+      .mockRejectedValueOnce(first)
+      .mockRejectedValueOnce(firestoreError('aborted'))
+      .mockRejectedValueOnce(last);
+    await expect(withTimeoutAndRetry(op, { maxRetries: 2, baseDelayMs: 1 })).rejects.toBe(last);
+    expect(op).toHaveBeenCalledTimes(3);
+  });
+
+  it('retries an error that carries no code', async () => {
+    const op = jest
+      .fn<Promise<string>, []>()
+      .mockRejectedValueOnce(new Error('Failed to fetch'))
+      .mockResolvedValueOnce('ok');
+    await expect(withTimeoutAndRetry(op, { maxRetries: 1, baseDelayMs: 1 })).resolves.toBe('ok');
+    expect(op).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops retrying when the network drops after a failed attempt', async () => {
+    const op = jest.fn(() => {
+      mockedIsNetworkAvailable.mockReturnValue(false);
+      return Promise.reject(firestoreError('unavailable'));
+    });
+    await expect(withTimeoutAndRetry(op, { maxRetries: 3, baseDelayMs: 1 })).rejects.toThrow(
+      'No network connection available'
+    );
+    expect(op).toHaveBeenCalledTimes(1);
+  });
+
   it('fails fast without a network, before running the operation', async () => {
     mockedIsNetworkAvailable.mockReturnValue(false);
     const op = jest.fn(() => Promise.resolve('never reached'));

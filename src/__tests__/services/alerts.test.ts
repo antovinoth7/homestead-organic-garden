@@ -428,6 +428,161 @@ describe('getFarmAlerts', () => {
       expect(alerts.some((a) => a.type === 'bed_resting_end')).toBe(false);
     });
   });
+
+  // One input reaching every alert family, pinned field for field and in sorted
+  // order — including the unnamed-bed and farm-level title fallbacks, the
+  // default half-cycle for a non-numeric frequency, and harvest-gap warnings.
+  it('emits exactly this for a farm with every kind of alert', () => {
+    const created_at = new Date(NOW).toISOString();
+    const alerts = getFarmAlerts({
+      plants: [
+        makePlant({ id: 'p-sick', name: 'Brinjal', health_status: 'sick' }),
+        makePlant({ id: 'p-ripe', name: 'Okra', expected_harvest_date: dueDaysAgo(1) }),
+        makePlant({ id: 'p-water', name: 'Chilli' }),
+      ],
+      todayTasks: [
+        makeTaskTemplate({
+          id: 't-plant',
+          plant_id: 'p-water',
+          task_type: 'water',
+          frequency_days: 2,
+          next_due_at: dueDaysAgo(3),
+        }),
+        makeTaskTemplate({
+          id: 't-bed',
+          plant_id: null,
+          bed_id: 'b-unnamed',
+          task_type: 'fertilise',
+          frequency_days: 30,
+          next_due_at: dueDaysAgo(2),
+        }),
+        makeTaskTemplate({
+          id: 't-farm',
+          plant_id: null,
+          bed_id: null,
+          task_type: 'prune',
+          frequency_days: Number.NaN,
+          next_due_at: dueDaysAgo(2),
+        }),
+      ],
+      rotationStatuses: [
+        {
+          bed_id: 'b1',
+          has_solanaceae_violation: true,
+          legume_coverage_pct: 10,
+          harvest_gap_warnings: [],
+          coordinator_checklist: [],
+          green_manure_recommendation: null,
+        },
+        {
+          bed_id: 'b2',
+          has_solanaceae_violation: false,
+          legume_coverage_pct: 40,
+          harvest_gap_warnings: [],
+          coordinator_checklist: [],
+          green_manure_recommendation: null,
+        },
+      ],
+      harvestGapWarnings: [
+        { bed_id: 'b1', category: 'leafy', gap_start: '2026-04-01', gap_end: '2026-04-15' },
+      ],
+      bedNames: { b1: 'North Bed' },
+      emptyOrRestingBedCount: 1,
+      now: NOW,
+    });
+
+    expect(alerts).toEqual([
+      {
+        id: 'task_t-plant',
+        type: 'water_needed',
+        templateId: 't-plant',
+        plantId: 'p-water',
+        title: 'Chilli',
+        message: 'Watering overdue by 3 days',
+        severity: 'critical',
+        iconKey: 'alert.water_needed',
+        daysOverdue: 3,
+        created_at,
+      },
+      {
+        id: 'task_t-farm',
+        type: 'prune_due',
+        templateId: 't-farm',
+        title: 'Farm',
+        message: 'Pruning overdue by 2 days',
+        severity: 'critical',
+        iconKey: 'alert.prune_due',
+        daysOverdue: 2,
+        created_at,
+      },
+      {
+        id: 'health_sick_p-sick',
+        type: 'health_sick',
+        plantId: 'p-sick',
+        title: 'Brinjal',
+        message: 'Marked sick — needs care',
+        severity: 'critical',
+        iconKey: 'alert.health_sick',
+        daysOverdue: 0,
+        created_at,
+      },
+      {
+        id: 'rotation_b1',
+        type: 'rotation_due',
+        bedId: 'b1',
+        title: 'North Bed',
+        message: 'Same-family repeat — rotate this bed',
+        severity: 'critical',
+        iconKey: 'alert.rotation_due',
+        daysOverdue: 0,
+        created_at,
+      },
+      {
+        id: 'task_t-bed',
+        type: 'fertilise_due',
+        templateId: 't-bed',
+        bedId: 'b-unnamed',
+        title: 'Bed',
+        message: 'Fertilising overdue by 2 days',
+        severity: 'warning',
+        iconKey: 'alert.fertilise_due',
+        daysOverdue: 2,
+        created_at,
+      },
+      {
+        id: 'harvest_p-ripe',
+        type: 'harvest_due',
+        plantId: 'p-ripe',
+        title: 'Okra',
+        message: 'Harvest overdue by 1 day',
+        severity: 'warning',
+        iconKey: 'alert.harvest_due',
+        daysOverdue: 1,
+        created_at,
+      },
+      {
+        id: 'gap_b1_2026-04-01',
+        type: 'rotation_due',
+        bedId: 'b1',
+        title: 'North Bed',
+        message: 'Harvest gap risk (leafy) — stagger clearing',
+        severity: 'warning',
+        iconKey: 'alert.rotation_due',
+        daysOverdue: 0,
+        created_at,
+      },
+      {
+        id: 'green_manure_2026_3',
+        type: 'bed_resting_end',
+        title: 'Green manure',
+        message: 'Sow Sunhemp in 1 empty bed',
+        severity: 'info',
+        iconKey: 'alert.bed_resting_end',
+        daysOverdue: 0,
+        created_at,
+      },
+    ]);
+  });
 });
 
 describe('sortAlerts', () => {
