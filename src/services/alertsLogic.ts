@@ -154,7 +154,6 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
     now = Date.now(),
   } = inputs;
   const nowIso = new Date(now).toISOString();
-  const alerts: FarmAlert[] = [];
 
   // Archived plants (bed cleared after final harvest) are done — they must not
   // keep emitting care/harvest alerts. Mirrors the filter every other surface
@@ -162,11 +161,36 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
   const activePlants = plants.filter((p) => !p.is_deleted && !isPlantArchived(p));
   const plantsById = new Map(activePlants.map((p) => [p.id, p]));
 
-  // Care alerts, straight from the task schedule. Nothing is recomputed from
-  // plant date fields here: a disabled care type has no enabled template, so it
-  // simply produces no card — the two can't drift.
+  const care = taskAlerts(todayTasks ?? [], plantsById, bedNames, now, nowIso);
+  const greenManure = greenManureAlert(emptyOrRestingBedCount, now, nowIso);
+
+  return sortAlerts([
+    ...care.alerts,
+    ...plantAlerts(activePlants, care.plantsWithHarvestTask, now, nowIso),
+    ...rotationAlerts(rotationStatuses ?? [], bedNames, nowIso),
+    ...(greenManure ? [greenManure] : []),
+    ...harvestGapAlerts(harvestGapWarnings ?? [], bedNames, nowIso),
+  ]);
+}
+
+/**
+ * Care alerts, straight from the task schedule. Nothing is recomputed from
+ * plant date fields here: a disabled care type has no enabled template, so it
+ * simply produces no card — the two can't drift.
+ *
+ * Also reports which plants have a harvest task, so the field-derived harvest
+ * nudge in `plantAlerts` can stand down for them.
+ */
+function taskAlerts(
+  templates: TaskTemplate[],
+  plantsById: Map<string, Plant>,
+  bedNames: Record<string, string> | undefined,
+  now: number,
+  nowIso: string
+): { alerts: FarmAlert[]; plantsWithHarvestTask: Set<string> } {
+  const alerts: FarmAlert[] = [];
   const plantsWithHarvestTask = new Set<string>();
-  for (const template of todayTasks ?? []) {
+  for (const template of templates) {
     if (!template?.enabled) continue;
 
     const plant = template.plant_id ? plantsById.get(template.plant_id) : null;
@@ -178,30 +202,62 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
       plantsWithHarvestTask.add(plant.id);
     }
 
-    const shape = TASK_ALERT_SHAPE[template.task_type];
-    if (!shape) continue;
-
-    const daysOverdue = daysSince(template.next_due_at, now);
-    if (daysOverdue === null || daysOverdue < ATTENTION_MIN_DAYS_OVERDUE) continue;
-
-    const frequency = Number(template.frequency_days);
-    const halfCycle = Number.isFinite(frequency) && frequency > 0 ? Math.ceil(frequency / 2) : 2;
-
-    alerts.push({
-      id: `task_${template.id}`,
-      type: shape.type,
-      templateId: template.id,
-      ...(plant ? { plantId: plant.id } : {}),
-      ...(template.bed_id ? { bedId: template.bed_id } : {}),
-      title: plant?.name ?? (template.bed_id ? bedNames?.[template.bed_id] ?? 'Bed' : 'Farm'),
-      message: `${shape.verb} overdue by ${daysOverdue} day${plural(daysOverdue)}`,
-      severity: daysOverdue >= Math.max(2, halfCycle) ? 'critical' : 'warning',
-      iconKey: shape.iconKey,
-      daysOverdue,
-      created_at: nowIso,
-    });
+    const alert = taskAlert(template, plant, bedNames, now, nowIso);
+    if (alert) alerts.push(alert);
   }
+  return { alerts, plantsWithHarvestTask };
+}
 
+/** One live template's care alert, or null when it has no alert shape or is not late enough. */
+function taskAlert(
+  template: TaskTemplate,
+  plant: Plant | null | undefined,
+  bedNames: Record<string, string> | undefined,
+  now: number,
+  nowIso: string
+): FarmAlert | null {
+  const shape = TASK_ALERT_SHAPE[template.task_type];
+  if (!shape) return null;
+
+  const daysOverdue = daysSince(template.next_due_at, now);
+  if (daysOverdue === null || daysOverdue < ATTENTION_MIN_DAYS_OVERDUE) return null;
+
+  const frequency = Number(template.frequency_days);
+  const halfCycle = Number.isFinite(frequency) && frequency > 0 ? Math.ceil(frequency / 2) : 2;
+
+  return {
+    id: `task_${template.id}`,
+    type: shape.type,
+    templateId: template.id,
+    ...(plant ? { plantId: plant.id } : {}),
+    ...(template.bed_id ? { bedId: template.bed_id } : {}),
+    title: taskAlertTitle(plant, template.bed_id, bedNames),
+    message: `${shape.verb} overdue by ${daysOverdue} day${plural(daysOverdue)}`,
+    severity: daysOverdue >= Math.max(2, halfCycle) ? 'critical' : 'warning',
+    iconKey: shape.iconKey,
+    daysOverdue,
+    created_at: nowIso,
+  };
+}
+
+/** The plant's name; else the bed's name ("Bed" if unnamed); else "Farm" for a farm-wide task. */
+function taskAlertTitle(
+  plant: Plant | null | undefined,
+  bedId: string | null | undefined,
+  bedNames: Record<string, string> | undefined
+): string {
+  if (!bedId) return plant?.name ?? 'Farm';
+  return plant?.name ?? bedNames?.[bedId] ?? 'Bed';
+}
+
+/** Conditions read off each plant's own fields: marked sick, and harvest readiness. */
+function plantAlerts(
+  activePlants: Plant[],
+  plantsWithHarvestTask: Set<string>,
+  now: number,
+  nowIso: string
+): FarmAlert[] {
+  const alerts: FarmAlert[] = [];
   for (const plant of activePlants) {
     // Health
     if (plant.health_status === 'sick') {
@@ -219,8 +275,8 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
     }
 
     // Watering, fertilising and pruning are not derived here — they arrive from
-    // their task templates above, so a care type switched off (which disables
-    // its template) can no longer keep firing a card the Care Plan has dropped.
+    // their task templates, so a care type switched off (which disables its
+    // template) can no longer keep firing a card the Care Plan has dropped.
 
     // Harvest-ready. One-shot readiness nudge: once the plant has actually been
     // harvested on or after its expected date the prompt is done, otherwise the
@@ -229,94 +285,115 @@ export function getFarmAlerts(inputs: FarmAlertInputs): FarmAlert[] {
     // the guard below is what keeps those from being reported twice.
     if (plantsWithHarvestTask.has(plant.id)) continue;
 
-    const toHarvest = daysSince(plant.expected_harvest_date, now);
-    // `daysSince` counts back from today, so a *later* date yields a *smaller*
-    // number: the gap between the two is how far the harvest fell after the
-    // expected date, which is what `isHarvestSatisfied` reads. That rule is
-    // shared with the Care Plan's Harvest Ready section — cut-and-come-again
-    // crops get no care task of their own, so it is the only thing re-arming
-    // their prompt one picking cycle on.
-    const sinceHarvest = daysSince(plant.last_harvest_date, now);
-    const alreadyHarvested = isHarvestSatisfied(
-      plant.harvest_mode,
-      sinceHarvest !== null && toHarvest !== null ? toHarvest - sinceHarvest : null,
-      sinceHarvest
-    );
-    if (toHarvest !== null && toHarvest >= 0 && !alreadyHarvested) {
-      alerts.push({
-        id: `harvest_${plant.id}`,
-        type: 'harvest_due',
-        plantId: plant.id,
-        title: plant.name,
-        message:
-          toHarvest === 0
-            ? 'Ready to harvest today'
-            : `Harvest overdue by ${toHarvest} day${plural(toHarvest)}`,
-        severity: 'warning',
-        iconKey: 'alert.harvest_due',
-        daysOverdue: toHarvest,
-        created_at: nowIso,
-      });
-    }
+    const harvest = harvestReadyAlert(plant, now, nowIso);
+    if (harvest) alerts.push(harvest);
   }
+  return alerts;
+}
 
-  // Bed rotation alerts.
-  for (const status of rotationStatuses ?? []) {
-    const bedLabel = bedNames?.[status.bed_id] ?? 'Bed';
-    if (status.has_solanaceae_violation) {
-      alerts.push({
+/** The harvest-readiness nudge for a plant with no harvest task, or null. */
+function harvestReadyAlert(plant: Plant, now: number, nowIso: string): FarmAlert | null {
+  const toHarvest = daysSince(plant.expected_harvest_date, now);
+  // `daysSince` counts back from today, so a *later* date yields a *smaller*
+  // number: the gap between the two is how far the harvest fell after the
+  // expected date, which is what `isHarvestSatisfied` reads. That rule is
+  // shared with the Care Plan's Harvest Ready section — cut-and-come-again
+  // crops get no care task of their own, so it is the only thing re-arming
+  // their prompt one picking cycle on.
+  const sinceHarvest = daysSince(plant.last_harvest_date, now);
+  const alreadyHarvested = isHarvestSatisfied(
+    plant.harvest_mode,
+    sinceHarvest !== null && toHarvest !== null ? toHarvest - sinceHarvest : null,
+    sinceHarvest
+  );
+  if (toHarvest === null || toHarvest < 0 || alreadyHarvested) return null;
+  return {
+    id: `harvest_${plant.id}`,
+    type: 'harvest_due',
+    plantId: plant.id,
+    title: plant.name,
+    message:
+      toHarvest === 0
+        ? 'Ready to harvest today'
+        : `Harvest overdue by ${toHarvest} day${plural(toHarvest)}`,
+    severity: 'warning',
+    iconKey: 'alert.harvest_due',
+    daysOverdue: toHarvest,
+    created_at: nowIso,
+  };
+}
+
+/** Bed rotation alerts. */
+function rotationAlerts(
+  statuses: RotationStatus[],
+  bedNames: Record<string, string> | undefined,
+  nowIso: string
+): FarmAlert[] {
+  return statuses
+    .filter((status) => status.has_solanaceae_violation)
+    .map(
+      (status): FarmAlert => ({
         id: `rotation_${status.bed_id}`,
         type: 'rotation_due',
         bedId: status.bed_id,
-        title: bedLabel,
+        title: bedNames?.[status.bed_id] ?? 'Bed',
         message: 'Same-family repeat — rotate this bed',
         severity: 'critical',
         iconKey: 'alert.rotation_due',
         daysOverdue: 0,
         created_at: nowIso,
-      });
-    }
-  }
+      })
+    );
+}
 
-  // Seasonal green-manure suggestion — a single farm-level card rather than one
-  // per bed. Computed straight from the calendar so it never blinks out while
-  // bed data loads; it drops away ("completes") once every bed is planted.
-  if (emptyOrRestingBedCount !== 0) {
-    const nowDate = new Date(now);
-    const month = nowDate.getMonth() + 1;
-    const gm = getGreenManureForMonth(month);
-    alerts.push({
-      id: `green_manure_${nowDate.getFullYear()}_${month}`,
-      type: 'bed_resting_end',
-      title: 'Green manure',
-      message:
-        emptyOrRestingBedCount != null
-          ? `Sow ${gm.name} in ${emptyOrRestingBedCount} empty bed${plural(emptyOrRestingBedCount)}`
-          : `Sow ${gm.name} green manure in empty beds`,
-      severity: 'info',
-      iconKey: 'alert.bed_resting_end',
-      daysOverdue: 0,
-      created_at: nowIso,
-    });
-  }
+/**
+ * Seasonal green-manure suggestion — a single farm-level card rather than one
+ * per bed. Computed straight from the calendar so it never blinks out while
+ * bed data loads; it drops away ("completes") once every bed is planted.
+ */
+function greenManureAlert(
+  emptyOrRestingBedCount: number | null | undefined,
+  now: number,
+  nowIso: string
+): FarmAlert | null {
+  if (emptyOrRestingBedCount === 0) return null;
+  const nowDate = new Date(now);
+  const month = nowDate.getMonth() + 1;
+  const gm = getGreenManureForMonth(month);
+  return {
+    id: `green_manure_${nowDate.getFullYear()}_${month}`,
+    type: 'bed_resting_end',
+    title: 'Green manure',
+    message:
+      emptyOrRestingBedCount != null
+        ? `Sow ${gm.name} in ${emptyOrRestingBedCount} empty bed${plural(emptyOrRestingBedCount)}`
+        : `Sow ${gm.name} green manure in empty beds`,
+    severity: 'info',
+    iconKey: 'alert.bed_resting_end',
+    daysOverdue: 0,
+    created_at: nowIso,
+  };
+}
 
-  // Harvest-gap warnings (two same-guild beds clearing within 21 days).
-  for (const gap of harvestGapWarnings ?? []) {
-    const bedLabel = bedNames?.[gap.bed_id] ?? 'Bed';
-    alerts.push({
+/** Harvest-gap warnings (two same-guild beds clearing within 21 days). */
+function harvestGapAlerts(
+  gaps: HarvestGapWarning[],
+  bedNames: Record<string, string> | undefined,
+  nowIso: string
+): FarmAlert[] {
+  return gaps.map(
+    (gap): FarmAlert => ({
       id: `gap_${gap.bed_id}_${gap.gap_start}`,
       type: 'rotation_due',
       bedId: gap.bed_id,
-      title: bedLabel,
+      title: bedNames?.[gap.bed_id] ?? 'Bed',
       message: `Harvest gap risk (${gap.category}) — stagger clearing`,
       severity: 'warning',
       iconKey: 'alert.rotation_due',
       daysOverdue: 0,
       created_at: nowIso,
-    });
-  }
-
-  return sortAlerts(alerts);
+    })
+  );
 }
 
 /** Sort most-urgent-first: severity desc, then days overdue desc, then title. */
