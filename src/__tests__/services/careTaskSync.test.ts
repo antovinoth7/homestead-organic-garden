@@ -15,11 +15,12 @@ import {
 } from '@/services/taskSchedulingLogic';
 import { getCoconutAgeInfo } from '@/utils/plantHelpers';
 import { getEffectiveWateringIntervalDays } from '@/utils/plantWatering';
-import type { PlantType } from '@/types/database.types';
+import type { Plant, PlantType, TaskType } from '@/types/database.types';
 import { makePlant } from '../fixtures/plant.fixtures';
 import { makeTaskTemplate } from '../fixtures/task.fixtures';
 
-const careSet = (plant: Parameters<typeof desiredCareTasks>[0]) =>
+/** The desired care set as [type, interval, enabled] rows, for compact assertions. */
+const careSet = (plant: Plant): [TaskType, number | null, boolean][] =>
   desiredCareTasks(plant).map(({ taskType, frequency, enabled }) => [taskType, frequency, enabled]);
 
 describe('desiredCareTasks', () => {
