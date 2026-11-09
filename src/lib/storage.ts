@@ -89,12 +89,12 @@ export const getLocationStorageKey = (uid: string | null | undefined): string =>
  * The last two are written via `safeSetItem` as plain strings, so the array
  * write used for every other key corrupts them.
  */
-const PRESERVED_KEYS: string[] = [
+const PRESERVED_KEYS = new Set<string>([
   STORAGE_KEYS.OFFLINE_QUEUE,
   STORAGE_KEYS.OFFLINE_DEAD_LETTER,
   STORAGE_KEYS.ONBOARDING_COMPLETE,
-];
-const SCALAR_KEYS_TO_REMOVE: string[] = [STORAGE_KEYS.LAST_SYNC];
+]);
+const SCALAR_KEYS_TO_REMOVE = new Set<string>([STORAGE_KEYS.LAST_SYNC]);
 
 /**
  * Clear cached data from AsyncStorage.
@@ -111,7 +111,7 @@ export const clearAllData = async (uid?: string): Promise<void> => {
   try {
     invalidateAll();
     const keys = Object.values(STORAGE_KEYS).filter(
-      (key) => !PRESERVED_KEYS.includes(key) && !SCALAR_KEYS_TO_REMOVE.includes(key)
+      (key) => !PRESERVED_KEYS.has(key) && !SCALAR_KEYS_TO_REMOVE.has(key)
     );
     for (const key of keys) {
       await safeSetData(key, []);
