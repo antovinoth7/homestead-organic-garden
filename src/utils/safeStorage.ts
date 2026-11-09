@@ -17,7 +17,7 @@ interface QueueItem {
 const MAX_QUEUE_SIZE = 100; // Prevent memory overflow
 
 class StorageQueue {
-  private queue: QueueItem[] = [];
+  private readonly queue: QueueItem[] = [];
   private isProcessing = false;
 
   async add<T>(operation: () => Promise<T>): Promise<T> {
@@ -30,7 +30,8 @@ class StorageQueue {
       }
 
       this.queue.push({ operation, resolve, reject });
-      this.process();
+      // Fire-and-forget: process() settles every item itself and never rejects.
+      void this.process();
     });
   }
 

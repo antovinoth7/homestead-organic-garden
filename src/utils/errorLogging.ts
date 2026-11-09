@@ -40,7 +40,7 @@ const sanitizeContext = (
 export const logError = (
   type: ErrorLog['type'],
   message: string,
-  error?: Error | unknown,
+  error?: unknown,
   context?: Record<string, unknown>
 ): void => {
   const userId = currentUserId;
@@ -71,11 +71,25 @@ export const logError = (
   logger.error(`[${type.toUpperCase()}] ${message}`, error instanceof Error ? error : undefined);
 
   // Send to error tracker (can forward to Sentry)
-  import('../utils/errorTracker').then(({ errorTracker }) => {
-    errorTracker.trackError(message, error instanceof Error ? error : undefined, enrichedContext, {
-      level,
+  // Best-effort: a tracker failure must never surface as an unhandled rejection
+  // from the logging path. `logger` only writes to the console, so this cannot loop.
+  import('../utils/errorTracker')
+    .then(({ errorTracker }) =>
+      errorTracker.trackError(
+        message,
+        error instanceof Error ? error : undefined,
+        enrichedContext,
+        {
+          level,
+        }
+      )
+    )
+    .catch((trackerError: unknown) => {
+      logger.warn(
+        'Error tracker unavailable',
+        trackerError instanceof Error ? trackerError : undefined
+      );
     });
-  });
 };
 
 /**
