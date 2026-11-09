@@ -65,7 +65,9 @@ const applyHarvestSideEffects = async (entry: JournalEntry): Promise<void> => {
   try {
     const { getPlant, updatePlant } = await import('./plants');
     const plant = await getPlant(plantId);
-    const current = plant?.last_harvest_date ? new Date(plant.last_harvest_date).getTime() : NaN;
+    const current = plant?.last_harvest_date
+      ? new Date(plant.last_harvest_date).getTime()
+      : Number.NaN;
     if (Number.isNaN(current) || new Date(entry.created_at).getTime() > current) {
       await updatePlant(plantId, { last_harvest_date: entry.created_at });
     }

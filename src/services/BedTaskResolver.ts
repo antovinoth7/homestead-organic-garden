@@ -50,37 +50,36 @@ function computeBedTasks(plants: Plant[]): BedTaskSpec[] {
     });
   }
 
-  // Jeevamrutha: fixed schedule
-  tasks.push({
-    task_type: 'fertilise',
-    task_subtype: 'jeevamrutha',
-    frequency_days: JEEVAMRUTHA_INTERVAL_DAYS,
-    label: 'Apply Jeevamrutha',
-  });
-
-  // Weeding: fixed
-  tasks.push({
-    task_type: 'spray',
-    task_subtype: 'weeding',
-    frequency_days: WEEDING_INTERVAL_DAYS,
-    label: 'Weed bed',
-  });
-
-  // Wood ash: potassium supplement
-  tasks.push({
-    task_type: 'fertilise',
-    task_subtype: 'wood_ash',
-    frequency_days: WOOD_ASH_INTERVAL_DAYS,
-    label: 'Apply wood ash (potassium)',
-  });
-
-  // Mulch check
-  tasks.push({
-    task_type: 'mulch',
-    task_subtype: 'mulch',
-    frequency_days: MULCH_INTERVAL_DAYS,
-    label: 'Check and top up mulch',
-  });
+  tasks.push(
+    // Jeevamrutha: fixed schedule
+    {
+      task_type: 'fertilise',
+      task_subtype: 'jeevamrutha',
+      frequency_days: JEEVAMRUTHA_INTERVAL_DAYS,
+      label: 'Apply Jeevamrutha',
+    },
+    // Weeding: fixed
+    {
+      task_type: 'spray',
+      task_subtype: 'weeding',
+      frequency_days: WEEDING_INTERVAL_DAYS,
+      label: 'Weed bed',
+    },
+    // Wood ash: potassium supplement
+    {
+      task_type: 'fertilise',
+      task_subtype: 'wood_ash',
+      frequency_days: WOOD_ASH_INTERVAL_DAYS,
+      label: 'Apply wood ash (potassium)',
+    },
+    // Mulch check
+    {
+      task_type: 'mulch',
+      task_subtype: 'mulch',
+      frequency_days: MULCH_INTERVAL_DAYS,
+      label: 'Check and top up mulch',
+    }
+  );
 
   // Dynamic accumulator chop-drop tasks
   for (const plant of plants) {

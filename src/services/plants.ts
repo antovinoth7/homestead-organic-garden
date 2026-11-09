@@ -187,7 +187,7 @@ const fetchPlantsPage = async (
 
     return {
       plants: activePlants,
-      lastDoc: snapshot.docs[snapshot.docs.length - 1],
+      lastDoc: snapshot.docs.at(-1),
       // Raw doc count (before the is_deleted filter) so callers can paginate on
       // pages, not on the filtered active count — a full page of raw docs may
       // contain soft-deleted docs and yield fewer active plants.
@@ -1056,7 +1056,7 @@ export const unpinGrowthStage = async (plantId: string): Promise<void> => {
   const history = [...(existing.growth_stage_history ?? [])];
   // Mark the last pin entry as unpinned
   if (history.length > 0) {
-    const lastEntry = history[history.length - 1]!;
+    const lastEntry = history.at(-1)!;
     if (!lastEntry.unpinnedAt) {
       history[history.length - 1] = {
         ...lastEntry,

@@ -118,7 +118,7 @@ export function parseOpenMeteoForecast(value: unknown): WeatherForecast {
   );
   const windSpeeds =
     json.daily?.wind_speed_10m_max == null
-      ? Array<number | null>(length).fill(null)
+      ? new Array<number | null>(length).fill(null)
       : asOptionalNumberArray(json.daily.wind_speed_10m_max, length, 'wind_speed_10m_max');
 
   const daily: DailyWeather[] = times.map((date, i) => {
@@ -261,7 +261,7 @@ function cacheKey(lat: number, lng: number): string {
 
 const STORAGE_PREFIX = `${KEYS.WEATHER}:${CACHE_KEYS.WEATHER}:`;
 /** The shape `cacheKey` writes today — anything else under the prefix is stale. */
-const CURRENT_STORAGE_KEY = new RegExp(`^${STORAGE_PREFIX}-?\\d+\\.\\d{4},-?\\d+\\.\\d{4}$`);
+const CURRENT_STORAGE_KEY = new RegExp(String.raw`^${STORAGE_PREFIX}-?\d+\.\d{4},-?\d+\.\d{4}$`);
 
 /**
  * The cache key used two decimals before this version, so every forecast a

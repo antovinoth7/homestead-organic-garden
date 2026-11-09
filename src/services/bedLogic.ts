@@ -68,8 +68,7 @@ export function getHarvestGapWarnings(beds: Bed[]): HarvestGapWarning[] {
   const bedsByType: Partial<Record<BedType, Bed[]>> = {};
 
   for (const bed of beds) {
-    if (!bedsByType[bed.type]) bedsByType[bed.type] = [];
-    bedsByType[bed.type]!.push(bed);
+    (bedsByType[bed.type] ??= []).push(bed);
   }
 
   for (const [type, typeBeds] of Object.entries(bedsByType) as [BedType, Bed[]][]) {
