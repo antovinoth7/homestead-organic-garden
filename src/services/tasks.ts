@@ -35,14 +35,9 @@ import {
   CACHE_KEYS,
 } from '../lib/dataCache';
 import { TASK_LABELS, EARLY_COMPLETION_BLOCK_REASON } from '../utils/taskConstants';
-import { getCoconutAgeInfo, getEffectiveGrowthStage, isPlantArchived } from '../utils/plantHelpers';
-import { getEffectiveWateringIntervalDays } from '../utils/plantWatering';
+import { getEffectiveGrowthStage, isPlantArchived } from '../utils/plantHelpers';
 import { getPlantCareProfile } from '../utils/plantCareDefaults';
 import {
-  TASK_TYPE_TO_PLANT_LAST_CARE_FIELD,
-  parseDateValue,
-  getLastCareDate,
-  computeNextDueAt,
   computeSkipDate,
   calendarDaysOverdue,
   isEarlyCompletionBlocked,
@@ -50,7 +45,13 @@ import {
   isSkipBlocked,
   isSyncOwnedTemplate,
   computeScheduleAfterCompletion,
-  resolveCareInterval,
+  templateChangeAfterCompletion,
+  plantCareStampAfterCompletion,
+  oneShotArchivePlantId,
+  desiredCareTasks,
+  careNextDueAt,
+  careTemplateUpdates,
+  type DesiredCareTask,
 } from './taskSchedulingLogic';
 import {
   addDaysToDateKey,
@@ -532,6 +533,64 @@ interface TaskDoneOps {
  */
 type PlantWriteData = Record<string, string | number | null>;
 
+/** What the farmer recorded about a completion — shared by the Firestore log and its cached copy. */
+type CompletionDetails = Required<
+  Pick<
+    TaskLog,
+    | 'notes'
+    | 'product_used'
+    | 'completed_early'
+    | 'completion_reason'
+    | 'input_quantity'
+    | 'input_unit'
+    | 'treated_area'
+    | 'area_unit'
+    | 'labour_minutes'
+  >
+>;
+
+const completionDetails = (
+  notes: string | undefined,
+  productUsed: string | undefined,
+  completedEarly: boolean,
+  completionReason: string | null,
+  farmDetails: TaskFarmDetails | undefined
+): CompletionDetails => ({
+  notes: notes || null,
+  product_used: productUsed || null,
+  completed_early: completedEarly,
+  completion_reason: completionReason,
+  input_quantity: farmDetails?.inputQuantity ?? null,
+  input_unit: farmDetails?.inputUnit?.trim() || null,
+  treated_area: farmDetails?.treatedArea ?? null,
+  area_unit: farmDetails?.areaUnit?.trim() || null,
+  labour_minutes: farmDetails?.labourMinutes ?? null,
+});
+
+/**
+ * A completion's schedule change as the template write and the matching cache
+ * patch (same keys, same order), or null when the template is left as it is.
+ */
+const templateCompletionUpdate = (
+  change: ReturnType<typeof templateChangeAfterCompletion>
+): {
+  data: { next_due_at?: Timestamp; enabled?: boolean };
+  patch: Partial<Pick<TaskTemplate, 'enabled' | 'next_due_at'>>;
+} | null => {
+  if (change.enabled === undefined && !change.nextDueAt) return null;
+  const data: { next_due_at?: Timestamp; enabled?: boolean } = {};
+  const patch: Partial<Pick<TaskTemplate, 'enabled' | 'next_due_at'>> = {};
+  if (change.enabled === false) {
+    data.enabled = false;
+    patch.enabled = false;
+  }
+  if (change.nextDueAt) {
+    data.next_due_at = Timestamp.fromDate(change.nextDueAt);
+    patch.next_due_at = change.nextDueAt.toISOString();
+  }
+  return { data, patch };
+};
+
 const buildTaskDoneOps = (
   template: TaskTemplate,
   userId: string,
@@ -556,7 +615,13 @@ const buildTaskDoneOps = (
   );
   const completedEarly = isFutureTask(template, doneAt);
   const completionReason = options?.completionReason?.trim() || null;
-  const farmDetails = options?.farmDetails;
+  const details = completionDetails(
+    notes,
+    productUsed,
+    completedEarly,
+    completionReason,
+    options?.farmDetails
+  );
 
   // Insert task log with optional notes
   const logRef = doc(collection(db, TASK_LOGS_COLLECTION));
@@ -566,46 +631,25 @@ const buildTaskDoneOps = (
     plant_id: template.plant_id,
     task_type: template.task_type,
     done_at: Timestamp.fromDate(doneAt),
-    notes: notes || null,
-    product_used: productUsed || null,
-    completed_early: completedEarly,
-    completion_reason: completionReason,
-    input_quantity: farmDetails?.inputQuantity ?? null,
-    input_unit: farmDetails?.inputUnit?.trim() || null,
-    treated_area: farmDetails?.treatedArea ?? null,
-    area_unit: farmDetails?.areaUnit?.trim() || null,
-    labour_minutes: farmDetails?.labourMinutes ?? null,
+    ...details,
     created_at: Timestamp.now(),
   };
 
   // Update next due date
-  const templateUpdates: { next_due_at?: Timestamp; enabled?: boolean } = {};
-  let nextDueAtIso: string | undefined;
-  if (frequencyDays <= 0) {
-    templateUpdates.enabled = false;
-    templateUpdates.next_due_at = Timestamp.fromDate(doneAt);
-    nextDueAtIso = doneAtIso;
-  } else if (nextDueAt && !Number.isNaN(nextDueAt.getTime())) {
-    templateUpdates.next_due_at = Timestamp.fromDate(nextDueAt);
-    nextDueAtIso = nextDueAt.toISOString();
-  }
-  const hasTemplateUpdate = Object.keys(templateUpdates).length > 0;
+  const templateUpdate = templateCompletionUpdate(
+    templateChangeAfterCompletion(frequencyDays, nextDueAt, doneAt)
+  );
 
-  // Determine plant last-care update. A water completion also stamps the
-  // multiplier it used, so the overdue math can read the decision back instead
-  // of re-deriving it from a season (and a forecast) that have since moved on.
-  const plantLastCareField = TASK_TYPE_TO_PLANT_LAST_CARE_FIELD[template.task_type];
-  const plantCareUpdate: Partial<Plant> | null = plantLastCareField
-    ? {
-        [plantLastCareField]: doneAtIso,
-        ...(wateringMultiplier !== null
-          ? {
-              last_watering_multiplier: wateringMultiplier,
-              last_watering_adjustment: null,
-            }
-          : {}),
-      }
-    : null;
+  // Determine plant last-care update (see plantCareStampAfterCompletion).
+  const plantCareUpdate = plantCareStampAfterCompletion(
+    template.task_type,
+    doneAtIso,
+    wateringMultiplier
+  );
+  const plantStamp =
+    template.plant_id && plantCareUpdate
+      ? { plantId: template.plant_id, data: plantCareUpdate }
+      : null;
 
   const newTaskLog: TaskLog = {
     id: logRef.id,
@@ -614,15 +658,7 @@ const buildTaskDoneOps = (
     plant_id: template.plant_id,
     task_type: template.task_type,
     done_at: doneAtIso,
-    notes: notes || null,
-    product_used: productUsed || null,
-    completed_early: completedEarly,
-    completion_reason: completionReason,
-    input_quantity: farmDetails?.inputQuantity ?? null,
-    input_unit: farmDetails?.inputUnit?.trim() || null,
-    treated_area: farmDetails?.treatedArea ?? null,
-    area_unit: farmDetails?.areaUnit?.trim() || null,
-    labour_minutes: farmDetails?.labourMinutes ?? null,
+    ...details,
     created_at: doneAtIso,
   };
 
@@ -632,49 +668,30 @@ const buildTaskDoneOps = (
     ? BED_TASK_SUBTYPE_DATE_FIELD[template.task_subtype]
     : undefined;
 
-  // For one_shot annual plants: completing a harvest task auto-archives the plant.
-  let archiveOneShotPlantId: string | null = null;
-  if (template.task_type === 'harvest' && template.plant_id) {
-    const harvestedPlant = cachedPlants.find((p) => p.id === template.plant_id);
-    if (harvestedPlant?.harvest_mode === 'one_shot' && !isPlantArchived(harvestedPlant)) {
-      archiveOneShotPlantId = template.plant_id;
-    }
-  }
-
   return {
     log: { ref: logRef, data: logData },
-    templateUpdate: hasTemplateUpdate
-      ? { ref: doc(db, TASKS_COLLECTION, template.id), data: templateUpdates }
+    templateUpdate: templateUpdate
+      ? { ref: doc(db, TASKS_COLLECTION, template.id), data: templateUpdate.data }
       : null,
-    plantUpdate:
-      template.plant_id && plantCareUpdate
-        ? {
-            ref: doc(db, PLANTS_COLLECTION, template.plant_id),
-            data: plantCareUpdate as PlantWriteData,
-          }
-        : null,
+    plantUpdate: plantStamp
+      ? {
+          ref: doc(db, PLANTS_COLLECTION, plantStamp.plantId),
+          data: plantStamp.data as PlantWriteData,
+        }
+      : null,
     cache: {
       newTaskLog,
       taskId: template.id,
-      taskPatch: hasTemplateUpdate
-        ? {
-            ...(typeof templateUpdates.enabled === 'boolean'
-              ? { enabled: templateUpdates.enabled }
-              : {}),
-            ...(nextDueAtIso ? { next_due_at: nextDueAtIso } : {}),
-          }
-        : null,
-      plantPatch:
-        template.plant_id && plantCareUpdate
-          ? { plantId: template.plant_id, data: plantCareUpdate }
-          : null,
+      taskPatch: templateUpdate?.patch ?? null,
+      plantPatch: plantStamp,
     },
     sideEffects: {
       bedStamp:
         template.bed_id && bedDateField
           ? { bedId: template.bed_id, field: bedDateField, value: doneAtIso }
           : null,
-      archiveOneShotPlantId,
+      // For one_shot annual plants: completing a harvest task auto-archives the plant.
+      archiveOneShotPlantId: oneShotArchivePlantId(template, cachedPlants),
     },
   };
 };
@@ -1199,62 +1216,90 @@ export interface SyncCareTasksResult {
   updated: TaskType[];
 }
 
-export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasksResult> => {
-  const result: SyncCareTasksResult = { created: [], updated: [] };
-  if (!plant?.id) return result;
-
-  // Archived plants have their tasks disabled in archivePlant() — skip sync.
-  if (isPlantArchived(plant)) return result;
-
-  // Every care type the plant could have a template for, with its on/off intent.
-  // Disabled types are kept (not filtered out) so an existing template can be
-  // flipped to enabled: false below — otherwise turning a care type off would
-  // leave a stale "Active" task on the Care Plan and detail screen.
-  const desiredFrequencies: {
-    taskType: TaskType;
-    frequency: number | null | undefined;
-    enabled: boolean;
-  }[] = [
-    {
-      taskType: 'water',
-      frequency: resolveCareInterval(plant, 'watering'),
-      enabled: plant.watering_enabled !== false,
-    },
-    {
-      taskType: 'fertilise',
-      frequency: resolveCareInterval(plant, 'fertilising'),
-      enabled: plant.fertilising_enabled !== false,
-    },
-    {
-      taskType: 'prune',
-      frequency: resolveCareInterval(plant, 'pruning'),
-      enabled: plant.pruning_enabled !== false,
-    },
-  ];
-
-  // For coconut trees, auto-derive a Harvest task from the tree's age.
-  // harvestFrequencyDays === 0 means the tree is not yet bearing.
-  if (plant.plant_type === 'coconut_tree' && plant.planting_date) {
-    const ageInfo = getCoconutAgeInfo(plant.planting_date);
-    if (ageInfo && ageInfo.harvestFrequencyDays > 0) {
-      desiredFrequencies.push({
-        taskType: 'harvest',
-        frequency: ageInfo.harvestFrequencyDays,
-        enabled: true,
-      });
+/**
+ * Switch off every enabled template in the list, one write at a time (each
+ * write updates the shared cache the next one reads). True if any changed.
+ */
+const disableEnabledTemplates = async (templates: TaskTemplate[]): Promise<boolean> => {
+  let changed = false;
+  for (const task of templates) {
+    if (task.enabled) {
+      await updateTaskTemplate(task.id, { enabled: false });
+      changed = true;
     }
   }
+  return changed;
+};
 
-  // For perennial plants (Type 2), maintain a recurring "harvest_leaves" task
-  // so the user is prompted to log leaf/produce weight on a fixed cycle.
-  // Default 14-day cycle; permanent plants use their own harvest cadence (coconut above).
-  if (plant.lifecycle_type === 'perennial') {
-    desiredFrequencies.push({
-      taskType: 'harvest_leaves',
-      frequency: 14,
-      enabled: true,
-    });
+/**
+ * Bring a plant's sync-owned templates of one care type in line with what the
+ * plant wants, recording every change in `result`.
+ */
+const reconcileCareType = async (
+  plant: Plant,
+  { taskType, frequency, enabled }: DesiredCareTask,
+  plantTasks: TaskTemplate[],
+  result: SyncCareTasksResult
+): Promise<void> => {
+  // Collect every template of this type for the plant. Using filter (not a
+  // single find) is deliberate: if duplicate templates ever got created for
+  // the same plant + task type, all of them must be reconciled — otherwise a
+  // stale duplicate keeps reading "Active" (and firing reminders) after the
+  // care type is turned off.
+  const matching = plantTasks.filter((task) => task.task_type === taskType);
+
+  // Care type switched off by the farmer: disable every existing template so
+  // none linger on the Care Plan / detail screen and no reminders fire.
+  if (!enabled) {
+    if (await disableEnabledTemplates(matching)) result.updated.push(taskType);
+    return;
   }
+
+  // No interval could be resolved — not even a plant-type default, so the
+  // plant type is unrecognised. That is "unknown", not "switched off": leave
+  // whatever templates exist exactly as they are rather than disabling work
+  // the farmer is doing. Absence is not evidence (see CLAUDE.md), and this is
+  // the one branch a recovery action must never take.
+  if (frequency === null) return;
+
+  // Season-adjusted for water tasks; the stored frequency stays the base.
+  const nextDueAt = careNextDueAt(plant, taskType, frequency);
+
+  // Keep the first template as canonical and disable any duplicates so only
+  // one enabled template of this type survives.
+  const [existing, ...duplicates] = matching;
+  if (await disableEnabledTemplates(duplicates)) result.updated.push(taskType);
+
+  if (existing) {
+    const updates = careTemplateUpdates(existing, plant, taskType, frequency, nextDueAt);
+    if (Object.keys(updates).length > 0) {
+      await updateTaskTemplate(existing.id, updates);
+      result.updated.push(taskType);
+    }
+    return;
+  }
+
+  await createTaskTemplate({
+    plant_id: plant.id,
+    task_type: taskType,
+    frequency_days: frequency,
+    next_due_at: nextDueAt,
+    enabled: true,
+    preferred_time: null,
+    source: 'auto',
+  });
+  result.created.push(taskType);
+};
+
+export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasksResult> => {
+  if (!plant?.id) return { created: [], updated: [] };
+
+  // Archived plants have their tasks disabled in archivePlant() — skip sync.
+  if (isPlantArchived(plant)) return { created: [], updated: [] };
+
+  // Every care type the plant could have a template for, with its on/off intent
+  // (see desiredCareTasks — disabled types are kept so they can be switched off).
+  const desired = desiredCareTasks(plant);
 
   const existingTasks = await getTaskTemplates();
   // Only templates sync owns. A manually-created task for this plant is left
@@ -1263,114 +1308,12 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
   const plantTasks = existingTasks.filter(
     (task) => task.plant_id === plant.id && isSyncOwnedTemplate(task)
   );
-  const plantCreatedAt = parseDateValue(plant.created_at);
 
-  for (const item of desiredFrequencies) {
-    const { taskType, enabled } = item;
-    const frequency =
-      typeof item.frequency === 'number' && Number.isFinite(item.frequency) && item.frequency > 0
-        ? item.frequency
-        : null;
-    // Collect every template of this type for the plant. Using filter (not a
-    // single find) is deliberate: if duplicate templates ever got created for
-    // the same plant + task type, all of them must be reconciled — otherwise a
-    // stale duplicate keeps reading "Active" (and firing reminders) after the
-    // care type is turned off.
-    const matching = plantTasks.filter((task) => task.task_type === taskType);
-
-    // Care type switched off by the farmer: disable every existing template so
-    // none linger on the Care Plan / detail screen and no reminders fire.
-    if (!enabled) {
-      let changed = false;
-      for (const task of matching) {
-        if (task.enabled) {
-          await updateTaskTemplate(task.id, { enabled: false });
-          changed = true;
-        }
-      }
-      if (changed) result.updated.push(taskType);
-      continue;
-    }
-
-    // No interval could be resolved — not even a plant-type default, so the
-    // plant type is unrecognised. That is "unknown", not "switched off": leave
-    // whatever templates exist exactly as they are rather than disabling work
-    // the farmer is doing. Absence is not evidence (see CLAUDE.md), and this is
-    // the one branch a recovery action must never take.
-    if (frequency === null) continue;
-
-    // Apply the farm zone's season multiplier for water tasks. frequencyDays
-    // stored remains the user-configured base so the user's intent is preserved
-    // across seasons; only next_due_at is adjusted. The shared helper keeps this
-    // in step with the listing/alerts overdue math — and, because that helper
-    // now prefers the multiplier recorded at the last watering, a plant keeps
-    // the cadence it was actually put on rather than being re-derived into a
-    // different one the moment the calendar crosses a season.
-    const effectiveFrequency =
-      taskType === 'water' ? getEffectiveWateringIntervalDays(plant) ?? frequency : frequency;
-    const nextDueAt = computeNextDueAt(plant, taskType, effectiveFrequency);
-
-    // Keep the first template as canonical and disable any duplicates so only
-    // one enabled template of this type survives.
-    const [existing, ...duplicates] = matching;
-    let disabledDuplicate = false;
-    for (const dup of duplicates) {
-      if (dup.enabled) {
-        await updateTaskTemplate(dup.id, { enabled: false });
-        disabledDuplicate = true;
-      }
-    }
-    if (disabledDuplicate) result.updated.push(taskType);
-
-    if (existing) {
-      const updates: Partial<TaskTemplate> = {};
-      if (existing.frequency_days !== frequency) {
-        updates.frequency_days = frequency;
-        updates.next_due_at = nextDueAt;
-      }
-      if (!existing.enabled) {
-        // Re-enabling always means the schedule is resuming after a pause — a
-        // restored plant, or a care type switched back on — so the stored due
-        // date is stale by however long the gap was. Re-base it, or a plant
-        // restored after three months returns showing three months of overdue
-        // work nobody was expected to do. `computeNextDueAt` caps at today, so
-        // the task comes back due today rather than backdated.
-        updates.enabled = true;
-        updates.next_due_at = nextDueAt;
-      }
-      const existingDueDate = parseDateValue(existing.next_due_at);
-      if (
-        // No usable due date stored.
-        !existingDueDate ||
-        // Due date predates the plant itself.
-        (plantCreatedAt && existingDueDate < plantCreatedAt) ||
-        // Older builds seeded the first due date from "now" instead of the
-        // planting date; pull never-completed tasks back into agreement.
-        // Only for task types with a plant last-care field — completions of
-        // other types (harvest_leaves) are invisible on the plant doc.
-        (TASK_TYPE_TO_PLANT_LAST_CARE_FIELD[taskType] !== undefined &&
-          !parseDateValue(getLastCareDate(plant, taskType)) &&
-          existingDueDate > new Date(nextDueAt))
-      ) {
-        updates.next_due_at = nextDueAt;
-      }
-      if (Object.keys(updates).length > 0) {
-        await updateTaskTemplate(existing.id, updates);
-        result.updated.push(taskType);
-      }
-      continue;
-    }
-
-    await createTaskTemplate({
-      plant_id: plant.id,
-      task_type: taskType,
-      frequency_days: frequency,
-      next_due_at: nextDueAt,
-      enabled: true,
-      preferred_time: null,
-      source: 'auto',
-    });
-    result.created.push(taskType);
+  // One care type at a time: each step's writes update the template cache the
+  // next step reads.
+  const result: SyncCareTasksResult = { created: [], updated: [] };
+  for (const item of desired) {
+    await reconcileCareType(plant, item, plantTasks, result);
   }
 
   return result;
