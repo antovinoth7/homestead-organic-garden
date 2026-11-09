@@ -51,6 +51,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 56,
       gap: 10,
     },
+    // Placeholder rows on the 24px section gutter.
+    loadingRows: {
+      paddingHorizontal: 24,
+      paddingTop: 12,
+    },
     emptyText: {
       fontSize: 14,
       color: theme.textSecondary,

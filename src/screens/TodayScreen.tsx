@@ -25,7 +25,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   LayoutChangeEvent,
   RefreshControl,
@@ -47,6 +46,16 @@ import { PlotCarousel } from '@/components/today/PlotCarousel';
 import { NeedsActionRow } from '@/components/today/NeedsActionRow';
 import { SeasonBlock } from '@/components/today/SeasonBlock';
 import { ForecastOverlay } from '@/components/today/ForecastOverlay';
+import {
+  Skeleton,
+  SkeletonCards,
+  SkeletonList,
+  SkeletonTiles,
+  type SkeletonCardSize,
+} from '@/components/skeleton';
+
+/** First-launch placeholder: one plot card's worth of block. */
+const TODAY_SKELETON_CARDS: readonly SkeletonCardSize[] = ['tall'];
 
 export default function TodayScreen(): React.JSX.Element {
   const navigation = useNavigation<TodayScreenNavigationProp>();
@@ -311,10 +320,11 @@ export default function TodayScreen(): React.JSX.Element {
           onPressTasks={goToCarePlan}
           onPressNeedAction={goToNeedsAction}
         />
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={styles.loadingText}>Loading your farm…</Text>
-        </View>
+        <Skeleton label="Loading your farm" style={styles.loadingState}>
+          <SkeletonCards label="Loading plots" cards={TODAY_SKELETON_CARDS} />
+          <SkeletonList label="Loading jobs" count={3} thumb="none" />
+          <SkeletonTiles label="Loading season" count={2} tall style={styles.loadingTiles} />
+        </Skeleton>
       </View>
     );
   }

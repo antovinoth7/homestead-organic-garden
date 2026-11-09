@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   BackHandler,
   LayoutChangeEvent,
   Linking,
@@ -18,6 +17,7 @@ import {
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from 'react-native-svg';
 import { GardenIcon } from '@/components/GardenIcon';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { SkeletonCards, type SkeletonCardSize } from '@/components/skeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DailyWeather, WeatherForecast } from '@/types/database.types';
 import { Theme } from '@/theme/colors';
@@ -63,6 +63,9 @@ type Styles = ReturnType<typeof createStyles>;
  * hairline-coloured rail, which is to say it draws nothing, because a grey day
  * is not news.
  */
+/** Placeholder day cards while the first forecast is fetched. */
+const FORECAST_SKELETON_CARDS: readonly SkeletonCardSize[] = ['short', 'short', 'short'];
+
 function railTone(styles: Styles, theme: Theme, tone: WeatherTone): { rail: StyleProp<ViewStyle>; ink: string } {
   switch (tone) {
     case 'rain':
@@ -334,23 +337,23 @@ export const ForecastOverlay = React.memo(function ForecastOverlay({
           {forecastSectionLabel(today !== null, rows.length)}
         </Text>
 
-        {available.length === 0 ? (
+        {available.length === 0 && loading ? (
+          <SkeletonCards
+            label="Loading forecast"
+            cards={FORECAST_SKELETON_CARDS}
+            style={styles.loadingDays}
+          />
+        ) : available.length === 0 ? (
           <View style={styles.noDataBlock}>
-            {loading ? (
-              <ActivityIndicator color={theme.primary} />
-            ) : (
-              <>
-                <Text style={styles.noData}>No current forecast is available for this plot.</Text>
-                <TouchableOpacity
-                  style={styles.retryButton}
-                  onPress={onRetry}
-                  accessibilityRole="button"
-                  accessibilityLabel="Retry forecast"
-                >
-                  <Text style={styles.retryButtonText}>Retry</Text>
-                </TouchableOpacity>
-              </>
-            )}
+            <Text style={styles.noData}>No current forecast is available for this plot.</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={onRetry}
+              accessibilityRole="button"
+              accessibilityLabel="Retry forecast"
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.days}>

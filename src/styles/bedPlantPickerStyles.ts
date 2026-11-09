@@ -65,7 +65,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     confirmButtonDisabled: { backgroundColor: theme.textTertiary },
     confirmText: { color: theme.textInverse, fontSize: 16, ...font(theme, 'bodyBold', '700') },
-    loader: { flex: 1 },
 
     // ── Bottom sheet ─────────────────────────────────────────────────────────
     sheet: {

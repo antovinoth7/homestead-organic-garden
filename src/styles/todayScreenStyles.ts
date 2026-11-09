@@ -142,16 +142,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     // ─── List states ─────────────────────────────────────────────────────────
     // An all-clear day has no empty row: the section heading is withheld too,
     // so the screen runs plot cards straight into the season block.
+    // First-ever launch: the plot card, a few job rows and the season tiles.
     loadingState: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 12,
-      paddingVertical: 64,
+      paddingBottom: 24,
     },
-    loadingText: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      ...font(theme, 'body'),
+    loadingTiles: {
+      paddingHorizontal: 16,
+      marginTop: 10,
     },
     errorText: {
       fontSize: 13,

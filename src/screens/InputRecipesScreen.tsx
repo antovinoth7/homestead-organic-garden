@@ -1,11 +1,12 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { TAB_BAR_HEIGHT } from '@/components/FloatingTabBar';
 import { RecipeScaler } from '@/components/organicInput/RecipeScaler';
+import { SkeletonDetail } from '@/components/skeleton';
 import { createStyles } from '@/styles/inputRecipesStyles';
 import { ORGANIC_RECIPES } from '@/config/organicInputs';
 import type { RecipeId, OrganicInputRecipe } from '@/config/organicInputs';
@@ -174,14 +175,6 @@ export default function InputRecipesScreen(): React.JSX.Element {
 
   const activeRecipe = ORGANIC_RECIPES.find((r) => r.id === activeTab) ?? ORGANIC_RECIPES[0]!;
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <View style={[styles.headerBlock, { paddingTop: insets.top + 6 }]}>
@@ -222,14 +215,19 @@ export default function InputRecipesScreen(): React.JSX.Element {
         ))}
       </ScrollView>
 
-      <RecipePanel
-        recipe={activeRecipe}
-        landCents={cents}
-        bottomInset={TAB_BAR_HEIGHT + Math.max(insets.bottom, 8)}
-        onIncrement={handleIncrement}
-        onDecrement={handleDecrement}
-        styles={styles}
-      />
+      {/* The recipes are bundled; only the farm size that scales them loads. */}
+      {loading ? (
+        <SkeletonDetail label="Loading recipe" hero="none" sections={3} />
+      ) : (
+        <RecipePanel
+          recipe={activeRecipe}
+          landCents={cents}
+          bottomInset={TAB_BAR_HEIGHT + Math.max(insets.bottom, 8)}
+          onIncrement={handleIncrement}
+          onDecrement={handleDecrement}
+          styles={styles}
+        />
+      )}
     </View>
   );
 }

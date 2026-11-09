@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import type { Theme } from '@/theme/colors';
@@ -7,6 +7,7 @@ import { createStyles } from '@/styles/plantHistoryTabStyles';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
 import type { SegmentedTab } from '@/components/SegmentedTabs';
 import { ShowMoreFooter } from '@/components/ShowMoreFooter';
+import { SkeletonList } from '@/components/skeleton';
 import { usePlantHistory } from '@/hooks/usePlantHistory';
 import { filterHistoryItems } from '@/utils/plantHistory';
 import { paginateList } from '@/utils/progressiveList';
@@ -188,9 +189,12 @@ export function PlantHistorySection({ plant, journalEntries, enabled }: Props): 
     <View style={styles.container}>
       <SegmentedTabs tabs={FILTERS} activeKey={filter} onChange={handleFilterChange} />
       {loading && items.length === 0 ? (
-        <View style={styles.centered}>
-          <ActivityIndicator color={theme.primary} />
-        </View>
+        <SkeletonList
+          label="Loading history"
+          count={4}
+          thumb="none"
+          style={styles.loadingRows}
+        />
       ) : filtered.length === 0 ? (
         <View style={styles.centered}>
           <Ionicons name="time-outline" size={44} color={theme.textTertiary} />

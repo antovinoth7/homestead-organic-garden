@@ -60,8 +60,6 @@ export const createEditStyles = (theme: Theme): ReturnType<typeof StyleSheet.cre
       right: 0,
       bottom: 0,
       backgroundColor: theme.background,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
       zIndex: 10,
     },
     flexOne: {

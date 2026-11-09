@@ -121,6 +121,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
 
     // ── First-load skeleton ────────────────────────────────────────────────
+    // Geometry only: colour and pulse come from `SkeletonBlock`.
     skeleton: {
       gap: 10,
       marginTop: 14,
@@ -128,7 +129,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     skeletonBlock: {
       borderRadius: 14,
-      backgroundColor: theme.backgroundTertiary,
     },
     skeletonSummary: { height: 64 },
     skeletonBand: { height: 120 },

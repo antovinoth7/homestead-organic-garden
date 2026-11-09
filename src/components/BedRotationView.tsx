@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { RotationStatus } from '@/types/database.types';
@@ -8,6 +8,7 @@ import { BedWithCoverage } from '@/hooks/useBedData';
 import { getGreenManureForMonth } from '@/config/beds/greenManureEngine';
 import { getTransitionInputs } from '@/config/beds';
 import { RotationStatusCard } from '@/components/RotationStatusCard';
+import { SkeletonCards } from '@/components/skeleton';
 import { LOW_LEGUME_THRESHOLD } from '@/utils/filterAndSortBeds';
 import { computeFarmRotationSummary } from '@/utils/farmRotationSummary';
 import { getHarvestGapWarnings } from '@/services/beds';
@@ -121,7 +122,7 @@ export function BedRotationView({ beds, onOpenBed }: Props): React.JSX.Element {
       </View>
 
       {loading && rotationStatuses.length === 0 ? (
-        <ActivityIndicator style={styles.loader} color={theme.primary} />
+        <SkeletonCards label="Loading rotation status" flush />
       ) : (
         beds.map((bed) => {
           const status = statusByBed.get(bed.id);

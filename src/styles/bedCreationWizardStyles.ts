@@ -5,7 +5,6 @@ import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
-    loadingContainer: { alignItems: 'center', justifyContent: 'center' },
     progressContainer: {
       backgroundColor: theme.backgroundSecondary,
       borderBottomWidth: 1,
@@ -272,6 +271,8 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     },
     // Field groups
     fieldGroup: { marginBottom: 12 },
+    // Stands in for the location dropdown (44 = its minHeight) while plots load.
+    fieldLoading: { height: 44, borderRadius: radius(theme, 'input', 10) },
     // Step 2 — collapsible "More soil details" toggle
     lcMoreToggle: {
       flexDirection: 'row' as const,

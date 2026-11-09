@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -10,6 +10,7 @@ import { RotationStatusCard } from '@/components/RotationStatusCard';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { BedTopDownMap } from '@/components/BedTopDownMap';
 import { BedSuccessionTimeline } from '@/components/BedSuccessionTimeline';
+import { SkeletonDetail } from '@/components/skeleton';
 import {
   markBedAsResting,
   endBedRest,
@@ -137,10 +138,13 @@ export default function BedDetailScreen(): React.JSX.Element {
     return getSmartNextCrops(bed, plants);
   }, [bed, plants]);
 
+  const goBack = useCallback(() => navigation.goBack(), [navigation]);
+
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={styles.container}>
+        <ScreenHeader title="Bed" onBack={goBack} />
+        <SkeletonDetail label="Loading bed" hero="compact" sections={3} />
       </View>
     );
   }

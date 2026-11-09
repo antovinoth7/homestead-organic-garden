@@ -13,7 +13,6 @@ import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
-    centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     content: { flex: 1 },
     scrollContent: { paddingBottom: 24 },
 

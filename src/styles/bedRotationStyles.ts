@@ -26,12 +26,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       ...shadow(theme, 'iconButton'),
     },
     screenTitle: { fontSize: 20, color: theme.text, ...font(theme, 'title', '700') },
-    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+    loadingCards: { paddingHorizontal: 12, paddingTop: 12 },
     emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
     emptyTitle: { fontSize: 18, color: theme.text, marginTop: 16, ...font(theme, 'title', '600') },
     emptySubtitle: { color: theme.textSecondary, marginTop: 8, textAlign: 'center' },
     scrollContent: { padding: 12, paddingBottom: 120, gap: 12 },
-    loader: { marginTop: 24 },
     bottomSpacer: { height: 12 },
     // Farm summary card
     summaryCard: {

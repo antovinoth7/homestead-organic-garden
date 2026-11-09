@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Text,
   TextInput,
@@ -17,6 +16,7 @@ import { getAllPlants } from '@/services/plants';
 import { getGuildTemplate } from '@/config/beds';
 import { getPlantImage } from '@/config/referenceAssets';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
+import { SkeletonList } from '@/components/skeleton';
 import { createStyles } from '@/styles/bedPlantPickerStyles';
 import type { BedLayer, BedType, Plant, PlantEntry } from '@/types/database.types';
 import type { PlantRow } from '@/config/beds/guildTemplates';
@@ -272,7 +272,7 @@ function MyPlantsTab({
   }, [selectedIds, plants, layerMap, preselectedLayer, onAdd]);
 
   if (loading) {
-    return <ActivityIndicator style={styles.loader} color={theme.primary} />;
+    return <SkeletonList label="Loading plants" count={5} thumb="round" flush />;
   }
 
   if (plants.length === 0) {

@@ -8,7 +8,6 @@ jest.mock('react-native', () => {
       return React.createElement(name, props, children);
     };
   return {
-    ActivityIndicator: host('ActivityIndicator'),
     ScrollView: host('ScrollView'),
     Text: host('Text'),
     TouchableOpacity: host('TouchableOpacity'),

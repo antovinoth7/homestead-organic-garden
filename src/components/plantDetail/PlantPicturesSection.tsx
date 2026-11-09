@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import type { ImageStyle } from 'react-native';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/plantPicturesTabStyles';
 import { ImageZoomModal } from '@/components/ImageZoomModal';
 import { ShowMoreFooter } from '@/components/ShowMoreFooter';
+import { SkeletonGrid } from '@/components/skeleton';
 import { usePlantPhotos } from '@/hooks/usePlantPhotos';
 import { resolvedPlantPhotos } from '@/utils/plantPhotos';
 import { paginateList } from '@/utils/progressiveList';
@@ -47,9 +48,7 @@ export function PlantPicturesSection({ plant, journalEntries }: Props): React.JS
 
   if (loading && photos.length === 0) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={theme.primary} />
-      </View>
+      <SkeletonGrid label="Loading photos" count={6} />
     );
   }
 

@@ -37,6 +37,7 @@ import { CoreCareSection } from '@/components/catalog/sections/CoreCareSection';
 import { GrowingInfoSection } from '@/components/catalog/sections/GrowingInfoSection';
 import { PruningSection } from '@/components/catalog/sections/PruningSection';
 import { TolerancesSection } from '@/components/catalog/sections/TolerancesSection';
+import { SkeletonDetail } from '@/components/skeleton';
 import type {
   CatalogEditor,
   PickerSheetConfig,
@@ -638,9 +639,8 @@ export default function CatalogPlantDetailScreen(): React.JSX.Element {
 
   if (loading || !careForm || !editor) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={styles.container}>
+        <SkeletonDetail label="Loading plant profile" hero="photo" sections={3} />
       </View>
     );
   }

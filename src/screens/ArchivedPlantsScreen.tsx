@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, SectionList, TouchableOpacity, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   useFocusEffect,
@@ -21,6 +21,7 @@ import { Plant } from '../types/database.types';
 import { createStyles } from '../styles/archivedPlantsStyles';
 import { getErrorMessage } from '../utils/errorLogging';
 import { ConfirmDeleteModal } from '../components/modals/ConfirmDeleteModal';
+import { SkeletonList } from '@/components/skeleton';
 
 const NO_BED_KEY = '__no_bed__';
 
@@ -342,10 +343,7 @@ export default function ArchivedPlantsScreen(): React.JSX.Element {
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={styles.loadingText}>Loading deleted plants...</Text>
-        </View>
+        <SkeletonList label="Loading deleted plants" count={6} thumb="square" />
       ) : plants.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="archive-outline" size={64} color={theme.border} />

@@ -7,6 +7,7 @@ import { Plant, BedLayer } from '@/types/database.types';
 import { getAllPlants, updatePlant } from '@/services/plants';
 import { getBed } from '@/services/beds';
 import { createStyles } from '@/styles/bedPlantPickerStyles';
+import { SkeletonList } from '@/components/skeleton';
 import type {
   BedPlantPickerNavigationProp,
   BedPlantPickerRouteProp,
@@ -125,7 +126,7 @@ export default function BedPlantPickerScreen(): React.JSX.Element {
       </View>
 
       {loading ? (
-        <ActivityIndicator style={styles.loader} color={theme.primary} />
+        <SkeletonList label="Loading plants" count={6} thumb="round" />
       ) : (
         <FlatList
           data={plants}

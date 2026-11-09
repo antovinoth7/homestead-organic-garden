@@ -31,6 +31,7 @@ import { HeaderIconButton } from '@/components/header/HeaderIconButton';
 import { HeaderSearchField } from '@/components/header/HeaderSearchField';
 import { UndoToast } from '@/components/UndoToast';
 import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
+import { SkeletonList } from '@/components/skeleton';
 import { useBedOptions } from '@/hooks/useBedOptions';
 import { usePlantList } from '@/hooks/usePlantList';
 import { isPlantArchived } from '@/utils/plantHelpers';
@@ -560,14 +561,17 @@ export default function PlantsScreen(): React.JSX.Element {
     [styles.listContent, insets.bottom]
   );
 
+  // The first load paints placeholder rows (below), so only a pull spins.
   const refreshControl = useMemo(
-    () => <RefreshControl refreshing={loading || refreshing} onRefresh={refresh} />,
-    [loading, refreshing, refresh]
+    () => <RefreshControl refreshing={refreshing} onRefresh={refresh} />,
+    [refreshing, refresh]
   );
 
   const listEmpty = useMemo(
     () =>
-      loading ? null : (
+      loading ? (
+        <SkeletonList label="Loading plants" count={8} thumb="square" flush />
+      ) : (
         <View style={styles.emptyState}>
           <Ionicons name={emptyState.icon} size={64} color={emptyState.color} />
           <Text style={styles.emptyText}>{emptyState.title}</Text>

@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
 import { BottomSheetModal } from '@/components/BottomSheetModal';
+import { SkeletonList } from '@/components/skeleton';
 import { SheetHandle } from '@/components/SheetHandle';
 import { getAllPlants } from '@/services/plants';
 import { DEFAULT_PLANT_CATALOG, PLANT_CATEGORIES } from '@/services/plantCatalog';
@@ -191,7 +192,7 @@ export function PlantEntryResolverSheet({
             )}
           </>
         ) : loadingLinkable ? (
-          <ActivityIndicator color={theme.primary} style={styles.loader} />
+          <SkeletonList label="Loading plants" count={4} thumb="none" flush style={styles.loader} />
         ) : linkablePlants.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="search-outline" size={24} color={theme.textTertiary} />

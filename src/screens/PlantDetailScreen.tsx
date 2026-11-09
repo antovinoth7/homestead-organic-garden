@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,6 +33,7 @@ import { PlantHistorySection } from '@/components/plantDetail/PlantHistorySectio
 import { CoconutSection } from '@/components/CoconutSection';
 import { usePlantDetail } from '@/hooks/usePlantDetail';
 import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
+import { SkeletonDetail } from '@/components/skeleton';
 import {
   PlantDetailScreenNavigationProp,
   PlantDetailScreenRouteProp,
@@ -165,8 +166,8 @@ export default function PlantDetailScreen(): React.JSX.Element {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={styles.container}>
+        <SkeletonDetail label="Loading plant" hero="photo" sections={3} />
       </View>
     );
   }

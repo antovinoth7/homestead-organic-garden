@@ -19,6 +19,7 @@ import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import DiscardChangesModal from '@/components/modals/DiscardChangesModal';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { SkeletonForm } from '@/components/skeleton';
 import { bedTypeTitle } from '@/config/beds';
 import type {
   BedCreationWizardNavigationProp,
@@ -222,8 +223,9 @@ export default function BedCreationWizardScreen(): React.JSX.Element {
 
   if (wizard.initializing) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={styles.container}>
+        <ScreenHeader title={headerTitle} onBack={requestExit} />
+        <SkeletonForm label="Loading bed details" fields={5} />
       </View>
     );
   }

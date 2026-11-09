@@ -1,11 +1,12 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 import { useBedData, BedWithCoverage } from '@/hooks/useBedData';
 import { BedRotationView } from '@/components/BedRotationView';
+import { SkeletonCards } from '@/components/skeleton';
 import { createStyles } from '@/styles/bedRotationStyles';
 import type { BedRotationScreenNavigationProp } from '@/types/navigation.types';
 
@@ -36,9 +37,7 @@ export default function BedRotationScreen(): React.JSX.Element {
       </View>
 
       {loading && beds.length === 0 ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
+        <SkeletonCards label="Loading crop rotation" style={styles.loadingCards} />
       ) : beds.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="sync-outline" size={56} color={theme.textSecondary} />

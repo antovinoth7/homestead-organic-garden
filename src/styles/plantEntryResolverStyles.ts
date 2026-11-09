@@ -170,8 +170,9 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       paddingVertical: 10,
       alignItems: 'center' as const,
     },
+    // Placeholder rows while the linkable plants load.
     loader: {
-      marginVertical: 24,
+      marginVertical: 12,
     },
     revertBtnText: {
       fontSize: 13,

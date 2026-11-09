@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo } from 'react';
-import { View, Animated, useWindowDimensions } from 'react-native';
-import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import React, { useMemo } from 'react';
+import { View, useWindowDimensions } from 'react-native';
 import { useTheme } from '@/theme';
 import { createStyles } from '@/styles/managePlantCatalogStyles';
+import { Skeleton, SkeletonBlock } from '@/components/skeleton';
 
 interface Props {
   /** How many placeholder rows to draw — roughly one screenful. */
@@ -14,38 +14,19 @@ interface Props {
  *
  * Replaces a full-screen spinner, which blanked the list on every cold start
  * and told the user nothing about what was coming. These occupy the real row
- * metrics, so the list does not jump when the data lands.
- *
- * Plain `Animated` rather than a shimmer sweep: the app has no reanimated, and
- * a pulsing opacity reads as loading without a gradient to maintain.
+ * metrics, so the list does not jump when the data lands. The pulse comes from
+ * the shared `Skeleton`, so it matches every other loading screen.
  */
 function CatalogSkeletonRowsComponent({ count = 8 }: Readonly<Props>): React.JSX.Element {
   const theme = useTheme();
   const { fontScale } = useWindowDimensions();
   const styles = useMemo(() => createStyles(theme, fontScale), [theme, fontScale]);
 
-  const pulse = useAnimatedValue(0.4);
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0.4, duration: 700, useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
-
   const rows = useMemo(() => Array.from({ length: count }, (_, i) => i), [count]);
 
   return (
-    <View
-      style={styles.listContent}
-      accessibilityLabel="Loading catalog"
-      accessibilityRole="progressbar"
-    >
-      <View style={styles.skeletonHeader} />
+    <Skeleton style={styles.listContent} label="Loading catalog">
+      <SkeletonBlock style={styles.skeletonHeader} />
       {rows.map((index) => (
         <View
           key={index}
@@ -56,16 +37,16 @@ function CatalogSkeletonRowsComponent({ count = 8 }: Readonly<Props>): React.JSX
           ]}
         >
           <View style={styles.plantRowCompact}>
-            <Animated.View style={[styles.skeletonThumb, { opacity: pulse }]} />
+            <SkeletonBlock style={styles.skeletonThumb} />
             <View style={styles.plantInfo}>
-              <Animated.View style={[styles.skeletonLineWide, { opacity: pulse }]} />
-              <Animated.View style={[styles.skeletonLineNarrow, { opacity: pulse }]} />
+              <SkeletonBlock style={styles.skeletonLineWide} />
+              <SkeletonBlock style={styles.skeletonLineNarrow} />
             </View>
           </View>
           {index !== rows.length - 1 && <View style={styles.rowDivider} />}
         </View>
       ))}
-    </View>
+    </Skeleton>
   );
 }
 

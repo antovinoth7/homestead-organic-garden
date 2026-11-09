@@ -178,17 +178,6 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.error,
       ...font(theme, 'bodyStrong', '600'),
     },
-    loadingContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 12,
-    },
-    loadingText: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      ...font(theme, 'body'),
-    },
     emptyState: {
       flex: 1,
       alignItems: 'center',

@@ -281,6 +281,11 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       color: theme.textSecondary,
       ...font(theme, 'body'),
     },
+    // Day-card placeholders while the first forecast is fetched.
+    loadingDays: {
+      paddingHorizontal: CARD_GUTTER,
+      paddingTop: 0,
+    },
     noDataBlock: {
       alignItems: 'center',
       gap: 12,

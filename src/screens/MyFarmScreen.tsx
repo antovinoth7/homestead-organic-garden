@@ -12,6 +12,7 @@ import { PlotEditModal } from '@/components/modals/PlotEditModal';
 import { SectionEditSheet } from '@/components/modals/SectionEditSheet';
 import { LocationReassignModal } from '@/components/modals/LocationReassignModal';
 import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal';
+import { SkeletonCards, type SkeletonCardSize } from '@/components/skeleton';
 import { useLocationManager, hasSoilData } from '@/hooks/useLocationManager';
 
 const LOCATION_HELP = {
@@ -228,6 +229,9 @@ function SectionTile({
   );
 }
 
+/** First-load placeholder: the farm summary card, then one card per plot. */
+const MY_FARM_SKELETON_CARDS: readonly SkeletonCardSize[] = ['medium', 'tall', 'tall'];
+
 export default function MyFarmScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
@@ -351,10 +355,7 @@ export default function MyFarmScreen(): React.JSX.Element {
       </View>
 
       {loading ? (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={styles.loadingText}>Loading farm data...</Text>
-        </View>
+        <SkeletonCards label="Loading farm data" cards={MY_FARM_SKELETON_CARDS} />
       ) : (
         <ScrollView
           style={styles.content}

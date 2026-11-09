@@ -99,6 +99,7 @@ import { buildPlotRainBanner, RAIN_MOVE_DAYS, type PlotRainBanner } from '@/util
 import { locationKey } from '@/utils/locationHelpers';
 import { createStyles as createSectionStyles } from '@/styles/carePlanSectionStyles';
 import { createStyles as createBandStyles } from '@/styles/carePlanBandStyles';
+import { Skeleton, SkeletonBlock } from '@/components/skeleton';
 import {
   HARVEST_ROUND_KEY,
   OVERDUE_SECTION_KEY,
@@ -2211,18 +2212,14 @@ export default function CalendarScreen(): React.JSX.Element {
           </View>
         )}
         {initialLoading && tasks.length === 0 && (
-          <View
-            style={bandStyles.skeleton}
-            accessibilityRole="progressbar"
-            accessibilityLabel="Loading the care plan"
-          >
-            <View style={[bandStyles.skeletonBlock, bandStyles.skeletonSummary]} />
-            <View style={[bandStyles.skeletonBlock, bandStyles.skeletonBand]} />
-            <View style={[bandStyles.skeletonBlock, bandStyles.skeletonCard]} />
-            <View
-              style={[bandStyles.skeletonBlock, bandStyles.skeletonCard, bandStyles.skeletonFaded]}
-            />
-          </View>
+          <Skeleton style={bandStyles.skeleton} label="Loading the care plan">
+            <SkeletonBlock style={[bandStyles.skeletonBlock, bandStyles.skeletonSummary]} />
+            <SkeletonBlock style={[bandStyles.skeletonBlock, bandStyles.skeletonBand]} />
+            <SkeletonBlock style={[bandStyles.skeletonBlock, bandStyles.skeletonCard]} />
+            <View style={bandStyles.skeletonFaded}>
+              <SkeletonBlock style={[bandStyles.skeletonBlock, bandStyles.skeletonCard]} />
+            </View>
+          </Skeleton>
         )}
         {!isSearching && !initialLoading && !(loadError && tasks.length === 0) && (
           <CarePlanProgressCard summary={todaySummary} />

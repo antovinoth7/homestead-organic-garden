@@ -5,7 +5,6 @@ import {
   TextInput,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/theme';
@@ -22,6 +21,7 @@ import {
 import { createStyles } from '@/styles/bedCreationWizardStyles';
 import FieldLabelWithHelp from '@/components/FieldLabelWithHelp';
 import ThemedDropdown from '@/components/ThemedDropdown';
+import { Skeleton, SkeletonBlock } from '@/components/skeleton';
 import { GUILD_TEMPLATES } from '@/config/beds/guildTemplates';
 import { buildGeneratedBedNameBase, buildGeneratedBedName } from '@/utils/bedNameGenerator';
 
@@ -171,7 +171,9 @@ export function LandConditionsStep({
           style={styles.fieldLabelRow}
         />
         {locationsLoading ? (
-          <ActivityIndicator size="small" color={theme.primary} />
+          <Skeleton label="Loading locations">
+            <SkeletonBlock style={styles.fieldLoading} />
+          </Skeleton>
         ) : (
           <ThemedDropdown
             items={[

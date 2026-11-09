@@ -32,8 +32,6 @@ export const createStyles = (theme: Theme) =>
     },
     title: { fontSize: 22, color: theme.text, letterSpacing: -0.2, ...font(theme, 'title', '700') },
     content: { flex: 1 },
-    loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-    loadingText: { fontSize: 14, color: theme.textSecondary, ...font(theme, 'body') },
 
     // ── Section headers ──────────────────────────────────────────────────────
     sectionHeader: {

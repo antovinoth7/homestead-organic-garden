@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   FlatList,
-  ActivityIndicator,
   TouchableOpacity,
   Animated,
   Alert,
@@ -27,6 +26,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { HeaderIconButton } from '@/components/header/HeaderIconButton';
 import { HeaderSearchField } from '@/components/header/HeaderSearchField';
 import { UndoToast } from '@/components/UndoToast';
+import { SkeletonCards, type SkeletonCardSize } from '@/components/skeleton';
 import { createStyles } from '@/styles/bedListStyles';
 import {
   filterAndSortBeds,
@@ -45,6 +45,9 @@ const bedDeleteMessage = (activePlantCount: number): string => {
 };
 
 const bedKey = (bed: BedWithCoverage): string => bed.id;
+
+/** First-load placeholder: one block per bed card. */
+const BED_SKELETON_CARDS: readonly SkeletonCardSize[] = ['medium', 'medium', 'medium', 'medium'];
 
 export default function BedListScreen(): React.JSX.Element {
   const theme = useTheme();
@@ -387,15 +390,10 @@ export default function BedListScreen(): React.JSX.Element {
     />
   );
 
-  if (loading && beds.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
-  }
+  // First load: the header stays and placeholder cards stand in for the list.
+  const firstLoad = loading && beds.length === 0;
 
-  if (error && beds.length === 0) {
+  if (!firstLoad && error && beds.length === 0) {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>{error}</Text>
@@ -458,7 +456,9 @@ export default function BedListScreen(): React.JSX.Element {
         </View>
       )}
 
-      {beds.length === 0 ? (
+      {firstLoad ? (
+        <SkeletonCards label="Loading beds" cards={BED_SKELETON_CARDS} style={styles.list} />
+      ) : beds.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="grid-outline" size={56} color={theme.textSecondary} />
           <Text style={styles.emptyTitle}>No beds yet</Text>

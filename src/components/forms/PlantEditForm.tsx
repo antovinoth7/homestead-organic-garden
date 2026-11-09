@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
-  ActivityIndicator,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
@@ -22,6 +21,7 @@ import { createStyles } from '../../styles/plantFormStyles';
 import { createEditStyles } from '../../styles/plantEditFormStyles';
 import VoiceDictation from '@/components/VoiceDictation';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
+import { SkeletonForm } from '@/components/skeleton';
 import type { SegmentedTab } from '@/components/SegmentedTabs';
 import { PlantSectionHeader } from '@/components/plantDetail/PlantSectionHeader';
 import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
@@ -171,7 +171,7 @@ export function PlantEditForm({ formState }: Props): React.JSX.Element {
     <View style={editStyles.flexOne}>
       {dataLoading && (
         <View style={editStyles.dataLoadingOverlay}>
-          <ActivityIndicator size="large" color={theme.primary} />
+          <SkeletonForm label="Loading plant details" fields={6} />
         </View>
       )}
       {/* KAV padding lifts the notes/text inputs above the keyboard;

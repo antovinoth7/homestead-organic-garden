@@ -72,6 +72,7 @@ import { OptionPickerSheet } from '@/components/OptionPickerSheet';
 import { JournalActionSheet } from '@/components/journal/JournalActionSheet';
 import { JournalResolveSheet } from '@/components/journal/JournalResolveSheet';
 import { JournalStatTiles, type JournalStatTile } from '@/components/journal/JournalStatTiles';
+import { SkeletonCards, SkeletonTiles, type SkeletonCardSize } from '@/components/skeleton';
 import {
   JournalFilterSheet,
   type JournalFilterCount,
@@ -89,6 +90,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const SHEET_SWAP_DELAY_MS = Platform.OS === 'ios' ? 320 : 0;
 
 type OpenSheet = 'filter' | 'place' | null;
+
+/** First-load placeholder: entry cards of mixed height, as a real day reads. */
+const JOURNAL_SKELETON_CARDS: readonly SkeletonCardSize[] = ['medium', 'short', 'medium', 'short'];
 
 export default function JournalScreen(): React.JSX.Element {
   const navigation = useNavigation<JournalScreenNavigationProp>();
@@ -524,15 +528,24 @@ export default function JournalScreen(): React.JSX.Element {
     ]
   );
 
+  // First load with nothing to show yet: placeholders instead of zeroed tiles
+  // and a "No journal entries yet" flash.
+  const firstLoad = loading && entries.length === 0;
+
   // The tiles name their own period, so there is no caption row above them.
   const listHeader = (
     <View style={styles.statsHeader}>
-      <JournalStatTiles tiles={statTiles} />
+      {firstLoad ? (
+        <SkeletonTiles label="Loading journal stats" count={statTiles.length} />
+      ) : (
+        <JournalStatTiles tiles={statTiles} />
+      )}
     </View>
   );
 
-  // Empty state — hidden while the first load is in flight to avoid a flash.
-  const listEmpty = loading ? null : (
+  const listEmpty = loading ? (
+    <SkeletonCards label="Loading journal entries" cards={JOURNAL_SKELETON_CARDS} flush />
+  ) : (
     <View style={styles.emptyState}>
       <Ionicons name="book-outline" size={56} color={theme.border} />
       {entries.length === 0 ? (
@@ -560,9 +573,11 @@ export default function JournalScreen(): React.JSX.Element {
     [styles.listContent, insets.bottom]
   );
 
+  // A first load paints placeholders instead; a pull over entries still spins.
+  const refreshing = loading && !firstLoad;
   const refreshControl = useMemo(
-    () => <RefreshControl refreshing={loading} onRefresh={pullToRefresh} />,
-    [loading, pullToRefresh]
+    () => <RefreshControl refreshing={refreshing} onRefresh={pullToRefresh} />,
+    [refreshing, pullToRefresh]
   );
 
   const resolveName = resolvePrompt?.pest_name?.trim() || 'problem';
