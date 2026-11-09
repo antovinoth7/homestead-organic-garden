@@ -124,6 +124,44 @@ async function withTimeout<T>(
 }
 
 /**
+ * Throws when a failed attempt must not be retried: a timeout the caller chose
+ * not to repeat, an error a retry cannot fix, or no network at all.
+ */
+function assertRetryable(
+  error: unknown,
+  code: string | undefined,
+  message: string,
+  retryOnTimeout: boolean
+): void {
+  if (!retryOnTimeout && error instanceof FirestoreTimeoutError) {
+    throw error;
+  }
+
+  if (code !== undefined && NON_RETRYABLE_CODES.has(code)) {
+    logger.error(`Non-retryable Firestore error (${code}), not retrying: ${message}`);
+    throw error;
+  }
+
+  // Don't retry if no network
+  if (!isNetworkAvailable()) {
+    logger.warn('No network connection, stopping retries');
+    throw new Error('No network connection available');
+  }
+}
+
+/** Log network errors with more details. */
+function logNetworkFailure(
+  code: string | undefined,
+  message: string,
+  attempt: number,
+  maxRetries: number
+): void {
+  if (code === 'unavailable' || message.includes('Failed to fetch')) {
+    logger.warn(`Network unavailable (attempt ${attempt + 1}/${maxRetries + 1}): ${message}`);
+  }
+}
+
+/**
  * Retry wrapper for Firestore operations
  * Automatically retries failed operations with exponential backoff
  */
@@ -143,25 +181,8 @@ async function withRetry<T>(
       const code = getErrorCode(error);
       const message = getErrorMessage(error);
 
-      if (!retryOnTimeout && error instanceof FirestoreTimeoutError) {
-        throw error;
-      }
-
-      if (code !== undefined && NON_RETRYABLE_CODES.has(code)) {
-        logger.error(`Non-retryable Firestore error (${code}), not retrying: ${message}`);
-        throw error;
-      }
-
-      // Don't retry if no network
-      if (!isNetworkAvailable()) {
-        logger.warn('No network connection, stopping retries');
-        throw new Error('No network connection available');
-      }
-
-      // Log network errors with more details
-      if (code === 'unavailable' || message.includes('Failed to fetch')) {
-        logger.warn(`Network unavailable (attempt ${attempt + 1}/${maxRetries + 1}): ${message}`);
-      }
+      assertRetryable(error, code, message, retryOnTimeout);
+      logNetworkFailure(code, message, attempt, maxRetries);
 
       // Last attempt failed
       if (attempt === maxRetries) {
