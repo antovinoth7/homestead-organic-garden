@@ -172,74 +172,82 @@ export function parseOpenMeteoForecast(value: unknown): WeatherForecast {
   };
 }
 
-/** Validate and upgrade cached data written by older app versions. */
-export function normalizeCachedForecast(value: unknown): WeatherForecast | null {
-  if (!value || typeof value !== 'object') return null;
-  const raw = value as Partial<WeatherForecast> & { daily?: unknown };
+type RawCachedForecast = Partial<WeatherForecast> & { daily?: unknown };
+type CheckedCachedForecast = RawCachedForecast & {
+  latitude: number;
+  longitude: number;
+  fetched_at: string;
+  daily: unknown[];
+};
+
+/** Coordinates, fetch time and a 1–7 day list are all present and valid. */
+function isValidCachedHeader(raw: RawCachedForecast): raw is CheckedCachedForecast {
+  return (
+    typeof raw.latitude === 'number' &&
+    typeof raw.longitude === 'number' &&
+    isValidWeatherCoordinates(raw.latitude, raw.longitude) &&
+    typeof raw.fetched_at === 'string' &&
+    !Number.isNaN(new Date(raw.fetched_at).getTime()) &&
+    Array.isArray(raw.daily) &&
+    raw.daily.length >= 1 &&
+    raw.daily.length <= 7
+  );
+}
+
+/** `v` when it is a finite number (an integer, if asked) within [min, max], else null. */
+function numberInRange(v: unknown, min: number, max = Infinity, integer = false): number | null {
+  if (typeof v !== 'number') return null;
+  const valid = integer ? Number.isInteger(v) : Number.isFinite(v);
+  return valid && v >= min && v <= max ? v : null;
+}
+
+/**
+ * One cached day, or null when a required field is missing or out of range.
+ * Optional fields that fail their range check are cleared to null instead.
+ */
+function normalizeCachedDay(item: unknown): DailyWeather | null {
+  if (!item || typeof item !== 'object') return null;
+  const day = item as Partial<DailyWeather>;
   if (
-    typeof raw.latitude !== 'number' ||
-    typeof raw.longitude !== 'number' ||
-    !isValidWeatherCoordinates(raw.latitude, raw.longitude) ||
-    typeof raw.fetched_at !== 'string' ||
-    Number.isNaN(new Date(raw.fetched_at).getTime()) ||
-    !Array.isArray(raw.daily) ||
-    raw.daily.length < 1 ||
-    raw.daily.length > 7
+    !isValidDate(day.date) ||
+    typeof day.tempMaxC !== 'number' ||
+    !Number.isFinite(day.tempMaxC) ||
+    typeof day.tempMinC !== 'number' ||
+    !Number.isFinite(day.tempMinC) ||
+    typeof day.precipitationMm !== 'number' ||
+    !Number.isFinite(day.precipitationMm) ||
+    day.tempMaxC < -100 ||
+    day.tempMaxC > 70 ||
+    day.tempMinC < -100 ||
+    day.tempMinC > 70 ||
+    day.tempMinC > day.tempMaxC ||
+    day.precipitationMm < 0 ||
+    day.precipitationMm > 2000
   ) {
     return null;
   }
+  return {
+    date: day.date,
+    tempMaxC: day.tempMaxC,
+    tempMinC: day.tempMinC,
+    precipitationMm: day.precipitationMm,
+    weatherCode: numberInRange(day.weatherCode, 0, 99, true),
+    precipitationProbabilityPct: numberInRange(day.precipitationProbabilityPct, 0, 100),
+    windSpeedMaxKph: numberInRange(day.windSpeedMaxKph, 0),
+  };
+}
+
+/** Validate and upgrade cached data written by older app versions. */
+export function normalizeCachedForecast(value: unknown): WeatherForecast | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as RawCachedForecast;
+  if (!isValidCachedHeader(raw)) return null;
 
   const daily: DailyWeather[] = [];
   for (const item of raw.daily) {
-    if (!item || typeof item !== 'object') return null;
-    const day = item as Partial<DailyWeather>;
-    if (
-      !isValidDate(day.date) ||
-      typeof day.tempMaxC !== 'number' ||
-      !Number.isFinite(day.tempMaxC) ||
-      typeof day.tempMinC !== 'number' ||
-      !Number.isFinite(day.tempMinC) ||
-      typeof day.precipitationMm !== 'number' ||
-      !Number.isFinite(day.precipitationMm) ||
-      day.tempMaxC < -100 ||
-      day.tempMaxC > 70 ||
-      day.tempMinC < -100 ||
-      day.tempMinC > 70 ||
-      day.tempMinC > day.tempMaxC ||
-      day.precipitationMm < 0 ||
-      day.precipitationMm > 2000
-    ) {
-      return null;
-    }
-    const weatherCode =
-      typeof day.weatherCode === 'number' &&
-      Number.isInteger(day.weatherCode) &&
-      day.weatherCode >= 0 &&
-      day.weatherCode <= 99
-        ? day.weatherCode
-        : null;
-    const precipitationProbabilityPct =
-      typeof day.precipitationProbabilityPct === 'number' &&
-      Number.isFinite(day.precipitationProbabilityPct) &&
-      day.precipitationProbabilityPct >= 0 &&
-      day.precipitationProbabilityPct <= 100
-        ? day.precipitationProbabilityPct
-        : null;
-    const windSpeedMaxKph =
-      typeof day.windSpeedMaxKph === 'number' &&
-      Number.isFinite(day.windSpeedMaxKph) &&
-      day.windSpeedMaxKph >= 0
-        ? day.windSpeedMaxKph
-        : null;
-    daily.push({
-      date: day.date,
-      tempMaxC: day.tempMaxC,
-      tempMinC: day.tempMinC,
-      precipitationMm: day.precipitationMm,
-      weatherCode,
-      precipitationProbabilityPct,
-      windSpeedMaxKph,
-    });
+    const day = normalizeCachedDay(item);
+    if (!day) return null;
+    daily.push(day);
   }
 
   if (new Set(daily.map((day) => day.date)).size !== daily.length) return null;

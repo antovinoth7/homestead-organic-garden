@@ -9,6 +9,8 @@ import {
   farmDateTimeFromKey,
 } from '@/utils/farmDate';
 import { HARVEST_TASK_TYPES } from '@/utils/harvestStats';
+import { getCoconutAgeInfo, isPlantArchived } from '@/utils/plantHelpers';
+import { getEffectiveWateringIntervalDays } from '@/utils/plantWatering';
 
 /**
  * Pure care-task scheduling logic (no Firestore) — extracted from `tasks.ts`
@@ -202,6 +204,187 @@ export const computeScheduleAfterCompletion = (
   const nextDueAt = nextKey ? farmDateTimeFromKey(nextKey, dueHourForTemplate(template)) : null;
 
   return { nextDueAt, effectiveDays, wateringMultiplier };
+};
+
+/**
+ * How a template changes once completed. A one-off (frequency 0 or less) is
+ * switched off and stamped with the completion time; a recurring task moves to
+ * its next due date. Empty when that date could not be computed.
+ */
+export const templateChangeAfterCompletion = (
+  frequencyDays: number,
+  nextDueAt: Date | null,
+  doneAt: Date
+): { enabled?: false; nextDueAt?: Date } => {
+  if (frequencyDays <= 0) return { enabled: false, nextDueAt: doneAt };
+  if (nextDueAt && !Number.isNaN(nextDueAt.getTime())) return { nextDueAt };
+  return {};
+};
+
+/**
+ * The last-care stamp a completion writes to its plant, or null when the task
+ * type has no last-care field. A water completion also stamps the multiplier
+ * it used, so the overdue math can read the decision back instead of
+ * re-deriving it from a season (and a forecast) that have since moved on.
+ */
+export const plantCareStampAfterCompletion = (
+  taskType: TaskType,
+  doneAtIso: string,
+  wateringMultiplier: number | null
+): Partial<Plant> | null => {
+  const field = TASK_TYPE_TO_PLANT_LAST_CARE_FIELD[taskType];
+  if (!field) return null;
+  return {
+    [field]: doneAtIso,
+    ...(wateringMultiplier !== null
+      ? {
+          last_watering_multiplier: wateringMultiplier,
+          last_watering_adjustment: null,
+        }
+      : {}),
+  };
+};
+
+/**
+ * For one_shot annual plants: completing a harvest task auto-archives the
+ * plant. Returns that plant's id, or null when nothing should be archived.
+ */
+export const oneShotArchivePlantId = (
+  template: Pick<TaskTemplate, 'task_type' | 'plant_id'>,
+  cachedPlants: Plant[]
+): string | null => {
+  if (template.task_type !== 'harvest' || !template.plant_id) return null;
+  const harvestedPlant = cachedPlants.find((p) => p.id === template.plant_id);
+  return harvestedPlant?.harvest_mode === 'one_shot' && !isPlantArchived(harvestedPlant)
+    ? template.plant_id
+    : null;
+};
+
+/** One care type `syncCareTasksForPlant` reconciles, with its on/off intent. */
+export interface DesiredCareTask {
+  taskType: TaskType;
+  /** Interval in days — a positive finite number, or null when none could be resolved. */
+  frequency: number | null;
+  enabled: boolean;
+}
+
+const positiveOrNull = (value: number | null | undefined): number | null =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+
+/**
+ * Every care type the plant could have a template for, with its on/off intent.
+ * Disabled types are kept (not filtered out) so an existing template can be
+ * flipped to enabled: false — otherwise turning a care type off would leave a
+ * stale "Active" task on the Care Plan and detail screen.
+ */
+export const desiredCareTasks = (plant: Plant): DesiredCareTask[] => {
+  const desired: { taskType: TaskType; frequency: number | null | undefined; enabled: boolean }[] =
+    [
+      {
+        taskType: 'water',
+        frequency: resolveCareInterval(plant, 'watering'),
+        enabled: plant.watering_enabled !== false,
+      },
+      {
+        taskType: 'fertilise',
+        frequency: resolveCareInterval(plant, 'fertilising'),
+        enabled: plant.fertilising_enabled !== false,
+      },
+      {
+        taskType: 'prune',
+        frequency: resolveCareInterval(plant, 'pruning'),
+        enabled: plant.pruning_enabled !== false,
+      },
+    ];
+
+  // For coconut trees, auto-derive a Harvest task from the tree's age.
+  // harvestFrequencyDays === 0 means the tree is not yet bearing.
+  if (plant.plant_type === 'coconut_tree' && plant.planting_date) {
+    const ageInfo = getCoconutAgeInfo(plant.planting_date);
+    if (ageInfo && ageInfo.harvestFrequencyDays > 0) {
+      desired.push({
+        taskType: 'harvest',
+        frequency: ageInfo.harvestFrequencyDays,
+        enabled: true,
+      });
+    }
+  }
+
+  // For perennial plants (Type 2), maintain a recurring "harvest_leaves" task
+  // so the user is prompted to log leaf/produce weight on a fixed cycle.
+  // Default 14-day cycle; permanent plants use their own harvest cadence (coconut above).
+  if (plant.lifecycle_type === 'perennial') {
+    desired.push({
+      taskType: 'harvest_leaves',
+      frequency: 14,
+      enabled: true,
+    });
+  }
+
+  return desired.map((item) => ({ ...item, frequency: positiveOrNull(item.frequency) }));
+};
+
+/**
+ * When a sync-owned template of this type should next come due.
+ *
+ * Apply the farm zone's season multiplier for water tasks. frequencyDays
+ * stored remains the user-configured base so the user's intent is preserved
+ * across seasons; only next_due_at is adjusted. The shared helper keeps this
+ * in step with the listing/alerts overdue math — and, because that helper
+ * now prefers the multiplier recorded at the last watering, a plant keeps
+ * the cadence it was actually put on rather than being re-derived into a
+ * different one the moment the calendar crosses a season.
+ */
+export const careNextDueAt = (plant: Plant, taskType: TaskType, frequency: number): string => {
+  const effectiveFrequency =
+    taskType === 'water' ? (getEffectiveWateringIntervalDays(plant) ?? frequency) : frequency;
+  return computeNextDueAt(plant, taskType, effectiveFrequency);
+};
+
+/**
+ * The changes an existing sync-owned template needs to match its plant's care
+ * profile — empty when it already does.
+ */
+export const careTemplateUpdates = (
+  existing: TaskTemplate,
+  plant: Plant,
+  taskType: TaskType,
+  frequency: number,
+  nextDueAt: string
+): Partial<TaskTemplate> => {
+  const updates: Partial<TaskTemplate> = {};
+  if (existing.frequency_days !== frequency) {
+    updates.frequency_days = frequency;
+    updates.next_due_at = nextDueAt;
+  }
+  if (!existing.enabled) {
+    // Re-enabling always means the schedule is resuming after a pause — a
+    // restored plant, or a care type switched back on — so the stored due
+    // date is stale by however long the gap was. Re-base it, or a plant
+    // restored after three months returns showing three months of overdue
+    // work nobody was expected to do. `computeNextDueAt` caps at today, so
+    // the task comes back due today rather than backdated.
+    updates.enabled = true;
+    updates.next_due_at = nextDueAt;
+  }
+  const plantCreatedAt = parseDateValue(plant.created_at);
+  const existingDueDate = parseDateValue(existing.next_due_at);
+  if (
+    // No usable due date stored.
+    !existingDueDate ||
+    // Due date predates the plant itself.
+    (plantCreatedAt && existingDueDate < plantCreatedAt) ||
+    // Older builds seeded the first due date from "now" instead of the
+    // planting date; pull never-completed tasks back into agreement.
+    // Only for task types with a plant last-care field — completions of
+    // other types (harvest_leaves) are invisible on the plant doc.
+    (TASK_TYPE_TO_PLANT_LAST_CARE_FIELD[taskType] !== undefined &&
+      !parseDateValue(getLastCareDate(plant, taskType)) &&
+      existingDueDate > new Date(nextDueAt))
+  ) {
+    updates.next_due_at = nextDueAt;
+  }
+  return updates;
 };
 
 /**

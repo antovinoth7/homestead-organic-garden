@@ -202,22 +202,30 @@ export function getHiddenPlantNames(profiles: PlantProfiles): Record<PlantType, 
 export function toPlantCatalogShape(profiles: PlantProfiles): PlantCatalog {
   const categories = {} as PlantCatalog['categories'];
   for (const type of PLANT_CATEGORIES) {
-    const plants: string[] = getPlantNamesForType(profiles, type);
-    const varieties: Record<string, string[]> = {};
-    const tamilNames: Record<string, string> = {};
-    const descriptions: Record<string, string> = {};
-    const varietyDetails: Record<string, Record<string, VarietyDetail>> = {};
-    for (const name of plants) {
-      const p = getProfileEntry(profiles, type, name);
-      if (!p) continue;
-      if (p.varieties?.length) varieties[name] = p.varieties;
-      if (p.tamilName) tamilNames[name] = p.tamilName;
-      if (p.description) descriptions[name] = p.description;
-      if (p.varietyDetails) varietyDetails[name] = p.varietyDetails;
-    }
-    categories[type] = { plants, varieties, tamilNames, descriptions, varietyDetails };
+    categories[type] = catalogCategory(profiles, type);
   }
   return { categories };
+}
+
+/** One plant type's slice of the legacy catalog shape. */
+function catalogCategory(
+  profiles: PlantProfiles,
+  type: PlantType
+): PlantCatalog['categories'][PlantType] {
+  const plants: string[] = getPlantNamesForType(profiles, type);
+  const varieties: Record<string, string[]> = {};
+  const tamilNames: Record<string, string> = {};
+  const descriptions: Record<string, string> = {};
+  const varietyDetails: Record<string, Record<string, VarietyDetail>> = {};
+  for (const name of plants) {
+    const p = getProfileEntry(profiles, type, name);
+    if (!p) continue;
+    if (p.varieties?.length) varieties[name] = p.varieties;
+    if (p.tamilName) tamilNames[name] = p.tamilName;
+    if (p.description) descriptions[name] = p.description;
+    if (p.varietyDetails) varietyDetails[name] = p.varietyDetails;
+  }
+  return { plants, varieties, tamilNames, descriptions, varietyDetails };
 }
 
 /**
@@ -358,112 +366,94 @@ function normalizeEntry(raw: unknown): PlantProfile | null {
   const plantType = r.plantType as PlantType;
   if (!name || !PLANT_CATEGORIES.includes(plantType)) return null;
 
+  // Keys are set in a fixed order; `setIf` keeps a value only when it is truthy.
   const entry: PlantProfile = { plantType, name };
-  const tamilName = normalizeStr(r.tamilName);
-  if (tamilName) entry.tamilName = tamilName;
-  const description = normalizeStr(r.description);
-  if (description) entry.description = description;
-  const varieties = normalizeStrArr(r.varieties);
-  if (varieties) entry.varieties = varieties;
-  if (r.isUserAdded === true) entry.isUserAdded = true;
-  if (r.isDeleted === true) entry.isDeleted = true;
+  setIf(entry, 'tamilName', normalizeStr(r.tamilName));
+  setIf(entry, 'description', normalizeStr(r.description));
+  setIf(entry, 'varieties', normalizeStrArr(r.varieties));
+  setIf(entry, 'isUserAdded', trueOr(r.isUserAdded));
+  setIf(entry, 'isDeleted', trueOr(r.isDeleted));
   if (entry.isDeleted) {
-    if (r.isDismissed === true) entry.isDismissed = true;
-    const deletedAt = normalizeNum(r.deletedAt);
-    if (deletedAt) entry.deletedAt = deletedAt;
+    setIf(entry, 'isDismissed', trueOr(r.isDismissed));
+    setIf(entry, 'deletedAt', normalizeNum(r.deletedAt));
   }
-  if (r.varietyDetails && typeof r.varietyDetails === 'object')
-    entry.varietyDetails = r.varietyDetails as Record<string, VarietyDetail>;
-  if (WATER_REQS.has(r.waterRequirement as WaterRequirement))
-    entry.waterRequirement = r.waterRequirement as WaterRequirement;
-  if (SUNLIGHT_LEVELS.has(r.sunlight as SunlightLevel))
-    entry.sunlight = r.sunlight as SunlightLevel;
-  if (SOIL_TYPES.has(r.soilType as SoilType)) entry.soilType = r.soilType as SoilType;
-  if (FERTILISERS.has(r.preferredFertiliser as FertiliserType))
-    entry.preferredFertiliser = r.preferredFertiliser as FertiliserType;
-  if (GROWTH_STAGES.has(r.initialGrowthStage as GrowthStage))
-    entry.initialGrowthStage = r.initialGrowthStage as GrowthStage;
-  if (LIFECYCLES.has(r.lifecycle as PlantLifecycle))
-    entry.lifecycle = r.lifecycle as PlantLifecycle;
-  if (TOLERANCE_LEVELS.has(r.heatTolerance as ToleranceLevel))
-    entry.heatTolerance = r.heatTolerance as ToleranceLevel;
-  if (TOLERANCE_LEVELS.has(r.droughtTolerance as ToleranceLevel))
-    entry.droughtTolerance = r.droughtTolerance as ToleranceLevel;
-  if (TOLERANCE_LEVELS.has(r.waterloggingTolerance as ToleranceLevel))
-    entry.waterloggingTolerance = r.waterloggingTolerance as ToleranceLevel;
-  if (FEEDING_INTENSITIES.has(r.feedingIntensity as FeedingIntensity))
-    entry.feedingIntensity = r.feedingIntensity as FeedingIntensity;
-  const wDays = normalizeNum(r.wateringFrequencyDays);
-  if (wDays) entry.wateringFrequencyDays = wDays;
+  setIf(entry, 'varietyDetails', objectOr<Record<string, VarietyDetail>>(r.varietyDetails));
+  setIf(entry, 'waterRequirement', pickEnum(WATER_REQS, r.waterRequirement));
+  setIf(entry, 'sunlight', pickEnum(SUNLIGHT_LEVELS, r.sunlight));
+  setIf(entry, 'soilType', pickEnum(SOIL_TYPES, r.soilType));
+  setIf(entry, 'preferredFertiliser', pickEnum(FERTILISERS, r.preferredFertiliser));
+  setIf(entry, 'initialGrowthStage', pickEnum(GROWTH_STAGES, r.initialGrowthStage));
+  setIf(entry, 'lifecycle', pickEnum(LIFECYCLES, r.lifecycle));
+  setIf(entry, 'heatTolerance', pickEnum(TOLERANCE_LEVELS, r.heatTolerance));
+  setIf(entry, 'droughtTolerance', pickEnum(TOLERANCE_LEVELS, r.droughtTolerance));
+  setIf(entry, 'waterloggingTolerance', pickEnum(TOLERANCE_LEVELS, r.waterloggingTolerance));
+  setIf(entry, 'feedingIntensity', pickEnum(FEEDING_INTENSITIES, r.feedingIntensity));
+  setIf(entry, 'wateringFrequencyDays', normalizeNum(r.wateringFrequencyDays));
   if (r.wateringEnabled === false) entry.wateringEnabled = false;
-  const fDays = normalizeNum(r.fertilisingFrequencyDays);
-  if (fDays) entry.fertilisingFrequencyDays = fDays;
+  setIf(entry, 'fertilisingFrequencyDays', normalizeNum(r.fertilisingFrequencyDays));
   if (r.fertilisingEnabled === false) entry.fertilisingEnabled = false;
-  const pDays = normalizeNum(r.pruningFrequencyDays);
-  if (pDays) entry.pruningFrequencyDays = pDays;
+  setIf(entry, 'pruningFrequencyDays', normalizeNum(r.pruningFrequencyDays));
   if (r.pruningEnabled === false) entry.pruningEnabled = false;
-  const pruningTips = normalizeStrArr(r.pruningTips);
-  if (pruningTips) entry.pruningTips = pruningTips;
-  const shapePruningTip = normalizeStr(r.shapePruningTip);
-  if (shapePruningTip) entry.shapePruningTip = shapePruningTip;
-  const shapePruningMonths = normalizeStr(r.shapePruningMonths);
-  if (shapePruningMonths) entry.shapePruningMonths = shapePruningMonths;
-  const flowerPruningTip = normalizeStr(r.flowerPruningTip);
-  if (flowerPruningTip) entry.flowerPruningTip = flowerPruningTip;
-  const flowerPruningMonths = normalizeStr(r.flowerPruningMonths);
-  if (flowerPruningMonths) entry.flowerPruningMonths = flowerPruningMonths;
-  const scientificName = normalizeStr(r.scientificName);
-  if (scientificName) entry.scientificName = scientificName;
-  const taxonomicFamily = normalizeStr(r.taxonomicFamily);
-  if (taxonomicFamily) entry.taxonomicFamily = taxonomicFamily;
-  const daysToHarvest = normalizeRange(r.daysToHarvest);
-  if (daysToHarvest) entry.daysToHarvest = daysToHarvest;
-  const heightCm = normalizeRange(r.heightCm);
-  if (heightCm) entry.heightCm = heightCm;
-  const germinationDays = normalizeRange(r.germinationDays);
-  if (germinationDays) entry.germinationDays = germinationDays;
-  const germinationTempC = normalizeRange(r.germinationTempC);
-  if (germinationTempC) entry.germinationTempC = germinationTempC;
-  const soilPhRange = normalizeRange(r.soilPhRange);
-  if (soilPhRange) entry.soilPhRange = soilPhRange;
-  const spacingCm = normalizeNum(r.spacingCm);
-  if (spacingCm) entry.spacingCm = spacingCm;
-  const plantingDepthCm = normalizeNum(r.plantingDepthCm);
-  if (plantingDepthCm) entry.plantingDepthCm = plantingDepthCm;
-  const yearsToFirstHarvest = normalizeNum(r.yearsToFirstHarvest);
-  if (yearsToFirstHarvest) entry.yearsToFirstHarvest = yearsToFirstHarvest;
-  const chopDropIntervalDays = normalizeNum(r.chopDropIntervalDays);
-  if (chopDropIntervalDays) entry.chopDropIntervalDays = chopDropIntervalDays;
+  setIf(entry, 'pruningTips', normalizeStrArr(r.pruningTips));
+  setIf(entry, 'shapePruningTip', normalizeStr(r.shapePruningTip));
+  setIf(entry, 'shapePruningMonths', normalizeStr(r.shapePruningMonths));
+  setIf(entry, 'flowerPruningTip', normalizeStr(r.flowerPruningTip));
+  setIf(entry, 'flowerPruningMonths', normalizeStr(r.flowerPruningMonths));
+  setIf(entry, 'scientificName', normalizeStr(r.scientificName));
+  setIf(entry, 'taxonomicFamily', normalizeStr(r.taxonomicFamily));
+  setIf(entry, 'daysToHarvest', normalizeRange(r.daysToHarvest));
+  setIf(entry, 'heightCm', normalizeRange(r.heightCm));
+  setIf(entry, 'germinationDays', normalizeRange(r.germinationDays));
+  setIf(entry, 'germinationTempC', normalizeRange(r.germinationTempC));
+  setIf(entry, 'soilPhRange', normalizeRange(r.soilPhRange));
+  setIf(entry, 'spacingCm', normalizeNum(r.spacingCm));
+  setIf(entry, 'plantingDepthCm', normalizeNum(r.plantingDepthCm));
+  setIf(entry, 'yearsToFirstHarvest', normalizeNum(r.yearsToFirstHarvest));
+  setIf(entry, 'chopDropIntervalDays', normalizeNum(r.chopDropIntervalDays));
   const floweringStartMonth = normalizeNum(r.floweringStartMonth);
   if (floweringStartMonth && floweringStartMonth >= 1 && floweringStartMonth <= 12)
     entry.floweringStartMonth = floweringStartMonth;
-  const growingSeason = normalizeStr(r.growingSeason);
-  if (growingSeason) entry.growingSeason = growingSeason;
-  const seedSource = normalizeStr(r.seedSource);
-  if (seedSource) entry.seedSource = seedSource;
-  const guild = normalizeStr(r.guild);
-  if (guild) entry.guild = guild;
-  if (r.isPermanent === true) entry.isPermanent = true;
-  if (r.isDynamicAccumulator === true) entry.isDynamicAccumulator = true;
+  setIf(entry, 'growingSeason', normalizeStr(r.growingSeason));
+  setIf(entry, 'seedSource', normalizeStr(r.seedSource));
+  setIf(entry, 'guild', normalizeStr(r.guild));
+  setIf(entry, 'isPermanent', trueOr(r.isPermanent));
+  setIf(entry, 'isDynamicAccumulator', trueOr(r.isDynamicAccumulator));
   if (typeof r.petToxicity === 'boolean') entry.petToxicity = r.petToxicity;
-  const vitamins = normalizeStrArr(r.vitamins);
-  if (vitamins) entry.vitamins = vitamins;
-  const minerals = normalizeStrArr(r.minerals);
-  if (minerals) entry.minerals = minerals;
-  const customPests = normalizeStrArr(r.customPests);
-  if (customPests) entry.customPests = customPests;
-  const customDiseases = normalizeStrArr(r.customDiseases);
-  if (customDiseases) entry.customDiseases = customDiseases;
-  const customBeneficials = normalizeStrArr(r.customBeneficials);
-  if (customBeneficials) entry.customBeneficials = customBeneficials;
-  if (r.growthStageDurations && typeof r.growthStageDurations === 'object')
-    entry.growthStageDurations = r.growthStageDurations as GrowthStageDurations;
-  if (r.annualCycleDurations && typeof r.annualCycleDurations === 'object')
-    entry.annualCycleDurations = r.annualCycleDurations as AnnualCycleDurations;
-  if (r.cropFamily) entry.cropFamily = r.cropFamily as PlantProfile['cropFamily'];
-  if (r.layer) entry.layer = r.layer as PlantProfile['layer'];
+  setIf(entry, 'vitamins', normalizeStrArr(r.vitamins));
+  setIf(entry, 'minerals', normalizeStrArr(r.minerals));
+  setIf(entry, 'customPests', normalizeStrArr(r.customPests));
+  setIf(entry, 'customDiseases', normalizeStrArr(r.customDiseases));
+  setIf(entry, 'customBeneficials', normalizeStrArr(r.customBeneficials));
+  setIf(entry, 'growthStageDurations', objectOr<GrowthStageDurations>(r.growthStageDurations));
+  setIf(entry, 'annualCycleDurations', objectOr<AnnualCycleDurations>(r.annualCycleDurations));
+  setIf(entry, 'cropFamily', r.cropFamily as PlantProfile['cropFamily']);
+  setIf(entry, 'layer', r.layer as PlantProfile['layer']);
   if (CATALOG_GROUP_ORDER.includes(r.group as CatalogGroup)) entry.group = r.group as CatalogGroup;
   return entry;
+}
+
+/** Sets `entry[key]` only when `value` is truthy — blank, zero and missing are dropped. */
+function setIf<K extends keyof PlantProfile>(
+  entry: PlantProfile,
+  key: K,
+  value: PlantProfile[K] | undefined
+): void {
+  if (value) entry[key] = value;
+}
+
+/** `v` when it is one of the allowed values, else undefined. */
+function pickEnum<T extends string>(allowed: ReadonlySet<T>, v: unknown): T | undefined {
+  return allowed.has(v as T) ? (v as T) : undefined;
+}
+
+/** `v` when it is a non-null object, else undefined. Its contents pass through as stored. */
+function objectOr<T>(v: unknown): T | undefined {
+  return v && typeof v === 'object' ? (v as T) : undefined;
+}
+
+/** `true` only for a literal `true`; anything else leaves the flag unset. */
+function trueOr(v: unknown): true | undefined {
+  return v === true ? true : undefined;
 }
 
 function normalizeProfiles(raw: unknown): PlantProfiles {

@@ -45,13 +45,7 @@ export function isJsonEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
   if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
 
-  if (Array.isArray(a) || Array.isArray(b)) {
-    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (!isJsonEqual(a[i], b[i])) return false;
-    }
-    return true;
-  }
+  if (Array.isArray(a) || Array.isArray(b)) return arraysEqual(a, b);
 
   if (a instanceof Date || b instanceof Date) {
     return a instanceof Date && b instanceof Date && a.getTime() === b.getTime();
@@ -66,6 +60,20 @@ export function isJsonEqual(a: unknown, b: unknown): boolean {
     );
   }
 
+  return plainObjectsEqual(a, b);
+}
+
+/** Both must be arrays of the same length with pairwise-equal entries. */
+function arraysEqual(a: object, b: object): boolean {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (!isJsonEqual(a[i], b[i])) return false;
+  }
+  return true;
+}
+
+/** Both must be plain objects with the same defined keys and equal values. */
+function plainObjectsEqual(a: object, b: object): boolean {
   if (!isPlainObject(a) || !isPlainObject(b)) return false;
 
   const aRecord = a as Record<string, unknown>;

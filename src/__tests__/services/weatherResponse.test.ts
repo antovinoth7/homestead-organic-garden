@@ -129,6 +129,121 @@ describe('normalizeCachedForecast', () => {
       })
     ).toBeNull();
   });
+
+  const cachedDay = (date: string, overrides: Record<string, unknown> = {}) => ({
+    date,
+    tempMaxC: 31,
+    tempMinC: 24,
+    precipitationMm: 3,
+    weatherCode: 61,
+    precipitationProbabilityPct: 70,
+    windSpeedMaxKph: 12,
+    ...overrides,
+  });
+  const cached = (daily: unknown[], overrides: Record<string, unknown> = {}) => ({
+    latitude: 8.08,
+    longitude: 77.55,
+    timezone: 'Asia/Kolkata',
+    fetched_at: '2026-08-09T00:00:00.000Z',
+    daily,
+    ...overrides,
+  });
+
+  it('keeps a valid entry as stored, with days sorted by date', () => {
+    expect(
+      normalizeCachedForecast(
+        cached([cachedDay('2026-08-10'), cachedDay('2026-08-09', { precipitationMm: 0 })])
+      )
+    ).toEqual({
+      latitude: 8.08,
+      longitude: 77.55,
+      timezone: 'Asia/Kolkata',
+      fetched_at: '2026-08-09T00:00:00.000Z',
+      daily: [cachedDay('2026-08-09', { precipitationMm: 0 }), cachedDay('2026-08-10')],
+    });
+  });
+
+  it.each([
+    ['a weather code above 99', { weatherCode: 100 }, 'weatherCode'],
+    ['a fractional weather code', { weatherCode: 1.5 }, 'weatherCode'],
+    ['a negative weather code', { weatherCode: -1 }, 'weatherCode'],
+    [
+      'a rain chance above 100%',
+      { precipitationProbabilityPct: 101 },
+      'precipitationProbabilityPct',
+    ],
+    [
+      'a non-finite rain chance',
+      { precipitationProbabilityPct: Infinity },
+      'precipitationProbabilityPct',
+    ],
+    ['a negative wind speed', { windSpeedMaxKph: -1 }, 'windSpeedMaxKph'],
+    ['a non-numeric wind speed', { windSpeedMaxKph: '12' }, 'windSpeedMaxKph'],
+  ])('clears %s to null', (_label, override, field) => {
+    const normalized = normalizeCachedForecast(cached([cachedDay('2026-08-09', override)]));
+    expect(normalized?.daily[0]).toHaveProperty(field, null);
+  });
+
+  it('keeps optional fields on their boundaries', () => {
+    const normalized = normalizeCachedForecast(
+      cached([
+        cachedDay('2026-08-09', {
+          weatherCode: 99,
+          precipitationProbabilityPct: 100,
+          windSpeedMaxKph: 0,
+        }),
+      ])
+    );
+    expect(normalized?.daily[0]).toMatchObject({
+      weatherCode: 99,
+      precipitationProbabilityPct: 100,
+      windSpeedMaxKph: 0,
+    });
+  });
+
+  it.each([
+    ['a bad date', { date: '2026-13-40' }],
+    ['a missing max temperature', { tempMaxC: undefined }],
+    ['a non-finite min temperature', { tempMinC: Number.NaN }],
+    ['a string rainfall', { precipitationMm: '3' }],
+    ['a max temperature above 70', { tempMaxC: 71 }],
+    ['a min temperature below -100', { tempMinC: -101 }],
+    ['a min above the max', { tempMinC: 32 }],
+    ['negative rainfall', { precipitationMm: -1 }],
+    ['rainfall above 2000mm', { precipitationMm: 2001 }],
+  ])('rejects the whole forecast for %s', (_label, override) => {
+    expect(
+      normalizeCachedForecast(cached([cachedDay('2026-08-09'), cachedDay('2026-08-10', override)]))
+    ).toBeNull();
+  });
+
+  it.each([
+    ['a non-object day', cached([cachedDay('2026-08-09'), null])],
+    ['duplicate dates', cached([cachedDay('2026-08-09'), cachedDay('2026-08-09')])],
+    ['no days', cached([])],
+    [
+      'more than seven days',
+      cached(
+        Array.from({ length: 8 }, (_, i) => cachedDay(`2026-08-${String(i + 1).padStart(2, '0')}`))
+      ),
+    ],
+    ['a missing latitude', cached([cachedDay('2026-08-09')], { latitude: undefined })],
+    ['out-of-range coordinates', cached([cachedDay('2026-08-09')], { latitude: 91 })],
+    ['a non-string fetch time', cached([cachedDay('2026-08-09')], { fetched_at: 0 })],
+    ['a non-array daily list', cached([], { daily: {} })],
+  ])('rejects %s', (_label, value) => {
+    expect(normalizeCachedForecast(value)).toBeNull();
+  });
+
+  it.each([null, undefined, 'forecast', 42])('rejects a non-object value (%p)', (value) => {
+    expect(normalizeCachedForecast(value)).toBeNull();
+  });
+
+  it('falls back to the farm timezone when the stored one is blank', () => {
+    expect(
+      normalizeCachedForecast(cached([cachedDay('2026-08-09')], { timezone: '  ' }))?.timezone
+    ).toBe('Asia/Kolkata');
+  });
 });
 
 describe('getWeatherForecast cache policy', () => {
