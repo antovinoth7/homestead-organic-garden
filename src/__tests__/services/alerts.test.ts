@@ -1,18 +1,20 @@
 import { getFarmAlerts, isActionable } from '@/services/alerts';
 import { sortAlerts, ATTENTION_MIN_DAYS_OVERDUE } from '@/services/alertsLogic';
 import type { FarmAlert } from '@/types/database.types';
+import { addDaysToDateKey, farmDateKey, farmDateTimeFromKey } from '@/utils/farmDate';
 import { summarizeTodayTasks } from '@/utils/taskSummary';
 import { makePlant } from '../fixtures/plant.fixtures';
 import { makeTaskTemplate } from '../fixtures/task.fixtures';
 
 const NOW = new Date('2026-03-15T12:00:00.000Z').getTime();
 
-/** ISO timestamp `days` before NOW, at the app's 6 PM due-time convention. */
+/**
+ * ISO timestamp `days` before NOW, stamped the way the app stamps a due date:
+ * 6 PM farm time on the farm's calendar day, whatever timezone the test runs in.
+ */
 function dueDaysAgo(days: number): string {
-  const d = new Date(NOW);
-  d.setDate(d.getDate() - days);
-  d.setHours(18, 0, 0, 0);
-  return d.toISOString();
+  const key = addDaysToDateKey(farmDateKey(NOW) ?? '', -days) ?? '';
+  return farmDateTimeFromKey(key, 18)?.toISOString() ?? '';
 }
 
 // Retained for fixtures that construct a pest alert directly. Today no longer
@@ -113,6 +115,26 @@ describe('getFarmAlerts', () => {
       });
       expect(alerts.some((a) => a.type === 'water_needed')).toBe(false);
       expect(ATTENTION_MIN_DAYS_OVERDUE).toBe(1);
+    });
+
+    it('counts overdue days on the farm calendar, not the device’s', () => {
+      // 00:30 on 16 March at the farm, still 15 March in UTC. A task due at
+      // 6 PM farm time on the 14th is two farm days late — the Care Plan's count.
+      const justAfterFarmMidnight = new Date('2026-03-15T19:00:00.000Z').getTime();
+      const alert = getFarmAlerts({
+        plants: [makePlant({ id: 'p2' })],
+        todayTasks: [
+          makeTaskTemplate({
+            id: 't',
+            plant_id: 'p2',
+            task_type: 'water',
+            frequency_days: 10,
+            next_due_at: farmDateTimeFromKey('2026-03-14', 18)?.toISOString() ?? '',
+          }),
+        ],
+        now: justAfterFarmMidnight,
+      }).find((a) => a.type === 'water_needed');
+      expect(alert).toMatchObject({ daysOverdue: 2 });
     });
 
     it('ignores disabled templates — a care type switched off cannot keep firing', () => {

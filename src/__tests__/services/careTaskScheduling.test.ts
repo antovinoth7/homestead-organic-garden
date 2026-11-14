@@ -28,6 +28,23 @@ describe('computeNextDueAt', () => {
     expect(computeNextDueAt(plant, 'water', 3, NOW)).toBe(localDue(2026, 2, 17));
   });
 
+  it('stamps the due date at a given hour instead of the default', () => {
+    const plant = makePlant({
+      last_watered_date: '2026-03-14T02:30:00.000Z',
+      planting_date: '2025-01-01T06:30:00.000Z',
+    });
+    expect(computeNextDueAt(plant, 'water', 3, NOW, 8)).toBe(
+      farmDateTimeFromKey('2026-03-17', 8)?.toISOString()
+    );
+  });
+
+  it('caps an already-passed cycle at today, at the given hour', () => {
+    const plant = makePlant({ last_watered_date: '2026-03-01T02:30:00.000Z' });
+    expect(computeNextDueAt(plant, 'water', 3, NOW, 8)).toBe(
+      farmDateTimeFromKey('2026-03-15', 8)?.toISOString()
+    );
+  });
+
   it('uses the per-type last care date, not another type’s', () => {
     const plant = makePlant({
       last_watered_date: '2026-03-14T02:30:00.000Z',

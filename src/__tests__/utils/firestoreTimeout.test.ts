@@ -8,6 +8,7 @@ import {
   CACHED_READ_OPTIONS,
   FirestoreTimeoutError,
   FIRESTORE_READ_TIMEOUT_MS,
+  NoNetworkError,
   withTimeoutAndRetry,
 } from '@/utils/firestoreTimeout';
 import { isNetworkAvailable } from '@/utils/networkState';
@@ -116,10 +117,28 @@ describe('withTimeoutAndRetry', () => {
     expect(op).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the failure it gave up on when the network drops', async () => {
+    const original = firestoreError('unavailable');
+    const op = jest.fn(() => {
+      mockedIsNetworkAvailable.mockReturnValue(false);
+      return Promise.reject(original);
+    });
+    const error: unknown = await withTimeoutAndRetry(op, { maxRetries: 3, baseDelayMs: 1 }).catch(
+      (caught: unknown) => caught
+    );
+    expect(error).toBeInstanceOf(NoNetworkError);
+    expect(error).toMatchObject({ code: 'unavailable', cause: original });
+  });
+
   it('fails fast without a network, before running the operation', async () => {
     mockedIsNetworkAvailable.mockReturnValue(false);
     const op = jest.fn(() => Promise.resolve('never reached'));
-    await expect(withTimeoutAndRetry(op)).rejects.toThrow('No network connection available');
+    const error: unknown = await withTimeoutAndRetry(op).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(NoNetworkError);
+    expect(error).toMatchObject({
+      message: 'No network connection available',
+      code: 'unavailable',
+    });
     expect(op).not.toHaveBeenCalled();
   });
 });

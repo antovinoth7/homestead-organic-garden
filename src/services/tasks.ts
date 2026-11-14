@@ -1,5 +1,5 @@
-import { TaskTemplate, TaskLog, Plant, TaskType } from '../types/database.types';
-import { db, auth, refreshAuthToken } from '../lib/firebase';
+import { TaskTemplate, TaskLog, Plant, TaskType } from '@/types/database.types';
+import { db, auth, refreshAuthToken } from '@/lib/firebase';
 import {
   collection,
   doc,
@@ -14,17 +14,17 @@ import {
   Timestamp,
   type DocumentReference,
 } from 'firebase/firestore';
-import { getData, setData, KEYS } from '../lib/storage';
-import { writeOrQueue, isOfflineWriteError } from '../lib/offlineWrite';
-import type { OfflineMutationInput } from '../types/offline.types';
+import { getData, setData, KEYS } from '@/lib/storage';
+import { writeOrQueue, isOfflineWriteError } from '@/lib/offlineWrite';
+import type { OfflineMutationInput } from '@/types/offline.types';
 import {
   withTimeoutAndRetry,
   FIRESTORE_READ_TIMEOUT_MS,
   CACHED_READ_OPTIONS,
-} from '../utils/firestoreTimeout';
-import { logError } from '../utils/errorLogging';
-import { logger } from '../utils/logger';
-import { convertTimestamp } from '../utils/dateHelpers';
+} from '@/utils/firestoreTimeout';
+import { logError } from '@/utils/errorLogging';
+import { logger } from '@/utils/logger';
+import { convertTimestamp } from '@/utils/dateHelpers';
 import {
   getCached,
   peekCached,
@@ -33,10 +33,10 @@ import {
   invalidatePrefix,
   dedup,
   CACHE_KEYS,
-} from '../lib/dataCache';
-import { TASK_LABELS, EARLY_COMPLETION_BLOCK_REASON } from '../utils/taskConstants';
-import { getEffectiveGrowthStage, isPlantArchived } from '../utils/plantHelpers';
-import { getPlantCareProfile } from '../utils/plantCareDefaults';
+} from '@/lib/dataCache';
+import { TASK_LABELS, EARLY_COMPLETION_BLOCK_REASON } from '@/utils/taskConstants';
+import { getEffectiveGrowthStage, isPlantArchived } from '@/utils/plantHelpers';
+import { getPlantCareProfile } from '@/utils/plantCareDefaults';
 import {
   computeSkipDate,
   calendarDaysOverdue,
@@ -51,8 +51,9 @@ import {
   desiredCareTasks,
   careNextDueAt,
   careTemplateUpdates,
+  dueHourForTemplate,
   type DesiredCareTask,
-} from './taskSchedulingLogic';
+} from '@/services/taskSchedulingLogic';
 import {
   addDaysToDateKey,
   farmDateKey,
@@ -605,12 +606,13 @@ const buildTaskDoneOps = (
 
   // Scheduling lives in taskSchedulingLogic so it can be unit-tested without a
   // Firestore emulator; this function only turns the result into batch writes.
-  const waterPlant = template.plant_id
+  // Resolved once: the schedule and the one-shot archive decision both read it.
+  const templatePlant = template.plant_id
     ? cachedPlants.find((p) => p.id === template.plant_id) ?? null
     : null;
   const { nextDueAt, wateringMultiplier } = computeScheduleAfterCompletion(
     template,
-    waterPlant,
+    templatePlant,
     doneAt
   );
   const completedEarly = isFutureTask(template, doneAt);
@@ -691,7 +693,7 @@ const buildTaskDoneOps = (
           ? { bedId: template.bed_id, field: bedDateField, value: doneAtIso }
           : null,
       // For one_shot annual plants: completing a harvest task auto-archives the plant.
-      archiveOneShotPlantId: oneShotArchivePlantId(template, cachedPlants),
+      archiveOneShotPlantId: oneShotArchivePlantId(template, templatePlant),
     },
   };
 };
@@ -1217,8 +1219,11 @@ export interface SyncCareTasksResult {
 }
 
 /**
- * Switch off every enabled template in the list, one write at a time (each
- * write updates the shared cache the next one reads). True if any changed.
+ * Switch off every enabled template in the list. True if any changed.
+ *
+ * One write at a time: `updateTaskTemplate` rewrites the whole stored task
+ * list (read, patch one entry, save), so two running together would each save
+ * a list missing the other's change.
  */
 const disableEnabledTemplates = async (templates: TaskTemplate[]): Promise<boolean> => {
   let changed = false;
@@ -1262,23 +1267,24 @@ const reconcileCareType = async (
   // the one branch a recovery action must never take.
   if (frequency === null) return;
 
-  // Season-adjusted for water tasks; the stored frequency stays the base.
-  const nextDueAt = careNextDueAt(plant, taskType, frequency);
-
   // Keep the first template as canonical and disable any duplicates so only
   // one enabled template of this type survives.
   const [existing, ...duplicates] = matching;
-  if (await disableEnabledTemplates(duplicates)) result.updated.push(taskType);
+  const duplicatesDisabled = await disableEnabledTemplates(duplicates);
 
   if (existing) {
+    // Season-adjusted for water tasks; the stored frequency stays the base.
+    // Stamped at the template's own hour so a re-base keeps `preferred_time`.
+    const nextDueAt = careNextDueAt(plant, taskType, frequency, dueHourForTemplate(existing));
     const updates = careTemplateUpdates(existing, plant, taskType, frequency, nextDueAt);
-    if (Object.keys(updates).length > 0) {
-      await updateTaskTemplate(existing.id, updates);
-      result.updated.push(taskType);
-    }
+    const canonicalChanged = Object.keys(updates).length > 0;
+    if (canonicalChanged) await updateTaskTemplate(existing.id, updates);
+    // Reported once per care type, however many of its templates were written.
+    if (duplicatesDisabled || canonicalChanged) result.updated.push(taskType);
     return;
   }
 
+  const nextDueAt = careNextDueAt(plant, taskType, frequency);
   await createTaskTemplate({
     plant_id: plant.id,
     task_type: taskType,
@@ -1309,8 +1315,10 @@ export const syncCareTasksForPlant = async (plant: Plant): Promise<SyncCareTasks
     (task) => task.plant_id === plant.id && isSyncOwnedTemplate(task)
   );
 
-  // One care type at a time: each step's writes update the template cache the
-  // next step reads.
+  // `plantTasks` is a snapshot taken once, above. No step reads another's
+  // writes — each care type only touches templates of its own type. They run
+  // one at a time because the template writes must not overlap (see
+  // disableEnabledTemplates).
   const result: SyncCareTasksResult = { created: [], updated: [] };
   for (const item of desired) {
     await reconcileCareType(plant, item, plantTasks, result);

@@ -58,6 +58,10 @@ export const getLastCareDate = (plant: Plant, taskType: TaskType): string | null
 export const isSyncOwnedTemplate = (template: Pick<TaskTemplate, 'source'>): boolean =>
   (template.source ?? 'auto') === 'auto';
 
+/** The value when it is a usable interval — a positive finite number — else null. */
+const positiveOrNull = (value: unknown): number | null =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+
 export type CareIntervalField = 'watering' | 'fertilising' | 'pruning';
 
 const CARE_INTERVAL_PLANT_FIELD: Record<CareIntervalField, keyof Plant> = {
@@ -99,21 +103,24 @@ const CARE_INTERVAL_PROFILE_FIELD: Record<
  * caller checks separately and which always wins over a default.
  */
 export const resolveCareInterval = (plant: Plant, field: CareIntervalField): number | null => {
-  const own = plant[CARE_INTERVAL_PLANT_FIELD[field]];
-  if (typeof own === 'number' && Number.isFinite(own) && own > 0) return own;
+  const own = positiveOrNull(plant[CARE_INTERVAL_PLANT_FIELD[field]]);
+  if (own !== null) return own;
 
   const profile = getPlantCareProfile(plant.plant_variety ?? '', plant.plant_type);
-  const fallback = profile?.[CARE_INTERVAL_PROFILE_FIELD[field]];
-  return typeof fallback === 'number' && Number.isFinite(fallback) && fallback > 0
-    ? fallback
-    : null;
+  return positiveOrNull(profile?.[CARE_INTERVAL_PROFILE_FIELD[field]]);
 };
 
+/**
+ * `dueHour` is the farm wall-clock hour the due date is stamped at. Pass
+ * `dueHourForTemplate` when re-dating an existing template so the farmer's
+ * `preferred_time` survives; the default is for a template being created.
+ */
 export const computeNextDueAt = (
   plant: Plant,
   taskType: TaskType,
   frequency: number,
-  now: Date = new Date()
+  now: Date = new Date(),
+  dueHour: number = TASK_DUE_TIME_HOUR
 ): string => {
   // No care history: seed from the planting date (same baseline as
   // getPlantWaterStatus) so the Care Plan agrees with the Home alerts.
@@ -125,12 +132,12 @@ export const computeNextDueAt = (
 
   const baseKey = farmDateKey(base) ?? farmDateKey(now);
   const nextKey = baseKey ? addDaysToDateKey(baseKey, frequency) : null;
-  const nextDueAt = nextKey ? farmDateTimeFromKey(nextKey, TASK_DUE_TIME_HOUR) : null;
+  const nextDueAt = nextKey ? farmDateTimeFromKey(nextKey, dueHour) : null;
 
   // Cap at today so a plant already past its cycle shows "due today" instead
   // of overdue by the plant's whole age.
   const todayKey = farmDateKey(now);
-  const todayDue = todayKey ? farmDateTimeFromKey(todayKey, TASK_DUE_TIME_HOUR) : null;
+  const todayDue = todayKey ? farmDateTimeFromKey(todayKey, dueHour) : null;
   if (!nextDueAt || !todayDue) return now.toISOString();
   if (nextDueAt < todayDue) return todayDue.toISOString();
 
@@ -248,16 +255,16 @@ export const plantCareStampAfterCompletion = (
 /**
  * For one_shot annual plants: completing a harvest task auto-archives the
  * plant. Returns that plant's id, or null when nothing should be archived.
+ *
+ * `plant` is the template's own plant, or null when it has none or the plant
+ * is not loaded.
  */
 export const oneShotArchivePlantId = (
   template: Pick<TaskTemplate, 'task_type' | 'plant_id'>,
-  cachedPlants: Plant[]
+  plant: Plant | null
 ): string | null => {
-  if (template.task_type !== 'harvest' || !template.plant_id) return null;
-  const harvestedPlant = cachedPlants.find((p) => p.id === template.plant_id);
-  return harvestedPlant?.harvest_mode === 'one_shot' && !isPlantArchived(harvestedPlant)
-    ? template.plant_id
-    : null;
+  if (template.task_type !== 'harvest' || !template.plant_id || !plant) return null;
+  return plant.harvest_mode === 'one_shot' && !isPlantArchived(plant) ? template.plant_id : null;
 };
 
 /** One care type `syncCareTasksForPlant` reconciles, with its on/off intent. */
@@ -267,9 +274,6 @@ export interface DesiredCareTask {
   frequency: number | null;
   enabled: boolean;
 }
-
-const positiveOrNull = (value: number | null | undefined): number | null =>
-  typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
 
 /**
  * Every care type the plant could have a template for, with its on/off intent.
@@ -334,11 +338,26 @@ export const desiredCareTasks = (plant: Plant): DesiredCareTask[] => {
  * now prefers the multiplier recorded at the last watering, a plant keeps
  * the cadence it was actually put on rather than being re-derived into a
  * different one the moment the calendar crosses a season.
+ *
+ * `frequency` is handed to that helper as the base interval, because it may be
+ * a plant-type default the plant document does not carry — read off the plant
+ * alone, such a plant has no interval and would skip the multiplier until its
+ * first completion applied it.
+ *
+ * `dueHour` is the hour to stamp (see `computeNextDueAt`).
  */
-export const careNextDueAt = (plant: Plant, taskType: TaskType, frequency: number): string => {
+export const careNextDueAt = (
+  plant: Plant,
+  taskType: TaskType,
+  frequency: number,
+  dueHour: number = TASK_DUE_TIME_HOUR,
+  now: Date = new Date()
+): string => {
   const effectiveFrequency =
-    taskType === 'water' ? (getEffectiveWateringIntervalDays(plant) ?? frequency) : frequency;
-  return computeNextDueAt(plant, taskType, effectiveFrequency);
+    taskType === 'water'
+      ? (getEffectiveWateringIntervalDays(plant, now.getTime(), frequency) ?? frequency)
+      : frequency;
+  return computeNextDueAt(plant, taskType, effectiveFrequency, now, dueHour);
 };
 
 /**

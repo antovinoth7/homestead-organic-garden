@@ -30,6 +30,7 @@ import type { VisualIconKey } from '@/types/visual.types';
 // module in that neighbourhood (`journalEntryOptions.ts`) is never on this path.
 import { isPlantArchived } from '@/utils/plantHelpers';
 import { HARVEST_TASK_TYPES, isHarvestSatisfied } from '@/utils/harvestStats';
+import { calendarDaysOverdue } from '@/services/taskSchedulingLogic';
 import { getGreenManureForMonth } from '@/config/beds';
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -123,6 +124,11 @@ export interface FarmAlertInputs {
   now?: number;
 }
 
+/**
+ * Whole days from a plant's date field to today, both floored to device-local
+ * midnight. For plant fields only (see `isHarvestSatisfied` on why that clock
+ * is kept) — task due dates go through `calendarDaysOverdue`.
+ */
 function daysSince(dateValue: string | null | undefined, now: number): number | null {
   if (!dateValue) return null;
   const date = new Date(dateValue);
@@ -219,7 +225,10 @@ function taskAlert(
   const shape = TASK_ALERT_SHAPE[template.task_type];
   if (!shape) return null;
 
-  const daysOverdue = daysSince(template.next_due_at, now);
+  // Counted in farm calendar days by the Care Plan's own function, not
+  // `daysSince`: due dates are stamped in farm wall-clock time, so device-local
+  // midnight puts them on the wrong day on a phone set to another timezone.
+  const daysOverdue = calendarDaysOverdue(template, new Date(now));
   if (daysOverdue === null || daysOverdue < ATTENTION_MIN_DAYS_OVERDUE) return null;
 
   const frequency = Number(template.frequency_days);

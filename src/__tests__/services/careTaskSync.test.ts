@@ -13,6 +13,7 @@ import {
   plantCareStampAfterCompletion,
   templateChangeAfterCompletion,
 } from '@/services/taskSchedulingLogic';
+import { farmDateTimeFromKey } from '@/utils/farmDate';
 import { getCoconutAgeInfo } from '@/utils/plantHelpers';
 import { getEffectiveWateringIntervalDays } from '@/utils/plantWatering';
 import type { Plant, PlantType, TaskType } from '@/types/database.types';
@@ -110,6 +111,30 @@ describe('careNextDueAt', () => {
     });
     const effective = getEffectiveWateringIntervalDays(plant) ?? 4;
     expect(careNextDueAt(plant, 'water', 4)).toBe(computeNextDueAt(plant, 'water', effective));
+  });
+
+  // A fixed clock the day after the last care date, so the due dates below are
+  // in the future and not flattened by the cap-at-today rule.
+  const NOW = new Date('2026-03-02T06:30:00.000Z');
+
+  it('season-adjusts a water interval that came from the plant-type default', () => {
+    // No interval on the plant itself, so the caller resolved 3 days from the
+    // care profile. The multiplier must still apply to it.
+    const plant = makePlant({
+      watering_frequency_days: null,
+      last_watered_date: '2026-03-01T06:30:00.000Z',
+      last_watering_multiplier: 2,
+    });
+    expect(careNextDueAt(plant, 'water', 3, undefined, NOW)).toBe(
+      computeNextDueAt(plant, 'water', 6, NOW)
+    );
+  });
+
+  it('stamps the due date at the hour it is given', () => {
+    const plant = makePlant({ last_fertilised_date: '2026-03-01T06:30:00.000Z' });
+    expect(careNextDueAt(plant, 'fertilise', 30, 8, NOW)).toBe(
+      farmDateTimeFromKey('2026-03-31', 8)?.toISOString()
+    );
   });
 });
 
@@ -233,26 +258,26 @@ describe('oneShotArchivePlantId', () => {
   const oneShot = makePlant({ id: 'p1', harvest_mode: 'one_shot' });
 
   it('archives a one-shot plant when its harvest is completed', () => {
-    expect(oneShotArchivePlantId(harvest, [oneShot])).toBe('p1');
+    expect(oneShotArchivePlantId(harvest, oneShot)).toBe('p1');
   });
 
   it('leaves an already archived plant alone', () => {
     const archived = makePlant({ ...oneShot, archived_at: '2026-03-01T00:00:00.000Z' });
-    expect(oneShotArchivePlantId(harvest, [archived])).toBeNull();
+    expect(oneShotArchivePlantId(harvest, archived)).toBeNull();
   });
 
   it('leaves a cut-and-come-again plant alone', () => {
     const repeat = makePlant({ ...oneShot, harvest_mode: 'cut_and_come_again' });
-    expect(oneShotArchivePlantId(harvest, [repeat])).toBeNull();
+    expect(oneShotArchivePlantId(harvest, repeat)).toBeNull();
   });
 
   it('ignores task types other than harvest', () => {
     const water = makeTaskTemplate({ task_type: 'water', plant_id: 'p1' });
-    expect(oneShotArchivePlantId(water, [oneShot])).toBeNull();
+    expect(oneShotArchivePlantId(water, oneShot)).toBeNull();
   });
 
   it('ignores a harvest task with no plant, or a plant that is not loaded', () => {
-    expect(oneShotArchivePlantId({ ...harvest, plant_id: null }, [oneShot])).toBeNull();
-    expect(oneShotArchivePlantId(harvest, [])).toBeNull();
+    expect(oneShotArchivePlantId({ ...harvest, plant_id: null }, oneShot)).toBeNull();
+    expect(oneShotArchivePlantId(harvest, null)).toBeNull();
   });
 });

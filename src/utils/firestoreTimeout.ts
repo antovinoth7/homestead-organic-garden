@@ -34,6 +34,22 @@ export class FirestoreTimeoutError extends Error {
 }
 
 /**
+ * Raised when the device has no network, before an attempt or between retries.
+ *
+ * The message is matched as text by `isOfflineWriteError` and
+ * `isConnectivityError`, so it must not change. `code` is Firestore's own
+ * `unavailable`, which both already treat as a connectivity failure. `cause`
+ * holds the failure that was in hand when the network was found to be down.
+ */
+export class NoNetworkError extends Error {
+  readonly code = 'unavailable';
+  constructor(cause?: unknown) {
+    super('No network connection available', { cause });
+    this.name = 'NoNetworkError';
+  }
+}
+
+/**
  * Errors a retry cannot fix. `failed-precondition` is a missing index or a
  * bad query; `resource-exhausted` is the free-tier quota — retrying either only
  * burns time (and, for quota, more of it).
@@ -81,7 +97,7 @@ async function withTimeout<T>(
   // Check network connectivity first
   if (!isNetworkAvailable()) {
     if (throwOnTimeout) {
-      throw new Error('No network connection available');
+      throw new NoNetworkError();
     }
     return fallbackValue as T;
   }
@@ -144,8 +160,9 @@ function assertRetryable(
 
   // Don't retry if no network
   if (!isNetworkAvailable()) {
-    logger.warn('No network connection, stopping retries');
-    throw new Error('No network connection available');
+    logger.warn(`No network connection, stopping retries (${code ?? 'no code'}): ${message}`);
+    // The offline guard's own error is already the right one to surface.
+    throw error instanceof NoNetworkError ? error : new NoNetworkError(error);
   }
 }
 

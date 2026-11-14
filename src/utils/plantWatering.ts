@@ -64,13 +64,18 @@ function scheduleReferenceDate(plant: Plant, now: number): Date {
  * Plants watered before this field existed, and plants never watered at all,
  * fall back to the season multiplier as of the date their schedule was set.
  * Returns null when watering is disabled or no valid base interval is set.
+ *
+ * `baseDays` overrides the plant's own interval. Care-task sync passes the
+ * interval it resolved, which may be a plant-type default the plant document
+ * does not store.
  */
 export function getEffectiveWateringIntervalDays(
   plant: Plant,
-  now: number = Date.now()
+  now: number = Date.now(),
+  baseDays?: number
 ): number | null {
   if (plant.watering_enabled === false) return null;
-  const base = Number(plant.watering_frequency_days);
+  const base = Number(baseDays ?? plant.watering_frequency_days);
   if (!Number.isFinite(base) || base <= 0) return null;
 
   const recorded = plant.last_watering_multiplier;

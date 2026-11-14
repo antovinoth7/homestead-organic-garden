@@ -194,11 +194,14 @@ function isValidCachedHeader(raw: RawCachedForecast): raw is CheckedCachedForeca
   );
 }
 
-/** `v` when it is a finite number (an integer, if asked) within [min, max], else null. */
-function numberInRange(v: unknown, min: number, max = Infinity, integer = false): number | null {
-  if (typeof v !== 'number') return null;
-  const valid = integer ? Number.isInteger(v) : Number.isFinite(v);
-  return valid && v >= min && v <= max ? v : null;
+/** `v` when it is a finite number within [min, max], else null. */
+function numberInRange(v: unknown, min: number, max = Infinity): number | null {
+  return typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : null;
+}
+
+/** `v` when it is an integer within [min, max], else null. */
+function integerInRange(v: unknown, min: number, max: number): number | null {
+  return Number.isInteger(v) ? numberInRange(v, min, max) : null;
 }
 
 /**
@@ -231,7 +234,7 @@ function normalizeCachedDay(item: unknown): DailyWeather | null {
     tempMaxC: day.tempMaxC,
     tempMinC: day.tempMinC,
     precipitationMm: day.precipitationMm,
-    weatherCode: numberInRange(day.weatherCode, 0, 99, true),
+    weatherCode: integerInRange(day.weatherCode, 0, 99),
     precipitationProbabilityPct: numberInRange(day.precipitationProbabilityPct, 0, 100),
     windSpeedMaxKph: numberInRange(day.windSpeedMaxKph, 0),
   };
