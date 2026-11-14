@@ -94,6 +94,7 @@ npm test           # Jest
 - Read `docs/CODEMAP.md` (generated; `npm run codemap` to refresh) before exploring `src/` — it lists every file with line counts.
 - Files over 800 lines (flagged ⚠️ in the codemap, e.g. `src/utils/plantHelpers.ts`, `src/screens/CatalogPlantDetailScreen.tsx`, `src/styles/plantFormStyles.ts`) — Grep/search inside them; do not read them whole.
 - Scoped checks: `npm run lint:file -- <path>` lints one file; `npm test -- <path-or-pattern>` runs one test file. Prefer these while iterating; run full `npm run lint` + `npm test` before finishing.
+- **SonarQube check before finishing.** After lint + tests pass, scan every changed `src/**/*.ts(x)` file with SonarQube for IDE (procedure in `docs/CONVENTIONS.md` → SonarQube Check). Fix findings the change introduced; list pre-existing findings in the same files in the summary and leave them. Do not edit the legacy-API files (`imageStorage.ts`, `backup.ts`, `zipHelper.ts`) to clear Sonar findings. If the IDE diagnostics tool is unavailable (CLI session, VS Code closed), say the scan was skipped — never report it as clean.
 - **Lint baseline: 0 errors, 47 warnings.** The `eslint-plugin-react-hooks` v7 rules that arrived with `eslint-config-expo` 57 were triaged after the upgrade. `refs` (142), `preserve-manual-memoization` (8), `globals` (3), `immutability` (3), `purity` (2) and the lone `exhaustive-deps` warning are all at zero and those five rules are back at **`error`** in `eslint.config.cjs` — reintroducing one fails the build. The remaining 47 are `set-state-in-effect`, still demoted on purpose: they are prop-to-state sync on sheet open and async loaders whose only synchronous write is a no-op `setLoading(true)`. **That is the expected state — do not "fix" these as a side task.** Remaining triage is in `docs/IMPLEMENTATION_ROADMAP.md` → Post-Upgrade Backlog. Only a *new* warning or any error is a regression.
 - Test baseline: 188 suites / 2375 tests / 5 snapshots passing.
 
@@ -105,7 +106,7 @@ npm test           # Jest
 4. Create screen calling hook — screens never call services directly
 5. Create components + `*Styles.ts` in `src/styles/`
 6. Write tests in `src/__tests__/`
-7. `npm run lint` + `npm test` — both must pass
+7. `npm run lint` + `npm test` — both must pass; then the SonarQube check on changed files
 
 ## Schema Changes
 

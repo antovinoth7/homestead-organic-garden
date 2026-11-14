@@ -221,6 +221,30 @@ This is a convention, not a hook — there is no `commitlint` in the toolchain, 
 
 ---
 
+## SonarQube Check
+
+Feature and code changes get a SonarQube for IDE pass on their changed files before the task is reported finished. Run it after `npm run lint` and `npm test` pass.
+
+SonarQube for IDE (`sonarsource.sonarlint-vscode`) analyses open files only — there is no whole-project scan and no CLI command.
+
+**Procedure**
+
+1. List the changed files: `git diff --name-only` plus untracked files, filtered to `src/**/*.{ts,tsx}`.
+2. Open each one with `code -r <file>` — **one file per call**. Several paths in one call only analyse the first; background tabs are not analysed until shown.
+3. Read the results with the `mcp__claude-vscode__getDiagnostics` tool. Sonar entries have `source: "sonarqube"` and `code: "typescript:Sxxxx"`. Line ranges are 0-based. Analysis takes a few seconds after the file opens — a result with no `sonarqube` entries right after opening means "not analysed yet", so read it again before calling the file clean.
+
+**What to fix**
+
+- **New findings — fix.** A finding is new if it sits on lines in the diff, or did not exist before the change (e.g. an edit that pushes a function over the S3776 cognitive-complexity limit).
+- **Pre-existing findings in the same files — report, do not fix.** List them in the task summary. Same stance as the expected `set-state-in-effect` lint warnings.
+- Known accepted findings (report-only): `await` in loops in the sync/queue code, cognitive complexity in the Firestore orchestrators, project-internal `@deprecated` types.
+- Never edit `src/lib/imageStorage.ts`, `src/services/backup.ts`, or `src/utils/zipHelper.ts` to clear a finding — they have no test coverage.
+- A fix must not change behaviour without a test covering it. Re-run the scoped lint and tests afterwards.
+
+If the diagnostics tool is unavailable (CLI session, VS Code closed), say the scan was skipped — never report it as clean.
+
+---
+
 ## AI Code Generation Checklist
 
 Before generating any code for this project, verify:
@@ -261,7 +285,8 @@ Before generating any code for this project, verify:
 - No TODO comments without an issue number
 - Functions are ≤ 50 lines; helpers extracted if exceeded
 - Magic numbers are named `UPPER_SNAKE_CASE` constants
-- `npm run lint` passes with zero errors after code generation (54 pre-existing `set-state-in-effect` warnings are expected — do not "fix" them as a side task)
+- `npm run lint` passes with zero errors after code generation (47 pre-existing `set-state-in-effect` warnings are expected — do not "fix" them as a side task)
+- SonarQube for IDE shows no new findings on changed files (see SonarQube Check)
 
 ---
 
