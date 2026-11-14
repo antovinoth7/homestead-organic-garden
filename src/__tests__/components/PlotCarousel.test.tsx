@@ -123,6 +123,24 @@ describe('PlotCarousel', () => {
     expect(dots[1]?.props.style).toContain(null);
 
     const row = nodes(rendered, 'View', 'dots')[0];
+    expect(row?.props.accessibilityLabel).toBe('Plot 1 of 2. 1 plot has overdue work.');
+  });
+
+  it('flags an off-screen plot with overdue work, and never the active dot', () => {
+    // Overdue plot second: it is the one behind the swipe.
+    const behind = nodes(render([pond, home]), 'View', 'dot');
+    expect(behind[0]?.props.style).not.toContain('dotAlert');
+    expect(behind[1]?.props.style).toContain('dotAlert');
+
+    // Overdue plot in front: its own card already says so.
+    const inFront = nodes(render([home, pond]), 'View', 'dot');
+    expect(inFront[0]?.props.style).not.toContain('dotAlert');
+    expect(inFront[1]?.props.style).not.toContain('dotAlert');
+  });
+
+  it('says nothing about overdue work when no plot has any', () => {
+    const quiet = makePlotBrief({ id: 'quiet', name: 'Back Field', dueCount: 0, overdueCount: 0 });
+    const row = nodes(render([pond, quiet]), 'View', 'dots')[0];
     expect(row?.props.accessibilityLabel).toBe('Plot 1 of 2.');
   });
 });

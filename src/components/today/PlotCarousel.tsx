@@ -92,6 +92,13 @@ export const PlotCarousel = React.memo(function PlotCarousel({
   // — `active` is state, so it can outlive the list it indexed.
   const current = Math.min(active, plots.length - 1);
 
+  // The dots are colour only, so the reader is told the same thing in words.
+  const overduePlots = plots.filter((plot) => plot.overdueCount > 0).length;
+  const overdueNote =
+    overduePlots === 0
+      ? ''
+      : ` ${overduePlots} ${overduePlots === 1 ? 'plot has' : 'plots have'} overdue work.`;
+
   return (
     <View>
       <ScrollView
@@ -124,10 +131,17 @@ export const PlotCarousel = React.memo(function PlotCarousel({
       <View
         style={styles.dots}
         accessibilityRole="text"
-        accessibilityLabel={`Plot ${current + 1} of ${plots.length}.`}
+        accessibilityLabel={`Plot ${current + 1} of ${plots.length}.${overdueNote}`}
       >
         {plots.map((plot, index) => (
-          <View key={plot.id} style={[styles.dot, index === current ? styles.dotActive : null]} />
+          <View
+            key={plot.id}
+            style={[
+              styles.dot,
+              index !== current && plot.overdueCount > 0 ? styles.dotAlert : null,
+              index === current ? styles.dotActive : null,
+            ]}
+          />
         ))}
       </View>
     </View>

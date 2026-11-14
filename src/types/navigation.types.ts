@@ -63,6 +63,12 @@ export type RootTabParamList = {
          * Care Plan already renders.
          */
         scrollTo?: 'overdue';
+        /**
+         * One-shot: parent location name, or `UNASSIGNED_PLOT_ID` — narrows the
+         * plan to one plot by preselecting the filter sheet's plot filter. Set
+         * by the Today plot card, whose due and overdue counts are per-plot.
+         */
+        plotFilter?: string;
         openCreateTask?: boolean;
         prefillPlantId?: string;
         prefillTaskType?: TaskType;

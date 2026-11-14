@@ -55,6 +55,13 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderRadius: 3,
       backgroundColor: theme.border,
     },
+    // A page out of sight with overdue work. Plots run in their configured
+    // order, so without this a plot in trouble two swipes away looks exactly
+    // like one with nothing due. Never on the active dot: that card is on
+    // screen saying so itself, and the pill's colour has to keep meaning "here".
+    dotAlert: {
+      backgroundColor: theme.error,
+    },
     // The active page stretches into a pill, so the current position is legible
     // without relying on the colour difference alone.
     dotActive: {

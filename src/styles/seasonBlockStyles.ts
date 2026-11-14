@@ -17,7 +17,9 @@
  * Each crop tile is a square photo with its name and one line of figures laid
  * over a gradient at its foot, the same tile the journal's new-entry form uses
  * for pest suggestions. A group is one horizontal row of them, bleeding past
- * the card's padding so the tiles scroll off its edge.
+ * the card's padding so the tiles scroll off its edge. Their width follows the
+ * screen so that the row always ends part-way through a tile — see
+ * `cropTileWidth`.
  */
 
 import { StyleSheet } from 'react-native';
@@ -25,12 +27,39 @@ import type { Theme } from '../theme/colors';
 import { border, eyebrow, font, radius, shadow } from '@/theme/styleTokens';
 import { CARD_GUTTER } from './todayScreenStyles';
 
+/** The card's side padding, which a tile row bleeds back out through. */
+const CARD_PADDING = 15;
+
+/** Between two tiles in a row. */
+const TILE_GAP = 12;
+
+/** As wide as a tile gets — the size it was when the width was a constant. */
+const TILE_MAX = 148;
+
 /**
- * Fixed width, not a column share. 148 matches the old two-column tile at
- * 375–390pt (`(width − 62) × 47%`), so the photo keeps its size; two tiles and a
- * sliver of a third show, and the sliver is the cue that the row scrolls.
+ * Tiles on screen before the row scrolls: two whole and a third of the next.
+ * The cut-off third is the cue that the row scrolls, so it has to be there at
+ * every width.
  */
-const TILE_SIZE = 148;
+const TILES_VISIBLE = 2.33;
+
+/**
+ * A crop tile's width at this screen width.
+ *
+ * It was a fixed 148, which left the cue to chance: from the first tile's left
+ * edge to the card's right edge there is `screenWidth − 47`pt, two tiles and
+ * their gaps took 320 of it, and so a 390pt phone showed 23pt of the third tile,
+ * the 377pt one 10, and a 360dp Android none at all. Dividing the space instead
+ * shows the same share of the next tile everywhere.
+ *
+ * Capped at the old size: past about 416pt the tiles stop growing and the row
+ * simply shows more of them.
+ */
+export function cropTileWidth(screenWidth: number): number {
+  const visible = screenWidth - CARD_GUTTER * 2 - CARD_PADDING;
+  const tile = (visible - TILE_GAP * Math.floor(TILES_VISIBLE)) / TILES_VISIBLE;
+  return Math.min(TILE_MAX, Math.floor(tile));
+}
 
 export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create> =>
   StyleSheet.create({
@@ -42,7 +71,7 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       borderWidth: border(theme, 'card', StyleSheet.hairlineWidth),
       borderColor: theme.border,
       borderRadius: radius(theme, 'card', 18),
-      paddingHorizontal: 15,
+      paddingHorizontal: CARD_PADDING,
       paddingVertical: 14,
       ...shadow(theme, 'card'),
     },
@@ -152,10 +181,24 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
     plantGroup: {
       marginTop: 12,
     },
+    // The action and, when the row runs off screen, how many crops are in it.
+    plantActionRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
     plantAction: {
       fontSize: 13,
       color: theme.text,
       ...font(theme, 'bodyBold', '700'),
+    },
+    // The cut-off tile says the row scrolls; this says how far. A caption —
+    // there is no list of its own for it to open.
+    plantActionCount: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      ...font(theme, 'body'),
     },
     // What the action actually asks of the grower. "Transplant" without this
     // silently assumes a nursery sown weeks ago.
@@ -166,22 +209,20 @@ export const createStyles = (theme: Theme): ReturnType<typeof StyleSheet.create>
       marginTop: 2,
       ...font(theme, 'body'),
     },
-    // Bleeds past the card's 15pt padding; the content padding puts the first
-    // tile back in line with the text above it.
+    // Bleeds past the card's padding; the content padding puts the first tile
+    // back in line with the text above it.
     tileRow: {
-      marginHorizontal: -15,
+      marginHorizontal: -CARD_PADDING,
       marginTop: 11,
     },
     tileRowContent: {
-      paddingHorizontal: 15,
-      gap: 12,
+      paddingHorizontal: CARD_PADDING,
+      gap: TILE_GAP,
     },
-    // `overflow: 'hidden'` is what lets the photo meet the card's top edge: the
-    // image rounds its own top corners, and this clips anything the radius
-    // leaves over.
     // `overflow: 'hidden'` gives the unrounded square photo the tile's corners.
+    // The width is not here: it depends on the screen, so the component merges
+    // `cropTileWidth` over this.
     tile: {
-      width: TILE_SIZE,
       aspectRatio: 1,
       backgroundColor: theme.backgroundTertiary,
       borderRadius: 14,

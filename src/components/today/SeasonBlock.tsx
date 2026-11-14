@@ -16,7 +16,9 @@
  * there. The tile is the crop's photo, the fastest way to recognise one, with
  * its name and the two figures that decide whether it fits a bed laid over its
  * foot on a gradient. Each group scrolls sideways as one row, like the
- * suggestion row on the journal's new-entry form.
+ * suggestion row on the journal's new-entry form. Two things say so: the row
+ * always ends part-way through a tile, whatever the screen width, and a group
+ * with more crops than fit states how many it holds beside its heading.
  *
  * Two figures and no more. The window the crop opens in is what the card's own
  * header already establishes, month and season both; the harvest month is
@@ -63,7 +65,15 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView,
+  StyleProp,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+  useWindowDimensions,
+} from 'react-native';
 import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { GardenIcon } from '@/components/GardenIcon';
 import { ReferenceThumb } from '@/components/ReferenceThumb';
@@ -78,7 +88,7 @@ import {
 } from '@/types/database.types';
 import type { VisualIconKey } from '@/types/visual.types';
 import { useTheme } from '@/theme';
-import { createStyles } from '@/styles/seasonBlockStyles';
+import { createStyles, cropTileWidth } from '@/styles/seasonBlockStyles';
 
 interface Props {
   season: SeasonProgress;
@@ -128,8 +138,16 @@ interface CropTileProps {
   item: PlantNowRecommendation;
   onPress: (plantName: string, plantType: PlantType) => void;
   styles: ReturnType<typeof createStyles>;
+  /** The tile's width at this screen width — see `cropTileWidth`. */
+  sizeStyle: StyleProp<ViewStyle>;
   scrimColor: string;
 }
+
+/**
+ * Two tiles fit a row whole, so a third is where the row starts running off
+ * screen — and where saying how many there are starts to be news.
+ */
+const COUNT_FROM = 3;
 
 /**
  * One crop. The photo is decorative — the tile speaks as a single label, so a
@@ -156,6 +174,7 @@ const CropTile = React.memo(function CropTile({
   item,
   onPress,
   styles,
+  sizeStyle,
   scrimColor,
 }: CropTileProps): React.JSX.Element {
   const handlePress = useCallback(
@@ -184,7 +203,7 @@ const CropTile = React.memo(function CropTile({
 
   return (
     <TouchableOpacity
-      style={styles.tile}
+      style={[styles.tile, sizeStyle]}
       onPress={handlePress}
       activeOpacity={0.7}
       accessibilityRole="button"
@@ -239,6 +258,8 @@ export const SeasonBlock = React.memo(function SeasonBlock({
 }: Props): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const { width } = useWindowDimensions();
+  const tileSize = useMemo(() => ({ width: cropTileWidth(width) }), [width]);
   const elapsed = season.elapsedFraction;
 
   const sown = recommendations.filter((recommendation) => recommendation.action === 'sow');
@@ -260,9 +281,24 @@ export const SeasonBlock = React.memo(function SeasonBlock({
     items: PlantNowRecommendation[]
   ): React.JSX.Element | null => {
     if (items.length === 0) return null;
+    const overflows = items.length >= COUNT_FROM;
     return (
       <View style={styles.plantGroup}>
-        <Text style={styles.plantAction}>{ACTION_TITLE[action]}</Text>
+        {/* One element for the reader: the heading, and — only when some of the
+            row is off screen — how many crops it holds and that it scrolls. */}
+        <View
+          style={styles.plantActionRow}
+          accessible
+          accessibilityRole="header"
+          accessibilityLabel={
+            overflows
+              ? `${ACTION_TITLE[action]}, ${items.length} crops. Scrolls sideways.`
+              : ACTION_TITLE[action]
+          }
+        >
+          <Text style={styles.plantAction}>{ACTION_TITLE[action]}</Text>
+          {overflows && <Text style={styles.plantActionCount}>{items.length} crops</Text>}
+        </View>
         <Text style={styles.plantActionHint}>{ACTION_HINT[action]}</Text>
         <ScrollView
           horizontal
@@ -276,6 +312,7 @@ export const SeasonBlock = React.memo(function SeasonBlock({
               item={item}
               onPress={onPressCrop}
               styles={styles}
+              sizeStyle={tileSize}
               scrimColor={theme.scrim}
             />
           ))}

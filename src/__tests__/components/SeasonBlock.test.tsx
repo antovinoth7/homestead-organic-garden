@@ -1,6 +1,9 @@
 /* The repository's Jest preset is Node-only, so this test supplies a minimal
  * native host boundary for the season card's layout and press handlers. */
 /* eslint-disable import/first */
+/** Screen width the next render sees. `mock`-prefixed so the factory may read it. */
+const mockWindow = { width: 390 };
+
 jest.mock('react-native', () => {
   const React = jest.requireActual<typeof import('react')>('react');
   const host = (name: string) =>
@@ -12,6 +15,7 @@ jest.mock('react-native', () => {
     Text: host('Text'),
     TouchableOpacity: host('TouchableOpacity'),
     View: host('View'),
+    useWindowDimensions: () => ({ width: mockWindow.width, height: 844, scale: 3, fontScale: 1 }),
   };
 });
 jest.mock('react-native-svg', () => {
@@ -47,11 +51,16 @@ jest.mock('@/config/referenceAssets', () => ({
   getPlantImage: (name: string) => ({ testUri: name }),
 }));
 jest.mock('@/styles/seasonBlockStyles', () => ({
+  // The real sizing rule: the tile widths below are its answers, not the mock's.
+  cropTileWidth: jest.requireActual<typeof import('@/styles/seasonBlockStyles')>(
+    '@/styles/seasonBlockStyles'
+  ).cropTileWidth,
   createStyles: () => new Proxy({}, { get: (_target, property) => String(property) }),
 }));
 
 import React from 'react';
 import { SeasonBlock } from '@/components/today/SeasonBlock';
+import { cropTileWidth } from '@/styles/seasonBlockStyles';
 import { PlantNowRecommendation, SeasonProgress } from '@/types/database.types';
 
 interface RenderedNode {
@@ -358,7 +367,9 @@ describe('SeasonBlock crop tiles', () => {
     const rendered = render();
     // No warning tint, and no icon inside a tile — the card still does not mark
     // a closing window visually. The only icon on the card is the header badge.
-    expect(tiles(rendered).map((node) => node.props.style)).toEqual(['tile', 'tile', 'tile']);
+    // Each carries the shared tile style and its width, and nothing besides.
+    const plain = ['tile', { width: 136 }];
+    expect(tiles(rendered).map((node) => node.props.style)).toEqual([plain, plain, plain]);
     const iconsInTiles = tiles(rendered).flatMap((tile) =>
       tile.findAll((node) => node.type === 'GardenIcon')
     );
@@ -381,6 +392,57 @@ describe('SeasonBlock at the calendar\'s widest', () => {
     const rendered = render({ recommendations: [...fiveSows, brinjal] });
     expect(tiles(rendered)).toHaveLength(6);
     expect(hostText(rendered, 'plantAction')).toEqual(['Sow', 'Transplant']);
+  });
+});
+
+describe('SeasonBlock scroll cue', () => {
+  afterEach(() => {
+    mockWindow.width = 390;
+  });
+
+  /** How much of the third tile is inside the card, as a share of a tile. */
+  const peek = (screenWidth: number): number => {
+    const tile = cropTileWidth(screenWidth);
+    // Card gutter 16 each side, card padding 15 before the first tile, gap 12.
+    const visible = screenWidth - 32 - 15;
+    return (visible - 2 * (tile + 12)) / tile;
+  };
+
+  it('leaves about a third of the next tile showing at every phone width', () => {
+    // 360 is where the fixed 148pt tile showed none of the third at all.
+    for (const screenWidth of [320, 360, 377, 390, 412]) {
+      expect(peek(screenWidth)).toBeGreaterThanOrEqual(0.3);
+      expect(peek(screenWidth)).toBeLessThanOrEqual(0.4);
+    }
+  });
+
+  it('stops growing at the size the tile used to be', () => {
+    expect(cropTileWidth(360)).toBe(124);
+    expect(cropTileWidth(412)).toBe(146);
+    expect(cropTileWidth(600)).toBe(148);
+    expect(cropTileWidth(1024)).toBe(148);
+  });
+
+  it('sizes the rendered tiles to the screen they are on', () => {
+    mockWindow.width = 360;
+    const rendered = render();
+    expect(tiles(rendered)[0]?.props.style).toEqual(['tile', { width: 124 }]);
+  });
+
+  it('counts a group only once some of it is off screen', () => {
+    // Two sows and one transplant: both rows fit, so neither is counted.
+    expect(hostText(render(), 'plantActionCount')).toEqual([]);
+
+    const rendered = render({ recommendations: [...fiveSows, brinjal] });
+    expect(hostText(rendered, 'plantActionCount')).toEqual([[5, ' crops']]);
+
+    const headings = rendered.root.findAll(
+      (node) => node.type === 'View' && baseStyle(node.props.style) === 'plantActionRow'
+    );
+    expect(headings.map((node) => node.props.accessibilityLabel)).toEqual([
+      'Sow, 5 crops. Scrolls sideways.',
+      'Transplant',
+    ]);
   });
 });
 

@@ -39,6 +39,7 @@ import {
 import { resolveWeatherCoords, WEATHER_FRESH_MS } from '@/services/weather';
 import { useWeatherByPlot } from '@/hooks/useWeatherByPlot';
 import { useWeatherLocations, WeatherPlot } from '@/hooks/useWeatherLocations';
+import { advanceDay, advanceStaleCheck } from '@/utils/briefClock';
 import { getErrorMessage } from '@/utils/errorLogging';
 import { locationKey } from '@/utils/locationHelpers';
 import { buildNeedsActionItems } from '@/utils/needsActionItems';
@@ -62,6 +63,12 @@ export interface UseTodayBriefResult {
   brief: TodayBrief;
   /** True only on a cold start with nothing cached to paint. */
   loading: boolean;
+  /**
+   * False until there is something real to paint — the caches, or the first
+   * load settling either way. The brief cannot say this itself: with no plots
+   * configured it always carries one fallback card, loaded or not.
+   */
+  hydrated: boolean;
   error: string | null;
   /**
    * Re-read the sources. `fresh` (pull-to-refresh) drops the in-memory copies
@@ -137,7 +144,22 @@ export function useTodayBrief(): UseTodayBriefResult {
   const [sources, setSources] = useState<TodayBriefSources>(EMPTY_SOURCES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const isMountedRef = useRef(true);
+
+  // The day everything dated is derived from, and when weather staleness was
+  // last read. State rather than `new Date()` inside the memos: this screen
+  // stays mounted for the life of the process, so a memo that read the clock
+  // once kept yesterday's season day and planting windows until a restart.
+  // Both only change identity when they have gone out of date — see `briefClock`.
+  const [today, setToday] = useState(() => new Date());
+  const [staleCheckedAt, setStaleCheckedAt] = useState(() => Date.now());
+
+  const refreshClock = useCallback(() => {
+    const now = new Date();
+    setToday((prev) => advanceDay(prev, now));
+    setStaleCheckedAt((prev) => advanceStaleCheck(prev, now.getTime()));
+  }, []);
 
   const { plots: configuredWeatherPlots, loading: weatherLocationsLoading } = useWeatherLocations();
 
@@ -152,7 +174,11 @@ export function useTodayBrief(): UseTodayBriefResult {
       if (!isMountedRef.current) return;
       if (!options?.silent) setError(getErrorMessage(err));
     } finally {
-      if (isMountedRef.current && !options?.silent) setLoading(false);
+      if (isMountedRef.current) {
+        if (!options?.silent) setLoading(false);
+        // Either way: a failed first load has an error to show, not a skeleton.
+        setHydrated(true);
+      }
     }
   }, []);
 
@@ -164,6 +190,7 @@ export function useTodayBrief(): UseTodayBriefResult {
       if (!isMountedRef.current || !stored) return false;
       setSources((prev) => shareSources(prev, stored));
       setLoading(false);
+      setHydrated(true);
       return true;
     } catch {
       return false;
@@ -345,11 +372,14 @@ export function useTodayBrief(): UseTodayBriefResult {
           conditionLabel: description.label,
           conditionIconKey: description.iconKey,
           fetched_at: fetchedAt,
-          // Deliberately impure: staleness is a function of elapsed time, so it
-          // must be re-read rather than frozen. Freezing it at mount would leave
-          // a Today screen open past WEATHER_FRESH_MS (3h) claiming fresh data.
-          // eslint-disable-next-line react-hooks/purity
-          stale: fetchedAt ? Date.now() - new Date(fetchedAt).getTime() > WEATHER_FRESH_MS : false,
+          // Staleness is a function of elapsed time, so it is measured against
+          // a clock reading that every reload and foreground retakes. Reading
+          // the clock in here instead froze the answer for as long as the other
+          // inputs held still, leaving a screen open past WEATHER_FRESH_MS (3h)
+          // claiming fresh data.
+          stale: fetchedAt
+            ? staleCheckedAt - new Date(fetchedAt).getTime() > WEATHER_FRESH_MS
+            : false,
           // Covers revalidation, not just the cold fetch: the overlay's stale
           // banner only exists when a forecast is already painted, so gating
           // this on `forecast === null` left its Retry with no feedback at all.
@@ -363,6 +393,7 @@ export function useTodayBrief(): UseTodayBriefResult {
     fallbackWeatherPlot,
     byPlotName,
     weatherLoading,
+    staleCheckedAt,
     district,
     bedsById,
     bedNames,
@@ -372,17 +403,18 @@ export function useTodayBrief(): UseTodayBriefResult {
 
   const totals = useMemo(() => summarizeTodayTasks(tasks, logs), [tasks, logs]);
   const season = useMemo(
-    () => getSeasonProgress(new Date(), activeZone ?? TAMIL_NADU_METEOROLOGICAL_ZONE),
-    [activeZone]
+    () => getSeasonProgress(today, activeZone ?? TAMIL_NADU_METEOROLOGICAL_ZONE),
+    [today, activeZone]
   );
   const month = useMemo(
-    () => getMonthlyHighlight(new Date(), activeZone, season.seasonId),
-    [activeZone, season.seasonId]
+    () => getMonthlyHighlight(today, activeZone, season.seasonId),
+    [today, activeZone, season.seasonId]
   );
 
   const windows = useMemo(
-    () => (activeZone ? getTamilNaduPlantingWindows(activeZone.id as AgroClimaticZoneId) : null),
-    [activeZone]
+    () =>
+      activeZone ? getTamilNaduPlantingWindows(activeZone.id as AgroClimaticZoneId, today) : null,
+    [today, activeZone]
   );
 
   // Bound to the loaded profiles so `sowNowChips` stays a pure util with no
@@ -474,7 +506,7 @@ export function useTodayBrief(): UseTodayBriefResult {
 
   const brief = useMemo<TodayBrief>(
     () => ({
-      dateLabel: formatDateLabel(new Date()),
+      dateLabel: formatDateLabel(today),
       remainingTasks: countRemaining(totals),
       needActionCount: needsAction.length,
       plots: plotBriefs,
@@ -494,6 +526,7 @@ export function useTodayBrief(): UseTodayBriefResult {
       perennialCare,
     }),
     [
+      today,
       totals,
       needsAction,
       plotBriefs,
@@ -532,13 +565,14 @@ export function useTodayBrief(): UseTodayBriefResult {
 
   const reload = useCallback(
     async (options?: { silent?: boolean; forceWeather?: boolean; fresh?: boolean }) => {
+      refreshClock();
       if (options?.fresh) {
         invalidate(CACHE_KEYS.TODAY_TASK_LOGS, CACHE_KEYS.TASK_TEMPLATES, CACHE_KEYS.BEDS);
         invalidatePrefix(CACHE_KEYS.LOCATIONS);
       }
       await Promise.all([load(options), refreshWeather({ force: options?.forceWeather })]);
     },
-    [load, refreshWeather]
+    [load, refreshClock, refreshWeather]
   );
 
   const refreshWeatherFor = useCallback(
@@ -555,5 +589,5 @@ export function useTodayBrief(): UseTodayBriefResult {
     [fallbackWeatherPlot, grouping.groups, refreshWeather, weatherPlotByKey, weatherPlots]
   );
 
-  return { brief, loading, error, reload, refreshWeatherFor, jobsByDateFor };
+  return { brief, loading, hydrated, error, reload, refreshWeatherFor, jobsByDateFor };
 }

@@ -25,6 +25,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AppState,
   FlatList,
   LayoutChangeEvent,
   RefreshControl,
@@ -66,7 +67,8 @@ export default function TodayScreen(): React.JSX.Element {
   const listRef = useRef<FlatList<NeedsActionItem>>(null);
   const { onScroll: onTabBarScroll, resetTabBar } = useTabBarScroll();
 
-  const { brief, loading, error, reload, refreshWeatherFor, jobsByDateFor } = useTodayBrief();
+  const { brief, loading, hydrated, error, reload, refreshWeatherFor, jobsByDateFor } =
+    useTodayBrief();
   const [forecastPlotId, setForecastPlotId] = useState<string | null>(null);
 
   const openPlot = useMemo<PlotBrief | null>(
@@ -82,9 +84,11 @@ export default function TodayScreen(): React.JSX.Element {
     }
   }, [route.params, navigation, reload]);
 
+  // The scroll position is deliberately left alone here. Working down the
+  // needs-action list means opening a row and coming back, and returning to the
+  // top each time made the grower find their place again for every item.
   useFocusEffect(
     useCallback(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
       resetTabBar();
       void reload({ silent: true });
       // Leaving the tab with the overlay open would strand the user on a
@@ -92,6 +96,27 @@ export default function TodayScreen(): React.JSX.Element {
       return () => setForecastPlotId(null);
     }, [reload, resetTabBar])
   );
+
+  // Pressing the tab is what asks for the top of the brief — from another tab
+  // or from further down this one.
+  useEffect(
+    () =>
+      navigation.addListener('tabPress', () => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: navigation.isFocused() });
+      }),
+    [navigation]
+  );
+
+  // The tab stays mounted while the app is in the background, and coming back
+  // to the foreground is not a focus event — so without this the phone picked
+  // up in the morning still shows last night's brief. Only while this tab is
+  // the one showing: any other tab reloads through the focus effect on return.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && navigation.isFocused()) void reload({ silent: true });
+    });
+    return () => subscription.remove();
+  }, [navigation, reload]);
 
   // ─── Navigation ────────────────────────────────────────────────────────────
 
@@ -136,15 +161,40 @@ export default function TodayScreen(): React.JSX.Element {
     [navigation]
   );
 
-  const handlePressPlot = useCallback(() => goToCarePlan(), [goToCarePlan]);
+  // With no plots configured there is one card, and it is named after the district
+  // rather than after anything a task or bed is filed under — scoping by its id
+  // would open an empty list, so the whole list is the honest answer there.
+  // Configured plots and the unassigned bucket both resolve the same way on the
+  // other side: the Care Plan through `groupByPlot`, the bed list against
+  // `Bed.parent_location`.
+  const plotsAreConfigured = useMemo(
+    () => brief.plots.some((plot) => plot.isConfigured),
+    [brief.plots]
+  );
 
-  // The card's overdue figure names a section the Care Plan already renders, so
-  // it opens the plan *there* rather than at the top. Filters are still reset —
-  // the plan is not narrowed, the rest of it just sits below the section. The
-  // count is per-plot and the plan is farm-wide, so the plot id is not carried.
+  // The card's counts are this plot's, so the plan opens narrowed to it — the
+  // list has to hold the work the figure just named. The plot lands in the
+  // plan's own filter sheet, where it is visible and clearable. The hero's task
+  // figure is the farm's, and still opens the plan whole.
+  const handlePressPlot = useCallback(
+    (plotId: string) =>
+      navigation.navigate('Care Plan', {
+        resetFilters: true,
+        ...(plotsAreConfigured && { plotFilter: plotId }),
+      }),
+    [navigation, plotsAreConfigured]
+  );
+
+  // The overdue figure also names a section the Care Plan already renders, so it
+  // opens the plan *there* rather than at the top.
   const handlePressOverdue = useCallback(
-    () => navigation.navigate('Care Plan', { resetFilters: true, scrollTo: 'overdue' }),
-    [navigation]
+    (plotId: string) =>
+      navigation.navigate('Care Plan', {
+        resetFilters: true,
+        scrollTo: 'overdue',
+        ...(plotsAreConfigured && { plotFilter: plotId }),
+      }),
+    [navigation, plotsAreConfigured]
   );
   const handlePressWeather = useCallback((plotId: string) => setForecastPlotId(plotId), []);
   const closeForecast = useCallback(() => setForecastPlotId(null), []);
@@ -199,17 +249,7 @@ export default function TodayScreen(): React.JSX.Element {
   );
 
   // The bed counts do the same into the Beds tab: the lifecycle tapped, scoped to
-  // the plot that was tapped.
-  //
-  // With no plots configured there is one card, and it is named after the district
-  // rather than after anything a bed is filed under — scoping by its id would open
-  // an empty list, so the whole list is the honest answer there. Configured plots
-  // and the unassigned bucket both resolve against `Bed.parent_location`.
-  const plotsAreConfigured = useMemo(
-    () => brief.plots.some((plot) => plot.isConfigured),
-    [brief.plots]
-  );
-
+  // the plot that was tapped — on the same `plotsAreConfigured` terms as the plan.
   const handlePressBedStatus = useCallback(
     (plotId: string, lifecycleFilter: BedLifecycle) => {
       navigation.navigate('Beds', {
@@ -309,7 +349,9 @@ export default function TodayScreen(): React.JSX.Element {
   const separator = useCallback(() => <View style={styles.divider} />, [styles]);
 
   // True first-ever launch: nothing cached, so there is genuinely nothing to paint.
-  if (loading && brief.plots.length === 0) {
+  // Asked of the hook rather than of the brief — with no plots configured the
+  // brief always carries its one fallback card, so it never looks empty.
+  if (!hydrated) {
     return (
       <View style={styles.container}>
         <TodayHeader

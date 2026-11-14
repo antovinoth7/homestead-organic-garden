@@ -560,6 +560,15 @@ export default function CalendarScreen(): React.JSX.Element {
         setGroupBy(DEFAULT_GROUP_BY);
         setSortBy('due');
       }
+      // Applied after the reset so it survives it, and into the same filter
+      // state the sheet edits — so the plot shows there as selected and clears
+      // like any other. `resetFilters` is consumed along with it: left set, the
+      // re-run this `setParams` causes would wipe the filter just applied.
+      if (route.params?.plotFilter) {
+        const plotId = route.params.plotFilter;
+        setFilters((prev) => ({ ...prev, plotIds: new Set([plotId]) }));
+        navigation.setParams({ plotFilter: undefined, resetFilters: undefined });
+      }
       // Armed here, fired by the scroll effect once the section is in the model.
       // Consumed like the other one-shots so returning to the tab later — from
       // the tab bar, or back out of a task — does not scroll the plan again.
